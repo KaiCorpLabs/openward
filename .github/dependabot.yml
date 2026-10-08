@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directories: ["/core", "/spikes/s1-terminal/termbench"]
+    schedule:
+      interval: weekly
+    # Engines are pinned on purpose (ADR-002): bump them by hand after
+    # re-running the spike benchmarks.
+    ignore:
+      - dependency-name: alacritty_terminal
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly

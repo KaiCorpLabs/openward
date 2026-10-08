@@ -1,0 +1,21 @@
+[package]
+name = "openward-term"
+description = "Terminal state behind a common TermEngine interface, encoded as damage frames for the UI (ADR-002)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = ["alacritty"]
+# Candidate engines for spike S1. Exactly which one ships is decided by the
+# spike; both stay behind the same trait so the UI never depends on either.
+alacritty = ["dep:alacritty_terminal"]
+
+[dependencies]
+# Pinned exactly: the crate makes no stable-API promise (ADR-002).
+alacritty_terminal = { version = "=0.26.0", optional = true }
+
+[lints]
+workspace = true

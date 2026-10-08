@@ -1,0 +1,18 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/openward-term",
+]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.99"
+license = "Apache-2.0"
+repository = "https://github.com/Ulzuhan/openward"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = "warn"

@@ -1,0 +1,21 @@
+[package]
+name = "termbench"
+description = "Spike S1: compare terminal engines behind openward-term's TermEngine"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.99"
+license = "Apache-2.0"
+publish = false
+
+# Standalone on purpose: spike code never joins the core workspace.
+[workspace]
+
+[dependencies]
+openward-term = { path = "../../../core/crates/openward-term" }
+serde_json = "1"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[profile.release]
+debug = 1

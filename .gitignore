@@ -1,0 +1,44 @@
+# OS
+.DS_Store
+
+# Rust
+target/
+**/*.rs.bk
+
+# Flutter (app and spike harnesses)
+**/build/
+**/.dart_tool/
+**/Pods/
+**/.gradle/
+**/*.iml
+
+# Spike S1: the synthetic corpus is generated, never committed
+spikes/s1-terminal/corpus/synthetic/
+
+# Local data and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+id_ecdsa*
+known_hosts*
+authorized_keys
+.ssh/
+*.log
+.local/
+
+# Local assistant notes
+.agents/
+.codex/
+
+# Editors
+.idea/
+.vscode/
+*.swp
