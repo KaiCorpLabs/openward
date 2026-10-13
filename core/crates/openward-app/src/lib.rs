@@ -136,6 +136,9 @@ impl App {
                     return sink.send(closed(None, Some(failure)));
                 }
             };
+            // Input goes to the shell before anyone hears it is connected.
+            let pump = pipe.pump_ssh(channel, &plan.hops[last].label);
+            drop(pipe);
             let info = target.info();
             sink.send(Event::Connected(Connected {
                 post_quantum: info.post_quantum(),
@@ -150,7 +153,7 @@ impl App {
                 hops: plan.hops.len(),
                 connect_ms: info.connect_ms,
             }));
-            let (exit_code, failure) = pipe.pump_ssh(channel, &plan.hops[last].label).await;
+            let (exit_code, failure) = pump.await;
             for session in sessions.iter().rev() {
                 session.disconnect().await;
             }

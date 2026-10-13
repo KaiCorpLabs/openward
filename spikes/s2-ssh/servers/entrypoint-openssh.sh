@@ -28,4 +28,11 @@ chmod 400 /home/otp/.google_authenticator
 mkdir -p /srv/www && echo "s2-forward-ok $(hostname)" > /srv/www/index.html
 (cd /srv/www && python3 -m http.server 8080 --bind 127.0.0.1 >/dev/null 2>&1 &)
 
-exec /usr/sbin/sshd -D -e
+# Tests connect in parallel and fail authentication on purpose: room for
+# many connections at once, and no penalties for the source address
+# (PerSourcePenalties, OpenSSH 9.8+ only).
+extra=(-o MaxStartups=100)
+if /usr/sbin/sshd -t -o PerSourcePenalties=no 2>/dev/null; then
+  extra+=(-o PerSourcePenalties=no)
+fi
+exec /usr/sbin/sshd -D -e "${extra[@]}"

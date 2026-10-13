@@ -335,6 +335,13 @@ impl Terminal {
     pub fn screen_text(&self) -> String {
         lock(&self.state).engine.screen_text()
     }
+
+    /// The next [`Terminal::poll`] returns the whole screen.
+    pub fn redraw(&self) {
+        let mut s = lock(&self.state);
+        s.engine.redraw();
+        s.dirty = true;
+    }
 }
 
 /// A terminal's state and input side, for the task that feeds it.
@@ -350,13 +357,32 @@ impl Pipe {
 
     /// Pumps an open shell channel until it closes; returns its exit code,
     /// or the failure if the connection broke.
-    pub(crate) async fn pump_ssh(
+    /// Wires input to an open shell channel at once, then returns what
+    /// pumps it until it closes: its exit code, or the failure if the
+    /// connection broke. Input sent after this call reaches the shell.
+    pub(crate) fn pump_ssh(
         &self,
         channel: openward_ssh::russh::Channel<Msg>,
         label: &str,
-    ) -> (Option<u32>, Option<Failure>) {
-        let (tx, mut rx) = mpsc::unbounded_channel::<SshCmd>();
+    ) -> impl Future<Output = (Option<u32>, Option<Failure>)> + Send + 'static {
+        let (tx, rx) = mpsc::unbounded_channel::<SshCmd>();
         *lock(&self.io) = Io::Ssh(tx.clone());
+        let (state, io, label) = (
+            Arc::clone(&self.state),
+            Arc::clone(&self.io),
+            label.to_owned(),
+        );
+        async move { Self::pump(channel, tx, rx, state, io, label).await }
+    }
+
+    async fn pump(
+        channel: openward_ssh::russh::Channel<Msg>,
+        tx: mpsc::UnboundedSender<SshCmd>,
+        mut rx: mpsc::UnboundedReceiver<SshCmd>,
+        state: Arc<Mutex<State>>,
+        io: Arc<Mutex<Io>>,
+        label: String,
+    ) -> (Option<u32>, Option<Failure>) {
         let (mut read, write) = channel.split();
         let writer = async move {
             let mut w = write.make_writer();
@@ -373,14 +399,14 @@ impl Pipe {
                 }
             }
         };
-        let state = Arc::clone(&self.state);
+        let reader_state = Arc::clone(&state);
         let reader = async move {
             let mut exit = None;
             let mut ended = false;
             while let Some(msg) = read.wait().await {
                 match msg {
                     ChannelMsg::Data { data } | ChannelMsg::ExtendedData { data, .. } => {
-                        let replies = Terminal::output(&state, &data);
+                        let replies = Terminal::output(&reader_state, &data);
                         if !replies.is_empty() {
                             let _ = tx.send(SshCmd::Data(replies));
                         }
@@ -403,14 +429,14 @@ impl Pipe {
         let ((exit, ended), ()) = tokio::join!(
             async {
                 let r = reader.await;
-                *lock(&self.io) = Io::None;
+                *lock(&io) = Io::None;
                 r
             },
             writer
         );
-        lock(&self.state).dirty = true;
+        lock(&state).dirty = true;
         let failure = (!ended).then(|| Failure::Network {
-            label: label.to_owned(),
+            label,
             message: "connection lost".into(),
         });
         (exit, failure)

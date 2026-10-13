@@ -358,6 +358,12 @@ impl GhosttyEngine {
         }
     }
 
+    /// The next damage frame repaints everything (the UI dropped its
+    /// cached rows: new font, theme or pixel density).
+    pub fn redraw(&mut self) {
+        self.force_full = true;
+    }
+
     /// Back to the live screen (what terminals do on input).
     pub fn scroll_to_bottom(&mut self) {
         if self.display_offset() == 0 {
