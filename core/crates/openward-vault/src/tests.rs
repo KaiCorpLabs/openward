@@ -31,7 +31,9 @@ fn items_persist_across_opens() {
     let (vault_id, id, before) = {
         let mut v = Vault::open(&path).unwrap();
         let g = v.create(group("prod", None, Settings::default())).unwrap();
-        let bastion = v.create(host("bastion", Some(g), Settings::default())).unwrap();
+        let bastion = v
+            .create(host("bastion", Some(g), Settings::default()))
+            .unwrap();
         let through_bastion = Settings {
             route: Some(Route::Jump(vec![Jump::Host(bastion)])),
             ..Settings::default()
