@@ -11,7 +11,7 @@ OpenWard es un cliente SSH open-core para Windows, macOS, Linux, iOS y Android. 
 | Área | Decisión | ADR |
 |---|---|---|
 | Reparto | **Núcleo Rust** compartido por todos los clientes, **UI Flutter** para las 5 plataformas y **servidor Go**. Es el mismo patrón que Arveil. | [ADR-001](adr/ADR-001-rust-core-flutter-go.md) |
-| Terminal | Estado VT nativo y render propio en Flutter (atlas de glifos). **Recomendación provisional: `libghostty-vt`**, el único que pasa la puerta de memoria (S1.3). `xterm.dart` está descartado: sin versión desde febrero de 2024. | [ADR-002](adr/ADR-002-motor-de-terminal.md) |
+| Terminal | Estado VT nativo y render propio en Flutter (atlas de glifos). **`libghostty-vt`**, fijado a un commit: el único que pasa la puerta de memoria y el que trae los codificadores de entrada ([informe S1](spikes/S1-terminal-resultados.md)). `xterm.dart` está descartado: sin versión desde febrero de 2024. | [ADR-002](adr/ADR-002-motor-de-terminal.md) |
 | SSH | `russh` + `russh-sftp`, con un trait `Signer` para claves en software, agente, Secure Enclave, Keystore, TPM y FIDO2 | [ADR-003](adr/ADR-003-ssh-russh-y-firmantes.md) |
 | Vault | Cifrado por ítem (XChaCha20-Poly1305) sobre SQLite. Jerarquía de claves con HPKE y kit de recuperación obligatorio. | [ADR-004](adr/ADR-004-vault-y-jerarquia-de-claves.md) |
 | Sync | Registros inmutables por dispositivo, firmados y cifrados. Sirven para cualquier backend "tonto" (carpeta, S3, WebDAV, Git) y para el relay. | [ADR-005](adr/ADR-005-sync-por-registros-de-dispositivo.md) |
@@ -43,7 +43,7 @@ OpenWard es un cliente SSH open-core para Windows, macOS, Linux, iOS y Android. 
 | Arranque en frío (escritorio) | < 1,5 s hasta la lista de hosts |
 | Latencia de tecla añadida (sin contar el RTT) | < 5 ms desde la pulsación hasta el envío; eco pintado en < 1 refresco + 4 ms en p95 ([S1](spikes/S1-terminal.md)) |
 | Throughput | `cat` de 100 MB sin bloquear la UI (el render agrupa cuadros) |
-| Memoria | < 300 MB con 10 pestañas × 10.000 líneas × 120 columnas de scrollback. Un valor por defecto de 40.000 líneas exige scrollback compacto ([S1](spikes/S1-terminal.md)) |
+| Memoria | < 300 MB con 10 pestañas × 10.000 líneas × 120 columnas de scrollback (S1: 98–104 MB con `libghostty-vt`). 40.000 líneas por defecto son viables gracias a la compresión del historial en reposo ([S1](spikes/S1-terminal-resultados.md)) |
 | Desbloqueo | < 300 ms con 10.000 ítems |
 | Propagación de sync (relay) | < 2 s p95 |
 | Privacidad | Sin cuenta obligatoria y sin telemetría por defecto. El servidor nunca ve hosts, usuarios, claves ni comandos. |
@@ -122,8 +122,8 @@ flowchart TB
 | `openward-sync` | Motor de sync (registros por dispositivo, merge y compactación) y backends | `object_store` (S3/R2/local), WebDAV, `gix` (Git), cliente del relay |
 | `openward-ssh` | Sesiones, autenticación, trait `Signer`, cadenas de saltos, proxy, ProxyCommand, servidor SOCKS5 propio para forwarding dinámico, known hosts, keepalive, reconexión | `russh`, `ssh-key`, `tokio-socks` |
 | `openward-sftp` | Navegador remoto, transferencias con cola, reanudación y permisos | `russh-sftp` |
-| `openward-term` | Adaptador `TermEngine`: estado VT, scrollback, búsqueda, *damage* por filas, grabación asciicast | `alacritty_terminal` o `libghostty-vt` (spike S1) |
-| `openward-pty` | Terminal local en escritorio | El módulo `tty` de `alacritty_terminal` si gana S1; si no, `portable-pty` fijado o en fork (sin versión desde febrero de 2025) |
+| `openward-term` | Adaptador `TermEngine`: estado VT, scrollback, búsqueda, *damage* por filas, grabación asciicast, codificación de entrada | `libghostty-vt` (commit fijado, Zig 0.16, bindings con `bindgen`) |
+| `openward-pty` | Terminal local en escritorio | `portable-pty` 0.9.0 fijado (probado en S1.5; sin versión desde febrero de 2025, fork si hace falta) |
 | `openward-serial` | Puertos serie en escritorio (Android con USB en una fase posterior; iOS no tiene) | `serialport` (MPL-2.0; busca mantenedores) |
 | `openward-mosh` | Cliente Mosh clean-room (fase 4) | — |
 | `openward-import` | Importar ssh_config, Termius, PuTTY (registro/.reg), MobaXterm (.mxtsessions), SecureCRT (XML) y CSV | — |
@@ -147,12 +147,21 @@ Reglas heredadas de Arveil: `unsafe_code = "forbid"` salvo en `openward-ffi` y e
 
 El terminal es la pieza que más se nota. Los clientes de escritorio basados en Electron suelen usar xterm.js. Proponemos (detalles en [ADR-002](adr/ADR-002-motor-de-terminal.md)):
 
-- **Estado y parser nativos** detrás de un adaptador `TermEngine`: grid, scrollback, modos, alternate screen, OSC 8, OSC 52, sixel y kitty graphics en fases posteriores, y *damage tracking*. Así el mismo estado alimenta la UI, la grabación, la búsqueda y la CLI. Hay dos candidatos:
-  - `alacritty_terminal`: Apache-2.0, embebido por decenas de crates y por Zed;
-  - `libghostty-vt`: MIT, más completo, pero con API inestable y build con Zig 0.16.
-- **Render en Flutter**: un `CustomPainter` con caché de glifos por estilo y celdas alineadas a la rejilla. Las ligaduras son opcionales.
-- **Entrada:** IME/composición (CJK), barra de teclas en móvil (Esc, Ctrl, Alt, Tab, flechas, `|`, `~`), gestos de scroll y selección, y copiar/pegar con confirmación al pegar varias líneas.
-- **Puerta del spike (fase 0):** se comparan los dos motores en throughput, latencia, `vttest`, tmux/vim/htop, IME y memoria en las 5 plataformas. **`xterm.dart` no es plan B** (sin versión desde febrero de 2024 y con issues de IME y rendimiento abiertos); solo sirve como referencia de código para el render.
+- **Estado y parser nativos: `libghostty-vt`** (MIT), detrás de un adaptador `TermEngine`. Gestiona grid, scrollback comprimible, modos, alternate screen, grafemas, OSC 8 y OSC 52; sixel y kitty graphics llegarán en fases posteriores. También hace el *damage tracking*. Así el mismo estado alimenta la UI, la grabación, la búsqueda y la CLI. Su API aún cambia: se fija un commit, se compila con Zig 0.16 y se actualiza a propósito, pasando las pruebas de conformidad.
+- **Render en Flutter:**
+  - un `CustomPainter` con un `Picture` en caché por fila y un atlas de glifos;
+  - celdas ajustadas a píxeles físicos;
+  - cajas, bloques y Powerline dibujados como geometría;
+  - el frame se codifica dentro del tick de vsync.
+  
+  Las ligaduras son opcionales.
+- **Entrada:**
+  - teclado, ratón y pegado con los codificadores de Ghostty (xterm y protocolo kitty);
+  - IME/composición (CJK) en el cursor con un `TextInputClient` propio;
+  - barra de teclas en móvil (Esc, Ctrl, Alt, Tab, flechas, `|`, `~`);
+  - gestos de scroll y selección;
+  - copiar y pegar, con confirmación al pegar varias líneas.
+- **Spike S1 (fase 0):** comparó `alacritty_terminal` y `libghostty-vt` en throughput, latencia, `vttest`, apps reales, IME y memoria. Ganó Ghostty ([informe](spikes/S1-terminal-resultados.md)). Quedan como condiciones los dispositivos móviles, Windows, Linux y la accesibilidad. **`xterm.dart` no es plan B** (sin versión desde febrero de 2024 y con issues de IME y rendimiento abiertos); solo sirve como referencia de código para el render.
 
 ### 3.5 SSH
 
@@ -462,9 +471,9 @@ Se reutilizan los documentos de Arveil `CLIENT_RELEASES.md`, `CLIENT_UPDATES.md`
 
 | Riesgo | Mitigación |
 |---|---|
-| Calidad del terminal en Flutter (IME, rendimiento, accesibilidad) | Spike con dos motores nativos; en el peor caso, vistas nativas por plataforma solo para el terminal. Ya no hay un plan B en Dart puro mantenido. |
+| Calidad del terminal en Flutter (IME, rendimiento, accesibilidad) | S1 pasó en macOS (60 fps, eco p95 16,5 ms); faltan los dispositivos móviles y la accesibilidad. En el peor caso, vistas nativas por plataforma solo para el terminal. Ya no hay un plan B en Dart puro mantenido. |
 | Huecos de `russh` (firma `sk-*`, móvil sin CI, `ssh-key` en RC) | CTAP2 propio; nuestro CI en iOS y Android; contribuir upstream; fork temporal si hace falta |
-| Dependencias con poco mantenimiento (`portable-pty`, `serialport`) | Fijar versiones, usar alternativas (`tty` de alacritty), fork si hace falta |
+| Dependencias con poco mantenimiento (`portable-pty`, `serialport`) | Fijar versiones; fork si hace falta |
 | Experiencia de distribución de claves en equipos sin servidor de confianza | Atestación SSO opcional; huellas visibles; documentar el modelo de confianza |
 | Complejidad del sync por registros | Pruebas de propiedades desde la fase 0; formato en `spec/` con versión |
 | Límites de segundo plano en iOS | tmux y reenganche primero; Mosh después |
@@ -494,8 +503,8 @@ Comprobado el 2026-10-08 en crates.io, pub.dev, go.dev, el canal estable de Rust
 | `russh` | 0.64.1 (2026-10-05) | Apache-2.0 | Muy activo; ML-KEM híbrido por defecto; sin CI móvil |
 | `russh-sftp` | 3.0.1 (2026-09-28) | Apache-2.0 | Activo |
 | `ssh-key` | 0.7.0-rc.11 (fijada por `russh`); estable 0.6.7 | Apache/MIT | Verifica `sk-*` pero no firma |
-| `alacritty_terminal` | 0.26.0 (2026-04-06) | Apache-2.0 | Embebible, sin promesa de API estable |
-| `libghostty-vt` | 0.1.0 dentro de Ghostty 1.3.x | MIT | API C "work-in-progress"; necesita Zig 0.16 |
+| `alacritty_terminal` | 0.26.0 (2026-04-06) | Apache-2.0 | **Descartado** como motor (S1); solo referencia de pruebas |
+| `libghostty-vt` | Commit `05dcf887` de Ghostty (main, 2026-10-12) | MIT | **Elegido** (ADR-002). API C "work-in-progress"; Zig 0.16.0 |
 | `xterm` (Dart) | 4.0.0 (2024-02-27) | MIT | **Descartado:** sin versiones desde 2024 |
 | `hpke-rs` | 0.8.0 (2026-10-07) | MPL-2.0 | Dentro de libcrux (verificado formalmente); X-Wing draft-06 |
 | `hpke` (rozbb) | 0.14.1 (2026-09-06) | MIT/Apache | X-Wing draft-10; sin auditar |

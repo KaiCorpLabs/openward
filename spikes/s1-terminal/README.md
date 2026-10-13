@@ -1,18 +1,19 @@
 # S1 · Motor de terminal
 
-Plan completo, hipótesis, puerta y resultados preliminares: [docs/spikes/S1-terminal.md](../../docs/spikes/S1-terminal.md).
+Plan, hipótesis, puerta y datos: [docs/spikes/S1-terminal.md](../../docs/spikes/S1-terminal.md). Resultados y decisión (gana `libghostty-vt`): [S1-terminal-resultados.md](../../docs/spikes/S1-terminal-resultados.md).
 
 | Ruta | Contenido |
 |---|---|
-| `termbench/` | CLI que mide los motores detrás de `TermEngine`: `gen`, `run`, `replay`, `echo`, `mem` |
+| `termbench/` | CLI que mide y compara los motores detrás de `TermEngine`: `gen`, `run`, `replay`, `echo`, `mem`, `conform`, `reports` |
 | `corpus/synthetic/` | Corpus generado con `termbench gen` (no se commitea) |
 | `corpus/` | `record.sh` graba el corpus real en un contenedor sin red (`make corpus`); `check-casts.sh` busca fugas de datos del host |
 | `corpus/casts/` | Grabaciones pequeñas (< 5 MB), commiteadas |
 | `corpus/casts-big/` | Grabaciones grandes, regeneradas, nunca commiteadas |
-| `ghostty-engine/` | Motor `libghostty-vt` (candidato B) |
-| `results/` | Resultados por plataforma en JSON lines (`<plataforma>.jsonl`) |
+| `corpus/conformance/` | Referencias de tmux para vttest, anchos Unicode y apps reales (`make conformance-record`; se comparan con `make conformance`) |
+| `ghostty-engine/` | Motor `libghostty-vt`, el elegido en el ADR-002 (pasará a `core/`) |
+| `results/` | Resultados en JSON lines por plataforma y paso; `results/conformance/` tiene los informes de corrección |
 | `s1-corpus/` | Cargas sintéticas deterministas, compartidas por `termbench` y el harness |
-| `render_harness/` | App Flutter + `flutter_rust_bridge` que mide el render (S1.4). `fvm flutter build macos --release --dart-define=S1_AUTORUN=fullscreen:0:256` y ejecutar el binario: imprime una línea `S1RESULT {json}` por prueba |
+| `render_harness/` | App Flutter + `flutter_rust_bridge`: banco de render (S1.4, `S1_AUTORUN`, `S1_ENGINE`), shell y registro de teclas (S1.5) y capturas comparables (S1.6). Ver su README |
 
 ```bash
 cd termbench && cargo build --release

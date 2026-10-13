@@ -1,6 +1,6 @@
 # Spike S1 — Motor de terminal
 
-- **Estado:** en preparación. S1.0 está hecho: interfaz común, formato de frames, backend `alacritty_terminal` y `termbench`.
+- **Estado:** cerrado en macOS (2026-10-13). Resultados y decisión en [S1-terminal-resultados.md](S1-terminal-resultados.md); quedan las pruebas en dispositivos (S1.2) como condición del ADR-002.
 - **Fecha:** 2026-10-08.
 - **Decide:** [ADR-002](../adr/ADR-002-motor-de-terminal.md).
 - **Duración estimada:** 15–20 días de trabajo (dentro de las 4–6 semanas de la fase 0).
@@ -42,7 +42,7 @@ flowchart LR
 
 - **`core/crates/openward-term`**: el trait `TermEngine`, el formato de frames v1 (documentado en `frame.rs`, con decodificador de referencia) y el backend `alacritty` con pruebas. **Hecho.**
 - **`spikes/s1-terminal/termbench`**: CLI que mide la parte del núcleo. **Hecho:** `gen`, `run`, `replay` (asciicast v2/v3), `echo` y `mem`, con salida en texto o JSON.
-- **`spikes/s1-terminal/render_harness`**: app Flutter que recibe frames por `flutter_rust_bridge`, los decodifica en Dart y los pinta. **Pendiente** (S1.4).
+- **`spikes/s1-terminal/render_harness`**: app Flutter que recibe frames por `flutter_rust_bridge`, los decodifica en Dart y los pinta. También tiene shell interactiva y registro de teclas (S1.5). **Hecho.**
 
 ## 5. Corpus
 
@@ -95,13 +95,13 @@ Gana el motor que pasa la puerta. Si pasan los dos, se puntúa:
 | S1.1 | Grabar el corpus real en un contenedor y añadir el script de regeneración | 1 | **Hecho** (§10.5) |
 | S1.2 | `termbench` con alacritty en las 5 plataformas; resultados en `spikes/s1-terminal/results/<plataforma>.jsonl` | 1–2 | Pendiente |
 | S1.3 | Backend `libghostty-vt`: build con Zig 0.16.0 al commit fijado (`ghostty-engine/GHOSTTY_COMMIT`), bindings generados con `bindgen` en un crate aislado del spike, `TermEngine` y medición contra alacritty | 3–4 | **Hecho** en macOS; enlaza para Android e iOS (§10.4) |
-| S1.4 | Harness de render: app Flutter + `flutter_rust_bridge` 2.13.0, decodificador Dart del frame v1 con pruebas cruzadas contra frames de ejemplo generados en Rust, y `CustomPainter` con un `Picture` en caché por fila (solo se regraban las filas que cambian) | 3–4 | **En curso:** v1 (async) y v2 (sync) medidos en macOS (§10.2) |
+| S1.4 | Harness de render: app Flutter + `flutter_rust_bridge` 2.13.0, decodificador Dart del frame v1 con pruebas cruzadas contra frames de ejemplo generados en Rust, y `CustomPainter` con un `Picture` en caché por fila (solo se regraban las filas que cambian) | 3–4 | **Hecho** en macOS con los dos motores (§10.2 y §10.8) |
 | S1.4b | Carga de tecleo (bytes sueltos a intervalos aleatorios) para medir el eco | 0,5 | **Hecho** en macOS: pasa la puerta (§10.2) |
 | S1.4c | Render con atlas de glifos (`drawRawAtlas`), con párrafo de respaldo para emoji y clústeres raros; comparar el coste de grabación con v2 | 1–2 | **Hecho** en macOS: 2–3× más barato (§10.3) |
 | S1.5 | Entrada: codificación de teclas (xterm y protocolo kitty), ratón (SGR 1006), bracketed paste; IME con `TextInputClient` y región de composición en el cursor; barra de teclas en móvil | 2–3 | **Hecho** en macOS con pruebas automáticas; falta la lista manual de IME y los dispositivos (§10.6) |
 | S1.6 | Corrección: vttest, apps reales y corpus unicode en ambos motores; capturas comparadas | 1–2 | **Hecho** en macOS (§10.7) |
-| S1.7 | Si se confirma H2: prototipo de scrollback compacto (texto UTF-8 con tramos de estilo para las líneas que salen de la pantalla) y medición | 2 | Condicional |
-| S1.8 | Informe `S1-terminal-resultados.md` y ADR-002 aceptado | 1 | Pendiente |
+| S1.7 | Si se confirma H2: prototipo de scrollback compacto (texto UTF-8 con tramos de estilo para las líneas que salen de la pantalla) y medición | 2 | **Descartada:** Ghostty pasa la puerta de memoria y comprime |
+| S1.8 | Informe `S1-terminal-resultados.md` y ADR-002 aceptado | 1 | **Hecho** ([resultados](S1-terminal-resultados.md)) |
 
 **Requisitos previos:** Rust 1.99.0 (fijado en `rust-toolchain.toml`), Flutter 3.47.6 (fijado en `.fvmrc`; se usa con `fvm flutter …`, sin tocar el Flutter global), Zig 0.16.0 (`zig@0.16` de Homebrew), `flutter_rust_bridge_codegen` 2.13.0, Android NDK y Xcode 27.
 
@@ -251,7 +251,7 @@ Ghostty ocupa unas 3 veces menos. Además, `ghostty_terminal_compress` (pensado 
 | Rendimiento | 15 % | 8 | 8 | Los dos sobran; cada uno gana en cargas distintas |
 | **Total ponderado** | | **6,1** | **7,4** | |
 
-**Recomendación provisional: `libghostty-vt`.** Es el único motor que pasa la puerta de memoria y el que menos trabajo propio deja (codificadores de entrada para S1.5, grafemas, compresión). El coste es la API inestable y la build con Zig, que se mitigan con el commit fijado, el adaptador `TermEngine` y bindings regenerables. Antes de aceptar el ADR-002 (S1.8) faltan:
+**Recomendación provisional: `libghostty-vt`** (confirmada en S1.8, ver [resultados](S1-terminal-resultados.md)). Es el único motor que pasa la puerta de memoria y el que menos trabajo propio deja (codificadores de entrada para S1.5, grafemas, compresión). El coste es la API inestable y la build con Zig, que se mitigan con el commit fijado, el adaptador `TermEngine` y bindings regenerables. Antes de aceptar el ADR-002 (S1.8) faltan:
 - ejecutar en Android e iOS reales (S1.2);
 - probar el IME con métodos de entrada reales y en móvil (S1.5 está hecho en macOS con pruebas automáticas, §10.6);
 - probar la corrección con apps reales (S1.6): **hecho** (§10.7). Ghostty acierta en más funciones y tiene tres fallos propios que reportar upstream;
@@ -482,6 +482,26 @@ En resumen: Ghostty acierta en casi todo lo de VT220 en adelante, que alacritty 
   - el árabe se pinta letra a letra, sin dar forma ni bidireccionalidad;
   - el parpadeo no se dibuja;
   - el subrayado ondulado, punteado o doble se pinta recto.
+
+### 10.8 Render con `libghostty-vt` (S1.8)
+
+2026-10-13 · mismas condiciones que §10.3 (atlas, vía síncrona) con `S1_ENGINE=ghostty`. Datos en `results/macos-render-v5-ghostty.jsonl`.
+
+Ghostty procesa tan rápido que 64 MiB terminaban dentro del medio segundo de calentamiento y no dejaban muestras. Por eso las cargas masivas usan 2 GiB.
+
+| Carga | Ritmo con la UI: alacritty → Ghostty | fps | Construcción p95 | Raster p95 | Codificación p95 | Congelados |
+|---|---|---|---|---|---|---|
+| fullscreen | 38 → **339 MiB/s** | 59,7 | 1,54 ms | 0,27 ms | 142 µs | 0 |
+| sgr-log | 46 → **257 MiB/s** | 60,1 | 2,43 ms | 0,33 ms | 165 µs | 0 |
+| unicode | 90 → **154 MiB/s** | 60,0 | 3,34 ms | 0,37 ms | 171 µs | 0 |
+| scroll-region | 56 → **315 MiB/s** | 60,0 | 1,59 ms | 0,26 ms | 131 µs | 0 |
+| ascii | 91 → **495 MiB/s** | 60,2 | 2,63 ms | 0,35 ms | 153 µs | 0 |
+| typing (eco) | — | 60,0 | 0,57 ms | 1,53 ms | 24 µs | 0 |
+
+- **La UI se mantiene a 60 fps** mientras Ghostty consume entre 4 y 8 veces más datos por segundo que alacritty.
+- **Construcción, raster y grabación de filas son iguales** con los dos motores: dependen del frame, no del motor.
+- **Codificar el frame cuesta más con Ghostty** (130–170 µs frente a 50–80) por las llamadas FFI por celda, pero es menos del 1 % del refresco.
+- **Eco:** p95 de **16,5 ms** (máximo 25,4 ms) frente a la puerta de 20,7 ms.
 
 ## 11. Cómo reproducir
 

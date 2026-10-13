@@ -1,6 +1,6 @@
 # ghostty-engine (spike S1.3)
 
-`libghostty-vt` detrás de `openward_term::TermEngine`. Es el candidato B del [spike S1](../../../docs/spikes/S1-terminal.md). Es código de spike: solo pasará a `core/` si el ADR-002 acepta este motor.
+`libghostty-vt` detrás de `openward_term::TermEngine`. Es el motor elegido en el [ADR-002](../../../docs/adr/ADR-002-motor-de-terminal.md), tras el [spike S1](../../../docs/spikes/S1-terminal-resultados.md). Sigue siendo código de spike hasta que pase a `core/`.
 
 ## Compilar
 
