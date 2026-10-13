@@ -1,0 +1,504 @@
+//! Connections through `App` against the S2 test servers
+//! (`spikes/s2-ssh/servers/up.sh`). Skipped when they are not running.
+
+use std::path::PathBuf;
+use std::sync::mpsc::{Receiver, Sender, channel};
+use std::sync::{Arc, Mutex, OnceLock, Weak};
+use std::time::{Duration, Instant};
+
+use openward_app::events::{Connected, Trust};
+use openward_app::vault::proto::{Agent, Data, Host, HostKeyPolicy, ItemId, Jump, Route, Settings};
+use openward_app::{Answer, App, Event, EventSink, Failure, Local, Prompt, Terminal};
+use zeroize::Zeroizing;
+
+const BASTION: u16 = 22100;
+
+fn fixtures() -> Option<PathBuf> {
+    let dir = std::env::var_os("S2_FIXTURES")
+        .map(PathBuf::from)
+        .or_else(|| {
+            let home = PathBuf::from(std::env::var_os("HOME")?);
+            Some(if cfg!(target_os = "macos") {
+                home.join("Library/Caches/openward/s2-fixtures")
+            } else {
+                home.join(".cache/openward/s2-fixtures")
+            })
+        })?;
+    let up = std::net::TcpStream::connect(("127.0.0.1", BASTION)).is_ok();
+    (up && dir.join("id_ed25519").is_file()).then_some(dir)
+}
+
+macro_rules! servers {
+    () => {
+        match fixtures() {
+            Some(dir) => dir,
+            None => {
+                eprintln!("S2 servers not running: skipped");
+                return;
+            }
+        }
+    };
+}
+
+/// Records events and answers prompts with `reply`.
+struct Ui {
+    app: OnceLock<Weak<App>>,
+    tx: Mutex<Sender<Event>>,
+    reply: Box<dyn Fn(&Prompt) -> Answer + Send + Sync>,
+}
+
+impl EventSink for Ui {
+    fn send(&self, event: Event) {
+        if let Event::Prompt { id, prompt } = &event
+            && let Some(app) = self.app.get().and_then(Weak::upgrade)
+        {
+            app.answer(*id, (self.reply)(prompt));
+        }
+        let _ = self.tx.lock().unwrap().send(event);
+    }
+}
+
+struct Fixture {
+    app: Arc<App>,
+    fx: PathBuf,
+    _dir: tempfile::TempDir,
+}
+
+fn text(s: &str) -> Answer {
+    Answer::Text(vec![Zeroizing::new(s.to_owned())])
+}
+
+impl Fixture {
+    fn new(fx: PathBuf) -> Self {
+        let dir = tempfile::tempdir().unwrap();
+        // A home of its own: the tester's keys, agent and known_hosts stay out.
+        let local = Local {
+            home: dir.path().into(),
+            user: "nobody".into(),
+            ssh_dir: dir.path().join(".ssh"),
+            agent: None,
+        };
+        let app = Arc::new(App::open_as(&dir.path().join("data"), local).unwrap());
+        Self { app, fx, _dir: dir }
+    }
+
+    fn host(&self, label: &str, address: &str, port: u16, settings: Settings) -> ItemId {
+        let settings = Settings {
+            port: Some(port),
+            agent: Some(Agent::Off),
+            ..settings
+        };
+        self.app
+            .vault()
+            .create(Data::Host(Host {
+                label: label.into(),
+                address: address.into(),
+                settings,
+                ..Host::default()
+            }))
+            .unwrap()
+    }
+
+    fn key(&self, name: &str) -> Option<Vec<String>> {
+        Some(vec![self.fx.join(name).display().to_string()])
+    }
+
+    fn read(&self, name: &str) -> String {
+        std::fs::read_to_string(self.fx.join(name))
+            .unwrap()
+            .trim()
+            .to_owned()
+    }
+
+    fn password(&self, user: &str) -> String {
+        self.read("passwords")
+            .lines()
+            .find_map(|l| l.strip_prefix(&format!("{user}=")).map(str::to_owned))
+            .unwrap()
+    }
+
+    fn connect(
+        &self,
+        host: ItemId,
+        reply: impl Fn(&Prompt) -> Answer + Send + Sync + 'static,
+    ) -> (Arc<Terminal>, Receiver<Event>) {
+        let (tx, rx) = channel();
+        let ui = Arc::new(Ui {
+            app: OnceLock::new(),
+            tx: Mutex::new(tx),
+            reply: Box::new(reply),
+        });
+        let _ = ui.app.set(Arc::downgrade(&self.app));
+        let term = self.app.terminal(80, 24, 1000);
+        self.app.connect(&term, host, ui).unwrap();
+        (term, rx)
+    }
+}
+
+/// Waits for the outcome: connected, or closed with a failure.
+fn outcome(rx: &Receiver<Event>) -> (Result<Connected, Option<Failure>>, Vec<Prompt>) {
+    let mut prompts = Vec::new();
+    loop {
+        match rx
+            .recv_timeout(Duration::from_secs(30))
+            .expect("no outcome in 30 s")
+        {
+            Event::Connected(c) => return (Ok(c), prompts),
+            Event::Closed { failure, .. } => return (Err(failure), prompts),
+            Event::Prompt { prompt, .. } => prompts.push(prompt),
+            Event::Stage { .. } | Event::Started { .. } => {}
+        }
+    }
+}
+
+fn wait_for(term: &Terminal, needle: &str) {
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while !term.screen_text().contains(needle) {
+        assert!(
+            Instant::now() < deadline,
+            "{needle:?} not on screen:\n{}",
+            term.screen_text()
+        );
+        std::thread::sleep(Duration::from_millis(20));
+    }
+}
+
+#[test]
+fn a_key_learns_the_host_and_runs_a_shell() {
+    let f = Fixture::new(servers!());
+    let host = f.host(
+        "bastion",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: f.key("id_ed25519"),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            env: Some([("LC_OPENWARD".to_owned(), "a2".to_owned())].into()),
+            ..Settings::default()
+        },
+    );
+    let (term, rx) = f.connect(host, |_| Answer::Cancel);
+    let (connected, prompts) = outcome(&rx);
+    let connected = connected.unwrap();
+    assert!(prompts.is_empty());
+    assert_eq!(connected.trust, Trust::New);
+    assert!(
+        connected.post_quantum,
+        "OpenSSH 10 negotiates ML-KEM: {}",
+        connected.kex
+    );
+    assert!(
+        f.app
+            .vault()
+            .known_hosts_text()
+            .contains("[127.0.0.1]:22100 ssh-")
+    );
+
+    term.resize(100, 30);
+    term.text("stty size; echo app-$((6*7))\n");
+    wait_for(&term, "app-42");
+    wait_for(&term, "30 100");
+    term.text("exit 5\n");
+    let closed = loop {
+        if let Event::Closed { exit_code, failure } =
+            rx.recv_timeout(Duration::from_secs(10)).unwrap()
+        {
+            break (exit_code, failure);
+        }
+    };
+    assert_eq!(closed, (Some(5), None));
+
+    // Known from now on.
+    let (_term, rx) = f.connect(host, |_| Answer::Cancel);
+    assert_eq!(outcome(&rx).0.unwrap().trust, Trust::Known);
+}
+
+/// Letting go of a connected terminal hangs up: the connection task holds
+/// the event sink, so the sink is released when the task ends.
+#[test]
+fn dropping_the_terminal_hangs_up() {
+    let f = Fixture::new(servers!());
+    let host = f.host(
+        "bastion",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: f.key("id_ed25519"),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    let (tx, rx) = channel();
+    let ui = Arc::new(Ui {
+        app: OnceLock::new(),
+        tx: Mutex::new(tx),
+        reply: Box::new(|_| Answer::Cancel),
+    });
+    let term = f.app.terminal(80, 24, 1000);
+    f.app.connect(&term, host, ui.clone()).unwrap();
+    outcome(&rx).0.unwrap();
+    assert!(Arc::strong_count(&ui) > 1);
+    drop(term);
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while Arc::strong_count(&ui) > 1 {
+        assert!(
+            Instant::now() < deadline,
+            "the connection outlived its terminal"
+        );
+        std::thread::sleep(Duration::from_millis(20));
+    }
+}
+
+#[test]
+fn an_unknown_host_is_asked_about() {
+    let f = Fixture::new(servers!());
+    let host = f.host(
+        "ninetwo",
+        "127.0.0.1",
+        22092,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: f.key("id_ed25519"),
+            ..Settings::default()
+        },
+    );
+    let (_t, rx) = f.connect(host, |_| Answer::Cancel);
+    let (result, prompts) = outcome(&rx);
+    assert!(matches!(result, Err(Some(Failure::HostKeyRejected { .. }))));
+    let [
+        Prompt::HostKey {
+            fingerprint, port, ..
+        },
+    ] = prompts.as_slice()
+    else {
+        panic!("{prompts:?}")
+    };
+    assert!(fingerprint.starts_with("SHA256:"));
+    assert_eq!(*port, 22092);
+    assert!(f.app.vault().known_hosts().is_empty());
+
+    let (_t, rx) = f.connect(host, |p| match p {
+        Prompt::HostKey { .. } => Answer::Accept,
+        _ => Answer::Cancel,
+    });
+    assert_eq!(outcome(&rx).0.unwrap().trust, Trust::New);
+    assert_eq!(f.app.vault().known_hosts().len(), 1);
+}
+
+#[test]
+fn a_changed_host_key_is_refused_until_trusted() {
+    let f = Fixture::new(servers!());
+    let fake = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILg+ccEU+buKk8f5ORMPyzCAzWM04Omv+MOaI8CvGd7f";
+    f.app.trust_host_key("127.0.0.1", 22089, fake).unwrap();
+    let host = f.host(
+        "eightnine",
+        "127.0.0.1",
+        22089,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: f.key("id_ed25519"),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    let (_t, rx) = f.connect(host, |_| Answer::Accept);
+    let (result, prompts) = outcome(&rx);
+    assert!(prompts.is_empty(), "a changed key is never asked about");
+    let Err(Some(Failure::HostKeyChanged {
+        key, fingerprint, ..
+    })) = result
+    else {
+        panic!("{result:?}")
+    };
+    assert!(fingerprint.starts_with("SHA256:"));
+
+    f.app.trust_host_key("127.0.0.1", 22089, &key).unwrap();
+    let (_t, rx) = f.connect(host, |_| Answer::Cancel);
+    assert_eq!(outcome(&rx).0.unwrap().trust, Trust::Known);
+}
+
+#[test]
+fn passphrase_and_password_are_asked_for() {
+    let f = Fixture::new(servers!());
+    let with_passphrase = f.host(
+        "pass",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: f.key("id_ed25519_pass"),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    let (_t, rx) = f.connect(with_passphrase, |p| match p {
+        Prompt::Passphrase { retry: false, .. } => text("wrong"),
+        Prompt::Passphrase { retry: true, .. } => text("s2-passphrase"),
+        _ => Answer::Cancel,
+    });
+    let (result, prompts) = outcome(&rx);
+    result.unwrap();
+    assert_eq!(prompts.len(), 2, "{prompts:?}");
+
+    let password = f.password("demo");
+    let with_password = f.host(
+        "password",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: Some(vec![]),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    // With PAM the password comes as keyboard-interactive, which OpenSSH
+    // (and OpenWard) try before the password method.
+    let (_t, rx) = f.connect(with_password, move |p| match p {
+        Prompt::Password { retry, .. } => text(if *retry { &password } else { "nope" }),
+        Prompt::KeyboardInteractive {
+            retry, questions, ..
+        } if questions.len() == 1 => text(if *retry { &password } else { "nope" }),
+        _ => Answer::Cancel,
+    });
+    let (result, prompts) = outcome(&rx);
+    result.unwrap();
+    let retries: Vec<bool> = prompts
+        .iter()
+        .map(|p| match p {
+            Prompt::Password { retry, .. } | Prompt::KeyboardInteractive { retry, .. } => *retry,
+            other => panic!("{other:?}"),
+        })
+        .collect();
+    assert_eq!(retries, [false, true]);
+
+    // Cancelling gives up.
+    let (_t, rx) = f.connect(with_password, |_| Answer::Cancel);
+    assert_eq!(outcome(&rx).0.unwrap_err(), Some(Failure::Cancelled));
+}
+
+/// Dropbear has no PAM: the plain password method.
+#[test]
+fn dropbear_asks_for_the_password_itself() {
+    let f = Fixture::new(servers!());
+    let password = f.password("demo");
+    let host = f.host(
+        "dropbear",
+        "127.0.0.1",
+        22200,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: Some(vec![]),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    let (_t, rx) = f.connect(host, move |p| match p {
+        Prompt::Password { .. } => text(&password),
+        _ => Answer::Cancel,
+    });
+    let (result, prompts) = outcome(&rx);
+    result.unwrap();
+    assert!(
+        matches!(prompts.as_slice(), [Prompt::Password { retry: false, .. }]),
+        "{prompts:?}"
+    );
+}
+
+#[test]
+fn two_factor_through_keyboard_interactive() {
+    let f = Fixture::new(servers!());
+    let (password, secret) = (f.password("otp"), f.read("totp_secret"));
+    let host = f.host(
+        "otp",
+        "127.0.0.1",
+        22089,
+        Settings {
+            user: Some("otp".into()),
+            identity_files: Some(vec![]),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    let (_t, rx) = f.connect(host, move |p| {
+        let Prompt::KeyboardInteractive { questions, .. } = p else {
+            return Answer::Cancel;
+        };
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        Answer::Text(
+            questions
+                .iter()
+                .map(|q| {
+                    Zeroizing::new(if q.text.to_lowercase().contains("password") {
+                        password.clone()
+                    } else {
+                        openward_ssh::totp::code(&secret, now).unwrap()
+                    })
+                })
+                .collect(),
+        )
+    });
+    let (result, prompts) = outcome(&rx);
+    result.unwrap();
+    assert!(
+        prompts
+            .iter()
+            .all(|p| matches!(p, Prompt::KeyboardInteractive { .. }))
+    );
+}
+
+#[test]
+fn a_saved_host_as_jump() {
+    let f = Fixture::new(servers!());
+    let common = Settings {
+        user: Some("demo".into()),
+        identity_files: f.key("id_ed25519"),
+        host_key_policy: Some(HostKeyPolicy::AcceptNew),
+        ..Settings::default()
+    };
+    let bastion = f.host("bastion", "127.0.0.1", BASTION, common.clone());
+    let target = f.host(
+        "target1",
+        "target1",
+        22,
+        Settings {
+            route: Some(Route::Jump(vec![Jump::Host(bastion)])),
+            ..common
+        },
+    );
+    let (term, rx) = f.connect(target, |_| Answer::Cancel);
+    let (result, _) = outcome(&rx);
+    assert_eq!(result.unwrap().hops, 2);
+    term.text("hostname\n");
+    wait_for(&term, "target1");
+    assert_eq!(f.app.vault().known_hosts().len(), 2);
+}
+
+#[cfg(unix)]
+#[test]
+fn a_local_shell() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = App::open_as(&dir.path().join("data"), Local::from_env()).unwrap();
+    let (tx, rx) = channel();
+    let ui = Arc::new(Ui {
+        app: OnceLock::new(),
+        tx: Mutex::new(tx),
+        reply: Box::new(|_| Answer::Cancel),
+    });
+    let term = app.terminal(80, 24, 1000);
+    app.open_local(&term, Some("/bin/sh".into()), ui).unwrap();
+    assert!(matches!(rx.recv().unwrap(), Event::Started { program } if program == "/bin/sh"));
+    term.text("echo local-$((40+2)); exit 3\n");
+    wait_for(&term, "local-42");
+    let Event::Closed { exit_code, failure } = rx.recv_timeout(Duration::from_secs(10)).unwrap()
+    else {
+        panic!("expected the shell to end")
+    };
+    assert_eq!((exit_code, failure), (Some(3), None));
+    assert!(term.poll().is_some());
+}

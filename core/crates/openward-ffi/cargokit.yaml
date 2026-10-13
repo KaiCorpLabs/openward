@@ -1,0 +1,8 @@
+# Rust for the Flutter builds (app/rust_builder, cargokit). Keep in sync with
+# core/rust-toolchain.toml; quoted so YAML keeps it a string. Needs the
+# OpenWard cargokit patch (options.dart).
+cargo:
+  debug:
+    toolchain: "1.99.0"
+  release:
+    toolchain: "1.99.0"

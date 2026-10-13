@@ -16,6 +16,7 @@ anyhow = "1"
 hmac = "0.12"
 sha1 = "0.10"
 data-encoding = "2"
+thiserror = "2"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

@@ -1,0 +1,29 @@
+[package]
+name = "openward-app"
+description = "Use cases behind the UI: the vault, connection plans, authentication that asks the user, and terminal sessions"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+openward-ghostty = { path = "../openward-ghostty" }
+openward-import = { path = "../openward-import" }
+openward-pty = { path = "../openward-pty" }
+openward-ssh = { path = "../openward-ssh" }
+openward-term = { path = "../openward-term" }
+openward-vault = { path = "../openward-vault" }
+anyhow = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "io-util", "macros"] }
+zeroize = "1"
+
+[dev-dependencies]
+tempfile = "3"
+# Integration tests answer 2FA prompts with codes.
+openward-ssh = { path = "../openward-ssh" }
+
+[lints]
+workspace = true

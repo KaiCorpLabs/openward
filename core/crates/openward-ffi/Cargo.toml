@@ -1,0 +1,29 @@
+[package]
+name = "openward-ffi"
+description = "The surface Flutter sees: opaque handles and plain views, never a secret (ARCHITECTURE §3.3)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+openward-app = { path = "../openward-app" }
+openward-import = { path = "../openward-import" }
+anyhow = "1"
+# Pinned exactly: the Dart package must be the same version.
+flutter_rust_bridge = "=2.13.0"
+zeroize = "1"
+
+# Not the workspace lints: the generated bindings need `unsafe`. The
+# hand-written API denies it (src/lib.rs).
+[lints.rust]
+unsafe_code = "deny"
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
+
+[lints.clippy]
+all = "warn"

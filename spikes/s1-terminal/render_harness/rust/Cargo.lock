@@ -1417,6 +1417,7 @@ dependencies = [
  "hmac 0.12.1",
  "russh",
  "sha1 0.10.7",
+ "thiserror 2.0.21",
  "tokio",
 ]
 

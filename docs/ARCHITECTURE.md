@@ -141,7 +141,8 @@ Reglas heredadas de Arveil: `unsafe_code = "forbid"` salvo en `openward-ghostty`
 
 - **Nunca cruza a Dart:** claves privadas, passphrases descifradas ni la clave del vault. Dart recibe handles y vistas sin secretos. Los campos de contraseña envían el texto al núcleo y Dart lo descarta enseguida.
 - **Terminal:** un stream por sesión con *damage* binario (filas modificadas codificadas como tramos de estilo) a ≤ 60 Hz, transferido sin copias. La entrada de teclado va como bytes ya codificados por el núcleo (modos de teclado, bracketed paste).
-- **Cancelación y ciclo de vida:** cada operación larga devuelve un `TaskHandle` cancelable. Al bloquear el vault se cierran los firmantes en software y se vacía la caché de claves.
+- **Preguntas a mitad de operación:** cada sesión tiene un stream de eventos (progreso, preguntas con id, conectada, cerrada con un fallo tipado). La UI responde con `answer(id, …)`. Así se piden la confianza en una clave de host nueva, la frase de una clave, la contraseña y el 2FA. Las respuestas con secretos se borran de memoria en cuanto se usan.
+- **Cancelación y ciclo de vida:** cada operación larga devuelve un `TaskHandle` cancelable; en la alfa, cerrar la sesión cancela la conexión en curso. Al bloquear el vault se cierran los firmantes en software y se vacía la caché de claves.
 - **Errores** tipados sin secretos (`AuthFailed{method}`, `HostKeyMismatch{fingerprint_old,new}`…).
 
 ### 3.4 Motor de terminal

@@ -54,6 +54,7 @@ Una app de escritorio que el equipo pueda usar a diario en vez de su cliente SSH
 | Known hosts | Tabla propia en el almacén. `~/.ssh/known_hosts` se lee, pero no se escribe | No tocar los ficheros de OpenSSH del usuario |
 | Motor de terminal | `openward-ghostty`: el adaptador de S1, en un crate propio porque es FFI con `unsafe` | El workspace prohíbe `unsafe`; las excepciones van aisladas y auditadas (§3.2) |
 | UI | Flutter de escritorio en `app/`; estado con Riverpod | Lo que fija la arquitectura (§3.1) |
+| macOS | **Sin App Sandbox** | Un cliente SSH con terminal local lanza shells y ProxyCommand, lee `~/.ssh` y habla con el agente, como iTerm2 o Ghostty. La Mac App Store, que exige sandbox, queda fuera por ahora |
 
 ## Hitos
 
@@ -61,7 +62,7 @@ Una app de escritorio que el equipo pueda usar a diario en vez de su cliente SSH
 |---|---|---|---|
 | A0 | Pasar al núcleo lo probado en los spikes: `openward-term` (sin alacritty), `openward-ghostty`, `openward-ssh` y `openward-pty`. Añadir Zig a la CI | 2 | **Hecho.** CI de Linux en verde, Zig incluido. `cargo-deny` ignora RUSTSEC-2023-0071 (`rsa`, sin corrección publicada), con la justificación en ADR-003 |
 | A1 | Almacén y modelo: `openward-proto` (tipos y CBOR), `openward-vault` (fase 1, sin cifrar) con hosts, grupos, etiquetas, herencia y known hosts. Importador de `~/.ssh/config` (`openward-import`) | 3 | **Hecho** ([detalle](#a1-almacén-modelo-e-importador)) |
-| A2 | `openward-app`, que orquesta las sesiones y resuelve la configuración efectiva, y `openward-ffi`, la superficie para Flutter con handles opacos y sin secretos | 3 | Pendiente |
+| A2 | `openward-app`, que orquesta las sesiones y resuelve la configuración efectiva, y `openward-ffi`, la superficie para Flutter con handles opacos y sin secretos | 3 | **Hecho** ([detalle](#a2-orquestación-y-ffi)) |
 | A3 | App Flutter: ventana, barra lateral de hosts, búsqueda, pestañas y el widget de terminal del banco convertido en componente | 4 | Pendiente |
 | A4 | Conexión: diálogos de autenticación, known hosts (TOFU, cambio), saltos, reconexión e indicador poscuántico | 3 | Pendiente |
 | A5 | Selección y copia, ajustes, atajos y terminal local | 3 | Pendiente |
@@ -108,6 +109,69 @@ Una app de escritorio que el equipo pueda usar a diario en vez de su cliente SSH
 - No escribe nada. `cargo run -p openward-import --example ssh_config` resume qué se importaría (con `-v`, el detalle).
 
 **Pruebas:** 5 en proto, 11 en vault y 13 en el importador, entre ellas una de extremo a extremo: importar, crear en el vault dentro de un grupo y resolver los saltos.
+
+## A2: orquestación y FFI
+
+**`openward-ssh`** se separa en dos pasos:
+- `open`: transporte, kex y clave de host;
+- autenticación paso a paso: `none`, clave, certificado, agente, contraseña y keyboard-interactive por rondas.
+
+Así la app puede pedir lo que falta a mitad de conexión. Las claves de host que `known_hosts` no avala pasan por un *hook* asíncrono. La matriz de S2 sigue en verde (83 ok).
+
+**`openward-app`** es lo que la UI pide al núcleo:
+- **Plan de conexión** (`Plan::for_host`):
+  - parte de la configuración efectiva;
+  - resuelve los saltos: un salto a un host guardado trae su propia cadena y ajustes, y se detectan los bucles;
+  - expande los tokens de OpenSSH (`~`, `%h`, `%p`, `%r`, `%n`, `%d`, `%u`, `${VAR}`);
+  - si no hay `IdentityFile`, usa las claves por defecto;
+  - el ProxyCommand solo vale en el primer salto.
+- **Autenticación** en el orden de OpenSSH:
+  - claves del agente que coinciden con un `IdentityFile`;
+  - el resto del agente (salvo `IdentitiesOnly`);
+  - ficheros de clave, cada uno con su certificado primero si lo tiene;
+  - keyboard-interactive;
+  - contraseña.
+
+  Admite *partial success* (clave + 2FA). La frase de la clave se pide hasta tres veces y, si se cancela, esa clave se salta, como hace `ssh`.
+- **Claves de host** por política:
+  - **preguntar:** evento con la huella `SHA256:`;
+  - **aceptar nuevas;**
+  - **estricta.**
+
+  Una clave cambiada se rechaza siempre: el fallo trae la clave nueva, y solo `trust_host_key`, un gesto explícito, la acepta. Lo aceptado se guarda en el vault; `~/.ssh/known_hosts` se lee, pero no se escribe.
+- **Eventos por sesión:**
+  - progreso por salto;
+  - preguntas con id, que la UI responde con `answer`; los secretos de las respuestas se borran de memoria (`zeroize`);
+  - `Connected` (kex, poscuántico, confianza);
+  - `Started` (programa local en marcha);
+  - `Closed` (código de salida o fallo tipado).
+- **`Terminal`**: motor Ghostty, frames y entrada, como el banco de S1. Recibe la salida de un PTY local o de un canal SSH. Volver a conectar conserva la pantalla.
+- **Importar `~/.ssh/config`** al grupo `~/.ssh/config`. Una segunda importación solo trae alias nuevos y respeta lo editado en OpenWard.
+- El directorio de datos se crea con permisos `0700`.
+
+**`openward-ffi` y `app/`.**
+- API generada con flutter_rust_bridge 2.13:
+  - un `OpenWard` opaco: CRUD de hosts y grupos con revisión, herencia con el origen de cada campo, búsqueda, etiquetas, importación, known hosts y respuestas;
+  - un `TerminalSession` opaco: frames y entrada.
+- `connect` y `openLocal` devuelven en Dart el `Stream` de eventos de la sesión. Los eventos son planos (tipo + parte).
+- Las actualizaciones aplican la vista sobre el ítem guardado, así que no se pierden campos de versiones más nuevas.
+- `app/`: proyecto de escritorio con cargokit (toolchain fijado y nombre de librería corregido) y una pantalla provisional.
+
+**Pruebas:**
+- **Rust:** 7 unitarias y 9 de integración contra los servidores de S2:
+  - TOFU y shell con `stty size`;
+  - pregunta de clave de host;
+  - clave cambiada;
+  - frase de la clave y contraseña con reintento;
+  - contraseña en Dropbear;
+  - 2FA con TOTP;
+  - salto a un host guardado;
+  - soltar el terminal cuelga la conexión;
+  - shell local.
+
+  El job `core` de la CI levanta los servidores en Linux para ejecutarlas.
+- **Dart:** 4 pruebas de integración en macOS a través de los bindings, todas en verde.
+- **Pendiente para A6:** compilar y probar `app/` en la CI.
 
 ## Riesgos
 

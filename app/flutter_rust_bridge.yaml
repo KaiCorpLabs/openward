@@ -1,0 +1,4 @@
+# fvm flutter_rust_bridge_codegen generate (from this directory)
+rust_input: crate::api
+rust_root: ../core/crates/openward-ffi/
+dart_output: lib/src/rust

@@ -120,6 +120,7 @@ fn options(user: &str, known: KnownHosts, host_certificates: bool) -> Options {
         host_certificates,
         keepalive: None,
         agent_forward: None,
+        on_untrusted: None,
     }
 }
 

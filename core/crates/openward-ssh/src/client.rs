@@ -7,16 +7,22 @@
 
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::future::Future;
+use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, bail};
-use russh::client::{self, KeyboardInteractiveAuthResponse};
+use russh::client::{self, AuthResult, KeyboardInteractiveAuthResponse};
 use russh::keys::agent::AgentIdentity;
 use russh::keys::agent::client::AgentClient;
-use russh::keys::{Algorithm, EcdsaCurve, PrivateKeyWithHashAlg, PublicKeyOrCertificate};
-use russh::{Channel, ChannelMsg, Pty};
+use russh::keys::agent::client::AgentStream;
+use russh::keys::{
+    Algorithm, Certificate, EcdsaCurve, PrivateKey, PrivateKeyWithHashAlg, PublicKey,
+    PublicKeyOrCertificate,
+};
+use russh::{Channel, ChannelMsg, MethodKind, Pty};
 use tokio::io::AsyncWriteExt;
 use tokio::process::{Child, Command};
 
@@ -71,6 +77,21 @@ pub enum Auth {
     },
 }
 
+/// A host key `known_hosts` does not vouch for: unknown, changed, or a
+/// certificate that does not check out.
+#[derive(Clone, Debug)]
+pub struct HostKeyQuery {
+    pub host: String,
+    pub port: u16,
+    pub key: PublicKey,
+    pub verdict: Verdict,
+}
+
+/// Decides on a [`HostKeyQuery`]: true to go on. It may take its time, to
+/// ask the user.
+pub type HostKeyHook =
+    Arc<dyn Fn(HostKeyQuery) -> Pin<Box<dyn Future<Output = bool> + Send>> + Send + Sync>;
+
 #[derive(Clone)]
 pub struct Options {
     pub user: String,
@@ -80,6 +101,9 @@ pub struct Options {
     pub keepalive: Option<Duration>,
     /// Local agent that forwarded agent requests are relayed to.
     pub agent_forward: Option<PathBuf>,
+    /// Asked about plain host keys that are not trusted. Without it they
+    /// are refused (or learned, if `known_hosts` learns).
+    pub on_untrusted: Option<HostKeyHook>,
 }
 
 /// What was negotiated and how the host was trusted.
@@ -100,17 +124,18 @@ impl Info {
     }
 }
 
-#[derive(Default)]
 struct Shared {
     info: Info,
     /// Remote forward port on the server → local address it leads to.
     remote_forwards: HashMap<u32, (String, u16)>,
+    started: Instant,
 }
 
 pub struct Handler {
     target: Target,
     known_hosts: Arc<Mutex<KnownHosts>>,
     agent_forward: Option<PathBuf>,
+    on_untrusted: Option<HostKeyHook>,
     shared: Arc<Mutex<Shared>>,
 }
 
@@ -121,11 +146,24 @@ impl client::Handler for Handler {
         &mut self,
         offered: &PublicKeyOrCertificate,
     ) -> Result<bool, Self::Error> {
-        let verdict =
+        let mut verdict =
             self.known_hosts
                 .lock()
                 .unwrap()
                 .check(&self.target.host, self.target.port, offered);
+        if let (false, Some(hook), PublicKeyOrCertificate::PublicKey { key, .. }) =
+            (verdict.trusted(), &self.on_untrusted, offered)
+        {
+            let query = HostKeyQuery {
+                host: self.target.host.clone(),
+                port: self.target.port,
+                key: key.clone(),
+                verdict: verdict.clone(),
+            };
+            if hook(query).await {
+                verdict = Verdict::Learned;
+            }
+        }
         let trusted = verdict.trusted();
         self.shared.lock().unwrap().info.verdict = Some(verdict);
         Ok(trusted)
@@ -243,12 +281,9 @@ const CERT_ALGORITHMS: &[Algorithm] = &[
     },
 ];
 
-pub async fn connect(
-    target: &Target,
-    hop: Hop<'_>,
-    auth: &Auth,
-    opts: &Options,
-) -> anyhow::Result<Session> {
+/// Opens the transport and checks the host key; the session still has to
+/// authenticate (the `auth_*` methods) before it can open channels.
+pub async fn open(target: &Target, hop: Hop<'_>, opts: &Options) -> anyhow::Result<Session> {
     let started = Instant::now();
     let mut config = client::Config {
         // Terminal traffic is many tiny writes: Nagle would hold keystrokes.
@@ -261,11 +296,16 @@ pub async fn connect(
         config.preferred.host_key_certificates = Cow::Borrowed(CERT_ALGORITHMS);
     }
     let config = Arc::new(config);
-    let shared = Arc::new(Mutex::new(Shared::default()));
+    let shared = Arc::new(Mutex::new(Shared {
+        info: Info::default(),
+        remote_forwards: HashMap::new(),
+        started,
+    }));
     let handler = Handler {
         target: target.clone(),
         known_hosts: Arc::clone(&opts.known_hosts),
         agent_forward: opts.agent_forward.clone(),
+        on_untrusted: opts.on_untrusted.clone(),
         shared: Arc::clone(&shared),
     };
 
@@ -300,20 +340,18 @@ pub async fn connect(
             client::connect_stream(config, channel.into_stream(), handler).await
         }
     };
-    let mut handle = match result {
+    let handle = match result {
         Ok(handle) => handle,
         Err(e) => {
             // A refused host key surfaces as a generic error: say why.
             if let Some(v) = shared.lock().unwrap().info.verdict.clone()
                 && !v.trusted()
             {
-                bail!("host key not trusted: {v:?}");
+                return Err(UntrustedHost(v).into());
             }
             return Err(e);
         }
     };
-    authenticate(&mut handle, &opts.user, auth).await?;
-    shared.lock().unwrap().info.connect_ms = started.elapsed().as_secs_f64() * 1e3;
     Ok(Session {
         handle,
         shared,
@@ -321,55 +359,50 @@ pub async fn connect(
     })
 }
 
-async fn authenticate(
-    handle: &mut client::Handle<Handler>,
-    user: &str,
+/// The host key was refused; the error carries the verdict.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UntrustedHost(pub Verdict);
+
+impl std::fmt::Display for UntrustedHost {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "host key not trusted: {:?}", self.0)
+    }
+}
+
+impl std::error::Error for UntrustedHost {}
+
+/// Opens and authenticates with one method whose secrets are all at hand.
+pub async fn connect(
+    target: &Target,
+    hop: Hop<'_>,
     auth: &Auth,
-) -> anyhow::Result<()> {
+    opts: &Options,
+) -> anyhow::Result<Session> {
+    let mut session = open(target, hop, opts).await?;
+    authenticate(&mut session, &opts.user, auth).await?;
+    Ok(session)
+}
+
+async fn authenticate(session: &mut Session, user: &str, auth: &Auth) -> anyhow::Result<()> {
     let ok = match auth {
-        Auth::Password(password) => handle
-            .authenticate_password(user, password)
-            .await?
-            .success(),
+        Auth::Password(password) => session.auth_password(user, password).await?.success(),
         Auth::Key { path, passphrase } => {
-            let key = russh::keys::load_secret_key(path, passphrase.as_deref())
-                .with_context(|| format!("loading {}", path.display()))?;
-            // RSA: the strongest of rsa-sha2-512/256 the server announced.
-            let hash = if key.algorithm().is_rsa() {
-                handle.best_supported_rsa_hash().await?.flatten()
-            } else {
-                None
-            };
-            handle
-                .authenticate_publickey(user, PrivateKeyWithHashAlg::new(Arc::new(key), hash))
-                .await?
-                .success()
+            let key = load_key(path, passphrase.as_deref())?;
+            session.auth_key(user, Arc::new(key)).await?.success()
         }
         Auth::Cert { key, cert } => {
-            let key = russh::keys::load_secret_key(key, None)?;
+            let key = load_key(key, None)?;
             let cert = russh::keys::load_openssh_certificate(cert)?;
-            handle
-                .authenticate_openssh_cert(user, Arc::new(key), cert)
+            session
+                .auth_cert(user, Arc::new(key), cert)
                 .await?
                 .success()
         }
         Auth::Agent { socket } => {
-            let mut agent = AgentClient::connect(connect_agent(socket).await?);
+            let mut agent = Agent::connect(socket).await?;
             let mut ok = false;
-            for identity in agent.request_identities().await? {
-                let AgentIdentity::PublicKey { key, .. } = identity else {
-                    continue;
-                };
-                let hash = if key.algorithm().is_rsa() {
-                    handle.best_supported_rsa_hash().await?.flatten()
-                } else {
-                    None
-                };
-                if handle
-                    .authenticate_publickey_with(user, key, hash, &mut agent)
-                    .await?
-                    .success()
-                {
+            for key in agent.keys().await? {
+                if session.auth_agent(user, &mut agent, key).await?.success() {
                     ok = true;
                     break;
                 }
@@ -380,22 +413,19 @@ async fn authenticate(
             password,
             totp_secret,
         } => {
-            let mut reply = handle
-                .authenticate_keyboard_interactive_start(user, None)
-                .await?;
+            let mut step = session.kbd_start(user).await?;
             let mut rounds = 0;
             loop {
-                match reply {
-                    KeyboardInteractiveAuthResponse::Success => break true,
-                    KeyboardInteractiveAuthResponse::Failure { .. } => break false,
-                    KeyboardInteractiveAuthResponse::InfoRequest { prompts, .. } => {
+                match step {
+                    Kbd::Done(outcome) => break outcome.success(),
+                    Kbd::Questions { prompts, .. } => {
                         rounds += 1;
                         if rounds > 5 {
                             bail!("keyboard-interactive: too many rounds");
                         }
                         let mut answers = Vec::with_capacity(prompts.len());
-                        for p in &prompts {
-                            let text = p.prompt.to_lowercase();
+                        for (prompt, _echo) in &prompts {
+                            let text = prompt.to_lowercase();
                             answers.push(if text.contains("password") {
                                 password.clone()
                             } else if text.contains("verification") || text.contains("code") {
@@ -410,9 +440,7 @@ async fn authenticate(
                                 String::new()
                             });
                         }
-                        reply = handle
-                            .authenticate_keyboard_interactive_respond(answers)
-                            .await?;
+                        step = session.kbd_respond(answers).await?;
                     }
                 }
             }
@@ -422,6 +450,132 @@ async fn authenticate(
         bail!("authentication failed ({})", auth_name(auth));
     }
     Ok(())
+}
+
+/// Why a private key could not be loaded.
+#[derive(Debug, thiserror::Error)]
+pub enum KeyError {
+    #[error("the key is protected by a passphrase")]
+    Encrypted,
+    #[error("wrong passphrase")]
+    WrongPassphrase,
+    #[error("{0}")]
+    Unreadable(String),
+}
+
+/// Loads a private key, decrypting it with `passphrase` if it is protected.
+pub fn load_key(path: &Path, passphrase: Option<&str>) -> Result<PrivateKey, KeyError> {
+    match russh::keys::load_secret_key(path, passphrase) {
+        Ok(key) => Ok(key),
+        Err(russh::keys::Error::KeyIsEncrypted) => Err(KeyError::Encrypted),
+        // Without a passphrase an encrypted key says so; with one, a
+        // failure to decode means it was wrong.
+        Err(russh::keys::Error::IO(e)) => {
+            Err(KeyError::Unreadable(format!("{}: {e}", path.display())))
+        }
+        Err(_) if passphrase.is_some() => Err(KeyError::WrongPassphrase),
+        Err(e) => Err(KeyError::Unreadable(format!("{}: {e}", path.display()))),
+    }
+}
+
+/// What the server said to an authentication attempt.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Outcome {
+    Success,
+    /// Not (yet) in. `partial` means the method was accepted but the server
+    /// wants another one too.
+    Continue {
+        methods: Vec<MethodKind>,
+        partial: bool,
+    },
+}
+
+impl Outcome {
+    pub fn success(&self) -> bool {
+        matches!(self, Self::Success)
+    }
+}
+
+impl From<AuthResult> for Outcome {
+    fn from(r: AuthResult) -> Self {
+        match r {
+            AuthResult::Success => Self::Success,
+            AuthResult::Failure {
+                remaining_methods,
+                partial_success,
+            } => Self::Continue {
+                methods: remaining_methods.to_vec(),
+                partial: partial_success,
+            },
+        }
+    }
+}
+
+/// A step of keyboard-interactive authentication.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Kbd {
+    Done(Outcome),
+    /// Answer each prompt (text, and whether the answer may be shown) with
+    /// [`Session::kbd_respond`]. A round can have no prompts at all.
+    Questions {
+        name: String,
+        instructions: String,
+        prompts: Vec<(String, bool)>,
+    },
+}
+
+impl From<KeyboardInteractiveAuthResponse> for Kbd {
+    fn from(r: KeyboardInteractiveAuthResponse) -> Self {
+        match r {
+            KeyboardInteractiveAuthResponse::Success => Self::Done(Outcome::Success),
+            KeyboardInteractiveAuthResponse::Failure {
+                remaining_methods,
+                partial_success,
+            } => Self::Done(Outcome::Continue {
+                methods: remaining_methods.to_vec(),
+                partial: partial_success,
+            }),
+            KeyboardInteractiveAuthResponse::InfoRequest {
+                name,
+                instructions,
+                prompts,
+            } => Self::Questions {
+                name,
+                instructions,
+                prompts: prompts.into_iter().map(|p| (p.prompt, p.echo)).collect(),
+            },
+        }
+    }
+}
+
+/// A local ssh-agent.
+pub struct Agent {
+    client: AgentClient<Box<dyn AgentStream + Send + Unpin>>,
+}
+
+impl Agent {
+    pub async fn connect(socket: &Path) -> anyhow::Result<Self> {
+        let stream = connect_agent(socket)
+            .await
+            .with_context(|| format!("agent at {}", socket.display()))?;
+        Ok(Self {
+            client: AgentClient::connect(stream).dynamic(),
+        })
+    }
+
+    /// The agent's plain keys (its certificates are not offered yet).
+    pub async fn keys(&mut self) -> anyhow::Result<Vec<PublicKey>> {
+        Ok(self
+            .client
+            .request_identities()
+            .await?
+            .into_iter()
+            .filter_map(|identity| match identity {
+                AgentIdentity::PublicKey { key, .. } => Some(key),
+                _ => None,
+            })
+            .collect())
+    }
 }
 
 pub fn auth_name(auth: &Auth) -> &'static str {
@@ -449,6 +603,96 @@ impl Output {
 impl Session {
     pub fn info(&self) -> Info {
         self.shared.lock().unwrap().info.clone()
+    }
+
+    fn done(&self, outcome: Outcome) -> Outcome {
+        if outcome.success() {
+            let mut shared = self.shared.lock().unwrap();
+            shared.info.connect_ms = shared.started.elapsed().as_secs_f64() * 1e3;
+        }
+        outcome
+    }
+
+    /// The `none` method: lets in servers without authentication and
+    /// otherwise lists the methods they accept.
+    pub async fn auth_none(&mut self, user: &str) -> anyhow::Result<Outcome> {
+        let r = self.handle.authenticate_none(user).await?;
+        Ok(self.done(r.into()))
+    }
+
+    pub async fn auth_password(&mut self, user: &str, password: &str) -> anyhow::Result<Outcome> {
+        let r = self.handle.authenticate_password(user, password).await?;
+        Ok(self.done(r.into()))
+    }
+
+    pub async fn auth_key(&mut self, user: &str, key: Arc<PrivateKey>) -> anyhow::Result<Outcome> {
+        // RSA: the strongest of rsa-sha2-512/256 the server announced.
+        let hash = if key.algorithm().is_rsa() {
+            self.handle.best_supported_rsa_hash().await?.flatten()
+        } else {
+            None
+        };
+        let r = self
+            .handle
+            .authenticate_publickey(user, PrivateKeyWithHashAlg::new(key, hash))
+            .await?;
+        Ok(self.done(r.into()))
+    }
+
+    /// An OpenSSH user certificate and its private key.
+    pub async fn auth_cert(
+        &mut self,
+        user: &str,
+        key: Arc<PrivateKey>,
+        cert: Certificate,
+    ) -> anyhow::Result<Outcome> {
+        let r = self
+            .handle
+            .authenticate_openssh_cert(user, key, cert)
+            .await?;
+        Ok(self.done(r.into()))
+    }
+
+    /// One of the agent's keys; the agent signs.
+    pub async fn auth_agent(
+        &mut self,
+        user: &str,
+        agent: &mut Agent,
+        key: PublicKey,
+    ) -> anyhow::Result<Outcome> {
+        let hash = if key.algorithm().is_rsa() {
+            self.handle.best_supported_rsa_hash().await?.flatten()
+        } else {
+            None
+        };
+        let r = self
+            .handle
+            .authenticate_publickey_with(user, key, hash, &mut agent.client)
+            .await?;
+        Ok(self.done(r.into()))
+    }
+
+    pub async fn kbd_start(&mut self, user: &str) -> anyhow::Result<Kbd> {
+        let r = self
+            .handle
+            .authenticate_keyboard_interactive_start(user, None)
+            .await?;
+        Ok(self.kbd_done(r.into()))
+    }
+
+    pub async fn kbd_respond(&mut self, answers: Vec<String>) -> anyhow::Result<Kbd> {
+        let r = self
+            .handle
+            .authenticate_keyboard_interactive_respond(answers)
+            .await?;
+        Ok(self.kbd_done(r.into()))
+    }
+
+    fn kbd_done(&self, step: Kbd) -> Kbd {
+        match step {
+            Kbd::Done(outcome) => Kbd::Done(self.done(outcome)),
+            questions => questions,
+        }
     }
 
     pub fn is_closed(&self) -> bool {
@@ -496,7 +740,27 @@ impl Session {
         cols: u32,
         rows: u32,
     ) -> anyhow::Result<Channel<client::Msg>> {
+        self.shell_with(term, cols, rows, &[], false).await
+    }
+
+    /// A shell with environment variables (servers accept only those their
+    /// `AcceptEnv` lists, silently dropping the rest) and, optionally, the
+    /// agent forwarded.
+    pub async fn shell_with(
+        &self,
+        term: &str,
+        cols: u32,
+        rows: u32,
+        env: &[(String, String)],
+        agent_forward: bool,
+    ) -> anyhow::Result<Channel<client::Msg>> {
         let channel = self.handle.channel_open_session().await?;
+        if agent_forward {
+            channel.agent_forward(false).await?;
+        }
+        for (k, v) in env {
+            channel.set_env(false, k.as_str(), v.as_str()).await?;
+        }
         // ECHO on and the usual cooked mode; the server fills in the rest.
         channel
             .request_pty(true, term, cols, rows, 0, 0, &[(Pty::ECHO, 1)])

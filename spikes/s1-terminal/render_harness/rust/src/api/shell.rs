@@ -242,6 +242,7 @@ fn create_ssh(
         host_certificates: false,
         keepalive: Some(Duration::from_secs(15)),
         agent_forward: None,
+        on_untrusted: None,
     };
     let auth = Auth::Key {
         path: key.into(),

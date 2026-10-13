@@ -1,6 +1,8 @@
 [workspace]
 resolver = "3"
 members = [
+    "crates/openward-app",
+    "crates/openward-ffi",
     "crates/openward-ghostty",
     "crates/openward-import",
     "crates/openward-proto",

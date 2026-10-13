@@ -1,0 +1,27 @@
+name: openward
+description: "OpenWard, cliente SSH de código abierto"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Same version as the flutter_rust_bridge crate in core/crates/openward-ffi.
+  flutter_rust_bridge: 2.13.0
+  # Builds core/crates/openward-ffi with cargokit and bundles it.
+  openward_ffi:
+    path: rust_builder
+  path_provider: ^2.1.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
