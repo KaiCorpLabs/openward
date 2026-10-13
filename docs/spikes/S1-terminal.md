@@ -97,7 +97,7 @@ Gana el motor que pasa la puerta. Si pasan los dos, se puntúa:
 | S1.3 | Backend `libghostty-vt`: build con **Zig 0.16.0 exacto** (`brew install zig@0.16`, disponible como `zig`) para los 5 destinos; bindings de `vt.h` en un crate `-sys` aislado (la única excepción a `unsafe_code = "forbid"`); implementar `TermEngine` | 3–4 | Pendiente |
 | S1.4 | Harness de render: app Flutter + `flutter_rust_bridge` 2.13.0, decodificador Dart del frame v1 con pruebas cruzadas contra frames de ejemplo generados en Rust, y `CustomPainter` con un `Picture` en caché por fila (solo se regraban las filas que cambian) | 3–4 | **En curso:** v1 (async) y v2 (sync) medidos en macOS (§10.2) |
 | S1.4b | Carga de tecleo (bytes sueltos a intervalos aleatorios) para medir el eco | 0,5 | **Hecho** en macOS: pasa la puerta (§10.2) |
-| S1.4c | Render con atlas de glifos (`drawRawAtlas`) para ASCII/latino, con párrafo de respaldo para CJK y emoji; comparar el coste de grabación con v2 | 1–2 | Pendiente |
+| S1.4c | Render con atlas de glifos (`drawRawAtlas`), con párrafo de respaldo para emoji y clústeres raros; comparar el coste de grabación con v2 | 1–2 | **Hecho** en macOS: 2–3× más barato (§10.3) |
 | S1.5 | Entrada: codificación de teclas (xterm y protocolo kitty), ratón (SGR 1006), bracketed paste; IME con `TextInputClient` y región de composición en el cursor; barra de teclas en móvil | 2–3 | Pendiente |
 | S1.6 | Corrección: vttest, apps reales y corpus unicode en ambos motores; capturas comparadas | 1–2 | Pendiente |
 | S1.7 | Si se confirma H2: prototipo de scrollback compacto (texto UTF-8 con tramos de estilo para las líneas que salen de la pantalla) y medición | 2 | Condicional |
@@ -163,6 +163,37 @@ v1 pedía el frame a Rust de forma asíncrona en cada tick; v2 lo pide de forma 
 
    El p50 (~9 ms) es medio refresco de espera más ~1 ms de proceso, el mínimo posible a 60 Hz. Grabar la única fila que cambia cuesta < 1 ms. Hay picos aislados de ~40 ms (menos del 1 % de las pulsaciones) que conviene investigar en Android. El raster p95 sube a 3,7–4,8 ms con este ritmo intermitente, probablemente porque la GPU baja de frecuencia entre pulsaciones. En una pantalla de 120 Hz o más la puerta se estrecha (~12 ms) y habrá que repetir la medición.
 6. **Toolchain dentro de la build de Flutter:** cargokit solo aceptaba `stable`, `beta` o `nightly`, así que compilaba con el `stable` de la máquina y no con la versión fijada. Se ha parcheado la copia de cargokit del harness (`build_tool/lib/src/options.dart`) para aceptar una versión exacta, y `rust/cargokit.yaml` fija la 1.99.0. Habrá que proponer el cambio upstream o mantener el parche en la app real.
+
+### 10.3 Atlas de glifos frente a párrafos (S1.4c)
+
+2026-10-13 · mismas condiciones que §10.2 · las dos baterías seguidas en la misma sesión · vía síncrona. Datos en `results/macos-render-v4-{atlas,paragraph}.jsonl`. Selección con `--dart-define=S1_RENDERER=atlas|paragraph` y capturas con `S1_SNAPSHOT_DIR`.
+
+**Cómo funciona el atlas:** cada glifo (texto del clúster × negrita/cursiva × 1 o 2 celdas) se rasteriza una vez, en blanco y a resolución física, en una textura que solo crece. Cada fila se graba con una única llamada `drawRawAtlas` que tiñe los glifos con su color (`BlendMode.modulate`). Los emoji y los clústeres que no encajan con las celdas usan el párrafo de antes.
+
+| Carga | Grabación p95: párrafo → atlas | Construcción p95 | Raster p95 | Latencia p95 | Glifos en el atlas |
+|---|---|---|---|---|---|
+| fullscreen | 3,28 → **1,23 ms** (2,7×) | 3,64 → 1,46 ms | 0,49 → 0,28 ms | 20,0 → 18,0 ms | 53 |
+| sgr-log | 4,34 → **2,12 ms** (2,0×) | 4,53 → 2,37 ms | 0,60 → 0,32 ms | 21,1 → 18,9 ms | 69 |
+| unicode | 10,32 → **3,12 ms** (3,3×) | 10,68 → 3,51 ms | 1,26 → 0,82 ms | 27,1 → 20,0 ms | 103 |
+| scroll-region | 3,53 → **1,32 ms** (2,7×) | 3,72 → 1,52 ms | 0,60 → 0,28 ms | 20,3 → 18,1 ms | 103 |
+| ascii | 2,86 → **2,24 ms** (1,3×) | 3,04 → 2,49 ms | 0,44 → 0,33 ms | 19,6 → 18,9 ms | 143 |
+| typing (eco) | 0,63 → **0,22 ms** | 1,01 → 0,60 ms | 3,10 → 1,48 ms | 17,0 → **16,2 ms** (máx. 20,4) | 143 |
+
+**Conclusiones:**
+
+1. **El atlas abarata la grabación entre 2 y 3,3 veces**, y el peor caso (unicode) baja de 10,3 a 3,1 ms. El presupuesto de un refresco a 60 Hz queda con margen de sobra en un M5. Queda pendiente confirmarlo en Android de gama media.
+2. **El eco sigue pasando la puerta:** p95 de 16,2 ms frente a 20,7 ms, con el máximo en 20,4 ms.
+3. **El atlas es pequeño:** 143 glifos tras toda la batería, en una textura de 1024×256 px.
+4. **Calidad visual** (capturas comparadas a mano):
+   - **Igual en ambos:** posiciones y anchos coinciden en todo el corpus (CJK, hangul, cirílico, griego, acentos combinados y emoji por la vía de respaldo).
+   - **Distinto:** con el atlas el texto sale algo más grueso, seguramente por el ajuste de contraste al rasterizar glifos blancos. Hay que afinarlo en S1.6.
+5. **Problemas de corrección encontrados (para S1.6):**
+   - **Emoji con modificador de tono:** `alacritty_terminal` parte 👍🏽 en dos celdas (👍 + cuadrado de color). Es un criterio a comparar con `libghostty-vt`, que soporta el modo de grafemas 2027.
+   - **Caracteres de caja:** dejan huecos verticales con interlineado 1,2. Los terminales maduros los dibujan de forma procedural para que llenen la celda.
+6. **Robustez del arnés:**
+   - **Sin vsync, sin frames:** macOS deja de producir frames para ventanas tapadas u ocultas. Un vigilante aborta la prueba (`error: no-vsync`) si pasan 5 s sin frame.
+   - **App Nap desactivado** en el arnés.
+   - **Sandbox desactivado** en el arnés para poder escribir las capturas. La app real sí irá con sandbox.
 
 ## 11. Cómo reproducir
 

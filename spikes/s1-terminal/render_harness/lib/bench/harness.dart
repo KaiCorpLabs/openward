@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show Platform;
+import 'dart:io' show File, Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
@@ -58,6 +58,10 @@ class Harness extends ChangeNotifier {
   }) : renderer = TerminalRenderer(
          metrics: CellMetrics.measure(),
          palette: TermPalette.dark,
+         mode: RenderMode.values.byName(
+           const String.fromEnvironment('S1_RENDERER', defaultValue: 'atlas'),
+         ),
+         devicePixelRatio: _devicePixelRatio(),
        ) {
     _ticker = vsync.createTicker(_onTick);
   }
@@ -75,6 +79,12 @@ class Harness extends ChangeNotifier {
   TermSession? _session;
 
   bool running = false;
+
+  /// Aborts a run when no vsync arrives (window hidden or occluded: the
+  /// platform stops producing frames, so nothing can be measured).
+  Timer? _watchdog;
+  final _sinceTick = Stopwatch();
+  static const _noVsyncTimeout = Duration(seconds: 5);
   bool _inFlight = false;
   int fedBytes = 0;
   RunSpec? current;
@@ -119,6 +129,7 @@ class Harness extends ChangeNotifier {
       l.clear();
     }
     _frozen = 0;
+    renderer.paragraphFallbacks = 0;
     current = spec;
     running = true;
     final startFed = fedBytes;
@@ -138,6 +149,17 @@ class Harness extends ChangeNotifier {
       ..reset()
       ..start();
     if (!_ticker.isActive) _ticker.start();
+    _sinceTick
+      ..reset()
+      ..start();
+    _watchdog?.cancel();
+    _watchdog = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (running && _sinceTick.elapsed > _noVsyncTimeout) {
+        debugPrint('S1 no vsync for $_noVsyncTimeout: is the window visible?');
+        _session?.stopWorkload();
+        _finish(error: 'no-vsync');
+      }
+    });
     notifyListeners();
     final result = await _done!.future;
     result['fed_mib'] = (fedBytes - startFed) / 1048576;
@@ -145,6 +167,21 @@ class Harness extends ChangeNotifier {
   }
 
   void stop() => _session?.stopWorkload();
+
+  /// Writes `<S1_SNAPSHOT_DIR>/<workload>-<renderer>.png` when set.
+  Future<void> _saveSnapshot(RunSpec spec) async {
+    const dir = String.fromEnvironment('S1_SNAPSHOT_DIR');
+    if (dir.isEmpty) return;
+    final png = await renderer.snapshotPng();
+    if (png == null) return;
+    await File('$dir/${spec.workload}-${renderer.mode.name}.png')
+        .writeAsBytes(png);
+  }
+
+  static double _devicePixelRatio() {
+    final views = PlatformDispatcher.instance.views;
+    return views.isEmpty ? 2 : views.first.devicePixelRatio;
+  }
 
   /// Refresh rate of the display the app runs on.
   double get refreshHz {
@@ -154,6 +191,9 @@ class Harness extends ChangeNotifier {
   }
 
   void _onTick(Duration _) {
+    _sinceTick
+      ..reset()
+      ..start();
     final session = _session;
     if (session == null || _inFlight) return;
     if (pipeline == 'sync') {
@@ -197,7 +237,9 @@ class Harness extends ChangeNotifier {
     }
   }
 
-  void _finish() {
+  void _finish({String? error}) {
+    if (!running) return;
+    _watchdog?.cancel();
     running = false;
     _wall.stop();
     _ticker.stop();
@@ -210,6 +252,10 @@ class Harness extends ChangeNotifier {
           'kind': 'render',
           'engine': engine,
           'pipeline': pipeline,
+          'renderer': renderer.mode.name,
+          'atlas_glyphs': renderer.atlasGlyphs,
+          'atlas_height_px': renderer.atlasHeightPx,
+          'paragraph_fallbacks': renderer.paragraphFallbacks,
           'workload': spec.workload,
           'rate_mib_s': spec.mibPerSec,
           'cols': cols,
@@ -236,7 +282,10 @@ class Harness extends ChangeNotifier {
         };
         lastResult = result;
         notifyListeners();
-        _done?.complete(result);
+        if (error != null) result['error'] = error;
+        _saveSnapshot(spec)
+            .catchError((Object e) => debugPrint('snapshot failed: $e'))
+            .whenComplete(() => _done?.complete(result));
       });
     });
     SchedulerBinding.instance.scheduleFrame();
