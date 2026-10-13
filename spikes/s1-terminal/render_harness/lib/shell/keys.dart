@@ -2,7 +2,7 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/services.dart';
 
-/// libghostty-vt modifier bits (`ghostty_engine::mods`).
+/// libghostty-vt modifier bits (`openward_ghostty::mods`).
 abstract final class Mods {
   static const shift = 1;
   static const ctrl = 2;

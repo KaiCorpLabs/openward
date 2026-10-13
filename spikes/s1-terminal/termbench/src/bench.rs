@@ -277,7 +277,7 @@ pub fn mem(o: &Opts) -> Result<(), String> {
         "ghostty" => {
             let mut tabs = Vec::with_capacity(o.tabs);
             for tab in 0..o.tabs {
-                let mut e = ghostty_engine::GhosttyEngine::new(size, o.scrollback);
+                let mut e = openward_ghostty::GhosttyEngine::new(size, o.scrollback);
                 fill(&mut e, tab);
                 tabs.push(e);
             }

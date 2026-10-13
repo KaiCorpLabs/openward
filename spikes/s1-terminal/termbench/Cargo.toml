@@ -11,14 +11,14 @@ publish = false
 [workspace]
 
 [dependencies]
-openward-term = { path = "../../../core/crates/openward-term" }
+openward-term = { path = "../../../core/crates/openward-term", features = ["alacritty"] }
 s1-corpus = { path = "../s1-corpus" }
-ghostty-engine = { path = "../ghostty-engine", optional = true }
+openward-ghostty = { path = "../../../core/crates/openward-ghostty", optional = true }
 serde_json = "1"
 
 [features]
-# Needs a prebuilt libghostty-vt (ghostty-engine/build-libghostty.sh).
-ghostty = ["dep:ghostty-engine"]
+# Needs a prebuilt libghostty-vt (core/crates/openward-ghostty/build-libghostty.sh).
+ghostty = ["dep:openward-ghostty"]
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

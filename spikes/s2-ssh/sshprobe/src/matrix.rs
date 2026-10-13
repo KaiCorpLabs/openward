@@ -12,9 +12,9 @@ use serde_json::json;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::{Child, Command};
 
-use sshprobe::client::{self, Auth, Hop, Options, Session, Target};
-use sshprobe::forward;
-use sshprobe::known_hosts::{KnownHosts, Unknown, Verdict};
+use openward_ssh::client::{self, Auth, Hop, Options, Session, Target};
+use openward_ssh::forward;
+use openward_ssh::known_hosts::{KnownHosts, Unknown, Verdict};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Kind {
@@ -506,7 +506,7 @@ async fn http_get(mut stream: tokio::net::TcpStream) -> anyhow::Result<String> {
 
 /// Reads from a shell until `needle` shows up.
 async fn read_until(
-    channel: &mut russh::Channel<russh::client::Msg>,
+    channel: &mut openward_ssh::russh::Channel<openward_ssh::russh::client::Msg>,
     seen: &mut String,
     needle: &str,
 ) -> anyhow::Result<()> {
@@ -514,7 +514,7 @@ async fn read_until(
     while !seen.contains(needle) {
         let left = deadline.saturating_duration_since(Instant::now());
         match tokio::time::timeout(left, channel.wait()).await {
-            Ok(Some(russh::ChannelMsg::Data { data })) => {
+            Ok(Some(openward_ssh::russh::ChannelMsg::Data { data })) => {
                 seen.push_str(&String::from_utf8_lossy(&data))
             }
             Ok(Some(_)) => {}
@@ -540,7 +540,7 @@ async fn pty_test(session: &Session) -> anyhow::Result<String> {
     loop {
         let left = deadline.saturating_duration_since(Instant::now());
         match tokio::time::timeout(left, ch.wait()).await {
-            Ok(Some(russh::ChannelMsg::ExitStatus { exit_status: 7 })) => {
+            Ok(Some(openward_ssh::russh::ChannelMsg::ExitStatus { exit_status: 7 })) => {
                 return Ok("TERM, 80×24 → 100×30, exit 7".into());
             }
             Ok(Some(_)) => {}

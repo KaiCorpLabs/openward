@@ -16,11 +16,11 @@ crate-type = ["cdylib", "staticlib"]
 [dependencies]
 anyhow = "1"
 flutter_rust_bridge = "=2.13.0"
-ghostty-engine = { path = "../../ghostty-engine" }
-openward-term = { path = "../../../../core/crates/openward-term" }
+openward-ghostty = { path = "../../../../core/crates/openward-ghostty" }
+openward-term = { path = "../../../../core/crates/openward-term", features = ["alacritty"] }
 portable-pty = "=0.9.0"
 s1-corpus = { path = "../../s1-corpus" }
-sshprobe = { path = "../../../s2-ssh/sshprobe" }
+openward-ssh = { path = "../../../../core/crates/openward-ssh" }
 tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "io-util"] }
 
 [lints.rust]

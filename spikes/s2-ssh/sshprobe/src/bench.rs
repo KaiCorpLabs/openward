@@ -9,7 +9,7 @@ use anyhow::bail;
 use serde_json::json;
 
 use crate::matrix::{Fixtures, tofu};
-use sshprobe::client::{self, Hop, Target};
+use openward_ssh::client::{self, Hop, Target};
 
 fn summary(mut v: Vec<f64>) -> serde_json::Value {
     v.sort_by(f64::total_cmp);
@@ -107,7 +107,11 @@ pub async fn run(fx: &Fixtures, port: u16, json_out: bool) -> anyhow::Result<()>
         client::send(&ch, &[byte]).await?;
         loop {
             match tokio::time::timeout(Duration::from_secs(2), ch.wait()).await {
-                Ok(Some(russh::ChannelMsg::Data { data })) if data.contains(&byte) => break,
+                Ok(Some(openward_ssh::russh::ChannelMsg::Data { data }))
+                    if data.contains(&byte) =>
+                {
+                    break;
+                }
                 Ok(Some(_)) => {}
                 _ => bail!("no echo for byte {i}"),
             }

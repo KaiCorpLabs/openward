@@ -2,7 +2,7 @@
 //!
 //! cargo run -- <ghostty include dir> <output .rs>
 //!
-//! The output is committed (ghostty-engine/src/sys.rs) so normal builds do
+//! The output is committed (openward-ghostty/src/sys.rs) so normal builds do
 //! not need libclang. Regenerate whenever the pinned Ghostty commit changes.
 
 use std::env;

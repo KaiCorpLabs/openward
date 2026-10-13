@@ -1016,6 +1016,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
+name = "openward-ssh"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "data-encoding",
+ "hmac 0.12.1",
+ "russh",
+ "sha1 0.10.7",
+ "tokio",
+]
+
+[[package]]
 name = "p256"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1715,11 +1727,8 @@ name = "sshprobe"
 version = "0.0.0"
 dependencies = [
  "anyhow",
- "data-encoding",
- "hmac 0.12.1",
- "russh",
+ "openward-ssh",
  "serde_json",
- "sha1 0.10.7",
  "tokio",
 ]
 

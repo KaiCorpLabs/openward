@@ -4,7 +4,7 @@
 //! Three backends:
 //! - a shell on a local pty (desktop; Android has /system/bin/sh);
 //! - a remote shell over SSH (`ssh://user@host:port?key=/path`, spike S2),
-//!   with `russh` through the `sshprobe` crate;
+//!   with `russh` through the `openward-ssh` crate;
 //! - a key log, which prints the bytes each input produced. It works on
 //!   every platform (iOS has no local shell) and is how the manual input
 //!   checklist verifies the encoding.
@@ -17,13 +17,13 @@ use std::thread;
 use std::time::Duration;
 
 use flutter_rust_bridge::frb;
-use ghostty_engine::{
+use openward_ghostty::{
     GhosttyEngine, KeyAction, KeyInput, MouseAction, MouseButton, MouseInput, Paste,
 };
+use openward_ssh::client::{self as ssh, Auth, Hop, Options, Target};
+use openward_ssh::known_hosts::{KnownHosts, Unknown};
 use openward_term::{FrameEncoder, Size, TermEngine};
 use portable_pty::{Child, CommandBuilder, MasterPty, PtySize, native_pty_system};
-use sshprobe::client::{self as ssh, Auth, Hop, Options, Target};
-use sshprobe::known_hosts::{KnownHosts, Unknown};
 use tokio::io::AsyncWriteExt;
 use tokio::sync::mpsc;
 
@@ -264,7 +264,7 @@ fn create_ssh(
                 ""
             },
             info.verdict
-                .unwrap_or(sshprobe::known_hosts::Verdict::Unknown),
+                .unwrap_or(openward_ssh::known_hosts::Verdict::Unknown),
             info.connect_ms,
         )
         .as_bytes(),
@@ -276,8 +276,8 @@ fn create_ssh(
     rt.spawn(async move {
         while let Some(msg) = read.wait().await {
             match msg {
-                sshprobe::russh::ChannelMsg::Data { data }
-                | sshprobe::russh::ChannelMsg::ExtendedData { data, .. } => {
+                openward_ssh::russh::ChannelMsg::Data { data }
+                | openward_ssh::russh::ChannelMsg::ExtendedData { data, .. } => {
                     let replies = {
                         let mut s = lock(&state2);
                         s.engine.feed(&data);
@@ -291,7 +291,7 @@ fn create_ssh(
                         let _ = replies_tx.send(SshCmd::Data(replies));
                     }
                 }
-                sshprobe::russh::ChannelMsg::Close => break,
+                openward_ssh::russh::ChannelMsg::Close => break,
                 _ => {}
             }
         }

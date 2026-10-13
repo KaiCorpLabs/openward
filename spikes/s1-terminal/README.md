@@ -1,6 +1,6 @@
 # S1 · Motor de terminal
 
-Plan, hipótesis, puerta y datos: [docs/spikes/S1-terminal.md](../../docs/spikes/S1-terminal.md). Resultados y decisión (gana `libghostty-vt`): [S1-terminal-resultados.md](../../docs/spikes/S1-terminal-resultados.md).
+Plan, hipótesis, puerta y datos: [docs/spikes/S1-terminal.md](../../docs/spikes/S1-terminal.md). Resultados y decisión (gana `libghostty-vt`): [S1-terminal-resultados.md](../../docs/spikes/S1-terminal-resultados.md). El motor ya vive en el núcleo: `core/crates/openward-ghostty`.
 
 | Ruta | Contenido |
 |---|---|
@@ -10,7 +10,6 @@ Plan, hipótesis, puerta y datos: [docs/spikes/S1-terminal.md](../../docs/spikes
 | `corpus/casts/` | Grabaciones pequeñas (< 5 MB), commiteadas |
 | `corpus/casts-big/` | Grabaciones grandes, regeneradas, nunca commiteadas |
 | `corpus/conformance/` | Referencias de tmux para vttest, anchos Unicode y apps reales (`make conformance-record`; se comparan con `make conformance`) |
-| `ghostty-engine/` | Motor `libghostty-vt`, el elegido en el ADR-002 (pasará a `core/`) |
 | `results/` | Resultados en JSON lines por plataforma y paso; `results/conformance/` tiene los informes de corrección |
 | `s1-corpus/` | Cargas sintéticas deterministas, compartidas por `termbench` y el harness |
 | `render_harness/` | App Flutter + `flutter_rust_bridge`: banco de render (S1.4, `S1_AUTORUN`, `S1_ENGINE`), shell y registro de teclas (S1.5) y capturas comparables (S1.6). Ver su README |

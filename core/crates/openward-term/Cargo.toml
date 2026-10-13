@@ -6,11 +6,13 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+publish.workspace = true
 
 [features]
-default = ["alacritty"]
-# Candidate engines for spike S1. Exactly which one ships is decided by the
-# spike; both stay behind the same trait so the UI never depends on either.
+default = []
+# The engine that lost spike S1 (ADR-002). Kept, off by default, as a second
+# reference for the spikes' conformance tests; the product uses
+# openward-ghostty.
 alacritty = ["dep:alacritty_terminal"]
 
 [dependencies]

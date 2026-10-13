@@ -26,6 +26,21 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # openward-ghostty links a prebuilt libghostty-vt, built with Zig at
+      # the pinned Ghostty commit and cached per commit and OS.
+      - name: Cache location
+        shell: bash
+        run: echo "OPENWARD_CACHE=$RUNNER_TEMP/openward" >> "$GITHUB_ENV"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/openward/ghostty/build
+          key: libghostty-vt-${{ runner.os }}-${{ hashFiles('core/crates/openward-ghostty/GHOSTTY_COMMIT') }}
+      - name: Install Zig
+        shell: bash
+        run: .github/scripts/install-zig.sh
+      - name: Build libghostty-vt
+        shell: bash
+        run: core/crates/openward-ghostty/build-libghostty.sh
       - name: Install toolchain from rust-toolchain.toml
         working-directory: core
         run: rustup show
@@ -40,12 +55,17 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test
         working-directory: core
-        run: cargo test --workspace
+        run: |
+          cargo test --workspace
+          # The reference engine of the spikes, off by default.
+          cargo test -p openward-term --features alacritty
 
   mobile-check:
     name: Core compiles for mobile targets
-    # cargo check does not link, and no dependency builds C for these targets,
-    # so Linux is enough. Real device runs belong to the spikes.
+    # cargo check does not link, so Linux is enough. Left out: crates that
+    # build C for the target (openward-ssh: aws-lc) or need a prebuilt
+    # library (openward-ghostty), and the desktop-only openward-pty. Their
+    # mobile builds come with phase 2.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -61,7 +81,8 @@ jobs:
         working-directory: core
         run: |
           for target in aarch64-apple-ios aarch64-apple-ios-sim aarch64-linux-android x86_64-linux-android; do
-            cargo check --workspace --target "$target"
+            cargo check --workspace --target "$target" \
+              --exclude openward-ghostty --exclude openward-ssh --exclude openward-pty
           done
 
   termbench:

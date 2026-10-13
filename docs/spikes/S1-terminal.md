@@ -200,7 +200,7 @@ v1 pedía el frame a Rust de forma asíncrona en cada tick; v2 lo pide de forma 
 2026-10-13 · Apple M5 · release · Ghostty en el commit `05dcf887` (main, 2026-10-12) · corpus de 16 MiB por carga · 200×50 · scrollback de 10.000 líneas. Datos en `results/macos-engines-s1.3.jsonl`.
 
 **Integración:**
-- **Código:** el motor vive en `spikes/s1-terminal/ghostty-engine`. Los bindings (`src/sys.rs`, 199 funciones con comprobación de layout en compilación) se generan con `bindgen` y se commitean, así que la build normal no necesita libclang.
+- **Código:** el motor vivía en `spikes/s1-terminal/ghostty-engine`; desde la alfa está en `core/crates/openward-ghostty`. Los bindings (`src/sys.rs`, 199 funciones con comprobación de layout en compilación) se generan con `bindgen` y se commitean, así que la build normal no necesita libclang.
 - **Compilación:** `build-libghostty.sh` compila la librería estática por destino en la caché del usuario. `termbench` la usa con `--features ghostty`.
 - **Detalles para que funcione:**
   - enlazar desde un directorio que solo contenga el `.a`, porque el enlazador de macOS prefiere la `.dylib`;
@@ -514,9 +514,9 @@ cargo build --release
 ./target/release/termbench mem --tabs 10 --scrollback 10000 --cols 120 --json >> ../results/macos.jsonl
 
 # Motor libghostty-vt (Zig 0.16: brew install zig@0.16)
-../ghostty-engine/build-libghostty.sh                      # host
+../../../core/crates/openward-ghostty/build-libghostty.sh   # host
 ANDROID_NDK_HOME=~/Library/Android/sdk/ndk/<versión> \
-  ../ghostty-engine/build-libghostty.sh aarch64-linux-android
+  ../../../core/crates/openward-ghostty/build-libghostty.sh aarch64-linux-android
 cargo build --release --features ghostty
 ./target/release/termbench run ../corpus/synthetic/*.txt --engine all
 ./target/release/termbench mem --engine ghostty --tabs 10 --scrollback 10000 --cols 120
@@ -524,7 +524,7 @@ cargo build --release --features ghostty
 
 ```bash
 # Entrada (S1.5): pruebas de los codificadores y de la app en macOS
-cd spikes/s1-terminal/ghostty-engine && cargo test
+cd core && cargo test -p openward-ghostty
 cd ../render_harness && (cd rust && cargo test)
 fvm flutter test integration_test/input_test.dart -d macos
 fvm flutter run -d macos --release --dart-define=S1_PAGE=shell    # o keylog

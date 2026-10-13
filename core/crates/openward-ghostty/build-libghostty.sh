@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds libghostty-vt at the pinned commit (GHOSTTY_COMMIT) into the user
-# cache, where ghostty-engine's build.rs looks for it.
+# cache, where openward-ghostty's build.rs looks for it.
 #
 #   ./build-libghostty.sh                 # host target
 #   ./build-libghostty.sh aarch64-linux-android
@@ -43,14 +43,28 @@ git -C "$src" -c advice.detachedHead=false checkout --quiet "$commit"
 
 if [[ "$target" == native ]]; then
   arch="$(uname -m)"; [[ "$arch" == arm64 ]] && arch=aarch64
-  os="$(uname | tr '[:upper:]' '[:lower:]')"; [[ "$os" == darwin ]] && os=macos
+  os="$(uname | tr '[:upper:]' '[:lower:]')"
+  case "$os" in
+    darwin) os=macos ;;
+    # Git Bash / MSYS on Windows: Rust's default target uses the MSVC ABI.
+    mingw* | msys* | cygwin*) os=windows-msvc ;;
+  esac
   name="$arch-$os"
-  target_flag=()
+  if [[ "$os" == windows-msvc ]]; then
+    target_flag=("-Dtarget=$name")
+  else
+    target_flag=()
+  fi
 else
   name="$target"
   target_flag=("-Dtarget=$target")
 fi
 out="$cache/ghostty/build/${commit:0:8}/$name"
+# Already built for this commit and target (CI restores it from its cache).
+if ! $bindings && compgen -G "$out/lib/*ghostty-vt*" >/dev/null; then
+  echo "libghostty-vt: $out (cached)"
+  exit 0
+fi
 
 (cd "$src" && zig build -Demit-lib-vt=true -Doptimize=ReleaseFast "${target_flag[@]}" --prefix "$out")
 echo "libghostty-vt: $out"

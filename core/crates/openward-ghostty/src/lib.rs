@@ -1,8 +1,8 @@
-//! libghostty-vt behind `openward_term::TermEngine` (spike S1.3, candidate B).
+//! libghostty-vt behind `openward_term::TermEngine`: the terminal engine of
+//! OpenWard (ADR-002), with its input encoders (keys, mouse, paste, focus).
 //!
-//! All `unsafe` lives in this crate: generated bindings in [`sys`] and the
-//! calls in [`engine`] and its input encoders. Nothing here is promoted to `core/` unless the spike
-//! picks this engine (ADR-002).
+//! The one crate allowed to use `unsafe`: generated bindings in [`sys`] and
+//! the calls in `engine`. Everything it exposes is safe.
 
 #[allow(
     non_upper_case_globals,

@@ -1,6 +1,6 @@
 [package]
 name = "sshprobe"
-description = "Spike S2: russh against real SSH servers (interop matrix, sessions, forwarding)"
+description = "Spike S2: openward-ssh against real SSH servers (interop matrix and measurements)"
 version = "0.0.0"
 edition = "2024"
 rust-version = "1.99"
@@ -11,10 +11,7 @@ publish = false
 [workspace]
 
 [dependencies]
-russh = "=0.64.1"
+openward-ssh = { path = "../../../core/crates/openward-ssh" }
 tokio = { version = "1", features = ["full"] }
 anyhow = "1"
 serde_json = "1"
-hmac = "0.12"
-sha1 = "0.10"
-data-encoding = "2"

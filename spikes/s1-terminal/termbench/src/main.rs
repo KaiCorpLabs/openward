@@ -118,7 +118,7 @@ pub fn make_engine(
             size, scrollback,
         ))),
         #[cfg(feature = "ghostty")]
-        "ghostty" => Ok(Box::new(ghostty_engine::GhosttyEngine::new(
+        "ghostty" => Ok(Box::new(openward_ghostty::GhosttyEngine::new(
             size, scrollback,
         ))),
         #[cfg(not(feature = "ghostty"))]

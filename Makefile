@@ -33,7 +33,7 @@ corpus:
 
 # Spike S1.6 correctness: replay the committed tmux references (vttest,
 # Unicode widths, real programs) into both engines. Needs libghostty-vt
-# (spikes/s1-terminal/ghostty-engine/build-libghostty.sh).
+# (core/crates/openward-ghostty/build-libghostty.sh).
 CONFORMANCE := spikes/s1-terminal/corpus/conformance
 REPORTS := spikes/s1-terminal/results/conformance
 conformance:

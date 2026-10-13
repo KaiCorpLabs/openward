@@ -1,8 +1,13 @@
 [workspace]
 resolver = "3"
 members = [
+    "crates/openward-ghostty",
+    "crates/openward-pty",
+    "crates/openward-ssh",
     "crates/openward-term",
 ]
+# Its own workspace: regenerates openward-ghostty's bindings, needs libclang.
+exclude = ["crates/openward-ghostty/bindgen-gen"]
 
 [workspace.package]
 version = "0.0.1"
@@ -10,6 +15,8 @@ edition = "2024"
 rust-version = "1.99"
 license = "Apache-2.0"
 repository = "https://github.com/Ulzuhan/openward"
+# Not on crates.io: the app and the CLI ship as binaries.
+publish = false
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

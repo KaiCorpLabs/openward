@@ -1,6 +1,6 @@
-# ghostty-engine (spike S1.3)
+# openward-ghostty
 
-`libghostty-vt` detrás de `openward_term::TermEngine`. Es el motor elegido en el [ADR-002](../../../docs/adr/ADR-002-motor-de-terminal.md), tras el [spike S1](../../../docs/spikes/S1-terminal-resultados.md). Sigue siendo código de spike hasta que pase a `core/`.
+`libghostty-vt` detrás de `openward_term::TermEngine`: el motor de terminal de OpenWard, elegido en el [ADR-002](../../../docs/adr/ADR-002-motor-de-terminal.md) tras el [spike S1](../../../docs/spikes/S1-terminal-resultados.md). Es el único crate del núcleo con `unsafe` (FFI), como excepción auditada (ARCHITECTURE §3.2).
 
 ## Compilar
 

@@ -11,7 +11,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use flutter_rust_bridge::frb;
-use ghostty_engine::GhosttyEngine;
+use openward_ghostty::GhosttyEngine;
 use openward_term::alacritty::AlacrittyEngine;
 use openward_term::{FrameEncoder, Size, TermEngine};
 use s1_corpus::Workload;

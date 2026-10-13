@@ -32,7 +32,8 @@ fn zig_target(rust_target: &str) -> String {
         "x86_64-linux-android" => "x86_64-linux-android",
         "x86_64-unknown-linux-gnu" => "x86_64-linux",
         "aarch64-unknown-linux-gnu" => "aarch64-linux",
-        "x86_64-pc-windows-msvc" => "x86_64-windows",
+        "x86_64-pc-windows-msvc" => "x86_64-windows-msvc",
+        "aarch64-pc-windows-msvc" => "aarch64-windows-msvc",
         other => other,
     }
     .to_owned()
@@ -55,29 +56,36 @@ fn main() {
         }
     };
     let lib = dir.join("lib");
-    if !lib.join("libghostty-vt.a").exists() {
+    let windows = env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows");
+    // Zig names the static library differently on Windows.
+    let (file, name) = if windows {
+        ("ghostty-vt-static.lib", "ghostty-vt-static")
+    } else {
+        ("libghostty-vt.a", "ghostty-vt")
+    };
+    if !lib.join(file).exists() {
         panic!(
-            "libghostty-vt not found in {}. Run spikes/s1-terminal/ghostty-engine/build-libghostty.sh \
+            "libghostty-vt not found in {}. Run core/crates/openward-ghostty/build-libghostty.sh \
              (or set GHOSTTY_VT_DIR).",
             lib.display()
         );
     }
-    println!(
-        "cargo:rerun-if-changed={}",
-        lib.join("libghostty-vt.a").display()
-    );
-    // The install dir also has the .dylib/.so, which the macOS linker would
+    println!("cargo:rerun-if-changed={}", lib.join(file).display());
+    // The install dir also has the .dylib/.so/.dll, which the linker could
     // pick over the archive. Link from a directory that only has the archive.
     let out = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR")).join("lib");
     std::fs::create_dir_all(&out).expect("create OUT_DIR/lib");
-    let archive = out.join("libghostty-vt.a");
     if env::var("CARGO_CFG_TARGET_VENDOR").as_deref() == Ok("apple") {
-        prelink_apple(&lib.join("libghostty-vt.a"), &out);
+        prelink_apple(&lib.join(file), &out);
     } else {
-        std::fs::copy(lib.join("libghostty-vt.a"), &archive).expect("copy libghostty-vt.a");
+        std::fs::copy(lib.join(file), out.join(file)).expect("copy libghostty-vt");
     }
     println!("cargo:rustc-link-search=native={}", out.display());
-    println!("cargo:rustc-link-lib=static=ghostty-vt");
+    println!("cargo:rustc-link-lib=static={name}");
+    if windows {
+        // The Zig standard library calls into ntdll (kernel32 comes with std).
+        println!("cargo:rustc-link-lib=ntdll");
+    }
 }
 
 /// Zig bundles its compiler_rt into static libraries. On Apple targets a Rust

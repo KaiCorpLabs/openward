@@ -122,7 +122,8 @@ flowchart TB
 | `openward-sync` | Motor de sync (registros por dispositivo, merge y compactación) y backends | `object_store` (S3/R2/local), WebDAV, `gix` (Git), cliente del relay |
 | `openward-ssh` | Sesiones, autenticación, trait `Signer`, cadenas de saltos, proxy, ProxyCommand, servidor SOCKS5 propio para forwarding dinámico, known hosts, keepalive, reconexión | `russh`, `ssh-key`, `tokio-socks` |
 | `openward-sftp` | Navegador remoto, transferencias con cola, reanudación y permisos | `russh-sftp` |
-| `openward-term` | Adaptador `TermEngine`: estado VT, scrollback, búsqueda, *damage* por filas, grabación asciicast, codificación de entrada | `libghostty-vt` (commit fijado, Zig 0.16, bindings con `bindgen`) |
+| `openward-term` | Trait `TermEngine` y formato de frames (*damage* por filas) entre el motor y la UI | — |
+| `openward-ghostty` | El motor: estado VT, scrollback comprimible, búsqueda, codificación de entrada y respuestas. Único crate con `unsafe` (FFI) | `libghostty-vt` (commit fijado, Zig 0.16, bindings con `bindgen`) |
 | `openward-pty` | Terminal local en escritorio | `portable-pty` 0.9.0 fijado (probado en S1.5; sin versión desde febrero de 2025, fork si hace falta) |
 | `openward-serial` | Puertos serie en escritorio (Android con USB en una fase posterior; iOS no tiene) | `serialport` (MPL-2.0; busca mantenedores) |
 | `openward-mosh` | Cliente Mosh clean-room (fase 4) | — |
@@ -134,7 +135,7 @@ flowchart TB
 | `openward-ffi` | Superficie para Flutter | `flutter_rust_bridge` |
 | `openward-cli` | Binario `ow`: conectar, listar, agente, MCP, importar y exportar, pruebas sin UI | `clap` |
 
-Reglas heredadas de Arveil: `unsafe_code = "forbid"` salvo en `openward-ffi` y en los firmantes de plataforma (auditados aparte), lockfiles fijados, `cargo-deny` y `cargo-audit` en CI.
+Reglas heredadas de Arveil: `unsafe_code = "forbid"` salvo en `openward-ghostty`, `openward-ffi` y los firmantes de plataforma (auditados aparte), lockfiles fijados, `cargo-deny` y `cargo-audit` en CI.
 
 ### 3.3 Contrato FFI
 
