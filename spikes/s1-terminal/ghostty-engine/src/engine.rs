@@ -22,9 +22,72 @@ const CELL_H_PX: u32 = 16;
 /// in modes.h, so bindgen does not generate it).
 const GRAPHEME_CLUSTER_MODE: sys::GhosttyMode = 2027 & 0x7FFF;
 
-/// What the terminal reports back while parsing.
+/// What the terminal reports back while parsing, and what it needs to know
+/// to answer the program's queries.
 struct Effects {
     host_writes: Vec<u8>,
+    size: Size,
+    /// Cell size in pixels for XTWINOPS size reports.
+    cell_px: (u32, u32),
+}
+
+/// Theme defaults reported to OSC 10/11 queries (programs use them to pick
+/// a dark or light scheme). The UI resolves `Color::Default` itself.
+const DEFAULT_FG: sys::GhosttyColorRgb = sys::GhosttyColorRgb {
+    r: 0xD4,
+    g: 0xD4,
+    b: 0xD4,
+};
+const DEFAULT_BG: sys::GhosttyColorRgb = sys::GhosttyColorRgb {
+    r: 0x16,
+    g: 0x18,
+    b: 0x1D,
+};
+const XTVERSION: &[u8] = b"OpenWard S1";
+const TERMINFO_NAME: &[u8] = b"xterm-256color";
+
+unsafe extern "C" fn on_xtversion(
+    _terminal: sys::GhosttyTerminal,
+    _userdata: *mut c_void,
+) -> sys::GhosttyString {
+    sys::GhosttyString {
+        ptr: XTVERSION.as_ptr(),
+        len: XTVERSION.len(),
+    }
+}
+
+unsafe extern "C" fn on_size(
+    _terminal: sys::GhosttyTerminal,
+    userdata: *mut c_void,
+    out: *mut sys::GhosttySizeReportSize,
+) -> bool {
+    if userdata.is_null() || out.is_null() {
+        return false;
+    }
+    // SAFETY: userdata is the engine's boxed Effects; out is valid for the call.
+    unsafe {
+        let effects = &*userdata.cast::<Effects>();
+        *out = sys::GhosttySizeReportSize {
+            rows: effects.size.rows,
+            columns: effects.size.cols,
+            cell_width: effects.cell_px.0,
+            cell_height: effects.cell_px.1,
+        };
+    }
+    true
+}
+
+unsafe extern "C" fn on_color_scheme(
+    _terminal: sys::GhosttyTerminal,
+    _userdata: *mut c_void,
+    out: *mut sys::GhosttyColorScheme,
+) -> bool {
+    if out.is_null() {
+        return false;
+    }
+    // SAFETY: out is valid for the call. The spike only has a dark theme.
+    unsafe { *out = sys::GHOSTTY_COLOR_SCHEME_DARK };
+    true
 }
 
 unsafe extern "C" fn on_write_pty(
@@ -87,6 +150,8 @@ impl GhosttyEngine {
     pub fn new(size: Size, scrollback_lines: usize) -> Self {
         let mut effects = Box::new(Effects {
             host_writes: Vec::new(),
+            size,
+            cell_px: (CELL_W_PX, CELL_H_PX),
         });
         // SAFETY: every out-pointer is valid; option values follow the
         // documented input types (pointer values, size_t*, function pointers).
@@ -117,6 +182,63 @@ impl GhosttyEngine {
                     write_pty as *const c_void,
                 ),
                 "set write_pty",
+            );
+            // Answers to queries: our name, the size, a dark scheme, the
+            // theme's default colors and the terminfo entry we advertise.
+            let xtversion: unsafe extern "C" fn(
+                sys::GhosttyTerminal,
+                *mut c_void,
+            ) -> sys::GhosttyString = on_xtversion;
+            let size_fn: unsafe extern "C" fn(
+                sys::GhosttyTerminal,
+                *mut c_void,
+                *mut sys::GhosttySizeReportSize,
+            ) -> bool = on_size;
+            let scheme_fn: unsafe extern "C" fn(
+                sys::GhosttyTerminal,
+                *mut c_void,
+                *mut sys::GhosttyColorScheme,
+            ) -> bool = on_color_scheme;
+            for (opt, value, what) in [
+                (
+                    sys::GHOSTTY_TERMINAL_OPT_XTVERSION,
+                    xtversion as *const c_void,
+                    "set xtversion",
+                ),
+                (
+                    sys::GHOSTTY_TERMINAL_OPT_SIZE,
+                    size_fn as *const c_void,
+                    "set size",
+                ),
+                (
+                    sys::GHOSTTY_TERMINAL_OPT_COLOR_SCHEME,
+                    scheme_fn as *const c_void,
+                    "set color scheme",
+                ),
+                (
+                    sys::GHOSTTY_TERMINAL_OPT_COLOR_FOREGROUND,
+                    (&DEFAULT_FG as *const sys::GhosttyColorRgb).cast::<c_void>(),
+                    "set foreground",
+                ),
+                (
+                    sys::GHOSTTY_TERMINAL_OPT_COLOR_BACKGROUND,
+                    (&DEFAULT_BG as *const sys::GhosttyColorRgb).cast::<c_void>(),
+                    "set background",
+                ),
+            ] {
+                ok(sys::ghostty_terminal_set(term, opt, value), what);
+            }
+            let terminfo = sys::GhosttyString {
+                ptr: TERMINFO_NAME.as_ptr(),
+                len: TERMINFO_NAME.len(),
+            };
+            ok(
+                sys::ghostty_terminal_set(
+                    term,
+                    sys::GHOSTTY_TERMINAL_OPT_TERMINFO_NAME,
+                    (&terminfo as *const sys::GhosttyString).cast::<c_void>(),
+                ),
+                "set terminfo name",
             );
             // Same retention rule as the other engine: a line limit only.
             let lines: usize = scrollback_lines;
@@ -209,6 +331,31 @@ impl GhosttyEngine {
             );
         }
         usage
+    }
+
+    /// The program can change the grid itself (DECCOLM, 80/132 columns,
+    /// when it also enabled mode 40). Track it so frames carry the real size.
+    fn sync_size(&mut self) {
+        let (mut cols, mut rows) = (0u16, 0u16);
+        // SAFETY: valid terminal; both queries write a uint16_t.
+        unsafe {
+            sys::ghostty_terminal_get(
+                self.term,
+                sys::GHOSTTY_TERMINAL_DATA_COLS,
+                (&mut cols as *mut u16).cast::<c_void>(),
+            );
+            sys::ghostty_terminal_get(
+                self.term,
+                sys::GHOSTTY_TERMINAL_DATA_ROWS,
+                (&mut rows as *mut u16).cast::<c_void>(),
+            );
+        }
+        let actual = Size::new(cols, rows);
+        if cols > 0 && rows > 0 && actual != self.size {
+            self.size = actual;
+            self.effects.size = actual;
+            self.force_full = true;
+        }
     }
 
     /// Back to the live screen (what terminals do on input).
@@ -375,6 +522,48 @@ impl GhosttyEngine {
             .extend(self.graphemes.iter().filter_map(|&cp| char::from_u32(cp)));
     }
 
+    /// The background of a cell that has only a color (no text, no style).
+    fn cell_bg_only(&self) -> Option<Color> {
+        let mut raw: sys::GhosttyCell = 0;
+        if !self.cell_get(sys::GHOSTTY_RENDER_STATE_ROW_CELLS_DATA_RAW, &mut raw) {
+            return None;
+        }
+        // SAFETY: each query writes the documented output type.
+        unsafe {
+            let mut tag: sys::GhosttyCellContentTag = 0;
+            sys::ghostty_cell_get(
+                raw,
+                sys::GHOSTTY_CELL_DATA_CONTENT_TAG,
+                (&mut tag as *mut sys::GhosttyCellContentTag).cast::<c_void>(),
+            );
+            match tag {
+                sys::GHOSTTY_CELL_CONTENT_BG_COLOR_PALETTE => {
+                    let mut i: sys::GhosttyColorPaletteIndex = 0;
+                    sys::ghostty_cell_get(
+                        raw,
+                        sys::GHOSTTY_CELL_DATA_COLOR_PALETTE,
+                        (&mut i as *mut u8).cast::<c_void>(),
+                    );
+                    Some(if i < 16 {
+                        Color::Named(i)
+                    } else {
+                        Color::Indexed(i)
+                    })
+                }
+                sys::GHOSTTY_CELL_CONTENT_BG_COLOR_RGB => {
+                    let mut rgb = sys::GhosttyColorRgb::default();
+                    sys::ghostty_cell_get(
+                        raw,
+                        sys::GHOSTTY_CELL_DATA_COLOR_RGB,
+                        (&mut rgb as *mut sys::GhosttyColorRgb).cast::<c_void>(),
+                    );
+                    Some(Color::Rgb(rgb.r, rgb.g, rgb.b))
+                }
+                _ => None,
+            }
+        }
+    }
+
     fn cell_width(&self) -> sys::GhosttyCellWide {
         let mut raw: sys::GhosttyCell = 0;
         if !self.cell_get(sys::GHOSTTY_RENDER_STATE_ROW_CELLS_DATA_RAW, &mut raw) {
@@ -498,12 +687,28 @@ impl TermEngine for GhosttyEngine {
             );
         }
         self.size = size;
+        self.effects.size = size;
         self.force_full = true;
     }
 
     fn feed(&mut self, bytes: &[u8]) {
-        // SAFETY: valid terminal and buffer.
-        unsafe { sys::ghostty_terminal_vt_write(self.term, bytes.as_ptr(), bytes.len()) };
+        // libghostty-vt at the pinned commit prints DEL (0x7F) into a cell
+        // instead of ignoring it, as VT100 and xterm do in every state
+        // (found by vttest, S1.6). Drop it here; the common case has none.
+        let write = |term, data: &[u8]| {
+            // SAFETY: valid terminal and buffer.
+            unsafe { sys::ghostty_terminal_vt_write(term, data.as_ptr(), data.len()) };
+        };
+        if !bytes.contains(&0x7F) {
+            write(self.term, bytes);
+        } else {
+            for piece in bytes.split(|&b| b == 0x7F) {
+                if !piece.is_empty() {
+                    write(self.term, piece);
+                }
+            }
+        }
+        self.sync_size();
     }
 
     fn encode_damage(&mut self, enc: &mut FrameEncoder) -> FrameStats {
@@ -544,7 +749,14 @@ impl TermEngine for GhosttyEngine {
                         col += 1;
                         continue;
                     }
-                    let style = this.cell_style();
+                    let mut style = this.cell_style();
+                    // Cells erased with a background color (BCE: EL, ED, ECH
+                    // with a color set) hold only that color, no style.
+                    if style == Style::default()
+                        && let Some(bg) = this.cell_bg_only()
+                    {
+                        style.bg = bg;
+                    }
                     this.read_grapheme();
                     // A written space with no style is as blank as an empty
                     // cell; both engines omit it from frames.
@@ -814,6 +1026,70 @@ mod tests {
         e.feed(b"ab\x1b[6n");
         assert_eq!(e.take_host_writes(), b"\x1b[1;3R");
         assert!(e.take_host_writes().is_empty());
+    }
+
+    #[test]
+    fn erased_cells_keep_the_background_color() {
+        // Erasing after X with a green background: X plus the erased cells
+        // are green (one span, as they share the style).
+        for (erase, green) in [(&b"\x1b[K"[..], 6), (b"\x1b[3X", 4), (b"\x1b[J", 6)] {
+            let mut e = engine(6, 2);
+            e.feed(b"\x1b[42mX");
+            e.feed(erase);
+            let f = frame(&mut e);
+            let covered: u16 = f.lines[0]
+                .spans
+                .iter()
+                .filter(|s| s.style.bg == Color::Named(2))
+                .map(|s| s.width)
+                .sum();
+            assert_eq!(covered, green, "{erase:?}");
+        }
+        let mut e = engine(6, 1);
+        e.feed(b"\x1b[48;2;1;2;3m\x1b[K");
+        assert_eq!(
+            frame(&mut e).lines[0].spans[0].style.bg,
+            Color::Rgb(1, 2, 3)
+        );
+    }
+
+    #[test]
+    fn follows_a_program_switching_to_132_columns() {
+        let mut e = engine(80, 24);
+        e.feed(b"\x1b[?3h"); // DECCOLM alone is ignored (mode 40 off)
+        assert_eq!(e.size(), Size::new(80, 24));
+        e.feed(b"\x1b[?40h\x1b[?3h");
+        assert_eq!(e.size(), Size::new(132, 24));
+        let f = frame(&mut e);
+        assert!(f.full);
+        assert_eq!(f.cols, 132);
+    }
+
+    #[test]
+    fn ignores_del() {
+        let mut e = engine(20, 2);
+        e.feed(b"a\x7fb\x1b[3\x7f1mc");
+        assert_eq!(e.screen_text().lines().next(), Some("abc"));
+    }
+
+    #[test]
+    fn answers_queries_programs_send() {
+        let mut e = engine(80, 24);
+        let mut ask = |q: &[u8]| {
+            e.feed(q);
+            String::from_utf8(e.take_host_writes()).unwrap()
+        };
+        assert!(ask(b"\x1b[>0q").contains("OpenWard S1"));
+        assert_eq!(ask(b"\x1b[18t"), "\x1b[8;24;80t");
+        assert_eq!(ask(b"\x1b[?996n"), "\x1b[?997;1n");
+        assert!(ask(b"\x1b]11;?\x1b\\").contains("rgb:1616/1818/1d1d"));
+        assert!(ask(b"\x1b]10;?\x1b\\").contains("rgb:d4d4/d4d4/d4d4"));
+        // XTGETTCAP TN, hex-encoded both ways.
+        let hex: String = "xterm-256color"
+            .bytes()
+            .map(|b| format!("{b:02X}"))
+            .collect();
+        assert!(ask(b"\x1bP+q544e\x1b\\").contains(&hex));
     }
 
     #[test]

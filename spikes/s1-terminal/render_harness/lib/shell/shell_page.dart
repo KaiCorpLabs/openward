@@ -35,7 +35,7 @@ class ShellPage extends StatefulWidget {
 class ShellPageState extends State<ShellPage>
     with SingleTickerProviderStateMixin, TextInputClient {
   late final TerminalRenderer _renderer = TerminalRenderer(
-    metrics: CellMetrics.measure(),
+    metrics: CellMetrics.measure(devicePixelRatio: _devicePixelRatio()),
     palette: TermPalette.dark,
     mode: RenderMode.atlas,
     devicePixelRatio: _devicePixelRatio(),

@@ -56,7 +56,7 @@ class Harness extends ChangeNotifier {
       defaultValue: 'sync',
     ),
   }) : renderer = TerminalRenderer(
-         metrics: CellMetrics.measure(),
+         metrics: CellMetrics.measure(devicePixelRatio: _devicePixelRatio()),
          palette: TermPalette.dark,
          mode: RenderMode.values.byName(
            const String.fromEnvironment('S1_RENDERER', defaultValue: 'atlas'),

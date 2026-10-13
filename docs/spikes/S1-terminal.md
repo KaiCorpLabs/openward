@@ -99,7 +99,7 @@ Gana el motor que pasa la puerta. Si pasan los dos, se puntúa:
 | S1.4b | Carga de tecleo (bytes sueltos a intervalos aleatorios) para medir el eco | 0,5 | **Hecho** en macOS: pasa la puerta (§10.2) |
 | S1.4c | Render con atlas de glifos (`drawRawAtlas`), con párrafo de respaldo para emoji y clústeres raros; comparar el coste de grabación con v2 | 1–2 | **Hecho** en macOS: 2–3× más barato (§10.3) |
 | S1.5 | Entrada: codificación de teclas (xterm y protocolo kitty), ratón (SGR 1006), bracketed paste; IME con `TextInputClient` y región de composición en el cursor; barra de teclas en móvil | 2–3 | **Hecho** en macOS con pruebas automáticas; falta la lista manual de IME y los dispositivos (§10.6) |
-| S1.6 | Corrección: vttest, apps reales y corpus unicode en ambos motores; capturas comparadas | 1–2 | Pendiente |
+| S1.6 | Corrección: vttest, apps reales y corpus unicode en ambos motores; capturas comparadas | 1–2 | **Hecho** en macOS (§10.7) |
 | S1.7 | Si se confirma H2: prototipo de scrollback compacto (texto UTF-8 con tramos de estilo para las líneas que salen de la pantalla) y medición | 2 | Condicional |
 | S1.8 | Informe `S1-terminal-resultados.md` y ADR-002 aceptado | 1 | Pendiente |
 
@@ -254,7 +254,7 @@ Ghostty ocupa unas 3 veces menos. Además, `ghostty_terminal_compress` (pensado 
 **Recomendación provisional: `libghostty-vt`.** Es el único motor que pasa la puerta de memoria y el que menos trabajo propio deja (codificadores de entrada para S1.5, grafemas, compresión). El coste es la API inestable y la build con Zig, que se mitigan con el commit fijado, el adaptador `TermEngine` y bindings regenerables. Antes de aceptar el ADR-002 (S1.8) faltan:
 - ejecutar en Android e iOS reales (S1.2);
 - probar el IME con métodos de entrada reales y en móvil (S1.5 está hecho en macOS con pruebas automáticas, §10.6);
-- probar la corrección con apps reales (S1.6);
+- probar la corrección con apps reales (S1.6): **hecho** (§10.7). Ghostty acierta en más funciones y tiene tres fallos propios que reportar upstream;
 - repetir la memoria con grabaciones reales (S1.1).
 
 ### 10.5 Corpus de sesiones reales (S1.1)
@@ -391,6 +391,98 @@ Las grabaciones de vim, htop y man son cortas, así que sus cifras tienen más r
 | Android (Gboard, Samsung): letras, Retroceso, sugerencias desactivadas, barra de teclas con Ctrl+C | Sin duplicados ni letras perdidas; Ctrl+C interrumpe |
 | iOS: teclado de pantalla, teclado físico en iPad, Retroceso con el campo vacío | Retroceso siempre llega; Cmd no se envía al terminal |
 
+### 10.7 Corrección: vttest, anchos Unicode, apps reales y respuestas (S1.6)
+
+2026-10-13 · macOS · los dos motores con los adaptadores corregidos abajo. Datos en `results/macos-conformance-s1.6.jsonl`; informes con cada diferencia en `results/conformance/`.
+
+**Método:**
+- **Referencia:** tmux 3.5a, dentro del contenedor sin red de S1.1 (`corpus/conformance.sh`). tmux hace de terminal: dibuja la pantalla y responde a las consultas del programa.
+- **Qué se captura:**
+  - **vttest 2.7:** todos los menús, salvo los que piden algo más que `<RETURN>`. 551 pantallas a 80×24.
+  - **24 casos de ancho Unicode.**
+  - **23 paradas** en vim, less, man, htop y bash, con `TERM=xterm-256color`.
+- **Qué se guarda:** la salida en bruto del programa y, en cada parada, el texto, el cursor y los estilos de la pantalla de tmux (`capture-pane -e`).
+- **Comparación:** `termbench conform` reproduce la salida en cada motor hasta el mismo byte y compara texto, cursor y estilos.
+  - La captura de tmux se reinterpreta siempre con el mismo decodificador (alacritty), para traducir sus celdas de dibujo DEC (SO/SI) igual para los dos motores.
+  - Los pasos en que un motor pasa a 132 columnas se cuentan aparte, porque tmux no implementa DECCOLM.
+- **tmux también se equivoca.** No implementa los márgenes izquierdo/derecho, la línea de estado, las áreas protegidas ni el juego británico, y no conserva el color de fondo de BCE en su captura. Por eso la señal más útil es **dónde discrepan los dos motores**. Esas discrepancias se han resuelto a mano con la descripción que vttest muestra en pantalla.
+
+**Resultados:**
+
+| Captura | Pasos | alacritty = tmux (texto / cursor) | Ghostty = tmux (texto / cursor) | Los dos motores iguales (texto / estilo) |
+|---|---|---|---|---|
+| vttest | 551 | 523 / 545 | 465 / 527 (+20 pasos a 132 col.) | 467 / 492 de 531 |
+| Anchos Unicode | 24 | 24 / 18 | 23 / 23 | 23 / 24 |
+| Apps reales | 23 | 21 / 23 | 22 / 23 | 21 / 22 |
+
+**Discrepancias entre motores en vttest** (43 pruebas):
+
+| Grupo | Pruebas | Quién acierta |
+|---|---|---|
+| Márgenes izquierdo/derecho (DECSLRM; pruebas VT420/VT520 de movimiento, edición y áreas rectangulares) | ~18 | **Ghostty**, el único que los implementa (comprobado en «cursor movement within margins») |
+| Línea de estado (DECSASD/DECSSDT) | 6 | **Ghostty**: no mezcla su texto con la pantalla; tmux y alacritty lo escriben encima |
+| Áreas protegidas (DECSCA, SPA) | 4 | **Ghostty**: respeta la protección al borrar |
+| Región de desplazamiento con modo origen (tests 2, 11.6.6 y 11.6.8) | ~4 | **Ghostty**: alacritty deja el cursor fuera de la región tras `DECSTBM` con `?6h` |
+| Pantalla alternativa (modos 47 y 1047) | 2 | **Ghostty** |
+| 80/132 columnas (DECCOLM, DECNCSM) | 1 + 20 pasos | **Ghostty** las implementa (si el programa activa el modo 40) |
+| Parámetro 0 en SU, SD, IL, DL, DCH, CHT, CBT, HPR y VPR | 6 | **alacritty**: Ghostty no hace nada con `CSI 0 S` y similares, cuando ECMA-48 y xterm lo tratan como 1. Con el 0 cambiado por 1 en la reproducción, estas 6 coinciden |
+| Previous-Line (CPL) | 1 | **alacritty** (Ghostty y tmux no numeran en secuencia) |
+| Juegos de caracteres | 1 | **Mixto**: solo Ghostty tiene el británico (`#` → `£`), pero no pinta en blanco el `_` del juego gráfico DEC |
+
+En resumen: Ghostty acierta en casi todo lo de VT220 en adelante, que alacritty ni implementa, y falla en unos pocos valores por defecto del parser. El modo VT52 (test 7) no lo tiene Ghostty; no importa para un cliente SSH.
+
+**Anchos Unicode** (la columna del cursor tras cada caso):
+- **Ghostty coincide con tmux en 23 de 24 casos.** tmux 3.5 también agrupa grafemas: tonos de piel, familias ZWJ, ❤️ con VS16, keycaps y banderas van en 2 celdas.
+- **alacritty usa el ancho por punto de código:**
+  - 👍🏽 ocupa 4 celdas y la familia ZWJ, 6;
+  - ❤️ con VS16 y el keycap ocupan 1;
+  - el guion blando ocupa 0 (en tmux y Ghostty, 1).
+- **La única diferencia de Ghostty** es el conjunto devanagari क्षि: 1 celda, frente a 2 en tmux y alacritty.
+
+**Apps reales:** las dos diferencias que quedan son de **vim con emoji compuestos**.
+- **Qué pasa:** vim calcula 👍🏽 como 4 celdas y el terminal, con el modo 2027 activo, lo pone en 2. El resto de la línea se desplaza y quedan restos en pantalla (en Ghostty y en tmux). alacritty, que no agrupa, coincide con vim y la pantalla queda limpia.
+- **Por qué:** es el coste conocido de activar 2027 por defecto con programas que no lo piden. neovim 0.10+ sí lo gestiona.
+- **Decisión para el producto:** mantenerlo activo, como Ghostty y tmux, pero configurable.
+
+**Fallos encontrados y estado:**
+
+| Fallo | Dónde | Estado |
+|---|---|---|
+| Las celdas borradas con color de fondo (BCE: `EL`, `ED`, `ECH` con color) salían sin fondo: Ghostty las guarda como celdas «solo color» y el adaptador solo miraba el estilo. Rompía las barras de htop, mc o la de estado de tmux | Adaptador Ghostty | **Corregido**, con prueba |
+| Tras DECCOLM, los frames seguían diciendo 80 columnas | Adaptador Ghostty | **Corregido**: lee el tamaño real tras cada `feed` |
+| alacritty guarda un `\t` en la celda donde empezó un tabulador | Adaptador alacritty (`core/`) | **Corregido**: se muestra como blanco |
+| DEL (0x7F) se imprime en una celda en vez de ignorarse | libghostty-vt | **Mitigado** en el adaptador (se filtra antes de `feed`); reportar upstream |
+| Parámetro 0 en SU, SD, IL, DL, DCH, CHT, CBT, HPR y VPR no hace nada | libghostty-vt | Reportar upstream; los programas reales casi nunca envían 0 |
+| `_` del juego gráfico DEC no se pinta en blanco; sin modo VT52 | libghostty-vt | Menor |
+
+**Respuestas a consultas** (`termbench reports`, `results/conformance/reports.md`):
+- **Lo que ya responden los dos:** DA, DSR/CPR y DECRQM. Ghostty además responde a la consulta de flags de kitty, a DECRQSS y al modo 2027.
+- **Lo que se ha cableado en el motor del spike** con las opciones de libghostty-vt:
+  - XTVERSION (`OpenWard S1`);
+  - tamaño en celdas y en píxeles (XTWINOPS 14/18);
+  - esquema oscuro (DSR 996);
+  - colores por defecto para OSC 10/11, con los que vim, neovim y muchas CLIs eligen tema claro u oscuro;
+  - nombre de terminfo para XTGETTCAP.
+- **Pendiente para el producto:**
+  - la paleta del tema para OSC 4 (Ghostty responde con la suya);
+  - el portapapeles OSC 52;
+  - notificaciones, progreso (OSC 9;4) y avisos de directorio y título. Para todo esto Ghostty también trae opciones.
+- **alacritty no responde a la mayoría** sin trabajo propio: kitty, colores, XTVERSION, DECRQSS.
+
+**Render** (capturas comparables con `integration_test/snapshots_test.dart`, a 2×):
+- **El texto «más grueso» del atlas era emborronamiento.**
+  - **Causa:** las celdas medían una fracción de píxel (7,83 px con Menlo 13), así que cada glifo caía en una posición fraccionaria y se remuestreaba con filtro bilineal.
+  - **Medida:** sin ajustar las celdas, el atlas tiene 1,77 píxeles a medio tono por cada píxel lleno, frente a 0,89 del texto en párrafo. Con las celdas ajustadas a píxeles físicos, **0,89 frente a 0,86**: el mismo grosor.
+  - **Cambio:** la anchura y altura de celda se redondean a píxeles físicos, como hacen los terminales. Los párrafos de respaldo usan un espaciado entre letras que compensa la diferencia, para no salirse de la rejilla.
+- **Cajas sin huecos.**
+  - **Qué se dibuja:** cajas (U+2500–U+257F), bloques (U+2580–U+259F) y separadores Powerline (U+E0B0–E0B3). Se dibujan como geometría en el atlas, en píxeles enteros que llenan la celda. Eso incluye las uniones de líneas dobles (╔ ╦ ╬), las mezclas sencilla/doble, los arcos, los guiones y los sombreados.
+  - **Por qué:** con la fuente, las líneas verticales salían cortadas y los separadores Powerline como «?», porque Menlo no los tiene.
+  - **Pruebas:** 3 pruebas unitarias comprueban que cada carácter dibuja algo y que las líneas llegan a los bordes que unen.
+- **Limitaciones vistas** (comunes en terminales):
+  - el árabe se pinta letra a letra, sin dar forma ni bidireccionalidad;
+  - el parpadeo no se dibuja;
+  - el subrayado ondulado, punteado o doble se pinta recto.
+
 ## 11. Cómo reproducir
 
 ```bash
@@ -416,4 +508,13 @@ cd spikes/s1-terminal/ghostty-engine && cargo test
 cd ../render_harness && (cd rust && cargo test)
 fvm flutter test integration_test/input_test.dart -d macos
 fvm flutter run -d macos --release --dart-define=S1_PAGE=shell    # o keylog
+```
+
+```bash
+# Corrección (S1.6): referencias de tmux ya commiteadas, reproducidas en los dos motores
+make conformance                       # informes en spikes/s1-terminal/results/conformance/
+make conformance-record                # volver a grabar las referencias (contenedor, ~10 min)
+cd spikes/s1-terminal/render_harness
+fvm flutter test integration_test/snapshots_test.dart -d macos \
+  --dart-define=S1_SPIKE_DIR=$PWD/.. --dart-define=S1_SNAPSHOT_DIR=/tmp/s1-snapshots
 ```

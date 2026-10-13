@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'box_drawing.dart';
 import 'metrics.dart';
 
 /// Glyphs rendered once, in white, into a texture. Rows are then drawn with
@@ -75,6 +76,21 @@ final class GlyphAtlas {
     final old = _image;
     if (old != null) canvas.drawImage(old, ui.Offset.zero, ui.Paint());
     for (final (text, style, rect) in _pending) {
+      final runes = text.runes;
+      if (runes.length == 1 && BoxDrawing.handles(runes.first)) {
+        canvas
+          ..save()
+          ..clipRect(rect);
+        BoxDrawing.paint(
+          canvas,
+          runes.first,
+          rect,
+          devicePixelRatio,
+          const ui.Color(0xFFFFFFFF),
+        );
+        canvas.restore();
+        continue;
+      }
       final p = metrics.paragraph(
         text,
         color: const ui.Color(0xFFFFFFFF),

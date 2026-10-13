@@ -205,6 +205,10 @@ impl GhosttyEngine {
     pub fn set_cell_pixels(&mut self, width: f32, height: f32) {
         self.input.cell_w = width.max(1.0);
         self.input.cell_h = height.max(1.0);
+        self.effects.cell_px = (
+            self.input.cell_w.round() as u32,
+            self.input.cell_h.round() as u32,
+        );
     }
 
     pub fn input_modes(&self) -> InputModes {

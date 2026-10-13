@@ -7,7 +7,9 @@
 
 mod bench;
 mod cast;
+mod conform;
 mod corpus;
+mod reports;
 mod rss;
 
 use std::path::PathBuf;
@@ -24,6 +26,8 @@ USAGE:
   termbench replay <file.cast>... [--engine E] [--chunk B] [--frame-bytes B] [--json]
   termbench echo [--engine E] [--cols C] [--rows R] [--iterations N] [--json]
   termbench mem [file.cast] [--engine E] [--tabs N] [--scrollback L] [--cols C] [--rows R] [--json]
+  termbench conform <raw output> <reference.jsonl> [report.md] [--engine E] [--json]
+  termbench reports [--engine E] [--json]
 
 ENGINES:
   alacritty (default), ghostty (needs --features ghostty), all
@@ -147,6 +151,8 @@ fn main() -> ExitCode {
         "replay" => bench::replay_casts(&opts),
         "echo" => bench::echo(&opts),
         "mem" => bench::mem(&opts),
+        "conform" => conform::conform(&opts),
+        "reports" => reports::reports(&opts),
         "-h" | "--help" | "help" => {
             print!("{USAGE}");
             Ok(())

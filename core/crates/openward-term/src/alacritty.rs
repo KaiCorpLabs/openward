@@ -172,11 +172,12 @@ impl TermEngine for AlacrittyEngine {
                     continue;
                 }
                 let style = style_of(cell);
-                if cell.c == ' ' && style == Style::default() && cell.zerowidth().is_none() {
+                let c = visible_char(cell.c);
+                if c == ' ' && style == Style::default() && cell.zerowidth().is_none() {
                     continue;
                 }
                 text.clear();
-                text.push(cell.c);
+                text.push(c);
                 if let Some(marks) = cell.zerowidth() {
                     text.extend(marks);
                 }
@@ -218,7 +219,7 @@ impl TermEngine for AlacrittyEngine {
                 {
                     continue;
                 }
-                text.push(cell.c);
+                text.push(visible_char(cell.c));
                 if let Some(marks) = cell.zerowidth() {
                     text.extend(marks);
                 }
@@ -227,6 +228,12 @@ impl TermEngine for AlacrittyEngine {
         }
         out.join("\n")
     }
+}
+
+/// alacritty keeps a `\t` in the cell a tab started from, so copying text
+/// gives the tab back. On screen it is a blank.
+fn visible_char(c: char) -> char {
+    if c == '\t' { ' ' } else { c }
 }
 
 fn style_of(cell: &Cell) -> Style {
@@ -301,6 +308,18 @@ mod tests {
                     .collect()
             })
             .unwrap_or_default()
+    }
+
+    #[test]
+    fn tabs_are_blanks_on_screen() {
+        let mut e = AlacrittyEngine::new(Size::new(20, 2), 100);
+        e.feed(b"a\tb");
+        assert_eq!(e.screen_text().lines().next(), Some("a       b"));
+        let mut enc = FrameEncoder::new();
+        e.encode_damage(&mut enc);
+        let f = crate::frame::decode(enc.bytes()).unwrap();
+        let texts: Vec<_> = f.lines[0].spans.iter().map(|s| s.text.clone()).collect();
+        assert_eq!(texts, ["a", "b"]);
     }
 
     #[test]

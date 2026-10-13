@@ -1,0 +1,388 @@
+
+[?2004hbash-5.2# vim -N -u NONE -c 'syntax on' -c 'set number' -c 'set laststatus=2' /data/sample.py
+[?2004l[?1049h[22;0;0t[>4;2m[?1h=[?2004h[?1004h[1;40r[?12h[?12l[22;2t[22;1t[27m[23m[29m[m[H[2J[?25l[40;1H"/data/sample.py" 3085L, 91918B[2;1H▽[6n[2;1H  [3;1HPzz\[0%m[6n[3;1H           [1;1H[>c]10;?]11;?[1;1H[38;5;130m   1 [m[31m"""Synthetic module for the S1 corpus."""[m
+[38;5;130m   2 [m[2;6H[K[3;1H[38;5;130m   3 [m[35mimport[m os[3;15H[K[4;1H[38;5;130m   4 [m[35mimport[m json
+[38;5;130m   5 
+   6 class[m [36mHost0[m:
+[38;5;130m   7 [m    [31m"""Handles host number 0."""[m
+[38;5;130m   8 
+   9 [m    [38;5;130mdef[m [36m__init__[m(self, name, port=[31m22[m):
+[38;5;130m  10 [m[8Cself.name = name
+[38;5;130m  11 [m[8Cself.port = port
+[38;5;130m  12 [m[8Cself.retries = [31m6[m
+[38;5;130m  13 
+  14 [m    [38;5;130mdef[m [36mconnect[m(self, timeout=[31m17[m):
+[38;5;130m  15 [8Cfor[m attempt [38;5;130min[m [36mrange[m(self.retries):
+[38;5;130m  16 [12Cif[m self.port > [31m8793[m:
+[38;5;130m  17 [16Craise[m [32mValueError[m([31m"port out of range: %d"[m % self.port)
+[38;5;130m  18 [8Creturn[m json.dumps({[31m'name'[m: self.name, [31m'port'[m: self.port})
+[38;5;130m  19 
+  20 class[m [36mRelay1[m:
+[38;5;130m  21 [m    [31m"""Handles relay number 1."""[m
+[38;5;130m  22 
+  23 [m    [38;5;130mdef[m [36m__init__[m(self, name, port=[31m22[m):
+[38;5;130m  24 [m[8Cself.name = name
+[38;5;130m  25 [m[8Cself.port = port
+[38;5;130m  26 [m[8Cself.retries = [31m2[m
+[38;5;130m  27 
+  28 [m    [38;5;130mdef[m [36mconnect[m(self, timeout=[31m29[m):
+[38;5;130m  29 [8Cfor[m attempt [38;5;130min[m [36mrange[m(self.retries):
+[38;5;130m  30 [12Cif[m self.port > [31m2829[m:
+[38;5;130m  31 [16Craise[m [32mValueError[m([31m"port out of range: %d"[m % self.port)
+[38;5;130m  32 [8Creturn[m json.dumps({[31m'name'[m: self.name, [31m'port'[m: self.port})
+[38;5;130m  33 
+  34 class[m [36mDevice2[m:
+[38;5;130m  35 [m    [31m"""Handles device number 2."""[m
+[38;5;130m  36 
+  37 [m    [38;5;130mdef[m [36m__init__[m(self, name, port=[31m22[m):
+[38;5;130m  38 [m[8Cself.name = name
+[1m[7m/data/sample.py                                                                                                         [1;6H[?25h[?4m[?12$p[?25l[1;38r[m[1;1H[19M[1;40r[20;1H[38;5;130m  39 [m[8Cself.port = port
+[38;5;130m  40 [m[8Cself.retries = [31m9[m
+[38;5;130m  41 
+  42 [m    [38;5;130mdef[m [36mconnect[m(self, timeout=[31m14[m):
+[38;5;130m  43 [8Cfor[m attempt [38;5;130min[m [36mrange[m(self.retries):
+[38;5;130m  44 [12Cif[m self.port > [31m7417[m:
+[38;5;130m  45 [16Craise[m [32mValueError[m([31m"port out of range: %d"[m % self.port)
+[38;5;130m  46 [8Creturn[m json.dumps({[31m'name'[m: self.name, [31m'port'[m: self.port})
+[38;5;130m  47 
+  48 class[m [36mDevice3[m:
+[38;5;130m  49 [m    [31m"""Handles device number 3."""[m
+[38;5;130m  50 
+  51 [m    [38;5;130mdef[m [36m__init__[m(self, name, port=[31m22[m):
+[38;5;130m  52 [m[8Cself.name = name
+[38;5;130m  53 [m[8Cself.port = port
+[38;5;130m  54 [m[8Cself.retries = [31m9[m
+[38;5;130m  55 
+  56 [m    [38;5;130mdef[m [36mconnect[m(self, timeout=[31m27[m):
+[38;5;130m  57 [8Cfor[m attempt [38;5;130min[m [36mrange[m(self.retries):[40;1H[K[1;6H[?25h[?25l[1;38r[1;1H[19M[1;40r[20;1H[38;5;130m  58 [12Cif[m self.port > [31m6984[m:
+[38;5;130m  59 [16Craise[m [32mValueError[m([31m"port out of range: %d"[m % self.port)
+[38;5;130m  60 [8Creturn[m json.dumps({[31m'name'[m: self.name, [31m'port'[m: self.port})
+[38;5;130m  61 
+  62 class[m [36mEngine4[m:
+[38;5;130m  63 [m    [31m"""Handles engine number 4."""[m
+[38;5;130m  64 
+  65 [m    [38;5;130mdef[m [36m__init__[m(self, name, port=[31m22[m):
+[38;5;130m  66 [m[8Cself.name = name
+[38;5;130m  67 [m[8Cself.port = port
+[38;5;130m  68 [m[8Cself.retries = [31m8[m
+[38;5;130m  69 
+  70 [m    [38;5;130mdef[m [36mconnect[m(self, timeout=[31m8[m):
+[38;5;130m  71 [8Cfor[m attempt [38;5;130min[m [36mrange[m(self.retries):
+[38;5;130m  72 [12Cif[m self.port > [31m1020[m:
+[38;5;130m  73 [16Craise[m [32mValueError[m([31m"port out of range: %d"[m % self.port)
+[38;5;130m  74 [8Creturn[m json.dumps({[31m'name'[m: self.name, [31m'port'[m: self.port})
+[38;5;130m  75 
+  76 class[m [36mDevice5[m:[1;14H[?25h[?25l[40;1H/def connect[4;10H[?25h[?25l[40;1H[1m-- INSERT --[m[40;1H[K[5;45H[5;38r[5;1H[L[1;40r[5;1H[38;5;130m  43 [m[8C[34m# retry with exponential backoff[m[6;4H[38;5;130m4
+  45
+  46
+  47
+  48
+  49
+  50
+  51
+  52
+  53
+  54
+  55
+  56
+  57
+  58
+  59
+  60
+  61
+  62
+  63
+  64
+  65
+  66
+  67
+  68
+  69
+  70
+  71
+  72
+  73
+  74
+  75
+  76[m[39;17H[1m[7m[+][m
+[1m-- INSERT --[5;46H[?25h[?25l[m[40;1H[K[5;45H[?25h[?25l[40;1H[1m-- VISUAL BLOCK --[5;45H[?25h[?25l[m[30m[48;5;248mf[6;45H[?25h[?25l[5;38H backof[6;38Hf.retrie[7;38H[?25h[?25l[?25h[?25l[?25h[?25l[m[5;38H[34m backoff[m[6;38Hf.retrie[40;1H[K[7;37H[?25h[?25l[40;1H:vsplit[1;61H[7m|[2;61H|[3;61H|[4;61H|[5;61H|[6;61H|[7;61H|[8;61H|[m[9;3H[38;5;130m  [m[1C[31m"[m % self.port)                                         [7m|[m[10;4H[38;5;130m7[9Creturn[m json.dumps({[31m'name'[m: self.name, [31m'port'[m: s[7m|[m[11;3H[38;5;130m  [m[1Celf.port})    [41C[7m|[m[12;3H[38;5;130m48[m[5C                               [20C[7m|[m[13;3H[38;5;130m49 class[m [36mDevice3[m:[41C[7m|[m[14;4H[38;5;130m0[m[5C[31m"""Handles device number 3."""[m    [17C[7m|[m[15;4H[38;5;130m1[m[9C                [31C[7m|[m[16;4H[38;5;130m2 [m    [38;5;130mdef[m [36m__init__[m(self, name, port=[31m22[m):[17C[7m|[m[17;4H[38;5;130m3[m[14Cname = name[31C[7m|[m[18;4H[38;5;130m4[m[9Cself.port = port[31C[7m|[m[19;4H[38;5;130m5[m[5C    self.retries = [31m9[m          [21C[7m|[m[20;4H[38;5;130m6[m[9C                                   [12C[7m|[m[21;4H[38;5;130m7 [m    [38;5;130mdef[m [36mconnect[m(self, timeout=[31m27[m):[21C[7m|[m[22;3H[38;5;130m58[9Cfor[m attempt [38;5;130min[m [36mrange[m(self.retries):            [7m|[m[23;3H[38;5;130m59[m[9C    [38;5;130mif[m self.port > [31m6984[m:                       [7m|[m[24;4H[38;5;130m0[17Craise[m [32mValueError[m([31m"port out of range: %d[m[7m|[m[25;3H[38;5;130m  [m[1C[31m"[m % self.port)[41C[7m|[m[26;4H[38;5;130m1[m[5C    [38;5;130mreturn[m json.dumps({[31m'name'[m: self.name, [31m'port'[m: s[7m|[m[27;3H[38;5;130m  [m[1Celf.port})[45C[7m|[m[28;4H[38;5;130m2[m[5C                                  [17C[7m|[m[29;4H[38;5;130m3 class[m [36mEngine4[m:          [31C[7m|[m[30;4H[38;5;130m4[m[5C[31m"""Handles engine number 4."""[m[21C[7m|[m[31;4H[38;5;130m5[m[9C                 [30C[7m|[m[32;3H[38;5;130m66 [m    [38;5;130mdef[m [36m__init__[m(self, name, port=[31m22[m):[17C[7m|[m[33;3H[38;5;130m67[m[5C    self.name = name         [22C[7m|[m[34;3H[38;5;130m68[m[9Cself.port = port                   [12C[7m|[m[35;3H[38;5;130m69[m[9Cself.retries = [31m8[m        [23C[7m|[m[36;4H[38;5;130m0[m[17C                                       [7m|[m[37;4H[38;5;130m1 [m    [38;5;130mdef[m [36mconnect[m(self, timeout=[31m8[m):                      [7m|[m[38;4H[38;5;130m2[9Cfor[m attempt [38;5;130min[m [36mrange[m(self.retries):[12C[7m|[m[1;62H[38;5;130m  39 [m[8Cself.port = port[2;62H[38;5;130m  40 [m[8Cself.retries = [31m9[m[3;62H[38;5;130m  41 [4;62H  42 [m    [38;5;130mdef[m [36mconnect[m(self, timeout=[31m14[m):[5;62H[38;5;130m  43 [m[8C[34m# retry with exponential backoff[m[6;62H[38;5;130m  44 [8Cfor[m attempt [38;5;130min[m [36mrange[m(self.retries):[7;62H[38;5;130m  45 [12Cif[m self.port > [31m7417[m:[8;62H[38;5;130m  46 [m        [8C[38;5;130mraise[m [32mValueError[m([31m"port out of range: %[m[9;62H[38;5;130m     [m[31md"[m % self.port)[10;62H[38;5;130m  47 [8Creturn[m json.dumps({[31m'name'[m: self.name, [31m'port'[m:[11;62H[38;5;130m     [mself.port})[12;62H[38;5;130m  48 [13;62H  49 class[m [36mDevice3[m:[14;62H[38;5;130m  50 [m    [31m"""Handles device number 3."""[m[15;62H[38;5;130m  51 [16;62H  52 [m    [38;5;130mdef[m [36m__init__[m(self, name, port=[31m22[m):[17;62H[38;5;130m  53 [m[8Cself.name = name[18;62H[38;5;130m  54 [m[8Cself.port = port[19;62H[38;5;130m  55 [m[8Cself.retries = [31m9[m[20;62H[38;5;130m  56 [21;62H  57 [m    [38;5;130mdef[m [36mconnect[m(self, timeout=[31m27[m):[22;62H[38;5;130m  58 [m        [38;5;130mfor[m attempt [38;5;130min[m [36mrange[m(self.retries):[23;62H[38;5;130m  59 [m    [8C[38;5;130mif[m self.port > [31m6984[m:[24;62H[38;5;130m  60 [16Craise[m [32mValueError[m([31m"port out of range: %[m[25;62H[38;5;130m     [m[31md"[m % self.port)[26;62H[38;5;130m  61 [8Creturn[m json.dumps({[31m'name'[m: self.name, [31m'port'[m:[27;62H[38;5;130m     [mself.port})[28;62H[38;5;130m  62 [29;62H  63 class[m [36mEngine4[m:[30;62H[38;5;130m  64 [m    [31m"""Handles engine number 4."""[m[31;62H[38;5;130m  65 [32;62H  66 [m    [38;5;130mdef[m [36m__init__[m(self, name, port=[31m22[m):[33;62H[38;5;130m  67 [m[8Cself.name = name[34;62H[38;5;130m  68 [m[8Cself.port = port[35;62H[38;5;130m  69 [m[8Cself.retries = [31m8[m[36;62H[38;5;130m  70 [m[36;67H[K[37;62H[38;5;130m  71 [m    [38;5;130mdef[m [36mconnect[m(self, timeout=[31m8[m):[38;62H[38;5;130m  72 [8Cfor[m attempt [38;5;130min[m [36mrange[m(self.retries):[39;62H[7m/data/sample.py [+]                                        [7;37H[?25h[?25l[m[40;1H[K[40;1H:split /data/cjk.txt"/data/cjk.txt" [40;17H[K[40;17H400L, 42332B[1;3H[38;5;130m1 [m0000 é[1;12Hñ 漢字 中文测试 한국어 ñ П[1;38Hр[1;39Hи[1;40Hв[1;41Hе[1;42Hт[1;44Hñ かな é[1;53H🚀[1;56H─[1;57H┼[1;58H─[1;60HΩ[2;3H[38;5;130m  [mμ[2;6Hέγ[2;8Hα[2;10Hカタカナ П[2;20Hр[2;21Hи[2;22Hв[2;23Hе[2;24Hт[2;25H      [3;3H[38;5;130m2 [m0001 ─[3;11H┼[3;12H─[3;14Hñ 漢字 é[3;23H漢字 漢字 かな П[3;39Hр[3;40Hи[3;41Hв[3;42Hе[3;43Hт[4;3H[38;5;130m3 [m0002 ─[4;11H┼[4;12H─[4;14H─[4;15H┼[4;16H─[4;17H 中文测试 П[4;28Hр[4;29Hи[4;30Hв[4;31Hе[4;32Hт[4;33H ascii 漢字 カタカナ ñ 한국[94m>[m[5;3H[38;5;130m  [m어 かな Ω[5;14Hμ[5;15Hέγ[5;17Hα[5;18H 🚀[5;21H Ω[5;23Hμ[5;24Hέγ[5;26Hα[5;27H 한국어 カタカナ    [6;4H[38;5;130m [m0003 한국어 🚀[6;19H é[6;21H 한국어 П[6;30Hр[6;31Hи[6;32Hв[6;33Hе[6;34Hт[6;35H カタカナ ñ Ω[6;48Hμ[6;49Hέγ[6;51Hα[6;53H─[6;54H┼[6;55H─[7;3H[38;5;130m5 [m0004 é[7;12HП[7;13Hр[7;14Hи[7;15Hв[7;16Hе[7;17Hт[7;18H ─[7;20H┼[7;21H─[7;22H 한국어 中文测试 🚀[7;42H─[7;43H┼[7;44H─[7;46Hé[7;48Hñ 👍[7;52H🏽[7;55Hé[7;57Hかな[8;3H[38;5;130m6 [m0005 ─[8;11H┼[8;12H─[8;14H한국어 かな ascii かな П[8;38Hр[8;39Hи[8;40Hв[8;41Hе[8;42Hт[8;43H ─[8;45H┼[8;46H─[8;47H 🚀[8;50H 👍[8;53H🏽[8;55H      [9;3H[38;5;130m7[m[1C0006 カタカナ かな カタカナ 한국어 🚀[9;43HΩ[9;44Hμ[9;45Hέγ[9;47Hα[9;49H한국어 Ω[9;57Hμ[9;58Hέγ[9;60Hα[10;3H[38;5;130m  [m 漢字 ñ カタカナ 🚀[10;24H 🚀[10;27H ascii 中文测试 中文测试 ─[10;53H┼[10;54H─[10;55H      [11;3H[38;5;130m8[m[1C0007 Ω[11;11Hμ[11;12Hέγ[11;14Hα[11;15H 漢字 é[11;23Hñ é[11;27H中文测试 П[11;37Hр[11;38Hи[11;39Hв[11;40Hе[11;41Hт[11;43Hé[11;45Hカタカナ かな as[12;3H[38;5;130m  [mcii[13;3H[38;5;130m9 [m0008 ñ 한국어 П[13;20Hр[13;21Hи[13;22Hв[13;23Hе[13;24Hт[13;26Hé[13;28HΩ[13;29Hμ[13;30Hέγ[13;32Hα[13;34H👍[13;36H🏽[13;39H🚀[13;42H👍[13;44H🏽[14;2H[38;5;130m10 [m0009 ─[14;11H┼[14;12H─[14;13H 🚀[14;16H ñ П[14;20Hр[14;21Hи[14;22Hв[14;23Hе[14;24Hт[14;25H ascii 中文测试[15;2H[38;5;130m11 [m0010 かな é[15;17Hé[15;19HП[15;20Hр[15;21Hи[15;22Hв[15;23Hе[15;24Hт[15;26Hñ ascii ñ ñ かな 中文测试 中文测试[16;3H[38;5;130m  [m漢字 かな 👍[16;17H🏽[16;19H 漢字 かな               [17;2H[38;5;130m12 [m0011 é[17;12H👍[17;14H🏽[17;16H かな Ω[17;23Hμ[17;24Hέγ[17;26Hα[17;27H ascii 🚀[17;37Hascii 👍[17;45H🏽[17;48Hé[17;50H👍[17;52H🏽[17;55Hé[17;57Hñ 漢[18;3H[38;5;130m  [m字 カタカナ              [19;2H[38;5;130m13 [m0012 カタカナ 漢字 かな Ω[19;30Hμ[19;31Hέγ[19;33Hα[19;35Hかな カタカナ ñ 中文测试 [94m>[m[19;2H[38;5;130m   [m[94m@                                                       [m
+[1m[7m/data/cjk.txt                                               [m[21;3H[38;5;130m42[m[31C[31m14[m[22;3H[38;5;130m43[m[9C[34m# retry with exponential backoff[m   [23;3H[38;5;130m44[9Cfor[m attempt [38;5;130min[m [36mrange[m(self.retries):[24;3H[38;5;130m45[13Cif[m self.port > [31m7417[m:                       [25;3H[38;5;130m46[m[1C                [38;5;130mraise[m [32mValueError[m([31m"port out of range: %d[m[26;3H[38;5;130m  [m[1C[31m"[m % self.port)                                         [27;3H[38;5;130m47[m[1C        [38;5;130mreturn[m json.dumps({[31m'name'[m: self.name, [31m'port'[m: s[28;3H[38;5;130m  [m[1Celf.port})[29;3H[38;5;130m48[m[1C              [30;3H[38;5;130m49 class[m [36mDevice3[m:                     [31;3H[38;5;130m50[m[5C[31m"""Handles device number 3."""[m[32;3H[38;5;130m51[m[5C                                  [33;3H[38;5;130m52 [m    [38;5;130mdef[m [36m__init__[m(self, name, port=[31m22[m):[34;3H[38;5;130m53[m[14Cname = name[35;3H[38;5;130m54[m[14Cport = port[36;3H[38;5;130m55[m[9Cself.retries = [31m9[m[37;3H[38;5;130m56[m[5C                             [38;3H[38;5;130m57 [m    [38;5;130mdef[m [36mconnect[m(self, timeout=[31m27[m):         
+[7m/data/sample.py [+][m[1m[7m [m[7m                                          [1;5H[?25h[?25l[m[38;5;130m390[m[2C389[3Cかな ascii П[1;24Hр[1;25Hи[1;26Hв[1;27Hе[1;28Hт[1;29H ñ 中文测试 🚀[1;44HΩ[1;45Hμ[1;46Hέγ[1;48Hα[1;49H ñ ─[1;53H┼[1;54H─[1;56H한국[94m>[m[2;5H어 П[2;9Hр[2;10Hи[2;11Hв[2;12Hе[2;13Hт[2;14H 🚀[2;17H 漢字 中文测试 漢字
+[38;5;130m391[m[2C390 Ω[3;11Hμ[3;12Hέγ[3;14Hα[3;16Hかな ñ é[3;24H カタカナ П[3;35Hр[3;36Hи[3;37Hв[3;38Hе[3;39Hт[3;40H カタカナ 中文测试 漢[4;3H[38;5;130m [m[1C字 Ω[4;9Hμ[4;10Hέγ[4;12Hα[4;18Hñ Ω[4;21Hμ[4;22Hέγ[4;24Hα[4;25H 한국어 ─[4;34H┼[4;35H─[4;36H 漢字                    
+[38;5;130m392[m[1C0391 é[5;11H 中文测试 ─[5;22H┼[5;23H─[5;24H ñ 中文测试 П[5;37Hр[5;38Hи[5;39Hв[5;40Hе[5;41Hт[5;42H 한국어 ñ かな
+[38;5;130m393[m[2C392 П[6;11Hр[6;12Hи[6;13Hв[6;14Hе[6;15Hт[6;17H👍[6;19H🏽[6;22Hñ ascii かな 한국어               
+[38;5;130m394[m[2C393 かな é[7;16H 漢字 한국어 かな 한국어 Ω[7;42Hμ[7;43Hέγ[7;45Hα[7;46H ascii カタカナ[8;3H[38;5;130m [m[1C 中文测试                                         
+[38;5;130m395[m[2C394 한국어 カタカナ é[9;27H 👍[9;30H🏽[9;33HΩ[9;34Hμ[9;35Hέγ[9;37Hα[9;38H ascii 漢字 한국어 漢字[10;6Hñ 🚀[10;11H─[10;12H┼[10;13H─[10;14H ─[10;16H┼[10;17H─[10;18H П[10;20Hр[10;21Hи[10;22Hв[10;23Hе[10;24Hт[10;25H é[10;28H                           
+[38;5;130m396[m[2C395 ascii 한국어 한국어 é[11;31H П[11;33Hр[11;34Hи[11;35Hв[11;36Hе[11;37Hт[11;38H П[11;40Hр[11;41Hи[11;42Hв[11;43Hе[11;44Hт[11;45H é[11;47H ñ 👍[11;52H🏽[11;54H é[11;56H 漢字[12;5H カタカナ
+[38;5;130m397[m[2C396 П[13;11Hр[13;12Hи[13;13Hв[13;14Hе[13;15Hт[13;16H 🚀[13;19H 🚀[13;22H カタカナ 中文测试 ─[13;42H┼[13;43H─[13;44H かな 한국어 カタ[14;2H[38;5;130m  [m[1Cカナ ascii 中文测试 ñ 한국어 中文测试
+[38;5;130m398[m[2C397 🚀[15;12H é[15;15Hñ 한국어 中文测试 ascii                      
+[38;5;130m399[m[1C0398 中文测试 かな П[16;25Hр[16;26Hи[16;27Hв[16;28Hе[16;29Hт[16;31Hascii 中文测试 Ω[16;47Hμ[16;48Hέγ[16;50Hα[16;52Hñ カタカ[94m>[m[17;2H[38;5;130m  [m[1Cナ                                                      
+[38;5;130m400[m[1C0399 ñ 🚀[18;14H カタカナ П[18;25Hр[18;26Hи[18;27Hв[18;28Hе[18;29Hт[18;31HП[18;32Hр[18;33Hи[18;34Hв[18;35Hе[18;36Hт[18;38H中文测试 漢字 П[18;53Hр[18;54Hи[18;55Hв[18;56Hе[18;57Hт[18;59H한[19;5H국어 é[19;11H 한국어 é[19;20H ascii                                   [18;5H[?25h[?25l[40;1H[1m-- INSERT --[m[40;13H[K[40;1H[K[18;34H[1;1H[38;5;130m391 [m0390 Ω[1;11Hμ[1;12Hέγ[1;14Hα[1;15H かな ñ é[1;24H カタカナ П[1;35Hр[1;36Hи[1;37Hв[1;38Hе[1;39Hт[1;40H カタカナ 中文测试 漢
+[38;5;130m    [m字 Ω[2;9Hμ[2;10Hέγ[2;12Hα[2;13H ─[2;15H┼[2;16H─[2;17H ñ Ω[2;21Hμ[2;22Hέγ[2;24Hα[2;25H 한국어 ─[2;34H┼[2;35H─[2;36H 漢字                    
+[38;5;130m392 [m0391 é[3;11H 中文测试 ─[3;22H┼[3;23H─[3;24H ñ 中文测试 П[3;37Hр[3;38Hи[3;39Hв[3;40Hе[3;41Hт[3;42H 한국어 ñ かな     
+[38;5;130m393 [m0392 П[4;11Hр[4;12Hи[4;13Hв[4;14Hе[4;15Hт[4;16H 👍[4;19H🏽[4;21H ñ ascii かな 한국어                    
+[38;5;130m394 [m0393 かな é[5;16H 漢字 한국어 かな 한국어 Ω[5;42Hμ[5;43Hέγ[5;45Hα[5;46H ascii カタカナ
+[38;5;130m    [m 中文测试                                               
+[38;5;130m395 [m0394 한국어 カタカナ é[7;27H 👍[7;30H🏽[7;32H Ω[7;34Hμ[7;35Hέγ[7;37Hα[7;38H ascii 漢字 한국어 漢字
+[38;5;130m    [m ñ 🚀[8;10H ─[8;12H┼[8;13H─[8;14H ─[8;16H┼[8;17H─[8;18H П[8;20Hр[8;21Hи[8;22Hв[8;23Hе[8;24Hт[8;25H é[8;27H                                  
+[38;5;130m396 [m0395 ascii 한국어 한국어 é[9;31H П[9;33Hр[9;34Hи[9;35Hв[9;36Hе[9;37Hт[9;38H П[9;40Hр[9;41Hи[9;42Hв[9;43Hе[9;44Hт[9;45H é[9;47H ñ 👍[9;52H🏽[9;54H é[9;56H 漢字
+[38;5;130m    [m カタカナ                                               
+[38;5;130m397 [m0396 П[11;11Hр[11;12Hи[11;13Hв[11;14Hе[11;15Hт[11;16H 🚀[11;19H 🚀[11;22H カタカナ 中文测试 ─[11;42H┼[11;43H─[11;44H かな 한국어 カタ
+[38;5;130m    [mカナ ascii 中文测试 ñ 한국어 中文测试                   
+[38;5;130m398 [m0397 🚀[13;12H é[13;14H ñ 한국어 中文测试 ascii                       
+[38;5;130m399 [m0398 中文测试 かな П[14;25Hр[14;26Hи[14;27Hв[14;28Hе[14;29Hт[14;30H ascii 中文测试 Ω[14;47Hμ[14;48Hέγ[14;50Hα[14;51H ñ カタカ[94m>[m
+[38;5;130m    [mナ                                                      
+[38;5;130m400 [m0399 ñ 🚀[16;14H カタカナ П[16;25Hр[16;26Hи[16;27Hв[16;28Hе[16;29Hт[16;30H П[16;32Hр[16;33Hи[16;34Hв[16;35Hе[16;36Hт[16;37H 中文测试 漢字 П[16;53Hр[16;54Hи[16;55Hв[16;56Hе[16;57Hт[16;58H 한
+[38;5;130m    [m국어 é[17;11H 한국어 é[17;20H ascii                                   
+                                                            
+                                                            [18;1H[38;5;130m401 [m漢字 かな 한국어 café[18;27H👍[18;29H🏽[18;32H─[18;33H┼[18;34H─[19;1H[94m~                                                           [m[20;15H[1m[7m[+][m[40;1H[1m-- INSERT --[18;35H[?25h[?25l[m[40;1H[K[18;34H[?25h[?25l[40;1H:qa![?2004l[>4;m[23;2t[23;1t[40;1H[K[40;1H[?1004l[?2004l[?1l>[?1049l[23;0;0t[?25h[>4;m[?2004hbash-5.2# less -R /data/sample.py
+[?2004l[?1049h[22;0;0t[40;1H[?1h="""Synthetic module for the S1 corpus."""[m
+[m
+import os[m
+import json[m
+[m
+class Host0:[m
+    """Handles host number 0."""[m
+[m
+    def __init__(self, name, port=22):[m
+        self.name = name[m
+        self.port = port[m
+        self.retries = 6[m
+[m
+    def connect(self, timeout=17):[m
+        for attempt in range(self.retries):[m
+            if self.port > 8793:[m
+                raise ValueError("port out of range: %d" % self.port)[m
+        return json.dumps({'name': self.name, 'port': self.port})[m
+[m
+class Relay1:[m
+    """Handles relay number 1."""[m
+[m
+    def __init__(self, name, port=22):[m
+        self.name = name[m
+        self.port = port[m
+        self.retries = 2[m
+[m
+    def connect(self, timeout=29):[m
+        for attempt in range(self.retries):[m
+            if self.port > 2829:[m
+                raise ValueError("port out of range: %d" % self.port)[m
+        return json.dumps({'name': self.name, 'port': self.port})[m
+[m
+class Device2:[m
+    """Handles device number 2."""[m
+[m
+    def __init__(self, name, port=22):[m
+        self.name = name[m
+        self.port = port[m
+[7m/data/sample.py[27m[K[K/[Kcc[Kll[Kaa[Kss[Kss[K[1;1H[K"""Synthetic module for the S1 corpus."""[m
+[2;1H[K[m
+[3;1H[Kimport os[m
+[4;1H[Kimport json[m
+[5;1H[K[m
+[6;1H[Kclass Host0:[m
+[7;1H[K    """Handles host number 0."""[m
+[8;1H[K[m
+[9;1H[K    def __init__(self, name, port=22):[m
+[10;1H[K        self.name = name[m
+[11;1H[K        self.port = port[m
+[12;1H[K        self.retries = 6[m
+[13;1H[K[m
+[14;1H[K    def connect(self, timeout=17):[m
+[15;1H[K        for attempt in range(self.retries):[m
+[16;1H[K            if self.port > 8793:[m
+[17;1H[K                raise ValueError("port out of range: %d" % self.port)[m
+[18;1H[K        return json.dumps({'name': self.name, 'port': self.port})[m
+[19;1H[K[m
+[20;1H[Kclass Relay1:[m
+[21;1H[K    """Handles relay number 1."""[m
+[22;1H[K[m
+[23;1H[K    def __init__(self, name, port=22):[m
+[24;1H[K        self.name = name[m
+[25;1H[K        self.port = port[m
+[26;1H[K        self.retries = 2[m
+[27;1H[K[m
+[28;1H[K    def connect(self, timeout=29):[m
+[29;1H[K        for attempt in range(self.retries):[m
+[30;1H[K            if self.port > 2829:[m
+[31;1H[K                raise ValueError("port out of range: %d" % self.port)[m
+[32;1H[K        return json.dumps({'name': self.name, 'port': self.port})[m
+[33;1H[K[m
+[34;1H[Kclass Device2:[m
+[35;1H[K    """Handles device number 2."""[m
+[36;1H[K[m
+[37;1H[K    def __init__(self, name, port=22):[m
+[38;1H[K        self.name = name[m
+[39;1H[K        self.port = port[m
+[40;1H[1;1H[K"""Synthetic module for the S1 corpus."""[m
+[2;1H[K[m
+[3;1H[Kimport os[m
+[4;1H[Kimport json[m
+[5;1H[K[m
+[6;1H[K[7mclass[27m Host0:[m
+[7;1H[K    """Handles host number 0."""[m
+[8;1H[K[m
+[9;1H[K    def __init__(self, name, port=22):[m
+[10;1H[K        self.name = name[m
+[11;1H[K        self.port = port[m
+[12;1H[K        self.retries = 6[m
+[13;1H[K[m
+[14;1H[K    def connect(self, timeout=17):[m
+[15;1H[K        for attempt in range(self.retries):[m
+[16;1H[K            if self.port > 8793:[m
+[17;1H[K                raise ValueError("port out of range: %d" % self.port)[m
+[18;1H[K        return json.dumps({'name': self.name, 'port': self.port})[m
+[19;1H[K[m
+[20;1H[K[7mclass[27m Relay1:[m
+[21;1H[K    """Handles relay number 1."""[m
+[22;1H[K[m
+[23;1H[K    def __init__(self, name, port=22):[m
+[24;1H[K        self.name = name[m
+[25;1H[K        self.port = port[m
+[26;1H[K        self.retries = 2[m
+[27;1H[K[m
+[28;1H[K    def connect(self, timeout=29):[m
+[29;1H[K        for attempt in range(self.retries):[m
+[30;1H[K            if self.port > 2829:[m
+[31;1H[K                raise ValueError("port out of range: %d" % self.port)[m
+[32;1H[K        return json.dumps({'name': self.name, 'port': self.port})[m
+[33;1H[K[m
+[34;1H[K[7mclass[27m Device2:[m
+[35;1H[K    """Handles device number 2."""[m
+[36;1H[K[m
+[37;1H[K    def __init__(self, name, port=22):[m
+[38;1H[K        self.name = name[m
+[39;1H[K        self.port = port[m
+[40;1H        self.retries = 9[m
+[m
+    def connect(self, timeout=14):[m
+        for attempt in range(self.retries):[m
+            if self.port > 7417:[m
+:[K[K...skipping...
+    def __init__(self, name, port=22):[m
+        self.name = name[m
+        self.port = port[m
+        self.retries = 6[m
+[m
+    def connect(self, timeout=5):[m
+        for attempt in range(self.retries):[m
+            if self.port > 4746:[m
+                raise ValueError("port out of range: %d" % self.port)[m
+        return json.dumps({'name': self.name, 'port': self.port})[m
+[m
+[7mclass[27m Tunnel218:[m
+    """Handles tunnel number 218."""[m
+[m
+    def __init__(self, name, port=22):[m
+        self.name = name[m
+        self.port = port[m
+        self.retries = 3[m
+[m
+    def connect(self, timeout=23):[m
+        for attempt in range(self.retries):[m
+            if self.port > 1439:[m
+                raise ValueError("port out of range: %d" % self.port)[m
+        return json.dumps({'name': self.name, 'port': self.port})[m
+[m
+[7mclass[27m Tunnel219:[m
+    """Handles tunnel number 219."""[m
+[m
+    def __init__(self, name, port=22):[m
+        self.name = name[m
+        self.port = port[m
+        self.retries = 3[m
+[m
+    def connect(self, timeout=14):[m
+        for attempt in range(self.retries):[m
+            if self.port > 6252:[m
+                raise ValueError("port out of range: %d" % self.port)[m
+        return json.dumps({'name': self.name, 'port': self.port})[m
+[m
+[7m(END)[27m[K[K[?1l>[?1049l[23;0;0t[?2004hbash-5.2# MANPAGER='less -R' MANWIDTH=100 man tmux
+[?2004l[?1049h[22;0;0t[40;1H[?1h=[4mTMUX[24m(1)                                General Commands Manual                              [4mTMUX[24m(1)[m
+[m
+[1mNAME[0m[m
+       tmux — terminal multiplexer[m
+[m
+[1mSYNOPSIS[0m[m
+       [1mtmux   [22m[[1m-2CDlNuVv[22m]   [[1m-c   [4m[22mshell-command[24m]   [[1m-f  [4m[22mfile[24m]  [[1m-L  [4m[22msocket-name[24m]  [[1m-S  [4m[22msocket-path[24m][m
+            [[1m-T [4m[22mfeatures[24m] [[4mcommand[24m [[4mflags[24m]][m
+[m
+[1mDESCRIPTION[0m[m
+       [1mtmux [22mis a terminal multiplexer: it enables a number of terminals to  be  created,  accessed,[m
+       and  controlled  from a single screen.  [1mtmux [22mmay be detached from a screen and continue run‐[m
+       ning in the background, then later reattached.[m
+[m
+       When [1mtmux [22mis started, it creates a new [4msession[24m with a  single  [4mwindow[24m  and  displays  it  on[m
+       screen.   A status line at the bottom of the screen shows information on the current session[m
+       and is used to enter interactive commands.[m
+[m
+       A session is a single collection of [4mpseudo[24m [4mterminals[24m under the  management  of  [1mtmux[22m.   Each[m
+       session  has  one or more windows linked to it.  A window occupies the entire screen and may[m
+       be split into rectangular panes, each of which is a separate  pseudo  terminal  (the  [4mpty[24m(4)[m
+       manual  page  documents  the technical details of pseudo terminals).  Any number of [1mtmux [22min‐[m
+       stances may connect to the same session, and any number of windows may  be  present  in  the[m
+       same session.  Once all sessions are killed, [1mtmux [22mexits.[m
+[m
+       Each session is persistent and will survive accidental disconnection (such as [4mssh[24m(1) connec‐[m
+       tion  timeout)  or  intentional detaching (with the ‘C-b d’ key strokes).  [1mtmux [22mmay be reat‐[m
+       tached using:[m
+[m
+             [1m$ tmux attach[0m[m
+[m
+       In [1mtmux[22m, a session is displayed on screen by a [4mclient[24m and all sessions are managed by a sin‐[m
+       gle [4mserver[24m.  The server and each client are separate processes which communicate  through  a[m
+       socket in [4m/tmp[24m.[m
+[m
+       The options are as follows:[m
+[m
+       [1m-2            [22mForce [1mtmux [22mto assume the terminal supports 256 colours.  This is equivalent to[m
+                     [1m-T [4m[22m256[24m.[m
+[7m Manual page tmux(1) line 1 (press h for help or q to quit)[27m[K[K[m
+       [1m-C            [22mStart  in  control  mode  (see the “CONTROL MODE” section).  Given twice ([1m-CC[22m)[m
+                     disables echo.[m
+[m
+       [1m-c [4m[22mshell-command[0m[m
+                     Execute [4mshell-command[24m using the default shell.  If necessary, the [1mtmux  [22mserver[m
+                     will be started to retrieve the [1mdefault-shell [22moption.  This option is for com‐[m
+                     patibility with [4msh[24m(1) when [1mtmux [22mis used as a login shell.[m
+[m
+       [1m-D            [22mDo  not start the [1mtmux [22mserver as a daemon.  This also turns the [1mexit-empty [22mop‐[m
+                     tion off.  With [1m-D[22m, [4mcommand[24m may not be specified.[m
+[m
+       [1m-f [4m[22mfile[24m       Specify an alternative configuration file.  By default, [1mtmux [22mloads the  system[m
+                     configuration file from [4m/etc/tmux.conf[24m, if present, then looks for a user con‐[m
+                     figuration file at [4m~/.tmux.conf[24m or [4m$XDG_CONFIG_HOME/tmux/tmux.conf[24m.[m
+[m
+                     The  configuration  file  is  a set of [1mtmux [22mcommands which are executed in se‐[m
+                     quence when the server is first started.  [1mtmux [22mloads configuration files  once[m
+                     when  the  server process has started.  The [1msource-file [22mcommand may be used to[m
+                     load a file later.[m
+[m
+                     [1mtmux [22mshows any error messages from commands  in  configuration  files  in  the[m
+                     first  session created, and continues to process the rest of the configuration[m
+                     file.[m
+[m
+       [1m-L [4m[22msocket-name[0m[m
+                     [1mtmux [22mstores the server socket in a directory under TMUX_TMPDIR or [4m/tmp[24m  if  it[m
+                     is  unset.  The default socket is named [4mdefault[24m.  This option allows a differ‐[m
+                     ent socket name to be specified, allowing several independent [1mtmux [22mservers  to[m
+                     be  run.   Unlike [1m-S [22ma full path is not necessary: the sockets are all created[m
+                     in a directory [4mtmux-UID[24m under the directory given by TMUX_TMPDIR or  in  [4m/tmp[24m.[m
+                     The  [4mtmux-UID[24m  directory  is  created  by [1mtmux [22mand must not be world readable,[m
+                     writable or executable.[m
+[m
+                     If the socket is accidentally removed, the SIGUSR1 signal may be sent  to  the[m
+                     [1mtmux [22mserver process to recreate it (note that this will fail if any parent di‐[m
+                     rectories are missing).[m
+[m
+       [1m-l            [22mBehave as a login shell.  This flag currently has no effect and is for compat‐[m
+[7m Manual page tmux(1) line 40 (press h for help or q to quit)[27m[K[K[?1l>[?1049l[23;0;0t[?2004hbash-5.2# htop -d 50
+[?2004l[?1049h[22;0;0t[1;40r(B[m[4l[?7h[?1h=[?25l[39;49m[?1006;1000h[39;49m(B[m[H[2J[2d  [36m  0[39m(B[0;1m[[90m[48X[2;55H0.0%[39m](B[m [36mTasks: (B[0;1m[36m6(B[0m[36m, (B[0;1m[32m0(B[0m[36m thr(B[0;1m[90m, 0 kthr(B[0m[36m; (B[0;1m[32m1(B[0m[36m running[3;3H  1[39m(B[0;1m[[90m[48X[3;55H0.0%[39m](B[m [36mLoad average: [39m(B[0;1m0.12 [36m0.14 (B[0m[36m0.09 [4;3H  2[39m(B[0;1m[[90m[48X[4;55H0.0%[39m](B[m [36mUptime: (B[0;1m[36m02:34:30[5;3H(B[0m[36m  3[39m(B[0;1m[[90m[48X[5;55H0.0%[39m][6;3H(B[0m[36mMem[39m(B[0;1m[(B[0m[32m|||||||[35m|(B[0;1m[34m|(B[0m[33m|||||||||||||||(B[0;1m[90m[18X[6;49H476M/3.80G[39m][7;3H(B[0m[36mSwp[39m(B[0;1m[[90m[47X[7;54H0K/0K[39m][9;3H(B[0m[32m[42m[[30m[42mMain[32m[42m][39;49m(B[m [34m[44m[[30m[44mI/O[34m[44m][10d[30m[42m    PID USER       PRI  NI  VIRT   RES   SHR S [30m[46m CPU%▽[30m[42mMEM%   TIME+  Command[K[11;6H[30m[46m[1K 1 root        20   0 17056 11548  6008 S   N/A  0.3  0:00.07 python3 /scenarios/apps_capture.py[K[12;7H[39;49m(B[m5 root[12;21H20 (B[0;1m[90m  0 (B[0m[36m23[39m(B[m500 [36m 5[39m(B[m652 [36m 4[39m(B[m192 (B[0;1m[90mS   N/A [39m(B[m 0.1  0:00.02 tmux -f /tmp/capture-tmux.conf new-session -d -s cap[13;7H6 root[13;21H20 (B[0;1m[90m  0 (B[0m[36m 4[39m(B[m608 [36m 3[39m(B[m716 [36m 3[39m(B[m184 (B[0;1m[90mS   N/A [39m(B[m 0.1 (B[0;1m[90m 0:00.00 [39m(B[mbash --norc --noprofile[14;7H8 root[14;21H20 (B[0;1m[90m  0 (B[0m[36m 2[39m(B[m416 [36m 1[39m(B[m464 [36m 1[39m(B[m364 (B[0;1m[90mS   N/A  0.0  0:00.00 [39m(B[msh -c cat > /out/apps.out[15;7H9 root[15;21H20 (B[0;1m[90m  0 (B[0m[36m 3[39m(B[m016 [36m 1[39m(B[m528 [36m 1[39m(B[m416 (B[0;1m[90mS   N/A  0.0  0:00.00 [39m(B[mcat[16;6H97 root[16;21H20 (B[0;1m[90m  0 (B[0m[36m 4[39m(B[m756 [36m 3[39m(B[m264 [36m 2[39m(B[m552 [32mR (B[0;1m[90m  N/A [39m(B[m 0.1 (B[0;1m[90m 0:00.00 [39m(B[mhtop -d 50[40dF1[30m[46mHelp  [39;49m(B[mF2[30m[46mSetup [39;49m(B[mF3[30m[46mSearch[39;49m(B[mF4[30m[46mFilter[39;49m(B[mF5[30m[46mTree  [39;49m(B[mF6[30m[46mSortBy[39;49m(B[mF7[30m[46mNice -[39;49m(B[mF8[30m[46mNice +[39;49m(B[mF9[30m[46mKill  [39;49m(B[mF10[30m[46mQuit[K  [39;49m(B[m[10d[30m[46m    PID△[10;48H[30m[42m CPU% [12;68H[39;49m[36m└─ [39m(B[mtmux -f /tmp/capture-tmux.conf new-session -d -s c[13;68H[36m   ├─ [39m(B[mbash --norc --noprofile[14;6H97[14;29H[36m4[39m(B[m756 [36m 3[39m(B[m264 [36m 2[39m(B[m552 [32mR [54G[39m(B[m 0.1 [14;68H[36m   │  └─ [39m(B[mhtop -d 50[K[15;7H8[15;29H[36m2[39m(B[m416 [36m 1[39m(B[m464 [36m 1[39m(B[m364[15;68H[36m   └─ [39m(B[msh -c cat > /out/apps.out[16;6H 9[16;29H[36m3[39m(B[m016 [36m 1[39m(B[m528 [36m 1[39m(B[m416 (B[0;1m[90mS [54G 0.0 [16;68H(B[0m[36m      └─ [39m(B[mcat[40;35H[30m[46mList[40;82H[39;49m(B[m[J[?12l[?25h[?1006;1000l[40;1H[?1049l[23;0;0t[?1l>[?2004hbash-5.2# for i in $(seq 0 255); do printf '\033[48;5;%sm%4s' $i $i; done; printf '\033[0m\n'
+[?2004l[48;5;0m   0[48;5;1m   1[48;5;2m   2[48;5;3m   3[48;5;4m   4[48;5;5m   5[48;5;6m   6[48;5;7m   7[48;5;8m   8[48;5;9m   9[48;5;10m  10[48;5;11m  11[48;5;12m  12[48;5;13m  13[48;5;14m  14[48;5;15m  15[48;5;16m  16[48;5;17m  17[48;5;18m  18[48;5;19m  19[48;5;20m  20[48;5;21m  21[48;5;22m  22[48;5;23m  23[48;5;24m  24[48;5;25m  25[48;5;26m  26[48;5;27m  27[48;5;28m  28[48;5;29m  29[48;5;30m  30[48;5;31m  31[48;5;32m  32[48;5;33m  33[48;5;34m  34[48;5;35m  35[48;5;36m  36[48;5;37m  37[48;5;38m  38[48;5;39m  39[48;5;40m  40[48;5;41m  41[48;5;42m  42[48;5;43m  43[48;5;44m  44[48;5;45m  45[48;5;46m  46[48;5;47m  47[48;5;48m  48[48;5;49m  49[48;5;50m  50[48;5;51m  51[48;5;52m  52[48;5;53m  53[48;5;54m  54[48;5;55m  55[48;5;56m  56[48;5;57m  57[48;5;58m  58[48;5;59m  59[48;5;60m  60[48;5;61m  61[48;5;62m  62[48;5;63m  63[48;5;64m  64[48;5;65m  65[48;5;66m  66[48;5;67m  67[48;5;68m  68[48;5;69m  69[48;5;70m  70[48;5;71m  71[48;5;72m  72[48;5;73m  73[48;5;74m  74[48;5;75m  75[48;5;76m  76[48;5;77m  77[48;5;78m  78[48;5;79m  79[48;5;80m  80[48;5;81m  81[48;5;82m  82[48;5;83m  83[48;5;84m  84[48;5;85m  85[48;5;86m  86[48;5;87m  87[48;5;88m  88[48;5;89m  89[48;5;90m  90[48;5;91m  91[48;5;92m  92[48;5;93m  93[48;5;94m  94[48;5;95m  95[48;5;96m  96[48;5;97m  97[48;5;98m  98[48;5;99m  99[48;5;100m 100[48;5;101m 101[48;5;102m 102[48;5;103m 103[48;5;104m 104[48;5;105m 105[48;5;106m 106[48;5;107m 107[48;5;108m 108[48;5;109m 109[48;5;110m 110[48;5;111m 111[48;5;112m 112[48;5;113m 113[48;5;114m 114[48;5;115m 115[48;5;116m 116[48;5;117m 117[48;5;118m 118[48;5;119m 119[48;5;120m 120[48;5;121m 121[48;5;122m 122[48;5;123m 123[48;5;124m 124[48;5;125m 125[48;5;126m 126[48;5;127m 127[48;5;128m 128[48;5;129m 129[48;5;130m 130[48;5;131m 131[48;5;132m 132[48;5;133m 133[48;5;134m 134[48;5;135m 135[48;5;136m 136[48;5;137m 137[48;5;138m 138[48;5;139m 139[48;5;140m 140[48;5;141m 141[48;5;142m 142[48;5;143m 143[48;5;144m 144[48;5;145m 145[48;5;146m 146[48;5;147m 147[48;5;148m 148[48;5;149m 149[48;5;150m 150[48;5;151m 151[48;5;152m 152[48;5;153m 153[48;5;154m 154[48;5;155m 155[48;5;156m 156[48;5;157m 157[48;5;158m 158[48;5;159m 159[48;5;160m 160[48;5;161m 161[48;5;162m 162[48;5;163m 163[48;5;164m 164[48;5;165m 165[48;5;166m 166[48;5;167m 167[48;5;168m 168[48;5;169m 169[48;5;170m 170[48;5;171m 171[48;5;172m 172[48;5;173m 173[48;5;174m 174[48;5;175m 175[48;5;176m 176[48;5;177m 177[48;5;178m 178[48;5;179m 179[48;5;180m 180[48;5;181m 181[48;5;182m 182[48;5;183m 183[48;5;184m 184[48;5;185m 185[48;5;186m 186[48;5;187m 187[48;5;188m 188[48;5;189m 189[48;5;190m 190[48;5;191m 191[48;5;192m 192[48;5;193m 193[48;5;194m 194[48;5;195m 195[48;5;196m 196[48;5;197m 197[48;5;198m 198[48;5;199m 199[48;5;200m 200[48;5;201m 201[48;5;202m 202[48;5;203m 203[48;5;204m 204[48;5;205m 205[48;5;206m 206[48;5;207m 207[48;5;208m 208[48;5;209m 209[48;5;210m 210[48;5;211m 211[48;5;212m 212[48;5;213m 213[48;5;214m 214[48;5;215m 215[48;5;216m 216[48;5;217m 217[48;5;218m 218[48;5;219m 219[48;5;220m 220[48;5;221m 221[48;5;222m 222[48;5;223m 223[48;5;224m 224[48;5;225m 225[48;5;226m 226[48;5;227m 227[48;5;228m 228[48;5;229m 229[48;5;230m 230[48;5;231m 231[48;5;232m 232[48;5;233m 233[48;5;234m 234[48;5;235m 235[48;5;236m 236[48;5;237m 237[48;5;238m 238[48;5;239m 239[48;5;240m 240[48;5;241m 241[48;5;242m 242[48;5;243m 243[48;5;244m 244[48;5;245m 245[48;5;246m 246[48;5;247m 247[48;5;248m 248[48;5;249m 249[48;5;250m 250[48;5;251m 251[48;5;252m 252[48;5;253m 253[48;5;254m 254[48;5;255m 255[0m
+[?2004hbash-5.2# for i in $(seq 0 8 255); do printf '\033[38;2;%s;100;%sm#' $i $((255-i)); done; printf '\033[0m\n'
+[?2004l[38;2;0;100;255m#[38;2;8;100;247m#[38;2;16;100;239m#[38;2;24;100;231m#[38;2;32;100;223m#[38;2;40;100;215m#[38;2;48;100;207m#[38;2;56;100;199m#[38;2;64;100;191m#[38;2;72;100;183m#[38;2;80;100;175m#[38;2;88;100;167m#[38;2;96;100;159m#[38;2;104;100;151m#[38;2;112;100;143m#[38;2;120;100;135m#[38;2;128;100;127m#[38;2;136;100;119m#[38;2;144;100;111m#[38;2;152;100;103m#[38;2;160;100;95m#[38;2;168;100;87m#[38;2;176;100;79m#[38;2;184;100;71m#[38;2;192;100;63m#[38;2;200;100;55m#[38;2;208;100;47m#[38;2;216;100;39m#[38;2;224;100;31m#[38;2;232;100;23m#[38;2;240;100;15m#[38;2;248;100;7m#[0m
+[?2004hbash-5.2# printf '\033[1mbold\033[0m \033[2mdim\033[0m \033[3mitalic\033[0m \033[4munder\033[0m \033[7minverse\033[0m \033[9mstrike\033[0m \033[4:3mcurly\033[0m\n'
+[?2004l[1mbold[0m [2mdim[0m [3mitalic[0m [4munder[0m [7minverse[0m [9mstrike[0m [4:3mcurly[0m
+[?2004hbash-5.2# exit
+[?2004lexit

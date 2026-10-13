@@ -12,7 +12,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN rm -f /etc/dpkg/dpkg.cfg.d/docker* \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
-      asciinema vim htop tmux less man-db manpages python3 procps \
+      asciinema vim htop tmux less man-db manpages python3 procps vttest \
       ncurses-term coreutils findutils \
  && rm -rf /var/lib/apt/lists/*
 

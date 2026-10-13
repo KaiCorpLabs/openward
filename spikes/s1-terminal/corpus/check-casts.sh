@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # Fails if any recording contains data from the host that recorded it:
-# user name, host names or home paths. Run before committing casts.
+# user name, host names or home paths. Run before committing casts and
+# conformance captures.
 set -euo pipefail
 
 user="$(id -un)"
 patterns=("$user" "$HOME" "/Users/" "$(hostname -s)" "$(hostname)")
 status=0
 for dir in "$@"; do
-  for cast in "$dir"/*.cast; do
+  for cast in "$dir"/*.cast "$dir"/*.out "$dir"/*.jsonl; do
     [[ -e "$cast" ]] || continue
     for p in "${patterns[@]}"; do
       [[ -n "$p" ]] || continue
