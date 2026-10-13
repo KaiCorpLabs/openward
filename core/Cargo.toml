@@ -2,9 +2,12 @@
 resolver = "3"
 members = [
     "crates/openward-ghostty",
+    "crates/openward-import",
+    "crates/openward-proto",
     "crates/openward-pty",
     "crates/openward-ssh",
     "crates/openward-term",
+    "crates/openward-vault",
 ]
 # Its own workspace: regenerates openward-ghostty's bindings, needs libclang.
 exclude = ["crates/openward-ghostty/bindgen-gen"]

@@ -1,0 +1,18 @@
+[package]
+name = "openward-proto"
+description = "Vault data types and their versioned CBOR encoding: the plaintext of an item (ARCHITECTURE §4)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+ciborium = "0.2"
+uuid = { version = "1", features = ["v7", "serde"] }
+thiserror = "2"
+
+[lints]
+workspace = true

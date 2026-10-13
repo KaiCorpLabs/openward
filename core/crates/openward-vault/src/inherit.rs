@@ -1,0 +1,66 @@
+//! Settings inheritance: defaults ← root group ← … ← group ← host.
+
+use std::collections::BTreeMap;
+
+use openward_proto::{Agent, HostKeyPolicy, ItemId, Route, Settings};
+
+/// Where an effective setting came from, for the UI to show.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Origin {
+    Default,
+    Group(ItemId),
+    Host,
+}
+
+/// The settings a connection uses, complete, with the origin of each.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Effective {
+    pub settings: Settings,
+    origins: BTreeMap<&'static str, Origin>,
+}
+
+/// What a host gets when nothing sets a field. `user`, `identity_files`,
+/// `certificate_files` and `env` have no default: the connection falls back
+/// to the local user name and the usual key files, as OpenSSH does.
+pub fn defaults() -> Settings {
+    Settings {
+        port: Some(22),
+        identities_only: Some(false),
+        agent: Some(Agent::System),
+        route: Some(Route::Direct),
+        keepalive_secs: Some(30),
+        agent_forward: Some(false),
+        term: Some("xterm-256color".into()),
+        host_key_policy: Some(HostKeyPolicy::Ask),
+        ..Settings::default()
+    }
+}
+
+impl Effective {
+    /// Overlays `groups` (root first) and then the host on the defaults.
+    pub(crate) fn resolve<'a>(
+        groups: impl Iterator<Item = (ItemId, &'a Settings)>,
+        host: &Settings,
+    ) -> Self {
+        let mut settings = Settings::default();
+        let mut origins = BTreeMap::new();
+        settings.overlay(&defaults(), |f| {
+            origins.insert(f, Origin::Default);
+        });
+        for (id, layer) in groups {
+            settings.overlay(layer, |f| {
+                origins.insert(f, Origin::Group(id));
+            });
+        }
+        settings.overlay(host, |f| {
+            origins.insert(f, Origin::Host);
+        });
+        Self { settings, origins }
+    }
+
+    /// Where `field` (one of [`Settings::FIELDS`]) came from; `None` if
+    /// nothing sets it, defaults included.
+    pub fn origin(&self, field: &str) -> Option<Origin> {
+        self.origins.get(field).copied()
+    }
+}

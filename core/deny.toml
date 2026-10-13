@@ -6,6 +6,15 @@ all-features = true
 [advisories]
 version = 2
 yanked = "deny"
+ignore = [
+    # Marvin (timing in `rsa`), with no fixed release. It reaches us through
+    # russh, which only uses the private key to sign with the user's own RSA
+    # key when authenticating; host key checks are public-key operations and
+    # are not affected. Recovering the key needs a great many timed signatures,
+    # far more than one per login. Revisit when `rsa` ships a constant-time
+    # release (ADR-003).
+    { id = "RUSTSEC-2023-0071", reason = "rsa timing leak; no fix upstream; only client-side signing with the user's RSA key, see ADR-003" },
+]
 
 [licenses]
 version = 2

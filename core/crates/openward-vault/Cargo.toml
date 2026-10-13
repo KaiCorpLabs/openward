@@ -1,0 +1,22 @@
+[package]
+name = "openward-vault"
+description = "Local item store on SQLite: hosts, groups, known hosts and settings inheritance (phase 1, not encrypted yet)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+openward-proto = { path = "../openward-proto" }
+# Bundled: the same SQLite on every platform, mobile included.
+rusqlite = { version = "0.40", features = ["bundled"] }
+thiserror = "2"
+
+[dev-dependencies]
+ciborium = "0.2"
+tempfile = "3"
+
+[lints]
+workspace = true

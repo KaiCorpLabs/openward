@@ -59,13 +59,55 @@ Una app de escritorio que el equipo pueda usar a diario en vez de su cliente SSH
 
 | ID | Hito | Días | Estado |
 |---|---|---|---|
-| A0 | Pasar al núcleo lo probado en los spikes: `openward-term` (sin alacritty), `openward-ghostty`, `openward-ssh` y `openward-pty`. Añadir Zig a la CI | 2 | **Hecho** en local; la CI con Zig se valida con el push |
-| A1 | Almacén y modelo: `openward-vault` (fase 1, sin cifrar) con hosts, grupos, etiquetas, herencia y known hosts. Importador de `~/.ssh/config` (`openward-import`) | 3 | Pendiente |
+| A0 | Pasar al núcleo lo probado en los spikes: `openward-term` (sin alacritty), `openward-ghostty`, `openward-ssh` y `openward-pty`. Añadir Zig a la CI | 2 | **Hecho.** CI de Linux en verde, Zig incluido. `cargo-deny` ignora RUSTSEC-2023-0071 (`rsa`, sin corrección publicada), con la justificación en ADR-003 |
+| A1 | Almacén y modelo: `openward-proto` (tipos y CBOR), `openward-vault` (fase 1, sin cifrar) con hosts, grupos, etiquetas, herencia y known hosts. Importador de `~/.ssh/config` (`openward-import`) | 3 | **Hecho** ([detalle](#a1-almacén-modelo-e-importador)) |
 | A2 | `openward-app`, que orquesta las sesiones y resuelve la configuración efectiva, y `openward-ffi`, la superficie para Flutter con handles opacos y sin secretos | 3 | Pendiente |
 | A3 | App Flutter: ventana, barra lateral de hosts, búsqueda, pestañas y el widget de terminal del banco convertido en componente | 4 | Pendiente |
 | A4 | Conexión: diálogos de autenticación, known hosts (TOFU, cambio), saltos, reconexión e indicador poscuántico | 3 | Pendiente |
 | A5 | Selección y copia, ajustes, atajos y terminal local | 3 | Pendiente |
 | A6 | Empaquetado de macOS, builds de Linux y Windows en CI, y uso real por el equipo | 2 | Pendiente |
+
+## A1: almacén, modelo e importador
+
+**`openward-proto`.** Lo que va dentro de un ítem, en CBOR. En la fase 2 será el texto que se cifra.
+- Tipos: `Group`, `Host` y `KnownHost`, más `Settings`, con todos los campos opcionales (`None` = heredar):
+  - usuario, puerto, claves por ruta, certificados e `IdentitiesOnly`;
+  - agente (ninguno, el del sistema o un socket propio, como el de un gestor de contraseñas);
+  - ruta (directa, saltos o ProxyCommand), keepalive y reenvío del agente;
+  - `TERM`, variables de entorno y política de claves de host (preguntar, aceptar nuevas o estricta).
+- **Compatibilidad entre versiones:** los campos solo se añaden. Lo que escribe una versión más nueva se conserva al leer y al reescribir (`extra`). Un tipo de ítem desconocido se deja intacto en disco.
+- Los IDs son UUIDv7, codificados como 16 bytes.
+
+**`openward-vault`.** SQLite (`rusqlite` con SQLite incluido, que compila para iOS y Android).
+- Tabla `items(vault_id, item_id, head_rev, envelope)` y sobre de versión 0 `{v, body}` sin cifrar. La fase 2 añade la versión 1, cifrada, en la misma columna.
+- Un fichero nuevo se crea con permisos `0600`.
+- Escrituras:
+  - con revisión: una edición hecha sobre una revisión vieja se rechaza;
+  - creación por lotes con IDs del llamante, todo o nada, para que una importación pueda referirse a sí misma;
+  - validación de referencias: grupo existente, sin ciclos, y un salto debe apuntar a un host.
+- Borrar un grupo sube su contenido al grupo padre. Un host que otros usan como salto no se puede borrar.
+- `effective(host)` resuelve `defaults ← grupo raíz ← … ← grupo ← host` y dice de dónde viene cada ajuste.
+- También: búsqueda por palabras (etiqueta, dirección, usuario, etiquetas y grupos) y recuento de etiquetas.
+- Known hosts propios: `trust_host_key` sustituye la clave del mismo algoritmo para ese host, y `known_hosts_text` los entrega a `openward-ssh`.
+
+**`openward-import`.** `~/.ssh/config` leído como lo lee `ssh`.
+- Cada alias concreto de `Host` es un host, con los ajustes que usaría `ssh <alias>`: los de todos los bloques que encajan, comodines incluidos, y gana el primer valor.
+- Soporta:
+  - `Include` con globs, relativo a `~/.ssh` y limitado al bloque donde aparece;
+  - `Match all`;
+  - `%h` en `HostName`;
+  - comillas y `clave=valor`;
+  - `ProxyCommand` literal.
+- Un `ProxyJump` a otro alias importado pasa a ser un salto a ese host.
+- Avisos para la UI:
+  - palabras clave no importadas, una vez cada una;
+  - bloques `Match` saltados;
+  - valores inválidos;
+  - `StrictHostKeyChecking no`, que se importa como `accept-new`;
+  - saltos que pierden claves al quedar como dirección suelta.
+- No escribe nada. `cargo run -p openward-import --example ssh_config` resume qué se importaría (con `-v`, el detalle).
+
+**Pruebas:** 5 en proto, 11 en vault y 13 en el importador, entre ellas una de extremo a extremo: importar, crear en el vault dentro de un grupo y resolver los saltos.
 
 ## Riesgos
 

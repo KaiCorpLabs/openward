@@ -1,0 +1,20 @@
+[package]
+name = "openward-import"
+description = "Importers into the vault; for now OpenSSH's ~/.ssh/config"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+openward-proto = { path = "../openward-proto" }
+glob = "0.3"
+
+[dev-dependencies]
+openward-vault = { path = "../openward-vault" }
+tempfile = "3"
+
+[lints]
+workspace = true

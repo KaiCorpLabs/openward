@@ -235,6 +235,7 @@ Vault ─┬─ Group (parent_id, settings parciales)
 - SQLite con una tabla `items(vault_id, item_id, head_rev, envelope BLOB)` más tablas de sync. **No hace falta SQLCipher**: lo que se guarda ya es el sobre cifrado del ítem, que es el mismo formato que se sincroniza.
 - Al desbloquear, los ítems se descifran en memoria y se crea un índice de búsqueda. Con 10.000 ítems de ~1 KB son ~10 MB de AEAD, del orden de decenas de ms.
 - Formato del sobre: `{v, vault_id, item_id, rev, parents[], key_gen, device_id, nonce, ct, sig}` en CBOR canónico. **Tipo, nombres, direcciones y marcas de tiempo van dentro de `ct`.**
+- **Fase 1 (sin cifrar):** el sobre es `{v: 0, body}`, con el cuerpo del ítem en claro. La fase 2 escribe sobres `v: 1` en la misma columna y migra fila a fila. El cuerpo (`openward-proto`) no cambia entre fases. Los campos solo se añaden; los desconocidos se conservan al reescribir, y un tipo de ítem desconocido se deja intacto.
 
 ---
 
