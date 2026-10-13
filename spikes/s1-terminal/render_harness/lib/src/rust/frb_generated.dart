@@ -3,6 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/shell.dart';
 import 'api/term.dart';
 
 import 'dart:async';
@@ -69,7 +70,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 216335209;
+  int get rustContentHash => -289485726;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -81,6 +82,74 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
+  void crateApiShellShellSessionFocus({
+    required ShellSession that,
+    required bool gained,
+  });
+
+  void crateApiShellShellSessionInject({
+    required ShellSession that,
+    required List<int> bytes,
+  });
+
+  bool crateApiShellShellSessionKey({
+    required ShellSession that,
+    required int hidUsage,
+    required KeyKind kind,
+    required int mods,
+    required String text,
+    required int unshifted,
+  });
+
+  bool crateApiShellShellSessionPaste({
+    required ShellSession that,
+    required String text,
+    required bool allowUnsafe,
+  });
+
+  void crateApiShellShellSessionPointer({
+    required ShellSession that,
+    required PointerAction action,
+    required PointerButton button,
+    required int mods,
+    required double x,
+    required double y,
+  });
+
+  ShellFrame? crateApiShellShellSessionPoll({required ShellSession that});
+
+  void crateApiShellShellSessionResize({
+    required ShellSession that,
+    required int cols,
+    required int rows,
+  });
+
+  String crateApiShellShellSessionScreenText({required ShellSession that});
+
+  void crateApiShellShellSessionSetCellPixels({
+    required ShellSession that,
+    required double width,
+    required double height,
+  });
+
+  void crateApiShellShellSessionSetOptionAsAlt({
+    required ShellSession that,
+    required bool enabled,
+  });
+
+  void crateApiShellShellSessionText({
+    required ShellSession that,
+    required String text,
+  });
+
+  void crateApiShellShellSessionWheel({
+    required ShellSession that,
+    required int lines,
+    required double x,
+    required double y,
+    required int mods,
+  });
+
   Future<FrameBatch> crateApiTermTermSessionEncode({required TermSession that});
 
   FrameBatch crateApiTermTermSessionEncodeNow({required TermSession that});
@@ -128,6 +197,13 @@ abstract class RustLibApi extends BaseApi {
     required int scrollback,
   });
 
+  Future<ShellSession> crateApiShellCreateShell({
+    required String program,
+    required int cols,
+    required int rows,
+    required int scrollback,
+  });
+
   List<String> crateApiTermEngineNames();
 
   Future<void> crateApiTermInitApp();
@@ -135,6 +211,14 @@ abstract class RustLibApi extends BaseApi {
   BigInt crateApiTermNowMicros();
 
   List<String> crateApiTermWorkloadNames();
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_ShellSession;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_ShellSession;
+
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_ShellSessionPtr;
 
   RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_TermSession;
@@ -154,6 +238,419 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
+  void crateApiShellShellSessionFocus({
+    required ShellSession that,
+    required bool gained,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+            that,
+            serializer,
+          );
+          sse_encode_bool(gained, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 1)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiShellShellSessionFocusConstMeta,
+        argValues: [that, gained],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiShellShellSessionFocusConstMeta =>
+      const TaskConstMeta(
+        debugName: "ShellSession_focus",
+        argNames: ["that", "gained"],
+      );
+
+  @override
+  void crateApiShellShellSessionInject({
+    required ShellSession that,
+    required List<int> bytes,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+            that,
+            serializer,
+          );
+          sse_encode_list_prim_u_8_loose(bytes, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiShellShellSessionInjectConstMeta,
+        argValues: [that, bytes],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiShellShellSessionInjectConstMeta =>
+      const TaskConstMeta(
+        debugName: "ShellSession_inject",
+        argNames: ["that", "bytes"],
+      );
+
+  @override
+  bool crateApiShellShellSessionKey({
+    required ShellSession that,
+    required int hidUsage,
+    required KeyKind kind,
+    required int mods,
+    required String text,
+    required int unshifted,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+            that,
+            serializer,
+          );
+          sse_encode_u_32(hidUsage, serializer);
+          sse_encode_key_kind(kind, serializer);
+          sse_encode_u_16(mods, serializer);
+          sse_encode_String(text, serializer);
+          sse_encode_u_32(unshifted, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiShellShellSessionKeyConstMeta,
+        argValues: [that, hidUsage, kind, mods, text, unshifted],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiShellShellSessionKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "ShellSession_key",
+        argNames: ["that", "hidUsage", "kind", "mods", "text", "unshifted"],
+      );
+
+  @override
+  bool crateApiShellShellSessionPaste({
+    required ShellSession that,
+    required String text,
+    required bool allowUnsafe,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(text, serializer);
+          sse_encode_bool(allowUnsafe, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiShellShellSessionPasteConstMeta,
+        argValues: [that, text, allowUnsafe],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiShellShellSessionPasteConstMeta =>
+      const TaskConstMeta(
+        debugName: "ShellSession_paste",
+        argNames: ["that", "text", "allowUnsafe"],
+      );
+
+  @override
+  void crateApiShellShellSessionPointer({
+    required ShellSession that,
+    required PointerAction action,
+    required PointerButton button,
+    required int mods,
+    required double x,
+    required double y,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+            that,
+            serializer,
+          );
+          sse_encode_pointer_action(action, serializer);
+          sse_encode_pointer_button(button, serializer);
+          sse_encode_u_16(mods, serializer);
+          sse_encode_f_32(x, serializer);
+          sse_encode_f_32(y, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiShellShellSessionPointerConstMeta,
+        argValues: [that, action, button, mods, x, y],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiShellShellSessionPointerConstMeta =>
+      const TaskConstMeta(
+        debugName: "ShellSession_pointer",
+        argNames: ["that", "action", "button", "mods", "x", "y"],
+      );
+
+  @override
+  ShellFrame? crateApiShellShellSessionPoll({required ShellSession that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_shell_frame,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiShellShellSessionPollConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiShellShellSessionPollConstMeta =>
+      const TaskConstMeta(debugName: "ShellSession_poll", argNames: ["that"]);
+
+  @override
+  void crateApiShellShellSessionResize({
+    required ShellSession that,
+    required int cols,
+    required int rows,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+            that,
+            serializer,
+          );
+          sse_encode_u_16(cols, serializer);
+          sse_encode_u_16(rows, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiShellShellSessionResizeConstMeta,
+        argValues: [that, cols, rows],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiShellShellSessionResizeConstMeta =>
+      const TaskConstMeta(
+        debugName: "ShellSession_resize",
+        argNames: ["that", "cols", "rows"],
+      );
+
+  @override
+  String crateApiShellShellSessionScreenText({required ShellSession that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiShellShellSessionScreenTextConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiShellShellSessionScreenTextConstMeta =>
+      const TaskConstMeta(
+        debugName: "ShellSession_screen_text",
+        argNames: ["that"],
+      );
+
+  @override
+  void crateApiShellShellSessionSetCellPixels({
+    required ShellSession that,
+    required double width,
+    required double height,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+            that,
+            serializer,
+          );
+          sse_encode_f_32(width, serializer);
+          sse_encode_f_32(height, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiShellShellSessionSetCellPixelsConstMeta,
+        argValues: [that, width, height],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiShellShellSessionSetCellPixelsConstMeta =>
+      const TaskConstMeta(
+        debugName: "ShellSession_set_cell_pixels",
+        argNames: ["that", "width", "height"],
+      );
+
+  @override
+  void crateApiShellShellSessionSetOptionAsAlt({
+    required ShellSession that,
+    required bool enabled,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+            that,
+            serializer,
+          );
+          sse_encode_bool(enabled, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiShellShellSessionSetOptionAsAltConstMeta,
+        argValues: [that, enabled],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiShellShellSessionSetOptionAsAltConstMeta =>
+      const TaskConstMeta(
+        debugName: "ShellSession_set_option_as_alt",
+        argNames: ["that", "enabled"],
+      );
+
+  @override
+  void crateApiShellShellSessionText({
+    required ShellSession that,
+    required String text,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(text, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiShellShellSessionTextConstMeta,
+        argValues: [that, text],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiShellShellSessionTextConstMeta =>
+      const TaskConstMeta(
+        debugName: "ShellSession_text",
+        argNames: ["that", "text"],
+      );
+
+  @override
+  void crateApiShellShellSessionWheel({
+    required ShellSession that,
+    required int lines,
+    required double x,
+    required double y,
+    required int mods,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+            that,
+            serializer,
+          );
+          sse_encode_i_32(lines, serializer);
+          sse_encode_f_32(x, serializer);
+          sse_encode_f_32(y, serializer);
+          sse_encode_u_16(mods, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiShellShellSessionWheelConstMeta,
+        argValues: [that, lines, x, y, mods],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiShellShellSessionWheelConstMeta =>
+      const TaskConstMeta(
+        debugName: "ShellSession_wheel",
+        argNames: ["that", "lines", "x", "y", "mods"],
+      );
+
+  @override
   Future<FrameBatch> crateApiTermTermSessionEncode({
     required TermSession that,
   }) {
@@ -168,7 +665,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 1,
+            funcId: 13,
             port: port_,
           );
         },
@@ -196,7 +693,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_frame_batch,
@@ -232,7 +729,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 15,
             port: port_,
           );
         },
@@ -272,7 +769,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 4,
+            funcId: 16,
             port: port_,
           );
         },
@@ -303,7 +800,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -339,7 +836,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 18,
             port: port_,
           );
         },
@@ -381,7 +878,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 19,
             port: port_,
           );
         },
@@ -427,7 +924,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 20,
             port: port_,
           );
         },
@@ -458,7 +955,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -495,7 +992,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 22,
             port: port_,
           );
         },
@@ -517,12 +1014,51 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   );
 
   @override
+  Future<ShellSession> crateApiShellCreateShell({
+    required String program,
+    required int cols,
+    required int rows,
+    required int scrollback,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(program, serializer);
+          sse_encode_u_16(cols, serializer);
+          sse_encode_u_16(rows, serializer);
+          sse_encode_u_32(scrollback, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 23,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiShellCreateShellConstMeta,
+        argValues: [program, cols, rows, scrollback],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiShellCreateShellConstMeta => const TaskConstMeta(
+    debugName: "create_shell",
+    argNames: ["program", "cols", "rows", "scrollback"],
+  );
+
+  @override
   List<String> crateApiTermEngineNames() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_String,
@@ -547,7 +1083,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 25,
             port: port_,
           );
         },
@@ -571,7 +1107,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_u_64,
@@ -593,7 +1129,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_String,
@@ -610,6 +1146,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "workload_names", argNames: []);
 
   RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_ShellSession => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_ShellSession => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession;
+
+  RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_TermSession => wire
       .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTermSession;
 
@@ -624,6 +1168,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ShellSession
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ShellSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
   TermSession
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTermSession(
     dynamic raw,
@@ -633,12 +1186,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ShellSession
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ShellSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
   TermSession
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTermSession(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return TermSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  ShellSession
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ShellSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
   }
 
   @protected
@@ -660,6 +1231,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   bool dco_decode_bool(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as bool;
+  }
+
+  @protected
+  ShellFrame dco_decode_box_autoadd_shell_frame(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_shell_frame(raw);
+  }
+
+  @protected
+  double dco_decode_f_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
   }
 
   @protected
@@ -690,6 +1273,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  KeyKind dco_decode_key_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return KeyKind.values[raw as int];
+  }
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_String).toList();
@@ -705,6 +1294,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
+  }
+
+  @protected
+  ShellFrame? dco_decode_opt_box_autoadd_shell_frame(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_shell_frame(raw);
+  }
+
+  @protected
+  PointerAction dco_decode_pointer_action(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PointerAction.values[raw as int];
+  }
+
+  @protected
+  PointerButton dco_decode_pointer_button(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PointerButton.values[raw as int];
+  }
+
+  @protected
+  ShellFrame dco_decode_shell_frame(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return ShellFrame(
+      frame: dco_decode_list_prim_u_8_strict(arr[0]),
+      mouseTracking: dco_decode_bool(arr[1]),
+      bracketedPaste: dco_decode_bool(arr[2]),
+      reportAllKeys: dco_decode_bool(arr[3]),
+      altScreen: dco_decode_bool(arr[4]),
+      title: dco_decode_String(arr[5]),
+      exited: dco_decode_bool(arr[6]),
+      inputMicros: dco_decode_u_64(arr[7]),
+    );
   }
 
   @protected
@@ -751,6 +1376,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ShellSession
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return ShellSessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   TermSession
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTermSession(
     SseDeserializer deserializer,
@@ -763,12 +1400,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ShellSession
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return ShellSessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   TermSession
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTermSession(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return TermSessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  ShellSession
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return ShellSessionImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
@@ -797,6 +1458,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   bool sse_decode_bool(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8() != 0;
+  }
+
+  @protected
+  ShellFrame sse_decode_box_autoadd_shell_frame(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_shell_frame(deserializer));
+  }
+
+  @protected
+  double sse_decode_f_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getFloat32();
   }
 
   @protected
@@ -829,6 +1502,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  KeyKind sse_decode_key_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return KeyKind.values[inner];
+  }
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -852,6 +1532,56 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  ShellFrame? sse_decode_opt_box_autoadd_shell_frame(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_shell_frame(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  PointerAction sse_decode_pointer_action(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return PointerAction.values[inner];
+  }
+
+  @protected
+  PointerButton sse_decode_pointer_button(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return PointerButton.values[inner];
+  }
+
+  @protected
+  ShellFrame sse_decode_shell_frame(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_frame = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_mouseTracking = sse_decode_bool(deserializer);
+    var var_bracketedPaste = sse_decode_bool(deserializer);
+    var var_reportAllKeys = sse_decode_bool(deserializer);
+    var var_altScreen = sse_decode_bool(deserializer);
+    var var_title = sse_decode_String(deserializer);
+    var var_exited = sse_decode_bool(deserializer);
+    var var_inputMicros = sse_decode_u_64(deserializer);
+    return ShellFrame(
+      frame: var_frame,
+      mouseTracking: var_mouseTracking,
+      bracketedPaste: var_bracketedPaste,
+      reportAllKeys: var_reportAllKeys,
+      altScreen: var_altScreen,
+      title: var_title,
+      exited: var_exited,
+      inputMicros: var_inputMicros,
+    );
   }
 
   @protected
@@ -900,6 +1630,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+    ShellSession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as ShellSessionImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTermSession(
     TermSession self,
     SseSerializer serializer,
@@ -913,6 +1656,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+    ShellSession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as ShellSessionImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTermSession(
     TermSession self,
     SseSerializer serializer,
@@ -920,6 +1676,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
       (self as TermSessionImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerShellSession(
+    ShellSession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as ShellSessionImpl).frbInternalSseEncode(move: null),
       serializer,
     );
   }
@@ -950,6 +1719,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_shell_frame(
+    ShellFrame self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_shell_frame(self, serializer);
+  }
+
+  @protected
+  void sse_encode_f_32(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putFloat32(self);
+  }
+
+  @protected
   void sse_encode_f_64(double self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putFloat64(self);
@@ -969,6 +1753,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_i_32(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putInt32(self);
+  }
+
+  @protected
+  void sse_encode_key_kind(KeyKind self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
   }
 
   @protected
@@ -1000,6 +1790,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     serializer.buffer.putUint8List(self);
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_shell_frame(
+    ShellFrame? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_shell_frame(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_pointer_action(PointerAction self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_pointer_button(PointerButton self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_shell_frame(ShellFrame self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(self.frame, serializer);
+    sse_encode_bool(self.mouseTracking, serializer);
+    sse_encode_bool(self.bracketedPaste, serializer);
+    sse_encode_bool(self.reportAllKeys, serializer);
+    sse_encode_bool(self.altScreen, serializer);
+    sse_encode_String(self.title, serializer);
+    sse_encode_bool(self.exited, serializer);
+    sse_encode_u_64(self.inputMicros, serializer);
   }
 
   @protected
@@ -1036,6 +1864,115 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putBigUint64(self);
   }
+}
+
+@sealed
+class ShellSessionImpl extends RustOpaque implements ShellSession {
+  // Not to be used by end users
+  ShellSessionImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  ShellSessionImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
+    : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        RustLib.instance.api.rust_arc_increment_strong_count_ShellSession,
+    rustArcDecrementStrongCount:
+        RustLib.instance.api.rust_arc_decrement_strong_count_ShellSession,
+    rustArcDecrementStrongCountPtr:
+        RustLib.instance.api.rust_arc_decrement_strong_count_ShellSessionPtr,
+  );
+
+  void focus({required bool gained}) => RustLib.instance.api
+      .crateApiShellShellSessionFocus(that: this, gained: gained);
+
+  /// Feeds `bytes` as if the program had written them; the key log uses
+  /// it to switch input modes (DECCKM, kitty flags, mouse, paste).
+  void inject({required List<int> bytes}) => RustLib.instance.api
+      .crateApiShellShellSessionInject(that: this, bytes: bytes);
+
+  /// A key event; returns whether it produced any bytes.
+  bool key({
+    required int hidUsage,
+    required KeyKind kind,
+    required int mods,
+    required String text,
+    required int unshifted,
+  }) => RustLib.instance.api.crateApiShellShellSessionKey(
+    that: this,
+    hidUsage: hidUsage,
+    kind: kind,
+    mods: mods,
+    text: text,
+    unshifted: unshifted,
+  );
+
+  /// Pastes `text`. Returns false, sending nothing, when it could run
+  /// commands; ask the user and call again with `allow_unsafe`.
+  bool paste({required String text, required bool allowUnsafe}) =>
+      RustLib.instance.api.crateApiShellShellSessionPaste(
+        that: this,
+        text: text,
+        allowUnsafe: allowUnsafe,
+      );
+
+  void pointer({
+    required PointerAction action,
+    required PointerButton button,
+    required int mods,
+    required double x,
+    required double y,
+  }) => RustLib.instance.api.crateApiShellShellSessionPointer(
+    that: this,
+    action: action,
+    button: button,
+    mods: mods,
+    x: x,
+    y: y,
+  );
+
+  /// Everything that changed since the last call, or `None` if nothing did.
+  ShellFrame? poll() =>
+      RustLib.instance.api.crateApiShellShellSessionPoll(that: this);
+
+  void resize({required int cols, required int rows}) => RustLib.instance.api
+      .crateApiShellShellSessionResize(that: this, cols: cols, rows: rows);
+
+  String screenText() =>
+      RustLib.instance.api.crateApiShellShellSessionScreenText(that: this);
+
+  /// Cell size in the logical pixels pointer positions use.
+  void setCellPixels({required double width, required double height}) =>
+      RustLib.instance.api.crateApiShellShellSessionSetCellPixels(
+        that: this,
+        width: width,
+        height: height,
+      );
+
+  /// macOS: Option sends Alt (ESC-prefixed) instead of typing symbols.
+  void setOptionAsAlt({required bool enabled}) => RustLib.instance.api
+      .crateApiShellShellSessionSetOptionAsAlt(that: this, enabled: enabled);
+
+  /// Text committed by an IME or a soft keyboard.
+  void text({required String text}) => RustLib.instance.api
+      .crateApiShellShellSessionText(that: this, text: text);
+
+  /// Wheel or touch scroll, `lines` notches (positive = up). Goes to the
+  /// program if it wants it, otherwise scrolls the history.
+  void wheel({
+    required int lines,
+    required double x,
+    required double y,
+    required int mods,
+  }) => RustLib.instance.api.crateApiShellShellSessionWheel(
+    that: this,
+    lines: lines,
+    x: x,
+    y: y,
+    mods: mods,
+  );
 }
 
 @sealed

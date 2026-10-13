@@ -98,7 +98,7 @@ Gana el motor que pasa la puerta. Si pasan los dos, se puntúa:
 | S1.4 | Harness de render: app Flutter + `flutter_rust_bridge` 2.13.0, decodificador Dart del frame v1 con pruebas cruzadas contra frames de ejemplo generados en Rust, y `CustomPainter` con un `Picture` en caché por fila (solo se regraban las filas que cambian) | 3–4 | **En curso:** v1 (async) y v2 (sync) medidos en macOS (§10.2) |
 | S1.4b | Carga de tecleo (bytes sueltos a intervalos aleatorios) para medir el eco | 0,5 | **Hecho** en macOS: pasa la puerta (§10.2) |
 | S1.4c | Render con atlas de glifos (`drawRawAtlas`), con párrafo de respaldo para emoji y clústeres raros; comparar el coste de grabación con v2 | 1–2 | **Hecho** en macOS: 2–3× más barato (§10.3) |
-| S1.5 | Entrada: codificación de teclas (xterm y protocolo kitty), ratón (SGR 1006), bracketed paste; IME con `TextInputClient` y región de composición en el cursor; barra de teclas en móvil | 2–3 | Pendiente |
+| S1.5 | Entrada: codificación de teclas (xterm y protocolo kitty), ratón (SGR 1006), bracketed paste; IME con `TextInputClient` y región de composición en el cursor; barra de teclas en móvil | 2–3 | **Hecho** en macOS con pruebas automáticas; falta la lista manual de IME y los dispositivos (§10.6) |
 | S1.6 | Corrección: vttest, apps reales y corpus unicode en ambos motores; capturas comparadas | 1–2 | Pendiente |
 | S1.7 | Si se confirma H2: prototipo de scrollback compacto (texto UTF-8 con tramos de estilo para las líneas que salen de la pantalla) y medición | 2 | Condicional |
 | S1.8 | Informe `S1-terminal-resultados.md` y ADR-002 aceptado | 1 | Pendiente |
@@ -253,7 +253,7 @@ Ghostty ocupa unas 3 veces menos. Además, `ghostty_terminal_compress` (pensado 
 
 **Recomendación provisional: `libghostty-vt`.** Es el único motor que pasa la puerta de memoria y el que menos trabajo propio deja (codificadores de entrada para S1.5, grafemas, compresión). El coste es la API inestable y la build con Zig, que se mitigan con el commit fijado, el adaptador `TermEngine` y bindings regenerables. Antes de aceptar el ADR-002 (S1.8) faltan:
 - ejecutar en Android e iOS reales (S1.2);
-- probar la entrada y el IME con sus codificadores (S1.5);
+- probar el IME con métodos de entrada reales y en móvil (S1.5 está hecho en macOS con pruebas automáticas, §10.6);
 - probar la corrección con apps reales (S1.6);
 - repetir la memoria con grabaciones reales (S1.1).
 
@@ -301,6 +301,96 @@ Las grabaciones de vim, htop y man son cortas, así que sus cifras tienen más r
 2. Con contenido real Ghostty también **parsea más rápido** en casi todo; solo pierde en htop y en vim con CJK.
 3. **Cómo se midió:** la TUI de agente no se usa para memoria, porque redibuja con el cursor y apenas llena el historial. Para memoria cuentan las grabaciones orientadas a líneas.
 
+### 10.6 Entrada: teclado, IME, ratón y pegado (S1.5)
+
+2026-10-13 · macOS · motor `libghostty-vt` · banco de render en Flutter con dos modos nuevos (botones de la barra superior, o `--dart-define=S1_PAGE=shell|keylog`):
+- **Shell:** el shell de login del usuario en un pty local (`portable-pty` 0.9.0).
+- **Registro de teclas:** muestra los bytes que produce cada entrada (␛ = ESC, ^X = control). Funciona en todas las plataformas, también en iOS, que no tiene shell local. Su menú «Modos» simula lo que pediría un programa: DECCKM, ratón, bracketed paste, foco y flags de kitty.
+
+**Qué se ha construido:**
+- **Codificación** (`ghostty-engine/src/engine/input.rs`): teclas, ratón, pegado y foco con los codificadores de `libghostty-vt`. Antes de cada evento se sincronizan con los modos que ha pedido el programa, así que un cambio de modo vale desde la tecla siguiente. Lo único propio es la tabla de uso HID USB → tecla de Ghostty: los dos siguen los nombres W3C, así que la tabla es directa.
+- **Sesión** (`render_harness/rust/src/api/shell.rs`): un hilo lee el pty y alimenta el motor; las respuestas del terminal (DA, DSR) vuelven al programa. Cualquier entrada devuelve la vista al final del historial.
+- **Vista** (`render_harness/lib/shell/`): reparto de la entrada, IME, ratón, pegado y barra de teclas para teclados de pantalla.
+
+**Reparto de la entrada** (la regla clave para que convivan atajos e IME):
+
+| Entrada | Va a | Motivo |
+|---|---|---|
+| Teclas funcionales (Enter, Esc, Tab, Retroceso, flechas, Inicio/Fin, RePág/AvPág, F1–F24) | Codificador | Nunca producen texto |
+| Ctrl+tecla, y Alt+tecla fuera de Apple (en macOS solo con «Opción = Alt») | Codificador | Combinaciones de terminal |
+| Teclas imprimibles | Método de entrada (`TextInputClient`) | Así funcionan las teclas muertas (´ + e = é en el teclado español), la composición y los IME |
+| Cualquier tecla mientras hay composición | Método de entrada | Elegir candidatos y confirmar |
+| Cmd+tecla en macOS e iOS | La app | Atajos del sistema; Cmd+V pega |
+| AltGr en Windows (llega como Ctrl+Alt con texto) | Texto | Teclea @, #, etc. en muchas distribuciones |
+| Imprimibles con kitty «todas las teclas» (flag 8) | Codificador | El programa las quiere como secuencias |
+
+**IME:**
+- El valor de edición es un marcador fijo de dos espacios. Si el texto se acorta, ha habido un Retroceso, y lo que sobra es texto tecleado. Así los teclados de pantalla siempre tienen algo que borrar, porque en iOS un campo vacío no avisa del Retroceso.
+- La composición se dibuja en el cursor, subrayada, y no se envía hasta confirmarla.
+- Se informa a la plataforma de la posición del cursor y de la composición, para que la ventana de candidatos aparezca al lado.
+- Una nueva línea del teclado de pantalla se envía como Enter.
+
+**Ratón y rueda:**
+- **Informes de ratón:** solo se envían si el programa los pide, en el formato que pida (SGR 1006 incluido). Los arrastres en modo 1002 llevan el botón pulsado.
+- **Rueda:**
+  - va al programa si sigue el ratón;
+  - si no lo sigue pero está en pantalla alternativa con el modo 1007 (less, man), se envía como flechas;
+  - en otro caso, desplaza el historial.
+- **Táctil:** arrastrar equivale a la rueda, y tocar abre el teclado.
+
+**Pegado:** pasa por `ghostty_terminal_paste`. Con bracketed paste el texto va entre marcadores. Sin él, un texto con saltos de línea podría ejecutar comandos: la librería lo rechaza y la app pide confirmación con una vista previa antes de pegar.
+
+**Barra de teclas** (visible en móvil, conmutable en escritorio):
+- Esc, Tab, flechas con repetición al mantener, Inicio/Fin, RePág/AvPág, símbolos frecuentes y pegar.
+- Ctrl y Alt se quedan enganchados y se aplican a la tecla o al carácter siguiente, venga del teclado de pantalla o de la propia barra.
+- Nunca toma el foco, así que el teclado de pantalla no se cierra.
+
+**Verificación:**
+- **Codificadores:** 12 pruebas unitarias en `ghostty-engine`:
+  - modo xterm clásico;
+  - DECCKM;
+  - kitty cuando el programa envía `CSI > 1 u`;
+  - Ctrl y Alt;
+  - SGR, arrastres y celdas fraccionarias;
+  - rueda;
+  - bracketed paste y texto peligroso;
+  - foco.
+- **Sesión:** 4 pruebas en el crate del banco, una con `/bin/sh` real.
+- **App completa:** 7 pruebas de integración en macOS (`integration_test/input_test.dart`) que pasan por el framework de Flutter:
+  - teclas y combinaciones;
+  - cambios de modo;
+  - composición del IME y confirmación;
+  - Ctrl enganchado desde la barra;
+  - ratón solo cuando el programa lo sigue;
+  - pegado con confirmación y entre marcadores;
+  - un shell real que ejecuta lo tecleado y termina con Ctrl+D.
+
+**Hallazgos:**
+1. **Los codificadores de `libghostty-vt` cubren todo S1.5** (xterm, kitty, ratón, pegado seguro y foco), sin tablas propias de secuencias. Esto confirma una de las ventajas que se le atribuían en §10.4.
+2. **Ghostty olvida la deduplicación del movimiento del ratón** cada vez que se sincroniza con el terminal, y hay que sincronizar antes de cada evento. Se deduplica por celda en nuestro lado.
+3. **El codificador de ratón quiere celdas de píxeles enteros**, y las de Flutter son fraccionarias. Las posiciones se proyectan sobre una rejilla de celdas redondeadas: la celda es exacta, y los informes en píxeles (modo 1016) son aproximados.
+4. **Build en Apple: símbolos duplicados.**
+   - **Problema:** Zig mete su `compiler_rt` dentro de `libghostty-vt.a`, y en macOS e iOS la staticlib de Rust se enlaza con `-force_load` (como todo plugin de Flutter). Eso choca con los `compiler_builtins` de Rust (`___subvsi3` y otros). Quitar `compiler_rt.o` no sirve, porque Zig necesita builtins que Rust no tiene (`___extendxftf2`).
+   - **Solución en `build.rs`:** pre-enlazar el archivo en un solo objeto con `ld -r` que solo exporta `_ghostty_*` (205 símbolos). Lo demás (compiler_rt, la biblioteca estándar de Zig, simdutf, highway) queda interno, y solo depende de libSystem.
+   - **Para el producto:** encaja con el plan de llevar `ghostty-engine` a `core/` si se acepta el ADR-002.
+5. **El banco no compila para iOS, desde antes de S1.5.** `backtrace`, que llega por `allo-isolate` de flutter_rust_bridge 2.13.0, no encuentra las funciones `_dyld_*` de `libc` 0.2.190 en iOS. No se puede bajar `libc`, porque otra dependencia exige ≥ 0.2.190. Hay que resolverlo en S1.2, antes de las pruebas en iPhone.
+6. **La vista consulta el motor en cada vsync** para saber si hay cambios. La consulta cuesta microsegundos, pero mantiene despierto el bucle de frames. En el producto, Rust debería avisar a Dart cuando haya salida nueva (un stream de flutter_rust_bridge) y parar el ticker en reposo, por batería en móvil.
+7. **Fuera de S1.5:** no hay selección ni copia de texto. Con un programa que sigue el ratón, la selección local suele ir con Mayús, como en otros terminales. Queda para el producto.
+
+**Lista manual pendiente** (necesita una persona; en móvil va junto con S1.2). En la vista de shell, el eco p50/p95 de cada tecla aparece en la barra de estado.
+
+| Prueba | Esperado |
+|---|---|
+| Teclado español: ´ + e, ¨ + u, Opción+2 (@), Opción+º (\\) | é, ü, @ y \\ en el shell, sin bytes extra |
+| IME japonés (Kotoeri) y chino (pinyin): escribir, elegir candidato con flechas, confirmar con Enter | Composición subrayada en el cursor, candidatos junto al cursor, solo se envía el texto confirmado |
+| IME coreano (2-Set): sílabas seguidas y Retroceso a mitad de sílaba | Las sílabas se forman en el cursor; Retroceso deshace el jamo, no borra en el shell |
+| Selector de emoji (Ctrl+Cmd+Espacio) y dictado | El emoji o el texto llegan enteros |
+| vim: modo inserción, Esc, flechas y `:set mouse=a` con clic y rueda | Esc sale del modo inserción; el clic mueve el cursor; la rueda desplaza dentro de vim |
+| tmux con `set -g mouse on`: arrastrar el borde de un panel | El panel cambia de tamaño |
+| Pegar varias líneas en zsh (con bracketed paste) y en `/bin/sh` (sin él) | zsh pega sin preguntar y no ejecuta; en sh aparece la confirmación |
+| Android (Gboard, Samsung): letras, Retroceso, sugerencias desactivadas, barra de teclas con Ctrl+C | Sin duplicados ni letras perdidas; Ctrl+C interrumpe |
+| iOS: teclado de pantalla, teclado físico en iPad, Retroceso con el campo vacío | Retroceso siempre llega; Cmd no se envía al terminal |
+
 ## 11. Cómo reproducir
 
 ```bash
@@ -318,4 +408,12 @@ ANDROID_NDK_HOME=~/Library/Android/sdk/ndk/<versión> \
 cargo build --release --features ghostty
 ./target/release/termbench run ../corpus/synthetic/*.txt --engine all
 ./target/release/termbench mem --engine ghostty --tabs 10 --scrollback 10000 --cols 120
+```
+
+```bash
+# Entrada (S1.5): pruebas de los codificadores y de la app en macOS
+cd spikes/s1-terminal/ghostty-engine && cargo test
+cd ../render_harness && (cd rust && cargo test)
+fvm flutter test integration_test/input_test.dart -d macos
+fvm flutter run -d macos --release --dart-define=S1_PAGE=shell    # o keylog
 ```

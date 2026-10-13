@@ -1,8 +1,11 @@
-// Spike S1.4: render harness. See docs/spikes/S1-terminal.md.
+// Spike S1.4/S1.5: render harness. See docs/spikes/S1-terminal.md.
 //
 // Interactive: pick a workload and rate, press Start.
 // Unattended: --dart-define=S1_AUTORUN=fullscreen:0:64,typing:15 runs each
 // spec, prints one `S1RESULT {json}` line per run and exits.
+// S1_ENGINE=alacritty|ghostty picks the engine for the benchmark.
+// Input (S1.5): the shell and key log buttons, or S1_PAGE=shell|keylog to
+// open one directly.
 
 import 'dart:convert';
 import 'dart:io' show exit;
@@ -12,9 +15,12 @@ import 'package:flutter/material.dart';
 import 'bench/harness.dart';
 import 'src/rust/api/term.dart';
 import 'src/rust/frb_generated.dart';
+import 'shell/shell_page.dart';
 import 'term/renderer.dart';
 
 const _autorun = String.fromEnvironment('S1_AUTORUN');
+const _page = String.fromEnvironment('S1_PAGE');
+const _engine = String.fromEnvironment('S1_ENGINE', defaultValue: 'alacritty');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,7 +37,11 @@ class HarnessApp extends StatelessWidget {
       title: 'OpenWard S1 render harness',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(brightness: Brightness.dark, useMaterial3: true),
-      home: const HarnessPage(),
+      home: switch (_page) {
+        'shell' => const ShellPage(program: ''),
+        keyLog => const ShellPage(program: keyLog),
+        _ => const HarnessPage(),
+      },
     );
   }
 }
@@ -45,7 +55,7 @@ class HarnessPage extends StatefulWidget {
 
 class _HarnessPageState extends State<HarnessPage>
     with SingleTickerProviderStateMixin {
-  late final Harness _harness = Harness(vsync: this);
+  late final Harness _harness = Harness(vsync: this, engine: _engine);
   final List<String> _workloads = [...workloadNames(), RunSpec.typing];
   String _workload = 'fullscreen';
   double _rate = 0;
@@ -70,6 +80,12 @@ class _HarnessPageState extends State<HarnessPage>
     exit(0);
   }
 
+  void _open(String program) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => ShellPage(program: program)),
+    );
+  }
+
   @override
   void dispose() {
     _harness.dispose();
@@ -83,6 +99,17 @@ class _HarnessPageState extends State<HarnessPage>
       appBar: AppBar(
         title: const Text('S1 · render harness'),
         actions: [
+          IconButton(
+            tooltip: 'Shell (S1.5)',
+            icon: const Icon(Icons.terminal),
+            onPressed: running ? null : () => _open(''),
+          ),
+          IconButton(
+            tooltip: 'Registro de teclas (S1.5)',
+            icon: const Icon(Icons.keyboard),
+            onPressed: running ? null : () => _open(keyLog),
+          ),
+          const SizedBox(width: 12),
           DropdownButton<String>(
             value: _workload,
             items: [

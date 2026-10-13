@@ -1,6 +1,6 @@
 [package]
 name = "render_harness_core"
-description = "Spike S1.4: Rust side of the Flutter render harness"
+description = "Spike S1.4/S1.5: Rust side of the Flutter render harness"
 version = "0.0.0"
 edition = "2024"
 rust-version = "1.99"
@@ -16,7 +16,9 @@ crate-type = ["cdylib", "staticlib"]
 [dependencies]
 anyhow = "1"
 flutter_rust_bridge = "=2.13.0"
+ghostty-engine = { path = "../../ghostty-engine" }
 openward-term = { path = "../../../../core/crates/openward-term" }
+portable-pty = "=0.9.0"
 s1-corpus = { path = "../../s1-corpus" }
 
 [lints.rust]

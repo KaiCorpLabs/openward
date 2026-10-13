@@ -319,36 +319,42 @@ class TerminalRenderer extends ChangeNotifier {
   }
 }
 
-/// Paints a [TerminalRenderer] at its natural size, scaled down to fit.
+/// Paints a [TerminalRenderer] at its natural size, scaled down to fit
+/// unless [scaleToFit] is off (interactive use: pointer positions must map
+/// to cells 1:1).
 class TerminalView extends StatelessWidget {
   const TerminalView({
     super.key,
     required this.renderer,
     required this.cols,
     required this.rows,
+    this.scaleToFit = true,
   });
 
   final TerminalRenderer renderer;
   final int cols;
   final int rows;
+  final bool scaleToFit;
 
   @override
   Widget build(BuildContext context) {
     final m = renderer.metrics;
+    final grid = SizedBox(
+      width: math.max(1, cols) * m.width,
+      height: math.max(1, rows) * m.height,
+      child: RepaintBoundary(
+        child: CustomPaint(
+          painter: _TerminalPainter(renderer),
+          isComplex: true,
+          willChange: true,
+        ),
+      ),
+    );
+    if (!scaleToFit) return grid;
     return FittedBox(
       fit: BoxFit.contain,
       alignment: Alignment.topLeft,
-      child: SizedBox(
-        width: math.max(1, cols) * m.width,
-        height: math.max(1, rows) * m.height,
-        child: RepaintBoundary(
-          child: CustomPaint(
-            painter: _TerminalPainter(renderer),
-            isComplex: true,
-            willChange: true,
-          ),
-        ),
-      ),
+      child: grid,
     );
   }
 }

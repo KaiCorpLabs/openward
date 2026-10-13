@@ -11,6 +11,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use flutter_rust_bridge::frb;
+use ghostty_engine::GhosttyEngine;
 use openward_term::alacritty::AlacrittyEngine;
 use openward_term::{FrameEncoder, Size, TermEngine};
 use s1_corpus::Workload;
@@ -43,7 +44,7 @@ pub fn workload_names() -> Vec<String> {
 
 #[frb(sync)]
 pub fn engine_names() -> Vec<String> {
-    vec!["alacritty".to_owned()]
+    vec!["alacritty".to_owned(), "ghostty".to_owned()]
 }
 
 /// One pull of damage from the engine.
@@ -92,6 +93,7 @@ pub fn create_session(
     let size = Size::new(cols, rows);
     let engine: Box<dyn TermEngine> = match engine.as_str() {
         "alacritty" => Box::new(AlacrittyEngine::new(size, scrollback as usize)),
+        "ghostty" => Box::new(GhosttyEngine::new(size, scrollback as usize)),
         other => anyhow::bail!("engine not available in this build: {other}"),
     };
     Ok(TermSession {

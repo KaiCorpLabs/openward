@@ -14,6 +14,14 @@ cargo test
 
 El script clona Ghostty en la caché del usuario (`~/Library/Caches/openward/ghostty` en macOS), hace checkout del commit de [`GHOSTTY_COMMIT`](GHOSTTY_COMMIT) y deja la librería en `…/build/<commit>/<destino>/`, donde la busca `build.rs`. `GHOSTTY_VT_DIR` permite apuntar a otro directorio.
 
+## Entrada (S1.5)
+
+`src/engine/input.rs` añade al motor la codificación de teclas, ratón, pegado y foco con los codificadores de `libghostty-vt`, sincronizados con los modos del terminal antes de cada evento (`encode_key`, `encode_text`, `encode_mouse`, `wheel`, `encode_paste`, `encode_focus`, `input_modes`). Las teclas llegan como uso HID USB, el mismo que da Flutter en `PhysicalKeyboardKey.usbHidUsage`.
+
+## Enlace en Apple
+
+Zig mete su `compiler_rt` en la librería estática y, enlazada con `-force_load` (como hace Xcode con los plugins de Flutter), choca con los `compiler_builtins` de Rust. En destinos Apple, `build.rs` pre-enlaza el archivo con `ld -r` en un único objeto que solo exporta `_ghostty_*`; el resto queda interno.
+
 ## Bindings
 
 `src/sys.rs` se genera con `bindgen` (crate `bindgen-gen/`) y se commitea, para que la build normal no necesite libclang. Se regenera al cambiar `GHOSTTY_COMMIT`:

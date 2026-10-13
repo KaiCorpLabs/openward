@@ -11,6 +11,8 @@ use openward_term::{
 
 use crate::sys;
 
+pub mod input;
+
 /// Nominal cell size passed to libghostty-vt. Only pixel-based reports
 /// (XTWINOPS) use it; the UI measures its own font.
 const CELL_W_PX: u32 = 8;
@@ -73,6 +75,7 @@ pub struct GhosttyEngine {
     force_full: bool,
     graphemes: Vec<u32>,
     text: String,
+    input: input::Input,
 }
 
 // SAFETY: the handles are only touched through `&mut self` or, for the
@@ -178,6 +181,7 @@ impl GhosttyEngine {
                 force_full: true,
                 graphemes: Vec::with_capacity(16),
                 text: String::with_capacity(16),
+                input: input::Input::new(),
             }
         }
     }
@@ -205,6 +209,20 @@ impl GhosttyEngine {
             );
         }
         usage
+    }
+
+    /// Back to the live screen (what terminals do on input).
+    pub fn scroll_to_bottom(&mut self) {
+        if self.display_offset() == 0 {
+            return;
+        }
+        let behavior = sys::GhosttyTerminalScrollViewport {
+            tag: sys::GHOSTTY_SCROLL_VIEWPORT_BOTTOM,
+            value: sys::GhosttyTerminalScrollViewportValue { delta: 0 },
+        };
+        // SAFETY: valid terminal; the BOTTOM tag reads no union member.
+        unsafe { sys::ghostty_terminal_scroll_viewport(self.term, behavior) };
+        self.force_full = true;
     }
 
     /// Compresses scrollback as far as possible (an idle-time operation).
@@ -817,6 +835,20 @@ mod tests {
         assert!(f.full);
         assert_eq!(f.display_offset, 3);
         assert_eq!(spans_of(&f, 0)[0].2, "line43");
+    }
+
+    #[test]
+    fn scroll_to_bottom_returns_to_the_live_screen() {
+        let mut e = engine(10, 3);
+        for i in 0..20 {
+            e.feed(format!("line {i}\r\n").as_bytes());
+        }
+        e.scroll_display(5);
+        frame(&mut e);
+        e.scroll_to_bottom();
+        let f = frame(&mut e);
+        assert!(f.full);
+        assert_eq!(f.display_offset, 0);
     }
 
     #[test]
