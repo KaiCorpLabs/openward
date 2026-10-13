@@ -1,7 +1,7 @@
 // Spike S1.4: render harness. See docs/spikes/S1-terminal.md.
 //
 // Interactive: pick a workload and rate, press Start.
-// Unattended: --dart-define=S1_AUTORUN=fullscreen:0:64,sgr-log:4:16 runs each
+// Unattended: --dart-define=S1_AUTORUN=fullscreen:0:64,typing:15 runs each
 // spec, prints one `S1RESULT {json}` line per run and exits.
 
 import 'dart:convert';
@@ -46,7 +46,7 @@ class HarnessPage extends StatefulWidget {
 class _HarnessPageState extends State<HarnessPage>
     with SingleTickerProviderStateMixin {
   late final Harness _harness = Harness(vsync: this);
-  final List<String> _workloads = workloadNames();
+  final List<String> _workloads = [...workloadNames(), RunSpec.typing];
   String _workload = 'fullscreen';
   double _rate = 0;
   bool _ready = false;
@@ -109,7 +109,11 @@ class _HarnessPageState extends State<HarnessPage>
                 ? null
                 : running
                 ? _harness.stop
-                : () => _harness.run(RunSpec(_workload, _rate, 32)),
+                : () => _harness.run(
+                    _workload == RunSpec.typing
+                        ? const RunSpec(RunSpec.typing, 0, 10)
+                        : RunSpec(_workload, _rate, 32),
+                  ),
             child: Text(running ? 'Stop' : 'Start'),
           ),
           const SizedBox(width: 12),

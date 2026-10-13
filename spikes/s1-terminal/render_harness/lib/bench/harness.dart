@@ -13,14 +13,21 @@ import '../term/renderer.dart';
 final class RunSpec {
   const RunSpec(this.workload, this.mibPerSec, this.totalMib);
 
+  /// `typing:<seconds>` or `<workload>:<MiB/s>:<MiB>`.
   factory RunSpec.parse(String spec) {
     final parts = spec.split(':');
+    if (parts[0] == typing) {
+      return RunSpec(typing, 0, parts.length > 1 ? double.parse(parts[1]) : 15);
+    }
     return RunSpec(
       parts[0],
       parts.length > 1 ? double.parse(parts[1]) : 0,
       parts.length > 2 ? double.parse(parts[2]) : 32,
     );
   }
+
+  /// Keystroke echo workload; [totalMib] is its duration in seconds.
+  static const typing = 'typing';
 
   final String workload;
 
@@ -29,8 +36,9 @@ final class RunSpec {
   final double totalMib;
 
   @override
-  String toString() =>
-      '$workload @ ${mibPerSec == 0 ? 'max' : '$mibPerSec MiB/s'}, $totalMib MiB';
+  String toString() => workload == typing
+      ? 'typing, ${totalMib.toStringAsFixed(0)} s'
+      : '$workload @ ${mibPerSec == 0 ? 'max' : '$mibPerSec MiB/s'}, $totalMib MiB';
 }
 
 /// Drives a [TermSession] at the display refresh rate and measures the
@@ -115,13 +123,17 @@ class Harness extends ChangeNotifier {
     running = true;
     final startFed = fedBytes;
     _done = Completer();
-    await session.startWorkload(
-      workload: spec.workload,
-      cols: cols,
-      rows: rows,
-      mibPerSec: spec.mibPerSec,
-      totalMib: spec.totalMib,
-    );
+    if (spec.workload == RunSpec.typing) {
+      await session.startTyping(seconds: spec.totalMib, minMs: 60, maxMs: 180);
+    } else {
+      await session.startWorkload(
+        workload: spec.workload,
+        cols: cols,
+        rows: rows,
+        mibPerSec: spec.mibPerSec,
+        totalMib: spec.totalMib,
+      );
+    }
     _wall
       ..reset()
       ..start();
@@ -133,6 +145,13 @@ class Harness extends ChangeNotifier {
   }
 
   void stop() => _session?.stopWorkload();
+
+  /// Refresh rate of the display the app runs on.
+  double get refreshHz {
+    final views = PlatformDispatcher.instance.views;
+    final hz = views.isEmpty ? 0.0 : views.first.display.refreshRate;
+    return hz > 0 ? hz : 60;
+  }
 
   void _onTick(Duration _) {
     final session = _session;
@@ -196,6 +215,8 @@ class Harness extends ChangeNotifier {
           'cols': cols,
           'rows': rows,
           'platform': Platform.operatingSystem,
+          'refresh_hz': refreshHz,
+          'echo_gate_ms': 1000 / refreshHz + 4,
           'mode': kReleaseMode
               ? 'release'
               : (kProfileMode ? 'profile' : 'debug'),

@@ -96,7 +96,7 @@ Gana el motor que pasa la puerta. Si pasan los dos, se puntúa:
 | S1.2 | `termbench` con alacritty en las 5 plataformas; resultados en `spikes/s1-terminal/results/<plataforma>.jsonl` | 1–2 | Pendiente |
 | S1.3 | Backend `libghostty-vt`: build con **Zig 0.16.0 exacto** (`brew install zig@0.16`, disponible como `zig`) para los 5 destinos; bindings de `vt.h` en un crate `-sys` aislado (la única excepción a `unsafe_code = "forbid"`); implementar `TermEngine` | 3–4 | Pendiente |
 | S1.4 | Harness de render: app Flutter + `flutter_rust_bridge` 2.13.0, decodificador Dart del frame v1 con pruebas cruzadas contra frames de ejemplo generados en Rust, y `CustomPainter` con un `Picture` en caché por fila (solo se regraban las filas que cambian) | 3–4 | **En curso:** v1 (async) y v2 (sync) medidos en macOS (§10.2) |
-| S1.4b | Carga de tecleo (bytes sueltos a intervalos aleatorios) para medir el eco | 0,5 | Pendiente |
+| S1.4b | Carga de tecleo (bytes sueltos a intervalos aleatorios) para medir el eco | 0,5 | **Hecho** en macOS: pasa la puerta (§10.2) |
 | S1.4c | Render con atlas de glifos (`drawRawAtlas`) para ASCII/latino, con párrafo de respaldo para CJK y emoji; comparar el coste de grabación con v2 | 1–2 | Pendiente |
 | S1.5 | Entrada: codificación de teclas (xterm y protocolo kitty), ratón (SGR 1006), bracketed paste; IME con `TextInputClient` y región de composición en el cursor; barra de teclas en móvil | 2–3 | Pendiente |
 | S1.6 | Corrección: vttest, apps reales y corpus unicode en ambos motores; capturas comparadas | 1–2 | Pendiente |
@@ -154,7 +154,15 @@ v1 pedía el frame a Rust de forma asíncrona en cada tick; v2 lo pide de forma 
 2. **Pintar es barato:** el raster p95 está entre 0,6 y 1,4 ms y la app va a 60 fps estables, sin frames congelados tras el calentamiento, incluso con salida masiva.
 3. **El cuello de botella es grabar las filas en Dart** con un `Paragraph` por tramo de estilo: 3,5–15 ms en p95, y llega casi al presupuesto entero del refresco con CJK y emoji. En un Android de gama media puede ser varias veces más lento. **Siguiente iteración (S1.4c):** atlas de glifos con `drawRawAtlas`, que evita dar forma al texto en cada frame, y párrafo solo para lo que el atlas no cubra.
 4. **La métrica de latencia original estaba mal planteada para flujos continuos.** El byte más antiguo de cada frame espera por construcción casi un refresco entero, así que "p95 < 16 ms" era imposible a 60 Hz. La latencia que percibe el usuario es la del eco de una tecla aislada: la puerta pasa a "p95 < 1 refresco + 4 ms" con una carga de tecleo (S1.4b). Los flujos continuos se evalúan por fps y por tiempo de frame (§6).
-5. **Toolchain dentro de la build de Flutter:** cargokit solo aceptaba `stable`, `beta` o `nightly`, así que compilaba con el `stable` de la máquina y no con la versión fijada. Se ha parcheado la copia de cargokit del harness (`build_tool/lib/src/options.dart`) para aceptar una versión exacta, y `rust/cargokit.yaml` fija la 1.99.0. Habrá que proponer el cambio upstream o mantener el parche en la app real.
+5. **El eco de tecla pasa la puerta en macOS (S1.4b).** La carga `typing` envía bytes sueltos cada 60–180 ms sobre una pantalla ya llena, como el eco del shell al escribir. Dos ejecuciones de 20 s (334 pulsaciones), vía síncrona, pantalla a 60 Hz:
+
+   | Ejecución | Pulsaciones | p50 | p95 | p99 | Máx. | Puerta (1 refresco + 4 ms) |
+   |---|---|---|---|---|---|---|
+   | 1 | 166 | 8,8 ms | 17,4 ms | 18,9 ms | 40,3 ms | 20,7 ms → **pasa** |
+   | 2 | 168 | 9,2 ms | 17,1 ms | 17,9 ms | 44,2 ms | 20,7 ms → **pasa** |
+
+   El p50 (~9 ms) es medio refresco de espera más ~1 ms de proceso, el mínimo posible a 60 Hz. Grabar la única fila que cambia cuesta < 1 ms. Hay picos aislados de ~40 ms (menos del 1 % de las pulsaciones) que conviene investigar en Android. El raster p95 sube a 3,7–4,8 ms con este ritmo intermitente, probablemente porque la GPU baja de frecuencia entre pulsaciones. En una pantalla de 120 Hz o más la puerta se estrecha (~12 ms) y habrá que repetir la medición.
+6. **Toolchain dentro de la build de Flutter:** cargokit solo aceptaba `stable`, `beta` o `nightly`, así que compilaba con el `stable` de la máquina y no con la versión fijada. Se ha parcheado la copia de cargokit del harness (`build_tool/lib/src/options.dart`) para aceptar una versión exacta, y `rust/cargokit.yaml` fija la 1.99.0. Habrá que proponer el cambio upstream o mantener el parche en la app real.
 
 ## 11. Cómo reproducir
 

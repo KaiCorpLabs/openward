@@ -216,6 +216,60 @@ impl TermSession {
         Ok(())
     }
 
+    /// Simulates typing into a busy screen: one printable byte at a time
+    /// (what a remote shell echoes for one keystroke) at random intervals
+    /// between `min_ms` and `max_ms`, for `seconds`. Each frame then carries
+    /// at most one keystroke, so its latency is the echo latency.
+    pub fn start_typing(&self, seconds: f64, min_ms: u32, max_ms: u32) -> anyhow::Result<()> {
+        if self.running.swap(true, Ordering::SeqCst) {
+            anyhow::bail!("a workload is already running");
+        }
+        {
+            // Fill the screen first, without timestamps: only keystrokes count.
+            let mut state = lock(&self.state);
+            let size = state.engine.size();
+            let prefill = Workload::SgrLog.generate(
+                64 * 1024,
+                usize::from(size.cols),
+                usize::from(size.rows),
+            );
+            state.engine.feed(prefill.as_bytes());
+            state.engine.feed(b"\x1b[0m\r\n$ ");
+            state.engine.take_host_writes();
+        }
+        let (min_ms, max_ms) = (min_ms.min(max_ms), max_ms.max(min_ms));
+        let state = Arc::clone(&self.state);
+        let fed = Arc::clone(&self.fed);
+        let running = Arc::clone(&self.running);
+        thread::Builder::new()
+            .name("s1-typing".into())
+            .spawn(move || {
+                const TEXT: &[u8] =
+                    b"ssh deploy@build-01 && tail -f /var/log/app.log | grep -i error ";
+                let deadline = Instant::now() + Duration::from_secs_f64(seconds.max(0.0));
+                let mut rng = 0x2545_f491_4f6c_dd1d_u64;
+                let mut typed = 0usize;
+                while running.load(Ordering::Relaxed) && Instant::now() < deadline {
+                    // xorshift64: deterministic intervals across runs.
+                    rng ^= rng << 13;
+                    rng ^= rng >> 7;
+                    rng ^= rng << 17;
+                    let span = u64::from(max_ms - min_ms) + 1;
+                    thread::sleep(Duration::from_millis(u64::from(min_ms) + rng % span));
+                    let keystroke: &[u8] = if typed % 60 == 59 {
+                        b"\r\n$ "
+                    } else {
+                        std::slice::from_ref(&TEXT[typed % TEXT.len()])
+                    };
+                    lock(&state).feed(keystroke);
+                    fed.fetch_add(keystroke.len() as u64, Ordering::Relaxed);
+                    typed += 1;
+                }
+                running.store(false, Ordering::SeqCst);
+            })?;
+        Ok(())
+    }
+
     #[frb(sync)]
     pub fn stop_workload(&self) {
         self.running.store(false, Ordering::SeqCst);

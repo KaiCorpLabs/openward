@@ -69,7 +69,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -488595049;
+  int get rustContentHash => 216335209;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -101,6 +101,13 @@ abstract class RustLibApi extends BaseApi {
   Future<void> crateApiTermTermSessionScroll({
     required TermSession that,
     required int deltaLines,
+  });
+
+  Future<void> crateApiTermTermSessionStartTyping({
+    required TermSession that,
+    required double seconds,
+    required int minMs,
+    required int maxMs,
   });
 
   Future<void> crateApiTermTermSessionStartWorkload({
@@ -354,6 +361,48 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<void> crateApiTermTermSessionStartTyping({
+    required TermSession that,
+    required double seconds,
+    required int minMs,
+    required int maxMs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTermSession(
+            that,
+            serializer,
+          );
+          sse_encode_f_64(seconds, serializer);
+          sse_encode_u_32(minMs, serializer);
+          sse_encode_u_32(maxMs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 7,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiTermTermSessionStartTypingConstMeta,
+        argValues: [that, seconds, minMs, maxMs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTermTermSessionStartTypingConstMeta =>
+      const TaskConstMeta(
+        debugName: "TermSession_start_typing",
+        argNames: ["that", "seconds", "minMs", "maxMs"],
+      );
+
+  @override
   Future<void> crateApiTermTermSessionStartWorkload({
     required TermSession that,
     required String workload,
@@ -378,7 +427,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 8,
             port: port_,
           );
         },
@@ -409,7 +458,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -446,7 +495,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 10,
             port: port_,
           );
         },
@@ -473,7 +522,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_String,
@@ -498,7 +547,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 12,
             port: port_,
           );
         },
@@ -522,7 +571,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_u_64,
@@ -544,7 +593,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_String,
@@ -1034,6 +1083,21 @@ class TermSessionImpl extends RustOpaque implements TermSession {
 
   Future<void> scroll({required int deltaLines}) => RustLib.instance.api
       .crateApiTermTermSessionScroll(that: this, deltaLines: deltaLines);
+
+  /// Simulates typing into a busy screen: one printable byte at a time
+  /// (what a remote shell echoes for one keystroke) at random intervals
+  /// between `min_ms` and `max_ms`, for `seconds`. Each frame then carries
+  /// at most one keystroke, so its latency is the echo latency.
+  Future<void> startTyping({
+    required double seconds,
+    required int minMs,
+    required int maxMs,
+  }) => RustLib.instance.api.crateApiTermTermSessionStartTyping(
+    that: this,
+    seconds: seconds,
+    minMs: minMs,
+    maxMs: maxMs,
+  );
 
   /// Feed `workload` from a background thread at `mib_per_sec` (0 = as
   /// fast as possible) until `total_mib` have been fed or

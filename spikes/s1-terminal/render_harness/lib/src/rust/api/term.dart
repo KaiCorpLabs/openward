@@ -51,6 +51,16 @@ abstract class TermSession implements RustOpaqueInterface {
 
   Future<void> scroll({required int deltaLines});
 
+  /// Simulates typing into a busy screen: one printable byte at a time
+  /// (what a remote shell echoes for one keystroke) at random intervals
+  /// between `min_ms` and `max_ms`, for `seconds`. Each frame then carries
+  /// at most one keystroke, so its latency is the echo latency.
+  Future<void> startTyping({
+    required double seconds,
+    required int minMs,
+    required int maxMs,
+  });
+
   /// Feed `workload` from a background thread at `mib_per_sec` (0 = as
   /// fast as possible) until `total_mib` have been fed or
   /// [`stop_workload`](Self::stop_workload) is called.
