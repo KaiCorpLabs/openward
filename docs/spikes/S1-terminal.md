@@ -60,7 +60,8 @@ Las grabaciones se hacen **dentro de un contenedor desechable con datos sintéti
 | Throughput de parseo | `termbench run` | ≥ 50 MiB/s en un Android de gama media con todo el corpus |
 | `cat` de 100 MB con la UI | Harness de render | Ningún frame congelado > 100 ms; la UI sigue respondiendo |
 | Latencia del eco en el núcleo | `termbench echo` | p99 < 1 ms en todas las plataformas |
-| Latencia desde los datos recibidos hasta el pintado | Harness (`FrameTiming` + marca de tiempo del núcleo) | p95 < 16 ms a 200×50 |
+| Latencia del eco de una tecla, desde los datos recibidos hasta el pintado | Harness, carga de tecleo con bytes sueltos (`FrameTiming` + marca de tiempo del núcleo) | p95 < 1 refresco + 4 ms a 200×50 (≈ 21 ms a 60 Hz, ≈ 12 ms a 120 Hz) |
+| Flujo continuo (salida masiva) | Harness, cargas del corpus al máximo ritmo | ≥ 55 fps y construcción + raster p95 < 1 refresco |
 | Corrección | `vttest` (pantallas 1–3 y 8), vim, tmux, htop, mc, less, corpus `unicode` | Sin errores visibles; diferencias documentadas |
 | IME | Japonés, chino pinyin, coreano; Gboard y teclado de iOS | Composición visible en el cursor y texto confirmado correcto |
 | **Memoria de scrollback** | `termbench mem` | **< 300 MB con 10 pestañas × 10.000 líneas × 120 columnas.** Un valor por defecto de 40.000 líneas solo si hay scrollback compacto |
@@ -94,7 +95,9 @@ Gana el motor que pasa la puerta. Si pasan los dos, se puntúa:
 | S1.1 | Grabar el corpus real en un contenedor y añadir el script de regeneración | 1 | Pendiente |
 | S1.2 | `termbench` con alacritty en las 5 plataformas; resultados en `spikes/s1-terminal/results/<plataforma>.jsonl` | 1–2 | Pendiente |
 | S1.3 | Backend `libghostty-vt`: build con **Zig 0.16.0 exacto** (`brew install zig@0.16`, disponible como `zig`) para los 5 destinos; bindings de `vt.h` en un crate `-sys` aislado (la única excepción a `unsafe_code = "forbid"`); implementar `TermEngine` | 3–4 | Pendiente |
-| S1.4 | Harness de render: app Flutter + `flutter_rust_bridge` 2.13.0, decodificador Dart del frame v1 con pruebas cruzadas contra frames de ejemplo generados en Rust, y `CustomPainter` con un `Picture` en caché por fila (solo se regraban las filas que cambian) | 3–4 | Pendiente |
+| S1.4 | Harness de render: app Flutter + `flutter_rust_bridge` 2.13.0, decodificador Dart del frame v1 con pruebas cruzadas contra frames de ejemplo generados en Rust, y `CustomPainter` con un `Picture` en caché por fila (solo se regraban las filas que cambian) | 3–4 | **En curso:** v1 (async) y v2 (sync) medidos en macOS (§10.2) |
+| S1.4b | Carga de tecleo (bytes sueltos a intervalos aleatorios) para medir el eco | 0,5 | Pendiente |
+| S1.4c | Render con atlas de glifos (`drawRawAtlas`) para ASCII/latino, con párrafo de respaldo para CJK y emoji; comparar el coste de grabación con v2 | 1–2 | Pendiente |
 | S1.5 | Entrada: codificación de teclas (xterm y protocolo kitty), ratón (SGR 1006), bracketed paste; IME con `TextInputClient` y región de composición en el cursor; barra de teclas en móvil | 2–3 | Pendiente |
 | S1.6 | Corrección: vttest, apps reales y corpus unicode en ambos motores; capturas comparadas | 1–2 | Pendiente |
 | S1.7 | Si se confirma H2: prototipo de scrollback compacto (texto UTF-8 con tramos de estilo para las líneas que salen de la pantalla) y medición | 2 | Condicional |
@@ -128,6 +131,30 @@ Gana el motor que pasa la puerta. Si pasan los dos, se puntúa:
 - **Memoria:** 2 pestañas × 5.000 líneas × 200 columnas ocupan ~52 MB, es decir, **~5,3 KB por línea (~26 B por celda)**. Extrapolado, 10 pestañas × 40.000 líneas × 200 columnas serían ~2 GB. **Esto refuerza H2.** El objetivo de memoria original del ADR-002 era inalcanzable con este motor sin scrollback compacto, y la puerta queda redefinida en §6.
 - **Frames:** un frame completo de 200×50 pesa 7–27 KB; a 60 Hz son menos de 2 MB/s por el bridge, sin problema.
 - **Móvil:** `openward-term` con `alacritty_terminal` compila (`cargo check`) para `aarch64-apple-ios`, `aarch64-apple-ios-sim`, `aarch64-linux-android` y `x86_64-linux-android`. Falta ejecutarlo en dispositivo (S1.2). El CI lo comprueba en cada cambio.
+
+### 10.2 Banco de render en Flutter (S1.4)
+
+2026-10-13 · Apple M5 · pantalla a 60 Hz · macOS release, Impeller (Metal) · Flutter 3.47.6 · `alacritty_terminal` · 200×50 · scrollback de 10.000 líneas · se descarta el primer medio segundo (calentamiento de shaders). Datos en `spikes/s1-terminal/results/macos-render-v*.jsonl`.
+
+| Carga (ritmo) | fps | Latencia p50 v1 → v2 | Latencia p95 v2 | Construcción p95 v2 | Raster p95 v2 | Grabación de filas p95 v2 |
+|---|---|---|---|---|---|---|
+| fullscreen (máx.) | 60 | 33,3 → 21,5 ms | 21,7 ms | 5,3 ms | 0,6 ms | 4,9 ms |
+| sgr-log (máx.) | 60 | 33,3 → 22,9 ms | 23,6 ms | 7,1 ms | 0,8 ms | 6,8 ms |
+| unicode (máx.) | 59 | 33,4 → 27,8 ms | 31,9 ms | 16,3 ms | 1,4 ms | 15,4 ms |
+| scroll-region (máx.) | 60 | 33,3 → 20,7 ms | 21,0 ms | 4,5 ms | 0,6 ms | 4,3 ms |
+| ascii (máx.) | 60 | 33,3 → 19,6 ms | 20,3 ms | 3,8 ms | 0,6 ms | 3,5 ms |
+| fullscreen (2 MiB/s) | 60 | 32,4 → 20,3 ms | 21,1 ms | 4,9 ms | 0,7 ms | 4,6 ms |
+| sgr-log (1 MiB/s) | 60 | 31,4 → 19,9 ms | 21,6 ms | 5,8 ms | 0,8 ms | 5,6 ms |
+
+v1 pedía el frame a Rust de forma asíncrona en cada tick; v2 lo pide de forma síncrona dentro del tick. Codificar cuesta 50–100 µs en p95.
+
+**Conclusiones:**
+
+1. **La vía asíncrona añade un refresco entero** (~33 ms frente a ~20 ms): el frame llega cuando el refresco actual ya ha empezado. **Decisión para el producto:** codificar en el hilo de UI dentro del tick de vsync. Cuesta decenas de µs y elimina un refresco de latencia.
+2. **Pintar es barato:** el raster p95 está entre 0,6 y 1,4 ms y la app va a 60 fps estables, sin frames congelados tras el calentamiento, incluso con salida masiva.
+3. **El cuello de botella es grabar las filas en Dart** con un `Paragraph` por tramo de estilo: 3,5–15 ms en p95, y llega casi al presupuesto entero del refresco con CJK y emoji. En un Android de gama media puede ser varias veces más lento. **Siguiente iteración (S1.4c):** atlas de glifos con `drawRawAtlas`, que evita dar forma al texto en cada frame, y párrafo solo para lo que el atlas no cubra.
+4. **La métrica de latencia original estaba mal planteada para flujos continuos.** El byte más antiguo de cada frame espera por construcción casi un refresco entero, así que "p95 < 16 ms" era imposible a 60 Hz. La latencia que percibe el usuario es la del eco de una tecla aislada: la puerta pasa a "p95 < 1 refresco + 4 ms" con una carga de tecleo (S1.4b). Los flujos continuos se evalúan por fps y por tiempo de frame (§6).
+5. **Toolchain dentro de la build de Flutter:** cargokit solo aceptaba `stable`, `beta` o `nightly`, así que compilaba con el `stable` de la máquina y no con la versión fijada. Se ha parcheado la copia de cargokit del harness (`build_tool/lib/src/options.dart`) para aceptar una versión exacta, y `rust/cargokit.yaml` fija la 1.99.0. Habrá que proponer el cambio upstream o mantener el parche en la app real.
 
 ## 11. Cómo reproducir
 

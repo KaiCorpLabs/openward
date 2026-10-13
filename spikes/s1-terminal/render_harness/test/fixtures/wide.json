@@ -1,0 +1,63 @@
+{
+  "cols": 20,
+  "cursor": {
+    "col": 8,
+    "row": 0,
+    "shape": "Block",
+    "visible": true
+  },
+  "display_offset": 0,
+  "full": true,
+  "lines": [
+    {
+      "index": 0,
+      "spans": [
+        {
+          "attrs": 0,
+          "bg": 0,
+          "col": 0,
+          "fg": 0,
+          "text": "漢",
+          "width": 2
+        },
+        {
+          "attrs": 0,
+          "bg": 0,
+          "col": 2,
+          "fg": 0,
+          "text": "字",
+          "width": 2
+        },
+        {
+          "attrs": 0,
+          "bg": 0,
+          "col": 4,
+          "fg": 0,
+          "text": "a",
+          "width": 1
+        },
+        {
+          "attrs": 0,
+          "bg": 0,
+          "col": 5,
+          "fg": 0,
+          "text": "🙂",
+          "width": 2
+        },
+        {
+          "attrs": 0,
+          "bg": 0,
+          "col": 7,
+          "fg": 0,
+          "text": "é",
+          "width": 1
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "spans": []
+    }
+  ],
+  "rows": 2
+}

@@ -54,7 +54,8 @@ pub enum Color {
 }
 
 impl Color {
-    fn encode(self) -> u32 {
+    /// Wire value: tag in the high byte (0 default, 1 named, 2 indexed, 3 RGB).
+    pub fn to_raw(self) -> u32 {
         match self {
             Self::Default => 0,
             Self::Named(i) => (1 << 24) | u32::from(i),
@@ -65,7 +66,7 @@ impl Color {
         }
     }
 
-    fn decode(v: u32) -> Option<Self> {
+    pub fn from_raw(v: u32) -> Option<Self> {
         let payload = v & 0x00ff_ffff;
         Some(match v >> 24 {
             0 => Self::Default,
@@ -216,9 +217,9 @@ impl FrameEncoder {
         self.put_u16(span.col);
         self.put_u16(span.width);
         self.buf
-            .extend_from_slice(&span.style.fg.encode().to_le_bytes());
+            .extend_from_slice(&span.style.fg.to_raw().to_le_bytes());
         self.buf
-            .extend_from_slice(&span.style.bg.encode().to_le_bytes());
+            .extend_from_slice(&span.style.bg.to_raw().to_le_bytes());
         self.put_u16(span.style.attrs);
         self.put_u16(text.len() as u16);
         self.buf.extend_from_slice(text);
@@ -289,8 +290,8 @@ pub fn decode(bytes: &[u8]) -> Result<DecodedFrame, DecodeError> {
         for _ in 0..span_count {
             let col = r.u16()?;
             let width = r.u16()?;
-            let fg = Color::decode(r.u32()?).ok_or(DecodeError::InvalidValue)?;
-            let bg = Color::decode(r.u32()?).ok_or(DecodeError::InvalidValue)?;
+            let fg = Color::from_raw(r.u32()?).ok_or(DecodeError::InvalidValue)?;
+            let bg = Color::from_raw(r.u32()?).ok_or(DecodeError::InvalidValue)?;
             let attrs = r.u16()?;
             let len = usize::from(r.u16()?);
             let text = std::str::from_utf8(r.take(len)?).map_err(|_| DecodeError::InvalidValue)?;
@@ -425,7 +426,7 @@ mod tests {
             Color::Indexed(200),
             Color::Rgb(1, 2, 3),
         ] {
-            assert_eq!(Color::decode(c.encode()), Some(c));
+            assert_eq!(Color::from_raw(c.to_raw()), Some(c));
         }
     }
 

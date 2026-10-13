@@ -1,0 +1,11 @@
+[package]
+name = "s1-corpus"
+description = "Spike S1: deterministic synthetic terminal workloads, shared by termbench and the render harness"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.99"
+license = "Apache-2.0"
+publish = false
+
+# Standalone on purpose: spike code never joins the core workspace.
+[workspace]

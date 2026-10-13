@@ -8,7 +8,8 @@ Plan completo, hipótesis, puerta y resultados preliminares: [docs/spikes/S1-ter
 | `corpus/synthetic/` | Corpus generado con `termbench gen` (no se commitea) |
 | `corpus/casts/` | Grabaciones asciinema pequeñas, hechas en contenedores con datos sintéticos |
 | `results/` | Resultados por plataforma en JSON lines (`<plataforma>.jsonl`) |
-| `render_harness/` | App Flutter de medición del render (tarea S1.4, pendiente) |
+| `s1-corpus/` | Cargas sintéticas deterministas, compartidas por `termbench` y el harness |
+| `render_harness/` | App Flutter + `flutter_rust_bridge` que mide el render (S1.4). `fvm flutter build macos --release --dart-define=S1_AUTORUN=fullscreen:0:256` y ejecutar el binario: imprime una línea `S1RESULT {json}` por prueba |
 
 ```bash
 cd termbench && cargo build --release

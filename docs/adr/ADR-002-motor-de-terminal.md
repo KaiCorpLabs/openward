@@ -32,7 +32,7 @@ El terminal es lo que el usuario percibe en cada segundo de uso: latencia, fidel
 | Métrica | Umbral |
 |---|---|
 | `cat` de 100 MB | Sin cuadros congelados > 100 ms; la UI responde |
-| Latencia desde los datos recibidos hasta el pintado | p95 < 16 ms |
+| Latencia del eco de una tecla, desde los datos recibidos hasta el pintado | p95 < 1 refresco + 4 ms (≈ 21 ms a 60 Hz). Con flujos continuos el byte más antiguo espera por construcción casi un refresco, así que se miden por fps y tiempo de frame ([S1 §10.2](../spikes/S1-terminal.md#102-banco-de-render-en-flutter-s14)) |
 | `vttest` (pantallas básicas), vim, tmux, htop, mc | Sin errores visibles |
 | IME (japonés y chino) y teclado en pantalla de Android | Composición correcta |
 | Memoria de scrollback | < 300 MB con 10 pestañas × 10.000 líneas × 120 columnas; 40.000 líneas por defecto solo con scrollback compacto (el smoke test da ~26 B/celda con `alacritty_terminal`, ver [S1](../spikes/S1-terminal.md#10-resultados-preliminares-s10-smoke-test)) |

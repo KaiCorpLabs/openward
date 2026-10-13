@@ -1,0 +1,26 @@
+[package]
+name = "render_harness_core"
+description = "Spike S1.4: Rust side of the Flutter render harness"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.99"
+license = "Apache-2.0"
+publish = false
+
+# Standalone on purpose: spike code never joins the core workspace.
+[workspace]
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+anyhow = "1"
+flutter_rust_bridge = "=2.13.0"
+openward-term = { path = "../../../../core/crates/openward-term" }
+s1-corpus = { path = "../../s1-corpus" }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
+
+[dev-dependencies]
+serde_json = "1"

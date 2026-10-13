@@ -1,0 +1,40 @@
+{
+  "cols": 20,
+  "cursor": {
+    "col": 3,
+    "row": 1,
+    "shape": "Underline",
+    "visible": true
+  },
+  "display_offset": 0,
+  "full": false,
+  "lines": [
+    {
+      "index": 0,
+      "spans": [
+        {
+          "attrs": 0,
+          "bg": 0,
+          "col": 0,
+          "fg": 0,
+          "text": "one",
+          "width": 3
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "spans": [
+        {
+          "attrs": 0,
+          "bg": 0,
+          "col": 0,
+          "fg": 33554632,
+          "text": "two",
+          "width": 3
+        }
+      ]
+    }
+  ],
+  "rows": 6
+}

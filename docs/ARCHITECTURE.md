@@ -41,7 +41,7 @@ OpenWard es un cliente SSH open-core para Windows, macOS, Linux, iOS y Android. 
 | Atributo | Objetivo inicial |
 |---|---|
 | Arranque en frío (escritorio) | < 1,5 s hasta la lista de hosts |
-| Latencia de tecla añadida (sin contar el RTT) | < 5 ms desde la pulsación hasta el envío; < 16 ms desde los datos recibidos hasta el pintado |
+| Latencia de tecla añadida (sin contar el RTT) | < 5 ms desde la pulsación hasta el envío; eco pintado en < 1 refresco + 4 ms en p95 ([S1](spikes/S1-terminal.md)) |
 | Throughput | `cat` de 100 MB sin bloquear la UI (el render agrupa cuadros) |
 | Memoria | < 300 MB con 10 pestañas × 10.000 líneas × 120 columnas de scrollback. Un valor por defecto de 40.000 líneas exige scrollback compacto ([S1](spikes/S1-terminal.md)) |
 | Desbloqueo | < 300 ms con 10.000 ítems |
