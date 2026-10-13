@@ -1,4 +1,4 @@
-.PHONY: test lint fmt deny bench clean
+.PHONY: test lint fmt deny bench corpus clean
 
 TERMBENCH := spikes/s1-terminal/termbench
 CORPUS := spikes/s1-terminal/corpus/synthetic
@@ -26,6 +26,10 @@ bench:
 	$(TERMBENCH)/target/release/termbench run $(CORPUS)/*.txt --scrollback 10000
 	$(TERMBENCH)/target/release/termbench echo --iterations 5000
 	$(TERMBENCH)/target/release/termbench mem --tabs 2 --scrollback 5000
+
+# Spike S1 real-session corpus, recorded offline in a container (podman or docker)
+corpus:
+	spikes/s1-terminal/corpus/record.sh
 
 clean:
 	rm -rf core/target $(TERMBENCH)/target $(CORPUS)

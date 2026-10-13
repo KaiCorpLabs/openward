@@ -234,8 +234,29 @@ pub fn mem(o: &Opts) -> Result<(), String> {
     };
     let size = Size::new(o.cols, o.rows);
     let lines_per_tab = o.scrollback + usize::from(o.rows);
+    // Content: synthetic lines, or slices of a recording (`mem --cast x.cast`),
+    // one distinct slice per tab, so compression sees realistic, varied text.
+    let recording = match o.positional.first() {
+        Some(path) => Some(cast::read(Path::new(path))?.output),
+        None => None,
+    };
     let mut line = String::new();
     let mut fill = |e: &mut dyn TermEngine, tab: usize| {
+        if let Some(data) = &recording {
+            const CHUNK: usize = 4096;
+            let start = data.len() / o.tabs.max(1) * tab;
+            let mut fed_lines = 0usize;
+            let mut at = start;
+            while fed_lines < lines_per_tab {
+                let end = (at + CHUNK).min(data.len());
+                let chunk = &data[at..end];
+                fed_lines += chunk.iter().filter(|&&b| b == b'\n').count();
+                e.feed(chunk);
+                e.take_host_writes();
+                at = if end == data.len() { 0 } else { end };
+            }
+            return;
+        }
         for n in 0..lines_per_tab {
             line.clear();
             let _ = write!(line, "\x1b[3{}m{tab:02}:{n:06}\x1b[0m ", n % 8);
@@ -294,7 +315,7 @@ pub fn mem(o: &Opts) -> Result<(), String> {
         println!(
             "{}",
             json!({
-                "kind": "mem", "engine": engine, "tabs": o.tabs, "scrollback": o.scrollback,
+                "kind": "mem", "engine": engine, "input": o.positional.first(), "tabs": o.tabs, "scrollback": o.scrollback,
                 "cols": o.cols, "rows": o.rows, "peak_rss_before": before, "peak_rss_after": after,
                 "rss_bytes_per_line": rss_per_line,
                 "library_resident_bytes": library.map(|l| l.0),

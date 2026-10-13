@@ -1,0 +1,24 @@
+# Disposable recording environment for the S1 real-session corpus.
+# Runs with --network=none: nothing from the host or the internet ends up in
+# the recordings, only this image's files and synthetic data.
+FROM docker.io/library/debian:trixie-slim
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    TERM=xterm-256color
+
+# Slim images exclude man pages; the man scenario needs them.
+RUN rm -f /etc/dpkg/dpkg.cfg.d/docker* \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends \
+      asciinema vim htop tmux less man-db manpages python3 procps \
+      ncurses-term coreutils findutils \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY scenarios /scenarios
+RUN chmod +x /scenarios/*.sh /scenarios/*.py
+
+ENV HOME=/home/demo PS1='$ '
+WORKDIR /home/demo
+ENTRYPOINT ["/scenarios/run-all.sh"]

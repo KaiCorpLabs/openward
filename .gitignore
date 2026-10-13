@@ -14,6 +14,8 @@ target/
 
 # Spike S1: the synthetic corpus is generated, never committed
 spikes/s1-terminal/corpus/synthetic/
+# Large recordings are regenerated with corpus/record.sh, never committed
+spikes/s1-terminal/corpus/casts-big/
 
 # Local data and secrets
 .env

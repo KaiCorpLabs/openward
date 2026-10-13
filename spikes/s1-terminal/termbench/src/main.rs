@@ -23,7 +23,7 @@ USAGE:
   termbench run <file>... [--engine E] [--cols C] [--rows R] [--chunk B] [--frame-bytes B] [--json]
   termbench replay <file.cast>... [--engine E] [--chunk B] [--frame-bytes B] [--json]
   termbench echo [--engine E] [--cols C] [--rows R] [--iterations N] [--json]
-  termbench mem [--engine E] [--tabs N] [--scrollback L] [--cols C] [--rows R] [--json]
+  termbench mem [file.cast] [--engine E] [--tabs N] [--scrollback L] [--cols C] [--rows R] [--json]
 
 ENGINES:
   alacritty (default), ghostty (needs --features ghostty), all

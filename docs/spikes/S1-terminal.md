@@ -49,7 +49,7 @@ flowchart LR
 | Tipo | Contenido | Estado |
 |---|---|---|
 | Sintético (`termbench gen`) | `ascii` (cat de un log), `sgr-log` (16, 256 y truecolor), `unicode` (CJK, emoji, combinantes, caracteres de caja), `fullscreen` (estilo htop, pantalla alternativa), `scroll-region` (estilo vim o less, DECSTBM) | Hecho, determinista |
-| Grabaciones reales (asciinema v3, 200×50 y 80×24) | vim editando, htop 60 s, tmux con 4 paneles, `cat` de un log de 100 MB, `ls --color` en un directorio grande, `npm install` con barras de progreso, `less`/`man`, vim con texto CJK, **sesión de un agente de IA en modo TUI** (redibujado intenso) | S1.1 |
+| Grabaciones reales (asciinema 2.4, 200×50) | vim editando, htop, tmux con 4 paneles, `cat` de 300.000 líneas de log variado (70 MB), `ls -laR` coloreado, barras de progreso estilo npm, `man tmux` en less, vim con texto CJK y emoji, **TUI de un agente de IA** (redibujado intenso) | **Hecho** (S1.1) |
 
 Las grabaciones se hacen **dentro de un contenedor desechable con datos sintéticos**, para que ningún `.cast` contenga rutas, hosts ni datos personales. Se guardan en `spikes/s1-terminal/corpus/casts/` solo si pesan menos de 5 MB; las grandes se regeneran con un script.
 
@@ -92,7 +92,7 @@ Gana el motor que pasa la puerta. Si pasan los dos, se puntúa:
 | ID | Tarea | Días | Estado |
 |---|---|---|---|
 | S1.0 | Trait `TermEngine`, formato de frames v1, backend `alacritty_terminal`, `termbench` | 1 | **Hecho** |
-| S1.1 | Grabar el corpus real en un contenedor y añadir el script de regeneración | 1 | Pendiente |
+| S1.1 | Grabar el corpus real en un contenedor y añadir el script de regeneración | 1 | **Hecho** (§10.5) |
 | S1.2 | `termbench` con alacritty en las 5 plataformas; resultados en `spikes/s1-terminal/results/<plataforma>.jsonl` | 1–2 | Pendiente |
 | S1.3 | Backend `libghostty-vt`: build con Zig 0.16.0 al commit fijado (`ghostty-engine/GHOSTTY_COMMIT`), bindings generados con `bindgen` en un crate aislado del spike, `TermEngine` y medición contra alacritty | 3–4 | **Hecho** en macOS; enlaza para Android e iOS (§10.4) |
 | S1.4 | Harness de render: app Flutter + `flutter_rust_bridge` 2.13.0, decodificador Dart del frame v1 con pruebas cruzadas contra frames de ejemplo generados en Rust, y `CustomPainter` con un `Picture` en caché por fila (solo se regraban las filas que cambian) | 3–4 | **En curso:** v1 (async) y v2 (sync) medidos en macOS (§10.2) |
@@ -256,6 +256,50 @@ Ghostty ocupa unas 3 veces menos. Además, `ghostty_terminal_compress` (pensado 
 - probar la entrada y el IME con sus codificadores (S1.5);
 - probar la corrección con apps reales (S1.6);
 - repetir la memoria con grabaciones reales (S1.1).
+
+### 10.5 Corpus de sesiones reales (S1.1)
+
+2026-10-13 · grabado con `make corpus` (`corpus/record.sh`) en un contenedor Debian trixie **sin red** (`--network=none`).
+
+**Cómo se graba:**
+- **Apps a pantalla completa:** vim, man y less se manejan con un conductor PTY propio (`drive.py`) que teclea con retardos de décimas de segundo y reenvía la salida sin cortes. Con `expect` toda la salida llegaba de golpe al final.
+- **Datos:** sintéticos pero variados, para que no se repitan:
+  - logs con UUID, IPs, latencias, JSON y trazas;
+  - código Python;
+  - texto con CJK, hangul, acentos y emoji.
+- **Privacidad:** `check-casts.sh` comprueba que ninguna grabación contiene el usuario, el host ni rutas del Mac: **0 fugas**.
+
+**Qué se guarda:**
+- **Grabaciones pequeñas** (`corpus/casts/`, 3,5 MB en total): se commitean.
+- **Grabaciones grandes** (`casts-big/`: `cat-log` de 70 MB y `ls -laR` de 0,9 MB): se regeneran y nunca se commitean.
+
+**Reproducción con los dos motores** (`termbench replay`, datos en `results/macos-real-corpus-s1.1.jsonl`):
+
+| Grabación | Parseo alacritty → Ghostty |
+|---|---|
+| agent-tui (TUI de agente) | 147 → **560 MiB/s** |
+| cat-log (300.000 líneas) | 240 → **483 MiB/s** |
+| tmux-4panes | 195 → **324 MiB/s** |
+| ls-recursive | 132 → **324 MiB/s** |
+| man-tmux | 131 → **178 MiB/s** |
+| vim-edit | 203 → 206 MiB/s |
+| progress | 250 → 247 MiB/s |
+| vim-cjk | **219** → 158 MiB/s |
+| htop | **100** → 72 MiB/s |
+
+Las grabaciones de vim, htop y man son cortas, así que sus cifras tienen más ruido. Los frames coinciden byte a byte entre los dos motores salvo en vim-cjk, donde Ghostty agrupa grafemas.
+
+**Memoria con logs reales** (`termbench mem casts-big/cat-log.cast`, un tramo distinto por pestaña; el RSS de partida incluye la grabación cargada, unos 130 MB, y se descuenta):
+
+| Medición | alacritty | Ghostty | Ghostty con compresión |
+|---|---|---|---|
+| **Puerta:** 10 pestañas × 10.000 líneas × 120 col. | ~320 MB (3,3 KB/línea) → **no pasa** | 98 MB → **pasa** | **15 MB (6,4×)** |
+| 2 pestañas × 40.000 líneas × 200 col. | ~407 MB (5,3 KB/línea) | 132 MB | **18 MB (7,5×)** |
+
+**Conclusiones:**
+1. **La compresión real es de unas 6–7,5 veces**, no las 15–50 del corpus sintético, pero sigue siendo decisiva. Con Ghostty y compresión en reposo, 10 pestañas con 40.000 líneas de 200 columnas ocuparían unos 90 MB frente a ~2 GB con alacritty. **Un historial por defecto de 40.000 líneas es viable con Ghostty.**
+2. Con contenido real Ghostty también **parsea más rápido** en casi todo; solo pierde en htop y en vim con CJK.
+3. **Cómo se midió:** la TUI de agente no se usa para memoria, porque redibuja con el cursor y apenas llena el historial. Para memoria cuentan las grabaciones orientadas a líneas.
 
 ## 11. Cómo reproducir
 
