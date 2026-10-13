@@ -63,9 +63,9 @@ Una app de escritorio que el equipo pueda usar a diario en vez de su cliente SSH
 | A0 | Pasar al núcleo lo probado en los spikes: `openward-term` (sin alacritty), `openward-ghostty`, `openward-ssh` y `openward-pty`. Añadir Zig a la CI | 2 | **Hecho.** CI de Linux en verde, Zig incluido. `cargo-deny` ignora RUSTSEC-2023-0071 (`rsa`, sin corrección publicada), con la justificación en ADR-003 |
 | A1 | Almacén y modelo: `openward-proto` (tipos y CBOR), `openward-vault` (fase 1, sin cifrar) con hosts, grupos, etiquetas, herencia y known hosts. Importador de `~/.ssh/config` (`openward-import`) | 3 | **Hecho** ([detalle](#a1-almacén-modelo-e-importador)) |
 | A2 | `openward-app`, que orquesta las sesiones y resuelve la configuración efectiva, y `openward-ffi`, la superficie para Flutter con handles opacos y sin secretos | 3 | **Hecho** ([detalle](#a2-orquestación-y-ffi)) |
-| A3 | App Flutter: ventana, barra lateral de hosts, búsqueda, pestañas y el widget de terminal del banco convertido en componente | 4 | Pendiente |
-| A4 | Conexión: diálogos de autenticación, known hosts (TOFU, cambio), saltos, reconexión e indicador poscuántico | 3 | Pendiente |
-| A5 | Selección y copia, ajustes, atajos y terminal local | 3 | Pendiente |
+| A3 | App Flutter: ventana, barra lateral de hosts, búsqueda, pestañas y el widget de terminal del banco convertido en componente | 4 | **Hecho** ([detalle](#a3-la-app)) |
+| A4 | Conexión: diálogos de autenticación, known hosts (TOFU, cambio), saltos, reconexión e indicador poscuántico | 3 | Pendiente. Adelantado en A3: las preguntas básicas, el indicador poscuántico y el botón de reconectar. Falta el flujo de clave cambiada (ver las dos huellas y confiar en la nueva), la reconexión automática y el progreso por saltos |
+| A5 | Selección y copia, ajustes, atajos y terminal local | 3 | Pendiente. Adelantados en A3: los atajos, el terminal local y renombrar y reordenar pestañas. Faltan la selección y copia, y los ajustes (fuente, tema, Opción = Alt, historial) |
 | A6 | Empaquetado de macOS, builds de Linux y Windows en CI, y uso real por el equipo | 2 | Pendiente |
 
 ## A1: almacén, modelo e importador
@@ -172,6 +172,55 @@ Así la app puede pedir lo que falta a mitad de conexión. Las claves de host qu
   El job `core` de la CI levanta los servidores en Linux para ejecutarlas.
 - **Dart:** 4 pruebas de integración en macOS a través de los bindings, todas en verde.
 - **Pendiente para A6:** compilar y probar `app/` en la CI.
+
+## A3: la app
+
+Escritorio con Flutter y Riverpod, en `app/lib`:
+- **Ventana:**
+  - barra lateral de hosts (280 px);
+  - tira de pestañas;
+  - el terminal de la pestaña al frente;
+  - barra de estado.
+
+  Tema oscuro cercano al fondo del terminal.
+- **Barra lateral:**
+  - grupos plegables con el recuento de hosts;
+  - cada host con `usuario@dirección:puerto` efectivos y sus etiquetas;
+  - búsqueda por palabras (Intro conecta al primero, Esc limpia);
+  - menú contextual: conectar, editar y eliminar; en grupos, también crear dentro;
+  - doble clic para conectar en una pestaña nueva.
+- **Editores de host y grupo:**
+  - nombre, dirección, grupo, etiquetas, usuario, puerto, claves por ruta, agente, ruta (directa, salto por un host guardado o ProxyCommand), política de claves de host y notas;
+  - lo heredado aparece como pista atenuada, con su origen («Heredado: deploy (grupo prod)»);
+  - una cadena importada que el editor no sabe editar se conserva tal cual;
+  - los campos que el editor no muestra se mantienen.
+- **Importar `~/.ssh/config`:** un informe en palabras de lo que entró y lo que no.
+- **Pestañas:**
+  - una por sesión, con un punto de estado y un aviso si hay una pregunta pendiente;
+  - se cierran con clic central o ×, se reordenan arrastrando y se renombran con doble clic;
+  - cada una tiene su controlador: sesión de Rust, render y eventos;
+  - las ocultas se sondean a 4 Hz para mantener el título.
+- **Terminal** (`terminal/`): el render del banco (atlas de glifos y cajas dibujadas) y su entrada (teclado, IME, pegado con confirmación, ratón y rueda), ahora como componente. `redraw()` pide la pantalla entera cuando cambia la densidad de píxeles.
+- **Preguntas de la sesión** en una tarjeta sobre su pestaña, sin bloquear las demás:
+  - huella de una clave de host nueva;
+  - frase de la clave;
+  - contraseña;
+  - keyboard-interactive con una respuesta por pregunta.
+- **Estado:** progreso, «Conectado · poscuántico (mlkem768x25519-sha256) · cifrado», o el fallo en palabras con un botón de reconectar o reiniciar.
+- **Atajos:**
+  - ⌘T terminal local, ⌘W cerrar, ⌘K buscar, ⌘1–9 y ⌘⇧[ ] para cambiar de pestaña;
+  - Ctrl+Tab en todos los sistemas;
+  - Ctrl+Mayús+T/W/K en Linux y Windows.
+
+  El terminal deja pasar estas teclas.
+
+**Pruebas:**
+- 9 unitarias del render en Dart.
+- 3 de integración de la ventana en macOS, con capturas renderizadas por la propia app:
+  - barra lateral, búsqueda y terminal local;
+  - crear un grupo y un host desde los editores y ver la herencia;
+  - SSH con la pregunta de clave de host y la conexión poscuántica.
+- Las 4 del FFI.
 
 ## Riesgos
 

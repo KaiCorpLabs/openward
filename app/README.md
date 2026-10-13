@@ -2,7 +2,11 @@
 
 La app de Flutter de OpenWard. Por ahora solo hay escritorio (macOS, Linux y Windows); las demás plataformas llegan en fases posteriores. Habla con el núcleo de Rust (`core/crates/openward-ffi`) mediante flutter_rust_bridge, y lo compila y empaqueta cargokit (`rust_builder/`).
 
-> **Estado:** hito A2 de la [alfa de escritorio](../docs/plan/alfa-escritorio.md). `lib/main.dart` es provisional: solo lista los hosts guardados e importa `~/.ssh/config`. La interfaz de verdad llega con A3.
+> **Estado:** hito A3 de la [alfa de escritorio](../docs/plan/alfa-escritorio.md):
+> - hosts y grupos con su editor, búsqueda e importación de `~/.ssh/config`;
+> - pestañas con terminal SSH o local y preguntas de conexión.
+>
+> Faltan la selección y copia, los ajustes y el flujo de clave de host cambiada (A4 y A5).
 
 ## Requisitos
 
@@ -15,10 +19,23 @@ La app de Flutter de OpenWard. Por ahora solo hay escritorio (macOS, Linux y Win
 fvm flutter run -d macos
 ```
 
-**Pruebas de integración.** Llaman al núcleo de verdad a través de los bindings: hosts y herencia, importación, shell local y una conexión SSH con la pregunta de clave de host. La parte de SSH solo se ejecuta si los servidores de prueba están arriba (`spikes/s2-ssh/servers/up.sh`).
+**Pruebas.** Hay tres conjuntos:
+- `test/`: el decodificador de frames y el dibujo de cajas, sin Rust.
+- `integration_test/ffi_test.dart`: el núcleo a través de los bindings.
+- `integration_test/ui_test.dart`: la ventana entera. Guarda capturas en `$TMPDIR/openward-shots`.
+
+Las partes de SSH solo se ejecutan si los servidores de prueba están arriba (`spikes/s2-ssh/servers/up.sh`).
+
+```bash
+fvm flutter test test/
+```
 
 ```bash
 fvm flutter test integration_test/ffi_test.dart -d macos
+```
+
+```bash
+fvm flutter test integration_test/ui_test.dart -d macos
 ```
 
 **Regenerar los bindings** después de cambiar `core/crates/openward-ffi/src/api`. El resultado va a `lib/src/rust`, que se versiona.

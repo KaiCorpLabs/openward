@@ -1,0 +1,66 @@
+{
+  "cols": 12,
+  "cursor": {
+    "col": 0,
+    "row": 3,
+    "shape": "Block",
+    "visible": false
+  },
+  "display_offset": 3,
+  "full": true,
+  "lines": [
+    {
+      "index": 0,
+      "spans": [
+        {
+          "attrs": 0,
+          "bg": 0,
+          "col": 0,
+          "fg": 0,
+          "text": "line14",
+          "width": 6
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "spans": [
+        {
+          "attrs": 0,
+          "bg": 0,
+          "col": 0,
+          "fg": 0,
+          "text": "line15",
+          "width": 6
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "spans": [
+        {
+          "attrs": 0,
+          "bg": 0,
+          "col": 0,
+          "fg": 0,
+          "text": "line16",
+          "width": 6
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "spans": [
+        {
+          "attrs": 0,
+          "bg": 0,
+          "col": 0,
+          "fg": 0,
+          "text": "line17",
+          "width": 6
+        }
+      ]
+    }
+  ],
+  "rows": 4
+}

@@ -68,7 +68,11 @@ void main() {
     final rev = await app.updateHost(
       id: id,
       rev: detail.rev,
-      spec: HostSpec(label: 'web-1', address: 'web.example.com', groupId: group),
+      spec: HostSpec(
+        label: 'web-1',
+        address: 'web.example.com',
+        groupId: group,
+      ),
     );
     expect(rev, detail.rev + BigInt.one);
     // An edit made on the old revision is refused.
@@ -131,14 +135,20 @@ Host app
   }, skip: Platform.isWindows);
 
   test('ssh: host key question and a shell', () async {
-    final fixtures = Platform.environment['S2_FIXTURES'] ??
+    final fixtures =
+        Platform.environment['S2_FIXTURES'] ??
         '${Platform.environment['HOME']}/Library/Caches/openward/s2-fixtures';
-    final up = await Socket.connect('127.0.0.1', 22100,
-            timeout: const Duration(milliseconds: 300))
-        .then((s) {
-      s.destroy();
-      return true;
-    }).catchError((_) => false);
+    final up =
+        await Socket.connect(
+              '127.0.0.1',
+              22100,
+              timeout: const Duration(milliseconds: 300),
+            )
+            .then((s) {
+              s.destroy();
+              return true;
+            })
+            .catchError((_) => false);
     if (!up || !File('$fixtures/id_ed25519').existsSync()) {
       markTestSkipped('S2 servers not running');
       return;
@@ -168,14 +178,17 @@ Host app
       }
     });
     await until(
-      () => events.any((e) =>
-          e.kind == SessionEventKind.connected ||
-          e.kind == SessionEventKind.closed),
+      () => events.any(
+        (e) =>
+            e.kind == SessionEventKind.connected ||
+            e.kind == SessionEventKind.closed,
+      ),
       'the connection',
     );
     final connected = events.firstWhere(
       (e) => e.kind == SessionEventKind.connected,
-      orElse: () => fail('did not connect: ${events.last.closed?.failure?.message}'),
+      orElse: () =>
+          fail('did not connect: ${events.last.closed?.failure?.message}'),
     );
     expect(connected.connected!.trust, TrustKind.new_);
     expect(connected.connected!.postQuantum, isTrue);

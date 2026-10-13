@@ -42,6 +42,10 @@ abstract class TerminalSession implements RustOpaqueInterface {
   /// What changed since the last call, or nothing; once per refresh.
   TermFrame? poll();
 
+  /// The next poll returns the whole screen: after the UI dropped its
+  /// cached rows (new font, theme or pixel density).
+  void redraw();
+
   void resize({required int cols, required int rows});
 
   String screenText();

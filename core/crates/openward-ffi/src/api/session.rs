@@ -501,6 +501,13 @@ impl TerminalSession {
         self.term.screen_text()
     }
 
+    /// The next poll returns the whole screen: after the UI dropped its
+    /// cached rows (new font, theme or pixel density).
+    #[frb(sync)]
+    pub fn redraw(&self) {
+        self.term.redraw();
+    }
+
     /// Ends the connection or program; the screen stays until dropped.
     #[frb(sync)]
     pub fn close(&self) {
