@@ -32,6 +32,8 @@ id_ed25519*
 id_ecdsa*
 known_hosts*
 authorized_keys
+# …but never source code that happens to share those names.
+!*.rs
 .ssh/
 *.log
 .local/
