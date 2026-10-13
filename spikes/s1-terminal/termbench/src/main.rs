@@ -26,8 +26,7 @@ USAGE:
   termbench mem [--engine E] [--tabs N] [--scrollback L] [--cols C] [--rows R] [--json]
 
 ENGINES:
-  alacritty (default), all
-  ghostty is reserved for the libghostty-vt backend (task S1.3)
+  alacritty (default), ghostty (needs --features ghostty), all
 
 DEFAULTS:
   --mb 16  --cols 200  --rows 50  --chunk 4096  --frame-bytes 65536
@@ -100,7 +99,10 @@ fn parse(args: &[String]) -> Result<Opts, String> {
 }
 
 /// Engines compiled into this build.
+#[cfg(not(feature = "ghostty"))]
 pub const ENGINES: &[&str] = &["alacritty"];
+#[cfg(feature = "ghostty")]
+pub const ENGINES: &[&str] = &["alacritty", "ghostty"];
 
 pub fn make_engine(
     name: &str,
@@ -111,8 +113,13 @@ pub fn make_engine(
         "alacritty" => Ok(Box::new(openward_term::alacritty::AlacrittyEngine::new(
             size, scrollback,
         ))),
+        #[cfg(feature = "ghostty")]
+        "ghostty" => Ok(Box::new(ghostty_engine::GhosttyEngine::new(
+            size, scrollback,
+        ))),
+        #[cfg(not(feature = "ghostty"))]
         "ghostty" => {
-            Err("ghostty backend not built yet (task S1.3 in docs/spikes/S1-terminal.md)".into())
+            Err("built without the ghostty engine: cargo build --release --features ghostty".into())
         }
         other => Err(format!("unknown engine {other}")),
     }

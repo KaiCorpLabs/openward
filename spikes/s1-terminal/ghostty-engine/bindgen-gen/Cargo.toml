@@ -1,0 +1,13 @@
+[package]
+name = "ghostty-bindgen-gen"
+description = "Regenerates ghostty-engine/src/sys.rs from libghostty-vt's vt.h"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.99"
+license = "Apache-2.0"
+publish = false
+
+[workspace]
+
+[dependencies]
+bindgen = "=0.73.2"

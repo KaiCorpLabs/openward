@@ -13,7 +13,12 @@ publish = false
 [dependencies]
 openward-term = { path = "../../../core/crates/openward-term" }
 s1-corpus = { path = "../s1-corpus" }
+ghostty-engine = { path = "../ghostty-engine", optional = true }
 serde_json = "1"
+
+[features]
+# Needs a prebuilt libghostty-vt (ghostty-engine/build-libghostty.sh).
+ghostty = ["dep:ghostty-engine"]
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

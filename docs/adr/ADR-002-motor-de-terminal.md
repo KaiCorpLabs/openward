@@ -1,6 +1,6 @@
 # ADR-002 — Motor de terminal: estado en Rust, render en Flutter
 
-- **Estado:** propuesto, pendiente de spike (S1).
+- **Estado:** propuesto. **Recomendación provisional tras S1.3 (2026-10-13): `libghostty-vt`**, pendiente de S1.2, S1.5 y S1.6 ([evidencia](../spikes/S1-terminal.md#104-libghostty-vt-frente-a-alacritty_terminal-s13)).
 - **Fecha:** 2026-10-08.
 - **Alcance:** emulación VT, scrollback, render y entrada.
 

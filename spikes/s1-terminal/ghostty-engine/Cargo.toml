@@ -1,0 +1,18 @@
+[package]
+name = "ghostty-engine"
+description = "Spike S1.3: libghostty-vt behind openward-term's TermEngine (candidate B)"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.99"
+license = "Apache-2.0"
+publish = false
+links = "ghostty-vt"
+
+# Standalone on purpose: spike code never joins the core workspace.
+[workspace]
+
+[dependencies]
+openward-term = { path = "../../../core/crates/openward-term", default-features = false }
+
+[dev-dependencies]
+openward-term = { path = "../../../core/crates/openward-term", default-features = false }

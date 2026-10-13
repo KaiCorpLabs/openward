@@ -11,7 +11,7 @@ OpenWard es un cliente SSH open-core para Windows, macOS, Linux, iOS y Android. 
 | Área | Decisión | ADR |
 |---|---|---|
 | Reparto | **Núcleo Rust** compartido por todos los clientes, **UI Flutter** para las 5 plataformas y **servidor Go**. Es el mismo patrón que Arveil. | [ADR-001](adr/ADR-001-rust-core-flutter-go.md) |
-| Terminal | Estado VT nativo (`alacritty_terminal` o `libghostty-vt`, que se decide en el spike) y render propio en Flutter. `xterm.dart` está descartado: sin versión desde febrero de 2024. | [ADR-002](adr/ADR-002-motor-de-terminal.md) |
+| Terminal | Estado VT nativo y render propio en Flutter (atlas de glifos). **Recomendación provisional: `libghostty-vt`**, el único que pasa la puerta de memoria (S1.3). `xterm.dart` está descartado: sin versión desde febrero de 2024. | [ADR-002](adr/ADR-002-motor-de-terminal.md) |
 | SSH | `russh` + `russh-sftp`, con un trait `Signer` para claves en software, agente, Secure Enclave, Keystore, TPM y FIDO2 | [ADR-003](adr/ADR-003-ssh-russh-y-firmantes.md) |
 | Vault | Cifrado por ítem (XChaCha20-Poly1305) sobre SQLite. Jerarquía de claves con HPKE y kit de recuperación obligatorio. | [ADR-004](adr/ADR-004-vault-y-jerarquia-de-claves.md) |
 | Sync | Registros inmutables por dispositivo, firmados y cifrados. Sirven para cualquier backend "tonto" (carpeta, S3, WebDAV, Git) y para el relay. | [ADR-005](adr/ADR-005-sync-por-registros-de-dispositivo.md) |

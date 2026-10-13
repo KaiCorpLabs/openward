@@ -233,12 +233,10 @@ pub fn mem(o: &Opts) -> Result<(), String> {
         return Err("mem measures one engine per process; pass --engine alacritty (or another single engine)".into());
     };
     let size = Size::new(o.cols, o.rows);
-    let before = rss::peak_bytes();
-    let mut tabs: Vec<Box<dyn TermEngine>> = Vec::with_capacity(o.tabs);
+    let lines_per_tab = o.scrollback + usize::from(o.rows);
     let mut line = String::new();
-    for tab in 0..o.tabs {
-        let mut e = make_engine(engine, size, o.scrollback)?;
-        for n in 0..o.scrollback + usize::from(o.rows) {
+    let mut fill = |e: &mut dyn TermEngine, tab: usize| {
+        for n in 0..lines_per_tab {
             line.clear();
             let _ = write!(line, "\x1b[3{}m{tab:02}:{n:06}\x1b[0m ", n % 8);
             while line.len() < usize::from(o.cols) {
@@ -247,24 +245,66 @@ pub fn mem(o: &Opts) -> Result<(), String> {
             line.push_str("\r\n");
             e.feed(line.as_bytes());
         }
-        tabs.push(e);
-    }
-    let after = rss::peak_bytes();
-    let fmt = |b: Option<u64>| {
-        b.map_or("n/a".to_owned(), |b| {
-            format!("{:.1} MiB", b as f64 / 1_048_576.0)
-        })
     };
+    let before = rss::peak_bytes();
+    // libghostty-vt reports its own resident bytes and can compress
+    // scrollback; the other engine is measured by process RSS only.
+    #[cfg_attr(not(feature = "ghostty"), allow(unused_mut))]
+    let mut library: Option<(u64, u64, bool)> = None;
+    let tabs: Vec<Box<dyn TermEngine>> = match engine.as_str() {
+        #[cfg(feature = "ghostty")]
+        "ghostty" => {
+            let mut tabs = Vec::with_capacity(o.tabs);
+            for tab in 0..o.tabs {
+                let mut e = ghostty_engine::GhosttyEngine::new(size, o.scrollback);
+                fill(&mut e, tab);
+                tabs.push(e);
+            }
+            let resident: u64 = tabs.iter().map(|e| e.resident_bytes()).sum();
+            let mut supported = false;
+            let mut compressed = 0;
+            for e in &mut tabs {
+                let r = e.compress_scrollback();
+                supported |= r.supported;
+                compressed += r.resident_after;
+            }
+            library = Some((resident, compressed, supported));
+            tabs.into_iter()
+                .map(|e| Box::new(e) as Box<dyn TermEngine>)
+                .collect()
+        }
+        _ => {
+            let mut tabs = Vec::with_capacity(o.tabs);
+            for tab in 0..o.tabs {
+                let mut e = make_engine(engine, size, o.scrollback)?;
+                fill(e.as_mut(), tab);
+                tabs.push(e);
+            }
+            tabs
+        }
+    };
+    let after = rss::peak_bytes();
+    let total_lines = (o.tabs * lines_per_tab) as f64;
+    let rss_per_line = match (before, after) {
+        (Some(b), Some(a)) => Some(a.saturating_sub(b) as f64 / total_lines),
+        _ => None,
+    };
+    let mib = |b: u64| b as f64 / 1_048_576.0;
     if o.json {
         println!(
             "{}",
             json!({
                 "kind": "mem", "engine": engine, "tabs": o.tabs, "scrollback": o.scrollback,
                 "cols": o.cols, "rows": o.rows, "peak_rss_before": before, "peak_rss_after": after,
+                "rss_bytes_per_line": rss_per_line,
+                "library_resident_bytes": library.map(|l| l.0),
+                "library_resident_after_compress": library.map(|l| l.1),
+                "compression_supported": library.map(|l| l.2),
             })
         );
     } else {
-        println!(
+        let fmt = |b: Option<u64>| b.map_or("n/a".to_owned(), |b| format!("{:.1} MiB", mib(b)));
+        print!(
             "{engine:<18} {} tabs × {} lines × {} cols  peak RSS {} → {}",
             o.tabs,
             o.scrollback,
@@ -272,6 +312,18 @@ pub fn mem(o: &Opts) -> Result<(), String> {
             fmt(before),
             fmt(after)
         );
+        if let Some(per) = rss_per_line {
+            print!("  (~{per:.0} B/line)");
+        }
+        if let Some((resident, compressed, supported)) = library {
+            print!(
+                "  library {:.1} MiB → {:.1} MiB compressed{}",
+                mib(resident),
+                mib(compressed),
+                if supported { "" } else { " (unsupported here)" }
+            );
+        }
+        println!();
     }
     drop(tabs);
     Ok(())

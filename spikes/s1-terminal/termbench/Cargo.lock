@@ -113,6 +113,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "53c0fa8157de1303bfffdaa1cc2a673bfffb60102f76b0ef4441659124373fed"
 
 [[package]]
+name = "ghostty-engine"
+version = "0.0.0"
+dependencies = [
+ "openward-term",
+]
+
+[[package]]
 name = "hermit-abi"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -398,6 +405,7 @@ dependencies = [
 name = "termbench"
 version = "0.0.0"
 dependencies = [
+ "ghostty-engine",
  "libc",
  "openward-term",
  "s1-corpus",

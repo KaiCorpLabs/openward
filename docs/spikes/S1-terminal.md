@@ -94,7 +94,7 @@ Gana el motor que pasa la puerta. Si pasan los dos, se puntúa:
 | S1.0 | Trait `TermEngine`, formato de frames v1, backend `alacritty_terminal`, `termbench` | 1 | **Hecho** |
 | S1.1 | Grabar el corpus real en un contenedor y añadir el script de regeneración | 1 | Pendiente |
 | S1.2 | `termbench` con alacritty en las 5 plataformas; resultados en `spikes/s1-terminal/results/<plataforma>.jsonl` | 1–2 | Pendiente |
-| S1.3 | Backend `libghostty-vt`: build con **Zig 0.16.0 exacto** (`brew install zig@0.16`, disponible como `zig`) para los 5 destinos; bindings de `vt.h` en un crate `-sys` aislado (la única excepción a `unsafe_code = "forbid"`); implementar `TermEngine` | 3–4 | Pendiente |
+| S1.3 | Backend `libghostty-vt`: build con Zig 0.16.0 al commit fijado (`ghostty-engine/GHOSTTY_COMMIT`), bindings generados con `bindgen` en un crate aislado del spike, `TermEngine` y medición contra alacritty | 3–4 | **Hecho** en macOS; enlaza para Android e iOS (§10.4) |
 | S1.4 | Harness de render: app Flutter + `flutter_rust_bridge` 2.13.0, decodificador Dart del frame v1 con pruebas cruzadas contra frames de ejemplo generados en Rust, y `CustomPainter` con un `Picture` en caché por fila (solo se regraban las filas que cambian) | 3–4 | **En curso:** v1 (async) y v2 (sync) medidos en macOS (§10.2) |
 | S1.4b | Carga de tecleo (bytes sueltos a intervalos aleatorios) para medir el eco | 0,5 | **Hecho** en macOS: pasa la puerta (§10.2) |
 | S1.4c | Render con atlas de glifos (`drawRawAtlas`), con párrafo de respaldo para emoji y clústeres raros; comparar el coste de grabación con v2 | 1–2 | **Hecho** en macOS: 2–3× más barato (§10.3) |
@@ -195,6 +195,68 @@ v1 pedía el frame a Rust de forma asíncrona en cada tick; v2 lo pide de forma 
    - **App Nap desactivado** en el arnés.
    - **Sandbox desactivado** en el arnés para poder escribir las capturas. La app real sí irá con sandbox.
 
+### 10.4 `libghostty-vt` frente a `alacritty_terminal` (S1.3)
+
+2026-10-13 · Apple M5 · release · Ghostty en el commit `05dcf887` (main, 2026-10-12) · corpus de 16 MiB por carga · 200×50 · scrollback de 10.000 líneas. Datos en `results/macos-engines-s1.3.jsonl`.
+
+**Integración:**
+- **Código:** el motor vive en `spikes/s1-terminal/ghostty-engine`. Los bindings (`src/sys.rs`, 199 funciones con comprobación de layout en compilación) se generan con `bindgen` y se commitean, así que la build normal no necesita libclang.
+- **Compilación:** `build-libghostty.sh` compila la librería estática por destino en la caché del usuario. `termbench` la usa con `--features ghostty`.
+- **Detalles para que funcione:**
+  - enlazar desde un directorio que solo contenga el `.a`, porque el enlazador de macOS prefiere la `.dylib`;
+  - activar el modo de grafemas 2027 como valor por defecto;
+  - quitar el límite de historial por bytes para comparar en igualdad;
+  - omitir los espacios sin estilo, igual que con alacritty.
+- **Pruebas:** las mismas 7 de alacritty más dos, el emoji con modificador y la memoria con compresión: **9/9**.
+
+**Rendimiento del núcleo:**
+
+| Carga | Parseo alacritty → Ghostty | Con frames | `encode_damage` p95 |
+|---|---|---|---|
+| ascii | 242 → **840 MiB/s** | 200 → 367 MiB/s | 55 → 108 µs |
+| fullscreen | 226 → **355 MiB/s** | 196 → 234 MiB/s | 45 → 103 µs |
+| scroll-region | 198 → **841 MiB/s** | 174 → 399 MiB/s | 47 → 89 µs |
+| sgr-log | **241** → 192 MiB/s | 194 → 140 MiB/s | 63 → 125 µs |
+| unicode | **177** → 149 MiB/s | 148 → 123 MiB/s | 75 → 112 µs |
+| eco (una tecla) | p99 1,4 → 2,6 µs | | |
+
+Ghostty parsea mucho más rápido el texto plano y el scroll, y algo más lento el color intenso y el Unicode. Codifica el frame en el doble de tiempo porque el adaptador hace varias llamadas FFI por celda; se puede agrupar con `row_cells_get_multi`. Todo está muy por encima de lo necesario.
+
+**Memoria (criterio de mayor peso):**
+
+| Medición | alacritty | Ghostty | Ghostty con compresión |
+|---|---|---|---|
+| **Puerta:** 10 pestañas × 10.000 líneas × 120 col. | 322 MB → **no pasa** (< 300) | 104 MB → **pasa** | 5,8 MB |
+| 2 pestañas × 40.000 líneas × 200 col. | 409 MB (~5,3 KB/línea) | 136 MB (~1,8 KB/línea) | 2,3 MB |
+
+Ghostty ocupa unas 3 veces menos. Además, `ghostty_terminal_compress` (pensado para tiempo ocioso) reduce el historial más de 15 veces con este corpus. Cuidado: el corpus de memoria repite el mismo texto y se comprime de forma irreal, así que hay que repetirlo con grabaciones reales (S1.1). **H2 se confirma:** sin scrollback compacto, alacritty no pasa la puerta.
+
+**Plataformas y tamaño:**
+- **macOS:** medido.
+- **Android arm64:** compila con el NDK r28 y `termbench` con los dos motores enlaza como ELF para `/system/bin/linker64`.
+- **iOS arm64:** el xcframework trae las partes de dispositivo y simulador, y el ejecutable de pruebas enlaza.
+- **Pendiente:** ejecutar en dispositivos (S1.2).
+- **Tamaño:** Ghostty añade +1 MB al binario sin símbolos (0,8 → 1,8 MB).
+
+**Corrección encontrada:** con el modo 2027, Ghostty mantiene 👍🏽 en una sola celda ancha; alacritty lo parte en dos.
+
+**Puntuación provisional** (§6; las notas de 0 a 10 son valoración del equipo con los datos de arriba):
+
+| Criterio | Peso | alacritty | Ghostty | Por qué |
+|---|---|---|---|---|
+| Memoria de scrollback | 25 % | 3 | 10 | alacritty no pasa la puerta; Ghostty pasa y además comprime |
+| Trabajo propio pendiente | 25 % | 5 | 9 | Ghostty trae grafemas, codificadores de teclado y ratón, búsqueda, compresión y gráficos kitty |
+| Estabilidad de API y mantenimiento | 20 % | 7 | 4 | La API C de Ghostty "está en flujo" y no tiene versión: hay que fijar el commit y mantener un adaptador |
+| Complejidad de build | 15 % | 10 | 4 | Zig 0.16 exacto, NDK y una librería precompilada por destino |
+| Rendimiento | 15 % | 8 | 8 | Los dos sobran; cada uno gana en cargas distintas |
+| **Total ponderado** | | **6,1** | **7,4** | |
+
+**Recomendación provisional: `libghostty-vt`.** Es el único motor que pasa la puerta de memoria y el que menos trabajo propio deja (codificadores de entrada para S1.5, grafemas, compresión). El coste es la API inestable y la build con Zig, que se mitigan con el commit fijado, el adaptador `TermEngine` y bindings regenerables. Antes de aceptar el ADR-002 (S1.8) faltan:
+- ejecutar en Android e iOS reales (S1.2);
+- probar la entrada y el IME con sus codificadores (S1.5);
+- probar la corrección con apps reales (S1.6);
+- repetir la memoria con grabaciones reales (S1.1).
+
 ## 11. Cómo reproducir
 
 ```bash
@@ -204,4 +266,12 @@ cargo build --release
 ./target/release/termbench run ../corpus/synthetic/*.txt --json > ../results/macos.jsonl
 ./target/release/termbench echo --json >> ../results/macos.jsonl
 ./target/release/termbench mem --tabs 10 --scrollback 10000 --cols 120 --json >> ../results/macos.jsonl
+
+# Motor libghostty-vt (Zig 0.16: brew install zig@0.16)
+../ghostty-engine/build-libghostty.sh                      # host
+ANDROID_NDK_HOME=~/Library/Android/sdk/ndk/<versión> \
+  ../ghostty-engine/build-libghostty.sh aarch64-linux-android
+cargo build --release --features ghostty
+./target/release/termbench run ../corpus/synthetic/*.txt --engine all
+./target/release/termbench mem --engine ghostty --tabs 10 --scrollback 10000 --cols 120
 ```
