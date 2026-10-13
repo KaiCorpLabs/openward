@@ -20,6 +20,10 @@ import 'term/renderer.dart';
 
 const _autorun = String.fromEnvironment('S1_AUTORUN');
 const _page = String.fromEnvironment('S1_PAGE');
+
+/// Program for S1_PAGE=shell: '' (login shell), a path, or
+/// `ssh://user@host:port?key=/path` (spike S2).
+const _shell = String.fromEnvironment('S1_SHELL');
 const _engine = String.fromEnvironment('S1_ENGINE', defaultValue: 'alacritty');
 
 Future<void> main() async {
@@ -38,7 +42,7 @@ class HarnessApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(brightness: Brightness.dark, useMaterial3: true),
       home: switch (_page) {
-        'shell' => const ShellPage(program: ''),
+        'shell' => const ShellPage(program: _shell),
         keyLog => const ShellPage(program: keyLog),
         _ => const HarnessPage(),
       },

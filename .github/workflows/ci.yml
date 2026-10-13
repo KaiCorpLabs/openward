@@ -83,6 +83,41 @@ jobs:
       - name: Smoke run
         run: make bench
 
+  ssh:
+    name: Spike S2 SSH (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install toolchain from rust-toolchain.toml
+        working-directory: spikes/s2-ssh/sshprobe
+        run: rustup show
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: spikes/s2-ssh/sshprobe
+      - name: Lint and unit tests
+        working-directory: spikes/s2-ssh/sshprobe
+        run: |
+          cargo fmt -- --check
+          cargo clippy --all-targets -- -D warnings
+          cargo test
+      # Real servers (OpenSSH 8.9, 9.2, 10.0 and Dropbear) in containers.
+      - name: Interoperability matrix
+        if: runner.os == 'Linux'
+        env:
+          S2_RUNTIME: docker
+        run: |
+          spikes/s2-ssh/servers/up.sh
+          cd spikes/s2-ssh/sshprobe && cargo run --release -- matrix
+      - name: Stop servers
+        if: always() && runner.os == 'Linux'
+        env:
+          S2_RUNTIME: docker
+        run: spikes/s2-ssh/servers/down.sh
+
   deny:
     name: Dependency licenses and advisories
     runs-on: ubuntu-latest

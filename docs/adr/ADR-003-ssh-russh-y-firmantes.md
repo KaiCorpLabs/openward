@@ -1,7 +1,7 @@
 # ADR-003 — SSH con `russh` y firmantes intercambiables
 
-- **Estado:** propuesto, pendiente de spike (S2, S3).
-- **Fecha:** 2026-10-08.
+- **Estado:** **aceptado para escritorio** (2026-10-13), con los números del [spike S2](../spikes/S2-ssh.md#9-resultados-s26). Los firmantes de plataforma (S3) y la ejecución en móvil siguen pendientes.
+- **Fecha:** 2026-10-08 (propuesto); 2026-10-13 (escritorio aceptado).
 - **Alcance:** transporte y autenticación SSH, SFTP y origen de las firmas.
 
 ## Contexto
@@ -34,6 +34,17 @@ Necesitamos un cliente SSH embebible en Rust que funcione en las 5 plataformas, 
 
 **Puerta del spike S2:** interoperabilidad con OpenSSH 8.x–10.x, Dropbear, Windows OpenSSH y Tailscale SSH (autenticación, certificados, L/R/D, saltos anidados, 2FA y kex poscuántico negociado), compilando y ejecutando en iOS y Android.
 
+**Resultado de S2 en escritorio (2026-10-13):**
+- **Matriz:** 83 de 83 pruebas en verde con OpenSSH 8.9, 9.2 y 10.0 y Dropbear 2025.88. Cubre autenticación (incluidos 2FA y certificados de usuario y de host), agente y su reenvío, L/R/D, saltos dobles, ProxyCommand y keepalive.
+- **Kex poscuántico** negociado con OpenSSH 10.0 y con Dropbear.
+- **Rendimiento:** 266–386 MiB/s por canal, a la par que OpenSSH.
+- **Terminal completo por SSH:** eco p95 de 19,1 ms, dentro de la puerta de S1.
+- **Builds:** compila para iOS y enlaza para Android.
+- **Pendiente:**
+  - Windows OpenSSH y Tailscale SSH, a mano antes de la v0.1;
+  - ejecución en móvil (fase 2).
+- **Hueco encontrado:** con OpenSSH 9.0–9.8 no hay kex poscuántico, porque esos servidores ofrecen `sntrup761`, que `russh` no tiene.
+
 **Puerta del spike S3:** firma con Secure Enclave (macOS) y Keystore (Android) a través del trait, sin exportar la clave.
 
 ## Alternativas
@@ -51,4 +62,4 @@ Dependemos de un proyecto open source con un mantenedor principal (unas 1.900 es
 
 ## Validación y revisión
 
-Aceptar con la matriz de S2 en verde y S3 funcionando en dos plataformas. Reabrir si `russh` deja de mantenerse más de 6 meses o si hay un fallo de seguridad sin corregir en el transporte.
+Aceptado para escritorio con la matriz de S2 en verde, que corre en la CI de Linux en cada push contra servidores reales. La parte de firmantes se acepta con S3 funcionando en dos plataformas. Reabrir si `russh` deja de mantenerse más de 6 meses o si hay un fallo de seguridad sin corregir en el transporte.

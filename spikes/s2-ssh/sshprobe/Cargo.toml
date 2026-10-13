@@ -1,0 +1,20 @@
+[package]
+name = "sshprobe"
+description = "Spike S2: russh against real SSH servers (interop matrix, sessions, forwarding)"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.99"
+license = "Apache-2.0"
+publish = false
+
+# Standalone on purpose: spike code never joins the core workspace.
+[workspace]
+
+[dependencies]
+russh = "=0.64.1"
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+serde_json = "1"
+hmac = "0.12"
+sha1 = "0.10"
+data-encoding = "2"

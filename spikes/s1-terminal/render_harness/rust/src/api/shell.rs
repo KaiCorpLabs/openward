@@ -1,16 +1,20 @@
 //! Interactive session for spike S1.5: keyboard, IME, paste and mouse into
 //! a real program, encoded by libghostty-vt.
 //!
-//! Two backends:
-//! - a shell on a local pty (desktop; Android has /system/bin/sh), and
+//! Three backends:
+//! - a shell on a local pty (desktop; Android has /system/bin/sh);
+//! - a remote shell over SSH (`ssh://user@host:port?key=/path`, spike S2),
+//!   with `russh` through the `sshprobe` crate;
 //! - a key log, which prints the bytes each input produced. It works on
 //!   every platform (iOS has no local shell) and is how the manual input
 //!   checklist verifies the encoding.
 
 use std::io::{Read, Write};
+use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
+use std::time::Duration;
 
 use flutter_rust_bridge::frb;
 use ghostty_engine::{
@@ -18,6 +22,10 @@ use ghostty_engine::{
 };
 use openward_term::{FrameEncoder, Size, TermEngine};
 use portable_pty::{Child, CommandBuilder, MasterPty, PtySize, native_pty_system};
+use sshprobe::client::{self as ssh, Auth, Hop, Options, Target};
+use sshprobe::known_hosts::{KnownHosts, Unknown};
+use tokio::io::AsyncWriteExt;
+use tokio::sync::mpsc;
 
 use super::term::now_micros;
 
@@ -75,7 +83,27 @@ struct ShellState {
 
 enum Sink {
     Pty(Box<dyn Write + Send>),
+    /// Bytes and resizes for the task that owns the SSH channel.
+    Ssh(mpsc::UnboundedSender<SshCmd>),
     KeyLog,
+}
+
+enum SshCmd {
+    Data(Vec<u8>),
+    Resize(u16, u16),
+}
+
+/// The runtime `russh` runs on; created with the first SSH session.
+fn runtime() -> &'static tokio::runtime::Runtime {
+    static RT: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
+    RT.get_or_init(|| {
+        tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .thread_name("s2-ssh")
+            .enable_all()
+            .build()
+            .expect("tokio runtime")
+    })
 }
 
 #[frb(opaque)]
@@ -108,6 +136,9 @@ pub fn create_shell(
         echoed: None,
     }));
     let exited = Arc::new(AtomicBool::new(false));
+    if let Some(url) = program.strip_prefix("ssh://") {
+        return create_ssh(url, cols, rows, state, exited);
+    }
     if program == KEY_LOG {
         lock(&state).engine.feed(KEY_LOG_BANNER.as_bytes());
         return Ok(ShellSession {
@@ -184,15 +215,131 @@ pub fn create_shell(
     })
 }
 
+/// `user@host:port?key=/path/to/key`: a shell over SSH. Spike only: the key
+/// has no passphrase and host keys are trusted on first use, in memory.
+fn create_ssh(
+    url: &str,
+    cols: u16,
+    rows: u16,
+    state: Arc<Mutex<ShellState>>,
+    exited: Arc<AtomicBool>,
+) -> anyhow::Result<ShellSession> {
+    let (address, query) = url.split_once('?').unwrap_or((url, ""));
+    let (user, hostport) = address
+        .split_once('@')
+        .ok_or_else(|| anyhow::anyhow!("ssh://user@host:port?key=…"))?;
+    let (host, port) = match hostport.rsplit_once(':') {
+        Some((h, p)) => (h, p.parse::<u16>()?),
+        None => (hostport, 22),
+    };
+    let key = query
+        .split('&')
+        .find_map(|kv| kv.strip_prefix("key="))
+        .ok_or_else(|| anyhow::anyhow!("missing ?key=/path"))?;
+    let opts = Options {
+        user: user.to_owned(),
+        known_hosts: Arc::new(Mutex::new(KnownHosts::new(Unknown::Learn))),
+        host_certificates: false,
+        keepalive: Some(Duration::from_secs(15)),
+        agent_forward: None,
+    };
+    let auth = Auth::Key {
+        path: key.into(),
+        passphrase: None,
+    };
+    let rt = runtime();
+    let target = Target::new(host, port);
+    let session = rt.block_on(ssh::connect(&target, Hop::Tcp, &auth, &opts))?;
+    let info = session.info();
+    let channel = rt.block_on(session.shell("xterm-256color", u32::from(cols), u32::from(rows)))?;
+    // What the UI should show about the connection: who, how it was trusted
+    // and whether the key exchange was post-quantum.
+    lock(&state).engine.feed(
+        format!(
+            "\x1b[2mSSH {user}@{host}:{port} · {}{} · {:?} · {:.0} ms\x1b[0m\r\n",
+            info.kex,
+            if info.post_quantum() {
+                " (poscuántico)"
+            } else {
+                ""
+            },
+            info.verdict
+                .unwrap_or(sshprobe::known_hosts::Verdict::Unknown),
+            info.connect_ms,
+        )
+        .as_bytes(),
+    );
+
+    let (tx, mut rx) = mpsc::unbounded_channel::<SshCmd>();
+    let (mut read, write) = channel.split();
+    let (state2, exited2, replies_tx) = (Arc::clone(&state), Arc::clone(&exited), tx.clone());
+    rt.spawn(async move {
+        while let Some(msg) = read.wait().await {
+            match msg {
+                sshprobe::russh::ChannelMsg::Data { data }
+                | sshprobe::russh::ChannelMsg::ExtendedData { data, .. } => {
+                    let replies = {
+                        let mut s = lock(&state2);
+                        s.engine.feed(&data);
+                        s.dirty = true;
+                        if let Some(t) = s.awaiting_echo.take() {
+                            s.echoed.get_or_insert(t);
+                        }
+                        s.engine.take_host_writes()
+                    };
+                    if !replies.is_empty() {
+                        let _ = replies_tx.send(SshCmd::Data(replies));
+                    }
+                }
+                sshprobe::russh::ChannelMsg::Close => break,
+                _ => {}
+            }
+        }
+        exited2.store(true, Ordering::SeqCst);
+        lock(&state2).dirty = true;
+    });
+    rt.spawn(async move {
+        let mut writer = write.make_writer();
+        while let Some(cmd) = rx.recv().await {
+            match cmd {
+                SshCmd::Data(bytes) => {
+                    if writer.write_all(&bytes).await.is_err() || writer.flush().await.is_err() {
+                        break;
+                    }
+                }
+                SshCmd::Resize(c, r) => {
+                    let _ = write.window_change(u32::from(c), u32::from(r), 0, 0).await;
+                }
+            }
+        }
+        // The session lives as long as the UI holds the sender.
+        session.disconnect().await;
+    });
+
+    Ok(ShellSession {
+        state,
+        sink: Arc::new(Mutex::new(Sink::Ssh(tx))),
+        exited,
+        master: None,
+        child: None,
+    })
+}
+
 /// `now_micros`, never 0 (0 means "no input" in [`ShellFrame`]).
 fn input_time() -> u64 {
     now_micros().max(1)
 }
 
 fn write_sink(sink: &Mutex<Sink>, bytes: &[u8]) {
-    if let Sink::Pty(w) = &mut *lock(sink) {
+    match &mut *lock(sink) {
         // A dead child is reported by the reader thread; nothing to do here.
-        let _ = w.write_all(bytes).and_then(|_| w.flush());
+        Sink::Pty(w) => {
+            let _ = w.write_all(bytes).and_then(|_| w.flush());
+        }
+        Sink::Ssh(tx) => {
+            let _ = tx.send(SshCmd::Data(bytes.to_vec()));
+        }
+        Sink::KeyLog => {}
     }
 }
 
@@ -238,6 +385,14 @@ impl ShellSession {
                     s.awaiting_echo.get_or_insert(input_time());
                 }
                 let _ = w.write_all(&bytes).and_then(|_| w.flush());
+            }
+            Sink::Ssh(tx) => {
+                {
+                    let mut s = lock(&self.state);
+                    s.engine.scroll_to_bottom();
+                    s.awaiting_echo.get_or_insert(input_time());
+                }
+                let _ = tx.send(SshCmd::Data(bytes));
             }
             Sink::KeyLog => {
                 let mut s = lock(&self.state);
@@ -388,6 +543,9 @@ impl ShellSession {
                 pixel_height: 0,
             });
         }
+        if let Sink::Ssh(tx) = &*lock(&self.sink) {
+            let _ = tx.send(SshCmd::Resize(cols, rows));
+        }
     }
 
     /// Cell size in the logical pixels pointer positions use.
@@ -460,6 +618,32 @@ mod tests {
         assert!(!s.paste("rm -rf /tmp/x\n".into(), false));
         assert!(s.paste("rm -rf /tmp/x\n".into(), true));
         assert!(s.screen_text().contains("→ rm -rf /tmp/x^M"));
+    }
+
+    /// Needs the S2 servers (spikes/s2-ssh/servers/up.sh); skipped otherwise.
+    #[test]
+    fn an_ssh_shell_runs_what_is_typed() {
+        let home = std::env::var("HOME").unwrap_or_default();
+        let key = format!("{home}/Library/Caches/openward/s2-fixtures/id_ed25519");
+        if !std::path::Path::new(&key).exists()
+            || std::net::TcpStream::connect("127.0.0.1:22100").is_err()
+        {
+            eprintln!("S2 servers not running: skipped");
+            return;
+        }
+        let s = create_shell(format!("ssh://demo@127.0.0.1:22100?key={key}"), 80, 24, 100).unwrap();
+        assert!(
+            s.screen_text().contains("mlkem768x25519"),
+            "{}",
+            s.screen_text()
+        );
+        s.resize(100, 30);
+        s.text("stty size; echo s2-$((6*7))\n".into());
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while !(s.screen_text().contains("s2-42") && s.screen_text().contains("30 100")) {
+            assert!(std::time::Instant::now() < deadline, "{}", s.screen_text());
+            thread::sleep(std::time::Duration::from_millis(20));
+        }
     }
 
     #[cfg(unix)]

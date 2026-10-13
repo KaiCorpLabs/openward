@@ -180,7 +180,7 @@ El terminal es la pieza que más se nota. Los clientes de escritorio basados en 
 - **Transporte:** directo, proxy HTTP CONNECT o SOCKS5, **ProxyCommand** (solo en escritorio; necesario para `cloudflared`, `tsh proxy ssh` y `aws ssm`), cadenas de saltos anidadas (cada salto abre `direct-tcpip` y el siguiente SSH viaja por ese canal) y red Tailscale.
 - **Known hosts:** almacén propio dentro del vault (se sincroniza), lectura opcional de `~/.ssh/known_hosts`, `@cert-authority` (CA de hosts), políticas *strict*, TOFU o preguntar, y gestión de rotación (`hostkeys-00@openssh.com`).
 - **Sesión:** PTY con `TERM` configurable, variables de entorno, snippet de arranque, agent forwarding con **confirmación por uso** opcional, keepalive, **reconexión automática** y la opción de **sesión persistente** (`tmux new -A -s ow-<id>`) para que reconectar sea retomar.
-- **Criptografía poscuántica:** `russh` 0.64 ya negocia `mlkem768x25519-sha256` por defecto. La UI muestra en cada sesión si el intercambio de claves fue poscuántico.
+- **Criptografía poscuántica:** `russh` 0.64 ya negocia `mlkem768x25519-sha256` por defecto, comprobado con OpenSSH 10.0 y Dropbear 2025.88 en S2. Con OpenSSH 9.0–9.8 cae a `curve25519`, porque esos servidores solo ofrecen `sntrup761`. La UI muestra en cada sesión si el intercambio de claves fue poscuántico.
 - **FIDO2:** `russh` acepta firmas `sk-*` a través de un `Signer` externo, pero `ssh-key` no sabe firmar `sk`. Por eso la parte CTAP2 la implementamos nosotros (`libfido2` o `ctap-hid-fido2` en escritorio).
 
 ### 3.6 Agente SSH y CLI
@@ -500,7 +500,7 @@ Comprobado el 2026-10-08 en crates.io, pub.dev, go.dev, el canal estable de Rust
 | Go | 1.27.2 (2026-10-08) | BSD-3 | La línea 1.26.x sigue soportada |
 | Flutter / Dart | 3.47.6 / 3.13.5 (2026-10-01) | BSD-3 | — |
 | `flutter_rust_bridge` | 2.13.0 (2026-08-23) | MIT | La misma que usa Arveil; 2.14 en beta |
-| `russh` | 0.64.1 (2026-10-05) | Apache-2.0 | Muy activo; ML-KEM híbrido por defecto; sin CI móvil |
+| `russh` | 0.64.1 (2026-10-05) | Apache-2.0 | **Elegido para escritorio** (S2: 83 de 83 en la matriz de interoperabilidad); sin CI móvil propia |
 | `russh-sftp` | 3.0.1 (2026-09-28) | Apache-2.0 | Activo |
 | `ssh-key` | 0.7.0-rc.11 (fijada por `russh`); estable 0.6.7 | Apache/MIT | Verifica `sk-*` pero no firma |
 | `alacritty_terminal` | 0.26.0 (2026-04-06) | Apache-2.0 | **Descartado** como motor (S1); solo referencia de pruebas |

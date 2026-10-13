@@ -1,0 +1,23 @@
+# OpenSSH test server for spike S2. BASE picks the OpenSSH version:
+#   ubuntu:22.04 → 8.9 · debian:bookworm-slim → 9.2 · debian:trixie-slim → 10.0
+ARG BASE=debian:trixie-slim
+FROM docker.io/library/${BASE}
+
+ENV DEBIAN_FRONTEND=noninteractive LANG=C.UTF-8
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      openssh-server libpam-google-authenticator python3 netcat-openbsd procps \
+ && rm -rf /var/lib/apt/lists/* \
+ && mkdir -p /run/sshd \
+ && useradd -m -s /bin/bash demo \
+ && useradd -m -s /bin/bash otp
+
+# 2FA for keyboard-interactive: password, then a TOTP code. nullok: users
+# without ~/.google_authenticator (demo) only get the password prompt.
+RUN sed -i 's/^@include common-auth/@include common-auth\nauth required pam_google_authenticator.so nullok/' /etc/pam.d/sshd
+
+COPY openward.conf /etc/ssh/sshd_config.d/openward.conf
+COPY entrypoint-openssh.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+EXPOSE 22
+ENTRYPOINT ["/entrypoint.sh"]

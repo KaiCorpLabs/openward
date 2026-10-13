@@ -2,7 +2,8 @@
 // libghostty-vt engine, with keyboard, IME, paste, mouse and a key bar for
 // soft keyboards. Manual checklist: docs/spikes/S1-terminal.md.
 
-import 'dart:io' show Platform;
+import 'dart:convert' show jsonEncode;
+import 'dart:io' show Platform, exit;
 import 'dart:math' as math;
 import 'dart:ui' show PlatformDispatcher;
 
@@ -21,6 +22,9 @@ import 'keys.dart';
 
 /// Program name of the key log backend (`shell.rs` KEY_LOG).
 const keyLog = 'keylog';
+
+/// Spike S2: type, then flood, measure and exit (`S2RESULT {json}`).
+const _autorun = bool.fromEnvironment('S2_AUTORUN');
 
 class ShellPage extends StatefulWidget {
   const ShellPage({super.key, required this.program});
@@ -104,10 +108,95 @@ class ShellPageState extends State<ShellPage>
           if (_cols > 0) session.resize(cols: _cols, rows: _rows);
           _ticker.start();
           _focus.requestFocus();
+          if (_autorun) _runAutomatically();
         })
         .catchError((Object e) {
           if (mounted) setState(() => _error = '$e');
         });
+  }
+
+  int _framesWithOutput = 0;
+
+  /// The S2 measurement through the whole pipeline (keyboard → SSH →
+  /// libghostty-vt → Flutter paint): echo of typed keys at a human pace,
+  /// then a large output.
+  Future<void> _runAutomatically() async {
+    final session = _session!;
+    await Future<void>.delayed(const Duration(seconds: 2));
+    _echoUs.clear();
+    const text = 'echo openward-s2-latency ';
+    final rng = math.Random(42);
+    for (var i = 0; i < 150; i++) {
+      await Future<void>.delayed(Duration(milliseconds: 60 + rng.nextInt(121)));
+      session.text(text: text[i % text.length]);
+    }
+    await Future<void>.delayed(const Duration(seconds: 1));
+    final echo = _summary(_echoUs, 1e3);
+    // ^U: drop the typed line.
+    session.key(
+      hidUsage: 0x00070018,
+      kind: KeyKind.down,
+      mods: Mods.ctrl,
+      text: 'u',
+      unshifted: 0x75,
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+
+    final build = <int>[], raster = <int>[];
+    var frozen = 0;
+    void onTimings(List<FrameTiming> timings) {
+      for (final t in timings) {
+        build.add(t.buildDuration.inMicroseconds);
+        raster.add(t.rasterDuration.inMicroseconds);
+        if (t.totalSpan.inMilliseconds > 100) frozen++;
+      }
+    }
+
+    SchedulerBinding.instance.addTimingsCallback(onTimings);
+    const mib = 100;
+    _framesWithOutput = 0;
+    final sw = Stopwatch()..start();
+    session.text(
+      text:
+          "head -c ${mib * 1048576} /dev/zero | tr '\\0' x | fold -w 200; "
+          r'echo S2-$((40+2))-END'
+          '\n',
+    );
+    while (!session.screenText().contains('S2-42-END') &&
+        sw.elapsed < const Duration(minutes: 3)) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    final seconds = sw.elapsed.inMicroseconds / 1e6;
+    SchedulerBinding.instance.removeTimingsCallback(onTimings);
+    final result = {
+      'kind': 'ssh-terminal',
+      'program': widget.program.replaceAll(RegExp(r'\?key=.*'), ''),
+      'echo_ms': echo,
+      'flood_mib': mib,
+      'flood_seconds': seconds,
+      'flood_mib_s': mib * 201 / 200 / seconds,
+      'flood_fps': _framesWithOutput / seconds,
+      'build_ms': _summary(build, 1e3),
+      'raster_ms': _summary(raster, 1e3),
+      'frozen_frames_over_100ms': frozen,
+      'cols': _cols,
+      'rows': _rows,
+    };
+    // ignore: avoid_print
+    print('S2RESULT ${jsonEncode(result)}');
+    exit(0);
+  }
+
+  static Map<String, num> _summary(List<int> samples, num divisor) {
+    if (samples.isEmpty) return const {};
+    final s = [...samples]..sort();
+    num at(double q) => s[((s.length - 1) * q).round()] / divisor;
+    return {
+      'p50': at(0.5),
+      'p95': at(0.95),
+      'max': s.last / divisor,
+      'n': s.length,
+    };
   }
 
   @override
@@ -131,6 +220,7 @@ class ShellPageState extends State<ShellPage>
     final session = _session;
     final batch = session?.poll();
     if (batch == null) return;
+    _framesWithOutput++;
     final before = _renderer.cursor;
     _renderer.apply(decodeFrame(batch.frame));
     final sent = batch.inputMicros.toInt();

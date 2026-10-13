@@ -1,4 +1,4 @@
-.PHONY: test lint fmt deny bench corpus conformance conformance-record clean
+.PHONY: test lint fmt deny bench corpus conformance conformance-record ssh ssh-down clean
 
 TERMBENCH := spikes/s1-terminal/termbench
 CORPUS := spikes/s1-terminal/corpus/synthetic
@@ -48,6 +48,14 @@ conformance:
 # Re-record those references in the offline container (about 10 minutes)
 conformance-record:
 	spikes/s1-terminal/corpus/conformance.sh
+
+# Spike S2: real SSH servers in containers and the russh interop matrix
+ssh:
+	spikes/s2-ssh/servers/up.sh
+	cd spikes/s2-ssh/sshprobe && cargo run --release -- matrix
+
+ssh-down:
+	spikes/s2-ssh/servers/down.sh
 
 clean:
 	rm -rf core/target $(TERMBENCH)/target $(CORPUS)
