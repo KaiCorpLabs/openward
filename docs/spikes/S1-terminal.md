@@ -93,14 +93,14 @@ Gana el motor que pasa la puerta. Si pasan los dos, se puntúa:
 | S1.0 | Trait `TermEngine`, formato de frames v1, backend `alacritty_terminal`, `termbench` | 1 | **Hecho** |
 | S1.1 | Grabar el corpus real en un contenedor y añadir el script de regeneración | 1 | Pendiente |
 | S1.2 | `termbench` con alacritty en las 5 plataformas; resultados en `spikes/s1-terminal/results/<plataforma>.jsonl` | 1–2 | Pendiente |
-| S1.3 | Backend `libghostty-vt`: build con **Zig 0.16.0 exacto** (`brew install zig@0.16`, keg-only: se invoca como `$(brew --prefix zig@0.16)/bin/zig` y convive con otras versiones) para los 5 destinos; bindings de `vt.h` en un crate `-sys` aislado (la única excepción a `unsafe_code = "forbid"`); implementar `TermEngine` | 3–4 | Pendiente |
+| S1.3 | Backend `libghostty-vt`: build con **Zig 0.16.0 exacto** (`brew install zig@0.16`, disponible como `zig`) para los 5 destinos; bindings de `vt.h` en un crate `-sys` aislado (la única excepción a `unsafe_code = "forbid"`); implementar `TermEngine` | 3–4 | Pendiente |
 | S1.4 | Harness de render: app Flutter + `flutter_rust_bridge` 2.13.0, decodificador Dart del frame v1 con pruebas cruzadas contra frames de ejemplo generados en Rust, y `CustomPainter` con un `Picture` en caché por fila (solo se regraban las filas que cambian) | 3–4 | Pendiente |
 | S1.5 | Entrada: codificación de teclas (xterm y protocolo kitty), ratón (SGR 1006), bracketed paste; IME con `TextInputClient` y región de composición en el cursor; barra de teclas en móvil | 2–3 | Pendiente |
 | S1.6 | Corrección: vttest, apps reales y corpus unicode en ambos motores; capturas comparadas | 1–2 | Pendiente |
 | S1.7 | Si se confirma H2: prototipo de scrollback compacto (texto UTF-8 con tramos de estilo para las líneas que salen de la pantalla) y medición | 2 | Condicional |
 | S1.8 | Informe `S1-terminal-resultados.md` y ADR-002 aceptado | 1 | Pendiente |
 
-**Requisitos previos:** Rust 1.99.0 (fijado en `rust-toolchain.toml`), Flutter 3.47.x (la máquina de desarrollo tiene la 3.44.1), Zig 0.16.0 (`zig@0.16` de Homebrew, ya instalado), `flutter_rust_bridge_codegen` 2.13.0, Android NDK y Xcode 27.
+**Requisitos previos:** Rust 1.99.0 (fijado en `rust-toolchain.toml`), Flutter 3.47.6 (fijado en `.fvmrc`; se usa con `fvm flutter …`, sin tocar el Flutter global), Zig 0.16.0 (`zig@0.16` de Homebrew), `flutter_rust_bridge_codegen` 2.13.0, Android NDK y Xcode 27.
 
 ## 9. Riesgos del spike
 

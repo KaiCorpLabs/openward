@@ -42,3 +42,6 @@ authorized_keys
 .idea/
 .vscode/
 *.swp
+
+# FVM Version Cache
+.fvm/

@@ -50,7 +50,11 @@ Más detalles en [LICENSING.md](LICENSING.md).
 
 ## Desarrollo
 
-Requisitos: Rust (la versión se fija en [`core/rust-toolchain.toml`](core/rust-toolchain.toml)).
+Requisitos:
+
+- **Rust:** la versión se fija en [`core/rust-toolchain.toml`](core/rust-toolchain.toml) y `rustup` la instala sola.
+- **Flutter:** la versión se fija en [`.fvmrc`](.fvmrc). Con [FVM](https://fvm.app) (`brew install fvm`), ejecuta `fvm install` y usa `fvm flutter …`.
+- **Zig 0.16.0** (solo para el motor `libghostty-vt` del spike S1): `brew install zig@0.16`.
 
 ```bash
 make test     # pruebas del núcleo
