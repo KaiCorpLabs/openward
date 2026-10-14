@@ -277,12 +277,17 @@ Host web-1 web-2
         unshifted: 0x63,
       );
     }
-    c.session.text(
-      text:
-          r"printf '\033[?1000l'"
-          '\n',
-    );
-    await _until(tester, () => !c.mouseTracking, 'mouse tracking off');
+    // Until cat is gone the line may go to it instead of the shell: send
+    // it again until the terminal reports tracking off.
+    for (var i = 0; i < 20 && c.mouseTracking; i++) {
+      c.session.text(
+        text:
+            r"printf '\033[?1000l'"
+            '\n',
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+    expect(c.mouseTracking, isFalse);
 
     container.read(tabsProvider.notifier).close(0);
     await _settle(tester);
