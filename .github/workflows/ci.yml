@@ -221,13 +221,15 @@ jobs:
           # app at times vanishes at start, or flutter_tools fails cleaning
           # up after the tests passed): one retry, with a warning. A real
           # failure fails both times.
+          # The default reporter in Actions marks tests ✅/❌; with
+          # `-r expanded` the app never got past setUpAll here.
           once() {
             local log
             log="$(mktemp)"
-            if flutter test "$1" -d linux -r expanded 2>&1 | tee "$log"; then
+            if flutter test "$1" -d linux 2>&1 | tee "$log"; then
               return 0
             fi
-            grep -q "All tests passed" "$log" &&
+            grep -q "✅" "$log" && ! grep -q "❌" "$log" &&
               grep -q "unhandled error during finalization" "$log"
           }
           itest() {
