@@ -2091,19 +2091,25 @@ impl SseDecode for crate::api::session::ClosedView {
 impl SseDecode for crate::api::session::ConnectedView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_host = <String>::sse_decode(deserializer);
+        let mut var_port = <u16>::sse_decode(deserializer);
         let mut var_kex = <String>::sse_decode(deserializer);
         let mut var_postQuantum = <bool>::sse_decode(deserializer);
         let mut var_cipher = <String>::sse_decode(deserializer);
         let mut var_hostKeyAlgorithm = <String>::sse_decode(deserializer);
+        let mut var_fingerprint = <String>::sse_decode(deserializer);
         let mut var_trust = <crate::api::session::TrustKind>::sse_decode(deserializer);
         let mut var_ca = <String>::sse_decode(deserializer);
         let mut var_hops = <u32>::sse_decode(deserializer);
         let mut var_connectMs = <f64>::sse_decode(deserializer);
         return crate::api::session::ConnectedView {
+            host: var_host,
+            port: var_port,
             kex: var_kex,
             post_quantum: var_postQuantum,
             cipher: var_cipher,
             host_key_algorithm: var_hostKeyAlgorithm,
+            fingerprint: var_fingerprint,
             trust: var_trust,
             ca: var_ca,
             hops: var_hops,
@@ -2169,6 +2175,8 @@ impl SseDecode for crate::api::session::FailureView {
         let mut var_key = <String>::sse_decode(deserializer);
         let mut var_methods = <Vec<String>>::sse_decode(deserializer);
         let mut var_reason = <String>::sse_decode(deserializer);
+        let mut var_previous =
+            <Vec<crate::api::session::PreviousKeyView>>::sse_decode(deserializer);
         return crate::api::session::FailureView {
             kind: var_kind,
             message: var_message,
@@ -2181,6 +2189,7 @@ impl SseDecode for crate::api::session::FailureView {
             key: var_key,
             methods: var_methods,
             reason: var_reason,
+            previous: var_previous,
         };
     }
 }
@@ -2403,6 +2412,18 @@ impl SseDecode for crate::api::vault::KeyPolicy {
     }
 }
 
+impl SseDecode for crate::api::session::KeySourceKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::session::KeySourceKind::OpenWard,
+            1 => crate::api::session::KeySourceKind::OpenSsh,
+            _ => unreachable!("Invalid variant for KeySourceKind: {}", inner),
+        };
+    }
+}
+
 impl SseDecode for crate::api::vault::KnownHostView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2512,6 +2533,20 @@ impl SseDecode for Vec<crate::api::vault::KnownHostView> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::vault::KnownHostView>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::session::PreviousKeyView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::session::PreviousKeyView>::sse_decode(
+                deserializer,
+            ));
         }
         return ans_;
     }
@@ -2667,6 +2702,19 @@ impl SseDecode for Option<crate::api::session::PromptView> {
     }
 }
 
+impl SseDecode for Option<crate::api::session::ReconnectingView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::session::ReconnectingView>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<crate::api::vault::RouteKind> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2785,6 +2833,18 @@ impl SseDecode for crate::api::session::PointerButton {
     }
 }
 
+impl SseDecode for crate::api::session::PreviousKeyView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_fingerprint = <String>::sse_decode(deserializer);
+        let mut var_source = <crate::api::session::KeySourceKind>::sse_decode(deserializer);
+        return crate::api::session::PreviousKeyView {
+            fingerprint: var_fingerprint,
+            source: var_source,
+        };
+    }
+}
+
 impl SseDecode for crate::api::session::PromptAnswer {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2857,6 +2917,20 @@ impl SseDecode for crate::api::session::QuestionView {
     }
 }
 
+impl SseDecode for crate::api::session::ReconnectingView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_attempt = <u32>::sse_decode(deserializer);
+        let mut var_delayMs = <u64>::sse_decode(deserializer);
+        let mut var_reason = <crate::api::session::FailureView>::sse_decode(deserializer);
+        return crate::api::session::ReconnectingView {
+            attempt: var_attempt,
+            delay_ms: var_delayMs,
+            reason: var_reason,
+        };
+    }
+}
+
 impl SseDecode for crate::api::vault::RouteKind {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2874,17 +2948,22 @@ impl SseDecode for crate::api::session::SessionEvent {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_kind = <crate::api::session::SessionEventKind>::sse_decode(deserializer);
+        let mut var_route = <Vec<String>>::sse_decode(deserializer);
         let mut var_stage = <Option<crate::api::session::StageView>>::sse_decode(deserializer);
         let mut var_prompt = <Option<crate::api::session::PromptView>>::sse_decode(deserializer);
         let mut var_connected =
             <Option<crate::api::session::ConnectedView>>::sse_decode(deserializer);
+        let mut var_reconnecting =
+            <Option<crate::api::session::ReconnectingView>>::sse_decode(deserializer);
         let mut var_program = <Option<String>>::sse_decode(deserializer);
         let mut var_closed = <Option<crate::api::session::ClosedView>>::sse_decode(deserializer);
         return crate::api::session::SessionEvent {
             kind: var_kind,
+            route: var_route,
             stage: var_stage,
             prompt: var_prompt,
             connected: var_connected,
+            reconnecting: var_reconnecting,
             program: var_program,
             closed: var_closed,
         };
@@ -2896,11 +2975,13 @@ impl SseDecode for crate::api::session::SessionEventKind {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut inner = <i32>::sse_decode(deserializer);
         return match inner {
-            0 => crate::api::session::SessionEventKind::Stage,
-            1 => crate::api::session::SessionEventKind::Prompt,
-            2 => crate::api::session::SessionEventKind::Connected,
-            3 => crate::api::session::SessionEventKind::Started,
-            4 => crate::api::session::SessionEventKind::Closed,
+            0 => crate::api::session::SessionEventKind::Route,
+            1 => crate::api::session::SessionEventKind::Stage,
+            2 => crate::api::session::SessionEventKind::Prompt,
+            3 => crate::api::session::SessionEventKind::Connected,
+            4 => crate::api::session::SessionEventKind::Reconnecting,
+            5 => crate::api::session::SessionEventKind::Started,
+            6 => crate::api::session::SessionEventKind::Closed,
             _ => unreachable!("Invalid variant for SessionEventKind: {}", inner),
         };
     }
@@ -3244,10 +3325,13 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::session::ClosedView>
 impl flutter_rust_bridge::IntoDart for crate::api::session::ConnectedView {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
+            self.host.into_into_dart().into_dart(),
+            self.port.into_into_dart().into_dart(),
             self.kex.into_into_dart().into_dart(),
             self.post_quantum.into_into_dart().into_dart(),
             self.cipher.into_into_dart().into_dart(),
             self.host_key_algorithm.into_into_dart().into_dart(),
+            self.fingerprint.into_into_dart().into_dart(),
             self.trust.into_into_dart().into_dart(),
             self.ca.into_into_dart().into_dart(),
             self.hops.into_into_dart().into_dart(),
@@ -3324,6 +3408,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::session::FailureView {
             self.key.into_into_dart().into_dart(),
             self.methods.into_into_dart().into_dart(),
             self.reason.into_into_dart().into_dart(),
+            self.previous.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -3620,6 +3705,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::vault::KeyPolicy>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::session::KeySourceKind {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::OpenWard => 0.into_dart(),
+            Self::OpenSsh => 1.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::session::KeySourceKind
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::session::KeySourceKind>
+    for crate::api::session::KeySourceKind
+{
+    fn into_into_dart(self) -> crate::api::session::KeySourceKind {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::vault::KnownHostView {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -3705,6 +3811,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::session::PointerButton>
     for crate::api::session::PointerButton
 {
     fn into_into_dart(self) -> crate::api::session::PointerButton {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::session::PreviousKeyView {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.fingerprint.into_into_dart().into_dart(),
+            self.source.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::session::PreviousKeyView
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::session::PreviousKeyView>
+    for crate::api::session::PreviousKeyView
+{
+    fn into_into_dart(self) -> crate::api::session::PreviousKeyView {
         self
     }
 }
@@ -3806,6 +3933,28 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::session::QuestionView>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::session::ReconnectingView {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.attempt.into_into_dart().into_dart(),
+            self.delay_ms.into_into_dart().into_dart(),
+            self.reason.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::session::ReconnectingView
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::session::ReconnectingView>
+    for crate::api::session::ReconnectingView
+{
+    fn into_into_dart(self) -> crate::api::session::ReconnectingView {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::vault::RouteKind {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
@@ -3829,9 +3978,11 @@ impl flutter_rust_bridge::IntoDart for crate::api::session::SessionEvent {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.kind.into_into_dart().into_dart(),
+            self.route.into_into_dart().into_dart(),
             self.stage.into_into_dart().into_dart(),
             self.prompt.into_into_dart().into_dart(),
             self.connected.into_into_dart().into_dart(),
+            self.reconnecting.into_into_dart().into_dart(),
             self.program.into_into_dart().into_dart(),
             self.closed.into_into_dart().into_dart(),
         ]
@@ -3853,11 +4004,13 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::session::SessionEvent>
 impl flutter_rust_bridge::IntoDart for crate::api::session::SessionEventKind {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
-            Self::Stage => 0.into_dart(),
-            Self::Prompt => 1.into_dart(),
-            Self::Connected => 2.into_dart(),
-            Self::Started => 3.into_dart(),
-            Self::Closed => 4.into_dart(),
+            Self::Route => 0.into_dart(),
+            Self::Stage => 1.into_dart(),
+            Self::Prompt => 2.into_dart(),
+            Self::Connected => 3.into_dart(),
+            Self::Reconnecting => 4.into_dart(),
+            Self::Started => 5.into_dart(),
+            Self::Closed => 6.into_dart(),
             _ => unreachable!(),
         }
     }
@@ -4129,10 +4282,13 @@ impl SseEncode for crate::api::session::ClosedView {
 impl SseEncode for crate::api::session::ConnectedView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.host, serializer);
+        <u16>::sse_encode(self.port, serializer);
         <String>::sse_encode(self.kex, serializer);
         <bool>::sse_encode(self.post_quantum, serializer);
         <String>::sse_encode(self.cipher, serializer);
         <String>::sse_encode(self.host_key_algorithm, serializer);
+        <String>::sse_encode(self.fingerprint, serializer);
         <crate::api::session::TrustKind>::sse_encode(self.trust, serializer);
         <String>::sse_encode(self.ca, serializer);
         <u32>::sse_encode(self.hops, serializer);
@@ -4197,6 +4353,7 @@ impl SseEncode for crate::api::session::FailureView {
         <String>::sse_encode(self.key, serializer);
         <Vec<String>>::sse_encode(self.methods, serializer);
         <String>::sse_encode(self.reason, serializer);
+        <Vec<crate::api::session::PreviousKeyView>>::sse_encode(self.previous, serializer);
     }
 }
 
@@ -4366,6 +4523,22 @@ impl SseEncode for crate::api::vault::KeyPolicy {
     }
 }
 
+impl SseEncode for crate::api::session::KeySourceKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::session::KeySourceKind::OpenWard => 0,
+                crate::api::session::KeySourceKind::OpenSsh => 1,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
 impl SseEncode for crate::api::vault::KnownHostView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -4453,6 +4626,16 @@ impl SseEncode for Vec<crate::api::vault::KnownHostView> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::vault::KnownHostView>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::session::PreviousKeyView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::session::PreviousKeyView>::sse_encode(item, serializer);
         }
     }
 }
@@ -4587,6 +4770,16 @@ impl SseEncode for Option<crate::api::session::PromptView> {
     }
 }
 
+impl SseEncode for Option<crate::api::session::ReconnectingView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::session::ReconnectingView>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<crate::api::vault::RouteKind> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -4710,6 +4903,14 @@ impl SseEncode for crate::api::session::PointerButton {
     }
 }
 
+impl SseEncode for crate::api::session::PreviousKeyView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.fingerprint, serializer);
+        <crate::api::session::KeySourceKind>::sse_encode(self.source, serializer);
+    }
+}
+
 impl SseEncode for crate::api::session::PromptAnswer {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -4763,6 +4964,15 @@ impl SseEncode for crate::api::session::QuestionView {
     }
 }
 
+impl SseEncode for crate::api::session::ReconnectingView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.attempt, serializer);
+        <u64>::sse_encode(self.delay_ms, serializer);
+        <crate::api::session::FailureView>::sse_encode(self.reason, serializer);
+    }
+}
+
 impl SseEncode for crate::api::vault::RouteKind {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -4784,9 +4994,11 @@ impl SseEncode for crate::api::session::SessionEvent {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <crate::api::session::SessionEventKind>::sse_encode(self.kind, serializer);
+        <Vec<String>>::sse_encode(self.route, serializer);
         <Option<crate::api::session::StageView>>::sse_encode(self.stage, serializer);
         <Option<crate::api::session::PromptView>>::sse_encode(self.prompt, serializer);
         <Option<crate::api::session::ConnectedView>>::sse_encode(self.connected, serializer);
+        <Option<crate::api::session::ReconnectingView>>::sse_encode(self.reconnecting, serializer);
         <Option<String>>::sse_encode(self.program, serializer);
         <Option<crate::api::session::ClosedView>>::sse_encode(self.closed, serializer);
     }
@@ -4797,11 +5009,13 @@ impl SseEncode for crate::api::session::SessionEventKind {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <i32>::sse_encode(
             match self {
-                crate::api::session::SessionEventKind::Stage => 0,
-                crate::api::session::SessionEventKind::Prompt => 1,
-                crate::api::session::SessionEventKind::Connected => 2,
-                crate::api::session::SessionEventKind::Started => 3,
-                crate::api::session::SessionEventKind::Closed => 4,
+                crate::api::session::SessionEventKind::Route => 0,
+                crate::api::session::SessionEventKind::Stage => 1,
+                crate::api::session::SessionEventKind::Prompt => 2,
+                crate::api::session::SessionEventKind::Connected => 3,
+                crate::api::session::SessionEventKind::Reconnecting => 4,
+                crate::api::session::SessionEventKind::Started => 5,
+                crate::api::session::SessionEventKind::Closed => 6,
                 _ => {
                     unimplemented!("");
                 }

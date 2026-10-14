@@ -7,7 +7,7 @@
 use std::sync::Arc;
 
 use flutter_rust_bridge::frb;
-use openward_app::events::{Connected, Question, Stage, Trust};
+use openward_app::events::{Connected, KeySource, Question, Stage, Trust};
 use openward_app::terminal::{self, Terminal};
 use openward_app::{Answer, Event, EventSink, Failure, Prompt};
 use zeroize::Zeroizing;
@@ -16,9 +16,13 @@ use crate::frb_generated::StreamSink;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SessionEventKind {
+    /// The hops of the connection (`route`), before the first stage.
+    Route,
     Stage,
     Prompt,
     Connected,
+    /// The connection was lost and is tried again (`reconnecting`).
+    Reconnecting,
     /// A local program is running (`program`).
     Started,
     Closed,
@@ -28,9 +32,11 @@ pub enum SessionEventKind {
 #[derive(Clone, Debug, PartialEq)]
 pub struct SessionEvent {
     pub kind: SessionEventKind,
+    pub route: Vec<String>,
     pub stage: Option<StageView>,
     pub prompt: Option<PromptView>,
     pub connected: Option<ConnectedView>,
+    pub reconnecting: Option<ReconnectingView>,
     pub program: Option<String>,
     pub closed: Option<ClosedView>,
 }
@@ -95,12 +101,25 @@ pub enum TrustKind {
     New,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReconnectingView {
+    /// From 1.
+    pub attempt: u32,
+    pub delay_ms: u64,
+    /// Why the connection went away.
+    pub reason: FailureView,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct ConnectedView {
+    pub host: String,
+    pub port: u16,
     pub kex: String,
     pub post_quantum: bool,
     pub cipher: String,
     pub host_key_algorithm: String,
+    /// `SHA256:…` of the host key.
+    pub fingerprint: String,
     pub trust: TrustKind,
     /// The CA's fingerprint, when certified.
     pub ca: String,
@@ -134,6 +153,22 @@ pub struct FailureView {
     pub key: String,
     pub methods: Vec<String>,
     pub reason: String,
+    /// With [`FailureKind::HostKeyChanged`]: what was trusted before.
+    pub previous: Vec<PreviousKeyView>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum KeySourceKind {
+    /// OpenWard's own list: trusting the new key replaces it.
+    OpenWard,
+    /// `~/.ssh/known_hosts`, which OpenWard does not write.
+    OpenSsh,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PreviousKeyView {
+    pub fingerprint: String,
+    pub source: KeySourceKind,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -174,21 +209,25 @@ fn failure_view(f: Failure) -> FailureView {
         ..FailureView::default()
     };
     match f {
-        Failure::HostKeyChanged {
-            label,
-            host,
-            port,
-            algorithm,
-            fingerprint,
-            key,
-        } => FailureView {
+        Failure::HostKeyChanged(c) => FailureView {
             kind: Some(FailureKind::HostKeyChanged),
-            label,
-            host,
-            port,
-            algorithm,
-            fingerprint,
-            key,
+            label: c.label,
+            host: c.host,
+            port: c.port,
+            algorithm: c.algorithm,
+            fingerprint: c.fingerprint,
+            key: c.key,
+            previous: c
+                .previous
+                .into_iter()
+                .map(|p| PreviousKeyView {
+                    fingerprint: p.fingerprint,
+                    source: match p.source {
+                        KeySource::OpenWard => KeySourceKind::OpenWard,
+                        KeySource::OpenSsh => KeySourceKind::OpenSsh,
+                    },
+                })
+                .collect(),
             ..v
         },
         Failure::HostKeyRejected { label } => FailureView {
@@ -291,13 +330,31 @@ fn prompt_view(id: u64, p: Prompt) -> PromptView {
 pub(crate) fn event_view(e: Event) -> SessionEvent {
     let mut v = SessionEvent {
         kind: SessionEventKind::Stage,
+        route: Vec::new(),
         stage: None,
         prompt: None,
         connected: None,
+        reconnecting: None,
         program: None,
         closed: None,
     };
     match e {
+        Event::Route { hops } => {
+            v.kind = SessionEventKind::Route;
+            v.route = hops;
+        }
+        Event::Reconnecting {
+            attempt,
+            delay_ms,
+            reason,
+        } => {
+            v.kind = SessionEventKind::Reconnecting;
+            v.reconnecting = Some(ReconnectingView {
+                attempt,
+                delay_ms,
+                reason: failure_view(reason),
+            });
+        }
         Event::Stage {
             hop,
             hops,
@@ -320,10 +377,13 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
             v.prompt = Some(prompt_view(id, prompt));
         }
         Event::Connected(Connected {
+            host,
+            port,
             kex,
             post_quantum,
             cipher,
             host_key_algorithm,
+            fingerprint,
             trust,
             hops,
             connect_ms,
@@ -335,10 +395,13 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
                 Trust::New => (TrustKind::New, String::new()),
             };
             v.connected = Some(ConnectedView {
+                host,
+                port,
                 kex,
                 post_quantum,
                 cipher,
                 host_key_algorithm,
+                fingerprint,
                 trust,
                 ca,
                 hops: hops as u32,

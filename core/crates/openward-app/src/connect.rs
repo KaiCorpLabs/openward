@@ -27,7 +27,10 @@ use openward_vault::Vault;
 use openward_vault::proto::HostKeyPolicy;
 use zeroize::Zeroizing;
 
-use crate::events::{Answer, Event, EventSink, Failure, Prompt, Prompts, Question, Stage};
+use crate::events::{
+    Answer, ChangedKey, Event, EventSink, Failure, KeySource, PreviousKey, Prompt, Prompts,
+    Question, Stage,
+};
 use crate::local::Local;
 use crate::plan::{Hop, Plan};
 
@@ -54,13 +57,44 @@ impl Ctx {
         });
     }
 
-    /// The vault's trusted keys plus `~/.ssh/known_hosts`.
-    fn known_hosts(&self) -> String {
-        let mut text = lock(&self.vault).known_hosts_text();
-        if let Ok(theirs) = std::fs::read_to_string(self.local.known_hosts_file()) {
-            text.push_str(&theirs);
+    /// The vault's trusted keys, and `~/.ssh/known_hosts`.
+    fn known_hosts(&self) -> KnownTexts {
+        KnownTexts {
+            openward: lock(&self.vault).known_hosts_text(),
+            openssh: std::fs::read_to_string(self.local.known_hosts_file()).unwrap_or_default(),
         }
-        text
+    }
+}
+
+struct KnownTexts {
+    openward: String,
+    openssh: String,
+}
+
+impl KnownTexts {
+    fn all(&self) -> String {
+        format!("{}\n{}", self.openward, self.openssh)
+    }
+
+    /// What was trusted for `host:port` with the algorithm of `key`, and
+    /// where it is written.
+    fn previous(&self, host: &str, port: u16, key: &PublicKey) -> Vec<PreviousKey> {
+        let mut out = Vec::new();
+        for (text, source) in [
+            (&self.openward, KeySource::OpenWard),
+            (&self.openssh, KeySource::OpenSsh),
+        ] {
+            let known = KnownHosts::parse(text, Unknown::Reject);
+            for k in known.listed(host, port) {
+                if k.algorithm() == key.algorithm() {
+                    out.push(PreviousKey {
+                        fingerprint: k.fingerprint(HashAlg::Sha256).to_string(),
+                        source,
+                    });
+                }
+            }
+        }
+        out
     }
 }
 
@@ -70,7 +104,8 @@ pub(crate) fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 
 /// Authenticated sessions, jumps first; they must live as long as the last.
 pub(crate) async fn run(plan: &Plan, ctx: &Ctx) -> Result<Vec<Session>, Failure> {
-    let known = ctx.known_hosts();
+    let texts = ctx.known_hosts();
+    let known = texts.all();
     let mut sessions: Vec<Session> = Vec::with_capacity(plan.hops.len());
     for (i, hop) in plan.hops.iter().enumerate() {
         ctx.stage(plan, i, Stage::Connecting);
@@ -96,7 +131,7 @@ pub(crate) async fn run(plan: &Plan, ctx: &Ctx) -> Result<Vec<Session>, Failure>
         };
         let mut session = match ssh::open(&target, transport, &opts).await {
             Ok(session) => session,
-            Err(e) => return Err(open_failure(hop, &e, &refused)),
+            Err(e) => return Err(open_failure(hop, &e, &refused, &texts)),
         };
         ctx.stage(plan, i, Stage::Authenticating);
         authenticate(&mut session, hop, ctx).await?;
@@ -144,6 +179,7 @@ fn open_failure(
     hop: &Hop,
     error: &anyhow::Error,
     refused: &Mutex<Option<HostKeyQuery>>,
+    texts: &KnownTexts,
 ) -> Failure {
     let label = hop.label.clone();
     let Some(UntrustedHost(verdict)) = error.downcast_ref::<UntrustedHost>() else {
@@ -153,14 +189,15 @@ fn open_failure(
         };
     };
     match (verdict, lock(refused).take()) {
-        (Verdict::Changed, Some(q)) => Failure::HostKeyChanged {
+        (Verdict::Changed, Some(q)) => Failure::HostKeyChanged(Box::new(ChangedKey {
             label,
+            previous: texts.previous(&q.host, q.port, &q.key),
             host: q.host,
             port: q.port,
             algorithm: q.key.algorithm().to_string(),
             fingerprint: q.key.fingerprint(HashAlg::Sha256).to_string(),
             key: q.key.to_openssh().unwrap_or_default(),
-        },
+        })),
         (Verdict::BadCertificate(reason), _) => Failure::BadCertificate {
             label,
             reason: reason.clone(),

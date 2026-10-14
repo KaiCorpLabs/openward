@@ -185,17 +185,22 @@ impl KnownHosts {
         });
     }
 
+    /// The plain keys listed for `host:port` (not the CAs).
+    pub fn listed(&self, host: &str, port: u16) -> Vec<&PublicKey> {
+        let spec = host_spec(host, port);
+        self.entries
+            .iter()
+            .filter(|e| !e.cert_authority && e.patterns.matches(&spec))
+            .map(|e| &e.key)
+            .collect()
+    }
+
     pub fn check(&mut self, host: &str, port: u16, offered: &PublicKeyOrCertificate) -> Verdict {
         let spec = host_spec(host, port);
         match offered {
             PublicKeyOrCertificate::Certificate(cert) => self.check_certificate(host, &spec, cert),
             PublicKeyOrCertificate::PublicKey { key, .. } => {
-                let listed: Vec<&PublicKey> = self
-                    .entries
-                    .iter()
-                    .filter(|e| !e.cert_authority && e.patterns.matches(&spec))
-                    .map(|e| &e.key)
-                    .collect();
+                let listed = self.listed(host, port);
                 if listed.iter().any(|k| k.key_data() == key.key_data()) {
                     Verdict::Known
                 } else if listed.iter().any(|k| k.algorithm() == key.algorithm()) {

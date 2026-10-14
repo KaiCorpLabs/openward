@@ -17,6 +17,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:openward/app.dart';
 import 'package:openward/core/providers.dart';
 import 'package:openward/src/rust/api/app.dart';
+import 'package:openward/src/rust/api/session.dart';
 import 'package:openward/src/rust/api/vault.dart';
 import 'package:openward/src/rust/frb_generated.dart';
 import 'package:openward/tabs/tabs.dart';
@@ -47,6 +48,26 @@ Future<void> _until(
     if (DateTime.now().isAfter(deadline)) fail('timed out waiting for $what');
     await tester.pump(const Duration(milliseconds: 50));
   }
+}
+
+/// The S2 fixtures directory if the test servers are up, else null.
+Future<String?> _servers() async {
+  final fixtures =
+      Platform.environment['S2_FIXTURES'] ??
+      '${Platform.environment['HOME']}/Library/Caches/openward/s2-fixtures';
+  final up = await Socket.connect(
+    '127.0.0.1',
+    22100,
+    timeout: const Duration(milliseconds: 300),
+  ).then((s) => (s..destroy()) == s).catchError((_) => false);
+  return up && File('$fixtures/id_ed25519').existsSync() ? fixtures : null;
+}
+
+Future<void> _doubleTap(WidgetTester tester, String text) async {
+  await tester.tap(find.text(text));
+  await tester.pump(kDoubleTapMinTime);
+  await tester.tap(find.text(text));
+  await tester.pump();
 }
 
 void main() {
@@ -177,21 +198,155 @@ Host web-1 web-2
     await tester.pumpAndSettle();
   });
 
+  testWidgets('ssh: a changed host key is shown and trusted on purpose', (
+    tester,
+  ) async {
+    final fixtures = await _servers();
+    if (fixtures == null) return markTestSkipped('S2 servers not running');
+    // Trusted before: a key the server does not have.
+    await app.trustHostKey(
+      host: '127.0.0.1',
+      port: 22092,
+      key: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILg+ccEU+buKk8f5ORMPyzCAzWM04Omv+MOaI8CvGd7f',
+    );
+    await app.createHost(
+      spec: HostSpec(
+        label: 'ninetwo',
+        address: '127.0.0.1',
+        settings: SettingsSpec(
+          user: 'demo',
+          port: 22092,
+          identityFiles: ['$fixtures/id_ed25519'],
+          agent: AgentKind.off,
+          hostKeyPolicy: KeyPolicy.acceptNew,
+        ),
+      ),
+    );
+    final container = await launch(tester);
+    await _doubleTap(tester, 'ninetwo');
+    final c = container.read(tabsProvider).current!;
+    await _until(tester, () => c.phase == Phase.closed, 'the refusal');
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('La clave de ninetwo ha cambiado'), findsOneWidget);
+    await tester.tap(find.text('Revisar la clave…').first);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(
+      find.text('SHA256:OcXwgqVGP3Hoo1XR2bnfs1DJan7drTyBcfSdQo6EdIE'),
+      findsOneWidget,
+    );
+    expect(find.text('guardada en OpenWard'), findsOneWidget);
+    await _shot(tester, '6-host-key-changed');
+
+    // Not without saying the fingerprint was checked.
+    final trust = find.widgetWithText(
+      FilledButton,
+      'Confiar en la clave nueva',
+    );
+    expect(tester.widget<FilledButton>(trust).onPressed, isNull);
+    await tester.tap(find.text('He comprobado la huella nueva'));
+    await tester.pump();
+    await tester.tap(trust);
+    await _until(tester, () => c.phase == Phase.connected, 'the connection');
+    expect(c.connected!.trust, TrustKind.known);
+    container.read(tabsProvider.notifier).close(0);
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('ssh: through a jump, the route in the details, and back after '
+      'a drop', (tester) async {
+    final fixtures = await _servers();
+    if (fixtures == null) return markTestSkipped('S2 servers not running');
+    final common = SettingsSpec(
+      user: 'demo',
+      identityFiles: ['$fixtures/id_ed25519'],
+      agent: AgentKind.off,
+      hostKeyPolicy: KeyPolicy.acceptNew,
+    );
+    final bastion = await app.createHost(
+      spec: HostSpec(
+        label: 'bastion',
+        address: '127.0.0.1',
+        settings: SettingsSpec(
+          user: common.user,
+          port: 22100,
+          identityFiles: common.identityFiles,
+          agent: common.agent,
+          hostKeyPolicy: common.hostKeyPolicy,
+        ),
+      ),
+    );
+    await app.createHost(
+      spec: HostSpec(
+        label: 'target1',
+        address: 'target1',
+        settings: SettingsSpec(
+          user: common.user,
+          identityFiles: common.identityFiles,
+          agent: common.agent,
+          hostKeyPolicy: common.hostKeyPolicy,
+          route: RouteKind.jump,
+          jumps: [JumpSpec(hostId: bastion)],
+        ),
+      ),
+    );
+    final container = await launch(tester);
+    await _doubleTap(tester, 'target1');
+    final c = container.read(tabsProvider).current!;
+    await _until(tester, () => c.phase == Phase.connected, 'the connection');
+    expect(c.route, ['bastion', 'target1']);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(find.textContaining('Conectado'));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('este equipo → bastion → target1'), findsOneWidget);
+    await _shot(tester, '7-connection-info');
+    await tester.tap(find.text('Cerrar'));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    // Drop the connection on the bastion: it comes back by itself.
+    c.session.text(
+      text:
+          r'echo ppid-$PPID-end'
+          '\n',
+    );
+    await _until(
+      tester,
+      () => c.session.screenText().contains('-end\n'),
+      'the pid',
+    );
+    final line = c.session
+        .screenText()
+        .split('\n')
+        .firstWhere((l) => l.startsWith('ppid-'));
+    final pid = line.substring(5, line.length - 4);
+    final runtime = Platform.environment['S2_RUNTIME'] ?? 'podman';
+    // The shell runs on target1; its sshd's connection is the one carried
+    // through the bastion.
+    final killed = await Process.run(runtime, [
+      'exec',
+      'target1',
+      'kill',
+      '-9',
+      pid,
+    ]);
+    expect(killed.exitCode, 0, reason: '${killed.stderr}');
+    await _until(
+      tester,
+      () => c.phase == Phase.reconnecting && c.reconnectAt != null,
+      'the reconnection banner',
+    );
+    await tester.pump();
+    expect(find.textContaining('Conexión perdida'), findsOneWidget);
+    await _shot(tester, '8-reconnecting');
+    await _until(tester, () => c.phase == Phase.connected, 'the reconnection');
+    container.read(tabsProvider.notifier).close(0);
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('ssh: the host key question in the tab, then the shell', (
     tester,
   ) async {
-    final fixtures =
-        Platform.environment['S2_FIXTURES'] ??
-        '${Platform.environment['HOME']}/Library/Caches/openward/s2-fixtures';
-    final up = await Socket.connect(
-      '127.0.0.1',
-      22100,
-      timeout: const Duration(milliseconds: 300),
-    ).then((s) => (s..destroy()) == s).catchError((_) => false);
-    if (!up || !File('$fixtures/id_ed25519').existsSync()) {
-      markTestSkipped('S2 servers not running');
-      return;
-    }
+    final fixtures = await _servers();
+    if (fixtures == null) return markTestSkipped('S2 servers not running');
     await app.createHost(
       spec: HostSpec(
         label: 'bastion',
@@ -206,10 +361,7 @@ Host web-1 web-2
     );
     final container = await launch(tester);
 
-    await tester.tap(find.text('bastion'));
-    await tester.pump(kDoubleTapMinTime);
-    await tester.tap(find.text('bastion'));
-    await tester.pump();
+    await _doubleTap(tester, 'bastion');
     final c = container.read(tabsProvider).current!;
     await _until(tester, () => c.prompts.isNotEmpty, 'the host key question');
     // Not pumpAndSettle: a terminal pane repaints every frame.

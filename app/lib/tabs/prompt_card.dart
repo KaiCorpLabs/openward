@@ -51,7 +51,13 @@ class _PromptCardState extends State<PromptCard> {
     PromptKind.passphrase => 'Frase de la clave',
     PromptKind.password => 'Contraseña',
     PromptKind.keyboardInteractive =>
-      _p.name.isNotEmpty ? _p.name : 'Verificación',
+      _p.name.isNotEmpty
+          ? _p.name
+          // PAM asks for the password this way.
+          : _p.questions.length == 1 &&
+                _p.questions.single.text.toLowerCase().contains('password')
+          ? 'Contraseña'
+          : 'Verificación',
     null => '',
   };
 

@@ -19,6 +19,11 @@ pub trait EventSink: Send + Sync {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Event {
+    /// The hops this connection goes through, jump hosts first and the
+    /// target last; sent before the first [`Event::Stage`].
+    Route {
+        hops: Vec<String>,
+    },
     /// Connection progress, hop by hop (`hop` counts from 0).
     Stage {
         hop: usize,
@@ -31,6 +36,14 @@ pub enum Event {
         prompt: Prompt,
     },
     Connected(Connected),
+    /// An established connection was lost; it is tried again after
+    /// `delay_ms`. The screen stays; [`crate::App::connect`] retries now and
+    /// closing the terminal gives up.
+    Reconnecting {
+        attempt: u32,
+        delay_ms: u64,
+        reason: Failure,
+    },
     /// A local program is running: input goes to it from now on.
     Started {
         program: String,
@@ -52,10 +65,15 @@ pub enum Stage {
 /// What the status bar shows about a live connection.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Connected {
+    /// The target, as the vault has it.
+    pub host: String,
+    pub port: u16,
     pub kex: String,
     pub post_quantum: bool,
     pub cipher: String,
     pub host_key_algorithm: String,
+    /// `SHA256:…` of the target's host key.
+    pub fingerprint: String,
     pub trust: Trust,
     pub hops: usize,
     pub connect_ms: f64,
@@ -119,21 +137,44 @@ pub enum Answer {
     Cancel,
 }
 
+/// A host key that differs from the one trusted.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ChangedKey {
+    pub label: String,
+    pub host: String,
+    pub port: u16,
+    pub algorithm: String,
+    pub fingerprint: String,
+    /// The offered key, OpenSSH format.
+    pub key: String,
+    /// The keys trusted so far for this host and key type.
+    pub previous: Vec<PreviousKey>,
+}
+
+/// A key that was trusted for a host before it changed.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PreviousKey {
+    pub fingerprint: String,
+    pub source: KeySource,
+}
+
+/// Where a trusted key is written down.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum KeySource {
+    /// OpenWard's vault: trusting the new key replaces it.
+    OpenWard,
+    /// `~/.ssh/known_hosts`: OpenWard never writes there, so OpenSSH keeps
+    /// warning until the user updates it.
+    OpenSsh,
+}
+
 /// Why a connection did not come up or went away.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Failure {
     /// The host key differs from the one trusted: possibly an attack. The
     /// new key is only trusted by an explicit action
     /// ([`crate::App::trust_host_key`]).
-    HostKeyChanged {
-        label: String,
-        host: String,
-        port: u16,
-        algorithm: String,
-        fingerprint: String,
-        /// The offered key, OpenSSH format.
-        key: String,
-    },
+    HostKeyChanged(Box<ChangedKey>),
     /// Unknown key refused: by the user, or by a strict policy.
     HostKeyRejected {
         label: String,
@@ -160,9 +201,9 @@ pub enum Failure {
 impl std::fmt::Display for Failure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::HostKeyChanged {
-                label, fingerprint, ..
-            } => write!(f, "{label}: host key changed (now {fingerprint})"),
+            Self::HostKeyChanged(c) => {
+                write!(f, "{}: host key changed (now {})", c.label, c.fingerprint)
+            }
             Self::HostKeyRejected { label } => write!(f, "{label}: host key not trusted"),
             Self::BadCertificate { label, reason } => {
                 write!(f, "{label}: bad host certificate ({reason})")

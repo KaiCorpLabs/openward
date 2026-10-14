@@ -62,6 +62,9 @@ jobs:
         run: spikes/s2-ssh/servers/up.sh
       - name: Test
         working-directory: core
+        env:
+          # The reconnection test drops a connection inside a container.
+          S2_RUNTIME: docker
         run: |
           cargo test --workspace
           # The reference engine of the spikes, off by default.

@@ -58,6 +58,10 @@ String statusText(TerminalController c) {
       return s == null
           ? (c.isLocal ? 'Arrancando…' : 'Conectando…')
           : stageText(s);
+    case Phase.reconnecting:
+      final s = c.stage;
+      if (s != null) return 'Reconectando: ${stageText(s)}';
+      return 'Reconectando…';
     case Phase.running:
       return 'Terminal local';
     case Phase.connected:
@@ -68,6 +72,7 @@ String statusText(TerminalController c) {
           : '';
       return 'Conectado · $pq · ${k.cipher}$via';
     case Phase.closed:
+      if (c.cancelled) return 'Cancelado.';
       final closed = c.closed;
       final failure = closed?.failure;
       if (failure != null) return failureText(failure);

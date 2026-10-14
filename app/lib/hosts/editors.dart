@@ -62,12 +62,7 @@ class _SettingsForm {
       agent = original.agent,
       route = original.route,
       policy = original.hostKeyPolicy,
-      jump =
-          original.route == RouteKind.jump &&
-              original.jumps.length == 1 &&
-              original.jumps.single.hostId != null
-          ? original.jumps.single.hostId
-          : null;
+      jumps = [...original.jumps];
 
   final SettingsSpec original;
   final TextEditingController user, port, keys, socket, command;
@@ -75,17 +70,12 @@ class _SettingsForm {
   RouteKind? route;
   KeyPolicy? policy;
 
-  /// The host to jump through, when the route is a single saved host.
-  String? jump;
-
-  /// A chain this form cannot edit (several jumps, or bare addresses, as
-  /// imports bring): kept as it is unless the route is changed.
-  bool get complexChain =>
-      original.route == RouteKind.jump &&
-      !(original.jumps.length == 1 && original.jumps.single.hostId != null);
+  /// The jump chain, first hop first.
+  final List<JumpSpec> jumps;
+  final TextEditingController jumpAddress = TextEditingController();
 
   void dispose() {
-    for (final c in [user, port, keys, socket, command]) {
+    for (final c in [user, port, keys, socket, command, jumpAddress]) {
       c.dispose();
     }
   }
@@ -99,8 +89,8 @@ class _SettingsForm {
     if (agent == AgentKind.socket && socket.text.trim().isEmpty) {
       return 'Falta la ruta del socket del agente.';
     }
-    if (route == RouteKind.jump && jump == null && !complexChain) {
-      return 'Elige el host por el que saltar.';
+    if (route == RouteKind.jump && jumps.isEmpty) {
+      return 'Añade al menos un host por el que saltar.';
     }
     if (route == RouteKind.command && command.text.trim().isEmpty) {
       return 'Falta el ProxyCommand.';
@@ -114,7 +104,6 @@ class _SettingsForm {
         .map((l) => l.trim())
         .where((l) => l.isNotEmpty)
         .toList();
-    final keepChain = route == RouteKind.jump && complexChain && jump == null;
     return SettingsSpec(
       user: user.text.trim().isEmpty ? null : user.text.trim(),
       port: int.tryParse(port.text.trim()),
@@ -124,11 +113,7 @@ class _SettingsForm {
       agent: agent,
       agentSocket: agent == AgentKind.socket ? socket.text.trim() : '',
       route: route,
-      jumps: route != RouteKind.jump
-          ? const []
-          : keepChain
-          ? original.jumps
-          : [JumpSpec(hostId: jump)],
+      jumps: route == RouteKind.jump ? jumps : const [],
       proxyCommand: route == RouteKind.command ? command.text.trim() : '',
       keepaliveSecs: original.keepaliveSecs,
       agentForward: original.agentForward,
@@ -347,24 +332,11 @@ class _SettingsFieldsState extends State<_SettingsFields> {
         ),
         if (f.route == RouteKind.jump) ...[
           const SizedBox(height: 12),
-          DropdownButtonFormField<String?>(
-            initialValue: f.jump,
-            decoration: InputDecoration(
-              labelText: 'Saltar por',
-              helperText: f.complexChain && f.jump == null
-                  ? 'Se mantiene la cadena importada (${f.original.jumps.length} saltos).'
-                  : null,
-            ),
-            items: [
-              if (f.complexChain)
-                const DropdownMenuItem(
-                  value: null,
-                  child: Text('La cadena importada'),
-                ),
-              for (final (id, label) in widget.hosts)
-                DropdownMenuItem(value: id, child: Text(label)),
-            ],
-            onChanged: (v) => setState(() => f.jump = v),
+          _JumpChain(
+            jumps: f.jumps,
+            hosts: widget.hosts,
+            address: f.jumpAddress,
+            onChanged: () => setState(() {}),
           ),
         ],
         if (f.route == RouteKind.command) ...[
@@ -377,6 +349,158 @@ class _SettingsFieldsState extends State<_SettingsFields> {
             ),
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// `[user@]host[:port]`, with `[…]` around IPv6 addresses; null if it
+/// does not parse.
+JumpSpec? parseJumpAddress(String text) {
+  var rest = text.trim();
+  if (rest.isEmpty || rest.contains(' ')) return null;
+  String? user;
+  final at = rest.lastIndexOf('@');
+  if (at >= 0) {
+    user = rest.substring(0, at);
+    rest = rest.substring(at + 1);
+    if (user.isEmpty) return null;
+  }
+  String host = rest;
+  int? port;
+  if (rest.startsWith('[')) {
+    final close = rest.indexOf(']');
+    if (close < 0) return null;
+    host = rest.substring(1, close);
+    final after = rest.substring(close + 1);
+    if (after.isNotEmpty) {
+      if (!after.startsWith(':')) return null;
+      port = int.tryParse(after.substring(1));
+      if (port == null) return null;
+    }
+  } else if (rest.contains(':')) {
+    final colon = rest.lastIndexOf(':');
+    host = rest.substring(0, colon);
+    port = int.tryParse(rest.substring(colon + 1));
+    if (port == null || host.contains(':')) return null;
+  }
+  if (host.isEmpty || (port != null && (port < 1 || port > 65535))) {
+    return null;
+  }
+  return JumpSpec(address: host, user: user, port: port);
+}
+
+/// The hops in order, each removable, and ways to add one: a saved host or
+/// an address.
+class _JumpChain extends StatelessWidget {
+  const _JumpChain({
+    required this.jumps,
+    required this.hosts,
+    required this.address,
+    required this.onChanged,
+  });
+
+  final List<JumpSpec> jumps;
+  final List<(String, String)> hosts;
+  final TextEditingController address;
+  final VoidCallback onChanged;
+
+  String _label(JumpSpec j) {
+    final id = j.hostId;
+    if (id != null) {
+      for (final (hid, label) in hosts) {
+        if (hid == id) return label;
+      }
+      return '(host eliminado)';
+    }
+    final host = j.address ?? '';
+    final shown = host.contains(':') ? '[$host]' : host;
+    return '${j.user == null ? '' : '${j.user}@'}$shown'
+        '${j.port == null ? '' : ':${j.port}'}';
+  }
+
+  void _addAddress() {
+    final j = parseJumpAddress(address.text);
+    if (j == null) return;
+    jumps.add(j);
+    address.clear();
+    onChanged();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Saltar por, en orden', style: theme.textTheme.bodySmall),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            for (var i = 0; i < jumps.length; i++) ...[
+              if (i > 0) const Icon(Icons.arrow_forward, size: 14),
+              InputChip(
+                label: Text(_label(jumps[i])),
+                avatar: Icon(
+                  jumps[i].hostId != null ? Icons.dns_outlined : Icons.lan,
+                  size: 14,
+                ),
+                onDeleted: () {
+                  jumps.removeAt(i);
+                  onChanged();
+                },
+              ),
+            ],
+            if (jumps.isEmpty)
+              Text(
+                'Ninguno todavía.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                key: ValueKey(jumps.length),
+                decoration: const InputDecoration(
+                  labelText: 'Añadir un host guardado',
+                ),
+                items: [
+                  for (final (id, label) in hosts)
+                    DropdownMenuItem(value: id, child: Text(label)),
+                ],
+                onChanged: (id) {
+                  if (id == null) return;
+                  jumps.add(JumpSpec(hostId: id));
+                  onChanged();
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextField(
+                controller: address,
+                decoration: InputDecoration(
+                  labelText: 'o una dirección',
+                  hintText: 'usuario@host:puerto',
+                  suffixIcon: IconButton(
+                    tooltip: 'Añadir',
+                    icon: const Icon(Icons.add),
+                    onPressed: _addAddress,
+                  ),
+                ),
+                onSubmitted: (_) => _addAddress(),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }

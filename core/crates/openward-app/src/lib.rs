@@ -16,7 +16,8 @@ pub mod terminal;
 mod connect;
 
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard, Weak};
+use std::time::Duration;
 
 use openward_import::ssh_config::Paths;
 use openward_pty::Spawn;
@@ -93,7 +94,8 @@ impl App {
         host: ItemId,
         sink: Arc<dyn EventSink>,
     ) -> Result<(), PlanError> {
-        let plan = self.plan(host)?;
+        // Checked now so that a plan that cannot run fails at once.
+        self.plan(host)?;
         terminal.close();
         let ctx = Ctx {
             vault: Arc::clone(&self.vault),
@@ -103,61 +105,38 @@ impl App {
         };
         let term = Arc::downgrade(terminal);
         let task = self.runtime.spawn(async move {
-            let closed = |exit_code, failure| Event::Closed { exit_code, failure };
-            let sessions = match connect::run(&plan, &ctx).await {
-                Ok(sessions) => sessions,
-                Err(failure) => return sink.send(closed(None, Some(failure))),
-            };
-            let Some(pipe) = term.upgrade().map(|t| t.pipe()) else {
-                return;
-            };
-            let last = plan.hops.len() - 1;
-            ctx.sink.send(Event::Stage {
-                hop: last,
-                hops: plan.hops.len(),
-                label: plan.hops[last].label.clone(),
-                stage: Stage::OpeningShell,
-            });
-            let target = sessions.last().expect("a plan has hops");
-            let size = pipe.size();
-            let channel = match target
-                .shell_with(
-                    &plan.term,
-                    u32::from(size.cols),
-                    u32::from(size.rows),
-                    &plan.env,
-                    plan.agent_forward,
-                )
-                .await
-            {
-                Ok(channel) => channel,
-                Err(e) => {
-                    let failure = Failure::Other(format!("opening the shell: {e:#}"));
-                    return sink.send(closed(None, Some(failure)));
+            let mut attempt = 0;
+            loop {
+                // Again on every attempt: the host may have been edited.
+                let plan = match Plan::for_host(&lock(&ctx.vault), host, &ctx.local) {
+                    Ok(plan) => plan,
+                    Err(e) => {
+                        return sink.send(Event::Closed {
+                            exit_code: None,
+                            failure: Some(Failure::Other(e.to_string())),
+                        });
+                    }
+                };
+                let (exit_code, failure, connected) = session(&plan, &ctx, &term).await;
+                if connected {
+                    attempt = 0;
                 }
-            };
-            // Input goes to the shell before anyone hears it is connected.
-            let pump = pipe.pump_ssh(channel, &plan.hops[last].label);
-            drop(pipe);
-            let info = target.info();
-            sink.send(Event::Connected(Connected {
-                post_quantum: info.post_quantum(),
-                kex: info.kex,
-                cipher: info.cipher,
-                host_key_algorithm: info.host_key,
-                trust: match info.verdict {
-                    Some(Verdict::Certified { ca, .. }) => Trust::Certified { ca },
-                    Some(Verdict::Learned) => Trust::New,
-                    _ => Trust::Known,
-                },
-                hops: plan.hops.len(),
-                connect_ms: info.connect_ms,
-            }));
-            let (exit_code, failure) = pump.await;
-            for session in sessions.iter().rev() {
-                session.disconnect().await;
+                // Only a connection that was up and then went away is
+                // tried again, and only while the network is the problem.
+                let lost =
+                    matches!(failure, Some(Failure::Network { .. })) && (connected || attempt > 0);
+                if !lost || attempt >= RECONNECT_ATTEMPTS || term.strong_count() == 0 {
+                    return sink.send(Event::Closed { exit_code, failure });
+                }
+                attempt += 1;
+                let delay = reconnect_delay(attempt);
+                sink.send(Event::Reconnecting {
+                    attempt,
+                    delay_ms: delay.as_millis() as u64,
+                    reason: failure.expect("a lost connection has a reason"),
+                });
+                tokio::time::sleep(delay).await;
             }
-            sink.send(closed(exit_code, failure));
         });
         terminal.set_task(task);
         Ok(())
@@ -207,6 +186,86 @@ impl App {
     }
 }
 
+/// Tries after losing a connection, before giving up.
+const RECONNECT_ATTEMPTS: u32 = 8;
+
+/// 1, 2, 4, 8, 16 and then 30 seconds.
+fn reconnect_delay(attempt: u32) -> Duration {
+    Duration::from_secs((1u64 << attempt.saturating_sub(1).min(5)).min(30))
+}
+
+/// One connection, from the first hop to the shell closing. Returns the
+/// exit code, why it ended if not normally, and whether it got as far as
+/// the shell.
+async fn session(
+    plan: &Plan,
+    ctx: &Ctx,
+    term: &Weak<Terminal>,
+) -> (Option<u32>, Option<Failure>, bool) {
+    let sink = &ctx.sink;
+    sink.send(Event::Route {
+        hops: plan.hops.iter().map(|h| h.label.clone()).collect(),
+    });
+    let sessions = match connect::run(plan, ctx).await {
+        Ok(sessions) => sessions,
+        Err(failure) => return (None, Some(failure), false),
+    };
+    let Some(pipe) = term.upgrade().map(|t| t.pipe()) else {
+        return (None, None, false);
+    };
+    let last = plan.hops.len() - 1;
+    let target_hop = &plan.hops[last];
+    sink.send(Event::Stage {
+        hop: last,
+        hops: plan.hops.len(),
+        label: target_hop.label.clone(),
+        stage: Stage::OpeningShell,
+    });
+    let target = sessions.last().expect("a plan has hops");
+    let size = pipe.size();
+    let channel = match target
+        .shell_with(
+            &plan.term,
+            u32::from(size.cols),
+            u32::from(size.rows),
+            &plan.env,
+            plan.agent_forward,
+        )
+        .await
+    {
+        Ok(channel) => channel,
+        Err(e) => {
+            let failure = Failure::Other(format!("opening the shell: {e:#}"));
+            return (None, Some(failure), false);
+        }
+    };
+    // Input goes to the shell before anyone hears it is connected.
+    let pump = pipe.pump_ssh(channel, &target_hop.label);
+    drop(pipe);
+    let info = target.info();
+    sink.send(Event::Connected(Connected {
+        host: target_hop.address.clone(),
+        port: target_hop.port,
+        post_quantum: info.post_quantum(),
+        kex: info.kex,
+        cipher: info.cipher,
+        host_key_algorithm: info.host_key,
+        fingerprint: info.host_key_fingerprint,
+        trust: match info.verdict {
+            Some(Verdict::Certified { ca, .. }) => Trust::Certified { ca },
+            Some(Verdict::Learned) => Trust::New,
+            _ => Trust::Known,
+        },
+        hops: plan.hops.len(),
+        connect_ms: info.connect_ms,
+    }));
+    let (exit_code, failure) = pump.await;
+    for session in sessions.iter().rev() {
+        session.disconnect().await;
+    }
+    (exit_code, failure, true)
+}
+
 /// The data directory, readable by its owner only on Unix.
 fn create_private_dir(dir: &Path) -> std::io::Result<()> {
     if dir.is_dir() {
@@ -222,4 +281,15 @@ fn create_private_dir(dir: &Path) -> std::io::Result<()> {
     }
     #[cfg(not(unix))]
     std::fs::create_dir_all(dir)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reconnect_delays_grow_to_half_a_minute() {
+        let secs: Vec<u64> = (1..=8).map(|a| reconnect_delay(a).as_secs()).collect();
+        assert_eq!(secs, [1, 2, 4, 8, 16, 30, 30, 30]);
+    }
 }

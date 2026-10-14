@@ -6,7 +6,7 @@ use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Mutex, OnceLock, Weak};
 use std::time::{Duration, Instant};
 
-use openward_app::events::{Connected, Trust};
+use openward_app::events::{ChangedKey, Connected, KeySource, PreviousKey, Trust};
 use openward_app::vault::proto::{Agent, Data, Host, HostKeyPolicy, ItemId, Jump, Route, Settings};
 use openward_app::{Answer, App, Event, EventSink, Failure, Local, Prompt, Terminal};
 use zeroize::Zeroizing;
@@ -146,7 +146,10 @@ fn outcome(rx: &Receiver<Event>) -> (Result<Connected, Option<Failure>>, Vec<Pro
             Event::Connected(c) => return (Ok(c), prompts),
             Event::Closed { failure, .. } => return (Err(failure), prompts),
             Event::Prompt { prompt, .. } => prompts.push(prompt),
-            Event::Stage { .. } | Event::Started { .. } => {}
+            Event::Stage { .. }
+            | Event::Started { .. }
+            | Event::Route { .. }
+            | Event::Reconnecting { .. } => {}
         }
     }
 }
@@ -251,6 +254,64 @@ fn dropping_the_terminal_hangs_up() {
     }
 }
 
+/// The container runtime the servers run on (`up.sh` reads the same).
+fn runtime() -> String {
+    std::env::var("S2_RUNTIME").unwrap_or_else(|_| "podman".into())
+}
+
+/// A connection that drops is made again, on the same screen.
+#[test]
+fn a_lost_connection_comes_back() {
+    let f = Fixture::new(servers!());
+    let host = f.host(
+        "bastion",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: f.key("id_ed25519"),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    let (term, rx) = f.connect(host, |_| Answer::Cancel);
+    outcome(&rx).0.unwrap();
+    // The shell's parent is this connection's sshd: killing it drops the
+    // connection without a goodbye, like a network that goes away.
+    term.text("echo ppid-$PPID-end\n");
+    wait_for(&term, "-end\n");
+    let screen = term.screen_text();
+    let pid = screen
+        .lines()
+        .find_map(|l| l.strip_prefix("ppid-")?.strip_suffix("-end"))
+        .expect("the pid line")
+        .to_owned();
+    let killed = std::process::Command::new(runtime())
+        .args(["exec", "bastion", "kill", "-9", &pid])
+        .status()
+        .unwrap();
+    assert!(killed.success());
+
+    let deadline = Instant::now() + Duration::from_secs(20);
+    let mut reconnecting = None;
+    loop {
+        let left = deadline.saturating_duration_since(Instant::now());
+        match rx.recv_timeout(left).expect("no reconnection") {
+            Event::Reconnecting {
+                attempt, reason, ..
+            } => reconnecting = Some((attempt, reason)),
+            Event::Connected(_) => break,
+            Event::Closed { failure, .. } => panic!("gave up: {failure:?}"),
+            _ => {}
+        }
+    }
+    let (attempt, reason) = reconnecting.expect("no Reconnecting event");
+    assert_eq!(attempt, 1);
+    assert!(matches!(reason, Failure::Network { .. }), "{reason:?}");
+    term.text("echo back-$((6*7))\n");
+    wait_for(&term, "back-42");
+}
+
 #[test]
 fn an_unknown_host_is_asked_about() {
     let f = Fixture::new(servers!());
@@ -306,13 +367,24 @@ fn a_changed_host_key_is_refused_until_trusted() {
     let (_t, rx) = f.connect(host, |_| Answer::Accept);
     let (result, prompts) = outcome(&rx);
     assert!(prompts.is_empty(), "a changed key is never asked about");
-    let Err(Some(Failure::HostKeyChanged {
-        key, fingerprint, ..
-    })) = result
-    else {
+    let Err(Some(Failure::HostKeyChanged(changed))) = result else {
         panic!("{result:?}")
     };
+    let ChangedKey {
+        key,
+        fingerprint,
+        previous,
+        ..
+    } = *changed;
     assert!(fingerprint.starts_with("SHA256:"));
+    // What was trusted before, and where: OpenWard's own list.
+    assert_eq!(
+        previous,
+        [PreviousKey {
+            fingerprint: "SHA256:OcXwgqVGP3Hoo1XR2bnfs1DJan7drTyBcfSdQo6EdIE".into(),
+            source: KeySource::OpenWard,
+        }]
+    );
 
     f.app.trust_host_key("127.0.0.1", 22089, &key).unwrap();
     let (_t, rx) = f.connect(host, |_| Answer::Cancel);

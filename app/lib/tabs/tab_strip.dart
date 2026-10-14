@@ -104,7 +104,7 @@ class _Tab extends StatelessWidget {
       builder: (context, _) {
         final c = controller;
         final dot = switch (c.phase) {
-          Phase.connecting => scheme.tertiary,
+          Phase.connecting || Phase.reconnecting => scheme.tertiary,
           Phase.connected || Phase.running => scheme.primary,
           Phase.closed =>
             c.closed?.failure != null || c.error != null

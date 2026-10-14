@@ -1768,6 +1768,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ReconnectingView dco_decode_box_autoadd_reconnecting_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_reconnecting_view(raw);
+  }
+
+  @protected
   RouteKind dco_decode_box_autoadd_route_kind(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_route_kind(raw);
@@ -1813,17 +1819,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ConnectedView dco_decode_connected_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
     return ConnectedView(
-      kex: dco_decode_String(arr[0]),
-      postQuantum: dco_decode_bool(arr[1]),
-      cipher: dco_decode_String(arr[2]),
-      hostKeyAlgorithm: dco_decode_String(arr[3]),
-      trust: dco_decode_trust_kind(arr[4]),
-      ca: dco_decode_String(arr[5]),
-      hops: dco_decode_u_32(arr[6]),
-      connectMs: dco_decode_f_64(arr[7]),
+      host: dco_decode_String(arr[0]),
+      port: dco_decode_u_16(arr[1]),
+      kex: dco_decode_String(arr[2]),
+      postQuantum: dco_decode_bool(arr[3]),
+      cipher: dco_decode_String(arr[4]),
+      hostKeyAlgorithm: dco_decode_String(arr[5]),
+      fingerprint: dco_decode_String(arr[6]),
+      trust: dco_decode_trust_kind(arr[7]),
+      ca: dco_decode_String(arr[8]),
+      hops: dco_decode_u_32(arr[9]),
+      connectMs: dco_decode_f_64(arr[10]),
     );
   }
 
@@ -1861,8 +1870,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   FailureView dco_decode_failure_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 11)
-      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
     return FailureView(
       kind: dco_decode_opt_box_autoadd_failure_kind(arr[0]),
       message: dco_decode_String(arr[1]),
@@ -1875,6 +1884,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       key: dco_decode_String(arr[8]),
       methods: dco_decode_list_String(arr[9]),
       reason: dco_decode_String(arr[10]),
+      previous: dco_decode_list_previous_key_view(arr[11]),
     );
   }
 
@@ -2047,6 +2057,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  KeySourceKind dco_decode_key_source_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return KeySourceKind.values[raw as int];
+  }
+
+  @protected
   KnownHostView dco_decode_known_host_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -2107,6 +2123,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<KnownHostView> dco_decode_list_known_host_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_known_host_view).toList();
+  }
+
+  @protected
+  List<PreviousKeyView> dco_decode_list_previous_key_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_previous_key_view).toList();
   }
 
   @protected
@@ -2188,6 +2210,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ReconnectingView? dco_decode_opt_box_autoadd_reconnecting_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_reconnecting_view(raw);
+  }
+
+  @protected
   RouteKind? dco_decode_opt_box_autoadd_route_kind(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_route_kind(raw);
@@ -2248,6 +2276,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  PreviousKeyView dco_decode_previous_key_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return PreviousKeyView(
+      fingerprint: dco_decode_String(arr[0]),
+      source: dco_decode_key_source_kind(arr[1]),
+    );
+  }
+
+  @protected
   PromptAnswer dco_decode_prompt_answer(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -2301,6 +2341,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ReconnectingView dco_decode_reconnecting_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return ReconnectingView(
+      attempt: dco_decode_u_32(arr[0]),
+      delayMs: dco_decode_u_64(arr[1]),
+      reason: dco_decode_failure_view(arr[2]),
+    );
+  }
+
+  @protected
   RouteKind dco_decode_route_kind(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return RouteKind.values[raw as int];
@@ -2310,15 +2363,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   SessionEvent dco_decode_session_event(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
     return SessionEvent(
       kind: dco_decode_session_event_kind(arr[0]),
-      stage: dco_decode_opt_box_autoadd_stage_view(arr[1]),
-      prompt: dco_decode_opt_box_autoadd_prompt_view(arr[2]),
-      connected: dco_decode_opt_box_autoadd_connected_view(arr[3]),
-      program: dco_decode_opt_String(arr[4]),
-      closed: dco_decode_opt_box_autoadd_closed_view(arr[5]),
+      route: dco_decode_list_String(arr[1]),
+      stage: dco_decode_opt_box_autoadd_stage_view(arr[2]),
+      prompt: dco_decode_opt_box_autoadd_prompt_view(arr[3]),
+      connected: dco_decode_opt_box_autoadd_connected_view(arr[4]),
+      reconnecting: dco_decode_opt_box_autoadd_reconnecting_view(arr[5]),
+      program: dco_decode_opt_String(arr[6]),
+      closed: dco_decode_opt_box_autoadd_closed_view(arr[7]),
     );
   }
 
@@ -2638,6 +2693,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ReconnectingView sse_decode_box_autoadd_reconnecting_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_reconnecting_view(deserializer));
+  }
+
+  @protected
   RouteKind sse_decode_box_autoadd_route_kind(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_route_kind(deserializer));
@@ -2678,19 +2741,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   ConnectedView sse_decode_connected_view(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_host = sse_decode_String(deserializer);
+    var var_port = sse_decode_u_16(deserializer);
     var var_kex = sse_decode_String(deserializer);
     var var_postQuantum = sse_decode_bool(deserializer);
     var var_cipher = sse_decode_String(deserializer);
     var var_hostKeyAlgorithm = sse_decode_String(deserializer);
+    var var_fingerprint = sse_decode_String(deserializer);
     var var_trust = sse_decode_trust_kind(deserializer);
     var var_ca = sse_decode_String(deserializer);
     var var_hops = sse_decode_u_32(deserializer);
     var var_connectMs = sse_decode_f_64(deserializer);
     return ConnectedView(
+      host: var_host,
+      port: var_port,
       kex: var_kex,
       postQuantum: var_postQuantum,
       cipher: var_cipher,
       hostKeyAlgorithm: var_hostKeyAlgorithm,
+      fingerprint: var_fingerprint,
       trust: var_trust,
       ca: var_ca,
       hops: var_hops,
@@ -2739,6 +2808,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_key = sse_decode_String(deserializer);
     var var_methods = sse_decode_list_String(deserializer);
     var var_reason = sse_decode_String(deserializer);
+    var var_previous = sse_decode_list_previous_key_view(deserializer);
     return FailureView(
       kind: var_kind,
       message: var_message,
@@ -2751,6 +2821,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       key: var_key,
       methods: var_methods,
       reason: var_reason,
+      previous: var_previous,
     );
   }
 
@@ -2934,6 +3005,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  KeySourceKind sse_decode_key_source_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return KeySourceKind.values[inner];
+  }
+
+  @protected
   KnownHostView sse_decode_known_host_view(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_id = sse_decode_String(deserializer);
@@ -3046,6 +3124,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <KnownHostView>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_known_host_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<PreviousKeyView> sse_decode_list_previous_key_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <PreviousKeyView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_previous_key_view(deserializer));
     }
     return ans_;
   }
@@ -3210,6 +3302,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ReconnectingView? sse_decode_opt_box_autoadd_reconnecting_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_reconnecting_view(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   RouteKind? sse_decode_opt_box_autoadd_route_kind(
     SseDeserializer deserializer,
   ) {
@@ -3314,6 +3419,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  PreviousKeyView sse_decode_previous_key_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_fingerprint = sse_decode_String(deserializer);
+    var var_source = sse_decode_key_source_kind(deserializer);
+    return PreviousKeyView(fingerprint: var_fingerprint, source: var_source);
+  }
+
+  @protected
   PromptAnswer sse_decode_prompt_answer(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_kind = sse_decode_answer_kind(deserializer);
@@ -3370,6 +3483,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ReconnectingView sse_decode_reconnecting_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_attempt = sse_decode_u_32(deserializer);
+    var var_delayMs = sse_decode_u_64(deserializer);
+    var var_reason = sse_decode_failure_view(deserializer);
+    return ReconnectingView(
+      attempt: var_attempt,
+      delayMs: var_delayMs,
+      reason: var_reason,
+    );
+  }
+
+  @protected
   RouteKind sse_decode_route_kind(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
@@ -3380,16 +3506,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   SessionEvent sse_decode_session_event(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_kind = sse_decode_session_event_kind(deserializer);
+    var var_route = sse_decode_list_String(deserializer);
     var var_stage = sse_decode_opt_box_autoadd_stage_view(deserializer);
     var var_prompt = sse_decode_opt_box_autoadd_prompt_view(deserializer);
     var var_connected = sse_decode_opt_box_autoadd_connected_view(deserializer);
+    var var_reconnecting = sse_decode_opt_box_autoadd_reconnecting_view(
+      deserializer,
+    );
     var var_program = sse_decode_opt_String(deserializer);
     var var_closed = sse_decode_opt_box_autoadd_closed_view(deserializer);
     return SessionEvent(
       kind: var_kind,
+      route: var_route,
       stage: var_stage,
       prompt: var_prompt,
       connected: var_connected,
+      reconnecting: var_reconnecting,
       program: var_program,
       closed: var_closed,
     );
@@ -3764,6 +3896,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_reconnecting_view(
+    ReconnectingView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_reconnecting_view(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_route_kind(
     RouteKind self,
     SseSerializer serializer,
@@ -3812,10 +3953,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   void sse_encode_connected_view(ConnectedView self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.host, serializer);
+    sse_encode_u_16(self.port, serializer);
     sse_encode_String(self.kex, serializer);
     sse_encode_bool(self.postQuantum, serializer);
     sse_encode_String(self.cipher, serializer);
     sse_encode_String(self.hostKeyAlgorithm, serializer);
+    sse_encode_String(self.fingerprint, serializer);
     sse_encode_trust_kind(self.trust, serializer);
     sse_encode_String(self.ca, serializer);
     sse_encode_u_32(self.hops, serializer);
@@ -3861,6 +4005,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.key, serializer);
     sse_encode_list_String(self.methods, serializer);
     sse_encode_String(self.reason, serializer);
+    sse_encode_list_previous_key_view(self.previous, serializer);
   }
 
   @protected
@@ -3985,6 +4130,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_key_source_kind(
+    KeySourceKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
   void sse_encode_known_host_view(
     KnownHostView self,
     SseSerializer serializer,
@@ -4084,6 +4238,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_known_host_view(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_previous_key_view(
+    List<PreviousKeyView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_previous_key_view(item, serializer);
     }
   }
 
@@ -4246,6 +4412,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_reconnecting_view(
+    ReconnectingView? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_reconnecting_view(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_box_autoadd_route_kind(
     RouteKind? self,
     SseSerializer serializer,
@@ -4349,6 +4528,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_previous_key_view(
+    PreviousKeyView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.fingerprint, serializer);
+    sse_encode_key_source_kind(self.source, serializer);
+  }
+
+  @protected
   void sse_encode_prompt_answer(PromptAnswer self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_answer_kind(self.kind, serializer);
@@ -4387,6 +4576,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_reconnecting_view(
+    ReconnectingView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.attempt, serializer);
+    sse_encode_u_64(self.delayMs, serializer);
+    sse_encode_failure_view(self.reason, serializer);
+  }
+
+  @protected
   void sse_encode_route_kind(RouteKind self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.index, serializer);
@@ -4396,9 +4596,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_session_event(SessionEvent self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_session_event_kind(self.kind, serializer);
+    sse_encode_list_String(self.route, serializer);
     sse_encode_opt_box_autoadd_stage_view(self.stage, serializer);
     sse_encode_opt_box_autoadd_prompt_view(self.prompt, serializer);
     sse_encode_opt_box_autoadd_connected_view(self.connected, serializer);
+    sse_encode_opt_box_autoadd_reconnecting_view(self.reconnecting, serializer);
     sse_encode_opt_String(self.program, serializer);
     sse_encode_opt_box_autoadd_closed_view(self.closed, serializer);
   }

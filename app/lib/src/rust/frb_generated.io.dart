@@ -124,6 +124,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PromptView dco_decode_box_autoadd_prompt_view(dynamic raw);
 
   @protected
+  ReconnectingView dco_decode_box_autoadd_reconnecting_view(dynamic raw);
+
+  @protected
   RouteKind dco_decode_box_autoadd_route_kind(dynamic raw);
 
   @protected
@@ -202,6 +205,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   KeyPolicy dco_decode_key_policy(dynamic raw);
 
   @protected
+  KeySourceKind dco_decode_key_source_kind(dynamic raw);
+
+  @protected
   KnownHostView dco_decode_known_host_view(dynamic raw);
 
   @protected
@@ -227,6 +233,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<KnownHostView> dco_decode_list_known_host_view(dynamic raw);
+
+  @protected
+  List<PreviousKeyView> dco_decode_list_previous_key_view(dynamic raw);
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
@@ -268,6 +277,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PromptView? dco_decode_opt_box_autoadd_prompt_view(dynamic raw);
 
   @protected
+  ReconnectingView? dco_decode_opt_box_autoadd_reconnecting_view(dynamic raw);
+
+  @protected
   RouteKind? dco_decode_opt_box_autoadd_route_kind(dynamic raw);
 
   @protected
@@ -298,6 +310,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PointerButton dco_decode_pointer_button(dynamic raw);
 
   @protected
+  PreviousKeyView dco_decode_previous_key_view(dynamic raw);
+
+  @protected
   PromptAnswer dco_decode_prompt_answer(dynamic raw);
 
   @protected
@@ -308,6 +323,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   QuestionView dco_decode_question_view(dynamic raw);
+
+  @protected
+  ReconnectingView dco_decode_reconnecting_view(dynamic raw);
 
   @protected
   RouteKind dco_decode_route_kind(dynamic raw);
@@ -451,6 +469,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PromptView sse_decode_box_autoadd_prompt_view(SseDeserializer deserializer);
 
   @protected
+  ReconnectingView sse_decode_box_autoadd_reconnecting_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RouteKind sse_decode_box_autoadd_route_kind(SseDeserializer deserializer);
 
   @protected
@@ -531,6 +554,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   KeyPolicy sse_decode_key_policy(SseDeserializer deserializer);
 
   @protected
+  KeySourceKind sse_decode_key_source_kind(SseDeserializer deserializer);
+
+  @protected
   KnownHostView sse_decode_known_host_view(SseDeserializer deserializer);
 
   @protected
@@ -558,6 +584,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<KnownHostView> sse_decode_list_known_host_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<PreviousKeyView> sse_decode_list_previous_key_view(
     SseDeserializer deserializer,
   );
 
@@ -619,6 +650,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ReconnectingView? sse_decode_opt_box_autoadd_reconnecting_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RouteKind? sse_decode_opt_box_autoadd_route_kind(
     SseDeserializer deserializer,
   );
@@ -655,6 +691,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PointerButton sse_decode_pointer_button(SseDeserializer deserializer);
 
   @protected
+  PreviousKeyView sse_decode_previous_key_view(SseDeserializer deserializer);
+
+  @protected
   PromptAnswer sse_decode_prompt_answer(SseDeserializer deserializer);
 
   @protected
@@ -665,6 +704,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   QuestionView sse_decode_question_view(SseDeserializer deserializer);
+
+  @protected
+  ReconnectingView sse_decode_reconnecting_view(SseDeserializer deserializer);
 
   @protected
   RouteKind sse_decode_route_kind(SseDeserializer deserializer);
@@ -847,6 +889,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_reconnecting_view(
+    ReconnectingView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_route_kind(
     RouteKind self,
     SseSerializer serializer,
@@ -937,6 +985,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_key_policy(KeyPolicy self, SseSerializer serializer);
 
   @protected
+  void sse_encode_key_source_kind(KeySourceKind self, SseSerializer serializer);
+
+  @protected
   void sse_encode_known_host_view(KnownHostView self, SseSerializer serializer);
 
   @protected
@@ -972,6 +1023,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_known_host_view(
     List<KnownHostView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_previous_key_view(
+    List<PreviousKeyView> self,
     SseSerializer serializer,
   );
 
@@ -1045,6 +1102,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_reconnecting_view(
+    ReconnectingView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_route_kind(
     RouteKind? self,
     SseSerializer serializer,
@@ -1087,6 +1150,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_pointer_button(PointerButton self, SseSerializer serializer);
 
   @protected
+  void sse_encode_previous_key_view(
+    PreviousKeyView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_prompt_answer(PromptAnswer self, SseSerializer serializer);
 
   @protected
@@ -1097,6 +1166,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_question_view(QuestionView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_reconnecting_view(
+    ReconnectingView self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_route_kind(RouteKind self, SseSerializer serializer);

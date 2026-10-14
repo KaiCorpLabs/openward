@@ -64,7 +64,7 @@ Una app de escritorio que el equipo pueda usar a diario en vez de su cliente SSH
 | A1 | Almacén y modelo: `openward-proto` (tipos y CBOR), `openward-vault` (fase 1, sin cifrar) con hosts, grupos, etiquetas, herencia y known hosts. Importador de `~/.ssh/config` (`openward-import`) | 3 | **Hecho** ([detalle](#a1-almacén-modelo-e-importador)) |
 | A2 | `openward-app`, que orquesta las sesiones y resuelve la configuración efectiva, y `openward-ffi`, la superficie para Flutter con handles opacos y sin secretos | 3 | **Hecho** ([detalle](#a2-orquestación-y-ffi)) |
 | A3 | App Flutter: ventana, barra lateral de hosts, búsqueda, pestañas y el widget de terminal del banco convertido en componente | 4 | **Hecho** ([detalle](#a3-la-app)) |
-| A4 | Conexión: diálogos de autenticación, known hosts (TOFU, cambio), saltos, reconexión e indicador poscuántico | 3 | Pendiente. Adelantado en A3: las preguntas básicas, el indicador poscuántico y el botón de reconectar. Falta el flujo de clave cambiada (ver las dos huellas y confiar en la nueva), la reconexión automática y el progreso por saltos |
+| A4 | Conexión: diálogos de autenticación, known hosts (TOFU, cambio), saltos, reconexión e indicador poscuántico | 3 | **Hecho** ([detalle](#a4-flujos-de-conexión)) |
 | A5 | Selección y copia, ajustes, atajos y terminal local | 3 | Pendiente. Adelantados en A3: los atajos, el terminal local y renombrar y reordenar pestañas. Faltan la selección y copia, y los ajustes (fuente, tema, Opción = Alt, historial) |
 | A6 | Empaquetado de macOS, builds de Linux y Windows en CI, y uso real por el equipo | 2 | Pendiente |
 
@@ -221,6 +221,38 @@ Escritorio con Flutter y Riverpod, en `app/lib`:
   - crear un grupo y un host desde los editores y ver la herencia;
   - SSH con la pregunta de clave de host y la conexión poscuántica.
 - Las 4 del FFI.
+
+## A4: flujos de conexión
+
+- **Clave de host cambiada:**
+  - La conexión se rechaza siempre. El fallo trae la clave nueva y también las que se tenían por buenas para ese host y tipo de clave, con su origen: la lista de OpenWard o `~/.ssh/known_hosts`.
+  - La pestaña muestra una tarjeta de fallo con «Revisar la clave…». Esta abre un diálogo con las huellas de antes y de ahora y una explicación del riesgo.
+  - Confiar en la nueva exige marcar «He comprobado la huella nueva».
+  - Si la clave vieja estaba en `~/.ssh/known_hosts`, el diálogo recuerda que OpenWard no toca ese fichero y da el `ssh-keygen -R` que hace falta.
+- **Reconexión automática:**
+  - Una sesión establecida que se cae por la red se reintenta a los 1, 2, 4, 8, 16 y 30 s, hasta 8 veces, sobre la misma pantalla.
+  - El plan se recalcula en cada intento, por si el host se ha editado.
+  - Si el fallo deja de ser de red (autenticación, clave), se para y lo dice.
+  - Arriba del terminal aparece un aviso con el motivo, la cuenta atrás, «Reconectar ya» y «Cancelar».
+  - La prueba mata el `sshd` de la sesión dentro del contenedor, directo o detrás de un salto, y comprueba que vuelve.
+- **Progreso por saltos:**
+  - Al empezar, la conexión anuncia su ruta.
+  - Mientras se conecta por primera vez, una tarjeta muestra «Este equipo → bastion → db» con el estado de cada salto (hecho, conectando, autenticando o pendiente) y un botón de cancelar.
+  - El editor de hosts admite cadenas de saltos: hosts guardados o direcciones `usuario@host:puerto`, en orden, que se pueden quitar.
+- **Detalles de la conexión:** pulsando la barra de estado se ven:
+  - destino y ruta;
+  - intercambio de claves, con la explicación cuando no es poscuántico;
+  - cifrado, algoritmo y huella de la clave del host (copiable);
+  - confianza (conocida, nueva o certificada por una CA);
+  - tiempo de conexión.
+- La contraseña que PAM pide por keyboard-interactive se titula «Contraseña».
+
+**Pruebas:**
+- **Rust:** 10 de integración contra los servidores de S2, entre ellas la reconexión y las claves anteriores con su origen.
+- **Dart:** 5 de integración de la ventana:
+  - clave cambiada y confianza explícita;
+  - ruta con salto en los detalles y reconexión tras matar la sesión.
+- Una unitaria del analizador de direcciones de salto.
 
 ## Riesgos
 

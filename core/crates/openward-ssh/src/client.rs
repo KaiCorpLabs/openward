@@ -113,6 +113,8 @@ pub struct Info {
     pub cipher: String,
     pub mac: String,
     pub host_key: String,
+    /// `SHA256:…` of the host key (of the key a certificate certifies).
+    pub host_key_fingerprint: String,
     pub verdict: Option<Verdict>,
     /// From opening the transport to authenticated.
     pub connect_ms: f64,
@@ -151,6 +153,12 @@ impl client::Handler for Handler {
                 .lock()
                 .unwrap()
                 .check(&self.target.host, self.target.port, offered);
+        let key = match offered {
+            PublicKeyOrCertificate::PublicKey { key, .. } => key.clone(),
+            PublicKeyOrCertificate::Certificate(cert) => PublicKey::from(cert.public_key().clone()),
+        };
+        self.shared.lock().unwrap().info.host_key_fingerprint =
+            key.fingerprint(russh::keys::HashAlg::Sha256).to_string();
         if let (false, Some(hook), PublicKeyOrCertificate::PublicKey { key, .. }) =
             (verdict.trusted(), &self.on_untrusted, offered)
         {

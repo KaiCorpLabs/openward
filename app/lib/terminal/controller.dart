@@ -10,7 +10,7 @@ import 'palette.dart';
 import 'renderer.dart';
 
 /// Where a tab's session stands.
-enum Phase { connecting, connected, running, closed }
+enum Phase { connecting, connected, reconnecting, running, closed }
 
 /// One terminal tab: the Rust session, its renderer and what the session
 /// reported. Lives as long as the tab, visible or not.
@@ -33,9 +33,23 @@ class TerminalController extends ChangeNotifier {
   StreamSubscription<SessionEvent>? _events;
 
   Phase phase = Phase.connecting;
+
+  /// The hops of the connection, target last.
+  List<String> route = const [];
   StageView? stage;
   ConnectedView? connected;
   ClosedView? closed;
+
+  /// While waiting to reconnect: why, and when the next try starts.
+  ReconnectingView? reconnecting;
+  DateTime? reconnectAt;
+
+  /// The session got as far as a shell at least once: the screen has
+  /// something worth keeping on view.
+  bool everConnected = false;
+
+  /// The user gave up on the connection.
+  bool cancelled = false;
 
   /// An error before the session could start (a plan that cannot run).
   String? error;
@@ -64,11 +78,13 @@ class TerminalController extends ChangeNotifier {
 
   /// Connects (or reconnects, keeping the screen), or starts the shell.
   void start() {
-    phase = Phase.connecting;
+    phase = everConnected && !isLocal ? Phase.reconnecting : Phase.connecting;
     stage = null;
     connected = null;
     closed = null;
     error = null;
+    reconnectAt = null;
+    cancelled = false;
     prompts.clear();
     final hostId = this.hostId;
     final events = hostId == null
@@ -88,23 +104,53 @@ class TerminalController extends ChangeNotifier {
 
   void _onEvent(SessionEvent e) {
     switch (e.kind) {
+      case SessionEventKind.route:
+        route = e.route;
       case SessionEventKind.stage:
         stage = e.stage;
+        reconnectAt = null;
       case SessionEventKind.prompt:
         prompts.add(e.prompt!);
       case SessionEventKind.connected:
         phase = Phase.connected;
         connected = e.connected;
         stage = null;
+        reconnecting = null;
+        reconnectAt = null;
+        everConnected = true;
+      case SessionEventKind.reconnecting:
+        final r = e.reconnecting!;
+        phase = Phase.reconnecting;
+        reconnecting = r;
+        stage = null;
+        reconnectAt = DateTime.now().add(
+          Duration(milliseconds: r.delayMs.toInt()),
+        );
       case SessionEventKind.started:
         phase = Phase.running;
+        everConnected = true;
       case SessionEventKind.closed:
         phase = Phase.closed;
         closed = e.closed;
         stage = null;
+        reconnecting = null;
+        reconnectAt = null;
         // Questions of a session that is gone cannot be answered.
         prompts.clear();
     }
+    _notify();
+  }
+
+  /// Gives up on the connection (or its reconnection); the screen stays.
+  void cancel() {
+    _events?.cancel();
+    session.close();
+    phase = Phase.closed;
+    cancelled = true;
+    stage = null;
+    reconnecting = null;
+    reconnectAt = null;
+    prompts.clear();
     _notify();
   }
 

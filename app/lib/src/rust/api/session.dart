@@ -9,7 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `event_view`, `failure_view`, `into_answer`, `prompt_view`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DartSink`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<TerminalSession>>
 abstract class TerminalSession implements RustOpaqueInterface {
@@ -89,10 +89,15 @@ class ClosedView {
 }
 
 class ConnectedView {
+  final String host;
+  final int port;
   final String kex;
   final bool postQuantum;
   final String cipher;
   final String hostKeyAlgorithm;
+
+  /// `SHA256:…` of the host key.
+  final String fingerprint;
   final TrustKind trust;
 
   /// The CA's fingerprint, when certified.
@@ -101,10 +106,13 @@ class ConnectedView {
   final double connectMs;
 
   const ConnectedView({
+    required this.host,
+    required this.port,
     required this.kex,
     required this.postQuantum,
     required this.cipher,
     required this.hostKeyAlgorithm,
+    required this.fingerprint,
     required this.trust,
     required this.ca,
     required this.hops,
@@ -113,10 +121,13 @@ class ConnectedView {
 
   @override
   int get hashCode =>
+      host.hashCode ^
+      port.hashCode ^
       kex.hashCode ^
       postQuantum.hashCode ^
       cipher.hashCode ^
       hostKeyAlgorithm.hashCode ^
+      fingerprint.hashCode ^
       trust.hashCode ^
       ca.hashCode ^
       hops.hashCode ^
@@ -127,10 +138,13 @@ class ConnectedView {
       identical(this, other) ||
       other is ConnectedView &&
           runtimeType == other.runtimeType &&
+          host == other.host &&
+          port == other.port &&
           kex == other.kex &&
           postQuantum == other.postQuantum &&
           cipher == other.cipher &&
           hostKeyAlgorithm == other.hostKeyAlgorithm &&
+          fingerprint == other.fingerprint &&
           trust == other.trust &&
           ca == other.ca &&
           hops == other.hops &&
@@ -164,6 +178,9 @@ class FailureView {
   final List<String> methods;
   final String reason;
 
+  /// With [`FailureKind::HostKeyChanged`]: what was trusted before.
+  final List<PreviousKeyView> previous;
+
   const FailureView({
     this.kind,
     required this.message,
@@ -176,6 +193,7 @@ class FailureView {
     required this.key,
     required this.methods,
     required this.reason,
+    required this.previous,
   });
 
   static Future<FailureView> default_() =>
@@ -193,7 +211,8 @@ class FailureView {
       fingerprint.hashCode ^
       key.hashCode ^
       methods.hashCode ^
-      reason.hashCode;
+      reason.hashCode ^
+      previous.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -210,14 +229,41 @@ class FailureView {
           fingerprint == other.fingerprint &&
           key == other.key &&
           methods == other.methods &&
-          reason == other.reason;
+          reason == other.reason &&
+          previous == other.previous;
 }
 
 enum KeyKind { down, repeat, up }
 
+enum KeySourceKind {
+  /// OpenWard's own list: trusting the new key replaces it.
+  openWard,
+
+  /// `~/.ssh/known_hosts`, which OpenWard does not write.
+  openSsh,
+}
+
 enum PointerAction { down, up, move }
 
 enum PointerButton { none, left, middle, right }
+
+class PreviousKeyView {
+  final String fingerprint;
+  final KeySourceKind source;
+
+  const PreviousKeyView({required this.fingerprint, required this.source});
+
+  @override
+  int get hashCode => fingerprint.hashCode ^ source.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PreviousKeyView &&
+          runtimeType == other.runtimeType &&
+          fingerprint == other.fingerprint &&
+          source == other.source;
+}
 
 class PromptAnswer {
   final AnswerKind kind;
@@ -344,20 +390,51 @@ class QuestionView {
           echo == other.echo;
 }
 
+class ReconnectingView {
+  /// From 1.
+  final int attempt;
+  final BigInt delayMs;
+
+  /// Why the connection went away.
+  final FailureView reason;
+
+  const ReconnectingView({
+    required this.attempt,
+    required this.delayMs,
+    required this.reason,
+  });
+
+  @override
+  int get hashCode => attempt.hashCode ^ delayMs.hashCode ^ reason.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ReconnectingView &&
+          runtimeType == other.runtimeType &&
+          attempt == other.attempt &&
+          delayMs == other.delayMs &&
+          reason == other.reason;
+}
+
 /// One event; the field named by `kind` is set.
 class SessionEvent {
   final SessionEventKind kind;
+  final List<String> route;
   final StageView? stage;
   final PromptView? prompt;
   final ConnectedView? connected;
+  final ReconnectingView? reconnecting;
   final String? program;
   final ClosedView? closed;
 
   const SessionEvent({
     required this.kind,
+    required this.route,
     this.stage,
     this.prompt,
     this.connected,
+    this.reconnecting,
     this.program,
     this.closed,
   });
@@ -365,9 +442,11 @@ class SessionEvent {
   @override
   int get hashCode =>
       kind.hashCode ^
+      route.hashCode ^
       stage.hashCode ^
       prompt.hashCode ^
       connected.hashCode ^
+      reconnecting.hashCode ^
       program.hashCode ^
       closed.hashCode;
 
@@ -377,17 +456,24 @@ class SessionEvent {
       other is SessionEvent &&
           runtimeType == other.runtimeType &&
           kind == other.kind &&
+          route == other.route &&
           stage == other.stage &&
           prompt == other.prompt &&
           connected == other.connected &&
+          reconnecting == other.reconnecting &&
           program == other.program &&
           closed == other.closed;
 }
 
 enum SessionEventKind {
+  /// The hops of the connection (`route`), before the first stage.
+  route,
   stage,
   prompt,
   connected,
+
+  /// The connection was lost and is tried again (`reconnecting`).
+  reconnecting,
 
   /// A local program is running (`program`).
   started,
