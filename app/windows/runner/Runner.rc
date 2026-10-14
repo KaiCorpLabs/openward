@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "dev.openward" "\0"
-            VALUE "FileDescription", "openward" "\0"
+            VALUE "CompanyName", "OpenWard contributors" "\0"
+            VALUE "FileDescription", "OpenWard" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "openward" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 dev.openward. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 OpenWard contributors. Apache-2.0." "\0"
             VALUE "OriginalFilename", "openward.exe" "\0"
-            VALUE "ProductName", "openward" "\0"
+            VALUE "ProductName", "OpenWard" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/settings.dart';
+import 'core/version.dart';
 import 'terminal/keys.dart';
 
 /// Settings take effect as they change; there is nothing to save.
@@ -115,6 +116,13 @@ class _SettingsDialog extends ConsumerWidget {
         ),
       ),
       actions: [
+        Text(
+          'OpenWard $appVersion',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(width: 16),
         FilledButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('Cerrar'),

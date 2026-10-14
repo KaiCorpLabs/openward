@@ -5,6 +5,9 @@
 // Screenshots (rendered by the app itself) go to $TMPDIR/openward-shots.
 // The SSH part needs the S2 test servers (spikes/s2-ssh/servers/up.sh).
 
+@Timeout(Duration(minutes: 3))
+library;
+
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -46,6 +49,14 @@ Future<void> _shot(WidgetTester tester, String name) async {
   File('${_shots.path}/$name.png').writeAsBytesSync(png!.buffer.asUint8List());
 }
 
+/// pumpAndSettle with a short limit: an animation that never ends (a
+/// spinner, say) fails here at once instead of after ten minutes.
+Future<void> _settle(WidgetTester tester) => tester.pumpAndSettle(
+  const Duration(milliseconds: 100),
+  EnginePhase.sendSemanticsUpdate,
+  const Duration(seconds: 20),
+);
+
 /// Pumps frames until `done`, like a user waiting.
 Future<void> _until(
   WidgetTester tester,
@@ -61,9 +72,10 @@ Future<void> _until(
 
 /// The S2 fixtures directory if the test servers are up, else null.
 Future<String?> _servers() async {
+  final cache = Platform.isMacOS ? 'Library/Caches' : '.cache';
   final fixtures =
       Platform.environment['S2_FIXTURES'] ??
-      '${Platform.environment['HOME']}/Library/Caches/openward/s2-fixtures';
+      '${Platform.environment['HOME']}/$cache/openward/s2-fixtures';
   final up = await Socket.connect(
     '127.0.0.1',
     22100,
@@ -110,7 +122,7 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await _settle(tester);
     return ProviderScope.containerOf(tester.element(find.byType(OpenWardApp)));
   }
 
@@ -144,11 +156,11 @@ Host web-1 web-2
     await _shot(tester, '1-hosts');
 
     await tester.enterText(find.byType(TextField).first, 'web');
-    await tester.pumpAndSettle();
+    await _settle(tester);
     expect(find.text('web-1'), findsOneWidget);
     expect(find.text('db'), findsNothing);
     await tester.enterText(find.byType(TextField).first, '');
-    await tester.pumpAndSettle();
+    await _settle(tester);
 
     await tester.tap(find.textContaining('Terminal local'));
     await tester.pump();
@@ -200,9 +212,17 @@ Host web-1 web-2
     expect(c.session.selectionText(), 'ui-42');
     expect(c.currentRenderer!.selection, hasLength(1));
     await _shot(tester, '9-selection');
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    // ⌘C, or Ctrl+Shift+C off Apple platforms.
+    final copyMods = isApple
+        ? [LogicalKeyboardKey.metaLeft]
+        : [LogicalKeyboardKey.controlLeft, LogicalKeyboardKey.shiftLeft];
+    for (final k in copyMods) {
+      await tester.sendKeyDownEvent(k);
+    }
     await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+    for (final k in copyMods.reversed) {
+      await tester.sendKeyUpEvent(k);
+    }
     await tester.pump();
     expect(copied, 'ui-42');
 
@@ -265,7 +285,7 @@ Host web-1 web-2
     await _until(tester, () => !c.mouseTracking, 'mouse tracking off');
 
     container.read(tabsProvider.notifier).close(0);
-    await tester.pumpAndSettle();
+    await _settle(tester);
     expect(container.read(tabsProvider).tabs, isEmpty);
   });
 
@@ -274,16 +294,16 @@ Host web-1 web-2
   ) async {
     final container = await launch(tester);
     await tester.tap(find.byTooltip('Ajustes'));
-    await tester.pumpAndSettle();
+    await _settle(tester);
     await tester.tap(find.text('Claro'));
-    await tester.pumpAndSettle();
+    await _settle(tester);
     await tester.tap(find.text('13 px'));
-    await tester.pumpAndSettle();
+    await _settle(tester);
     await tester.tap(find.text('16 px').last);
-    await tester.pumpAndSettle();
+    await _settle(tester);
     await _shot(tester, '10-settings');
     await tester.tap(find.text('Cerrar'));
-    await tester.pumpAndSettle();
+    await _settle(tester);
     expect(container.read(settingsProvider).theme, ThemeChoice.light);
     final saved = File('${dir.path}/data/settings.json').readAsStringSync();
     expect(saved, contains('"theme": "light"'));
@@ -304,7 +324,7 @@ Host web-1 web-2
     expect(c.currentRenderer!.palette.dark, isFalse);
     await _shot(tester, '11-light-terminal');
     container.read(tabsProvider.notifier).close(0);
-    await tester.pumpAndSettle();
+    await _settle(tester);
   });
 
   testWidgets('a group and a host from the editors, with inheritance', (
@@ -314,24 +334,24 @@ Host web-1 web-2
     Finder field(String label) => find.widgetWithText(TextField, label);
 
     await tester.tap(find.text('Grupo'));
-    await tester.pumpAndSettle();
+    await _settle(tester);
     await tester.enterText(field('Nombre'), 'prod');
     await tester.enterText(field('Usuario'), 'deploy');
     await tester.tap(find.text('Guardar'));
-    await tester.pumpAndSettle();
+    await _settle(tester);
     expect(find.text('prod'), findsOneWidget);
 
     await tester.tap(find.text('Host'));
-    await tester.pumpAndSettle();
+    await _settle(tester);
     await tester.enterText(field('Nombre'), 'web');
     await tester.enterText(field('Dirección'), 'web.example.com');
     await tester.enterText(field('Puerto'), '2222');
     await tester.tap(find.text('Sin grupo'));
-    await tester.pumpAndSettle();
+    await _settle(tester);
     await tester.tap(find.text('prod').last);
-    await tester.pumpAndSettle();
+    await _settle(tester);
     await tester.tap(find.text('Guardar'));
-    await tester.pumpAndSettle();
+    await _settle(tester);
     // The user comes from the group.
     expect(find.text('deploy@web.example.com:2222'), findsOneWidget);
 
@@ -341,13 +361,13 @@ Host web-1 web-2
 
     // The editor says where inherited values come from.
     await tester.tap(find.text('web'), buttons: kSecondaryButton);
-    await tester.pumpAndSettle();
+    await _settle(tester);
     await tester.tap(find.text('Editar…'));
-    await tester.pumpAndSettle();
+    await _settle(tester);
     expect(find.text('Heredado: deploy (grupo prod)'), findsOneWidget);
     await _shot(tester, '5-host-editor');
     await tester.tap(find.text('Cancelar'));
-    await tester.pumpAndSettle();
+    await _settle(tester);
   });
 
   testWidgets('ssh: a changed host key is shown and trusted on purpose', (
@@ -401,7 +421,7 @@ Host web-1 web-2
     await _until(tester, () => c.phase == Phase.connected, 'the connection');
     expect(c.connected!.trust, TrustKind.known);
     container.read(tabsProvider.notifier).close(0);
-    await tester.pumpAndSettle();
+    await _settle(tester);
   });
 
   testWidgets('ssh: through a jump, the route in the details, and back after '
@@ -491,7 +511,7 @@ Host web-1 web-2
     await _shot(tester, '8-reconnecting');
     await _until(tester, () => c.phase == Phase.connected, 'the reconnection');
     container.read(tabsProvider.notifier).close(0);
-    await tester.pumpAndSettle();
+    await _settle(tester);
   });
 
   testWidgets('ssh: the host key question in the tab, then the shell', (
@@ -533,6 +553,6 @@ Host web-1 web-2
     );
     await _shot(tester, '4-ssh');
     container.read(tabsProvider.notifier).close(0);
-    await tester.pumpAndSettle();
+    await _settle(tester);
   });
 }

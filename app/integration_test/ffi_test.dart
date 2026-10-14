@@ -5,6 +5,9 @@
 // The SSH part runs when the S2 test servers are up
 // (spikes/s2-ssh/servers/up.sh); otherwise it is skipped.
 
+@Timeout(Duration(minutes: 3))
+library;
+
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -135,9 +138,10 @@ Host app
   }, skip: Platform.isWindows);
 
   test('ssh: host key question and a shell', () async {
+    final cache = Platform.isMacOS ? 'Library/Caches' : '.cache';
     final fixtures =
         Platform.environment['S2_FIXTURES'] ??
-        '${Platform.environment['HOME']}/Library/Caches/openward/s2-fixtures';
+        '${Platform.environment['HOME']}/$cache/openward/s2-fixtures';
     final up =
         await Socket.connect(
               '127.0.0.1',

@@ -2,14 +2,12 @@
 
 La app de Flutter de OpenWard. Por ahora solo hay escritorio (macOS, Linux y Windows); las demás plataformas llegan en fases posteriores. Habla con el núcleo de Rust (`core/crates/openward-ffi`) mediante flutter_rust_bridge, y lo compila y empaqueta cargokit (`rust_builder/`).
 
-> **Estado:** hitos A0–A5 de la [alfa de escritorio](../docs/plan/alfa-escritorio.md) hechos. La app permite:
-> - guardar hosts y grupos, buscarlos e importar `~/.ssh/config`;
+> **Estado:** alfa de escritorio 0.1.0 ([plan](../docs/plan/alfa-escritorio.md), [guía de prueba](../docs/plan/alfa-prueba.md)). La app permite:
+> - guardar hosts y grupos e importar `~/.ssh/config`;
 > - abrir pestañas con terminal SSH o local;
-> - responder a las preguntas de conexión, ver la clave de host que cambió y reconectar;
+> - responder a las preguntas de conexión y reconectar;
 > - seleccionar y copiar;
-> - elegir tema, letra y otros ajustes.
->
-> Queda A6: empaquetado y builds en la CI.
+> - elegir los ajustes.
 
 ## Requisitos
 
@@ -39,6 +37,18 @@ fvm flutter test integration_test/ffi_test.dart -d macos
 
 ```bash
 fvm flutter test integration_test/ui_test.dart -d macos
+```
+
+**Empaquetar para macOS:** `.dmg` universal en `build/`, sin firmar.
+
+```bash
+tool/package-macos.sh
+```
+
+**Regenerar el icono** después de cambiar el dibujo en `tool/make_icons.dart`.
+
+```bash
+fvm flutter test tool/make_icons.dart
 ```
 
 **Regenerar los bindings** después de cambiar `core/crates/openward-ffi/src/api`. El resultado va a `lib/src/rust`, que se versiona.

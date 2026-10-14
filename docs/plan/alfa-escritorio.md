@@ -1,6 +1,6 @@
 # Alfa de escritorio (v0.1-alfa)
 
-- **Estado:** en curso.
+- **Estado:** hitos técnicos hechos (A0–A6); falta la semana de uso por el equipo ([guía](alfa-prueba.md)).
 - **Fecha:** 2026-10-13.
 - **Base:** fase 1 de la hoja de ruta ([ARCHITECTURE §15](../ARCHITECTURE.md#15-hoja-de-ruta-con-puertas)), recortada a lo que hace falta para usarla a diario. Parte de los spikes cerrados: [S1](../spikes/S1-terminal-resultados.md) (terminal) y [S2](../spikes/S2-ssh.md) (SSH).
 - **Duración estimada:** 3–4 semanas de trabajo.
@@ -66,7 +66,7 @@ Una app de escritorio que el equipo pueda usar a diario en vez de su cliente SSH
 | A3 | App Flutter: ventana, barra lateral de hosts, búsqueda, pestañas y el widget de terminal del banco convertido en componente | 4 | **Hecho** ([detalle](#a3-la-app)) |
 | A4 | Conexión: diálogos de autenticación, known hosts (TOFU, cambio), saltos, reconexión e indicador poscuántico | 3 | **Hecho** ([detalle](#a4-flujos-de-conexión)) |
 | A5 | Selección y copia, ajustes, atajos y terminal local | 3 | **Hecho** ([detalle](#a5-selección-copia-y-ajustes)) |
-| A6 | Empaquetado de macOS, builds de Linux y Windows en CI, y uso real por el equipo | 2 | Pendiente |
+| A6 | Empaquetado de macOS, builds de Linux y Windows en CI, y uso real por el equipo | 2 | **Hecho** lo técnico ([detalle](#a6-empaquetado-y-ci)). Queda la semana de uso: [guía de prueba](alfa-prueba.md) |
 
 ## A1: almacén, modelo e importador
 
@@ -286,6 +286,25 @@ Escritorio con Flutter y Riverpod, en `app/lib`:
   - tema claro y letra de 16 px guardados en disco.
 
 **Pendiente:** el desplazamiento automático al arrastrar fuera del terminal, que la API de gestos ya contempla.
+
+## A6: empaquetado y CI
+
+- **Identidad de la app:**
+  - nombre «OpenWard» e identificador `dev.openward.OpenWard`;
+  - versión `0.1.0-alfa`, visible en Ajustes;
+  - copyright Apache-2.0 de los contribuidores;
+  - ventana de 1280×800 por defecto, con un mínimo de 760×480; en macOS recuerda su tamaño y posición.
+- **Icono:** un escudo con el prompt `>_`. Lo dibuja `app/tool/make_icons.dart` con el propio Flutter, que genera todos los tamaños de macOS, el `.ico` de Windows y un PNG para Linux.
+- **macOS:**
+  - `app/tool/package-macos.sh` genera un `.dmg` universal (Apple silicon e Intel) de unos 36 MB, con firma ad hoc y sin notarizar;
+  - el mínimo pasa a **macOS 13**, porque libghostty-vt se compila para esa versión;
+  - comprobado en local: Info.plist, firma, arquitecturas, y que la app de release arranca y abre su vault.
+- **CI (job `app`):**
+  - en cada push, en Linux: `flutter analyze`, pruebas unitarias, pruebas de integración del FFI y de la ventana bajo Xvfb (las de SSH se saltan sin servidores) y un `.tar.gz` de la build de release;
+  - en la ejecución semanal o manual, además, el `.dmg` de macOS y un `.zip` de Windows;
+  - todo queda como artefacto durante 14 días;
+  - Flutter sale de `/.fvmrc`; las acciones nuevas van fijadas por SHA (`subosito/flutter-action` v2.23.0, `actions/upload-artifact` v7.0.1).
+- **Prueba por el equipo:** [alfa-prueba.md](alfa-prueba.md) cuenta cómo instalar en cada sistema (también cómo abrir una app sin firmar), dónde quedan los datos, qué probar, las limitaciones conocidas y cómo informar.
 
 ## Riesgos
 
