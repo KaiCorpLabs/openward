@@ -66,7 +66,8 @@ if ! $bindings && compgen -G "$out/lib/*ghostty-vt*" >/dev/null; then
   exit 0
 fi
 
-(cd "$src" && zig build -Demit-lib-vt=true -Doptimize=ReleaseFast "${target_flag[@]}" --prefix "$out")
+# ${a[@]+"${a[@]}"}: an empty array under `set -u` in macOS's bash 3.2.
+(cd "$src" && zig build -Demit-lib-vt=true -Doptimize=ReleaseFast ${target_flag[@]+"${target_flag[@]}"} --prefix "$out")
 echo "libghostty-vt: $out"
 
 if $bindings; then
