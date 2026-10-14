@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
 
 use openward_ghostty::{
-    GhosttyEngine, KeyAction, KeyInput, MouseAction, MouseButton, MouseInput, Paste,
+    GhosttyEngine, KeyAction, KeyInput, MouseAction, MouseButton, MouseInput, Paste, SelectedRow,
 };
 use openward_pty::{Pty, Spawn};
 use openward_ssh::russh::ChannelMsg;
@@ -56,6 +56,9 @@ pub struct Frame {
     pub report_all_keys: bool,
     pub alt_screen: bool,
     pub title: String,
+    /// The selected range of each visible row that has one; empty without
+    /// a selection.
+    pub selection: Vec<SelectedRow>,
 }
 
 struct State {
@@ -189,7 +192,16 @@ impl Terminal {
         if bytes.is_empty() {
             return false;
         }
-        lock(&self.state).engine.scroll_to_bottom();
+        {
+            // Typing goes back to the live screen and drops the selection,
+            // as in Ghostty.
+            let mut s = lock(&self.state);
+            s.engine.scroll_to_bottom();
+            if s.engine.has_selection() {
+                s.engine.clear_selection();
+                s.dirty = true;
+            }
+        }
         match &*lock(&self.io) {
             Io::Pty(pty) => pty.write(&bytes).is_ok(),
             Io::Ssh(tx) => tx.send(SshCmd::Data(bytes)).is_ok(),
@@ -214,6 +226,7 @@ impl Terminal {
             report_all_keys: modes.report_all_keys(),
             alt_screen: modes.alt_screen,
             title: engine.title().unwrap_or_default(),
+            selection: engine.selected_rows(),
         })
     }
 
@@ -334,6 +347,49 @@ impl Terminal {
 
     pub fn screen_text(&self) -> String {
         lock(&self.state).engine.screen_text()
+    }
+
+    fn select(&self, change: impl FnOnce(&mut GhosttyEngine)) {
+        let mut s = lock(&self.state);
+        change(&mut s.engine);
+        s.dirty = true;
+    }
+
+    /// Selection with the mouse, in logical pixels: press, drag (a block
+    /// with `rectangle`) and release. Two and three quick presses select a
+    /// word and a line.
+    pub fn select_press(&self, x: f32, y: f32) {
+        self.select(|e| e.select_press(x, y));
+    }
+
+    pub fn select_drag(&self, x: f32, y: f32, rectangle: bool) {
+        self.select(|e| e.select_drag(x, y, rectangle));
+    }
+
+    pub fn select_release(&self, x: f32, y: f32) {
+        self.select(|e| e.select_release(x, y));
+    }
+
+    pub fn select_all(&self) {
+        self.select(GhosttyEngine::select_all);
+    }
+
+    pub fn clear_selection(&self) {
+        self.select(GhosttyEngine::clear_selection);
+    }
+
+    /// The selected text, for the clipboard.
+    pub fn selection_text(&self) -> Option<String> {
+        lock(&self.state).engine.selection_text()
+    }
+
+    /// See [`GhosttyEngine::set_theme`]; the screen is sent again, for the
+    /// UI to paint it in the new colors.
+    pub fn set_theme(&self, dark: bool, foreground: [u8; 3], background: [u8; 3]) {
+        let mut s = lock(&self.state);
+        s.engine.set_theme(dark, foreground, background);
+        s.engine.redraw();
+        s.dirty = true;
     }
 
     /// The next [`Terminal::poll`] returns the whole screen.

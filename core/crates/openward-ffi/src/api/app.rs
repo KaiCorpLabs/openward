@@ -291,10 +291,16 @@ impl OpenWard {
 
     /// A new terminal tab, connected to nothing yet: pass it to
     /// [`OpenWard::connect`] or [`OpenWard::open_local`].
+    /// `scrollback` lines of history; 0 for the default.
     #[frb(sync)]
-    pub fn terminal(&self, cols: u16, rows: u16) -> TerminalSession {
+    pub fn terminal(&self, cols: u16, rows: u16, scrollback: u32) -> TerminalSession {
+        let lines = if scrollback == 0 {
+            DEFAULT_SCROLLBACK
+        } else {
+            scrollback as usize
+        };
         TerminalSession {
-            term: self.app.terminal(cols, rows, DEFAULT_SCROLLBACK),
+            term: self.app.terminal(cols, rows, lines),
         }
     }
 

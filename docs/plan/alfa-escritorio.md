@@ -65,7 +65,7 @@ Una app de escritorio que el equipo pueda usar a diario en vez de su cliente SSH
 | A2 | `openward-app`, que orquesta las sesiones y resuelve la configuración efectiva, y `openward-ffi`, la superficie para Flutter con handles opacos y sin secretos | 3 | **Hecho** ([detalle](#a2-orquestación-y-ffi)) |
 | A3 | App Flutter: ventana, barra lateral de hosts, búsqueda, pestañas y el widget de terminal del banco convertido en componente | 4 | **Hecho** ([detalle](#a3-la-app)) |
 | A4 | Conexión: diálogos de autenticación, known hosts (TOFU, cambio), saltos, reconexión e indicador poscuántico | 3 | **Hecho** ([detalle](#a4-flujos-de-conexión)) |
-| A5 | Selección y copia, ajustes, atajos y terminal local | 3 | Pendiente. Adelantados en A3: los atajos, el terminal local y renombrar y reordenar pestañas. Faltan la selección y copia, y los ajustes (fuente, tema, Opción = Alt, historial) |
+| A5 | Selección y copia, ajustes, atajos y terminal local | 3 | **Hecho** ([detalle](#a5-selección-copia-y-ajustes)) |
 | A6 | Empaquetado de macOS, builds de Linux y Windows en CI, y uso real por el equipo | 2 | Pendiente |
 
 ## A1: almacén, modelo e importador
@@ -253,6 +253,39 @@ Escritorio con Flutter y Riverpod, en `app/lib`:
   - clave cambiada y confianza explícita;
   - ruta con salto en los detalles y reconexión tras matar la sesión.
 - Una unitaria del analizador de direcciones de salto.
+
+## A5: selección, copia y ajustes
+
+- **Selección:** la hace el núcleo, con la máquina de gestos de Ghostty:
+  - arrastrar selecciona; doble clic, una palabra; triple clic, una línea; Opción/Alt al arrastrar, un bloque;
+  - se cruza la celda al pasar su mitad, como en cualquier texto;
+  - la selección es la del propio terminal, así que sigue al contenido cuando la salida lo desplaza;
+  - la UI recibe con cada frame el tramo seleccionado de cada fila visible y lo pinta como capa. El formato de frames no cambia.
+- **Si el programa sigue el ratón** (vim, tmux, htop), los clics van a él y Mayús los recupera para seleccionar.
+- Escribir quita la selección, como en Ghostty.
+- **Copiar:**
+  - ⌘C, o Ctrl+Mayús+C en Linux y Windows;
+  - el texto sale del formateador de Ghostty, con las líneas partidas por el ancho unidas y los blancos finales recortados.
+- ⌘A selecciona todo, historial incluido. El clic derecho abre un menú con copiar, pegar, seleccionar todo y quitar la selección.
+- **Ajustes** (⌘, o Ctrl+, y el engranaje de la barra lateral):
+  - tema (sistema, oscuro o claro);
+  - tamaño de letra;
+  - historial de las pestañas nuevas;
+  - Opción como Alt (macOS).
+
+  Se aplican al momento en todas las pestañas y se guardan en `settings.json`, en el directorio de datos. Son preferencias del equipo, no del vault.
+- **Tema claro:** paleta propia con ANSI legibles sobre blanco. El terminal informa del tema y de sus colores por defecto a los programas que preguntan (OSC 10/11, DSR 996).
+- **XTVERSION** responde «OpenWard <versión>».
+
+**Pruebas:**
+- **Rust:** 4 del motor (arrastre y copia, palabra y línea, clic que limpia y seleccionar todo, y selección que sigue al texto).
+- **Dart:** 6 de integración de la ventana:
+  - seleccionar arrastrando y copiar con ⌘C, con un portapapeles simulado para no tocar el real;
+  - doble clic;
+  - Mayús con un programa que sigue el ratón;
+  - tema claro y letra de 16 px guardados en disco.
+
+**Pendiente:** el desplazamiento automático al arrastrar fuera del terminal, que la API de gestos ya contempla.
 
 ## Riesgos
 

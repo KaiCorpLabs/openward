@@ -12,6 +12,7 @@ use openward_term::{
 use crate::sys;
 
 pub mod input;
+pub mod select;
 
 /// Nominal cell size passed to libghostty-vt. Only pixel-based reports
 /// (XTWINOPS) use it; the UI measures its own font.
@@ -29,6 +30,8 @@ struct Effects {
     size: Size,
     /// Cell size in pixels for XTWINOPS size reports.
     cell_px: (u32, u32),
+    /// The UI's theme, for color scheme queries (DSR 996).
+    dark: bool,
 }
 
 /// Theme defaults reported to OSC 10/11 queries (programs use them to pick
@@ -43,7 +46,7 @@ const DEFAULT_BG: sys::GhosttyColorRgb = sys::GhosttyColorRgb {
     g: 0x18,
     b: 0x1D,
 };
-const XTVERSION: &[u8] = b"OpenWard S1";
+const XTVERSION: &[u8] = concat!("OpenWard ", env!("CARGO_PKG_VERSION")).as_bytes();
 const TERMINFO_NAME: &[u8] = b"xterm-256color";
 
 unsafe extern "C" fn on_xtversion(
@@ -79,14 +82,21 @@ unsafe extern "C" fn on_size(
 
 unsafe extern "C" fn on_color_scheme(
     _terminal: sys::GhosttyTerminal,
-    _userdata: *mut c_void,
+    userdata: *mut c_void,
     out: *mut sys::GhosttyColorScheme,
 ) -> bool {
-    if out.is_null() {
+    if userdata.is_null() || out.is_null() {
         return false;
     }
-    // SAFETY: out is valid for the call. The spike only has a dark theme.
-    unsafe { *out = sys::GHOSTTY_COLOR_SCHEME_DARK };
+    // SAFETY: userdata is the engine's boxed Effects; out is valid for the call.
+    unsafe {
+        let effects = &*userdata.cast::<Effects>();
+        *out = if effects.dark {
+            sys::GHOSTTY_COLOR_SCHEME_DARK
+        } else {
+            sys::GHOSTTY_COLOR_SCHEME_LIGHT
+        };
+    }
     true
 }
 
@@ -139,6 +149,7 @@ pub struct GhosttyEngine {
     graphemes: Vec<u32>,
     text: String,
     input: input::Input,
+    select: select::Gesture,
 }
 
 // SAFETY: the handles are only touched through `&mut self` or, for the
@@ -152,6 +163,7 @@ impl GhosttyEngine {
             host_writes: Vec::new(),
             size,
             cell_px: (CELL_W_PX, CELL_H_PX),
+            dark: true,
         });
         // SAFETY: every out-pointer is valid; option values follow the
         // documented input types (pointer values, size_t*, function pointers).
@@ -304,6 +316,7 @@ impl GhosttyEngine {
                 graphemes: Vec::with_capacity(16),
                 text: String::with_capacity(16),
                 input: input::Input::new(),
+                select: select::Gesture::new(),
             }
         }
     }
@@ -355,6 +368,38 @@ impl GhosttyEngine {
             self.size = actual;
             self.effects.size = actual;
             self.force_full = true;
+        }
+    }
+
+    /// The UI's theme: whether it is dark, and its default foreground and
+    /// background, which programs ask for (OSC 10/11, DSR 996) to pick
+    /// their own colors.
+    pub fn set_theme(&mut self, dark: bool, foreground: [u8; 3], background: [u8; 3]) {
+        self.effects.dark = dark;
+        for (opt, [r, g, b], what) in [
+            (
+                sys::GHOSTTY_TERMINAL_OPT_COLOR_FOREGROUND,
+                foreground,
+                "set foreground",
+            ),
+            (
+                sys::GHOSTTY_TERMINAL_OPT_COLOR_BACKGROUND,
+                background,
+                "set background",
+            ),
+        ] {
+            let rgb = sys::GhosttyColorRgb { r, g, b };
+            // SAFETY: valid terminal; the value is a GhosttyColorRgb*, copied.
+            ok(
+                unsafe {
+                    sys::ghostty_terminal_set(
+                        self.term,
+                        opt,
+                        (&rgb as *const sys::GhosttyColorRgb).cast::<c_void>(),
+                    )
+                },
+                what,
+            );
         }
     }
 
@@ -931,6 +976,7 @@ impl Drop for GhosttyEngine {
         // SAFETY: handles created in `new`, freed once; the terminal goes
         // before `effects` (dropped after this) so no callback outlives it.
         unsafe {
+            self.select.free(self.term);
             sys::ghostty_render_state_row_cells_free(self.cells);
             sys::ghostty_render_state_row_iterator_free(self.rows);
             sys::ghostty_render_state_free(self.render);
@@ -1085,7 +1131,7 @@ mod tests {
             e.feed(q);
             String::from_utf8(e.take_host_writes()).unwrap()
         };
-        assert!(ask(b"\x1b[>0q").contains("OpenWard S1"));
+        assert!(ask(b"\x1b[>0q").contains("OpenWard 0."));
         assert_eq!(ask(b"\x1b[18t"), "\x1b[8;24;80t");
         assert_eq!(ask(b"\x1b[?996n"), "\x1b[?997;1n");
         assert!(ask(b"\x1b]11;?\x1b\\").contains("rgb:1616/1818/1d1d"));

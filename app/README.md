@@ -2,11 +2,14 @@
 
 La app de Flutter de OpenWard. Por ahora solo hay escritorio (macOS, Linux y Windows); las demás plataformas llegan en fases posteriores. Habla con el núcleo de Rust (`core/crates/openward-ffi`) mediante flutter_rust_bridge, y lo compila y empaqueta cargokit (`rust_builder/`).
 
-> **Estado:** hito A3 de la [alfa de escritorio](../docs/plan/alfa-escritorio.md):
-> - hosts y grupos con su editor, búsqueda e importación de `~/.ssh/config`;
-> - pestañas con terminal SSH o local y preguntas de conexión.
+> **Estado:** hitos A0–A5 de la [alfa de escritorio](../docs/plan/alfa-escritorio.md) hechos. La app permite:
+> - guardar hosts y grupos, buscarlos e importar `~/.ssh/config`;
+> - abrir pestañas con terminal SSH o local;
+> - responder a las preguntas de conexión, ver la clave de host que cambió y reconectar;
+> - seleccionar y copiar;
+> - elegir tema, letra y otros ajustes.
 >
-> Faltan la selección y copia, los ajustes y el flujo de clave de host cambiada (A4 y A5).
+> Queda A6: empaquetado y builds en la CI.
 
 ## Requisitos
 

@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'app.dart';
 import 'core/providers.dart';
+import 'core/settings.dart';
 import 'src/rust/api/app.dart';
 import 'src/rust/frb_generated.dart';
 
@@ -20,7 +21,10 @@ Future<void> main() async {
   final app = await OpenWard.open(dataDir: dir);
   runApp(
     ProviderScope(
-      overrides: [openWardProvider.overrideWithValue(app)],
+      overrides: [
+        openWardProvider.overrideWithValue(app),
+        settingsFileProvider.overrideWithValue(File('$dir/settings.json')),
+      ],
       child: const OpenWardApp(),
     ),
   );

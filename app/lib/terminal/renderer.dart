@@ -34,6 +34,10 @@ class TerminalRenderer extends ChangeNotifier {
   int rows = 0;
   int displayOffset = 0;
   TermCursor? cursor;
+
+  /// Selected columns per visible row (both inclusive), painted over the
+  /// text.
+  List<({int row, int start, int end})> selection = const [];
   List<ui.Picture?> _rows = [];
   final Paint _paint = Paint();
   final Paint _atlasPaint = Paint()..filterQuality = FilterQuality.low;
@@ -47,6 +51,12 @@ class TerminalRenderer extends ChangeNotifier {
   final _transforms = <double>[];
   final _rects = <double>[];
   final _colors = <int>[];
+
+  void setSelection(List<({int row, int start, int end})> rows) {
+    if (rows.isEmpty && selection.isEmpty) return;
+    selection = rows;
+    notifyListeners();
+  }
 
   /// Applies a frame and returns how long recording took, in microseconds.
   int apply(TermFrame frame) {
@@ -247,6 +257,20 @@ class TerminalRenderer extends ChangeNotifier {
         ..translate(0, i * ch)
         ..drawPicture(picture)
         ..restore();
+    }
+    if (selection.isNotEmpty) {
+      final paint = Paint()..color = palette.selection;
+      for (final r in selection) {
+        canvas.drawRect(
+          Rect.fromLTWH(
+            r.start * cw,
+            r.row * ch,
+            (r.end - r.start + 1) * cw,
+            ch,
+          ),
+          paint,
+        );
+      }
     }
     final c = cursor;
     if (c != null && c.visible && displayOffset == 0) {

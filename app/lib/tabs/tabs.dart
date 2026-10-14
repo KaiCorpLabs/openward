@@ -2,6 +2,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/providers.dart';
+import '../core/settings.dart';
 import '../src/rust/api/vault.dart';
 import '../terminal/controller.dart';
 
@@ -48,13 +49,20 @@ class TabsNotifier extends Notifier<TabsState> {
         app: ref.read(openWardProvider),
         label: host.label,
         hostId: host.id,
+        scrollback: ref.read(settingsProvider).scrollback,
       ),
     );
   }
 
   /// A new tab with the user's shell on this machine.
   void openLocal() {
-    _add(TerminalController(app: ref.read(openWardProvider), label: 'Local'));
+    _add(
+      TerminalController(
+        app: ref.read(openWardProvider),
+        label: 'Local',
+        scrollback: ref.read(settingsProvider).scrollback,
+      ),
+    );
   }
 
   void select(int index) {

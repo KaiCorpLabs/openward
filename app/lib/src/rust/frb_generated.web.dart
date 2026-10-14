@@ -246,6 +246,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<QuestionView> dco_decode_list_question_view(dynamic raw);
 
   @protected
+  List<SelectedRange> dco_decode_list_selected_range(dynamic raw);
+
+  @protected
   List<TagCount> dco_decode_list_tag_count(dynamic raw);
 
   @protected
@@ -331,6 +334,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RouteKind dco_decode_route_kind(dynamic raw);
+
+  @protected
+  SelectedRange dco_decode_selected_range(dynamic raw);
 
   @protected
   SessionEvent dco_decode_session_event(dynamic raw);
@@ -603,6 +609,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<SelectedRange> sse_decode_list_selected_range(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<TagCount> sse_decode_list_tag_count(SseDeserializer deserializer);
 
   @protected
@@ -712,6 +723,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RouteKind sse_decode_route_kind(SseDeserializer deserializer);
+
+  @protected
+  SelectedRange sse_decode_selected_range(SseDeserializer deserializer);
 
   @protected
   SessionEvent sse_decode_session_event(SseDeserializer deserializer);
@@ -1047,6 +1061,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_selected_range(
+    List<SelectedRange> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_tag_count(List<TagCount> self, SseSerializer serializer);
 
   @protected
@@ -1177,6 +1197,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_route_kind(RouteKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_selected_range(SelectedRange self, SseSerializer serializer);
 
   @protected
   void sse_encode_session_event(SessionEvent self, SseSerializer serializer);

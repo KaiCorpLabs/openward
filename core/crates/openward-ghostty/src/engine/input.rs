@@ -131,8 +131,8 @@ pub(super) struct Input {
     mouse_encoder: sys::GhosttyMouseEncoder,
     mouse_event: sys::GhosttyMouseEvent,
     option_as_alt: bool,
-    cell_w: f32,
-    cell_h: f32,
+    pub(super) cell_w: f32,
+    pub(super) cell_h: f32,
     /// Mouse buttons held down: bit 0 left, 1 middle, 2 right.
     held: u8,
     /// Cell of the last report, to drop motion within the same cell. Kept
@@ -551,7 +551,11 @@ impl GhosttyEngine {
 
     /// # Safety
     /// As [`Self::get`].
-    unsafe fn get_raw<T>(&self, data: sys::GhosttyTerminalData, out: &mut T) -> sys::GhosttyResult {
+    pub(super) unsafe fn get_raw<T>(
+        &self,
+        data: sys::GhosttyTerminalData,
+        out: &mut T,
+    ) -> sys::GhosttyResult {
         unsafe { sys::ghostty_terminal_get(self.term, data, (out as *mut T).cast::<c_void>()) }
     }
 }

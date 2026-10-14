@@ -20,4 +20,5 @@ mod engine;
 pub use engine::input::{
     InputModes, KeyAction, KeyInput, MouseAction, MouseButton, MouseInput, Paste, mods,
 };
+pub use engine::select::SelectedRow;
 pub use engine::{CompressionReport, GhosttyEngine};

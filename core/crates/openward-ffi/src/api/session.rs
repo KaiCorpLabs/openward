@@ -455,6 +455,13 @@ pub enum PointerButton {
     Right,
 }
 
+/// One visible row's selected columns, both inclusive.
+pub struct SelectedRange {
+    pub row: u16,
+    pub start: u16,
+    pub end: u16,
+}
+
 /// Damage since the last poll, and how input should be routed.
 pub struct TermFrame {
     /// Damage frame v1 (`openward-term`, frame.rs).
@@ -464,6 +471,9 @@ pub struct TermFrame {
     pub report_all_keys: bool,
     pub alt_screen: bool,
     pub title: String,
+    /// The selection as it stands now (empty: none), to paint over the
+    /// screen.
+    pub selection: Vec<SelectedRange>,
 }
 
 /// A terminal tab: a remote shell, or a local one.
@@ -483,7 +493,58 @@ impl TerminalSession {
             report_all_keys: f.report_all_keys,
             alt_screen: f.alt_screen,
             title: f.title,
+            selection: f
+                .selection
+                .into_iter()
+                .map(|r| SelectedRange {
+                    row: r.row,
+                    start: r.start,
+                    end: r.end,
+                })
+                .collect(),
         })
+    }
+
+    /// Selection with the mouse, in the logical pixels of [`Self::pointer`]:
+    /// press, drag (`rectangle` for a block) and release. Two and three
+    /// quick presses select a word and a line.
+    #[frb(sync)]
+    pub fn select_press(&self, x: f32, y: f32) {
+        self.term.select_press(x, y);
+    }
+
+    #[frb(sync)]
+    pub fn select_drag(&self, x: f32, y: f32, rectangle: bool) {
+        self.term.select_drag(x, y, rectangle);
+    }
+
+    #[frb(sync)]
+    pub fn select_release(&self, x: f32, y: f32) {
+        self.term.select_release(x, y);
+    }
+
+    #[frb(sync)]
+    pub fn select_all(&self) {
+        self.term.select_all();
+    }
+
+    #[frb(sync)]
+    pub fn clear_selection(&self) {
+        self.term.clear_selection();
+    }
+
+    /// The selected text, for the clipboard; `None` without a selection.
+    #[frb(sync)]
+    pub fn selection_text(&self) -> Option<String> {
+        self.term.selection_text()
+    }
+
+    /// The UI theme, which programs ask for to pick their colors. Colors
+    /// are `0xRRGGBB`.
+    #[frb(sync)]
+    pub fn set_theme(&self, dark: bool, foreground: u32, background: u32) {
+        let rgb = |c: u32| [(c >> 16) as u8, (c >> 8) as u8, c as u8];
+        self.term.set_theme(dark, rgb(foreground), rgb(background));
     }
 
     /// A key; returns whether it produced any bytes.

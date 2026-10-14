@@ -94,6 +94,8 @@ bool isAppShortcut(KeyEvent event, int mods) {
   final ctrlShift = Mods.ctrl | Mods.shift;
   final key = event.logicalKey;
   if (key == LogicalKeyboardKey.tab && mods & Mods.ctrl != 0) return true;
+  // Ctrl+, opens the settings.
+  if (key == LogicalKeyboardKey.comma && mods & Mods.ctrl != 0) return true;
   final letter =
       key.keyId >= LogicalKeyboardKey.keyA.keyId &&
       key.keyId <= LogicalKeyboardKey.keyZ.keyId;

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'hosts/sidebar.dart';
+import 'settings_dialog.dart';
 import 'tabs/session_view.dart';
 import 'tabs/tab_strip.dart';
 import 'tabs/tabs.dart';
@@ -44,8 +45,10 @@ class _HomeState extends ConsumerState<Home> {
       ): () =>
           tabs.cycle(-1),
     };
+    void settings() => showSettings(context);
     if (isApple) {
       bindings.addAll({
+        const SingleActivator(LogicalKeyboardKey.comma, meta: true): settings,
         const SingleActivator(LogicalKeyboardKey.keyT, meta: true):
             tabs.openLocal,
         const SingleActivator(LogicalKeyboardKey.keyW, meta: true):
@@ -73,6 +76,8 @@ class _HomeState extends ConsumerState<Home> {
       });
     } else {
       bindings.addAll({
+        const SingleActivator(LogicalKeyboardKey.comma, control: true):
+            settings,
         const SingleActivator(
           LogicalKeyboardKey.keyT,
           control: true,

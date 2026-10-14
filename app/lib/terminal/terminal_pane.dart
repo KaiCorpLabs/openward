@@ -9,13 +9,16 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/settings.dart';
 import '../src/rust/api/session.dart';
 import 'controller.dart';
 import 'keys.dart';
+import 'palette.dart';
 import 'renderer.dart';
 
-class TerminalPane extends StatefulWidget {
+class TerminalPane extends ConsumerStatefulWidget {
   const TerminalPane({
     super.key,
     required this.controller,
@@ -26,10 +29,10 @@ class TerminalPane extends StatefulWidget {
   final bool autofocus;
 
   @override
-  State<TerminalPane> createState() => TerminalPaneState();
+  ConsumerState<TerminalPane> createState() => TerminalPaneState();
 }
 
-class TerminalPaneState extends State<TerminalPane>
+class TerminalPaneState extends ConsumerState<TerminalPane>
     with SingleTickerProviderStateMixin, TextInputClient {
   late final Ticker _ticker = createTicker(_onTick);
   final FocusNode focusNode = FocusNode(debugLabel: 'terminal');
@@ -60,12 +63,19 @@ class TerminalPaneState extends State<TerminalPane>
   int _buttons = 0;
   double _scrollPixels = 0;
 
+  /// A selection drag is under way (the press did not go to the program).
+  bool _selecting = false;
+
+  bool _optionAsAlt = false;
+
   @override
   void initState() {
     super.initState();
     focusNode.addListener(_onFocusChange);
     _c.visible = true;
     _ticker.start();
+    _optionAsAlt = ref.read(settingsProvider).optionAsAlt;
+    _session.setOptionAsAlt(enabled: _optionAsAlt);
     if (widget.autofocus) _focusSoon();
   }
 
@@ -77,10 +87,15 @@ class TerminalPaneState extends State<TerminalPane>
     });
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _renderer = _c.renderer(MediaQuery.devicePixelRatioOf(context));
+  /// The renderer for the current pixel density, font size and theme.
+  TerminalRenderer _look() {
+    final settings = ref.watch(settingsProvider);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return _renderer = _c.renderer(
+      MediaQuery.devicePixelRatioOf(context),
+      fontSize: settings.fontSize,
+      palette: dark ? TermPalette.darkTheme : TermPalette.lightTheme,
+    );
   }
 
   @override
@@ -90,7 +105,6 @@ class TerminalPaneState extends State<TerminalPane>
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.visible = false;
       _c.visible = true;
-      _renderer = _c.renderer(MediaQuery.devicePixelRatioOf(context));
       _cols = _rows = 0;
     }
   }
@@ -166,6 +180,17 @@ class TerminalPaneState extends State<TerminalPane>
       _paste();
       return KeyEventResult.handled;
     }
+    if (event is KeyDownEvent && _isCopyShortcut(event, mods)) {
+      _copy();
+      return KeyEventResult.handled;
+    }
+    if (event is KeyDownEvent &&
+        isApple &&
+        mods & Mods.superKey != 0 &&
+        event.logicalKey == LogicalKeyboardKey.keyA) {
+      _session.selectAll();
+      return KeyEventResult.handled;
+    }
     // Tabs, search and the like: the window's.
     if (isAppShortcut(event, mods)) return KeyEventResult.ignored;
 
@@ -198,8 +223,48 @@ class TerminalPaneState extends State<TerminalPane>
     return KeyEventResult.handled;
   }
 
-  // Settings come with A5; until then Option types symbols, as on macOS.
-  static const bool _optionAsAlt = false;
+  bool _isCopyShortcut(KeyDownEvent e, int mods) {
+    final c = e.logicalKey == LogicalKeyboardKey.keyC;
+    if (isApple) return c && mods & Mods.superKey != 0;
+    return c && mods & Mods.ctrl != 0 && mods & Mods.shift != 0;
+  }
+
+  /// Copies the selection; false if there is none.
+  bool _copy() {
+    final text = _session.selectionText();
+    if (text == null || text.isEmpty) return false;
+    Clipboard.setData(ClipboardData(text: text));
+    return true;
+  }
+
+  Future<void> _contextMenu(Offset at) async {
+    final hasSelection = _session.selectionText()?.isNotEmpty ?? false;
+    final key = isApple ? '⌘' : 'Ctrl+Mayús+';
+    final action = await showMenu<VoidCallback>(
+      context: context,
+      position: RelativeRect.fromLTRB(at.dx, at.dy, at.dx, at.dy),
+      items: [
+        PopupMenuItem(
+          enabled: hasSelection,
+          value: _copy,
+          child: _MenuRow('Copiar', '${key}C'),
+        ),
+        PopupMenuItem(value: _paste, child: _MenuRow('Pegar', '${key}V')),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          value: _session.selectAll,
+          child: _MenuRow('Seleccionar todo', isApple ? '⌘A' : ''),
+        ),
+        PopupMenuItem(
+          enabled: hasSelection,
+          value: _session.clearSelection,
+          child: const _MenuRow('Quitar la selección', ''),
+        ),
+      ],
+    );
+    action?.call();
+    focusNode.requestFocus();
+  }
 
   bool _isPasteShortcut(KeyDownEvent e, int mods) {
     final v = e.logicalKey == LogicalKeyboardKey.keyV;
@@ -442,12 +507,26 @@ class TerminalPaneState extends State<TerminalPane>
     );
   }
 
+  /// Mouse input goes to the program when it asks for it, unless Shift is
+  /// held: then, as everywhere else, it selects text.
+  bool get _toProgram =>
+      _c.mouseTracking && !HardwareKeyboard.instance.isShiftPressed;
+
   void _onPointerDown(PointerDownEvent e) {
     focusNode.requestFocus();
     _scrollPixels = 0;
-    if (_isTouch(e) || !_c.mouseTracking) return;
+    if (_isTouch(e)) return;
     final pressed = e.buttons & ~_buttons;
     _buttons = e.buttons;
+    if (!_toProgram) {
+      if (pressed & kSecondaryMouseButton != 0) {
+        _contextMenu(e.position);
+      } else if (pressed & kPrimaryMouseButton != 0) {
+        _selecting = true;
+        _session.selectPress(x: e.localPosition.dx, y: e.localPosition.dy);
+      }
+      return;
+    }
     _pointer(PointerAction.down, _button(pressed), e.localPosition);
   }
 
@@ -455,6 +534,15 @@ class TerminalPaneState extends State<TerminalPane>
     if (_isTouch(e)) {
       // Dragging the content down reveals history (positive lines).
       _scroll(e.localDelta.dy, e.localPosition);
+      return;
+    }
+    if (_selecting) {
+      _session.selectDrag(
+        x: e.localPosition.dx,
+        y: e.localPosition.dy,
+        // Option/Alt drags a block, as in other terminals.
+        rectangle: HardwareKeyboard.instance.isAltPressed,
+      );
       return;
     }
     if (_c.mouseTracking) {
@@ -466,6 +554,11 @@ class TerminalPaneState extends State<TerminalPane>
     if (_isTouch(e)) return;
     final released = _buttons & ~e.buttons;
     _buttons = e.buttons;
+    if (_selecting && released & kPrimaryMouseButton != 0) {
+      _selecting = false;
+      _session.selectRelease(x: e.localPosition.dx, y: e.localPosition.dy);
+      return;
+    }
     if (!_c.mouseTracking || released == 0) return;
     _pointer(PointerAction.up, _button(released), e.localPosition);
   }
@@ -501,7 +594,11 @@ class TerminalPaneState extends State<TerminalPane>
 
   @override
   Widget build(BuildContext context) {
-    final r = _renderer!;
+    ref.listen(settingsProvider.select((s) => s.optionAsAlt), (_, on) {
+      _optionAsAlt = on;
+      _session.setOptionAsAlt(enabled: on);
+    });
+    final r = _look();
     final m = r.metrics;
     final cursor = r.cursor;
     return ColoredBox(
@@ -587,6 +684,30 @@ class _ComposingText extends StatelessWidget {
           decorationThickness: 2,
         ),
       ),
+    );
+  }
+}
+
+class _MenuRow extends StatelessWidget {
+  const _MenuRow(this.text, this.shortcut);
+
+  final String text;
+  final String shortcut;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Expanded(child: Text(text)),
+        if (shortcut.isNotEmpty)
+          Text(
+            shortcut,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+      ],
     );
   }
 }

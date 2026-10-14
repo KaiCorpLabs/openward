@@ -13,6 +13,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<TerminalSession>>
 abstract class TerminalSession implements RustOpaqueInterface {
+  void clearSelection();
+
   /// Ends the connection or program; the screen stays until dropped.
   void close();
 
@@ -50,9 +52,35 @@ abstract class TerminalSession implements RustOpaqueInterface {
 
   String screenText();
 
+  void selectAll();
+
+  void selectDrag({
+    required double x,
+    required double y,
+    required bool rectangle,
+  });
+
+  /// Selection with the mouse, in the logical pixels of [`Self::pointer`]:
+  /// press, drag (`rectangle` for a block) and release. Two and three
+  /// quick presses select a word and a line.
+  void selectPress({required double x, required double y});
+
+  void selectRelease({required double x, required double y});
+
+  /// The selected text, for the clipboard; `None` without a selection.
+  String? selectionText();
+
   void setCellPixels({required double width, required double height});
 
   void setOptionAsAlt({required bool enabled});
+
+  /// The UI theme, which programs ask for to pick their colors. Colors
+  /// are `0xRRGGBB`.
+  void setTheme({
+    required bool dark,
+    required int foreground,
+    required int background,
+  });
 
   /// Text from an input method or soft keyboard.
   void text({required String text});
@@ -417,6 +445,31 @@ class ReconnectingView {
           reason == other.reason;
 }
 
+/// One visible row's selected columns, both inclusive.
+class SelectedRange {
+  final int row;
+  final int start;
+  final int end;
+
+  const SelectedRange({
+    required this.row,
+    required this.start,
+    required this.end,
+  });
+
+  @override
+  int get hashCode => row.hashCode ^ start.hashCode ^ end.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SelectedRange &&
+          runtimeType == other.runtimeType &&
+          row == other.row &&
+          start == other.start &&
+          end == other.end;
+}
+
 /// One event; the field named by `kind` is set.
 class SessionEvent {
   final SessionEventKind kind;
@@ -521,6 +574,10 @@ class TermFrame {
   final bool altScreen;
   final String title;
 
+  /// The selection as it stands now (empty: none), to paint over the
+  /// screen.
+  final List<SelectedRange> selection;
+
   const TermFrame({
     required this.frame,
     required this.mouseTracking,
@@ -528,6 +585,7 @@ class TermFrame {
     required this.reportAllKeys,
     required this.altScreen,
     required this.title,
+    required this.selection,
   });
 
   @override
@@ -537,7 +595,8 @@ class TermFrame {
       bracketedPaste.hashCode ^
       reportAllKeys.hashCode ^
       altScreen.hashCode ^
-      title.hashCode;
+      title.hashCode ^
+      selection.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -549,7 +608,8 @@ class TermFrame {
           bracketedPaste == other.bracketedPaste &&
           reportAllKeys == other.reportAllKeys &&
           altScreen == other.altScreen &&
-          title == other.title;
+          title == other.title &&
+          selection == other.selection;
 }
 
 enum TrustKind { known, certified, new_ }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/providers.dart';
 import '../src/rust/api/vault.dart';
+import '../settings_dialog.dart';
 import '../tabs/tabs.dart';
 import 'editors.dart';
 import 'import_ssh_config.dart';
@@ -157,6 +158,11 @@ class _SidebarState extends ConsumerState<Sidebar> {
                   label: const Text('Grupo'),
                 ),
                 const Spacer(),
+                IconButton(
+                  tooltip: 'Ajustes',
+                  icon: const Icon(Icons.settings_outlined, size: 18),
+                  onPressed: () => showSettings(context),
+                ),
                 IconButton(
                   tooltip: 'Importar ~/.ssh/config',
                   icon: const Icon(Icons.download_outlined, size: 18),

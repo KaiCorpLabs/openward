@@ -8,20 +8,29 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
-import 'package:flutter/gestures.dart' show kDoubleTapMinTime, kSecondaryButton;
+import 'package:flutter/gestures.dart'
+    show
+        PointerDeviceKind,
+        kDoubleTapMinTime,
+        kPrimaryMouseButton,
+        kSecondaryButton;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:openward/app.dart';
 import 'package:openward/core/providers.dart';
+import 'package:openward/core/settings.dart';
 import 'package:openward/src/rust/api/app.dart';
 import 'package:openward/src/rust/api/session.dart';
 import 'package:openward/src/rust/api/vault.dart';
 import 'package:openward/src/rust/frb_generated.dart';
 import 'package:openward/tabs/tabs.dart';
 import 'package:openward/terminal/controller.dart';
+import 'package:openward/terminal/keys.dart';
+import 'package:openward/terminal/renderer.dart';
 
 final _shots = Directory('${Directory.systemTemp.path}/openward-shots');
 final _frame = GlobalKey();
@@ -91,7 +100,12 @@ void main() {
       RepaintBoundary(
         key: _frame,
         child: ProviderScope(
-          overrides: [openWardProvider.overrideWithValue(app)],
+          overrides: [
+            openWardProvider.overrideWithValue(app),
+            settingsFileProvider.overrideWithValue(
+              File('${dir.path}/data/settings.json'),
+            ),
+          ],
           child: const OpenWardApp(),
         ),
       ),
@@ -150,9 +164,147 @@ Host web-1 web-2
     );
     await _shot(tester, '2-local-terminal');
 
+    // Select with the mouse and copy with ⌘C (to a stand-in clipboard: the
+    // real one is the tester's).
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          copied = (call.arguments as Map)['text'] as String?;
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    final grid = tester.getTopLeft(find.byType(TerminalGrid));
+    final m = c.currentRenderer!.metrics;
+    final lines = c.session.screenText().split('\n');
+    final row = lines.indexWhere((l) => l == 'ui-42');
+    expect(row, isNonNegative, reason: lines.join('\n'));
+    Offset cell(int col) =>
+        grid + Offset(col * m.width + 1, row * m.height + m.height / 2);
+    final drag = await tester.startGesture(
+      cell(0),
+      kind: PointerDeviceKind.mouse,
+      buttons: kPrimaryMouseButton,
+    );
+    await drag.moveTo(cell(4) + Offset(m.width - 2, 0));
+    await drag.up();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(c.session.selectionText(), 'ui-42');
+    expect(c.currentRenderer!.selection, hasLength(1));
+    await _shot(tester, '9-selection');
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+    await tester.pump();
+    expect(copied, 'ui-42');
+
+    // A double click takes the word.
+    Future<void> click() async {
+      final g = await tester.startGesture(
+        cell(1),
+        kind: PointerDeviceKind.mouse,
+        buttons: kPrimaryMouseButton,
+      );
+      await g.up();
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    await click();
+    await click();
+    expect(c.session.selectionText(), 'ui-42');
+
+    // A program that follows the mouse gets the drags; Shift still selects.
+    // cat swallows the mouse reports, which a shell would take as typing.
+    c.session.text(
+      text:
+          r"printf '\033[?1000h'; cat > /dev/null"
+          '\n',
+    );
+    await _until(tester, () => c.mouseTracking, 'mouse tracking');
+    expect(c.session.selectionText(), isNull, reason: 'typing clears it');
+    Future<void> dragAcross() async {
+      final g = await tester.startGesture(
+        cell(0),
+        kind: PointerDeviceKind.mouse,
+        buttons: kPrimaryMouseButton,
+      );
+      await g.moveTo(cell(4) + Offset(m.width - 2, 0));
+      await g.up();
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    await dragAcross();
+    expect(c.session.selectionText(), isNull);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await dragAcross();
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    expect(c.session.selectionText(), 'ui-42');
+    // Ctrl+C ends cat; then tracking off.
+    for (final kind in [KeyKind.down, KeyKind.up]) {
+      c.session.key(
+        hidUsage: 0x00070006,
+        kind: kind,
+        mods: Mods.ctrl,
+        text: kind == KeyKind.down ? 'c' : '',
+        unshifted: 0x63,
+      );
+    }
+    c.session.text(
+      text:
+          r"printf '\033[?1000l'"
+          '\n',
+    );
+    await _until(tester, () => !c.mouseTracking, 'mouse tracking off');
+
     container.read(tabsProvider.notifier).close(0);
     await tester.pumpAndSettle();
     expect(container.read(tabsProvider).tabs, isEmpty);
+  });
+
+  testWidgets('settings: light theme and a bigger font, kept on disk', (
+    tester,
+  ) async {
+    final container = await launch(tester);
+    await tester.tap(find.byTooltip('Ajustes'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Claro'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('13 px'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('16 px').last);
+    await tester.pumpAndSettle();
+    await _shot(tester, '10-settings');
+    await tester.tap(find.text('Cerrar'));
+    await tester.pumpAndSettle();
+    expect(container.read(settingsProvider).theme, ThemeChoice.light);
+    final saved = File('${dir.path}/data/settings.json').readAsStringSync();
+    expect(saved, contains('"theme": "light"'));
+    expect(saved, contains('"font_size": 16.0'));
+
+    await tester.tap(find.textContaining('Terminal local'));
+    await tester.pump();
+    final c = container.read(tabsProvider).current!;
+    await _until(tester, () => c.phase == Phase.running, 'the shell');
+    c.session.text(text: 'printf "\\033[31mrojo\\033[0m normal\\n"\n');
+    await _until(
+      tester,
+      () => c.session.screenText().contains('rojo normal'),
+      'the output',
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(c.currentRenderer!.metrics.fontSize, 16);
+    expect(c.currentRenderer!.palette.dark, isFalse);
+    await _shot(tester, '11-light-terminal');
+    container.read(tabsProvider.notifier).close(0);
+    await tester.pumpAndSettle();
   });
 
   testWidgets('a group and a host from the editors, with inheritance', (

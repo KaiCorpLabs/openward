@@ -63,7 +63,12 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   /// A new terminal tab, connected to nothing yet: pass it to
   /// [`OpenWard::connect`] or [`OpenWard::open_local`].
-  TerminalSession terminal({required int cols, required int rows});
+  /// `scrollback` lines of history; 0 for the default.
+  TerminalSession terminal({
+    required int cols,
+    required int rows,
+    required int scrollback,
+  });
 
   /// Trusts a key the user checked, replacing the old one of its type
   /// (after a changed host key).

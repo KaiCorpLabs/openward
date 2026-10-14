@@ -113,7 +113,7 @@ Host app
   });
 
   test('a local shell', () async {
-    final session = app.terminal(cols: 80, rows: 24);
+    final session = app.terminal(cols: 80, rows: 24, scrollback: 0);
     final events = <SessionEvent>[];
     final sub = app.openLocal(session: session).listen(events.add);
     // Input before the program starts goes nowhere.
@@ -165,7 +165,7 @@ Host app
         ),
       ),
     );
-    final session = app.terminal(cols: 80, rows: 24);
+    final session = app.terminal(cols: 80, rows: 24, scrollback: 0);
     final events = <SessionEvent>[];
     final sub = app.connect(session: session, hostId: id).listen((e) {
       events.add(e);

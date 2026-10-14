@@ -15,8 +15,12 @@ enum Phase { connecting, connected, reconnecting, running, closed }
 /// One terminal tab: the Rust session, its renderer and what the session
 /// reported. Lives as long as the tab, visible or not.
 class TerminalController extends ChangeNotifier {
-  TerminalController({required this.app, required this.label, this.hostId})
-    : session = app.terminal(cols: 80, rows: 24);
+  TerminalController({
+    required this.app,
+    required this.label,
+    this.hostId,
+    int scrollback = 0,
+  }) : session = app.terminal(cols: 80, rows: 24, scrollback: scrollback);
 
   final OpenWard app;
 
@@ -64,6 +68,9 @@ class TerminalController extends ChangeNotifier {
   bool reportAllKeys = false;
 
   TerminalRenderer? _renderer;
+
+  /// The renderer in use, if the tab has been shown.
+  TerminalRenderer? get currentRenderer => _renderer;
   Timer? _background;
   bool _disposed = false;
 
@@ -160,20 +167,37 @@ class TerminalController extends ChangeNotifier {
     _notify();
   }
 
-  /// The renderer for this pixel density, made anew (and the screen asked
-  /// for again) when it changes.
-  TerminalRenderer renderer(double devicePixelRatio) {
+  /// The renderer for this pixel density, font size and palette, made anew
+  /// (and the screen asked for again) when any of them changes.
+  TerminalRenderer renderer(
+    double devicePixelRatio, {
+    required double fontSize,
+    required TermPalette palette,
+  }) {
     final current = _renderer;
-    if (current != null && current.devicePixelRatio == devicePixelRatio) {
+    if (current != null &&
+        current.devicePixelRatio == devicePixelRatio &&
+        current.metrics.fontSize == fontSize &&
+        identical(current.palette, palette)) {
       return current;
     }
+    if (current == null || !identical(current.palette, palette)) {
+      session.setTheme(
+        dark: palette.dark,
+        foreground: TermPalette.rgb(palette.foreground),
+        background: TermPalette.rgb(palette.background),
+      );
+    }
     current?.dispose();
-    final metrics = CellMetrics.measure(devicePixelRatio: devicePixelRatio);
+    final metrics = CellMetrics.measure(
+      fontSize: fontSize,
+      devicePixelRatio: devicePixelRatio,
+    );
     session.setCellPixels(width: metrics.width, height: metrics.height);
     session.redraw();
     return _renderer = TerminalRenderer(
       metrics: metrics,
-      palette: TermPalette.dark,
+      palette: palette,
       devicePixelRatio: devicePixelRatio,
     );
   }
@@ -185,6 +209,9 @@ class TerminalController extends ChangeNotifier {
     final f = session.poll();
     if (f == null) return false;
     renderer.apply(decodeFrame(f.frame));
+    renderer.setSelection([
+      for (final r in f.selection) (row: r.row, start: r.start, end: r.end),
+    ]);
     if (f.title != title ||
         f.mouseTracking != mouseTracking ||
         f.bracketedPaste != bracketedPaste ||
