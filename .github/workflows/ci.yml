@@ -214,17 +214,26 @@ jobs:
         if: runner.os == 'Linux'
         working-directory: app
         run: |
-          # flutter_tools sometimes fails cleaning up its temporary files
-          # after the tests have passed ("unhandled error during
-          # finalization"): that alone does not fail the job.
-          itest() {
+          # One X server for the whole step.
+          Xvfb :99 -screen 0 1920x1200x24 >/dev/null 2>&1 &
+          export DISPLAY=:99
+          # Flutter's integration tests are flaky on a headless Linux (the
+          # app at times vanishes at start, or flutter_tools fails cleaning
+          # up after the tests passed): one retry, with a warning. A real
+          # failure fails both times.
+          once() {
             local log
             log="$(mktemp)"
-            if xvfb-run -a flutter test "$1" -d linux -r expanded 2>&1 | tee "$log"; then
+            if flutter test "$1" -d linux -r expanded 2>&1 | tee "$log"; then
               return 0
             fi
             grep -q "All tests passed" "$log" &&
               grep -q "unhandled error during finalization" "$log"
+          }
+          itest() {
+            once "$1" && return 0
+            echo "::warning title=Flaky integration test::$1 failed; retrying once"
+            once "$1"
           }
           itest integration_test/ffi_test.dart
           itest integration_test/ui_test.dart
