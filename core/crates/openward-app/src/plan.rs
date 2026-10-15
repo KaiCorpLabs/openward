@@ -9,7 +9,7 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use openward_vault::proto::{Agent, HostKeyPolicy, ItemId, Jump, Route, Settings};
+use openward_vault::proto::{Agent, HostKeyPolicy, ItemId, Jump, Proxy, Route, Settings};
 use openward_vault::{Vault, defaults};
 
 use crate::local::{Local, Tokens};
@@ -36,6 +36,8 @@ pub struct Hop {
     pub agent: Option<PathBuf>,
     /// Only on the first hop.
     pub proxy_command: Option<String>,
+    /// Only on the first hop, never with a `proxy_command`.
+    pub proxy: Option<openward_ssh::proxy::Proxy>,
     pub keepalive: Option<Duration>,
     pub host_key_policy: HostKeyPolicy,
 }
@@ -69,9 +71,14 @@ impl Plan {
             .iter()
             .map(|h| format!("{}@{}:{}", h.user, h.address, h.port))
             .collect();
-        match self.hops.first().and_then(|h| h.proxy_command.as_deref()) {
-            Some(command) => format!("{} via {command}", hops.join(" > ")),
-            None => hops.join(" > "),
+        let first = self.hops.first();
+        match (
+            first.and_then(|h| h.proxy_command.as_deref()),
+            first.and_then(|h| h.proxy.as_ref()),
+        ) {
+            (Some(command), _) => format!("{} via {command}", hops.join(" > ")),
+            (None, Some(p)) => format!("{} via proxy {}", hops.join(" > "), p.address()),
+            (None, None) => hops.join(" > "),
         }
     }
 
@@ -102,6 +109,18 @@ impl Plan {
         let mut hops = Vec::new();
         chain(vault, host, local, &mut Vec::new(), &mut hops)?;
         let settings = vault.effective(host)?.settings;
+        // The proxy goes in front of the first connection: the first hop's,
+        // or else the target's (a group with a proxy whose hosts jump).
+        if let Some(first) = hops.first_mut()
+            && first.proxy_command.is_none()
+        {
+            let chosen = match first.host {
+                Some(id) => vault.effective(id)?.settings.proxy,
+                None => None,
+            }
+            .or_else(|| settings.proxy.clone());
+            first.proxy = chosen.and_then(proxy_of);
+        }
         let target = hops.last().expect("the chain ends with the host");
         Ok(Self {
             term: settings.term.unwrap_or_else(|| "xterm-256color".into()),
@@ -155,6 +174,22 @@ fn chain(
     Ok(())
 }
 
+fn proxy_of(p: Proxy) -> Option<openward_ssh::proxy::Proxy> {
+    use openward_ssh::proxy::ProxyKind;
+    let (kind, server) = match p {
+        Proxy::None => return None,
+        Proxy::Http(s) => (ProxyKind::Http, s),
+        Proxy::Socks5(s) => (ProxyKind::Socks5, s),
+    };
+    Some(openward_ssh::proxy::Proxy {
+        kind,
+        host: server.host,
+        port: server.port,
+        user: server.user,
+        password: None,
+    })
+}
+
 /// One hop from complete settings (defaults included).
 fn hop(
     label: &str,
@@ -200,6 +235,7 @@ fn hop(
         identities_only: s.identities_only.unwrap_or(false),
         agent,
         proxy_command,
+        proxy: None,
         keepalive: s
             .keepalive_secs
             .filter(|&k| k > 0)
@@ -359,6 +395,92 @@ mod tests {
         assert_eq!(plan.hops[3].agent, None);
         // No agent to forward.
         assert!(!plan.agent_forward);
+    }
+
+    #[test]
+    fn the_proxy_goes_in_front_of_the_first_hop() {
+        use openward_vault::proto::ProxyServer;
+        let server = |host: &str| ProxyServer {
+            host: host.into(),
+            port: 3128,
+            user: None,
+        };
+        let mut v = Vault::open_in_memory().unwrap();
+        let office = v
+            .create(Data::Group(Group {
+                name: "Oficina".into(),
+                settings: Settings {
+                    proxy: Some(Proxy::Http(server("proxy.oficina"))),
+                    ..Settings::default()
+                },
+                ..Group::default()
+            }))
+            .unwrap();
+        let plain = host(&mut v, "plain", Some(office), Settings::default());
+        let plan = Plan::for_host(&v, plain, &local()).unwrap();
+        let p = plan.hops[0].proxy.as_ref().unwrap();
+        assert_eq!(
+            (p.address(), p.kind),
+            (
+                "proxy.oficina:3128".into(),
+                openward_ssh::proxy::ProxyKind::Http
+            )
+        );
+        assert!(plan.key().ends_with("via proxy proxy.oficina:3128"));
+
+        // A bastion outside the group: the target's proxy leads to it.
+        let bastion = host(&mut v, "bastion", None, Settings::default());
+        let jumping = host(
+            &mut v,
+            "web",
+            Some(office),
+            Settings {
+                route: Some(Route::Jump(vec![Jump::Host(bastion)])),
+                ..Settings::default()
+            },
+        );
+        let plan = Plan::for_host(&v, jumping, &local()).unwrap();
+        assert_eq!(plan.hops[0].label, "bastion");
+        assert!(plan.hops[0].proxy.is_some());
+        assert!(plan.hops[1].proxy.is_none());
+
+        // The first hop's own choice wins, "none" included.
+        let direct = host(
+            &mut v,
+            "inside",
+            None,
+            Settings {
+                proxy: Some(Proxy::None),
+                ..Settings::default()
+            },
+        );
+        let via_direct = host(
+            &mut v,
+            "web2",
+            Some(office),
+            Settings {
+                route: Some(Route::Jump(vec![Jump::Host(direct)])),
+                ..Settings::default()
+            },
+        );
+        assert!(
+            Plan::for_host(&v, via_direct, &local()).unwrap().hops[0]
+                .proxy
+                .is_none()
+        );
+
+        // Never together with a ProxyCommand.
+        let cmd = host(
+            &mut v,
+            "cmd",
+            Some(office),
+            Settings {
+                route: Some(Route::Command("nc %h %p".into())),
+                ..Settings::default()
+            },
+        );
+        let plan = Plan::for_host(&v, cmd, &local()).unwrap();
+        assert!(plan.hops[0].proxy.is_none() && plan.hops[0].proxy_command.is_some());
     }
 
     #[test]

@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -52,6 +53,9 @@ pub enum Hop<'a> {
     ProxyCommand(String),
     /// A `direct-tcpip` channel through an authenticated session (jump host).
     Via(&'a Session),
+    /// An HTTP or SOCKS5 proxy. Fails with [`crate::proxy::ProxyAuthRequired`]
+    /// when the proxy wants a password it was not given.
+    Proxy(crate::proxy::Proxy),
 }
 
 #[derive(Clone, Debug)]
@@ -128,8 +132,9 @@ impl Info {
 
 struct Shared {
     info: Info,
-    /// Remote forward port on the server → local address it leads to.
-    remote_forwards: HashMap<u32, (String, u16)>,
+    /// Remote forward port on the server → local address it leads to, and
+    /// how many connections are going through it.
+    remote_forwards: HashMap<u32, (String, u16, Arc<AtomicU32>)>,
     started: Instant,
 }
 
@@ -208,15 +213,17 @@ impl client::Handler for Handler {
             .remote_forwards
             .get(&connected_port)
             .cloned();
-        let Some((host, port)) = local else {
+        let Some((host, port, active)) = local else {
             // Not ours: dropping the reply rejects the channel.
             return Ok(());
         };
         reply.accept().await;
         tokio::spawn(async move {
             if let Ok(mut socket) = tokio::net::TcpStream::connect((host.as_str(), port)).await {
+                active.fetch_add(1, Ordering::Relaxed);
                 let mut stream = channel.into_stream();
                 let _ = tokio::io::copy_bidirectional(&mut stream, &mut socket).await;
+                active.fetch_sub(1, Ordering::Relaxed);
             }
         });
         Ok(())
@@ -336,6 +343,10 @@ pub async fn open(target: &Target, hop: Hop<'_>, opts: &Options) -> anyhow::Resu
                 child.stdin.take().context("ProxyCommand stdin")?,
             );
             proxy = Some(child);
+            client::connect_stream(config, stream, handler).await
+        }
+        Hop::Proxy(p) => {
+            let stream = crate::proxy::connect(&p, &target.host, target.port).await?;
             client::connect_stream(config, stream, handler).await
         }
         Hop::Via(jump) => {
@@ -813,13 +824,36 @@ impl Session {
     /// Asks the server to listen on `127.0.0.1:0` and relay connections to
     /// `local`. Returns the port the server picked.
     pub async fn remote_forward(&self, local: (&str, u16)) -> anyhow::Result<u32> {
-        let port = self.handle.tcpip_forward("127.0.0.1", 0).await?;
+        self.remote_forward_on("127.0.0.1", 0, local, Arc::default())
+            .await
+    }
+
+    /// Asks the server to listen on `address:port` (0: it picks) and relay
+    /// connections to `local`, counting them in `active`. Returns the port.
+    /// Fails if the server will not: the port is taken, or it does not
+    /// allow forwarding.
+    pub async fn remote_forward_on(
+        &self,
+        address: &str,
+        port: u32,
+        local: (&str, u16),
+        active: Arc<AtomicU32>,
+    ) -> anyhow::Result<u32> {
+        let got = self.handle.tcpip_forward(address, port).await?;
+        // With a fixed port the server answers 0: the port is the one asked.
+        let got = if port == 0 { got } else { port };
         self.shared
             .lock()
             .unwrap()
             .remote_forwards
-            .insert(port, (local.0.to_owned(), local.1));
-        Ok(port)
+            .insert(got, (local.0.to_owned(), local.1, active));
+        Ok(got)
+    }
+
+    /// Stops a remote forward.
+    pub async fn cancel_remote_forward(&self, address: &str, port: u32) {
+        self.shared.lock().unwrap().remote_forwards.remove(&port);
+        let _ = self.handle.cancel_tcpip_forward(address, port).await;
     }
 
     pub async fn disconnect(&self) {

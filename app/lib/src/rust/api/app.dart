@@ -9,6 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'session.dart';
 import 'sftp.dart';
+import 'tunnels.dart';
 import 'vault.dart';
 
 // These functions are ignored because they are not marked as `pub`: `apply_group`, `apply_host`, `host_spec`, `warning`
@@ -22,6 +23,9 @@ abstract class OpenWard implements RustOpaqueInterface {
   void cancelTransfer({required BigInt id});
 
   void clearFinishedTransfers();
+
+  /// Closes it (and forgets an error it had).
+  void closeTunnel({required String id});
 
   /// Connects `session` to a saved host; again on the same session, it
   /// reconnects and keeps the screen. In Dart this returns the stream of
@@ -60,9 +64,14 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   Future<String> createHost({required HostSpec spec});
 
+  Future<String> createTunnel({required TunnelSpec spec});
+
   /// A host, group or known host. A group's contents move up to its
   /// parent; a host other hosts jump through cannot go.
   Future<void> delete({required String id});
+
+  /// A free port here after `port`, to offer when that one is taken.
+  int? freePortNear({required int port});
 
   GroupDetail group({required String id});
 
@@ -92,6 +101,10 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// Runs the user's shell on this machine in `session`. In Dart this
   /// returns the stream of its events (the end, with its exit code).
   Stream<SessionEvent> openLocal({required TerminalSession session});
+
+  /// Opens a tunnel, connecting to its host if needed. The stream is that
+  /// connection's events (questions, and `connected` once it listens).
+  Stream<SessionEvent> openTunnel({required String id});
 
   void pauseTransfer({required BigInt id});
 
@@ -147,6 +160,9 @@ abstract class OpenWard implements RustOpaqueInterface {
     required String key,
   });
 
+  /// Every saved tunnel with its state now, by name.
+  List<TunnelView> tunnels();
+
   Future<BigInt> updateGroup({
     required String id,
     required BigInt rev,
@@ -158,5 +174,13 @@ abstract class OpenWard implements RustOpaqueInterface {
     required String id,
     required BigInt rev,
     required HostSpec spec,
+  });
+
+  /// Returns the new revision. An open tunnel closes: it opens again with
+  /// what it is now.
+  Future<BigInt> updateTunnel({
+    required String id,
+    required BigInt rev,
+    required TunnelSpec spec,
   });
 }

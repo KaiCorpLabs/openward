@@ -58,6 +58,8 @@ settings! {
     agent: Agent,
     /// How to reach the host.
     route: Route,
+    /// A proxy in front of the first hop (not with a `ProxyCommand`).
+    proxy: Proxy,
     /// Seconds between keepalives; 0 turns them off.
     keepalive_secs: u32,
     /// Forward the agent to the server.
@@ -106,6 +108,26 @@ pub enum Jump {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         port: Option<u16>,
     },
+}
+
+/// An HTTP or SOCKS proxy that the connection to the first hop goes
+/// through. Its password is never stored: it is asked for when needed.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Proxy {
+    /// No proxy, even if a group sets one.
+    None,
+    /// `CONNECT` through an HTTP proxy.
+    Http(ProxyServer),
+    Socks5(ProxyServer),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProxyServer {
+    pub host: String,
+    pub port: u16,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub user: Option<String>,
 }
 
 /// What to do with a host key that is not known yet. A key that changed is

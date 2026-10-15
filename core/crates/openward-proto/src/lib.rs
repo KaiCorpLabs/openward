@@ -21,7 +21,7 @@ use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-pub use settings::{Agent, HostKeyPolicy, Jump, Route, Settings};
+pub use settings::{Agent, HostKeyPolicy, Jump, Proxy, ProxyServer, Route, Settings};
 
 /// Fields a newer version wrote that this one does not know.
 pub type Extra = BTreeMap<String, ciborium::Value>;
@@ -87,6 +87,7 @@ pub enum Data {
     Group(Group),
     Host(Host),
     KnownHost(KnownHost),
+    PortForward(PortForward),
     /// A type from a newer version. Never encoded: the stored bytes stay.
     #[serde(other)]
     Unsupported,
@@ -98,6 +99,7 @@ impl Data {
             Self::Group(_) => "group",
             Self::Host(_) => "host",
             Self::KnownHost(_) => "known_host",
+            Self::PortForward(_) => "port_forward",
             Self::Unsupported => "unsupported",
         }
     }
@@ -142,6 +144,46 @@ pub struct Host {
 pub enum Source {
     /// A `Host` alias of an imported `~/.ssh/config`.
     SshConfig { alias: String },
+}
+
+/// A saved tunnel: a port forward over the connection to a host.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PortForward {
+    pub label: String,
+    /// The host whose connection it goes over.
+    pub host: ItemId,
+    pub kind: ForwardKind,
+    /// The port listened on: on this machine (local, dynamic) or on the
+    /// server (remote).
+    pub listen_port: u16,
+    /// Where to listen; `None` is loopback only. `0.0.0.0` (or `*`) lets
+    /// the local network in.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub listen_address: Option<String>,
+    /// Where connections go: seen from the server for a local forward,
+    /// from this machine for a remote one. `None` for a dynamic forward.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dest_host: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dest_port: Option<u16>,
+    /// Opened whenever a terminal or a browser connects to the host.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub autostart: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<Source>,
+    #[serde(flatten)]
+    pub extra: Extra,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ForwardKind {
+    /// `-L`: a port here that reaches a service the server sees.
+    Local,
+    /// `-R`: a port on the server that reaches a service here.
+    Remote,
+    /// `-D`: a SOCKS5 proxy here whose connections leave from the server.
+    Dynamic,
 }
 
 /// A trusted host key, in the terms of an OpenSSH `known_hosts` line.
@@ -297,6 +339,36 @@ mod tests {
                 "created", "modified", "type", "label", "address", "tags", "settings"
             ]
         );
+    }
+
+    #[test]
+    fn tunnels_and_proxies_round_trip() {
+        let tunnel = Body {
+            created: 1,
+            modified: 2,
+            data: Data::PortForward(PortForward {
+                label: "Postgres".into(),
+                host: ItemId::new(),
+                kind: ForwardKind::Local,
+                listen_port: 5433,
+                listen_address: None,
+                dest_host: Some("10.0.4.21".into()),
+                dest_port: Some(5432),
+                autostart: true,
+                source: None,
+                extra: Extra::new(),
+            }),
+        };
+        assert_eq!(Body::from_cbor(&tunnel.to_cbor()).unwrap(), tunnel);
+        let mut group = host();
+        if let Data::Host(h) = &mut group.data {
+            h.settings.proxy = Some(Proxy::Socks5(ProxyServer {
+                host: "proxy.example".into(),
+                port: 1080,
+                user: Some("ana".into()),
+            }));
+        }
+        assert_eq!(Body::from_cbor(&group.to_cbor()).unwrap(), group);
     }
 
     /// What a newer version wrote survives a read and a write by this one.

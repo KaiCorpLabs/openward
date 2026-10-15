@@ -51,6 +51,7 @@ Future<void> showImportReport(BuildContext context, ImportReport report) {
 String reportSummary(AppLocalizations l, ImportReport r) {
   final parts = [
     if (r.created > 0) l.reportCreated(r.created),
+    if (r.tunnels > 0) l.reportTunnels(r.tunnels),
     if (r.skipped > 0) l.reportSkipped(r.skipped),
   ];
   return parts.isEmpty
@@ -99,7 +100,11 @@ class _ImportPickerState extends State<ImportPicker> {
   late final Set<String> _picked = {for (final p in _new) p.alias};
   bool _all = false;
 
-  Iterable<ImportPreview> get _new => widget.previews.where((p) => !p.existing);
+  /// What can be picked: new hosts, and hosts imported before that bring
+  /// tunnels they did not have.
+  Iterable<ImportPreview> get _new => widget.previews.where(_pickable);
+
+  bool _pickable(ImportPreview p) => !p.existing || p.tunnels > 0;
 
   ImportPreview? _find(String alias) =>
       widget.previews.where((p) => p.alias == alias).firstOrNull;
@@ -119,7 +124,10 @@ class _ImportPickerState extends State<ImportPicker> {
         final queue = [p];
         while (queue.isNotEmpty) {
           final next = queue.removeLast();
-          if (next.existing || !_picked.add(next.alias)) continue;
+          if ((next.existing && !identical(next, p)) ||
+              !_picked.add(next.alias)) {
+            continue;
+          }
           queue.addAll(next.jumps.map(_find).whereType<ImportPreview>());
         }
       } else {
@@ -223,11 +231,12 @@ class _ImportPickerState extends State<ImportPicker> {
       p.address,
       if (p.port != null && p.port != 22) ':${p.port}',
     ].join();
-    final note = p.existing
-        ? l.alreadyImported
-        : p.jumps.isEmpty
-        ? null
-        : l.jumpsVia(p.jumps.join(' → '));
+    final notes = [
+      if (p.existing) l.alreadyImported,
+      if (!p.existing && p.jumps.isNotEmpty) l.jumpsVia(p.jumps.join(' → ')),
+      if (p.tunnels > 0) l.bringsTunnels(p.tunnels),
+    ];
+    final note = notes.isEmpty ? null : notes.join(' · ');
     return DecoratedBox(
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: c.border)),
@@ -235,8 +244,8 @@ class _ImportPickerState extends State<ImportPicker> {
       child: CheckboxListTile(
         dense: true,
         controlAffinity: ListTileControlAffinity.leading,
-        value: !p.existing && _picked.contains(p.alias),
-        onChanged: p.existing ? null : (v) => _pick(p, v ?? false),
+        value: _pickable(p) && _picked.contains(p.alias),
+        onChanged: _pickable(p) ? (v) => _pick(p, v ?? false) : null,
         title: Row(
           children: [
             SizedBox(
@@ -247,7 +256,7 @@ class _ImportPickerState extends State<ImportPicker> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontWeight: FontWeight.w500,
-                  color: p.existing ? c.textMuted : c.text,
+                  color: _pickable(p) ? c.text : c.textMuted,
                 ),
               ),
             ),

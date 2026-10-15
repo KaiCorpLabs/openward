@@ -20,7 +20,7 @@ pub fn init_app() {
 
 #[frb(opaque)]
 pub struct OpenWard {
-    app: Arc<App>,
+    pub(crate) app: Arc<App>,
 }
 
 fn host_spec(h: &Host) -> HostSpec {
@@ -261,7 +261,7 @@ impl OpenWard {
     /// A host, group or known host. A group's contents move up to its
     /// parent; a host other hosts jump through cannot go.
     pub fn delete(&self, id: String) -> anyhow::Result<()> {
-        self.app.vault().delete(super::vault::id(&id)?)?;
+        self.app.delete(super::vault::id(&id)?)?;
         Ok(())
     }
 
@@ -278,6 +278,7 @@ impl OpenWard {
                 port: p.port,
                 jumps: p.jumps,
                 existing: p.existing,
+                tunnels: p.tunnels as u32,
             })
             .collect()
     }
@@ -297,6 +298,7 @@ impl OpenWard {
             group_id: report.group.to_string(),
             created: report.created as u32,
             skipped: report.skipped as u32,
+            tunnels: report.tunnels as u32,
             warnings: report.warnings.into_iter().map(warning).collect(),
         })
     }

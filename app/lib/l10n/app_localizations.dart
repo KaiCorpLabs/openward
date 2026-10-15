@@ -170,6 +170,12 @@ abstract class AppLocalizations {
   /// **'ya importado'**
   String get alreadyImported;
 
+  /// No description provided for @anyDestination.
+  ///
+  /// In es, this message translates to:
+  /// **'Cualquier destino'**
+  String get anyDestination;
+
   /// No description provided for @appearanceStepBody.
   ///
   /// In es, this message translates to:
@@ -218,6 +224,12 @@ abstract class AppLocalizations {
   /// **'Ha sonado la campana'**
   String get bellRang;
 
+  /// No description provided for @bringsTunnels.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{trae 1 túnel} other{trae {count} túneles}}'**
+  String bringsTunnels(int count);
+
   /// No description provided for @broadcastBanner.
   ///
   /// In es, this message translates to:
@@ -265,6 +277,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{count, plural, =1{Broadcast · 1 panel} other{Broadcast · {count} paneles}}'**
   String broadcastStatus(int count);
+
+  /// No description provided for @bySsh.
+  ///
+  /// In es, this message translates to:
+  /// **'por SSH'**
+  String get bySsh;
 
   /// No description provided for @cancel.
   ///
@@ -361,6 +379,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cerrar'**
   String get close;
+
+  /// No description provided for @closeAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar'**
+  String get closeAction;
 
   /// No description provided for @closePane.
   ///
@@ -559,6 +583,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Copiar'**
   String get copy;
+
+  /// No description provided for @copyAddress.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar dirección'**
+  String get copyAddress;
 
   /// No description provided for @copyFingerprint.
   ///
@@ -764,6 +794,12 @@ abstract class AppLocalizations {
   /// **'Suelta para subir aquí'**
   String get dropToUpload;
 
+  /// No description provided for @dynamicSentence.
+  ///
+  /// In es, this message translates to:
+  /// **'Usa {here} como proxy SOCKS5: las conexiones salen de {host}.'**
+  String dynamicSentence(String here, String host);
+
   /// No description provided for @editEllipsis.
   ///
   /// In es, this message translates to:
@@ -787,6 +823,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Editar host'**
   String get editHostTitle;
+
+  /// No description provided for @editTunnel.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar túnel'**
+  String get editTunnel;
 
   /// No description provided for @emptyFolder.
   ///
@@ -865,6 +907,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Filtrar en esta carpeta'**
   String get filterFolder;
+
+  /// No description provided for @filterTunnels.
+  ///
+  /// In es, this message translates to:
+  /// **'Filtrar por nombre, host o puerto'**
+  String get filterTunnels;
 
   /// No description provided for @findClose.
   ///
@@ -956,6 +1004,12 @@ abstract class AppLocalizations {
   /// **'A todos:'**
   String get forAll;
 
+  /// No description provided for @forward.
+  ///
+  /// In es, this message translates to:
+  /// **'Reenvío'**
+  String get forward;
+
   /// No description provided for @fromDefault.
   ///
   /// In es, this message translates to:
@@ -968,11 +1022,29 @@ abstract class AppLocalizations {
   /// **'Del grupo {name}'**
   String fromGroup(String name);
 
+  /// No description provided for @fromHere.
+  ///
+  /// In es, this message translates to:
+  /// **'desde aquí'**
+  String get fromHere;
+
   /// No description provided for @fromNowhere.
   ///
   /// In es, this message translates to:
   /// **'Sin valor: lo decide la conexión'**
   String get fromNowhere;
+
+  /// No description provided for @fromSshConfig.
+  ///
+  /// In es, this message translates to:
+  /// **'de ~/.ssh/config'**
+  String get fromSshConfig;
+
+  /// No description provided for @fromThere.
+  ///
+  /// In es, this message translates to:
+  /// **'desde allí'**
+  String get fromThere;
 
   /// No description provided for @group.
   ///
@@ -1010,6 +1082,12 @@ abstract class AppLocalizations {
   /// **'Ocultar'**
   String get hideQueue;
 
+  /// No description provided for @host.
+  ///
+  /// In es, this message translates to:
+  /// **'Host'**
+  String get host;
+
   /// No description provided for @hostInUse.
   ///
   /// In es, this message translates to:
@@ -1040,6 +1118,12 @@ abstract class AppLocalizations {
   /// **'El host necesita un nombre.'**
   String get hostNeedsName;
 
+  /// No description provided for @ignore.
+  ///
+  /// In es, this message translates to:
+  /// **'Ignorar'**
+  String get ignore;
+
   /// No description provided for @importEllipsis.
   ///
   /// In es, this message translates to:
@@ -1063,6 +1147,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Importar de ~/.ssh/config'**
   String get importFrom;
+
+  /// No description provided for @importFromSshConfig.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar de ~/.ssh/config'**
+  String get importFromSshConfig;
 
   /// No description provided for @importIntoGroup.
   ///
@@ -1159,6 +1249,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{count, plural, =1{1 elemento} other{{count} elementos}}'**
   String itemCount(int count);
+
+  /// No description provided for @itsPort.
+  ///
+  /// In es, this message translates to:
+  /// **'Su puerto'**
+  String get itsPort;
 
   /// No description provided for @jobCancelled.
   ///
@@ -1322,6 +1418,54 @@ abstract class AppLocalizations {
   /// **'Una ruta por línea. OpenWard guarda la ruta, nunca la clave.'**
   String get keysHelp;
 
+  /// No description provided for @kindDynamic.
+  ///
+  /// In es, this message translates to:
+  /// **'Dinámico (-D)'**
+  String get kindDynamic;
+
+  /// No description provided for @kindDynamicShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Dinámico'**
+  String get kindDynamicShort;
+
+  /// No description provided for @kindLocal.
+  ///
+  /// In es, this message translates to:
+  /// **'Local (-L)'**
+  String get kindLocal;
+
+  /// No description provided for @kindLocalShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Local'**
+  String get kindLocalShort;
+
+  /// No description provided for @kindRemote.
+  ///
+  /// In es, this message translates to:
+  /// **'Remoto (-R)'**
+  String get kindRemote;
+
+  /// No description provided for @kindRemoteShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Remoto'**
+  String get kindRemoteShort;
+
+  /// No description provided for @lanLocalNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Cualquiera de tu red podrá usarlo mientras esté abierto.'**
+  String get lanLocalNote;
+
+  /// No description provided for @lanRemoteNote.
+  ///
+  /// In es, this message translates to:
+  /// **'El servidor tiene que permitirlo (GatewayPorts en sshd); si no, escucha solo en sí mismo.'**
+  String get lanRemoteNote;
+
   /// No description provided for @language.
   ///
   /// In es, this message translates to:
@@ -1333,6 +1477,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Como el sistema'**
   String get languageSystem;
+
+  /// No description provided for @library.
+  ///
+  /// In es, this message translates to:
+  /// **'Biblioteca'**
+  String get library;
 
   /// No description provided for @licenses.
   ///
@@ -1357,6 +1507,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Los enlaces «{scheme}:» no se abren desde el terminal.'**
   String linkNotOpened(String scheme);
+
+  /// No description provided for @localSentence.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que conecte a {here} llega a {dest} como si saliera de {host}.'**
+  String localSentence(String here, String dest, String host);
 
   /// No description provided for @localTerminal.
   ///
@@ -1405,6 +1561,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Añade al menos un host por el que saltar.'**
   String get missingJump;
+
+  /// No description provided for @missingProxy.
+  ///
+  /// In es, this message translates to:
+  /// **'Falta el servidor o el puerto del proxy.'**
+  String get missingProxy;
 
   /// No description provided for @missingProxyCommand.
   ///
@@ -1466,6 +1628,12 @@ abstract class AppLocalizations {
   /// **'tiempo de espera agotado.'**
   String get netTimeout;
 
+  /// No description provided for @newEllipsis.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo…'**
+  String get newEllipsis;
+
   /// No description provided for @newFolder.
   ///
   /// In es, this message translates to:
@@ -1519,6 +1687,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Nuevo subgrupo'**
   String get newSubgroup;
+
+  /// No description provided for @newTunnel.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo túnel'**
+  String get newTunnel;
 
   /// No description provided for @next.
   ///
@@ -1580,6 +1754,18 @@ abstract class AppLocalizations {
   /// **'Ningún host coincide.'**
   String get noResults;
 
+  /// No description provided for @noTunnels.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay túneles'**
+  String get noTunnels;
+
+  /// No description provided for @noTunnelsBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Un túnel lleva un puerto de este equipo a un servicio que solo ve el servidor (una base de datos, un panel), o al revés. Crea uno o tráelos de tu ~/.ssh/config.'**
+  String get noTunnelsBody;
+
   /// No description provided for @notNow.
   ///
   /// In es, this message translates to:
@@ -1598,11 +1784,53 @@ abstract class AppLocalizations {
   /// **'Aceptar'**
   String get ok;
 
+  /// No description provided for @onConnect.
+  ///
+  /// In es, this message translates to:
+  /// **'Al conectar'**
+  String get onConnect;
+
+  /// No description provided for @onlyTheServer.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo el servidor'**
+  String get onlyTheServer;
+
+  /// No description provided for @onlyThisComputer.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo este equipo (127.0.0.1)'**
+  String get onlyThisComputer;
+
+  /// No description provided for @openAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir'**
+  String get openAction;
+
+  /// No description provided for @openCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 abierto} other{{count} abiertos}}'**
+  String openCount(int count);
+
   /// No description provided for @openLocal.
   ///
   /// In es, this message translates to:
   /// **'Abrir un terminal local'**
   String get openLocal;
+
+  /// No description provided for @openOnConnect.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir al conectar a {host}'**
+  String openOnConnect(String host);
+
+  /// No description provided for @openOnConnectNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Desde un terminal o un SFTP. Si el puerto está ocupado, la conexión sigue y el túnel avisa.'**
+  String get openOnConnectNote;
 
   /// No description provided for @openSftp.
   ///
@@ -1838,6 +2066,24 @@ abstract class AppLocalizations {
   /// **'Puerto'**
   String get port;
 
+  /// No description provided for @portBusyNow.
+  ///
+  /// In es, this message translates to:
+  /// **'ocupado ahora'**
+  String get portBusyNow;
+
+  /// No description provided for @portHere.
+  ///
+  /// In es, this message translates to:
+  /// **'Puerto aquí'**
+  String get portHere;
+
+  /// No description provided for @portOnHost.
+  ///
+  /// In es, this message translates to:
+  /// **'Puerto en {host}'**
+  String portOnHost(String host);
+
   /// No description provided for @portRange.
   ///
   /// In es, this message translates to:
@@ -1867,6 +2113,66 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Los cambios se ven al momento en toda la ventana.'**
   String get previewLive;
+
+  /// No description provided for @proxy.
+  ///
+  /// In es, this message translates to:
+  /// **'Proxy'**
+  String get proxy;
+
+  /// No description provided for @proxyHttpNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Con un proxy HTTP, la petición CONNECT va sin cifrar: el proxy ve a qué host y puerto te conectas, pero no lo que pasa por SSH.'**
+  String get proxyHttpNote;
+
+  /// No description provided for @proxyLoginBody.
+  ///
+  /// In es, this message translates to:
+  /// **'{proxy} pide usuario y contraseña para dejarte pasar. No se guardan.'**
+  String proxyLoginBody(String proxy);
+
+  /// No description provided for @proxyLoginTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'El proxy pide entrar'**
+  String get proxyLoginTitle;
+
+  /// No description provided for @proxyNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin proxy'**
+  String get proxyNone;
+
+  /// No description provided for @proxyNotWithCommand.
+  ///
+  /// In es, this message translates to:
+  /// **'Con ProxyCommand no se usa el proxy.'**
+  String get proxyNotWithCommand;
+
+  /// No description provided for @proxyRouteTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'La ruta queda así'**
+  String get proxyRouteTitle;
+
+  /// No description provided for @proxyServer.
+  ///
+  /// In es, this message translates to:
+  /// **'Servidor proxy'**
+  String get proxyServer;
+
+  /// No description provided for @proxyUser.
+  ///
+  /// In es, this message translates to:
+  /// **'Usuario del proxy'**
+  String get proxyUser;
+
+  /// No description provided for @proxyUserHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Opcional. La contraseña se pide al conectar y no se guarda.'**
+  String get proxyUserHelp;
 
   /// No description provided for @queueAllDone.
   ///
@@ -1958,6 +2264,12 @@ abstract class AppLocalizations {
   /// **'Recargar'**
   String get reload;
 
+  /// No description provided for @remoteSentence.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que se conecte en {host} al puerto {port} llega a {dest} de este equipo.'**
+  String remoteSentence(String host, String port, String dest);
+
   /// No description provided for @remove.
   ///
   /// In es, this message translates to:
@@ -2012,6 +2324,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 ya estaba importado y no se ha tocado} other{{count} ya estaban importados y no se han tocado}}'**
   String reportSkipped(int count);
 
+  /// No description provided for @reportTunnels.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 túnel nuevo} other{{count} túneles nuevos}}'**
+  String reportTunnels(int count);
+
   /// No description provided for @reportWhere.
   ///
   /// In es, this message translates to:
@@ -2041,6 +2359,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Reanudar'**
   String get resume;
+
+  /// No description provided for @retry.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar'**
+  String get retry;
 
   /// No description provided for @retryIn.
   ///
@@ -2132,6 +2456,12 @@ abstract class AppLocalizations {
   /// **'Guardar y conectar'**
   String get saveAndConnect;
 
+  /// No description provided for @saveAndOpen.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar y abrir'**
+  String get saveAndOpen;
+
   /// No description provided for @saveFailed.
   ///
   /// In es, this message translates to:
@@ -2185,6 +2515,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'General'**
   String get sectionGeneral;
+
+  /// No description provided for @seenFrom.
+  ///
+  /// In es, this message translates to:
+  /// **'visto desde {host}'**
+  String seenFrom(String host);
+
+  /// No description provided for @seenFromHere.
+  ///
+  /// In es, this message translates to:
+  /// **'visto desde este equipo'**
+  String get seenFromHere;
 
   /// No description provided for @selectAll.
   ///
@@ -2390,6 +2732,12 @@ abstract class AppLocalizations {
   /// **'Arrancando…'**
   String get starting;
 
+  /// No description provided for @state.
+  ///
+  /// In es, this message translates to:
+  /// **'Estado'**
+  String get state;
+
   /// No description provided for @statusConnected.
   ///
   /// In es, this message translates to:
@@ -2516,6 +2864,24 @@ abstract class AppLocalizations {
   /// **'De la interfaz, sobre el del sistema. El terminal tiene el suyo.'**
   String get textSizeHelp;
 
+  /// No description provided for @theHost.
+  ///
+  /// In es, this message translates to:
+  /// **'el host'**
+  String get theHost;
+
+  /// No description provided for @theLocalNetwork.
+  ///
+  /// In es, this message translates to:
+  /// **'Toda la red local'**
+  String get theLocalNetwork;
+
+  /// No description provided for @theServerNetwork.
+  ///
+  /// In es, this message translates to:
+  /// **'La red del servidor'**
+  String get theServerNetwork;
+
   /// No description provided for @theme.
   ///
   /// In es, this message translates to:
@@ -2630,6 +2996,144 @@ abstract class AppLocalizations {
   /// **'Reintentar'**
   String get tryAgain;
 
+  /// No description provided for @tunnelBadAddress.
+  ///
+  /// In es, this message translates to:
+  /// **'Esa dirección no existe en este equipo.'**
+  String get tunnelBadAddress;
+
+  /// No description provided for @tunnelClosed.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrado'**
+  String get tunnelClosed;
+
+  /// No description provided for @tunnelDidNotOpen.
+  ///
+  /// In es, this message translates to:
+  /// **'No se abrió «{name}» al conectar: {why}'**
+  String tunnelDidNotOpen(String name, String why);
+
+  /// No description provided for @tunnelEditorHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Un puerto de este equipo que lleva a un servicio que solo ve el servidor, o al revés.'**
+  String get tunnelEditorHint;
+
+  /// No description provided for @tunnelFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se abrió'**
+  String get tunnelFailed;
+
+  /// No description provided for @tunnelLost.
+  ///
+  /// In es, this message translates to:
+  /// **'Se cortó'**
+  String get tunnelLost;
+
+  /// No description provided for @tunnelLostBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se perdió la conexión con {host}. Vuelve a abrirlo cuando haya conexión.'**
+  String tunnelLostBody(String host);
+
+  /// No description provided for @tunnelNeedsDest.
+  ///
+  /// In es, this message translates to:
+  /// **'Falta el destino o su puerto.'**
+  String get tunnelNeedsDest;
+
+  /// No description provided for @tunnelNeedsHost.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige el host por el que va.'**
+  String get tunnelNeedsHost;
+
+  /// No description provided for @tunnelNeedsName.
+  ///
+  /// In es, this message translates to:
+  /// **'Ponle un nombre.'**
+  String get tunnelNeedsName;
+
+  /// No description provided for @tunnelOpen.
+  ///
+  /// In es, this message translates to:
+  /// **'Abierto'**
+  String get tunnelOpen;
+
+  /// No description provided for @tunnelOpenWith.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Abierto · 1 conexión} other{Abierto · {count} conexiones}}'**
+  String tunnelOpenWith(int count);
+
+  /// No description provided for @tunnelOpening.
+  ///
+  /// In es, this message translates to:
+  /// **'Abriendo…'**
+  String get tunnelOpening;
+
+  /// No description provided for @tunnelPortBusy.
+  ///
+  /// In es, this message translates to:
+  /// **'el puerto {port} de este equipo está ocupado.'**
+  String tunnelPortBusy(int port);
+
+  /// No description provided for @tunnelRemotePortBusy.
+  ///
+  /// In es, this message translates to:
+  /// **'{host} no abrió el puerto {port} (en uso o no permitido).'**
+  String tunnelRemotePortBusy(int port, String host);
+
+  /// No description provided for @tunnelType.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo'**
+  String get tunnelType;
+
+  /// No description provided for @tunnels.
+  ///
+  /// In es, this message translates to:
+  /// **'Túneles'**
+  String get tunnels;
+
+  /// No description provided for @tunnelsCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{total, plural, =1{1 túnel} other{{total} túneles}} · {open, plural, =1{1 abierto} other{{open} abiertos}}'**
+  String tunnelsCount(int total, int open);
+
+  /// No description provided for @tunnelsIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Reenvíos de puertos guardados, cada uno con un host. Se abren a mano o al conectar al host, por la misma conexión que el terminal.'**
+  String get tunnelsIntro;
+
+  /// No description provided for @tunnelsKeepConnection.
+  ///
+  /// In es, this message translates to:
+  /// **'Un túnel abierto mantiene la conexión con su host aunque cierres la pestaña. Se cierra al cerrarlo aquí o al salir de OpenWard.'**
+  String get tunnelsKeepConnection;
+
+  /// No description provided for @tunnelsOf.
+  ///
+  /// In es, this message translates to:
+  /// **'Túneles de {host}'**
+  String tunnelsOf(String host);
+
+  /// No description provided for @tunnelsOpenCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 túnel abierto} other{{count} túneles abiertos}}'**
+  String tunnelsOpenCount(int count);
+
+  /// No description provided for @tunnelsStayOpen.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguen abiertos si cierras esta pestaña. Todos en Biblioteca › Túneles.'**
+  String get tunnelsStayOpen;
+
   /// No description provided for @uiColors.
   ///
   /// In es, this message translates to:
@@ -2665,6 +3169,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Subir a {host}'**
   String uploadToHost(String host);
+
+  /// No description provided for @usePort.
+  ///
+  /// In es, this message translates to:
+  /// **'Usar el {port}'**
+  String usePort(int port);
 
   /// No description provided for @user.
   ///
@@ -2773,6 +3283,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Te damos la bienvenida a OpenWard'**
   String get welcomeTitle;
+
+  /// No description provided for @whoCanUse.
+  ///
+  /// In es, this message translates to:
+  /// **'Quién puede usarlo'**
+  String get whoCanUse;
 
   /// No description provided for @wrongAnswer.
   ///

@@ -19,6 +19,7 @@
   "agentSocket": "Otro socket…",
   "agentSystem": "El del sistema",
   "alreadyImported": "ya importado",
+  "anyDestination": "Cualquier destino",
   "appearanceStepBody": "Puedes cambiarlo cuando quieras en Ajustes.",
   "appearanceStepTitle": "¿Cómo la quieres ver?",
   "apply": "Aplicar",
@@ -27,6 +28,14 @@
   "bellFlash": "Destello con la campana",
   "bellFlashHelp": "Cuando un programa hace sonar la campana. Si la pestaña no está delante, se marca igualmente.",
   "bellRang": "Ha sonado la campana",
+  "bringsTunnels": "{count, plural, =1{trae 1 túnel} other{trae {count} túneles}}",
+  "@bringsTunnels": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "broadcastBanner": "{count, plural, =1{Broadcast: lo que escribas va a 1 de {total} paneles ({names}).} other{Broadcast: lo que escribas va a {count} de {total} paneles ({names}).}}",
   "@broadcastBanner": {
     "placeholders": {
@@ -79,6 +88,7 @@
       }
     }
   },
+  "bySsh": "por SSH",
   "cancel": "Cancelar",
   "cancelThese": "{count, plural, =1{No copiar este} other{No copiar estos {count}}}",
   "@cancelThese": {
@@ -109,6 +119,7 @@
   "clearFinished": "Quitar las terminadas",
   "clearSelection": "Quitar la selección",
   "close": "Cerrar",
+  "closeAction": "Cerrar",
   "closePane": "Cerrar el panel",
   "closeTab": "Cerrar la pestaña",
   "closeTheTab": "Cerrar la pestaña",
@@ -221,6 +232,7 @@
     }
   },
   "copy": "Copiar",
+  "copyAddress": "Copiar dirección",
   "copyFingerprint": "Copiar la huella",
   "copyPath": "Copiar la ruta",
   "create": "Crear",
@@ -311,10 +323,22 @@
   "dropAskFirst": "Si alguno ya existe, te preguntamos antes de tocarlo.",
   "dropToDownload": "Suelta para descargar aquí",
   "dropToUpload": "Suelta para subir aquí",
+  "dynamicSentence": "Usa {here} como proxy SOCKS5: las conexiones salen de {host}.",
+  "@dynamicSentence": {
+    "placeholders": {
+      "here": {
+        "type": "String"
+      },
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "editEllipsis": "Editar…",
   "editGroup": "Editar grupo…",
   "editGroupTitle": "Editar grupo",
   "editHostTitle": "Editar host",
+  "editTunnel": "Editar túnel",
   "emptyFolder": "Esta carpeta está vacía",
   "failureAuth": "{user}@{label} no ha podido autenticarse.",
   "@failureAuth": {
@@ -413,6 +437,7 @@
     }
   },
   "filterFolder": "Filtrar en esta carpeta",
+  "filterTunnels": "Filtrar por nombre, host o puerto",
   "findClose": "Cerrar la búsqueda (Esc)",
   "findCount": "{selected} de {total}",
   "@findCount": {
@@ -452,6 +477,7 @@
   "fontSize": "Tamaño de letra",
   "fontSystem": "La del sistema",
   "forAll": "A todos:",
+  "forward": "Reenvío",
   "fromDefault": "Valor por defecto",
   "fromGroup": "Del grupo {name}",
   "@fromGroup": {
@@ -461,13 +487,17 @@
       }
     }
   },
+  "fromHere": "desde aquí",
   "fromNowhere": "Sin valor: lo decide la conexión",
+  "fromSshConfig": "de ~/.ssh/config",
+  "fromThere": "desde allí",
   "group": "Grupo",
   "groupInsideItself": "Un grupo no puede estar dentro de sí mismo.",
   "groupNeedsName": "El grupo necesita un nombre.",
   "groupSettingsSection": "Ajustes para todo lo que contiene",
   "hideHiddenFiles": "No mostrar los ocultos",
   "hideQueue": "Ocultar",
+  "host": "Host",
   "hostInUse": "Otros hosts saltan por «{name}»: cámbialos antes de eliminarlo.",
   "@hostInUse": {
     "placeholders": {
@@ -487,6 +517,7 @@
   },
   "hostKeys": "Claves de host nuevas",
   "hostNeedsName": "El host necesita un nombre.",
+  "ignore": "Ignorar",
   "importEllipsis": "Importar…",
   "importFailed": "No se ha podido importar: {error}",
   "@importFailed": {
@@ -505,6 +536,7 @@
     }
   },
   "importFrom": "Importar de ~/.ssh/config",
+  "importFromSshConfig": "Importar de ~/.ssh/config",
   "importIntoGroup": "Se guardan en el grupo «~/.ssh/config». Un host trae consigo los hosts por los que salta.",
   "importKeepsFile": "El fichero no se toca, y las claves se quedan donde están: OpenWard guarda la ruta, nunca la clave.",
   "importLater": "Puedes importar más tarde desde la barra lateral.",
@@ -549,6 +581,7 @@
       }
     }
   },
+  "itsPort": "Su puerto",
   "jobCancelled": "Cancelada",
   "jobCounting": "Contando…",
   "jobDone": "Hecho · {size}",
@@ -676,8 +709,17 @@
   "keySaved": "Guardada",
   "keys": "Claves",
   "keysHelp": "Una ruta por línea. OpenWard guarda la ruta, nunca la clave.",
+  "kindDynamic": "Dinámico (-D)",
+  "kindDynamicShort": "Dinámico",
+  "kindLocal": "Local (-L)",
+  "kindLocalShort": "Local",
+  "kindRemote": "Remoto (-R)",
+  "kindRemoteShort": "Remoto",
+  "lanLocalNote": "Cualquiera de tu red podrá usarlo mientras esté abierto.",
+  "lanRemoteNote": "El servidor tiene que permitirlo (GatewayPorts en sshd); si no, escucha solo en sí mismo.",
   "language": "Idioma",
   "languageSystem": "Como el sistema",
+  "library": "Biblioteca",
   "licenses": "Licencias",
   "lightAndDark": "Claro y oscuro",
   "lineHeight": "Interlineado del terminal",
@@ -685,6 +727,20 @@
   "@linkNotOpened": {
     "placeholders": {
       "scheme": {
+        "type": "String"
+      }
+    }
+  },
+  "localSentence": "Lo que conecte a {here} llega a {dest} como si saliera de {host}.",
+  "@localSentence": {
+    "placeholders": {
+      "here": {
+        "type": "String"
+      },
+      "dest": {
+        "type": "String"
+      },
+      "host": {
         "type": "String"
       }
     }
@@ -704,6 +760,7 @@
   "minimumContrastHelp": "Aclara u oscurece el texto del terminal que no se lee sobre su fondo.",
   "missingAddress": "Falta la dirección.",
   "missingJump": "Añade al menos un host por el que saltar.",
+  "missingProxy": "Falta el servidor o el puerto del proxy.",
   "missingProxyCommand": "Falta el ProxyCommand.",
   "missingSocket": "Falta la ruta del socket del agente.",
   "moreActions": "Más acciones",
@@ -714,6 +771,7 @@
   "netNotFound": "no se encuentra el host.",
   "netRefused": "conexión rechazada.",
   "netTimeout": "tiempo de espera agotado.",
+  "newEllipsis": "Nuevo…",
   "newFolder": "Nueva carpeta",
   "newGroup": "Nuevo grupo",
   "newGroupTitle": "Nuevo grupo",
@@ -723,6 +781,7 @@
   "newLocalTerminal": "Terminal local nuevo",
   "newPane": "Panel nuevo",
   "newSubgroup": "Nuevo subgrupo",
+  "newTunnel": "Nuevo túnel",
   "next": "Siguiente",
   "no": "No",
   "noGroup": "Sin grupo",
@@ -740,10 +799,33 @@
   "noParent": "Ningún grupo",
   "noPostQuantumNote": "El servidor no ofrece un intercambio poscuántico (mlkem768x25519; OpenSSH lo trae desde la 10.0).",
   "noResults": "Ningún host coincide.",
+  "noTunnels": "Aún no hay túneles",
+  "noTunnelsBody": "Un túnel lleva un puerto de este equipo a un servicio que solo ve el servidor (una base de datos, un panel), o al revés. Crea uno o tráelos de tu ~/.ssh/config.",
   "notNow": "Ahora no",
   "notes": "Notas",
   "ok": "Aceptar",
+  "onConnect": "Al conectar",
+  "onlyTheServer": "Solo el servidor",
+  "onlyThisComputer": "Solo este equipo (127.0.0.1)",
+  "openAction": "Abrir",
+  "openCount": "{count, plural, =1{1 abierto} other{{count} abiertos}}",
+  "@openCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "openLocal": "Abrir un terminal local",
+  "openOnConnect": "Abrir al conectar a {host}",
+  "@openOnConnect": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "openOnConnectNote": "Desde un terminal o un SFTP. Si el puerto está ocupado, la conexión sigue y el túnel avisa.",
   "openSftp": "Abrir SFTP",
   "openSshStillWarns": "OpenWard no modifica ~/.ssh/known_hosts: ssh seguirá avisando hasta que quites la clave vieja de allí ({command}).",
   "@openSshStillWarns": {
@@ -839,6 +921,16 @@
   "policyAsk": "Preguntar",
   "policyStrict": "Estricta",
   "port": "Puerto",
+  "portBusyNow": "ocupado ahora",
+  "portHere": "Puerto aquí",
+  "portOnHost": "Puerto en {host}",
+  "@portOnHost": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "portRange": "El puerto va de 1 a 65535.",
   "postQuantum": "poscuántico",
   "postQuantumKex": "{kex} (poscuántico)",
@@ -851,6 +943,23 @@
   },
   "preview": "Vista previa",
   "previewLive": "Los cambios se ven al momento en toda la ventana.",
+  "proxy": "Proxy",
+  "proxyHttpNote": "Con un proxy HTTP, la petición CONNECT va sin cifrar: el proxy ve a qué host y puerto te conectas, pero no lo que pasa por SSH.",
+  "proxyLoginBody": "{proxy} pide usuario y contraseña para dejarte pasar. No se guardan.",
+  "@proxyLoginBody": {
+    "placeholders": {
+      "proxy": {
+        "type": "String"
+      }
+    }
+  },
+  "proxyLoginTitle": "El proxy pide entrar",
+  "proxyNone": "Sin proxy",
+  "proxyNotWithCommand": "Con ProxyCommand no se usa el proxy.",
+  "proxyRouteTitle": "La ruta queda así",
+  "proxyServer": "Servidor proxy",
+  "proxyUser": "Usuario del proxy",
+  "proxyUserHelp": "Opcional. La contraseña se pide al conectar y no se guarda.",
   "queueAllDone": "Todo terminado",
   "queueFailed": "{count} con error",
   "@queueFailed": {
@@ -901,6 +1010,20 @@
   },
   "reduceMotion": "Reducir movimiento",
   "reload": "Recargar",
+  "remoteSentence": "Lo que se conecte en {host} al puerto {port} llega a {dest} de este equipo.",
+  "@remoteSentence": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      },
+      "port": {
+        "type": "String"
+      },
+      "dest": {
+        "type": "String"
+      }
+    }
+  },
   "remove": "Quitar",
   "removeTag": "Quitar {tag}",
   "@removeTag": {
@@ -938,11 +1061,20 @@
       }
     }
   },
+  "reportTunnels": "{count, plural, =1{1 túnel nuevo} other{{count} túneles nuevos}}",
+  "@reportTunnels": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "reportWhere": "Están en el grupo «~/.ssh/config».",
   "resetTheme": "Restablecer",
   "restart": "Reiniciar",
   "restorePanes": "Volver a los paneles",
   "resume": "Reanudar",
+  "retry": "Reintentar",
   "retryIn": "Reintento {attempt} de {max} en {secs} s.",
   "@retryIn": {
     "placeholders": {
@@ -971,6 +1103,7 @@
   "sampleWarningText": "2 migraciones pendientes",
   "save": "Guardar",
   "saveAndConnect": "Guardar y conectar",
+  "saveAndOpen": "Guardar y abrir",
   "saveFailed": "No se ha podido guardar: {error}",
   "@saveFailed": {
     "placeholders": {
@@ -1001,6 +1134,15 @@
   "searchHosts": "Buscar hosts",
   "sectionConnection": "Conexión",
   "sectionGeneral": "General",
+  "seenFrom": "visto desde {host}",
+  "@seenFrom": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "seenFromHere": "visto desde este equipo",
   "selectAll": "Todos",
   "selectAllText": "Seleccionar todo",
   "selectedCount": "{count, plural, =1{1 seleccionado ({size})} other{{count} seleccionados ({size})}}",
@@ -1131,6 +1273,7 @@
   "start": "Empezar",
   "startHere": "Empieza aquí",
   "starting": "Arrancando…",
+  "state": "Estado",
   "statusConnected": "Conectado",
   "statusConnecting": "Conectando",
   "statusError": "Error: {error}",
@@ -1166,6 +1309,9 @@
   },
   "textSize": "Tamaño del texto",
   "textSizeHelp": "De la interfaz, sobre el del sistema. El terminal tiene el suyo.",
+  "theHost": "el host",
+  "theLocalNetwork": "Toda la red local",
+  "theServerNetwork": "La red del servidor",
   "theme": "Tema",
   "themeDark": "Oscuro",
   "themeHelp": "En claro, Papel; en oscuro, Grafito.",
@@ -1216,6 +1362,94 @@
   "trustNewKey": "Confiar en la clave nueva",
   "trustNewKeyEllipsis": "Confiar en la clave nueva…",
   "tryAgain": "Reintentar",
+  "tunnelBadAddress": "Esa dirección no existe en este equipo.",
+  "tunnelClosed": "Cerrado",
+  "tunnelDidNotOpen": "No se abrió «{name}» al conectar: {why}",
+  "@tunnelDidNotOpen": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "why": {
+        "type": "String"
+      }
+    }
+  },
+  "tunnelEditorHint": "Un puerto de este equipo que lleva a un servicio que solo ve el servidor, o al revés.",
+  "tunnelFailed": "No se abrió",
+  "tunnelLost": "Se cortó",
+  "tunnelLostBody": "Se perdió la conexión con {host}. Vuelve a abrirlo cuando haya conexión.",
+  "@tunnelLostBody": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "tunnelNeedsDest": "Falta el destino o su puerto.",
+  "tunnelNeedsHost": "Elige el host por el que va.",
+  "tunnelNeedsName": "Ponle un nombre.",
+  "tunnelOpen": "Abierto",
+  "tunnelOpenWith": "{count, plural, =1{Abierto · 1 conexión} other{Abierto · {count} conexiones}}",
+  "@tunnelOpenWith": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tunnelOpening": "Abriendo…",
+  "tunnelPortBusy": "el puerto {port} de este equipo está ocupado.",
+  "@tunnelPortBusy": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "tunnelRemotePortBusy": "{host} no abrió el puerto {port} (en uso o no permitido).",
+  "@tunnelRemotePortBusy": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      },
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "tunnelType": "Tipo",
+  "tunnels": "Túneles",
+  "tunnelsCount": "{total, plural, =1{1 túnel} other{{total} túneles}} · {open, plural, =1{1 abierto} other{{open} abiertos}}",
+  "@tunnelsCount": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "open": {
+        "type": "int"
+      }
+    }
+  },
+  "tunnelsIntro": "Reenvíos de puertos guardados, cada uno con un host. Se abren a mano o al conectar al host, por la misma conexión que el terminal.",
+  "tunnelsKeepConnection": "Un túnel abierto mantiene la conexión con su host aunque cierres la pestaña. Se cierra al cerrarlo aquí o al salir de OpenWard.",
+  "tunnelsOf": "Túneles de {host}",
+  "@tunnelsOf": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "tunnelsOpenCount": "{count, plural, =1{1 túnel abierto} other{{count} túneles abiertos}}",
+  "@tunnelsOpenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tunnelsStayOpen": "Siguen abiertos si cierras esta pestaña. Todos en Biblioteca › Túneles.",
   "uiColors": "Colores de la interfaz",
   "uiFont": "Fuente de la interfaz",
   "upOneLevel": "Subir un nivel",
@@ -1233,6 +1467,14 @@
     "placeholders": {
       "host": {
         "type": "String"
+      }
+    }
+  },
+  "usePort": "Usar el {port}",
+  "@usePort": {
+    "placeholders": {
+      "port": {
+        "type": "int"
       }
     }
   },
@@ -1325,6 +1567,7 @@
   },
   "welcomeNoConfig": "No hemos encontrado hosts en ~/.ssh/config. Podrás añadirlos a mano en un momento.",
   "welcomeTitle": "Te damos la bienvenida a OpenWard",
+  "whoCanUse": "Quién puede usarlo",
   "wrongAnswer": "Respuesta incorrecta.",
   "wrongPassphrase": "Frase incorrecta.",
   "wrongPassword": "Contraseña incorrecta.",

@@ -29,6 +29,8 @@ class _PromptCardState extends State<PromptCard> {
   int get _fieldCount => switch (_p.kind) {
     PromptKind.passphrase || PromptKind.password => 1,
     PromptKind.keyboardInteractive => _p.questions.length,
+    // The user too, when the settings name none.
+    PromptKind.proxyLogin => _p.user.isEmpty ? 2 : 1,
     _ => 0,
   };
 
@@ -53,6 +55,7 @@ class _PromptCardState extends State<PromptCard> {
     PromptKind.hostKey => l.firstConnectionTo(_p.label),
     PromptKind.passphrase => l.passphraseTitle,
     PromptKind.password => l.passwordTitle,
+    PromptKind.proxyLogin => l.proxyLoginTitle,
     PromptKind.keyboardInteractive =>
       _p.name.isNotEmpty
           ? _p.name
@@ -111,6 +114,21 @@ class _PromptCardState extends State<PromptCard> {
           if (_p.retry) _retry(context, l.wrongPassword),
           const SizedBox(height: 12),
           _field(0, l.passwordTitle, obscure: true),
+        ];
+      case PromptKind.proxyLogin:
+        return [
+          Text(l.proxyLoginBody(_p.host), style: const TextStyle(height: 1.45)),
+          if (_p.retry) _retry(context, l.wrongPassword),
+          const SizedBox(height: 12),
+          if (_p.user.isEmpty) ...[
+            _field(0, l.proxyUser, obscure: false),
+            const SizedBox(height: 12),
+            _field(1, l.passwordTitle, obscure: true),
+          ] else ...[
+            Text(_p.user, style: monoStyle(context)),
+            const SizedBox(height: 12),
+            _field(0, l.passwordTitle, obscure: true),
+          ],
         ];
       case PromptKind.keyboardInteractive:
         return [

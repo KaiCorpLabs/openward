@@ -8,7 +8,7 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `apply`, `from_settings`, `id`, `opt_id`, `origin`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 enum AgentKind { off, system, socket }
 
@@ -266,6 +266,9 @@ class ImportPreview {
   /// Imported before: importing again leaves it as it is.
   final bool existing;
 
+  /// Tunnels (its forwards) it would bring that are not in OpenWard yet.
+  final int tunnels;
+
   const ImportPreview({
     required this.alias,
     required this.address,
@@ -273,6 +276,7 @@ class ImportPreview {
     this.port,
     required this.jumps,
     required this.existing,
+    required this.tunnels,
   });
 
   @override
@@ -282,7 +286,8 @@ class ImportPreview {
       user.hashCode ^
       port.hashCode ^
       jumps.hashCode ^
-      existing.hashCode;
+      existing.hashCode ^
+      tunnels.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -294,19 +299,22 @@ class ImportPreview {
           user == other.user &&
           port == other.port &&
           jumps == other.jumps &&
-          existing == other.existing;
+          existing == other.existing &&
+          tunnels == other.tunnels;
 }
 
 class ImportReport {
   final String groupId;
   final int created;
   final int skipped;
+  final int tunnels;
   final List<ImportWarning> warnings;
 
   const ImportReport({
     required this.groupId,
     required this.created,
     required this.skipped,
+    required this.tunnels,
     required this.warnings,
   });
 
@@ -315,6 +323,7 @@ class ImportReport {
       groupId.hashCode ^
       created.hashCode ^
       skipped.hashCode ^
+      tunnels.hashCode ^
       warnings.hashCode;
 
   @override
@@ -325,6 +334,7 @@ class ImportReport {
           groupId == other.groupId &&
           created == other.created &&
           skipped == other.skipped &&
+          tunnels == other.tunnels &&
           warnings == other.warnings;
 }
 
@@ -469,6 +479,9 @@ enum OriginKind {
   host,
 }
 
+/// A proxy in front of the first hop; `Off` overrides one inherited.
+enum ProxyKind { off, http, socks5 }
+
 enum RouteKind { direct, jump, command }
 
 /// Settings a group or host sets; `None` inherits.
@@ -489,6 +502,14 @@ class SettingsSpec {
 
   /// With [`RouteKind::Command`].
   final String proxyCommand;
+  final ProxyKind? proxy;
+
+  /// With an HTTP or SOCKS5 proxy.
+  final String proxyHost;
+  final int proxyPort;
+
+  /// Optional; the password is asked for when connecting.
+  final String proxyUser;
   final int? keepaliveSecs;
   final bool? agentForward;
   final String? term;
@@ -506,6 +527,10 @@ class SettingsSpec {
     this.route,
     this.jumps = const [],
     this.proxyCommand = r"",
+    this.proxy,
+    this.proxyHost = r"",
+    this.proxyPort = 0,
+    this.proxyUser = r"",
     this.keepaliveSecs,
     this.agentForward,
     this.term,
@@ -528,6 +553,10 @@ class SettingsSpec {
       route.hashCode ^
       jumps.hashCode ^
       proxyCommand.hashCode ^
+      proxy.hashCode ^
+      proxyHost.hashCode ^
+      proxyPort.hashCode ^
+      proxyUser.hashCode ^
       keepaliveSecs.hashCode ^
       agentForward.hashCode ^
       term.hashCode ^
@@ -549,6 +578,10 @@ class SettingsSpec {
           route == other.route &&
           jumps == other.jumps &&
           proxyCommand == other.proxyCommand &&
+          proxy == other.proxy &&
+          proxyHost == other.proxyHost &&
+          proxyPort == other.proxyPort &&
+          proxyUser == other.proxyUser &&
           keepaliveSecs == other.keepaliveSecs &&
           agentForward == other.agentForward &&
           term == other.term &&

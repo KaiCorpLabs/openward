@@ -10,13 +10,18 @@
 //! `~/.ssh`, scoped to the block it appears in), `HostName`, `User`, `Port`,
 //! `IdentityFile`, `CertificateFile`, `IdentitiesOnly`, `IdentityAgent`,
 //! `ProxyJump`, `ProxyCommand`, `ServerAliveInterval`, `ForwardAgent`,
-//! `SetEnv` and `StrictHostKeyChecking`. Anything else is reported once as
+//! `SetEnv`, `StrictHostKeyChecking` and the TCP forwards (`LocalForward`,
+//! `RemoteForward`, `DynamicForward`), which become saved tunnels that open
+//! on connect, as `ssh` opens them. Anything else is reported once as
 //! a [`Warning`], as are the other `Match` blocks, whose lines are skipped.
 
 use std::collections::{BTreeMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use openward_proto::{Agent, Host, HostKeyPolicy, ItemId, Jump, Route, Settings, Source};
+use openward_proto::{
+    Agent, Extra, ForwardKind, Host, HostKeyPolicy, ItemId, Jump, PortForward, Route, Settings,
+    Source,
+};
 
 /// OpenSSH's limit on nested `Include`s.
 const MAX_DEPTH: usize = 16;
@@ -130,6 +135,18 @@ enum Value {
     ForwardAgent(bool),
     SetEnv(BTreeMap<String, String>),
     Strict(HostKeyPolicy),
+    Forward(ForwardSpec),
+}
+
+/// A `LocalForward`, `RemoteForward` or `DynamicForward` line.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ForwardSpec {
+    pub kind: ForwardKind,
+    /// The listen address, when the line gives one (`*`, an IP, a name).
+    pub bind: Option<String>,
+    pub port: u16,
+    /// Where it leads; none for a dynamic forward.
+    pub dest: Option<(String, u16)>,
 }
 
 /// A route as written, before jump names are matched to hosts.
@@ -171,6 +188,8 @@ pub struct Resolved {
     pub agent_forward: Option<bool>,
     pub env: Option<BTreeMap<String, String>>,
     pub host_key_policy: Option<HostKeyPolicy>,
+    /// Every forward of every matching block: they add up, as in `ssh`.
+    pub forwards: Vec<ForwardSpec>,
 }
 
 #[derive(Debug, Default)]
@@ -241,6 +260,11 @@ impl SshConfig {
                 }
                 Value::Strict(p) => {
                     r.host_key_policy.get_or_insert(*p);
+                }
+                Value::Forward(f) => {
+                    if !r.forwards.contains(f) {
+                        r.forwards.push(f.clone());
+                    }
                 }
             }
         }
@@ -402,6 +426,14 @@ fn parse_value(keyword: &str, raw: &str, args: &[String]) -> Result<Option<Value
                 .collect::<Option<_>>()
                 .ok_or(())?,
         ),
+        "localforward" | "remoteforward" | "dynamicforward" => {
+            let kind = match keyword {
+                "localforward" => ForwardKind::Local,
+                "remoteforward" => ForwardKind::Remote,
+                _ => ForwardKind::Dynamic,
+            };
+            Value::Forward(parse_forward(kind, args).ok_or(())?)
+        }
         "stricthostkeychecking" => Value::Strict(match first.to_ascii_lowercase().as_str() {
             "yes" | "true" => HostKeyPolicy::Strict,
             "ask" => HostKeyPolicy::Ask,
@@ -410,6 +442,68 @@ fn parse_value(keyword: &str, raw: &str, args: &[String]) -> Result<Option<Value
         }),
         _ => return Ok(None),
     }))
+}
+
+/// `[bind:]port`, with `[…]` around an IPv6 bind address.
+fn parse_listen(spec: &str) -> Option<(Option<String>, u16)> {
+    if spec.contains('/') {
+        // A Unix socket: not a TCP forward.
+        return None;
+    }
+    if let Some(bracketed) = spec.strip_prefix('[') {
+        let (bind, port) = bracketed.split_once("]:")?;
+        return Some((Some(bind.to_owned()), port.parse().ok()?));
+    }
+    match spec.rsplit_once(':') {
+        Some((bind, port)) => Some((Some(bind.to_owned()), port.parse().ok()?)),
+        None => Some((None, spec.parse().ok()?)),
+    }
+}
+
+/// `host:port`, with `[…]` around IPv6 addresses.
+fn parse_dest(spec: &str) -> Option<(String, u16)> {
+    if spec.contains('/') {
+        return None;
+    }
+    if let Some(bracketed) = spec.strip_prefix('[') {
+        let (host, port) = bracketed.split_once("]:")?;
+        return Some((host.to_owned(), port.parse().ok()?));
+    }
+    let (host, port) = spec.rsplit_once(':')?;
+    Some((host.to_owned(), port.parse().ok()?))
+}
+
+/// The arguments of a forward line. A remote dynamic forward (a
+/// `RemoteForward` without a destination) is not supported.
+fn parse_forward(kind: ForwardKind, args: &[String]) -> Option<ForwardSpec> {
+    // OpenSSH also takes `port:host:hostport` as one argument.
+    let parts: Vec<String> = match args {
+        [one]
+            if kind != ForwardKind::Dynamic
+                && one.matches(':').count() >= 2
+                && !one.contains('[') =>
+        {
+            let (listen, dest) = one
+                .split_once(':')
+                .map(|(l, d)| (l.to_owned(), d.to_owned()))?;
+            vec![listen, dest]
+        }
+        _ => args.to_vec(),
+    };
+    let (bind, port) = parse_listen(parts.first()?)?;
+    if port == 0 {
+        return None;
+    }
+    let dest = match kind {
+        ForwardKind::Dynamic => None,
+        _ => Some(parse_dest(parts.get(1)?)?),
+    };
+    Some(ForwardSpec {
+        kind,
+        bind,
+        port,
+        dest,
+    })
 }
 
 /// `[ssh://][user@]host[:port]`, with `[…]` around IPv6 addresses.
@@ -550,6 +644,9 @@ fn glob(pattern: &str, text: &str) -> bool {
 #[derive(Debug)]
 pub struct Import {
     pub hosts: Vec<(ItemId, Host)>,
+    /// The hosts' forwards as tunnels that open on connect, pointing at the
+    /// ids in `hosts`.
+    pub forwards: Vec<PortForward>,
     pub warnings: Vec<Warning>,
 }
 
@@ -563,7 +660,11 @@ pub fn import(config: &SshConfig) -> Import {
         .collect();
     let mut warnings = config.warnings.clone();
     let mut hosts = Vec::new();
+    let mut forwards = Vec::new();
     for (alias, id, r) in &aliases {
+        for f in &r.forwards {
+            forwards.push(tunnel(alias, *id, f));
+        }
         let route = r.route.as_ref().map(|route| match route {
             RouteSpec::Direct => Route::Direct,
             RouteSpec::Command(c) => Route::Command(c.clone()),
@@ -627,7 +728,35 @@ pub fn import(config: &SshConfig) -> Import {
             },
         ));
     }
-    Import { hosts, warnings }
+    Import {
+        hosts,
+        forwards,
+        warnings,
+    }
+}
+
+/// A forward line as a tunnel: `5433 → db:5432`, `SOCKS 1080`.
+fn tunnel(alias: &str, host: ItemId, f: &ForwardSpec) -> PortForward {
+    let label = match (&f.kind, &f.dest) {
+        (ForwardKind::Dynamic, _) => format!("SOCKS {}", f.port),
+        (ForwardKind::Remote, Some((h, p))) => format!("{alias}:{} → {h}:{p}", f.port),
+        (_, Some((h, p))) => format!("{} → {h}:{p}", f.port),
+        (_, None) => f.port.to_string(),
+    };
+    PortForward {
+        label,
+        host,
+        kind: f.kind,
+        listen_port: f.port,
+        listen_address: f.bind.clone(),
+        dest_host: f.dest.as_ref().map(|(h, _)| h.clone()),
+        dest_port: f.dest.as_ref().map(|(_, p)| *p),
+        autostart: true,
+        source: Some(Source::SshConfig {
+            alias: alias.to_owned(),
+        }),
+        extra: Extra::new(),
+    }
 }
 
 #[cfg(test)]

@@ -48,6 +48,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get alreadyImported => 'already imported';
 
   @override
+  String get anyDestination => 'Any destination';
+
+  @override
   String get appearanceStepBody => 'You can change it any time in Settings.';
 
   @override
@@ -71,6 +74,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bellRang => 'The bell rang';
+
+  @override
+  String bringsTunnels(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'brings $count tunnels',
+      one: 'brings 1 tunnel',
+    );
+    return '$_temp0';
+  }
 
   @override
   String broadcastBanner(int count, int total, String names) {
@@ -126,6 +140,9 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get bySsh => 'over SSH';
 
   @override
   String get cancel => 'Cancel';
@@ -185,6 +202,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get close => 'Close';
+
+  @override
+  String get closeAction => 'Close';
 
   @override
   String get closePane => 'Close the pane';
@@ -319,6 +339,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get copy => 'Copy';
 
   @override
+  String get copyAddress => 'Copy address';
+
+  @override
   String get copyFingerprint => 'Copy the fingerprint';
 
   @override
@@ -442,6 +465,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dropToUpload => 'Drop to upload here';
 
   @override
+  String dynamicSentence(String here, String host) {
+    return 'Use $here as a SOCKS5 proxy: connections leave from $host.';
+  }
+
+  @override
   String get editEllipsis => 'Edit…';
 
   @override
@@ -452,6 +480,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editHostTitle => 'Edit host';
+
+  @override
+  String get editTunnel => 'Edit tunnel';
 
   @override
   String get emptyFolder => 'This folder is empty';
@@ -513,6 +544,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get filterFolder => 'Filter this folder';
 
   @override
+  String get filterTunnels => 'Filter by name, host or port';
+
+  @override
   String get findClose => 'Close the search (Esc)';
 
   @override
@@ -571,6 +605,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forAll => 'For all:';
 
   @override
+  String get forward => 'Forward';
+
+  @override
   String get fromDefault => 'Default value';
 
   @override
@@ -579,7 +616,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get fromHere => 'from here';
+
+  @override
   String get fromNowhere => 'Not set: the connection decides';
+
+  @override
+  String get fromSshConfig => 'from ~/.ssh/config';
+
+  @override
+  String get fromThere => 'from there';
 
   @override
   String get group => 'Group';
@@ -600,6 +646,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hideQueue => 'Hide';
 
   @override
+  String get host => 'Host';
+
+  @override
   String hostInUse(String name) {
     return 'Other hosts jump through “$name”: change them before deleting it.';
   }
@@ -617,6 +666,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hostNeedsName => 'The host needs a name.';
+
+  @override
+  String get ignore => 'Ignore';
 
   @override
   String get importEllipsis => 'Import…';
@@ -639,6 +691,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get importFrom => 'Import from ~/.ssh/config';
+
+  @override
+  String get importFromSshConfig => 'Import from ~/.ssh/config';
 
   @override
   String get importIntoGroup =>
@@ -712,6 +767,9 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get itsPort => 'Its port';
 
   @override
   String get jobCancelled => 'Cancelled';
@@ -835,10 +893,39 @@ class AppLocalizationsEn extends AppLocalizations {
       'One path per line. OpenWard keeps the path, never the key.';
 
   @override
+  String get kindDynamic => 'Dynamic (-D)';
+
+  @override
+  String get kindDynamicShort => 'Dynamic';
+
+  @override
+  String get kindLocal => 'Local (-L)';
+
+  @override
+  String get kindLocalShort => 'Local';
+
+  @override
+  String get kindRemote => 'Remote (-R)';
+
+  @override
+  String get kindRemoteShort => 'Remote';
+
+  @override
+  String get lanLocalNote =>
+      'Anyone on your network can use it while it is open.';
+
+  @override
+  String get lanRemoteNote =>
+      'The server has to allow it (GatewayPorts in sshd); otherwise it listens only on itself.';
+
+  @override
   String get language => 'Language';
 
   @override
   String get languageSystem => 'As the system';
+
+  @override
+  String get library => 'Library';
 
   @override
   String get licenses => 'Licenses';
@@ -852,6 +939,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String linkNotOpened(String scheme) {
     return '“$scheme:” links are not opened from the terminal.';
+  }
+
+  @override
+  String localSentence(String here, String dest, String host) {
+    return 'What connects to $here reaches $dest as if it came from $host.';
   }
 
   @override
@@ -880,6 +972,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get missingJump => 'Add at least one host to jump through.';
+
+  @override
+  String get missingProxy => 'The proxy needs a server and a port.';
 
   @override
   String get missingProxyCommand => 'The ProxyCommand is missing.';
@@ -912,6 +1007,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get netTimeout => 'timed out.';
 
   @override
+  String get newEllipsis => 'New…';
+
+  @override
   String get newFolder => 'New folder';
 
   @override
@@ -937,6 +1035,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get newSubgroup => 'New subgroup';
+
+  @override
+  String get newTunnel => 'New tunnel';
 
   @override
   String get next => 'Next';
@@ -972,6 +1073,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noResults => 'No host matches.';
 
   @override
+  String get noTunnels => 'No tunnels yet';
+
+  @override
+  String get noTunnelsBody =>
+      'A tunnel takes a port of this computer to a service only the server sees (a database, a dashboard), or the other way round. Create one, or bring them from your ~/.ssh/config.';
+
+  @override
   String get notNow => 'Not now';
 
   @override
@@ -981,7 +1089,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ok => 'OK';
 
   @override
+  String get onConnect => 'On connect';
+
+  @override
+  String get onlyTheServer => 'Only the server';
+
+  @override
+  String get onlyThisComputer => 'Only this computer (127.0.0.1)';
+
+  @override
+  String get openAction => 'Open';
+
+  @override
+  String openCount(int count) {
+    return '$count open';
+  }
+
+  @override
   String get openLocal => 'Open a local terminal';
+
+  @override
+  String openOnConnect(String host) {
+    return 'Open when connecting to $host';
+  }
+
+  @override
+  String get openOnConnectNote =>
+      'From a terminal or SFTP. If the port is taken, the connection goes on and the tunnel says so.';
 
   @override
   String get openSftp => 'Open SFTP';
@@ -1127,6 +1261,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get port => 'Port';
 
   @override
+  String get portBusyNow => 'taken now';
+
+  @override
+  String get portHere => 'Port here';
+
+  @override
+  String portOnHost(String host) {
+    return 'Port on $host';
+  }
+
+  @override
   String get portRange => 'The port goes from 1 to 65535.';
 
   @override
@@ -1142,6 +1287,41 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get previewLive => 'Changes show at once across the window.';
+
+  @override
+  String get proxy => 'Proxy';
+
+  @override
+  String get proxyHttpNote =>
+      'With an HTTP proxy the CONNECT request is not encrypted: the proxy sees which host and port you connect to, not what goes over SSH.';
+
+  @override
+  String proxyLoginBody(String proxy) {
+    return '$proxy asks for a user and password to let you through. They are not saved.';
+  }
+
+  @override
+  String get proxyLoginTitle => 'The proxy asks you to log in';
+
+  @override
+  String get proxyNone => 'No proxy';
+
+  @override
+  String get proxyNotWithCommand =>
+      'With a ProxyCommand the proxy is not used.';
+
+  @override
+  String get proxyRouteTitle => 'The route becomes';
+
+  @override
+  String get proxyServer => 'Proxy server';
+
+  @override
+  String get proxyUser => 'Proxy user';
+
+  @override
+  String get proxyUserHelp =>
+      'Optional. The password is asked for when connecting and not saved.';
 
   @override
   String get queueAllDone => 'All finished';
@@ -1199,6 +1379,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reload => 'Reload';
 
   @override
+  String remoteSentence(String host, String port, String dest) {
+    return 'What connects on $host to port $port reaches $dest on this computer.';
+  }
+
+  @override
   String get remove => 'Remove';
 
   @override
@@ -1246,6 +1431,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String reportTunnels(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count new tunnels',
+      one: '1 new tunnel',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get reportWhere => 'They are in the group “~/.ssh/config”.';
 
   @override
@@ -1259,6 +1455,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get resume => 'Resume';
+
+  @override
+  String get retry => 'Retry';
 
   @override
   String retryIn(int attempt, int max, int secs) {
@@ -1308,6 +1507,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saveAndConnect => 'Save and connect';
 
   @override
+  String get saveAndOpen => 'Save and open';
+
+  @override
   String saveFailed(String error) {
     return 'Could not save: $error';
   }
@@ -1339,6 +1541,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sectionGeneral => 'General';
+
+  @override
+  String seenFrom(String host) {
+    return 'as $host sees it';
+  }
+
+  @override
+  String get seenFromHere => 'as this computer sees it';
 
   @override
   String get selectAll => 'All';
@@ -1487,6 +1697,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get starting => 'Starting…';
 
   @override
+  String get state => 'State';
+
+  @override
   String get statusConnected => 'Connected';
 
   @override
@@ -1555,6 +1768,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Of the interface, on top of the system\'s. The terminal has its own.';
 
   @override
+  String get theHost => 'the host';
+
+  @override
+  String get theLocalNetwork => 'The whole local network';
+
+  @override
+  String get theServerNetwork => 'The server\'s network';
+
+  @override
   String get theme => 'Theme';
 
   @override
@@ -1620,6 +1842,114 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tryAgain => 'Try again';
 
   @override
+  String get tunnelBadAddress =>
+      'That address does not exist on this computer.';
+
+  @override
+  String get tunnelClosed => 'Closed';
+
+  @override
+  String tunnelDidNotOpen(String name, String why) {
+    return '«$name» did not open on connect: $why';
+  }
+
+  @override
+  String get tunnelEditorHint =>
+      'A port of this computer that leads to a service only the server sees, or the other way round.';
+
+  @override
+  String get tunnelFailed => 'Did not open';
+
+  @override
+  String get tunnelLost => 'Dropped';
+
+  @override
+  String tunnelLostBody(String host) {
+    return 'The connection to $host was lost. Open it again once it is back.';
+  }
+
+  @override
+  String get tunnelNeedsDest => 'It needs a destination and its port.';
+
+  @override
+  String get tunnelNeedsHost => 'Pick the host it goes through.';
+
+  @override
+  String get tunnelNeedsName => 'Give it a name.';
+
+  @override
+  String get tunnelOpen => 'Open';
+
+  @override
+  String tunnelOpenWith(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Open · $count connections',
+      one: 'Open · 1 connection',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tunnelOpening => 'Opening…';
+
+  @override
+  String tunnelPortBusy(int port) {
+    return 'port $port on this computer is taken.';
+  }
+
+  @override
+  String tunnelRemotePortBusy(int port, String host) {
+    return '$host did not open port $port (in use or not allowed).';
+  }
+
+  @override
+  String get tunnelType => 'Type';
+
+  @override
+  String get tunnels => 'Tunnels';
+
+  @override
+  String tunnelsCount(int total, int open) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total tunnels',
+      one: '1 tunnel',
+    );
+    return '$_temp0 · $open open';
+  }
+
+  @override
+  String get tunnelsIntro =>
+      'Saved port forwards, each with a host. They open by hand or when connecting to the host, over the same connection as the terminal.';
+
+  @override
+  String get tunnelsKeepConnection =>
+      'An open tunnel keeps its host\'s connection even if you close the tab. It closes when you close it here or quit OpenWard.';
+
+  @override
+  String tunnelsOf(String host) {
+    return 'Tunnels of $host';
+  }
+
+  @override
+  String tunnelsOpenCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tunnels open',
+      one: '1 tunnel open',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tunnelsStayOpen =>
+      'They stay open if you close this tab. All of them in Library › Tunnels.';
+
+  @override
   String get uiColors => 'Interface colors';
 
   @override
@@ -1639,6 +1969,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String uploadToHost(String host) {
     return 'Upload to $host';
+  }
+
+  @override
+  String usePort(int port) {
+    return 'Use $port';
   }
 
   @override
@@ -1711,6 +2046,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get welcomeTitle => 'Welcome to OpenWard';
+
+  @override
+  String get whoCanUse => 'Who can use it';
 
   @override
   String get wrongAnswer => 'Wrong answer.';

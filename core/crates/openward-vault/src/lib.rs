@@ -16,7 +16,10 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use openward_proto::{Body, Data, Group, Host, Item, ItemId, Jump, KnownHost, Route, Settings};
+use openward_proto::{
+    Body, Data, ForwardKind, Group, Host, Item, ItemId, Jump, KnownHost, PortForward, Route,
+    Settings,
+};
 
 pub use inherit::{Effective, Origin, defaults};
 pub use openward_proto as proto;
@@ -154,6 +157,27 @@ impl Vault {
         groups
     }
 
+    /// Saved tunnels sorted by label.
+    pub fn port_forward(&self, id: ItemId) -> Result<&PortForward> {
+        match &self.item(id)?.body.data {
+            Data::PortForward(f) => Ok(f),
+            other => Err(wrong_type(id, "port_forward", other)),
+        }
+    }
+
+    pub fn port_forwards(&self) -> Vec<(ItemId, &PortForward)> {
+        let mut forwards: Vec<_> = self
+            .items
+            .values()
+            .filter_map(|i| match &i.body.data {
+                Data::PortForward(f) => Some((i.id, f)),
+                _ => None,
+            })
+            .collect();
+        forwards.sort_by_cached_key(|(id, f)| (f.label.to_lowercase(), *id));
+        forwards
+    }
+
     pub fn known_hosts(&self) -> Vec<(ItemId, &KnownHost)> {
         let mut known: Vec<_> = self
             .items
@@ -232,9 +256,10 @@ impl Vault {
 
     /// Deletes an item. What was inside a deleted group moves up to that
     /// group's parent. A host that other hosts jump through cannot be
-    /// deleted until they stop using it.
+    /// deleted until they stop using it; its tunnels go with it.
     pub fn delete(&mut self, id: ItemId) -> Result<()> {
         let mut moved = Vec::new();
+        let mut gone = vec![id];
         match &self.item(id)?.body.data {
             Data::Group(group) => {
                 let parent = group.parent;
@@ -259,11 +284,19 @@ impl Vault {
                 if !users.is_empty() {
                     return Err(Error::InUse(id, users));
                 }
+                gone.extend(
+                    self.port_forwards()
+                        .into_iter()
+                        .filter(|(_, f)| f.host == id)
+                        .map(|(fid, _)| fid),
+                );
             }
             _ => {}
         }
-        self.store.write(&moved, &[id])?;
-        self.items.remove(&id);
+        self.store.write(&moved, &gone)?;
+        for g in &gone {
+            self.items.remove(g);
+        }
         for item in moved {
             self.items.insert(item.id, item);
         }
@@ -475,6 +508,22 @@ impl Vault {
                     return Err(Error::Invalid("a known host needs patterns and a key"));
                 }
                 Ok(())
+            }
+            Data::PortForward(f) => {
+                if f.label.trim().is_empty() {
+                    return Err(Error::Invalid("a tunnel needs a name"));
+                }
+                if f.listen_port == 0 {
+                    return Err(Error::Invalid("a tunnel needs a port to listen on"));
+                }
+                let dest = f.dest_host.as_deref().is_some_and(|h| !h.trim().is_empty())
+                    && f.dest_port.is_some_and(|p| p > 0);
+                match (f.kind, dest) {
+                    (ForwardKind::Dynamic, _) => {}
+                    (_, false) => return Err(Error::Invalid("a tunnel needs a destination")),
+                    _ => {}
+                }
+                expect(f.host, "host")
             }
             Data::Unsupported => Err(Error::Invalid("unsupported items cannot be written")),
         }

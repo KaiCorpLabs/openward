@@ -37,6 +37,8 @@ import 'package:openward/terminal/renderer.dart';
 import 'package:openward/settings/settings_page.dart';
 import 'package:openward/sftp/sftp_controller.dart';
 import 'package:openward/sftp/transfers.dart';
+import 'package:openward/src/rust/api/tunnels.dart';
+import 'package:openward/tunnels/tunnels.dart';
 import 'package:openward/ui/tokens.dart';
 
 final _shots = Directory('${Directory.systemTemp.path}/openward-shots');
@@ -1184,4 +1186,149 @@ Host db
       await _settle(tester);
     },
   );
+  testWidgets('tunnels: from the page, through it, and on connect', (
+    tester,
+  ) async {
+    final fixtures = await _servers();
+    if (fixtures == null) return markTestSkipped('S2 servers not running');
+    final hostId = await app.createHost(
+      spec: HostSpec(
+        label: 'bastion',
+        address: '127.0.0.1',
+        settings: SettingsSpec(
+          user: 'demo',
+          port: 22100,
+          identityFiles: ['$fixtures/id_ed25519'],
+          agent: AgentKind.off,
+          hostKeyPolicy: KeyPolicy.acceptNew,
+        ),
+      ),
+    );
+    Future<int> freePort() async {
+      final s = await ServerSocket.bind('127.0.0.1', 0);
+      final port = s.port;
+      await s.close();
+      return port;
+    }
+
+    final port = await freePort();
+    final container = await launch(tester);
+    final board = container.read(tunnelBoardProvider);
+    TunnelView? named(String label) =>
+        board.tunnels.where((t) => t.spec.label == label).firstOrNull;
+
+    await tester.tap(find.byKey(const ValueKey('library.tunnels')));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Aún no hay túneles'), findsOneWidget);
+
+    // A new one, saved and opened from the editor.
+    await tester.tap(find.byKey(const ValueKey('tunnels.new')));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.enterText(
+      find.byKey(const ValueKey('tunnel.label')),
+      'SSH del bastión',
+    );
+    await tester.tap(find.byKey(const ValueKey('tunnel.host')));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('bastion').last);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.enterText(
+      find.byKey(const ValueKey('tunnel.listen')),
+      '$port',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('tunnel.dest')),
+      '127.0.0.1',
+    );
+    await tester.enterText(find.byKey(const ValueKey('tunnel.destPort')), '22');
+    await tester.pump(const Duration(milliseconds: 100));
+    await _shot(tester, '22-tunnel-editor');
+    await tester.tap(find.text('Guardar y abrir'));
+    await _until(
+      tester,
+      () => named('SSH del bastión')?.state == TunnelStateKind.open,
+      'the tunnel open',
+    );
+    // Through it, the bastion's own SSH server.
+    final socket = await Socket.connect('127.0.0.1', port);
+    final banner = await socket.first.timeout(const Duration(seconds: 5));
+    expect(String.fromCharCodes(banner), startsWith('SSH-2.0-OpenSSH'));
+    socket.destroy();
+    await tester.pump(const Duration(milliseconds: 600));
+    await _shot(tester, '23-tunnels');
+
+    await tester.tap(
+      find.byKey(const ValueKey('tunnel.close.SSH del bastión')),
+    );
+    await _until(
+      tester,
+      () => named('SSH del bastión')?.state == TunnelStateKind.closed,
+      'the tunnel closed',
+    );
+
+    // On connect: one opens, one whose port is taken says so.
+    final taken = await ServerSocket.bind('127.0.0.1', 0);
+    await app.createTunnel(
+      spec: TunnelSpec(
+        label: 'pgAdmin',
+        hostId: hostId,
+        kind: TunnelKind.local,
+        listenPort: taken.port,
+        destHost: 'localhost',
+        destPort: 80,
+        autostart: true,
+      ),
+    );
+    final autoPort = await freePort();
+    await app.createTunnel(
+      spec: TunnelSpec(
+        label: 'Proxy SOCKS',
+        hostId: hostId,
+        kind: TunnelKind.dynamic_,
+        listenPort: autoPort,
+        autostart: true,
+      ),
+    );
+    board.refresh();
+    // The sidebar's, not the table's.
+    await tester.tap(find.text('bastion').first);
+    await tester.pump(kDoubleTapMinTime);
+    await tester.tap(find.text('bastion').first);
+    await tester.pump();
+    final term = container.read(tabsProvider).currentSession!;
+    await _until(tester, () => term.phase == Phase.connected, 'the shell');
+    await _until(
+      tester,
+      () => named('Proxy SOCKS')?.state == TunnelStateKind.open,
+      'the tunnel that opens on connect',
+    );
+    await _until(
+      tester,
+      () => find
+          .textContaining('No se abrió «pgAdmin» al conectar')
+          .evaluate()
+          .isNotEmpty,
+      'the notice',
+    );
+    expect(find.text('1 túnel abierto'), findsOneWidget);
+    await _shot(tester, '24-tunnel-notice');
+    await tester.tap(find.byKey(const ValueKey('status.tunnels')));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Túneles de bastion'), findsOneWidget);
+    await _shot(tester, '25-tunnel-popover');
+    await tester.tapAt(const Offset(10, 400));
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.tap(find.text('Ignorar'));
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.textContaining('No se abrió «pgAdmin»'), findsNothing);
+    await taken.close();
+
+    for (final t in board.tunnels) {
+      board.close(t.id);
+    }
+    container.read(tabsProvider.notifier)
+      ..close(1)
+      ..close(0);
+    await _settle(tester);
+  });
 }

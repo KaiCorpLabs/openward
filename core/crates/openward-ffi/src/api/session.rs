@@ -66,6 +66,8 @@ pub enum PromptKind {
     Password,
     /// One answer per question, in order.
     KeyboardInteractive,
+    /// The proxy's password; first its user when `user` is empty.
+    ProxyLogin,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -205,7 +207,7 @@ impl PromptAnswer {
     }
 }
 
-fn failure_view(f: Failure) -> FailureView {
+pub(crate) fn failure_view(f: Failure) -> FailureView {
     let message = f.to_string();
     let v = FailureView {
         message,
@@ -302,6 +304,13 @@ fn prompt_view(id: u64, p: Prompt) -> PromptView {
         Prompt::Passphrase { key, retry } => PromptView {
             kind: Some(PromptKind::Passphrase),
             key,
+            retry,
+            ..v
+        },
+        Prompt::ProxyLogin { proxy, user, retry } => PromptView {
+            kind: Some(PromptKind::ProxyLogin),
+            host: proxy,
+            user,
             retry,
             ..v
         },

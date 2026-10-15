@@ -1,5 +1,7 @@
 use ciborium::Value;
-use openward_proto::{Agent, Group, Host, HostKeyPolicy, Jump, KnownHost, Route, Settings};
+use openward_proto::{
+    Agent, ForwardKind, Group, Host, HostKeyPolicy, Jump, KnownHost, PortForward, Route, Settings,
+};
 use rusqlite::params;
 
 use super::*;
@@ -370,4 +372,61 @@ fn a_vault_from_a_newer_version_is_refused() {
         .pragma_update(None, "user_version", 99)
         .unwrap();
     assert!(matches!(Vault::open(&path), Err(Error::NewerFormat(99))));
+}
+
+fn tunnel(label: &str, host: ItemId, kind: ForwardKind, dest: Option<(&str, u16)>) -> Data {
+    Data::PortForward(PortForward {
+        label: label.into(),
+        host,
+        kind,
+        listen_port: 5433,
+        listen_address: None,
+        dest_host: dest.map(|(h, _)| h.to_owned()),
+        dest_port: dest.map(|(_, p)| p),
+        autostart: false,
+        source: None,
+        extra: Default::default(),
+    })
+}
+
+#[test]
+fn tunnels_belong_to_a_host_and_go_with_it() {
+    let mut v = Vault::open_in_memory().unwrap();
+    let db = v.create(host("db", None, Settings::default())).unwrap();
+    let pg = v
+        .create(tunnel(
+            "pg",
+            db,
+            ForwardKind::Local,
+            Some(("10.0.4.21", 5432)),
+        ))
+        .unwrap();
+    let socks = v
+        .create(tunnel("Proxy", db, ForwardKind::Dynamic, None))
+        .unwrap();
+    let names: Vec<_> = v
+        .port_forwards()
+        .iter()
+        .map(|(_, f)| f.label.clone())
+        .collect();
+    assert_eq!(names, ["pg", "Proxy"]);
+
+    // Local and remote ones need somewhere to go; every one needs a host.
+    assert!(matches!(
+        v.create(tunnel("x", db, ForwardKind::Remote, None)),
+        Err(Error::Invalid(_))
+    ));
+    let group = v.create(group("g", None, Settings::default())).unwrap();
+    assert!(matches!(
+        v.create(tunnel("x", group, ForwardKind::Dynamic, None)),
+        Err(Error::WrongType { .. })
+    ));
+
+    let other = v.create(host("web", None, Settings::default())).unwrap();
+    let kept = v
+        .create(tunnel("web", other, ForwardKind::Dynamic, None))
+        .unwrap();
+    v.delete(db).unwrap();
+    assert!(v.get(pg).is_none() && v.get(socks).is_none());
+    assert!(v.get(kept).is_some());
 }

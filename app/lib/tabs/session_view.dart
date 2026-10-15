@@ -11,6 +11,7 @@ import '../l10n/l10n.dart';
 import '../src/rust/api/session.dart';
 import '../terminal/controller.dart';
 import '../terminal/terminal_pane.dart';
+import '../tunnels/tunnels_page.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import 'connection_panels.dart';
@@ -43,6 +44,7 @@ class TabView extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (panes.broadcast) _BroadcastBanner(tab: tab),
+              if (active?.hostId case final host?) TunnelNotices(hostId: host),
               Expanded(
                 child: alone is Pane && !panes.isSplit
                     ? _Single(tab: tab, pane: alone)
@@ -761,6 +763,8 @@ class _StatusBar extends ConsumerWidget {
               onPressed: () => showHostKeyChanged(context, ref, s),
               child: Text(l.reviewKey),
             ),
+          if (k != null && s.hostId != null)
+            TunnelChip(hostId: s.hostId!, hostLabel: s.label),
           if (k != null)
             TextButton.icon(
               key: const ValueKey('status.sftp'),

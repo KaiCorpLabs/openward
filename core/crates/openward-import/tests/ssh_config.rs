@@ -276,10 +276,10 @@ fn unsupported_lines_are_reported_once_and_match_blocks_skipped() {
     let (_dir, paths) = home(
         "
 Host a
-    LocalForward 8080 localhost:80
+    Compression yes
     Port nope
 Host b
-    LocalForward 8081 localhost:81
+    Compression no
     UseKeychain yes
 Match host b exec \"true\"
     User matched
@@ -297,7 +297,7 @@ Match all
             _ => None,
         })
         .collect();
-    assert_eq!(unsupported, ["LocalForward", "UseKeychain"]);
+    assert_eq!(unsupported, ["Compression", "UseKeychain"]);
     assert!(
         config
             .warnings
@@ -366,5 +366,99 @@ Host app
     assert_eq!(
         vault.effective(app).unwrap().settings.route,
         Some(Route::Jump(vec![Jump::Host(bastion)]))
+    );
+}
+
+#[test]
+fn forwards_become_tunnels_that_open_on_connect() {
+    use openward_proto::ForwardKind;
+    let (_dir, paths) = home(
+        "
+Host db
+    HostName db.internal
+    LocalForward 5433 10.0.4.21:5432
+    LocalForward 127.0.0.1:8080 [::1]:80
+    DynamicForward *:1080
+
+Host web
+    RemoteForward 8080 localhost:5173
+    RemoteForward 9000:localhost:9001
+    # Not supported: a SOCKS proxy on the server, and a Unix socket.
+    RemoteForward 1081
+    LocalForward /tmp/s.sock /var/run/docker.sock
+
+Host *
+    LocalForward 5050 localhost:80
+",
+        &[],
+    );
+    let config = load(&paths);
+    let db = config.resolve("db");
+    let spec = |kind, bind: Option<&str>, port, dest: Option<(&str, u16)>| {
+        openward_import::ssh_config::ForwardSpec {
+            kind,
+            bind: bind.map(str::to_owned),
+            port,
+            dest: dest.map(|(h, p)| (h.to_owned(), p)),
+        }
+    };
+    assert_eq!(
+        db.forwards,
+        [
+            spec(ForwardKind::Local, None, 5433, Some(("10.0.4.21", 5432))),
+            spec(
+                ForwardKind::Local,
+                Some("127.0.0.1"),
+                8080,
+                Some(("::1", 80))
+            ),
+            spec(ForwardKind::Dynamic, Some("*"), 1080, None),
+            // From `Host *` too: forwards add up.
+            spec(ForwardKind::Local, None, 5050, Some(("localhost", 80))),
+        ]
+    );
+    let web = config.resolve("web");
+    assert_eq!(
+        web.forwards[..2],
+        [
+            spec(ForwardKind::Remote, None, 8080, Some(("localhost", 5173))),
+            spec(ForwardKind::Remote, None, 9000, Some(("localhost", 9001))),
+        ]
+    );
+    let bad: Vec<_> = config
+        .warnings
+        .iter()
+        .filter_map(|w| match w {
+            Warning::BadValue { keyword, .. } => Some(keyword.as_str()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(bad, ["RemoteForward", "LocalForward"]);
+
+    let imported = import(&config);
+    let db_id = imported
+        .hosts
+        .iter()
+        .find(|(_, h)| h.label == "db")
+        .unwrap()
+        .0;
+    let tunnels: Vec<_> = imported
+        .forwards
+        .iter()
+        .filter(|f| f.host == db_id)
+        .map(|f| (f.label.as_str(), f.autostart))
+        .collect();
+    assert_eq!(
+        tunnels,
+        [
+            ("5433 → 10.0.4.21:5432", true),
+            ("8080 → ::1:80", true),
+            ("SOCKS 1080", true),
+            ("5050 → localhost:80", true),
+        ]
+    );
+    assert_eq!(
+        imported.forwards[0].source,
+        Some(Source::SshConfig { alias: "db".into() })
     );
 }

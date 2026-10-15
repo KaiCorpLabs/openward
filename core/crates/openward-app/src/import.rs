@@ -7,13 +7,19 @@
 //! [`preview`] shows what an import would bring without touching the
 //! vault, so the user can pick; picking a host brings the hosts it jumps
 //! through along.
+//!
+//! Forwards come in as tunnels of their host, also for hosts imported
+//! before (from an OpenWard without tunnels): a tunnel of the same alias,
+//! kind and port is not brought twice.
 
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use openward_import::ssh_config::{self, Paths, SshConfig, Warning};
 use openward_vault::Vault;
-use openward_vault::proto::{Data, Group, Host, ItemId, Jump, Route, Source};
+use openward_vault::proto::{
+    Data, ForwardKind, Group, Host, ItemId, Jump, PortForward, Route, Source,
+};
 
 /// The group imported hosts go to, at the top level.
 pub const GROUP: &str = "~/.ssh/config";
@@ -24,6 +30,8 @@ pub struct Report {
     pub created: usize,
     /// Aliases already in the vault from an earlier import.
     pub skipped: usize,
+    /// Tunnels created.
+    pub tunnels: usize,
     pub warnings: Vec<Warning>,
 }
 
@@ -39,12 +47,15 @@ pub struct Preview {
     pub jumps: Vec<String>,
     /// Imported before: importing again leaves it as it is.
     pub existing: bool,
+    /// Tunnels it would bring that are not in the vault yet.
+    pub tunnels: usize,
 }
 
 /// What [`ssh_config`] would bring in, in the file's order.
 pub fn preview(vault: &Vault, file: &Path, paths: &Paths) -> Vec<Preview> {
     let imported = ssh_config::import(&SshConfig::load(file, paths));
     let existing = existing_aliases(vault);
+    let have = existing_tunnels(vault);
     let labels: HashMap<ItemId, &str> = imported
         .hosts
         .iter()
@@ -69,6 +80,12 @@ pub fn preview(vault: &Vault, file: &Path, paths: &Paths) -> Vec<Preview> {
                 _ => Vec::new(),
             },
             existing: existing.contains_key(&h.label.to_lowercase()),
+            tunnels: imported
+                .forwards
+                .iter()
+                .filter(|f| labels.get(&f.host) == Some(&h.label.as_str()))
+                .filter(|f| !have.contains(&tunnel_key(f)))
+                .count(),
         })
         .collect()
 }
@@ -121,6 +138,19 @@ pub fn ssh_config(
         ));
     }
     let mut skipped = 0;
+    let kept: HashSet<ItemId> = imported.hosts.iter().map(|(id, _)| *id).collect();
+    let mut have = existing_tunnels(vault);
+    let mut tunnels = 0;
+    for mut f in std::mem::take(&mut imported.forwards) {
+        if !kept.contains(&f.host) || !have.insert(tunnel_key(&f)) {
+            continue;
+        }
+        if let Some(old) = remap.get(&f.host) {
+            f.host = *old;
+        }
+        items.push((ItemId::new(), Data::PortForward(f)));
+        tunnels += 1;
+    }
     for (id, mut host) in imported.hosts {
         if remap.contains_key(&id) {
             skipped += 1;
@@ -138,16 +168,36 @@ pub fn ssh_config(
         }
         items.push((id, Data::Host(host)));
     }
-    let created = items.len() - usize::from(found.is_none());
-    if created > 0 {
+    let created = items.len() - usize::from(found.is_none()) - tunnels;
+    if created + tunnels > 0 {
         vault.create_all(items)?;
     }
     Ok(Report {
         group,
         created,
         skipped,
+        tunnels,
         warnings: imported.warnings,
     })
+}
+
+/// An imported tunnel's alias, kind and port: one of each comes in once.
+fn tunnel_key(f: &PortForward) -> (String, ForwardKind, u16) {
+    let alias = match &f.source {
+        Some(Source::SshConfig { alias }) => alias.to_lowercase(),
+        None => String::new(),
+    };
+    (alias, f.kind, f.listen_port)
+}
+
+/// Tunnels imported before.
+fn existing_tunnels(vault: &Vault) -> HashSet<(String, ForwardKind, u16)> {
+    vault
+        .port_forwards()
+        .into_iter()
+        .filter(|(_, f)| f.source.is_some())
+        .map(|(_, f)| tunnel_key(f))
+        .collect()
 }
 
 /// Aliases imported before (lowercased) → their host.
@@ -294,5 +344,61 @@ mod tests {
             .map(|p| p.alias.as_str())
             .collect();
         assert_eq!(existing, ["bastion", "web"]);
+    }
+
+    #[test]
+    fn forwards_come_in_once_also_for_hosts_imported_before() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = Paths::new(dir.path());
+        std::fs::create_dir_all(&paths.ssh_dir).unwrap();
+        let file = paths.user_config();
+        // Imported by an OpenWard without tunnels.
+        std::fs::write(&file, "Host db\n  User ops\n").unwrap();
+        let mut vault = Vault::open_in_memory().unwrap();
+        ssh_config(&mut vault, &file, &paths, None).unwrap();
+
+        std::fs::write(
+            &file,
+            "Host db\n  User ops\n  LocalForward 5433 10.0.4.21:5432\n  DynamicForward 1080\n\
+             Host web\n  RemoteForward 8080 localhost:5173\n",
+        )
+        .unwrap();
+        let preview = preview(&vault, &file, &paths);
+        let counts: Vec<_> = preview
+            .iter()
+            .map(|p| (p.alias.as_str(), p.existing, p.tunnels))
+            .collect();
+        assert_eq!(counts, [("db", true, 2), ("web", false, 1)]);
+
+        let second = ssh_config(&mut vault, &file, &paths, None).unwrap();
+        assert_eq!((second.created, second.skipped, second.tunnels), (1, 1, 3));
+        let (db, _) = vault
+            .hosts()
+            .into_iter()
+            .find(|(_, h)| h.label == "db")
+            .unwrap();
+        let on_db: Vec<_> = vault
+            .port_forwards()
+            .into_iter()
+            .filter(|(_, f)| f.host == db)
+            .map(|(_, f)| (f.kind, f.listen_port, f.autostart))
+            .collect();
+        assert_eq!(
+            on_db,
+            [
+                (ForwardKind::Local, 5433, true),
+                (ForwardKind::Dynamic, 1080, true)
+            ]
+        );
+
+        // Once is enough.
+        let third = ssh_config(&mut vault, &file, &paths, None).unwrap();
+        assert_eq!((third.created, third.tunnels), (0, 0));
+        assert_eq!(vault.port_forwards().len(), 3);
+        assert!(preview_tunnels(&vault, &file, &paths) == 0);
+    }
+
+    fn preview_tunnels(vault: &Vault, file: &Path, paths: &Paths) -> usize {
+        preview(vault, file, paths).iter().map(|p| p.tunnels).sum()
     }
 }

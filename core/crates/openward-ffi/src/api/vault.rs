@@ -8,7 +8,9 @@ use std::str::FromStr;
 
 use flutter_rust_bridge::frb;
 use openward_app::vault::Origin;
-use openward_app::vault::proto::{Agent, HostKeyPolicy, ItemId, Jump, Route, Settings};
+use openward_app::vault::proto::{
+    Agent, HostKeyPolicy, ItemId, Jump, Proxy, ProxyServer, Route, Settings,
+};
 
 pub(crate) fn id(text: &str) -> anyhow::Result<ItemId> {
     ItemId::from_str(text).map_err(|e| anyhow::anyhow!("bad id {text:?}: {e}"))
@@ -30,6 +32,14 @@ pub enum RouteKind {
     Direct,
     Jump,
     Command,
+}
+
+/// A proxy in front of the first hop; `Off` overrides one inherited.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ProxyKind {
+    Off,
+    Http,
+    Socks5,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -75,6 +85,15 @@ pub struct SettingsSpec {
     /// With [`RouteKind::Command`].
     #[frb(default = "")]
     pub proxy_command: String,
+    pub proxy: Option<ProxyKind>,
+    /// With an HTTP or SOCKS5 proxy.
+    #[frb(default = "")]
+    pub proxy_host: String,
+    #[frb(default = "0")]
+    pub proxy_port: u16,
+    /// Optional; the password is asked for when connecting.
+    #[frb(default = "")]
+    pub proxy_user: String,
     pub keepalive_secs: Option<u32>,
     pub agent_forward: Option<bool>,
     pub term: Option<String>,
@@ -114,7 +133,17 @@ impl SettingsSpec {
                 String::new(),
             ),
         };
+        let (proxy, server) = match &s.proxy {
+            None => (None, None),
+            Some(Proxy::None) => (Some(ProxyKind::Off), None),
+            Some(Proxy::Http(server)) => (Some(ProxyKind::Http), Some(server)),
+            Some(Proxy::Socks5(server)) => (Some(ProxyKind::Socks5), Some(server)),
+        };
         Self {
+            proxy,
+            proxy_host: server.map(|s| s.host.clone()).unwrap_or_default(),
+            proxy_port: server.map_or(0, |s| s.port),
+            proxy_user: server.and_then(|s| s.user.clone()).unwrap_or_default(),
             user: s.user.clone(),
             port: s.port,
             identity_files: s.identity_files.clone(),
@@ -174,6 +203,23 @@ impl SettingsSpec {
                     })
                     .collect::<anyhow::Result<_>>()?,
             )),
+        };
+        let server = || {
+            let host = self.proxy_host.trim();
+            if host.is_empty() || self.proxy_port == 0 {
+                anyhow::bail!("a proxy needs a host and a port");
+            }
+            Ok(ProxyServer {
+                host: host.to_owned(),
+                port: self.proxy_port,
+                user: Some(self.proxy_user.trim().to_owned()).filter(|u| !u.is_empty()),
+            })
+        };
+        s.proxy = match self.proxy {
+            None => None,
+            Some(ProxyKind::Off) => Some(Proxy::None),
+            Some(ProxyKind::Http) => Some(Proxy::Http(server()?)),
+            Some(ProxyKind::Socks5) => Some(Proxy::Socks5(server()?)),
         };
         s.keepalive_secs = self.keepalive_secs;
         s.agent_forward = self.agent_forward;
@@ -344,6 +390,8 @@ pub struct ImportPreview {
     pub jumps: Vec<String>,
     /// Imported before: importing again leaves it as it is.
     pub existing: bool,
+    /// Tunnels (its forwards) it would bring that are not in OpenWard yet.
+    pub tunnels: u32,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -351,6 +399,7 @@ pub struct ImportReport {
     pub group_id: String,
     pub created: u32,
     pub skipped: u32,
+    pub tunnels: u32,
     pub warnings: Vec<ImportWarning>,
 }
 

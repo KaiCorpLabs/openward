@@ -112,6 +112,15 @@ pub enum Prompt {
         host: String,
         retry: bool,
     },
+    /// The proxy in front of the first hop wants to log in. With `user`
+    /// empty, the answer is the user and then the password; otherwise just
+    /// the password. Neither is kept.
+    ProxyLogin {
+        /// `host:port`.
+        proxy: String,
+        user: String,
+        retry: bool,
+    },
     /// Keyboard-interactive (2FA and the like): one answer per question.
     KeyboardInteractive {
         user: String,

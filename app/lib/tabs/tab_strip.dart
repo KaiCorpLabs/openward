@@ -206,9 +206,11 @@ class _Tab extends StatelessWidget {
         context,
         leading: Icon(switch (page) {
           PageKind.settings => Icons.settings_outlined,
+          PageKind.tunnels => Icons.swap_horiz,
         }, size: 14),
         title: switch (page) {
           PageKind.settings => context.l10n.settings,
+          PageKind.tunnels => context.l10n.tunnels,
         },
       ),
     };

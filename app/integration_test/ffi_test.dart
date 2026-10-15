@@ -14,6 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:openward/src/rust/api/app.dart';
 import 'package:openward/src/rust/api/session.dart';
+import 'package:openward/src/rust/api/tunnels.dart';
 import 'package:openward/src/rust/api/vault.dart';
 import 'package:openward/src/rust/frb_generated.dart';
 
@@ -100,19 +101,26 @@ Host bastion
 Host app
     ProxyJump bastion
     LocalForward 8080 localhost:80
+    Compression yes
 ''');
     final report = await app.importSshConfig(file: config.path);
-    expect(report.created, 2);
+    expect((report.created, report.tunnels), (2, 1));
     expect(report.warnings.single.kind, ImportWarningKind.unsupported);
-    expect(report.warnings.single.subject, 'LocalForward');
+    expect(report.warnings.single.subject, 'Compression');
     final hosts = {for (final h in app.hosts()) h.label: h};
     expect(hosts['bastion']!.importedAlias, 'bastion');
     final route = app.host(id: hosts['app']!.id).spec.settings;
     expect(route.route, RouteKind.jump);
     expect(route.jumps.single.hostId, hosts['bastion']!.id);
 
+    final tunnel = app.tunnels().single;
+    expect(tunnel.spec.hostId, hosts['app']!.id);
+    expect(tunnel.spec.kind, TunnelKind.local);
+    expect((tunnel.spec.listenPort, tunnel.spec.destPort), (8080, 80));
+    expect((tunnel.spec.autostart, tunnel.imported), (true, true));
+
     final again = await app.importSshConfig(file: config.path);
-    expect((again.created, again.skipped), (0, 2));
+    expect((again.created, again.skipped, again.tunnels), (0, 2, 0));
   });
 
   test('previewing an ssh config and importing part of it', () async {

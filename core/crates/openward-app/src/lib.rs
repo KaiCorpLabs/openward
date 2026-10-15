@@ -13,6 +13,7 @@ pub mod local;
 pub mod plan;
 pub mod sftp;
 pub mod terminal;
+pub mod tunnels;
 
 mod connect;
 mod live;
@@ -33,11 +34,13 @@ pub use openward_vault as vault;
 pub use plan::{Plan, PlanError};
 pub use sftp::Sftp;
 pub use terminal::Terminal;
+pub use tunnels::{TunnelError, TunnelState};
 
 use connect::{Ctx, lock};
 use events::{Prompts, Stage};
 use live::{Live, Registry};
 use openward_sftp::{Request, Transfers};
+use tunnels::Tunnels;
 
 /// Scrollback lines when settings say nothing.
 pub const DEFAULT_SCROLLBACK: usize = 10_000;
@@ -49,6 +52,7 @@ pub struct App {
     live: Arc<Registry>,
     links: sftp::Links,
     transfers: Transfers,
+    tunnels: Arc<Tunnels>,
     runtime: tokio::runtime::Runtime,
 }
 
@@ -74,6 +78,7 @@ impl App {
             live: Arc::default(),
             links: sftp::Links::default(),
             transfers: Transfers::new(runtime.handle().clone()),
+            tunnels: Arc::new(Tunnels::new(runtime.handle().clone())),
             runtime,
         })
     }
@@ -185,8 +190,113 @@ impl App {
             prompts: Arc::clone(&self.prompts),
             sink: Arc::clone(sink),
             live: Arc::clone(&self.live),
+            tunnels: Arc::clone(&self.tunnels),
             runtime: self.runtime.handle().clone(),
         }
+    }
+
+    /// Every saved tunnel with its host's label and its state now, by
+    /// label.
+    pub fn tunnels(&self) -> Vec<TunnelInfo> {
+        let states = self.tunnels.states();
+        let vault = self.vault();
+        vault
+            .port_forwards()
+            .into_iter()
+            .map(|(id, f)| TunnelInfo {
+                id,
+                rev: vault.get(id).map_or(0, |i| i.rev),
+                host_label: vault
+                    .host(f.host)
+                    .map(|h| h.label.clone())
+                    .unwrap_or_default(),
+                spec: f.clone(),
+                state: states.get(&id).cloned().unwrap_or(TunnelState::Closed),
+            })
+            .collect()
+    }
+
+    /// Opens a saved tunnel over its host's connection, connecting if none
+    /// is up (questions and the outcome of that arrive on `sink`, which
+    /// gets `Connected` once it listens). Returns at once.
+    pub fn open_tunnel(&self, id: ItemId, sink: Arc<dyn EventSink>) -> Result<(), PlanError> {
+        let spec = self.vault().port_forward(id)?.clone();
+        let plan = Plan::for_host(&self.vault(), spec.host, &self.local)?;
+        self.tunnels.set_state(id, TunnelState::Opening);
+        let ctx = self.ctx(&sink);
+        self.runtime.spawn(async move {
+            let key = plan.key();
+            let live = match ctx.live.find(&key) {
+                Some(live) => live,
+                None => {
+                    ctx.sink.send(Event::Route {
+                        hops: plan.hops.iter().map(|h| h.label.clone()).collect(),
+                    });
+                    match connect::run(&plan, &ctx).await {
+                        Ok(sessions) => {
+                            let live = Live::new(&plan, sessions, ctx.runtime.clone());
+                            ctx.live.add(key, &live);
+                            live
+                        }
+                        Err(failure) => {
+                            ctx.tunnels.set_state(
+                                id,
+                                TunnelState::Failed {
+                                    error: TunnelError::Connection(failure.clone()),
+                                    on_connect: false,
+                                },
+                            );
+                            return ctx.sink.send(Event::Closed {
+                                exit_code: None,
+                                failure: Some(failure),
+                            });
+                        }
+                    }
+                }
+            };
+            ctx.tunnels
+                .open_on(id, spec, Arc::clone(&live), false)
+                .await;
+            match ctx.tunnels.states().get(&id) {
+                Some(TunnelState::Open { .. }) => {
+                    ctx.sink.send(Event::Connected(live.connected.clone()));
+                }
+                Some(TunnelState::Failed { error, .. }) => ctx.sink.send(Event::Closed {
+                    exit_code: None,
+                    failure: Some(events::Failure::Other(error.to_string())),
+                }),
+                _ => {}
+            }
+        });
+        Ok(())
+    }
+
+    /// Deletes an item from the vault. A tunnel, or a host's tunnels (they
+    /// go with it), close first.
+    pub fn delete(&self, id: ItemId) -> vault::Result<()> {
+        let tunnels: Vec<ItemId> = self
+            .vault()
+            .port_forwards()
+            .into_iter()
+            .filter(|(fid, f)| *fid == id || f.host == id)
+            .map(|(fid, _)| fid)
+            .collect();
+        self.vault().delete(id)?;
+        for t in tunnels {
+            self.tunnels.forget(t);
+        }
+        Ok(())
+    }
+
+    /// Closes a tunnel; its connection goes too unless something else uses
+    /// it.
+    pub fn close_tunnel(&self, id: ItemId) {
+        self.tunnels.close(id);
+    }
+
+    /// A free port here near `port`, to offer when that one is taken.
+    pub fn free_port_near(&self, port: u16) -> Option<u16> {
+        tunnels::free_port_near(port)
     }
 
     /// A new SFTP browser, not connected yet.
@@ -313,6 +423,16 @@ impl App {
     }
 }
 
+/// A saved tunnel as the UI lists it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct TunnelInfo {
+    pub id: ItemId,
+    pub rev: u64,
+    pub spec: vault::proto::PortForward,
+    pub host_label: String,
+    pub state: TunnelState,
+}
+
 /// What a connection goes to.
 enum Target {
     Host(ItemId),
@@ -362,6 +482,7 @@ async fn session(
     };
     // An SFTP browser for the same host can go over it.
     ctx.live.add(plan.key(), &live);
+    ctx.autostart(plan, &live).await;
     let Some(pipe) = term.upgrade().map(|t| t.pipe()) else {
         return (None, None, false);
     };

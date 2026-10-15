@@ -7,6 +7,7 @@
 pub mod client;
 pub mod forward;
 pub mod known_hosts;
+pub mod proxy;
 pub mod totp;
 
 /// The `russh` version these pieces are built on, for callers that need its

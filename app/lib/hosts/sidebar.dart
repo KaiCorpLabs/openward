@@ -8,6 +8,7 @@ import '../src/rust/api/vault.dart';
 import '../tabs/tabs.dart';
 import '../terminal/controller.dart';
 import '../terminal/keys.dart';
+import '../tunnels/tunnels.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../window/chrome.dart';
@@ -154,6 +155,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
                         : _tree(library, null, 0, sessions),
                   ),
           ),
+          const _Library(),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -483,6 +485,75 @@ class _Empty extends StatelessWidget {
             child: OutlinedButton(
               onPressed: onImport,
               child: Text(l.importEllipsis),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// What is kept besides hosts: tunnels for now; identities and snippets
+/// come later.
+class _Library extends ConsumerWidget {
+  const _Library();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ow = context.ow;
+    final c = ow.colors;
+    final l = context.l10n;
+    final board = ref.watch(tunnelBoardProvider);
+    final current = ref.watch(tabsProvider.select((s) => s.current));
+    final here = current is PageTab && current.page == PageKind.tunnels;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: c.border)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+            child: SectionLabel(l.library),
+          ),
+          ListenableBuilder(
+            listenable: board,
+            builder: (context, _) => Material(
+              color: here ? c.selected : Colors.transparent,
+              borderRadius: BorderRadius.circular(ow.shape.radius + 2),
+              child: InkWell(
+                key: const ValueKey('library.tunnels'),
+                borderRadius: BorderRadius.circular(ow.shape.radius + 2),
+                onTap: () =>
+                    ref.read(tabsProvider.notifier).openPage(PageKind.tunnels),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 7,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.swap_horiz, size: 16, color: c.textMuted),
+                      const SizedBox(width: 10),
+                      Expanded(child: Text(l.tunnels)),
+                      if (board.open > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Text(
+                            l.openCount(board.open),
+                            style: TextStyle(fontSize: 11, color: c.accentText),
+                          ),
+                        ),
+                      Text(
+                        '${board.tunnels.length}',
+                        style: monoStyle(context, size: 11),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ],

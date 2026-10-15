@@ -21,6 +21,7 @@ use openward_ssh::client::{
     Outcome, Session, Target, UntrustedHost,
 };
 use openward_ssh::known_hosts::{KnownHosts, Unknown, Verdict};
+use openward_ssh::proxy::ProxyAuthRequired;
 use openward_ssh::russh::MethodKind;
 use openward_ssh::russh::keys::{Certificate, HashAlg, PrivateKey, PublicKey};
 use openward_vault::Vault;
@@ -34,6 +35,7 @@ use crate::events::{
 use crate::live::Registry;
 use crate::local::Local;
 use crate::plan::{Hop, Plan};
+use crate::tunnels::Tunnels;
 
 /// Everything a connection needs from the app.
 #[derive(Clone)]
@@ -44,7 +46,27 @@ pub(crate) struct Ctx {
     pub sink: Arc<dyn EventSink>,
     /// Connections that are up, to share.
     pub live: Arc<Registry>,
+    pub tunnels: Arc<Tunnels>,
     pub runtime: tokio::runtime::Handle,
+}
+
+impl Ctx {
+    /// Opens on a new connection the tunnels of its host that open on
+    /// connect.
+    pub async fn autostart(&self, plan: &Plan, live: &Arc<crate::live::Live>) {
+        let Some(host) = plan.hops.last().and_then(|h| h.host) else {
+            return;
+        };
+        let forwards: Vec<_> = lock(&self.vault)
+            .port_forwards()
+            .into_iter()
+            .filter(|(_, f)| f.host == host && f.autostart)
+            .map(|(id, f)| (id, f.clone()))
+            .collect();
+        if !forwards.is_empty() {
+            self.tunnels.autostart(live, forwards).await;
+        }
+    }
 }
 
 impl Ctx {
@@ -128,14 +150,24 @@ pub(crate) async fn run(plan: &Plan, ctx: &Ctx) -> Result<Vec<Session>, Failure>
             on_untrusted: Some(host_key_hook(hop, ctx, Arc::clone(&refused))),
         };
         let target = Target::new(&hop.address, hop.port);
-        let transport = match (sessions.last(), &hop.proxy_command) {
-            (Some(previous), _) => Transport::Via(previous),
-            (None, Some(command)) => Transport::ProxyCommand(command.clone()),
-            (None, None) => Transport::Tcp,
-        };
-        let mut session = match ssh::open(&target, transport, &opts).await {
-            Ok(session) => session,
-            Err(e) => return Err(open_failure(hop, &e, &refused, &texts)),
+        let mut proxy = hop.proxy.clone();
+        let mut asked = 0;
+        let mut session = loop {
+            let transport = match (sessions.last(), &hop.proxy_command, &proxy) {
+                (Some(previous), _, _) => Transport::Via(previous),
+                (None, Some(command), _) => Transport::ProxyCommand(command.clone()),
+                (None, None, Some(p)) => Transport::Proxy(p.clone()),
+                (None, None, None) => Transport::Tcp,
+            };
+            match ssh::open(&target, transport, &opts).await {
+                Ok(session) => break session,
+                Err(e) if e.downcast_ref::<ProxyAuthRequired>().is_some() && asked < 3 => {
+                    let p = proxy.as_mut().expect("only a proxy asks");
+                    proxy_login(p, ctx, asked > 0).await?;
+                    asked += 1;
+                }
+                Err(e) => return Err(open_failure(hop, &e, &refused, &texts)),
+            }
         };
         ctx.stage(plan, i, Stage::Authenticating);
         authenticate(&mut session, hop, ctx).await?;
@@ -177,6 +209,28 @@ fn host_key_hook(hop: &Hop, ctx: &Ctx, refused: Arc<Mutex<Option<HostKeyQuery>>>
             accept
         })
     })
+}
+
+/// Asks for the proxy's password (and its user, if none is set) into `p`.
+async fn proxy_login(
+    p: &mut openward_ssh::proxy::Proxy,
+    ctx: &Ctx,
+    retry: bool,
+) -> Result<(), Failure> {
+    let prompt = Prompt::ProxyLogin {
+        proxy: p.address(),
+        user: p.user.clone().unwrap_or_default(),
+        retry,
+    };
+    let Answer::Text(texts) = ctx.ask(prompt).await else {
+        return Err(Failure::Cancelled);
+    };
+    let mut texts = texts.into_iter();
+    if p.user.as_deref().is_none_or(str::is_empty) {
+        p.user = texts.next().map(|u| u.as_str().to_owned());
+    }
+    p.password = texts.next().map(|t| t.as_str().to_owned());
+    Ok(())
 }
 
 fn open_failure(

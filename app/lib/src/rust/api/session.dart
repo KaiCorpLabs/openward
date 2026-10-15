@@ -373,6 +373,9 @@ enum PromptKind {
 
   /// One answer per question, in order.
   keyboardInteractive,
+
+  /// The proxy's password; first its user when `user` is empty.
+  proxyLogin,
 }
 
 /// A question; answer it with `OpenWard.answer(id, …)`.

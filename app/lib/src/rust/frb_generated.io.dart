@@ -6,6 +6,7 @@
 import 'api/app.dart';
 import 'api/session.dart';
 import 'api/sftp.dart';
+import 'api/tunnels.dart';
 import 'api/vault.dart';
 
 import 'dart:async';
@@ -159,6 +160,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PromptView dco_decode_box_autoadd_prompt_view(dynamic raw);
 
   @protected
+  ProxyKind dco_decode_box_autoadd_proxy_kind(dynamic raw);
+
+  @protected
   ReconnectingView dco_decode_box_autoadd_reconnecting_view(dynamic raw);
 
   @protected
@@ -172,6 +176,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   TermFrame dco_decode_box_autoadd_term_frame(dynamic raw);
+
+  @protected
+  TunnelErrorView dco_decode_box_autoadd_tunnel_error_view(dynamic raw);
+
+  @protected
+  TunnelSpec dco_decode_box_autoadd_tunnel_spec(dynamic raw);
 
   @protected
   int dco_decode_box_autoadd_u_16(dynamic raw);
@@ -336,6 +346,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<TransferView> dco_decode_list_transfer_view(dynamic raw);
 
   @protected
+  List<TunnelView> dco_decode_list_tunnel_view(dynamic raw);
+
+  @protected
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
@@ -378,6 +391,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PromptView? dco_decode_opt_box_autoadd_prompt_view(dynamic raw);
 
   @protected
+  ProxyKind? dco_decode_opt_box_autoadd_proxy_kind(dynamic raw);
+
+  @protected
   ReconnectingView? dco_decode_opt_box_autoadd_reconnecting_view(dynamic raw);
 
   @protected
@@ -391,6 +407,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   TermFrame? dco_decode_opt_box_autoadd_term_frame(dynamic raw);
+
+  @protected
+  TunnelErrorView? dco_decode_opt_box_autoadd_tunnel_error_view(dynamic raw);
 
   @protected
   int? dco_decode_opt_box_autoadd_u_16(dynamic raw);
@@ -424,6 +443,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PromptView dco_decode_prompt_view(dynamic raw);
+
+  @protected
+  ProxyKind dco_decode_proxy_kind(dynamic raw);
 
   @protected
   QuestionView dco_decode_question_view(dynamic raw);
@@ -475,6 +497,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   TrustKind dco_decode_trust_kind(dynamic raw);
+
+  @protected
+  TunnelErrorKind dco_decode_tunnel_error_kind(dynamic raw);
+
+  @protected
+  TunnelErrorView dco_decode_tunnel_error_view(dynamic raw);
+
+  @protected
+  TunnelKind dco_decode_tunnel_kind(dynamic raw);
+
+  @protected
+  TunnelSpec dco_decode_tunnel_spec(dynamic raw);
+
+  @protected
+  TunnelStateKind dco_decode_tunnel_state_kind(dynamic raw);
+
+  @protected
+  TunnelView dco_decode_tunnel_view(dynamic raw);
 
   @protected
   int dco_decode_u_16(dynamic raw);
@@ -621,6 +661,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PromptView sse_decode_box_autoadd_prompt_view(SseDeserializer deserializer);
 
   @protected
+  ProxyKind sse_decode_box_autoadd_proxy_kind(SseDeserializer deserializer);
+
+  @protected
   ReconnectingView sse_decode_box_autoadd_reconnecting_view(
     SseDeserializer deserializer,
   );
@@ -636,6 +679,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   TermFrame sse_decode_box_autoadd_term_frame(SseDeserializer deserializer);
+
+  @protected
+  TunnelErrorView sse_decode_box_autoadd_tunnel_error_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  TunnelSpec sse_decode_box_autoadd_tunnel_spec(SseDeserializer deserializer);
 
   @protected
   int sse_decode_box_autoadd_u_16(SseDeserializer deserializer);
@@ -820,6 +871,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<TunnelView> sse_decode_list_tunnel_view(SseDeserializer deserializer);
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
@@ -882,6 +936,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ProxyKind? sse_decode_opt_box_autoadd_proxy_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ReconnectingView? sse_decode_opt_box_autoadd_reconnecting_view(
     SseDeserializer deserializer,
   );
@@ -903,6 +962,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   TermFrame? sse_decode_opt_box_autoadd_term_frame(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  TunnelErrorView? sse_decode_opt_box_autoadd_tunnel_error_view(
     SseDeserializer deserializer,
   );
 
@@ -938,6 +1002,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PromptView sse_decode_prompt_view(SseDeserializer deserializer);
+
+  @protected
+  ProxyKind sse_decode_proxy_kind(SseDeserializer deserializer);
 
   @protected
   QuestionView sse_decode_question_view(SseDeserializer deserializer);
@@ -989,6 +1056,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   TrustKind sse_decode_trust_kind(SseDeserializer deserializer);
+
+  @protected
+  TunnelErrorKind sse_decode_tunnel_error_kind(SseDeserializer deserializer);
+
+  @protected
+  TunnelErrorView sse_decode_tunnel_error_view(SseDeserializer deserializer);
+
+  @protected
+  TunnelKind sse_decode_tunnel_kind(SseDeserializer deserializer);
+
+  @protected
+  TunnelSpec sse_decode_tunnel_spec(SseDeserializer deserializer);
+
+  @protected
+  TunnelStateKind sse_decode_tunnel_state_kind(SseDeserializer deserializer);
+
+  @protected
+  TunnelView sse_decode_tunnel_view(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_16(SseDeserializer deserializer);
@@ -1189,6 +1274,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_proxy_kind(
+    ProxyKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_reconnecting_view(
     ReconnectingView self,
     SseSerializer serializer,
@@ -1215,6 +1306,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_term_frame(
     TermFrame self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_tunnel_error_view(
+    TunnelErrorView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_tunnel_spec(
+    TunnelSpec self,
     SseSerializer serializer,
   );
 
@@ -1426,6 +1529,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_tunnel_view(
+    List<TunnelView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
@@ -1504,6 +1613,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_proxy_kind(
+    ProxyKind? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_reconnecting_view(
     ReconnectingView? self,
     SseSerializer serializer,
@@ -1530,6 +1645,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_term_frame(
     TermFrame? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_tunnel_error_view(
+    TunnelErrorView? self,
     SseSerializer serializer,
   );
 
@@ -1571,6 +1692,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_prompt_view(PromptView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_proxy_kind(ProxyKind self, SseSerializer serializer);
 
   @protected
   void sse_encode_question_view(QuestionView self, SseSerializer serializer);
@@ -1631,6 +1755,33 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_trust_kind(TrustKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_tunnel_error_kind(
+    TunnelErrorKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_tunnel_error_view(
+    TunnelErrorView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_tunnel_kind(TunnelKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_tunnel_spec(TunnelSpec self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_tunnel_state_kind(
+    TunnelStateKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_tunnel_view(TunnelView self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_16(int self, SseSerializer serializer);

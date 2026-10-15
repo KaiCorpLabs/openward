@@ -73,7 +73,9 @@ pub async fn dynamic(session: Arc<Session>) -> anyhow::Result<Forward> {
     Ok(Forward { port, task })
 }
 
-async fn socks5(mut socket: TcpStream, session: &Session) -> anyhow::Result<()> {
+/// Serves one SOCKS5 client (no authentication, CONNECT only) whose
+/// connection leaves from the SSH server.
+pub async fn socks5(mut socket: TcpStream, session: &Session) -> anyhow::Result<()> {
     // Greeting: VER NMETHODS METHODS…; we only offer "no authentication".
     let mut head = [0u8; 2];
     socket.read_exact(&mut head).await?;

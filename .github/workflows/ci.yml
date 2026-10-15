@@ -218,19 +218,23 @@ jobs:
           Xvfb :99 -screen 0 1920x1200x24 >/dev/null 2>&1 &
           export DISPLAY=:99
           # Flutter's integration tests are flaky on a headless Linux (the
-          # app at times vanishes at start, or flutter_tools fails cleaning
-          # up after the tests passed): one retry, with a warning. A real
-          # failure fails both times.
+          # app at times vanishes at start): one retry, with a warning. A
+          # real failure fails both times.
           # The default reporter in Actions marks tests ✅/❌; with
-          # `-r expanded` the app never got past setUpAll here.
+          # `-r expanded` the app never got past setUpAll here. On Linux
+          # `flutter test -d linux` ends with "No tests were found" and a
+          # failing exit code even when every test passed, so a run counts
+          # as good when no test failed and every test in the file passed.
           once() {
-            local log
+            local log want got
             log="$(mktemp)"
             if flutter test "$1" -d linux 2>&1 | tee "$log"; then
               return 0
             fi
-            grep -q "✅" "$log" && ! grep -q "❌" "$log" &&
-              grep -q "unhandled error during finalization" "$log"
+            want="$(grep -cE '^\s*(testWidgets|test)\(' "$1")"
+            got="$(grep -c '^✅' "$log" || true)"
+            echo "$1: $got of $want tests passed"
+            ! grep -q "❌" "$log" && [ "$got" -eq "$want" ]
           }
           itest() {
             once "$1" && return 0

@@ -719,3 +719,377 @@ fn sftp_on_its_own_and_transfers_that_outlive_it() {
     assert_eq!(conflicts[0].theirs.size, 5 << 20);
     block_on(again.remove(vec![dir])).unwrap();
 }
+
+// ----------------------------------------------------------------- tunnels
+
+use openward_app::vault::proto::{ForwardKind, PortForward, Proxy, ProxyServer};
+use openward_app::{TunnelError, TunnelState};
+use std::io::{Read, Write};
+
+impl Fixture {
+    fn tunnel(
+        &self,
+        host: ItemId,
+        kind: ForwardKind,
+        port: u16,
+        dest: Option<(&str, u16)>,
+        autostart: bool,
+    ) -> ItemId {
+        self.app
+            .vault()
+            .create(Data::PortForward(PortForward {
+                label: format!("{kind:?} {port}"),
+                host,
+                kind,
+                listen_port: port,
+                listen_address: None,
+                dest_host: dest.map(|(h, _)| h.to_owned()),
+                dest_port: dest.map(|(_, p)| p),
+                autostart,
+                source: None,
+                extra: Default::default(),
+            }))
+            .unwrap()
+    }
+
+    fn state(&self, id: ItemId) -> TunnelState {
+        self.app
+            .tunnels()
+            .into_iter()
+            .find(|t| t.id == id)
+            .unwrap()
+            .state
+    }
+
+    fn wait_state(&self, id: ItemId, done: impl Fn(&TunnelState) -> bool) -> TunnelState {
+        let deadline = Instant::now() + Duration::from_secs(20);
+        loop {
+            let s = self.state(id);
+            if done(&s) {
+                return s;
+            }
+            assert!(Instant::now() < deadline, "tunnel stuck in {s:?}");
+            std::thread::sleep(Duration::from_millis(20));
+        }
+    }
+
+    /// Opens a tunnel, answering questions with `reply`.
+    fn open_tunnel(
+        &self,
+        id: ItemId,
+        reply: impl Fn(&Prompt) -> Answer + Send + Sync + 'static,
+    ) -> Receiver<Event> {
+        let (tx, rx) = channel();
+        let ui = Arc::new(Ui {
+            app: OnceLock::new(),
+            tx: Mutex::new(tx),
+            reply: Box::new(reply),
+        });
+        let _ = ui.app.set(Arc::downgrade(&self.app));
+        self.app.open_tunnel(id, ui).unwrap();
+        rx
+    }
+
+    fn bastion(&self) -> ItemId {
+        self.host(
+            "bastion",
+            "127.0.0.1",
+            BASTION,
+            Settings {
+                user: Some("demo".into()),
+                identity_files: self.key("id_ed25519"),
+                host_key_policy: Some(HostKeyPolicy::AcceptNew),
+                ..Settings::default()
+            },
+        )
+    }
+}
+
+fn free_port() -> u16 {
+    std::net::TcpListener::bind("127.0.0.1:0")
+        .unwrap()
+        .local_addr()
+        .unwrap()
+        .port()
+}
+
+/// The first bytes a server sends on `port`: an SSH banner, say.
+fn banner(stream: &mut std::net::TcpStream) -> String {
+    stream
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .unwrap();
+    let mut buf = [0u8; 64];
+    let n = stream.read(&mut buf).unwrap();
+    String::from_utf8_lossy(&buf[..n]).into_owned()
+}
+
+/// Local (-L) and dynamic (-D) tunnels reach the bastion's own SSH server.
+#[test]
+fn local_and_dynamic_tunnels() {
+    let f = Fixture::new(servers!());
+    let host = f.bastion();
+    let port = free_port();
+    let local = f.tunnel(
+        host,
+        ForwardKind::Local,
+        port,
+        Some(("127.0.0.1", 22)),
+        false,
+    );
+    let rx = f.open_tunnel(local, |_| Answer::Cancel);
+    outcome(&rx).0.unwrap();
+    assert_eq!(
+        f.state(local),
+        TunnelState::Open {
+            port,
+            connections: 0
+        }
+    );
+    let mut s = std::net::TcpStream::connect(("127.0.0.1", port)).unwrap();
+    assert!(
+        banner(&mut s).starts_with("SSH-2.0-OpenSSH"),
+        "through the tunnel"
+    );
+    f.wait_state(local, |s| {
+        matches!(s, TunnelState::Open { connections: 1, .. })
+    });
+    drop(s);
+
+    // A SOCKS5 proxy whose connections leave from the bastion.
+    let socks_port = free_port();
+    let dynamic = f.tunnel(host, ForwardKind::Dynamic, socks_port, None, false);
+    let rx = f.open_tunnel(dynamic, |_| Answer::Cancel);
+    outcome(&rx).0.unwrap();
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let stream = rt
+        .block_on(openward_ssh::forward::socks5_connect(
+            socks_port,
+            "127.0.0.1",
+            22,
+        ))
+        .unwrap();
+    let mut s = stream.into_std().unwrap();
+    s.set_nonblocking(false).unwrap();
+    assert!(banner(&mut s).starts_with("SSH-2.0-OpenSSH"));
+
+    // Taken: the second one cannot listen.
+    let clash = f.tunnel(
+        host,
+        ForwardKind::Local,
+        port,
+        Some(("127.0.0.1", 22)),
+        false,
+    );
+    let rx = f.open_tunnel(clash, |_| Answer::Cancel);
+    assert!(outcome(&rx).0.is_err());
+    assert_eq!(
+        f.state(clash),
+        TunnelState::Failed {
+            error: TunnelError::PortInUse {
+                port,
+                remote: false
+            },
+            on_connect: false
+        }
+    );
+    assert!(f.app.free_port_near(port).is_some_and(|p| p > port));
+
+    // Closed, the port is free again.
+    f.app.close_tunnel(local);
+    assert_eq!(f.state(local), TunnelState::Closed);
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while std::net::TcpListener::bind(("127.0.0.1", port)).is_err() {
+        assert!(Instant::now() < deadline, "still listening");
+        std::thread::sleep(Duration::from_millis(20));
+    }
+}
+
+/// Remote (-R): the server's port leads to an echo server here.
+#[test]
+fn remote_tunnel() {
+    let f = Fixture::new(servers!());
+    let host = f.bastion();
+    let echo = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let echo_port = echo.local_addr().unwrap().port();
+    std::thread::spawn(move || {
+        for s in echo.incoming() {
+            let Ok(mut s) = s else { return };
+            let mut buf = [0u8; 64];
+            if let Ok(n) = s.read(&mut buf) {
+                let _ = s.write_all(&buf[..n]);
+            }
+        }
+    });
+    let server_port = 20000 + (std::process::id() % 10000) as u16;
+    let id = f.tunnel(
+        host,
+        ForwardKind::Remote,
+        server_port,
+        Some(("127.0.0.1", echo_port)),
+        false,
+    );
+    let rx = f.open_tunnel(id, |_| Answer::Cancel);
+    outcome(&rx).0.unwrap();
+    // From the server, through it.
+    let (term, rx) = f.connect(host, |_| Answer::Cancel);
+    outcome(&rx).0.unwrap();
+    term.text(&format!(
+        "echo hola | nc -q1 127.0.0.1 {server_port} | sed 's/^/got-/'\n"
+    ));
+    wait_for(&term, "got-hola");
+    f.app.close_tunnel(id);
+}
+
+/// A tunnel that opens on connect comes up with a terminal, over its
+/// connection; one whose port is taken says so and the terminal carries on.
+#[test]
+fn tunnels_open_with_the_terminal() {
+    let f = Fixture::new(servers!());
+    let password = f.password("demo");
+    let host = f.host(
+        "password",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: Some(vec![]),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    let port = free_port();
+    let auto = f.tunnel(
+        host,
+        ForwardKind::Local,
+        port,
+        Some(("127.0.0.1", 22)),
+        true,
+    );
+    let taken = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let taken_port = taken.local_addr().unwrap().port();
+    let busy = f.tunnel(
+        host,
+        ForwardKind::Local,
+        taken_port,
+        Some(("127.0.0.1", 22)),
+        true,
+    );
+    let manual = f.tunnel(host, ForwardKind::Dynamic, free_port(), None, false);
+
+    let (term, rx) = f.connect(host, move |p| match p {
+        Prompt::Password { .. } | Prompt::KeyboardInteractive { .. } => text(&password),
+        _ => Answer::Cancel,
+    });
+    outcome(&rx).0.unwrap();
+    f.wait_state(auto, |s| matches!(s, TunnelState::Open { .. }));
+    assert_eq!(
+        f.wait_state(busy, |s| matches!(s, TunnelState::Failed { .. })),
+        TunnelState::Failed {
+            error: TunnelError::PortInUse {
+                port: taken_port,
+                remote: false
+            },
+            on_connect: true
+        }
+    );
+    assert_eq!(f.state(manual), TunnelState::Closed);
+
+    // Opened by hand while the terminal is up: no password again.
+    let rx = f.open_tunnel(manual, |p| panic!("asked again: {p:?}"));
+    outcome(&rx).0.unwrap();
+
+    // The terminal goes; the tunnels keep the connection.
+    term.text("exit\n");
+    drop(term);
+    std::thread::sleep(Duration::from_millis(300));
+    let mut s = std::net::TcpStream::connect(("127.0.0.1", port)).unwrap();
+    assert!(banner(&mut s).starts_with("SSH-2.0-OpenSSH"));
+    drop(taken);
+}
+
+/// A tiny HTTP CONNECT proxy that wants ana:secreto; its port.
+fn login_proxy() -> u16 {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    std::thread::spawn(move || {
+        for s in listener.incoming() {
+            let Ok(mut s) = s else { return };
+            std::thread::spawn(move || {
+                let mut head = Vec::new();
+                let mut byte = [0u8; 1];
+                while !head.ends_with(b"\r\n\r\n") {
+                    if s.read(&mut byte).unwrap_or(0) == 0 {
+                        return;
+                    }
+                    head.push(byte[0]);
+                }
+                let head = String::from_utf8_lossy(&head).into_owned();
+                // "ana:secreto" in base64.
+                if !head.contains("Proxy-Authorization: Basic YW5hOnNlY3JldG8=") {
+                    let _ = s.write_all(b"HTTP/1.1 407 Proxy Authentication Required\r\n\r\n");
+                    return;
+                }
+                let target = head.split_whitespace().nth(1).unwrap().to_owned();
+                let up = std::net::TcpStream::connect(target).unwrap();
+                s.write_all(b"HTTP/1.1 200 OK\r\n\r\n").unwrap();
+                let (mut a, mut b) = (s.try_clone().unwrap(), up.try_clone().unwrap());
+                let (mut c, mut d) = (s, up);
+                std::thread::spawn(move || std::io::copy(&mut a, &mut b));
+                let _ = std::io::copy(&mut d, &mut c);
+            });
+        }
+    });
+    port
+}
+
+/// Through an HTTP proxy that asks for a login: the password is asked
+/// for, the user comes from the settings.
+#[test]
+fn through_a_proxy_that_asks_for_a_password() {
+    let f = Fixture::new(servers!());
+    let proxy_port = login_proxy();
+    let host = f.host(
+        "behind",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: f.key("id_ed25519"),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            proxy: Some(Proxy::Http(ProxyServer {
+                host: "127.0.0.1".into(),
+                port: proxy_port,
+                user: Some("ana".into()),
+            })),
+            ..Settings::default()
+        },
+    );
+    let (_term, rx) = f.connect(host, |p| match p {
+        Prompt::ProxyLogin { retry: false, .. } => text("mal"),
+        Prompt::ProxyLogin { retry: true, .. } => text("secreto"),
+        _ => Answer::Cancel,
+    });
+    let (result, prompts) = outcome(&rx);
+    result.unwrap();
+    assert_eq!(
+        prompts,
+        [
+            Prompt::ProxyLogin {
+                proxy: format!("127.0.0.1:{proxy_port}"),
+                user: "ana".into(),
+                retry: false
+            },
+            Prompt::ProxyLogin {
+                proxy: format!("127.0.0.1:{proxy_port}"),
+                user: "ana".into(),
+                retry: true
+            },
+        ]
+    );
+    // Cancelling gives up.
+    let (_term, rx) = f.connect(host, |_| Answer::Cancel);
+    assert_eq!(outcome(&rx).0.unwrap_err(), Some(Failure::Cancelled));
+}
