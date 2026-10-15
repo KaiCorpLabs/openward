@@ -26,6 +26,58 @@
   "bellFlash": "Destello con la campana",
   "bellFlashHelp": "Cuando un programa hace sonar la campana. Si la pestaña no está delante, se marca igualmente.",
   "bellRang": "Ha sonado la campana",
+  "broadcastBanner": "{count, plural, =1{Broadcast: lo que escribas va a 1 de {total} paneles ({names}).} other{Broadcast: lo que escribas va a {count} de {total} paneles ({names}).}}",
+  "@broadcastBanner": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "broadcastExit": "Salir {keys}",
+  "@broadcastExit": {
+    "placeholders": {
+      "keys": {
+        "type": "String"
+      }
+    }
+  },
+  "broadcastOff": "Apagar el broadcast",
+  "broadcastOn": "Broadcast en esta pestaña",
+  "broadcastPasteAlways": "Con broadcast, pegar siempre lo pregunta, aunque sea una línea.",
+  "broadcastPasteBody": "{count, plural, =1{Va a {names}. Es 1 línea.} other{Va a {names}. Son {count} líneas, y cada una puede ejecutarse al llegar.}}",
+  "@broadcastPasteBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "broadcastPasteTitle": "¿Pegar en {total} paneles a la vez?",
+  "@broadcastPasteTitle": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "broadcastStatus": "{count, plural, =1{Broadcast · 1 panel} other{Broadcast · {count} paneles}}",
+  "@broadcastStatus": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "cancel": "Cancelar",
   "cancelled": "Cancelado.",
   "cannotConnect": "No se ha podido conectar con {label}",
@@ -43,6 +95,7 @@
   "clear": "Quitar",
   "clearSelection": "Quitar la selección",
   "close": "Cerrar",
+  "closePane": "Cerrar el panel",
   "closeTab": "Cerrar la pestaña",
   "closeTheTab": "Cerrar la pestaña",
   "connect": "Conectar",
@@ -400,6 +453,7 @@
   },
   "localTerminal": "Terminal local",
   "localUser": "tu usuario local",
+  "maximizePane": "Maximizar el panel",
   "milliseconds": "{ms} ms",
   "@milliseconds": {
     "placeholders": {
@@ -427,6 +481,7 @@
   "newHostHere": "Nuevo host aquí",
   "newHostTitle": "Nuevo host",
   "newLocalTerminal": "Terminal local nuevo",
+  "newPane": "Panel nuevo",
   "newSubgroup": "Nuevo subgrupo",
   "next": "Siguiente",
   "no": "No",
@@ -452,12 +507,30 @@
   "optionAsAlt": "Opción como Alt",
   "optionAsAltHelp": "Opción envía Esc + tecla, como esperan emacs y readline, en vez de escribir símbolos como @ o €.",
   "orAnAddress": "o una dirección: usuario@host:puerto",
+  "paneOptions": "Opciones del panel",
+  "paneWhat": "¿Qué abres en este panel?",
   "passphraseField": "Frase",
   "passphraseTitle": "Frase de la clave",
   "passwordTitle": "Contraseña",
   "paste": "Pegar",
+  "pasteInPanes": "Pegar en {total} paneles",
+  "@pasteInPanes": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "pasteMultiBody": "El texto contiene saltos de línea u otras secuencias que pueden ejecutar comandos al pegarlo.",
   "pasteMultiTitle": "¿Pegar varias líneas?",
+  "pasteOnlyHere": "Pegar solo en {name}",
+  "@pasteOnlyHere": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "percent": "{number} %",
   "@percent": {
     "placeholders": {
@@ -494,6 +567,7 @@
   "quickConnectInvalid": "Escribe una dirección como usuario@servidor:puerto.",
   "readyBody": "Estos atajos te llevan a casi todo:",
   "readyTitle": "Todo listo",
+  "receives": "Recibe",
   "reconnect": "Reconectar",
   "reconnectingEllipsis": "Reconectando…",
   "reconnectingStage": "Reconectando: {stage}",
@@ -536,6 +610,7 @@
   "reportWhere": "Están en el grupo «~/.ssh/config».",
   "resetTheme": "Restablecer",
   "restart": "Reiniciar",
+  "restorePanes": "Volver a los paneles",
   "retryIn": "Reintento {attempt} de {max} en {secs} s.",
   "@retryIn": {
     "placeholders": {
@@ -556,6 +631,7 @@
   "routeDirect": "Directo",
   "routeJump": "Saltando por otro host",
   "routeStart": "este equipo",
+  "sameHost": "el mismo host",
   "sampleComment": "comentario en gris",
   "sampleError": "error:",
   "sampleErrorText": "no se pudo leer .env",
@@ -641,6 +717,8 @@
     }
   },
   "skipGuide": "Saltar la guía",
+  "splitDown": "Dividir abajo",
+  "splitRight": "Dividir a la derecha",
   "stageAuthenticating": "Autenticando en {label}{hop}…",
   "@stageAuthenticating": {
     "placeholders": {

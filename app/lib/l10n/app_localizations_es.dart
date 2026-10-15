@@ -71,6 +71,61 @@ class AppLocalizationsEs extends AppLocalizations {
   String get bellRang => 'Ha sonado la campana';
 
   @override
+  String broadcastBanner(int count, int total, String names) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Broadcast: lo que escribas va a $count de $total paneles ($names).',
+      one: 'Broadcast: lo que escribas va a 1 de $total paneles ($names).',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String broadcastExit(String keys) {
+    return 'Salir $keys';
+  }
+
+  @override
+  String get broadcastOff => 'Apagar el broadcast';
+
+  @override
+  String get broadcastOn => 'Broadcast en esta pestaña';
+
+  @override
+  String get broadcastPasteAlways =>
+      'Con broadcast, pegar siempre lo pregunta, aunque sea una línea.';
+
+  @override
+  String broadcastPasteBody(int count, String names) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Va a $names. Son $count líneas, y cada una puede ejecutarse al llegar.',
+      one: 'Va a $names. Es 1 línea.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String broadcastPasteTitle(int total) {
+    return '¿Pegar en $total paneles a la vez?';
+  }
+
+  @override
+  String broadcastStatus(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Broadcast · $count paneles',
+      one: 'Broadcast · 1 panel',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get cancel => 'Cancelar';
 
   @override
@@ -102,6 +157,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get close => 'Cerrar';
+
+  @override
+  String get closePane => 'Cerrar el panel';
 
   @override
   String get closeTab => 'Cerrar la pestaña';
@@ -534,6 +592,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get localUser => 'tu usuario local';
 
   @override
+  String get maximizePane => 'Maximizar el panel';
+
+  @override
   String milliseconds(int ms) {
     return '$ms ms';
   }
@@ -597,6 +658,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get newLocalTerminal => 'Terminal local nuevo';
 
   @override
+  String get newPane => 'Panel nuevo';
+
+  @override
   String get newSubgroup => 'Nuevo subgrupo';
 
   @override
@@ -655,6 +719,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get orAnAddress => 'o una dirección: usuario@host:puerto';
 
   @override
+  String get paneOptions => 'Opciones del panel';
+
+  @override
+  String get paneWhat => '¿Qué abres en este panel?';
+
+  @override
   String get passphraseField => 'Frase';
 
   @override
@@ -667,11 +737,21 @@ class AppLocalizationsEs extends AppLocalizations {
   String get paste => 'Pegar';
 
   @override
+  String pasteInPanes(int total) {
+    return 'Pegar en $total paneles';
+  }
+
+  @override
   String get pasteMultiBody =>
       'El texto contiene saltos de línea u otras secuencias que pueden ejecutar comandos al pegarlo.';
 
   @override
   String get pasteMultiTitle => '¿Pegar varias líneas?';
+
+  @override
+  String pasteOnlyHere(String name) {
+    return 'Pegar solo en $name';
+  }
 
   @override
   String percent(int number) {
@@ -724,6 +804,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get readyTitle => 'Todo listo';
+
+  @override
+  String get receives => 'Recibe';
 
   @override
   String get reconnect => 'Reconectar';
@@ -788,6 +871,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get restart => 'Reiniciar';
 
   @override
+  String get restorePanes => 'Volver a los paneles';
+
+  @override
   String retryIn(int attempt, int max, int secs) {
     return 'Reintento $attempt de $max en $secs s.';
   }
@@ -809,6 +895,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get routeStart => 'este equipo';
+
+  @override
+  String get sameHost => 'el mismo host';
 
   @override
   String get sampleComment => 'comentario en gris';
@@ -928,6 +1017,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get skipGuide => 'Saltar la guía';
+
+  @override
+  String get splitDown => 'Dividir abajo';
+
+  @override
+  String get splitRight => 'Dividir a la derecha';
 
   @override
   String stageAuthenticating(String label, String hop) {

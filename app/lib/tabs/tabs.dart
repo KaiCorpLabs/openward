@@ -1,3 +1,4 @@
+import 'package:flutter/painting.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,17 +7,24 @@ import '../core/providers.dart';
 import '../core/settings.dart';
 import '../src/rust/api/vault.dart';
 import '../terminal/controller.dart';
+import 'panes.dart';
 
-/// What a tab holds: a terminal session, or one of the app's pages. Pages
-/// open once; asking for one again brings its tab to the front.
+export 'panes.dart' show Pane, PaneNode, PaneSplit, Panes;
+
+/// What a tab holds: terminal sessions in panes, or one of the app's
+/// pages. Pages open once; asking for one again brings its tab to the
+/// front.
 sealed class OpenTab {
   const OpenTab();
 }
 
 final class SessionTab extends OpenTab {
-  const SessionTab(this.controller);
+  SessionTab(TerminalController first) : panes = Panes(first);
 
-  final TerminalController controller;
+  final Panes panes;
+
+  /// The active pane's session; null while that pane asks what to open.
+  TerminalController? get controller => panes.active.controller;
 }
 
 enum PageKind { settings }
@@ -39,15 +47,15 @@ class TabsState {
   OpenTab? get current =>
       active >= 0 && active < tabs.length ? tabs[active] : null;
 
-  /// The front tab's session, if it is one.
+  /// The front tab's active session, if it is one.
   TerminalController? get currentSession => switch (current) {
     SessionTab(:final controller) => controller,
     _ => null,
   };
 
-  /// Every open session, in tab order.
+  /// Every open session, in every pane of every tab.
   Iterable<TerminalController> get sessions =>
-      tabs.whereType<SessionTab>().map((t) => t.controller);
+      tabs.whereType<SessionTab>().expand((t) => t.panes.controllers);
 }
 
 class TabsNotifier extends Notifier<TabsState> {
@@ -66,10 +74,17 @@ class TabsNotifier extends Notifier<TabsState> {
     return const TabsState([], -1);
   }
 
-  void _add(TerminalController c) {
+  /// Rebuilds what watches the tabs after a change inside one.
+  void _refresh() => state = TabsState(state.tabs, state.active);
+
+  TerminalController _start(TerminalController c) {
     _live.add(c);
     c.start();
-    final tabs = [...state.tabs, SessionTab(c)];
+    return c;
+  }
+
+  void _add(TerminalController c) {
+    final tabs = [...state.tabs, SessionTab(_start(c))];
     state = TabsState(tabs, tabs.length - 1);
   }
 
@@ -116,17 +131,19 @@ class TabsNotifier extends Notifier<TabsState> {
     select((state.active + step) % n);
   }
 
+  void _dispose(TerminalController c) {
+    _live.remove(c);
+    // After the frame that unmounts its pane, which may still poll it.
+    SchedulerBinding.instance.addPostFrameCallback((_) => c.dispose());
+  }
+
   /// Closes a tab; the one after it (or before, at the end) comes to front.
   void close(int index) {
     if (index < 0 || index >= state.tabs.length) return;
     final tabs = [...state.tabs];
     final closed = tabs.removeAt(index);
-    if (closed case SessionTab(:final controller)) {
-      _live.remove(controller);
-      // After the frame that unmounts its pane, which may still poll it.
-      SchedulerBinding.instance.addPostFrameCallback(
-        (_) => controller.dispose(),
-      );
+    if (closed case SessionTab(:final panes)) {
+      panes.controllers.forEach(_dispose);
     }
     var active = state.active;
     if (index < active || active >= tabs.length) active--;
@@ -134,6 +151,111 @@ class TabsNotifier extends Notifier<TabsState> {
       tabs,
       tabs.isEmpty ? -1 : active.clamp(0, tabs.length - 1),
     );
+  }
+
+  /// ⌘W: the active pane when the tab is split, else the tab.
+  void closeCurrent() {
+    final tab = state.current;
+    if (tab is SessionTab && tab.panes.isSplit) {
+      return closePane(tab, tab.panes.active);
+    }
+    close(state.active);
+  }
+
+  /// Closes one pane; with the last one, the tab goes.
+  void closePane(SessionTab tab, Pane pane) {
+    final c = pane.controller;
+    if (!tab.panes.remove(pane)) return close(state.tabs.indexOf(tab));
+    if (c != null) _dispose(c);
+    _refresh();
+    focusActive(tab);
+  }
+
+  /// Closes the pane (or tab) a session is in.
+  void closeSession(TerminalController c) {
+    for (final tab in state.tabs.whereType<SessionTab>()) {
+      for (final pane in tab.panes.leaves) {
+        if (pane.controller == c) return closePane(tab, pane);
+      }
+    }
+  }
+
+  /// Splits the front tab's active pane: right of it ([Axis.horizontal])
+  /// or below. The new pane asks what to open.
+  void split(Axis axis) {
+    final tab = state.current;
+    if (tab is! SessionTab) return;
+    tab.panes.split(axis);
+    _refresh();
+  }
+
+  /// Opens a session in a pane that asked: a saved host, an address, or
+  /// (neither) a local shell.
+  void fillPane(
+    SessionTab tab,
+    Pane pane, {
+    HostView? host,
+    QuickTarget? target,
+  }) {
+    final c = _start(
+      host != null
+          ? _controller(label: host.label, hostId: host.id)
+          : target != null
+          ? _controller(label: target.label, target: target)
+          : _controller(label: 'Local'),
+    );
+    tab.panes.fill(pane, c);
+    _refresh();
+    focusActive(tab);
+  }
+
+  /// The same host as the pane it was split from (or a local shell).
+  void fillSame(SessionTab tab, Pane pane) {
+    final from = pane.from;
+    final host = from?.hostId == null
+        ? null
+        : ref.read(libraryProvider).host(from!.hostId!);
+    fillPane(tab, pane, host: host, target: from?.target);
+  }
+
+  /// Moves the keyboard to the pane in `direction`.
+  void focusPane(AxisDirection direction) {
+    final tab = state.current;
+    if (tab is! SessionTab) return;
+    final next = tab.panes.neighbor(direction);
+    if (next == null) return;
+    tab.panes.focus(next);
+    _refresh();
+    focusActive(tab);
+  }
+
+  void focusPaneOf(SessionTab tab, Pane pane) {
+    if (identical(tab.panes.active, pane)) return;
+    tab.panes.focus(pane);
+    _refresh();
+  }
+
+  /// Gives the keyboard back to the active pane's terminal, after the
+  /// frame (a click on a pane's header or menu may have taken it).
+  void focusActive(SessionTab tab) {
+    SchedulerBinding.instance.addPostFrameCallback(
+      (_) => tab.panes.active.controller?.focusTerminal?.call(),
+    );
+  }
+
+  void toggleMaximize() {
+    final tab = state.current;
+    if (tab is! SessionTab) return;
+    tab.panes.toggleMaximize();
+  }
+
+  /// ⌘⇧B: broadcast on or off in the front tab (it needs two panes).
+  void toggleBroadcast() {
+    final tab = state.current;
+    if (tab is! SessionTab) return;
+    tab.panes.setBroadcast(!tab.panes.broadcast);
+    _refresh();
+    focusActive(tab);
   }
 
   /// Moves a tab to index `to` of the resulting list.
@@ -145,12 +267,14 @@ class TabsNotifier extends Notifier<TabsState> {
     state = TabsState(tabs, current == null ? -1 : tabs.indexOf(current));
   }
 
+  /// Renames the tab's active session.
   void rename(int index, String title) {
     if (index < 0 || index >= state.tabs.length) return;
     final tab = state.tabs[index];
-    if (tab is! SessionTab) return;
-    tab.controller.customTitle = title.trim().isEmpty ? null : title.trim();
-    state = TabsState(state.tabs, state.active);
+    final c = tab is SessionTab ? tab.controller : null;
+    if (c == null) return;
+    c.customTitle = title.trim().isEmpty ? null : title.trim();
+    _refresh();
   }
 }
 

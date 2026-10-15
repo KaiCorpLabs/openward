@@ -96,6 +96,16 @@ bool isAppShortcut(KeyEvent event, int mods) {
   if (key == LogicalKeyboardKey.tab && mods & Mods.ctrl != 0) return true;
   // Ctrl+, opens the settings.
   if (key == LogicalKeyboardKey.comma && mods & Mods.ctrl != 0) return true;
+  // Ctrl+Shift+arrows move between panes; Ctrl+Shift+Enter maximizes one.
+  if (mods & ctrlShift == ctrlShift &&
+      mods & Mods.alt == 0 &&
+      (key == LogicalKeyboardKey.arrowLeft ||
+          key == LogicalKeyboardKey.arrowRight ||
+          key == LogicalKeyboardKey.arrowUp ||
+          key == LogicalKeyboardKey.arrowDown ||
+          key == LogicalKeyboardKey.enter)) {
+    return true;
+  }
   // Ctrl+= / Ctrl+- / Ctrl+0 size the tab's text, as in other terminals.
   if (mods & Mods.ctrl != 0 &&
       mods & Mods.alt == 0 &&

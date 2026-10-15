@@ -97,7 +97,9 @@ class TabStrip extends ConsumerWidget {
     final tab = ref.read(tabsProvider).tabs[index];
     if (tab is! SessionTab) return;
     final l = context.l10n;
-    final field = TextEditingController(text: tab.controller.displayTitle);
+    final field = TextEditingController(
+      text: tab.controller?.displayTitle ?? '',
+    );
     final name = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -146,23 +148,34 @@ class _Tab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (tab) {
-      SessionTab(:final controller) => ListenableBuilder(
-        listenable: controller,
-        builder: (context, _) => _frame(
-          context,
-          leading: StatusDot(
-            tabStatus(controller),
-            size: 7,
-            // On an accent block the accent would not show.
-            onAccent: active && context.ow.shape.tabs == TabStyle.block
-                ? context.ow.colors.onPrimary
-                : null,
-          ),
-          title: controller.displayTitle,
-          waiting: controller.prompts.isNotEmpty,
-          bell: controller.bellUnseen,
-          onRename: onRename,
-        ),
+      SessionTab(:final panes) => ListenableBuilder(
+        listenable: Listenable.merge([panes, ...panes.controllers]),
+        builder: (context, _) {
+          final all = panes.controllers.toList();
+          // The active pane's session; the first while it asks what to open.
+          final shown = panes.active.controller ?? all.firstOrNull;
+          final more = panes.leaves.length - 1;
+          final c = context.ow.colors;
+          return _frame(
+            context,
+            leading: panes.broadcast
+                ? Icon(Icons.podcasts, size: 14, color: c.warn)
+                : shown == null
+                ? const SizedBox(width: 7)
+                : StatusDot(
+                    tabStatus(shown),
+                    size: 7,
+                    // On an accent block the accent would not show.
+                    onAccent: active && context.ow.shape.tabs == TabStyle.block
+                        ? c.onPrimary
+                        : null,
+                  ),
+            title: '${shown?.displayTitle ?? ''}${more > 0 ? ' +$more' : ''}',
+            waiting: all.any((s) => s.prompts.isNotEmpty),
+            bell: all.any((s) => s.bellUnseen),
+            onRename: onRename,
+          );
+        },
       ),
       PageTab(:final page) => _frame(
         context,

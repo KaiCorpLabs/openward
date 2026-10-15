@@ -16,6 +16,14 @@ import 'terminal/keys.dart';
 import 'ui/tokens.dart';
 import 'welcome/first_run.dart';
 
+/// Arrow keys and the way each moves between panes.
+const _arrows = [
+  (LogicalKeyboardKey.arrowLeft, AxisDirection.left),
+  (LogicalKeyboardKey.arrowRight, AxisDirection.right),
+  (LogicalKeyboardKey.arrowUp, AxisDirection.up),
+  (LogicalKeyboardKey.arrowDown, AxisDirection.down),
+];
+
 /// The main window: hosts on the left; tabs on the right, with the front
 /// one below them. On the first run with nothing saved, the guide instead.
 class Home extends ConsumerStatefulWidget {
@@ -43,7 +51,10 @@ class _HomeState extends ConsumerState<Home> {
   /// Window shortcuts. Terminal panes let these through (`isAppShortcut`).
   Map<ShortcutActivator, VoidCallback> _shortcuts() {
     final tabs = ref.read(tabsProvider.notifier);
-    void closeCurrent() => tabs.close(ref.read(tabsProvider).active);
+    void closeCurrent() => tabs.closeCurrent();
+    void splitRight() => tabs.split(Axis.horizontal);
+    void splitDown() => tabs.split(Axis.vertical);
+    void go(AxisDirection d) => tabs.focusPane(d);
     void settings() => tabs.openPage(PageKind.settings);
     void last() => tabs.select(ref.read(tabsProvider).tabs.length - 1);
     TerminalController? session() => ref.read(tabsProvider).currentSession;
@@ -86,6 +97,18 @@ class _HomeState extends ConsumerState<Home> {
         const SingleActivator(LogicalKeyboardKey.minus, meta: true): smaller,
         const SingleActivator(LogicalKeyboardKey.digit0, meta: true):
             actualSize,
+        const SingleActivator(LogicalKeyboardKey.keyD, meta: true): splitRight,
+        const SingleActivator(LogicalKeyboardKey.keyD, meta: true, shift: true):
+            splitDown,
+        const SingleActivator(
+          LogicalKeyboardKey.enter,
+          meta: true,
+          shift: true,
+        ): tabs.toggleMaximize,
+        const SingleActivator(LogicalKeyboardKey.keyB, meta: true, shift: true):
+            tabs.toggleBroadcast,
+        for (final (key, d) in _arrows)
+          SingleActivator(key, meta: true, alt: true): () => go(d),
         const SingleActivator(
           LogicalKeyboardKey.bracketRight,
           meta: true,
@@ -144,6 +167,28 @@ class _HomeState extends ConsumerState<Home> {
         const SingleActivator(LogicalKeyboardKey.minus, control: true): smaller,
         const SingleActivator(LogicalKeyboardKey.digit0, control: true):
             actualSize,
+        const SingleActivator(
+          LogicalKeyboardKey.keyD,
+          control: true,
+          shift: true,
+        ): splitRight,
+        const SingleActivator(
+          LogicalKeyboardKey.keyE,
+          control: true,
+          shift: true,
+        ): splitDown,
+        const SingleActivator(
+          LogicalKeyboardKey.enter,
+          control: true,
+          shift: true,
+        ): tabs.toggleMaximize,
+        const SingleActivator(
+          LogicalKeyboardKey.keyB,
+          control: true,
+          shift: true,
+        ): tabs.toggleBroadcast,
+        for (final (key, d) in _arrows)
+          SingleActivator(key, control: true, shift: true): () => go(d),
       });
     }
     return bindings;
@@ -175,9 +220,9 @@ class _HomeState extends ConsumerState<Home> {
                   const TabStrip(),
                   Expanded(
                     child: switch (current) {
-                      SessionTab(:final controller) => SessionView(
-                        key: ObjectKey(controller),
-                        controller: controller,
+                      final SessionTab tab => TabView(
+                        key: ObjectKey(tab),
+                        tab: tab,
                       ),
                       PageTab(page: PageKind.settings) => const SettingsPage(),
                       null => StartPage(searchFocus: _search),

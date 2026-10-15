@@ -26,10 +26,15 @@ class TerminalPane extends ConsumerStatefulWidget {
     super.key,
     required this.controller,
     this.autofocus = true,
+    this.mirrors,
   });
 
   final TerminalController controller;
   final bool autofocus;
+
+  /// Other sessions that get what is typed here (broadcast), asked for at
+  /// each key: panes join and leave while it is on.
+  final List<TerminalController> Function()? mirrors;
 
   @override
   ConsumerState<TerminalPane> createState() => TerminalPaneState();
@@ -191,9 +196,34 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
 
   // -------------------------------------------------------------- keyboard
 
+  /// This session and, while broadcasting, the others that receive.
+  List<TerminalSession> get _targets => [
+    _session,
+    for (final c in widget.mirrors?.call() ?? const <TerminalController>[])
+      if (!c.isDisposed) c.session,
+  ];
+
+  void _key({
+    required int hidUsage,
+    required KeyKind kind,
+    required int mods,
+    required String text,
+    required int unshifted,
+  }) {
+    for (final s in _targets) {
+      s.key(
+        hidUsage: hidUsage,
+        kind: kind,
+        mods: mods,
+        text: text,
+        unshifted: unshifted,
+      );
+    }
+  }
+
   void _sendKey(int hid, {int mods = 0, String text = '', int unshifted = 0}) {
     for (final kind in [KeyKind.down, KeyKind.up]) {
-      _session.key(
+      _key(
         hidUsage: hid,
         kind: kind,
         mods: mods,
@@ -211,7 +241,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
 
     if (event is KeyUpEvent) {
       if (!_encoderKeys.remove(hid)) return KeyEventResult.ignored;
-      _session.key(
+      _key(
         hidUsage: hid,
         kind: KeyKind.up,
         mods: hardwareMods(),
@@ -259,7 +289,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     // compose sequences and IMEs work.
     if (!toEncoder) return KeyEventResult.ignored;
 
-    _session.key(
+    _key(
       hidUsage: hid,
       kind: event is KeyRepeatEvent ? KeyKind.repeat : KeyKind.down,
       mods: mods,
@@ -327,6 +357,8 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final text = data?.text;
     if (text == null || text.isEmpty || !mounted) return;
+    final also = widget.mirrors?.call() ?? const <TerminalController>[];
+    if (also.isNotEmpty) return _pasteBroadcast(text, also);
     if (_session.paste(text: text, allowUnsafe: false)) return;
     final preview = text.length > 400 ? '${text.substring(0, 400)}…' : text;
     final l = context.l10n;
@@ -373,6 +405,93 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
       ),
     );
     if (ok == true) _session.paste(text: text, allowUnsafe: true);
+    focusNode.requestFocus();
+  }
+
+  /// With broadcast, a paste always asks first: where it goes, and what.
+  Future<void> _pasteBroadcast(
+    String text,
+    List<TerminalController> also,
+  ) async {
+    final l = context.l10n;
+    final ow = context.ow;
+    final c = ow.colors;
+    final names = [_c, ...also].map((s) => s.displayTitle).toList();
+    final lines = text.split('\n').where((x) => x.isNotEmpty).length;
+    final preview = text.length > 600 ? '${text.substring(0, 600)}…' : text;
+    final choice = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: Icon(Icons.podcasts, color: c.warn),
+        title: Text(l.broadcastPasteTitle(names.length)),
+        content: SizedBox(
+          width: 520,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l.broadcastPasteBody(lines, names.join(', ')),
+                style: const TextStyle(height: 1.45),
+              ),
+              const SizedBox(height: 12),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 220),
+                child: SingleChildScrollView(
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: ow.terminal.background,
+                      border: Border.all(color: c.border),
+                      borderRadius: BorderRadius.circular(ow.shape.radius),
+                    ),
+                    child: Text(
+                      preview,
+                      style: TextStyle(
+                        fontFamily: _renderer?.metrics.fontFamily,
+                        fontSize: 12,
+                        color: ow.terminal.foreground,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                l.broadcastPasteAlways,
+                style: TextStyle(fontSize: 12, color: c.textMuted),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          OutlinedButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l.cancel),
+          ),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l.pasteOnlyHere(_c.displayTitle)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: c.warn,
+              foregroundColor: c.surface,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l.pasteInPanes(names.length)),
+          ),
+        ],
+      ),
+    );
+    if (choice == null) return focusNode.requestFocus();
+    final targets = choice
+        ? [_session, ...also.map((s) => s.session)]
+        : [_session];
+    for (final s in targets) {
+      s.paste(text: text, allowUnsafe: true);
+    }
     focusNode.requestFocus();
   }
 
@@ -446,7 +565,11 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
       _sendKey(Hid.backspace);
     }
     final typed = text.substring(common);
-    if (typed.isNotEmpty) _session.text(text: typed);
+    if (typed.isNotEmpty) {
+      for (final s in _targets) {
+        s.text(text: typed);
+      }
+    }
     _value = _idle;
     _input?.setEditingState(_value);
   }

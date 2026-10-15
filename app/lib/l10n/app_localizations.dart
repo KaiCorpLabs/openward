@@ -212,6 +212,54 @@ abstract class AppLocalizations {
   /// **'Ha sonado la campana'**
   String get bellRang;
 
+  /// No description provided for @broadcastBanner.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Broadcast: lo que escribas va a 1 de {total} paneles ({names}).} other{Broadcast: lo que escribas va a {count} de {total} paneles ({names}).}}'**
+  String broadcastBanner(int count, int total, String names);
+
+  /// No description provided for @broadcastExit.
+  ///
+  /// In es, this message translates to:
+  /// **'Salir {keys}'**
+  String broadcastExit(String keys);
+
+  /// No description provided for @broadcastOff.
+  ///
+  /// In es, this message translates to:
+  /// **'Apagar el broadcast'**
+  String get broadcastOff;
+
+  /// No description provided for @broadcastOn.
+  ///
+  /// In es, this message translates to:
+  /// **'Broadcast en esta pestaña'**
+  String get broadcastOn;
+
+  /// No description provided for @broadcastPasteAlways.
+  ///
+  /// In es, this message translates to:
+  /// **'Con broadcast, pegar siempre lo pregunta, aunque sea una línea.'**
+  String get broadcastPasteAlways;
+
+  /// No description provided for @broadcastPasteBody.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Va a {names}. Es 1 línea.} other{Va a {names}. Son {count} líneas, y cada una puede ejecutarse al llegar.}}'**
+  String broadcastPasteBody(int count, String names);
+
+  /// No description provided for @broadcastPasteTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Pegar en {total} paneles a la vez?'**
+  String broadcastPasteTitle(int total);
+
+  /// No description provided for @broadcastStatus.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Broadcast · 1 panel} other{Broadcast · {count} paneles}}'**
+  String broadcastStatus(int count);
+
   /// No description provided for @cancel.
   ///
   /// In es, this message translates to:
@@ -271,6 +319,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cerrar'**
   String get close;
+
+  /// No description provided for @closePane.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar el panel'**
+  String get closePane;
 
   /// No description provided for @closeTab.
   ///
@@ -944,6 +998,12 @@ abstract class AppLocalizations {
   /// **'tu usuario local'**
   String get localUser;
 
+  /// No description provided for @maximizePane.
+  ///
+  /// In es, this message translates to:
+  /// **'Maximizar el panel'**
+  String get maximizePane;
+
   /// No description provided for @milliseconds.
   ///
   /// In es, this message translates to:
@@ -1064,6 +1124,12 @@ abstract class AppLocalizations {
   /// **'Terminal local nuevo'**
   String get newLocalTerminal;
 
+  /// No description provided for @newPane.
+  ///
+  /// In es, this message translates to:
+  /// **'Panel nuevo'**
+  String get newPane;
+
   /// No description provided for @newSubgroup.
   ///
   /// In es, this message translates to:
@@ -1172,6 +1238,18 @@ abstract class AppLocalizations {
   /// **'o una dirección: usuario@host:puerto'**
   String get orAnAddress;
 
+  /// No description provided for @paneOptions.
+  ///
+  /// In es, this message translates to:
+  /// **'Opciones del panel'**
+  String get paneOptions;
+
+  /// No description provided for @paneWhat.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Qué abres en este panel?'**
+  String get paneWhat;
+
   /// No description provided for @passphraseField.
   ///
   /// In es, this message translates to:
@@ -1196,6 +1274,12 @@ abstract class AppLocalizations {
   /// **'Pegar'**
   String get paste;
 
+  /// No description provided for @pasteInPanes.
+  ///
+  /// In es, this message translates to:
+  /// **'Pegar en {total} paneles'**
+  String pasteInPanes(int total);
+
   /// No description provided for @pasteMultiBody.
   ///
   /// In es, this message translates to:
@@ -1207,6 +1291,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'¿Pegar varias líneas?'**
   String get pasteMultiTitle;
+
+  /// No description provided for @pasteOnlyHere.
+  ///
+  /// In es, this message translates to:
+  /// **'Pegar solo en {name}'**
+  String pasteOnlyHere(String name);
 
   /// No description provided for @percent.
   ///
@@ -1298,6 +1388,12 @@ abstract class AppLocalizations {
   /// **'Todo listo'**
   String get readyTitle;
 
+  /// No description provided for @receives.
+  ///
+  /// In es, this message translates to:
+  /// **'Recibe'**
+  String get receives;
+
   /// No description provided for @reconnect.
   ///
   /// In es, this message translates to:
@@ -1382,6 +1478,12 @@ abstract class AppLocalizations {
   /// **'Reiniciar'**
   String get restart;
 
+  /// No description provided for @restorePanes.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a los paneles'**
+  String get restorePanes;
+
   /// No description provided for @retryIn.
   ///
   /// In es, this message translates to:
@@ -1423,6 +1525,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'este equipo'**
   String get routeStart;
+
+  /// No description provided for @sameHost.
+  ///
+  /// In es, this message translates to:
+  /// **'el mismo host'**
+  String get sameHost;
 
   /// No description provided for @sampleComment.
   ///
@@ -1621,6 +1729,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Saltar la guía'**
   String get skipGuide;
+
+  /// No description provided for @splitDown.
+  ///
+  /// In es, this message translates to:
+  /// **'Dividir abajo'**
+  String get splitDown;
+
+  /// No description provided for @splitRight.
+  ///
+  /// In es, this message translates to:
+  /// **'Dividir a la derecha'**
+  String get splitRight;
 
   /// No description provided for @stageAuthenticating.
   ///

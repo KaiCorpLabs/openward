@@ -70,6 +70,61 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bellRang => 'The bell rang';
 
   @override
+  String broadcastBanner(int count, int total, String names) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Broadcast: what you type goes to $count of $total panes ($names).',
+      one: 'Broadcast: what you type goes to 1 of $total panes ($names).',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String broadcastExit(String keys) {
+    return 'Stop $keys';
+  }
+
+  @override
+  String get broadcastOff => 'Turn broadcast off';
+
+  @override
+  String get broadcastOn => 'Broadcast in this tab';
+
+  @override
+  String get broadcastPasteAlways =>
+      'With broadcast, pasting always asks, even a single line.';
+
+  @override
+  String broadcastPasteBody(int count, String names) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'It goes to $names. They are $count lines, and each may run as it arrives.',
+      one: 'It goes to $names. It is 1 line.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String broadcastPasteTitle(int total) {
+    return 'Paste in $total panes at once?';
+  }
+
+  @override
+  String broadcastStatus(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Broadcast · $count panes',
+      one: 'Broadcast · 1 pane',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get cancel => 'Cancel';
 
   @override
@@ -101,6 +156,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get close => 'Close';
+
+  @override
+  String get closePane => 'Close the pane';
 
   @override
   String get closeTab => 'Close tab';
@@ -533,6 +591,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get localUser => 'your local user';
 
   @override
+  String get maximizePane => 'Maximize the pane';
+
+  @override
   String milliseconds(int ms) {
     return '$ms ms';
   }
@@ -596,6 +657,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newLocalTerminal => 'New local terminal';
 
   @override
+  String get newPane => 'New pane';
+
+  @override
   String get newSubgroup => 'New subgroup';
 
   @override
@@ -654,6 +718,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get orAnAddress => 'or an address: user@host:port';
 
   @override
+  String get paneOptions => 'Pane options';
+
+  @override
+  String get paneWhat => 'What do you open in this pane?';
+
+  @override
   String get passphraseField => 'Passphrase';
 
   @override
@@ -666,11 +736,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paste => 'Paste';
 
   @override
+  String pasteInPanes(int total) {
+    return 'Paste in $total panes';
+  }
+
+  @override
   String get pasteMultiBody =>
       'The text has line breaks or other sequences that can run commands when pasted.';
 
   @override
   String get pasteMultiTitle => 'Paste several lines?';
+
+  @override
+  String pasteOnlyHere(String name) {
+    return 'Paste only in $name';
+  }
 
   @override
   String percent(int number) {
@@ -722,6 +802,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get readyTitle => 'All set';
+
+  @override
+  String get receives => 'Receives';
 
   @override
   String get reconnect => 'Reconnect';
@@ -786,6 +869,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get restart => 'Restart';
 
   @override
+  String get restorePanes => 'Back to the panes';
+
+  @override
   String retryIn(int attempt, int max, int secs) {
     return 'Try $attempt of $max in $secs s.';
   }
@@ -807,6 +893,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get routeStart => 'this computer';
+
+  @override
+  String get sameHost => 'the same host';
 
   @override
   String get sampleComment => 'a grey comment';
@@ -926,6 +1015,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get skipGuide => 'Skip the guide';
+
+  @override
+  String get splitDown => 'Split down';
+
+  @override
+  String get splitRight => 'Split right';
 
   @override
   String stageAuthenticating(String label, String hop) {

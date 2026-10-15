@@ -261,13 +261,9 @@ class FailureCard extends ConsumerWidget {
 
   final TerminalController controller;
 
-  void _closeTab(WidgetRef ref) {
-    final tabs = ref.read(tabsProvider);
-    final i = tabs.tabs.indexWhere(
-      (t) => t is SessionTab && t.controller == controller,
-    );
-    ref.read(tabsProvider.notifier).close(i);
-  }
+  /// Its pane, or its tab when it is the only one.
+  void _closeTab(WidgetRef ref) =>
+      ref.read(tabsProvider.notifier).closeSession(controller);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

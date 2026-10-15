@@ -875,4 +875,134 @@ Host db
     container.read(tabsProvider.notifier).close(0);
     await _settle(tester);
   });
+
+  testWidgets('panes: split, move, broadcast, paste with it, and close', (
+    tester,
+  ) async {
+    final container = await launch(tester);
+    // No newline: with bracketed paste the shell would not run it anyway.
+    String? clipboard = 'echo pasted-\$((20+1))';
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async =>
+          call.method == 'Clipboard.getData' ? {'text': clipboard} : null,
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    Future<void> keys(
+      List<LogicalKeyboardKey> mods,
+      LogicalKeyboardKey key,
+    ) async {
+      for (final k in mods) {
+        await tester.sendKeyDownEvent(k);
+      }
+      await tester.sendKeyEvent(key);
+      for (final k in mods.reversed) {
+        await tester.sendKeyUpEvent(k);
+      }
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    final cmd = isApple
+        ? [LogicalKeyboardKey.metaLeft]
+        : [LogicalKeyboardKey.controlLeft, LogicalKeyboardKey.shiftLeft];
+    final cmdShift = isApple
+        ? [LogicalKeyboardKey.metaLeft, LogicalKeyboardKey.shiftLeft]
+        : [LogicalKeyboardKey.controlLeft, LogicalKeyboardKey.shiftLeft];
+    final move = isApple
+        ? [LogicalKeyboardKey.metaLeft, LogicalKeyboardKey.altLeft]
+        : [LogicalKeyboardKey.controlLeft, LogicalKeyboardKey.shiftLeft];
+
+    await tester.tap(find.text('Abrir un terminal local'));
+    await tester.pump();
+    final tab = container.read(tabsProvider).current! as SessionTab;
+    final a = tab.panes.active.controller!;
+    await _until(tester, () => a.phase == Phase.running, 'the first shell');
+
+    // Split right: the new pane asks; Enter opens the same as before.
+    await keys(cmd, LogicalKeyboardKey.keyD);
+    expect(tab.panes.isSplit, isTrue);
+    expect(find.text('¿Qué abres en este panel?'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump(const Duration(milliseconds: 100));
+    final b = tab.panes.active.controller!;
+    expect(b, isNot(same(a)));
+    await _until(tester, () => b.phase == Phase.running, 'the second shell');
+
+    // The keyboard moves left, to the first pane.
+    await keys(move, LogicalKeyboardKey.arrowLeft);
+    expect(tab.panes.active.controller, same(a));
+
+    // Broadcast: one Enter typed in the first pane runs both lines.
+    await keys(cmdShift, LogicalKeyboardKey.keyB);
+    expect(tab.panes.broadcast, isTrue);
+    expect(find.textContaining('va a 2 de 2 paneles'), findsOneWidget);
+    a.session.text(text: 'echo from-\$((1+1))a');
+    b.session.text(text: 'echo from-\$((1+1))b');
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    List<String> lines(TerminalController c) =>
+        c.session.screenText().split('\n');
+    await _until(
+      tester,
+      () => lines(a).contains('from-2a') && lines(b).contains('from-2b'),
+      'both lines to run',
+    );
+    await _shot(tester, '17-broadcast');
+
+    // Left out, the second pane gets nothing.
+    await tester.tap(find.byType(Checkbox).last);
+    await tester.pump();
+    expect(tab.panes.receives(tab.panes.leaves.last), isFalse);
+    a.session.text(text: 'echo again-\$((1+1))a');
+    b.session.text(text: 'echo again-\$((1+1))b');
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await _until(tester, () => lines(a).contains('again-2a'), 'the first');
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lines(b).contains('again-2b'), isFalse);
+    // Clean the second pane's line for what comes next.
+    for (final kind in [KeyKind.down, KeyKind.up]) {
+      b.session.key(
+        hidUsage: 0x00070006,
+        kind: kind,
+        mods: Mods.ctrl,
+        text: kind == KeyKind.down ? 'c' : '',
+        unshifted: 0x63,
+      );
+    }
+    await tester.tap(find.byType(Checkbox).last);
+    await tester.pump();
+
+    // A paste always asks, and goes to both.
+    await keys(cmd, LogicalKeyboardKey.keyV);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('¿Pegar en 2 paneles a la vez?'), findsOneWidget);
+    await _shot(tester, '18-broadcast-paste');
+    await tester.tap(find.text('Pegar en 2 paneles'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await _until(
+      tester,
+      () => lines(a).contains('pasted-21') && lines(b).contains('pasted-21'),
+      'the paste in both',
+    );
+    clipboard = null;
+
+    await tester.tap(find.byKey(const ValueKey('broadcast.exit')));
+    await tester.pump();
+    expect(tab.panes.broadcast, isFalse);
+
+    // ⌘W closes the active pane; the other fills the tab.
+    await keys(cmd, LogicalKeyboardKey.keyW);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(tab.panes.isSplit, isFalse);
+    expect(container.read(tabsProvider).tabs, hasLength(1));
+    container.read(tabsProvider.notifier).close(0);
+    await _settle(tester);
+  });
 }

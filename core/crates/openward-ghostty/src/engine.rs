@@ -959,18 +959,16 @@ impl TermEngine for GhosttyEngine {
     }
 
     fn screen_text(&self) -> String {
-        // A separate render state: the engine's own dirty tracking must not
-        // change because a test or a CLI asked for the text.
+        // From the engine's own render state: updating any render state
+        // clears the terminal's dirty rows, so a separate one would hide
+        // them from the next frame. Only `encode_damage` cleans this one.
+        self.update_render_state();
         let mut out = Vec::with_capacity(usize::from(self.size.rows));
-        // SAFETY: handles created and freed here; out-pointers are locals.
+        // SAFETY: valid render state; the iterator and cells handles are
+        // created and freed here; out-pointers are locals.
         unsafe {
-            let mut render: sys::GhosttyRenderState = ptr::null_mut();
             let mut rows: sys::GhosttyRenderStateRowIterator = ptr::null_mut();
             let mut cells: sys::GhosttyRenderStateRowCells = ptr::null_mut();
-            ok(
-                sys::ghostty_render_state_new(ptr::null(), &mut render),
-                "render_state_new",
-            );
             ok(
                 sys::ghostty_render_state_row_iterator_new(ptr::null(), &mut rows),
                 "row_iterator_new",
@@ -980,12 +978,8 @@ impl TermEngine for GhosttyEngine {
                 "row_cells_new",
             );
             ok(
-                sys::ghostty_render_state_update(render, self.term),
-                "render_state_update",
-            );
-            ok(
                 sys::ghostty_render_state_get(
-                    render,
+                    self.render,
                     sys::GHOSTTY_RENDER_STATE_DATA_ROW_ITERATOR,
                     (&mut rows as *mut sys::GhosttyRenderStateRowIterator).cast::<c_void>(),
                 ),
@@ -1042,7 +1036,6 @@ impl TermEngine for GhosttyEngine {
             }
             sys::ghostty_render_state_row_cells_free(cells);
             sys::ghostty_render_state_row_iterator_free(rows);
-            sys::ghostty_render_state_free(render);
         }
         out.join("\n")
     }
@@ -1124,6 +1117,17 @@ mod tests {
         let rows: Vec<u16> = f.lines.iter().map(|l| l.index).collect();
         assert!(rows.contains(&1), "row 1 changed: {rows:?}");
         assert!(rows.len() < 10, "partial frame: {rows:?}");
+    }
+
+    #[test]
+    fn reading_the_text_keeps_the_damage_for_the_next_frame() {
+        let mut e = engine(20, 10);
+        e.feed(b"one");
+        frame(&mut e);
+        e.feed(b"\r\ntwo");
+        assert!(e.screen_text().contains("two"));
+        let f = frame(&mut e);
+        assert_eq!(spans_of(&f, 1), vec![(0, 3, "two".into(), Color::Default)]);
     }
 
     #[test]
