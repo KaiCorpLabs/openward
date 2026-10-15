@@ -144,6 +144,10 @@ void main() {
     tester.view.physicalSize = const Size(1280, 800) * 2;
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.reset);
+    // The same theme on every machine (Grafito): following a light system,
+    // Papel would draw section titles in a serif instead of capitals.
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
     final settings = File('${dir.path}/data/settings.json');
     if (!settings.existsSync()) {
       settings.writeAsStringSync('{"language": "es", "welcomed": $welcomed}');
