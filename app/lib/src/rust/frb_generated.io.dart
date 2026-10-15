@@ -5,6 +5,7 @@
 
 import 'api/app.dart';
 import 'api/session.dart';
+import 'api/sftp.dart';
 import 'api/vault.dart';
 
 import 'dart:async';
@@ -28,6 +29,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWardPtr;
 
   CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_SftpBrowserPtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowserPtr;
+
+  CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_TerminalSessionPtr => wire
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSessionPtr;
 
@@ -37,6 +42,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   OpenWard
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
+    dynamic raw,
+  );
+
+  @protected
+  SftpBrowser
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
     dynamic raw,
   );
 
@@ -53,6 +64,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  SftpBrowser
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+    dynamic raw,
+  );
+
+  @protected
   TerminalSession
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
     dynamic raw,
@@ -61,6 +78,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   OpenWard
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
+    dynamic raw,
+  );
+
+  @protected
+  SftpBrowser
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
     dynamic raw,
   );
 
@@ -106,10 +129,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   FailureView dco_decode_box_autoadd_failure_view(dynamic raw);
 
   @protected
+  FileEntry dco_decode_box_autoadd_file_entry(dynamic raw);
+
+  @protected
+  FileError dco_decode_box_autoadd_file_error(dynamic raw);
+
+  @protected
   GroupSpec dco_decode_box_autoadd_group_spec(dynamic raw);
 
   @protected
   HostSpec dco_decode_box_autoadd_host_spec(dynamic raw);
+
+  @protected
+  PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw);
 
   @protected
   KeyPolicy dco_decode_box_autoadd_key_policy(dynamic raw);
@@ -151,6 +183,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ClosedView dco_decode_closed_view(dynamic raw);
 
   @protected
+  ConflictChoice dco_decode_conflict_choice(dynamic raw);
+
+  @protected
+  ConflictView dco_decode_conflict_view(dynamic raw);
+
+  @protected
   ConnectedView dco_decode_connected_view(dynamic raw);
 
   @protected
@@ -175,6 +213,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   FieldOrigin dco_decode_field_origin(dynamic raw);
 
   @protected
+  FileEntry dco_decode_file_entry(dynamic raw);
+
+  @protected
+  FileError dco_decode_file_error(dynamic raw);
+
+  @protected
+  FileErrorKind dco_decode_file_error_kind(dynamic raw);
+
+  @protected
+  FileKind dco_decode_file_kind(dynamic raw);
+
+  @protected
   GroupDetail dco_decode_group_detail(dynamic raw);
 
   @protected
@@ -194,6 +244,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int dco_decode_i_32(dynamic raw);
+
+  @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw);
 
   @protected
   ImportPreview dco_decode_import_preview(dynamic raw);
@@ -232,10 +285,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
+  List<ConflictView> dco_decode_list_conflict_view(dynamic raw);
+
+  @protected
   List<EnvVar> dco_decode_list_env_var(dynamic raw);
 
   @protected
   List<FieldOrigin> dco_decode_list_field_origin(dynamic raw);
+
+  @protected
+  List<FileEntry> dco_decode_list_file_entry(dynamic raw);
 
   @protected
   List<GroupView> dco_decode_list_group_view(dynamic raw);
@@ -274,6 +333,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<TagCount> dco_decode_list_tag_count(dynamic raw);
 
   @protected
+  List<TransferView> dco_decode_list_transfer_view(dynamic raw);
+
+  @protected
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
@@ -293,6 +355,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FailureView? dco_decode_opt_box_autoadd_failure_view(dynamic raw);
+
+  @protected
+  FileEntry? dco_decode_opt_box_autoadd_file_entry(dynamic raw);
+
+  @protected
+  FileError? dco_decode_opt_box_autoadd_file_error(dynamic raw);
+
+  @protected
+  PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw);
 
   @protected
   KeyPolicy? dco_decode_opt_box_autoadd_key_policy(dynamic raw);
@@ -394,6 +465,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TermFrame dco_decode_term_frame(dynamic raw);
 
   @protected
+  TransferDirection dco_decode_transfer_direction(dynamic raw);
+
+  @protected
+  TransferState dco_decode_transfer_state(dynamic raw);
+
+  @protected
+  TransferView dco_decode_transfer_view(dynamic raw);
+
+  @protected
   TrustKind dco_decode_trust_kind(dynamic raw);
 
   @protected
@@ -424,6 +504,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  SftpBrowser
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   TerminalSession
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
     SseDeserializer deserializer,
@@ -436,6 +522,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  SftpBrowser
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   TerminalSession
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
     SseDeserializer deserializer,
@@ -444,6 +536,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   OpenWard
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  SftpBrowser
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
     SseDeserializer deserializer,
   );
 
@@ -491,10 +589,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   FailureView sse_decode_box_autoadd_failure_view(SseDeserializer deserializer);
 
   @protected
+  FileEntry sse_decode_box_autoadd_file_entry(SseDeserializer deserializer);
+
+  @protected
+  FileError sse_decode_box_autoadd_file_error(SseDeserializer deserializer);
+
+  @protected
   GroupSpec sse_decode_box_autoadd_group_spec(SseDeserializer deserializer);
 
   @protected
   HostSpec sse_decode_box_autoadd_host_spec(SseDeserializer deserializer);
+
+  @protected
+  PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
   KeyPolicy sse_decode_box_autoadd_key_policy(SseDeserializer deserializer);
@@ -540,6 +647,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ClosedView sse_decode_closed_view(SseDeserializer deserializer);
 
   @protected
+  ConflictChoice sse_decode_conflict_choice(SseDeserializer deserializer);
+
+  @protected
+  ConflictView sse_decode_conflict_view(SseDeserializer deserializer);
+
+  @protected
   ConnectedView sse_decode_connected_view(SseDeserializer deserializer);
 
   @protected
@@ -564,6 +677,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   FieldOrigin sse_decode_field_origin(SseDeserializer deserializer);
 
   @protected
+  FileEntry sse_decode_file_entry(SseDeserializer deserializer);
+
+  @protected
+  FileError sse_decode_file_error(SseDeserializer deserializer);
+
+  @protected
+  FileErrorKind sse_decode_file_error_kind(SseDeserializer deserializer);
+
+  @protected
+  FileKind sse_decode_file_kind(SseDeserializer deserializer);
+
+  @protected
   GroupDetail sse_decode_group_detail(SseDeserializer deserializer);
 
   @protected
@@ -583,6 +708,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int sse_decode_i_32(SseDeserializer deserializer);
+
+  @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
 
   @protected
   ImportPreview sse_decode_import_preview(SseDeserializer deserializer);
@@ -623,10 +751,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
+  List<ConflictView> sse_decode_list_conflict_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<EnvVar> sse_decode_list_env_var(SseDeserializer deserializer);
 
   @protected
   List<FieldOrigin> sse_decode_list_field_origin(SseDeserializer deserializer);
+
+  @protected
+  List<FileEntry> sse_decode_list_file_entry(SseDeserializer deserializer);
 
   @protected
   List<GroupView> sse_decode_list_group_view(SseDeserializer deserializer);
@@ -679,6 +815,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<TagCount> sse_decode_list_tag_count(SseDeserializer deserializer);
 
   @protected
+  List<TransferView> sse_decode_list_transfer_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
@@ -708,6 +849,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   FailureView? sse_decode_opt_box_autoadd_failure_view(
     SseDeserializer deserializer,
   );
+
+  @protected
+  FileEntry? sse_decode_opt_box_autoadd_file_entry(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  FileError? sse_decode_opt_box_autoadd_file_error(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
   KeyPolicy? sse_decode_opt_box_autoadd_key_policy(
@@ -825,6 +979,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TermFrame sse_decode_term_frame(SseDeserializer deserializer);
 
   @protected
+  TransferDirection sse_decode_transfer_direction(SseDeserializer deserializer);
+
+  @protected
+  TransferState sse_decode_transfer_state(SseDeserializer deserializer);
+
+  @protected
+  TransferView sse_decode_transfer_view(SseDeserializer deserializer);
+
+  @protected
   TrustKind sse_decode_trust_kind(SseDeserializer deserializer);
 
   @protected
@@ -860,6 +1023,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+    SftpBrowser self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
     TerminalSession self,
     SseSerializer serializer,
@@ -874,6 +1044,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+    SftpBrowser self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
     TerminalSession self,
     SseSerializer serializer,
@@ -883,6 +1060,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
     OpenWard self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+    SftpBrowser self,
     SseSerializer serializer,
   );
 
@@ -945,6 +1129,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_file_entry(
+    FileEntry self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_file_error(
+    FileError self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_group_spec(
     GroupSpec self,
     SseSerializer serializer,
@@ -953,6 +1149,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_host_spec(
     HostSpec self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_i_64(
+    PlatformInt64 self,
     SseSerializer serializer,
   );
 
@@ -1026,6 +1228,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_closed_view(ClosedView self, SseSerializer serializer);
 
   @protected
+  void sse_encode_conflict_choice(
+    ConflictChoice self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_conflict_view(ConflictView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_connected_view(ConnectedView self, SseSerializer serializer);
 
   @protected
@@ -1050,6 +1261,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_field_origin(FieldOrigin self, SseSerializer serializer);
 
   @protected
+  void sse_encode_file_entry(FileEntry self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_file_error(FileError self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_file_error_kind(FileErrorKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_file_kind(FileKind self, SseSerializer serializer);
+
+  @protected
   void sse_encode_group_detail(GroupDetail self, SseSerializer serializer);
 
   @protected
@@ -1069,6 +1292,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_i_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
 
   @protected
   void sse_encode_import_preview(ImportPreview self, SseSerializer serializer);
@@ -1110,11 +1336,23 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_conflict_view(
+    List<ConflictView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_env_var(List<EnvVar> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_field_origin(
     List<FieldOrigin> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_file_entry(
+    List<FileEntry> self,
     SseSerializer serializer,
   );
 
@@ -1182,6 +1420,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_tag_count(List<TagCount> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_transfer_view(
+    List<TransferView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
@@ -1214,6 +1458,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_failure_view(
     FailureView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_file_entry(
+    FileEntry? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_file_error(
+    FileError? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_64(
+    PlatformInt64? self,
     SseSerializer serializer,
   );
 
@@ -1356,6 +1618,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_term_frame(TermFrame self, SseSerializer serializer);
 
   @protected
+  void sse_encode_transfer_direction(
+    TransferDirection self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_transfer_state(TransferState self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_transfer_view(TransferView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_trust_kind(TrustKind self, SseSerializer serializer);
 
   @protected
@@ -1423,6 +1697,40 @@ class RustLibWire implements BaseWire {
       );
   late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard =
       _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWardPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowserPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_openward_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowserPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowserPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_openward_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowserPtr
           .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void

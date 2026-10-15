@@ -205,6 +205,9 @@ enum FailureKind {
   badCertificate,
   authFailed,
   cancelled,
+
+  /// The server has no SFTP.
+  noSftp,
   network,
   other,
 }
@@ -636,7 +639,7 @@ enum SessionEventKind {
   closed,
 }
 
-enum StageKind { connecting, authenticating, openingShell }
+enum StageKind { connecting, authenticating, openingShell, openingSftp }
 
 class StageView {
   /// From 0; `hops` in total, the target last.

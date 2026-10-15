@@ -574,3 +574,148 @@ fn a_local_shell() {
     assert_eq!((exit_code, failure), (Some(3), None));
     assert!(term.poll().is_some());
 }
+
+impl Fixture {
+    fn sftp(
+        &self,
+        host: ItemId,
+        reply: impl Fn(&Prompt) -> Answer + Send + Sync + 'static,
+    ) -> (Arc<openward_app::Sftp>, Receiver<Event>) {
+        let (tx, rx) = channel();
+        let ui = Arc::new(Ui {
+            app: OnceLock::new(),
+            tx: Mutex::new(tx),
+            reply: Box::new(reply),
+        });
+        let _ = ui.app.set(Arc::downgrade(&self.app));
+        let sftp = self.app.sftp();
+        self.app.connect_sftp(&sftp, host, ui).unwrap();
+        (sftp, rx)
+    }
+}
+
+/// Runs a browser's calls, which may come from any executor.
+fn block_on<F: std::future::Future>(f: F) -> F::Output {
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(f)
+}
+
+/// A browser for a host with a terminal open goes over the terminal's
+/// connection: no password again, and it stays up when the terminal goes.
+#[test]
+fn sftp_goes_over_the_terminal_connection() {
+    let f = Fixture::new(servers!());
+    let password = f.password("demo");
+    let host = f.host(
+        "password",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: Some(vec![]),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    let (term, rx) = f.connect(host, move |p| match p {
+        Prompt::Password { .. } | Prompt::KeyboardInteractive { .. } => text(&password),
+        _ => Answer::Cancel,
+    });
+    let terminal = outcome(&rx).0.unwrap();
+
+    let (sftp, events) = f.sftp(host, |p| panic!("asked again: {p:?}"));
+    let mut stages = Vec::new();
+    let connected = loop {
+        match events.recv_timeout(Duration::from_secs(30)).unwrap() {
+            Event::Connected(c) => break c,
+            Event::Stage { stage, .. } => stages.push(stage),
+            Event::Closed { failure, .. } => panic!("{failure:?}"),
+            _ => {}
+        }
+    };
+    assert_eq!(stages, [openward_app::events::Stage::OpeningSftp]);
+    assert_eq!(connected.fingerprint, terminal.fingerprint);
+    let home = block_on(sftp.home()).unwrap();
+    assert_eq!(home, "/home/demo");
+
+    // The terminal ends; the browser keeps the connection.
+    term.text("exit\n");
+    loop {
+        if let Event::Closed { .. } = rx.recv_timeout(Duration::from_secs(10)).unwrap() {
+            break;
+        }
+    }
+    drop(term);
+    let names: Vec<String> = block_on(sftp.list(home))
+        .unwrap()
+        .into_iter()
+        .map(|e| e.name)
+        .collect();
+    assert!(names.contains(&".profile".to_owned()), "{names:?}");
+}
+
+/// Without a terminal, a browser connects on its own; transfers go through
+/// the app and outlive the browser.
+#[test]
+fn sftp_on_its_own_and_transfers_that_outlive_it() {
+    use openward_app::files::{Direction, JobState, OnConflict, Request};
+    let f = Fixture::new(servers!());
+    let host = f.host(
+        "bastion",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: f.key("id_ed25519"),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    let (sftp, events) = f.sftp(host, |_| Answer::Cancel);
+    outcome(&events).0.unwrap();
+    let dir = format!("/home/demo/ow-app-sftp-{}", std::process::id());
+    block_on(sftp.remove(vec![dir.clone()])).unwrap();
+    block_on(sftp.mkdir(dir.clone())).unwrap();
+
+    let local = tempfile::tempdir().unwrap();
+    let file = local.path().join("data.bin");
+    std::fs::write(&file, vec![7u8; 5 << 20]).unwrap();
+    let id = f.app.transfer(
+        &sftp,
+        Request {
+            direction: Direction::Upload,
+            source: file.display().to_string(),
+            dest_dir: dir.clone(),
+            on_conflict: OnConflict::Replace,
+        },
+    );
+    // Closed at once: the transfer still has its connection.
+    let link = sftp.link();
+    drop(sftp);
+    let job = block_on(f.app.transfers().wait(id)).unwrap();
+    assert_eq!(job.state, JobState::Done, "{:?}", job.error);
+    assert_eq!(job.host, "bastion");
+
+    let remote = link.get().unwrap();
+    let got = block_on(remote.stat(&format!("{dir}/data.bin")))
+        .unwrap()
+        .unwrap();
+    assert_eq!(got.size, 5 << 20);
+
+    // A browser opened again takes up the same link.
+    let (again, events) = f.sftp(host, |_| Answer::Cancel);
+    outcome(&events).0.unwrap();
+    assert!(Arc::ptr_eq(&again.link(), &link));
+    let conflicts = block_on(again.conflicts(
+        Direction::Upload,
+        vec![file.display().to_string()],
+        dir.clone(),
+    ))
+    .unwrap();
+    assert_eq!(conflicts.len(), 1);
+    assert_eq!(conflicts[0].theirs.size, 5 << 20);
+    block_on(again.remove(vec![dir])).unwrap();
+}

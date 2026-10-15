@@ -46,6 +46,7 @@ pub enum StageKind {
     Connecting,
     Authenticating,
     OpeningShell,
+    OpeningSftp,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -134,6 +135,8 @@ pub enum FailureKind {
     BadCertificate,
     AuthFailed,
     Cancelled,
+    /// The server has no SFTP.
+    NoSftp,
     Network,
     Other,
 }
@@ -256,6 +259,11 @@ fn failure_view(f: Failure) -> FailureView {
             kind: Some(FailureKind::Cancelled),
             ..v
         },
+        Failure::NoSftp { label } => FailureView {
+            kind: Some(FailureKind::NoSftp),
+            label,
+            ..v
+        },
         Failure::Network { label, message } => FailureView {
             kind: Some(FailureKind::Network),
             label,
@@ -369,6 +377,7 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
                     Stage::Connecting => StageKind::Connecting,
                     Stage::Authenticating => StageKind::Authenticating,
                     Stage::OpeningShell => StageKind::OpeningShell,
+                    Stage::OpeningSftp => StageKind::OpeningSftp,
                 },
             });
         }

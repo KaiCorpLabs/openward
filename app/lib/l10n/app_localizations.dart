@@ -182,6 +182,12 @@ abstract class AppLocalizations {
   /// **'¿Cómo la quieres ver?'**
   String get appearanceStepTitle;
 
+  /// No description provided for @apply.
+  ///
+  /// In es, this message translates to:
+  /// **'Aplicar'**
+  String get apply;
+
   /// No description provided for @asSystem.
   ///
   /// In es, this message translates to:
@@ -266,6 +272,12 @@ abstract class AppLocalizations {
   /// **'Cancelar'**
   String get cancel;
 
+  /// No description provided for @cancelThese.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{No copiar este} other{No copiar estos {count}}}'**
+  String cancelThese(int count);
+
   /// No description provided for @cancelled.
   ///
   /// In es, this message translates to:
@@ -296,6 +308,30 @@ abstract class AppLocalizations {
   /// **'He comprobado la huella nueva'**
   String get checkedFingerprint;
 
+  /// No description provided for @choiceKeepBoth.
+  ///
+  /// In es, this message translates to:
+  /// **'Mantener los dos'**
+  String get choiceKeepBoth;
+
+  /// No description provided for @choiceNewer.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo si el mío es más nuevo'**
+  String get choiceNewer;
+
+  /// No description provided for @choiceReplace.
+  ///
+  /// In es, this message translates to:
+  /// **'Reemplazar'**
+  String get choiceReplace;
+
+  /// No description provided for @choiceSkip.
+  ///
+  /// In es, this message translates to:
+  /// **'Saltar'**
+  String get choiceSkip;
+
   /// No description provided for @cipher.
   ///
   /// In es, this message translates to:
@@ -307,6 +343,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Quitar'**
   String get clear;
+
+  /// No description provided for @clearFinished.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar las terminadas'**
+  String get clearFinished;
 
   /// No description provided for @clearSelection.
   ///
@@ -337,6 +379,114 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cerrar la pestaña'**
   String get closeTheTab;
+
+  /// No description provided for @colModified.
+  ///
+  /// In es, this message translates to:
+  /// **'Modificado'**
+  String get colModified;
+
+  /// No description provided for @colName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre'**
+  String get colName;
+
+  /// No description provided for @colPermissions.
+  ///
+  /// In es, this message translates to:
+  /// **'Permisos'**
+  String get colPermissions;
+
+  /// No description provided for @colSize.
+  ///
+  /// In es, this message translates to:
+  /// **'Tamaño'**
+  String get colSize;
+
+  /// No description provided for @conflictChoose.
+  ///
+  /// In es, this message translates to:
+  /// **'. Elige qué hacer con cada uno:'**
+  String get conflictChoose;
+
+  /// No description provided for @conflictFile.
+  ///
+  /// In es, this message translates to:
+  /// **'Fichero'**
+  String get conflictFile;
+
+  /// No description provided for @conflictFolder.
+  ///
+  /// In es, this message translates to:
+  /// **'carpeta'**
+  String get conflictFolder;
+
+  /// No description provided for @conflictIn.
+  ///
+  /// In es, this message translates to:
+  /// **'En '**
+  String get conflictIn;
+
+  /// No description provided for @conflictMerge.
+  ///
+  /// In es, this message translates to:
+  /// **'las dos carpetas se juntan'**
+  String get conflictMerge;
+
+  /// No description provided for @conflictRest.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{. El otro se copia ya. Elige qué hacer con cada uno:} other{. Los otros {count} se copian ya. Elige qué hacer con cada uno:}}'**
+  String conflictRest(int count);
+
+  /// No description provided for @conflictSame.
+  ///
+  /// In es, this message translates to:
+  /// **'igual tamaño y fecha'**
+  String get conflictSame;
+
+  /// No description provided for @conflictTheirs.
+  ///
+  /// In es, this message translates to:
+  /// **'En {where}'**
+  String conflictTheirs(String where);
+
+  /// No description provided for @conflictTheirsNewer.
+  ///
+  /// In es, this message translates to:
+  /// **'el de {where} es más nuevo'**
+  String conflictTheirsNewer(String where);
+
+  /// No description provided for @conflictTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 de los {total} ya existe en {where}} other{{count} de los {total} ya existen en {where}}}'**
+  String conflictTitle(int count, int total, String where);
+
+  /// No description provided for @conflictTitleOne.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya existe en {where}'**
+  String conflictTitleOne(String where);
+
+  /// No description provided for @conflictWhat.
+  ///
+  /// In es, this message translates to:
+  /// **'Qué hacer'**
+  String get conflictWhat;
+
+  /// No description provided for @conflictYours.
+  ///
+  /// In es, this message translates to:
+  /// **'El tuyo'**
+  String get conflictYours;
+
+  /// No description provided for @conflictYoursNewer.
+  ///
+  /// In es, this message translates to:
+  /// **'el tuyo es más nuevo'**
+  String get conflictYoursNewer;
 
   /// No description provided for @connect.
   ///
@@ -374,6 +524,12 @@ abstract class AppLocalizations {
   /// **'Se perdió la conexión con {label}{why}.'**
   String connectionLost(String label, String why);
 
+  /// No description provided for @continueAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Seguir'**
+  String get continueAction;
+
   /// No description provided for @continueLabel.
   ///
   /// In es, this message translates to:
@@ -409,6 +565,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Copiar la huella'**
   String get copyFingerprint;
+
+  /// No description provided for @copyPath.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar la ruta'**
+  String get copyPath;
+
+  /// No description provided for @create.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear'**
+  String get create;
 
   /// No description provided for @ctrlShiftPrefix.
   ///
@@ -476,6 +644,12 @@ abstract class AppLocalizations {
   /// **'Eliminar'**
   String get delete;
 
+  /// No description provided for @deleteEllipsis.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar…'**
+  String get deleteEllipsis;
+
   /// No description provided for @deleteFailed.
   ///
   /// In es, this message translates to:
@@ -512,6 +686,30 @@ abstract class AppLocalizations {
   /// **'¿Eliminar el host «{name}»?'**
   String deleteHostTitle(String name);
 
+  /// No description provided for @deleteLocalBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se eliminan de este equipo sin pasar por la papelera: no se puede deshacer.'**
+  String get deleteLocalBody;
+
+  /// No description provided for @deleteMany.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar {count} elementos?'**
+  String deleteMany(int count);
+
+  /// No description provided for @deleteOne.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar {name}?'**
+  String deleteOne(String name);
+
+  /// No description provided for @deleteRemoteBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se eliminan en {host}. En el servidor no hay papelera: no se puede deshacer.'**
+  String deleteRemoteBody(String host);
+
   /// No description provided for @deletedHost.
   ///
   /// In es, this message translates to:
@@ -529,6 +727,42 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No confiar'**
   String get dontTrust;
+
+  /// No description provided for @download.
+  ///
+  /// In es, this message translates to:
+  /// **'Descarga'**
+  String get download;
+
+  /// No description provided for @downloadArrow.
+  ///
+  /// In es, this message translates to:
+  /// **'← Descargar'**
+  String get downloadArrow;
+
+  /// No description provided for @downloadTo.
+  ///
+  /// In es, this message translates to:
+  /// **'Descargar a {path}'**
+  String downloadTo(String path);
+
+  /// No description provided for @dropAskFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Si alguno ya existe, te preguntamos antes de tocarlo.'**
+  String get dropAskFirst;
+
+  /// No description provided for @dropToDownload.
+  ///
+  /// In es, this message translates to:
+  /// **'Suelta para descargar aquí'**
+  String get dropToDownload;
+
+  /// No description provided for @dropToUpload.
+  ///
+  /// In es, this message translates to:
+  /// **'Suelta para subir aquí'**
+  String get dropToUpload;
 
   /// No description provided for @editEllipsis.
   ///
@@ -553,6 +787,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Editar host'**
   String get editHostTitle;
+
+  /// No description provided for @emptyFolder.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta carpeta está vacía'**
+  String get emptyFolder;
 
   /// No description provided for @failureAuth.
   ///
@@ -583,6 +823,48 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No se ha confiado en la clave de {label}.'**
   String failureHostKeyRejected(String label);
+
+  /// No description provided for @failureNoSftp.
+  ///
+  /// In es, this message translates to:
+  /// **'{label} no tiene SFTP: al servidor le falta sftp-server.'**
+  String failureNoSftp(String label);
+
+  /// No description provided for @fileChanged.
+  ///
+  /// In es, this message translates to:
+  /// **'{path} cambió mientras se copiaba.'**
+  String fileChanged(String path);
+
+  /// No description provided for @fileDenied.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin permiso: {path}'**
+  String fileDenied(String path);
+
+  /// No description provided for @fileExists.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya existe: {path}'**
+  String fileExists(String path);
+
+  /// No description provided for @fileLost.
+  ///
+  /// In es, this message translates to:
+  /// **'Se perdió la conexión.'**
+  String get fileLost;
+
+  /// No description provided for @fileNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'No existe: {path}'**
+  String fileNotFound(String path);
+
+  /// No description provided for @filterFolder.
+  ///
+  /// In es, this message translates to:
+  /// **'Filtrar en esta carpeta'**
+  String get filterFolder;
 
   /// No description provided for @findClose.
   ///
@@ -668,6 +950,12 @@ abstract class AppLocalizations {
   /// **'La del sistema'**
   String get fontSystem;
 
+  /// No description provided for @forAll.
+  ///
+  /// In es, this message translates to:
+  /// **'A todos:'**
+  String get forAll;
+
   /// No description provided for @fromDefault.
   ///
   /// In es, this message translates to:
@@ -709,6 +997,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ajustes para todo lo que contiene'**
   String get groupSettingsSection;
+
+  /// No description provided for @hideHiddenFiles.
+  ///
+  /// In es, this message translates to:
+  /// **'No mostrar los ocultos'**
+  String get hideHiddenFiles;
+
+  /// No description provided for @hideQueue.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocultar'**
+  String get hideQueue;
 
   /// No description provided for @hostInUse.
   ///
@@ -853,6 +1153,78 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Dentro de'**
   String get inside;
+
+  /// No description provided for @itemCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 elemento} other{{count} elementos}}'**
+  String itemCount(int count);
+
+  /// No description provided for @jobCancelled.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelada'**
+  String get jobCancelled;
+
+  /// No description provided for @jobCounting.
+  ///
+  /// In es, this message translates to:
+  /// **'Contando…'**
+  String get jobCounting;
+
+  /// No description provided for @jobDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Hecho · {size}'**
+  String jobDone(String size);
+
+  /// No description provided for @jobFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'Ha fallado'**
+  String get jobFailed;
+
+  /// No description provided for @jobFolder.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{carpeta, 1 fichero} other{carpeta, {count} ficheros}}'**
+  String jobFolder(int count);
+
+  /// No description provided for @jobLost.
+  ///
+  /// In es, this message translates to:
+  /// **'Se cortó la conexión con {done} de {total} copiados'**
+  String jobLost(String done, String total);
+
+  /// No description provided for @jobPaused.
+  ///
+  /// In es, this message translates to:
+  /// **'En pausa · {done} de {total}'**
+  String jobPaused(String done, String total);
+
+  /// No description provided for @jobProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'{done} de {total}'**
+  String jobProgress(String done, String total);
+
+  /// No description provided for @jobQueued.
+  ///
+  /// In es, this message translates to:
+  /// **'En cola · {size}'**
+  String jobQueued(String size);
+
+  /// No description provided for @jobQueuedNoSize.
+  ///
+  /// In es, this message translates to:
+  /// **'En cola'**
+  String get jobQueuedNoSize;
+
+  /// No description provided for @jobSkipped.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 ya estaba} other{{count} ya estaban}}'**
+  String jobSkipped(int count);
 
   /// No description provided for @jumpThrough.
   ///
@@ -1064,6 +1436,12 @@ abstract class AppLocalizations {
   /// **'Nombre'**
   String get name;
 
+  /// No description provided for @nameNoSlash.
+  ///
+  /// In es, this message translates to:
+  /// **'Un nombre no puede llevar «/».'**
+  String get nameNoSlash;
+
   /// No description provided for @netLost.
   ///
   /// In es, this message translates to:
@@ -1087,6 +1465,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'tiempo de espera agotado.'**
   String get netTimeout;
+
+  /// No description provided for @newFolder.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva carpeta'**
+  String get newFolder;
 
   /// No description provided for @newGroup.
   ///
@@ -1172,6 +1556,12 @@ abstract class AppLocalizations {
   /// **'Ninguno todavía.'**
   String get noJumpsYet;
 
+  /// No description provided for @noMatches.
+  ///
+  /// In es, this message translates to:
+  /// **'Nada coincide con «{filter}»'**
+  String noMatches(String filter);
+
   /// No description provided for @noParent.
   ///
   /// In es, this message translates to:
@@ -1214,6 +1604,12 @@ abstract class AppLocalizations {
   /// **'Abrir un terminal local'**
   String get openLocal;
 
+  /// No description provided for @openSftp.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir SFTP'**
+  String get openSftp;
+
   /// No description provided for @openSshStillWarns.
   ///
   /// In es, this message translates to:
@@ -1249,6 +1645,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'¿Qué abres en este panel?'**
   String get paneWhat;
+
+  /// No description provided for @partNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Se copia con un nombre temporal (.part) y se renombra al terminar: si se corta, el fichero bueno no queda a medias y la copia se puede reanudar.'**
+  String get partNote;
 
   /// No description provided for @passphraseField.
   ///
@@ -1298,11 +1700,113 @@ abstract class AppLocalizations {
   /// **'Pegar solo en {name}'**
   String pasteOnlyHere(String name);
 
+  /// No description provided for @pause.
+  ///
+  /// In es, this message translates to:
+  /// **'Pausar'**
+  String get pause;
+
+  /// No description provided for @pauseAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Pausar todo'**
+  String get pauseAll;
+
   /// No description provided for @percent.
   ///
   /// In es, this message translates to:
   /// **'{number} %'**
   String percent(int number);
+
+  /// No description provided for @permApplied.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Permisos cambiados en 1 elemento} other{Permisos cambiados en {count} elementos}}'**
+  String permApplied(int count);
+
+  /// No description provided for @permBefore.
+  ///
+  /// In es, this message translates to:
+  /// **'Antes: {mode}'**
+  String permBefore(String mode);
+
+  /// No description provided for @permEnter.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrar'**
+  String get permEnter;
+
+  /// No description provided for @permExecute.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejecutar'**
+  String get permExecute;
+
+  /// No description provided for @permGroup.
+  ///
+  /// In es, this message translates to:
+  /// **'Grupo'**
+  String get permGroup;
+
+  /// No description provided for @permOctal.
+  ///
+  /// In es, this message translates to:
+  /// **'En octal'**
+  String get permOctal;
+
+  /// No description provided for @permOthers.
+  ///
+  /// In es, this message translates to:
+  /// **'Otros'**
+  String get permOthers;
+
+  /// No description provided for @permOwner.
+  ///
+  /// In es, this message translates to:
+  /// **'Propietario'**
+  String get permOwner;
+
+  /// No description provided for @permOwnerNote.
+  ///
+  /// In es, this message translates to:
+  /// **'El propietario y el grupo no se cambian desde aquí.'**
+  String get permOwnerNote;
+
+  /// No description provided for @permRead.
+  ///
+  /// In es, this message translates to:
+  /// **'Leer'**
+  String get permRead;
+
+  /// No description provided for @permRecursive.
+  ///
+  /// In es, this message translates to:
+  /// **'Aplicar también a lo que hay dentro'**
+  String get permRecursive;
+
+  /// No description provided for @permRecursiveNote.
+  ///
+  /// In es, this message translates to:
+  /// **'A los ficheros solo se les deja «Ejecutar» si ya lo tenían.'**
+  String get permRecursiveNote;
+
+  /// No description provided for @permWrite.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribir'**
+  String get permWrite;
+
+  /// No description provided for @permissionsEllipsis.
+  ///
+  /// In es, this message translates to:
+  /// **'Permisos…'**
+  String get permissionsEllipsis;
+
+  /// No description provided for @permissionsOf.
+  ///
+  /// In es, this message translates to:
+  /// **'Permisos de {name}'**
+  String permissionsOf(String name);
 
   /// No description provided for @pixels.
   ///
@@ -1364,6 +1868,36 @@ abstract class AppLocalizations {
   /// **'Los cambios se ven al momento en toda la ventana.'**
   String get previewLive;
 
+  /// No description provided for @queueAllDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Todo terminado'**
+  String get queueAllDone;
+
+  /// No description provided for @queueFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} con error'**
+  String queueFailed(int count);
+
+  /// No description provided for @queuePaused.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} en pausa'**
+  String queuePaused(int count);
+
+  /// No description provided for @queueQueued.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} en cola'**
+  String queueQueued(int count);
+
+  /// No description provided for @queueRunning.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} en curso'**
+  String queueRunning(int count);
+
   /// No description provided for @quickConnectHint.
   ///
   /// In es, this message translates to:
@@ -1418,6 +1952,18 @@ abstract class AppLocalizations {
   /// **'Reducir movimiento'**
   String get reduceMotion;
 
+  /// No description provided for @reload.
+  ///
+  /// In es, this message translates to:
+  /// **'Recargar'**
+  String get reload;
+
+  /// No description provided for @remove.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar'**
+  String get remove;
+
   /// No description provided for @removeTag.
   ///
   /// In es, this message translates to:
@@ -1441,6 +1987,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Renombrar pestaña'**
   String get renameTabTitle;
+
+  /// No description provided for @renameTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Renombrar {name}'**
+  String renameTitle(String name);
 
   /// No description provided for @reportCreated.
   ///
@@ -1483,6 +2035,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Volver a los paneles'**
   String get restorePanes;
+
+  /// No description provided for @resume.
+  ///
+  /// In es, this message translates to:
+  /// **'Reanudar'**
+  String get resume;
 
   /// No description provided for @retryIn.
   ///
@@ -1640,6 +2198,18 @@ abstract class AppLocalizations {
   /// **'Seleccionar todo'**
   String get selectAllText;
 
+  /// No description provided for @selectedCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 seleccionado ({size})} other{{count} seleccionados ({size})}}'**
+  String selectedCount(int count, String size);
+
+  /// No description provided for @selectedCountOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 seleccionado} other{{count} seleccionados}}'**
+  String selectedCountOnly(int count);
+
   /// No description provided for @selectedOf.
   ///
   /// In es, this message translates to:
@@ -1688,6 +2258,30 @@ abstract class AppLocalizations {
   /// **'Terminal'**
   String get settingsTerminal;
 
+  /// No description provided for @sftpConnected.
+  ///
+  /// In es, this message translates to:
+  /// **'SFTP en {label}'**
+  String sftpConnected(String label);
+
+  /// No description provided for @sftpKeysApple.
+  ///
+  /// In es, this message translates to:
+  /// **'Intro abre · ⌘↑ sube · Tab cambia de lado · F2 renombra · ⌘⌫ elimina'**
+  String get sftpKeysApple;
+
+  /// No description provided for @sftpKeysOther.
+  ///
+  /// In es, this message translates to:
+  /// **'Intro abre · Retroceso sube · Tab cambia de lado · F2 renombra · Supr elimina'**
+  String get sftpKeysOther;
+
+  /// No description provided for @sftpTabTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'SFTP · {label}'**
+  String sftpTabTitle(String label);
+
   /// No description provided for @shape.
   ///
   /// In es, this message translates to:
@@ -1717,6 +2311,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Abre los ajustes'**
   String get shortcutSettings;
+
+  /// No description provided for @showHiddenFiles.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar los ocultos'**
+  String get showHiddenFiles;
+
+  /// No description provided for @showQueue.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver la cola'**
+  String get showQueue;
 
   /// No description provided for @showRest.
   ///
@@ -1753,6 +2359,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Conectando con {label}{hop}…'**
   String stageConnecting(String label, String hop);
+
+  /// No description provided for @stageOpeningSftp.
+  ///
+  /// In es, this message translates to:
+  /// **'Abriendo SFTP en {label}…'**
+  String stageOpeningSftp(String label);
 
   /// No description provided for @stageOpeningShell.
   ///
@@ -1831,6 +2443,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Importar'**
   String get stepImport;
+
+  /// No description provided for @stepOpeningSftp.
+  ///
+  /// In es, this message translates to:
+  /// **'abriendo SFTP…'**
+  String get stepOpeningSftp;
 
   /// No description provided for @stepOpeningShell.
   ///
@@ -1946,6 +2564,24 @@ abstract class AppLocalizations {
   /// **'Tiempo'**
   String get time;
 
+  /// No description provided for @timeLeft.
+  ///
+  /// In es, this message translates to:
+  /// **'quedan {time}'**
+  String timeLeft(String time);
+
+  /// No description provided for @todayAt.
+  ///
+  /// In es, this message translates to:
+  /// **'hoy {time}'**
+  String todayAt(String time);
+
+  /// No description provided for @transfers.
+  ///
+  /// In es, this message translates to:
+  /// **'Transferencias'**
+  String get transfers;
+
   /// No description provided for @trust.
   ///
   /// In es, this message translates to:
@@ -2005,6 +2641,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Fuente de la interfaz'**
   String get uiFont;
+
+  /// No description provided for @upOneLevel.
+  ///
+  /// In es, this message translates to:
+  /// **'Subir un nivel'**
+  String get upOneLevel;
+
+  /// No description provided for @upload.
+  ///
+  /// In es, this message translates to:
+  /// **'Subida'**
+  String get upload;
+
+  /// No description provided for @uploadToArrow.
+  ///
+  /// In es, this message translates to:
+  /// **'Subir a {where} →'**
+  String uploadToArrow(String where);
+
+  /// No description provided for @uploadToHost.
+  ///
+  /// In es, this message translates to:
+  /// **'Subir a {host}'**
+  String uploadToHost(String host);
 
   /// No description provided for @user.
   ///
@@ -2137,6 +2797,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Sí'**
   String get yes;
+
+  /// No description provided for @yesterdayAt.
+  ///
+  /// In es, this message translates to:
+  /// **'ayer {time}'**
+  String yesterdayAt(String time);
 }
 
 class _AppLocalizationsDelegate

@@ -60,6 +60,7 @@ pub enum Stage {
     Connecting,
     Authenticating,
     OpeningShell,
+    OpeningSftp,
 }
 
 /// What the status bar shows about a live connection.
@@ -190,6 +191,10 @@ pub enum Failure {
         methods: Vec<String>,
     },
     Cancelled,
+    /// The server has no SFTP (a Dropbear without `sftp-server`, a router).
+    NoSftp {
+        label: String,
+    },
     /// Could not reach the host, or the connection broke.
     Network {
         label: String,
@@ -218,6 +223,7 @@ impl std::fmt::Display for Failure {
                 methods.join(", ")
             ),
             Self::Cancelled => write!(f, "cancelled"),
+            Self::NoSftp { label } => write!(f, "{label}: the server has no SFTP"),
             Self::Network { label, message } => write!(f, "{label}: {message}"),
             Self::Other(message) => write!(f, "{message}"),
         }

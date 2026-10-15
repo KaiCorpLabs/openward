@@ -9,6 +9,7 @@ use openward_app::{App, DEFAULT_SCROLLBACK, RECONNECT_ATTEMPTS};
 use openward_import::ssh_config::Warning;
 
 use super::session::{DartSink, PromptAnswer, SessionEvent, TerminalSession};
+use super::sftp::{ConflictChoice, SftpBrowser, TransferDirection, TransferView};
 use super::vault::*;
 use crate::frb_generated::StreamSink;
 
@@ -400,5 +401,106 @@ impl OpenWard {
     #[frb(sync)]
     pub fn answer(&self, prompt_id: u64, answer: PromptAnswer) -> bool {
         self.app.answer(prompt_id, answer.into_answer())
+    }
+
+    /// A new SFTP browser, not connected yet.
+    #[frb(sync)]
+    pub fn sftp(&self) -> SftpBrowser {
+        SftpBrowser {
+            sftp: self.app.sftp(),
+        }
+    }
+
+    /// Connects a browser to a saved host, over a terminal's connection to
+    /// it when one is up. The stream is the connection's events, as for
+    /// terminals; `connected` means it can browse.
+    pub fn connect_sftp(
+        &self,
+        browser: &SftpBrowser,
+        host_id: String,
+        events: StreamSink<SessionEvent>,
+    ) -> anyhow::Result<()> {
+        self.app.connect_sftp(
+            &browser.sftp,
+            super::vault::id(&host_id)?,
+            Arc::new(DartSink(events)),
+        )?;
+        Ok(())
+    }
+
+    /// As [`OpenWard::connect_sftp`], to an address that is not saved.
+    pub fn connect_sftp_address(
+        &self,
+        browser: &SftpBrowser,
+        address: String,
+        user: Option<String>,
+        port: Option<u16>,
+        events: StreamSink<SessionEvent>,
+    ) -> anyhow::Result<()> {
+        self.app.connect_sftp_address(
+            &browser.sftp,
+            address,
+            user,
+            port,
+            Arc::new(DartSink(events)),
+        )?;
+        Ok(())
+    }
+
+    /// Queues a copy of a file or folder over `browser`'s connection;
+    /// returns its id. It goes on if the browser closes.
+    #[frb(sync)]
+    pub fn transfer(
+        &self,
+        browser: &SftpBrowser,
+        direction: TransferDirection,
+        source: String,
+        dest_dir: String,
+        on_conflict: ConflictChoice,
+    ) -> u64 {
+        super::sftp::transfer(&self.app, browser, direction, source, dest_dir, on_conflict)
+    }
+
+    /// Every transfer, oldest first, with its progress now.
+    #[frb(sync)]
+    pub fn transfers(&self) -> Vec<TransferView> {
+        self.app
+            .transfers()
+            .jobs()
+            .into_iter()
+            .map(TransferView::from)
+            .collect()
+    }
+
+    #[frb(sync)]
+    pub fn pause_transfer(&self, id: u64) {
+        self.app.transfers().pause(id);
+    }
+
+    #[frb(sync)]
+    pub fn resume_transfer(&self, id: u64) {
+        self.app.transfers().resume(id);
+    }
+
+    /// Stops it for good, deleting the file it was writing.
+    #[frb(sync)]
+    pub fn cancel_transfer(&self, id: u64) {
+        self.app.transfers().cancel(id);
+    }
+
+    /// Takes it off the list (cancelling it if it was not finished).
+    #[frb(sync)]
+    pub fn remove_transfer(&self, id: u64) {
+        self.app.transfers().remove(id);
+    }
+
+    #[frb(sync)]
+    pub fn pause_transfers(&self) {
+        self.app.transfers().pause_all();
+    }
+
+    #[frb(sync)]
+    pub fn clear_finished_transfers(&self) {
+        self.app.transfers().clear_finished();
     }
 }

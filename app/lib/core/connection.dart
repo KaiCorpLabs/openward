@@ -1,0 +1,168 @@
+import 'dart:async';
+import 'dart:collection';
+
+import 'package:flutter/foundation.dart';
+
+import '../src/rust/api/app.dart';
+import '../src/rust/api/session.dart';
+import 'address.dart';
+
+/// Where a connection stands.
+enum Phase { connecting, connected, reconnecting, running, closed }
+
+/// What a connection to a host reports: its route, progress, questions,
+/// how it went and whether it is coming back. Terminals and SFTP browsers
+/// both have one, and the cards that show it take either.
+abstract class ConnectionController extends ChangeNotifier {
+  ConnectionController({
+    required this.app,
+    required this.label,
+    this.hostId,
+    this.target,
+  });
+
+  final OpenWard app;
+
+  /// The saved host, if it is one.
+  final String? hostId;
+
+  /// An address that is not saved, if it is one.
+  final QuickTarget? target;
+
+  /// The host's label, or the shell's name.
+  final String label;
+
+  Phase phase = Phase.connecting;
+
+  /// The hops of the connection, target last.
+  List<String> route = const [];
+  StageView? stage;
+  ConnectedView? connected;
+  ClosedView? closed;
+
+  /// While waiting to reconnect: why, and when the next try starts.
+  ReconnectingView? reconnecting;
+  DateTime? reconnectAt;
+
+  /// It got as far as working at least once: what it shows is worth
+  /// keeping on view.
+  bool everConnected = false;
+
+  /// The user gave up on the connection.
+  bool cancelled = false;
+
+  /// An error before the session could start (a plan that cannot run).
+  String? error;
+
+  /// Questions from the session, oldest first.
+  final Queue<PromptView> prompts = Queue();
+
+  StreamSubscription<SessionEvent>? _events;
+  bool _disposed = false;
+
+  /// A shell on this machine: neither a saved host nor an address.
+  bool get isLocal => hostId == null && target == null;
+
+  bool get isDisposed => _disposed;
+
+  /// Starts the session in Rust: its events.
+  @protected
+  Stream<SessionEvent> open();
+
+  /// Ends the session in Rust.
+  @protected
+  void stop();
+
+  /// Connects (or reconnects, keeping what is on view).
+  void start() {
+    phase = everConnected && !isLocal ? Phase.reconnecting : Phase.connecting;
+    stage = null;
+    connected = null;
+    closed = null;
+    error = null;
+    reconnectAt = null;
+    cancelled = false;
+    prompts.clear();
+    _events?.cancel();
+    _events = open().listen(
+      onEvent,
+      onError: (Object e) {
+        phase = Phase.closed;
+        error = '$e';
+        notify();
+      },
+    );
+    notify();
+  }
+
+  @protected
+  @mustCallSuper
+  void onEvent(SessionEvent e) {
+    switch (e.kind) {
+      case SessionEventKind.route:
+        route = e.route;
+      case SessionEventKind.stage:
+        stage = e.stage;
+        reconnectAt = null;
+      case SessionEventKind.prompt:
+        prompts.add(e.prompt!);
+      case SessionEventKind.connected:
+        phase = Phase.connected;
+        connected = e.connected;
+        stage = null;
+        reconnecting = null;
+        reconnectAt = null;
+        everConnected = true;
+      case SessionEventKind.reconnecting:
+        final r = e.reconnecting!;
+        phase = Phase.reconnecting;
+        reconnecting = r;
+        stage = null;
+        reconnectAt = DateTime.now().add(
+          Duration(milliseconds: r.delayMs.toInt()),
+        );
+      case SessionEventKind.started:
+        phase = Phase.running;
+        everConnected = true;
+      case SessionEventKind.closed:
+        phase = Phase.closed;
+        closed = e.closed;
+        stage = null;
+        reconnecting = null;
+        reconnectAt = null;
+        // Questions of a session that is gone cannot be answered.
+        prompts.clear();
+    }
+    notify();
+  }
+
+  /// Gives up on the connection (or its reconnection).
+  void cancel() {
+    _events?.cancel();
+    stop();
+    phase = Phase.closed;
+    cancelled = true;
+    stage = null;
+    reconnecting = null;
+    reconnectAt = null;
+    prompts.clear();
+    notify();
+  }
+
+  void answer(PromptView prompt, PromptAnswer answer) {
+    prompts.remove(prompt);
+    app.answer(promptId: prompt.id, answer: answer);
+    notify();
+  }
+
+  void notify() {
+    if (!_disposed) notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _events?.cancel();
+    super.dispose();
+  }
+}

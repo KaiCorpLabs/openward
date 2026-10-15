@@ -11,9 +11,11 @@ pub mod events;
 pub mod import;
 pub mod local;
 pub mod plan;
+pub mod sftp;
 pub mod terminal;
 
 mod connect;
+mod live;
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
@@ -21,18 +23,21 @@ use std::time::Duration;
 
 use openward_import::ssh_config::Paths;
 use openward_pty::Spawn;
-use openward_ssh::known_hosts::Verdict;
 use openward_vault::Vault;
 use openward_vault::proto::ItemId;
 
 pub use events::{Answer, Event, EventSink, Failure, Prompt};
 pub use local::Local;
+pub use openward_sftp as files;
 pub use openward_vault as vault;
 pub use plan::{Plan, PlanError};
+pub use sftp::Sftp;
 pub use terminal::Terminal;
 
 use connect::{Ctx, lock};
-use events::{Connected, Prompts, Stage, Trust};
+use events::{Prompts, Stage};
+use live::{Live, Registry};
+use openward_sftp::{Request, Transfers};
 
 /// Scrollback lines when settings say nothing.
 pub const DEFAULT_SCROLLBACK: usize = 10_000;
@@ -41,6 +46,9 @@ pub struct App {
     vault: Arc<Mutex<Vault>>,
     local: Local,
     prompts: Arc<Prompts>,
+    live: Arc<Registry>,
+    links: sftp::Links,
+    transfers: Transfers,
     runtime: tokio::runtime::Runtime,
 }
 
@@ -63,6 +71,9 @@ impl App {
             vault: Arc::new(Mutex::new(vault)),
             local,
             prompts: Arc::default(),
+            live: Arc::default(),
+            links: sftp::Links::default(),
+            transfers: Transfers::new(runtime.handle().clone()),
             runtime,
         })
     }
@@ -127,12 +138,7 @@ impl App {
         // Checked now so that a plan that cannot run fails at once.
         target.plan(&self.vault(), &self.local)?;
         terminal.close();
-        let ctx = Ctx {
-            vault: Arc::clone(&self.vault),
-            local: self.local.clone(),
-            prompts: Arc::clone(&self.prompts),
-            sink: Arc::clone(&sink),
-        };
+        let ctx = self.ctx(&sink);
         let term = Arc::downgrade(terminal);
         let task = self.runtime.spawn(async move {
             let mut attempt = 0;
@@ -170,6 +176,81 @@ impl App {
         });
         terminal.set_task(task);
         Ok(())
+    }
+
+    fn ctx(&self, sink: &Arc<dyn EventSink>) -> Ctx {
+        Ctx {
+            vault: Arc::clone(&self.vault),
+            local: self.local.clone(),
+            prompts: Arc::clone(&self.prompts),
+            sink: Arc::clone(sink),
+            live: Arc::clone(&self.live),
+            runtime: self.runtime.handle().clone(),
+        }
+    }
+
+    /// A new SFTP browser, not connected yet.
+    pub fn sftp(&self) -> Arc<Sftp> {
+        Sftp::new(self.runtime.handle().clone())
+    }
+
+    /// Connects an SFTP browser to a saved host: over a terminal's
+    /// connection to it if one is up, otherwise on its own. Events as for
+    /// [`App::connect`]; `Connected` means it can browse.
+    pub fn connect_sftp(
+        &self,
+        sftp: &Arc<Sftp>,
+        host: ItemId,
+        sink: Arc<dyn EventSink>,
+    ) -> Result<(), PlanError> {
+        self.connect_sftp_to(sftp, Target::Host(host), sink)
+    }
+
+    /// As [`App::connect_sftp`], to an address that is not saved.
+    pub fn connect_sftp_address(
+        &self,
+        sftp: &Arc<Sftp>,
+        address: String,
+        user: Option<String>,
+        port: Option<u16>,
+        sink: Arc<dyn EventSink>,
+    ) -> Result<(), PlanError> {
+        let target = Target::Address {
+            address,
+            user,
+            port,
+        };
+        self.connect_sftp_to(sftp, target, sink)
+    }
+
+    fn connect_sftp_to(
+        &self,
+        sftp: &Arc<Sftp>,
+        target: Target,
+        sink: Arc<dyn EventSink>,
+    ) -> Result<(), PlanError> {
+        let plan = target.plan(&self.vault(), &self.local)?;
+        let label = plan.hops.last().map_or("", |h| h.label.as_str());
+        let link = self.links.get(&plan.key(), label);
+        let (vault, local) = (Arc::clone(&self.vault), self.local.clone());
+        let plan_of = move || {
+            target
+                .plan(&lock(&vault), &local)
+                .map_err(|e| events::Failure::Other(e.to_string()))
+        };
+        sftp::start(sftp, plan_of, link, self.ctx(&sink));
+        Ok(())
+    }
+
+    /// The transfer queue, every browser's.
+    pub fn transfers(&self) -> &Transfers {
+        &self.transfers
+    }
+
+    /// Queues a copy over `sftp`'s connection; it goes on if the browser
+    /// closes.
+    pub fn transfer(&self, sftp: &Sftp, request: Request) -> u64 {
+        self.transfers.add(sftp.link(), request)
     }
 
     /// Runs the user's shell (`program` `None`) or a program on this
@@ -259,7 +340,7 @@ impl Target {
 pub const RECONNECT_ATTEMPTS: u32 = 8;
 
 /// 1, 2, 4, 8, 16 and then 30 seconds.
-fn reconnect_delay(attempt: u32) -> Duration {
+pub(crate) fn reconnect_delay(attempt: u32) -> Duration {
     Duration::from_secs((1u64 << attempt.saturating_sub(1).min(5)).min(30))
 }
 
@@ -275,10 +356,12 @@ async fn session(
     sink.send(Event::Route {
         hops: plan.hops.iter().map(|h| h.label.clone()).collect(),
     });
-    let sessions = match connect::run(plan, ctx).await {
-        Ok(sessions) => sessions,
+    let live = match connect::run(plan, ctx).await {
+        Ok(sessions) => Live::new(plan, sessions, ctx.runtime.clone()),
         Err(failure) => return (None, Some(failure), false),
     };
+    // An SFTP browser for the same host can go over it.
+    ctx.live.add(plan.key(), &live);
     let Some(pipe) = term.upgrade().map(|t| t.pipe()) else {
         return (None, None, false);
     };
@@ -290,9 +373,9 @@ async fn session(
         label: target_hop.label.clone(),
         stage: Stage::OpeningShell,
     });
-    let target = sessions.last().expect("a plan has hops");
     let size = pipe.size();
-    let channel = match target
+    let channel = match live
+        .target()
         .shell_with(
             &plan.term,
             u32::from(size.cols),
@@ -311,27 +394,10 @@ async fn session(
     // Input goes to the shell before anyone hears it is connected.
     let pump = pipe.pump_ssh(channel, &target_hop.label);
     drop(pipe);
-    let info = target.info();
-    sink.send(Event::Connected(Connected {
-        host: target_hop.address.clone(),
-        port: target_hop.port,
-        post_quantum: info.post_quantum(),
-        kex: info.kex,
-        cipher: info.cipher,
-        host_key_algorithm: info.host_key,
-        fingerprint: info.host_key_fingerprint,
-        trust: match info.verdict {
-            Some(Verdict::Certified { ca, .. }) => Trust::Certified { ca },
-            Some(Verdict::Learned) => Trust::New,
-            _ => Trust::Known,
-        },
-        hops: plan.hops.len(),
-        connect_ms: info.connect_ms,
-    }));
+    sink.send(Event::Connected(live.connected.clone()));
     let (exit_code, failure) = pump.await;
-    for session in sessions.iter().rev() {
-        session.disconnect().await;
-    }
+    // The connection closes now, unless a browser still uses it.
+    drop(live);
     (exit_code, failure, true)
 }
 

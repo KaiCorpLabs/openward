@@ -52,7 +52,7 @@ class _Panel extends StatelessWidget {
 class _RouteSteps extends StatelessWidget {
   const _RouteSteps({required this.controller});
 
-  final TerminalController controller;
+  final ConnectionController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -111,6 +111,7 @@ class _RouteSteps extends StatelessWidget {
                 StageKind.connecting => l.stepConnecting,
                 StageKind.authenticating => l.stepAuthenticating,
                 StageKind.openingShell => l.stepOpeningShell,
+                StageKind.openingSftp => l.stepOpeningSftp,
               },
             )
           else
@@ -128,7 +129,7 @@ class _RouteSteps extends StatelessWidget {
 class ConnectingCard extends StatelessWidget {
   const ConnectingCard({super.key, required this.controller});
 
-  final TerminalController controller;
+  final ConnectionController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -164,7 +165,7 @@ class ConnectingCard extends StatelessWidget {
 class ReconnectBanner extends ConsumerStatefulWidget {
   const ReconnectBanner({super.key, required this.controller});
 
-  final TerminalController controller;
+  final ConnectionController controller;
 
   @override
   ConsumerState<ReconnectBanner> createState() => _ReconnectBannerState();
@@ -259,11 +260,11 @@ class _ReconnectBannerState extends ConsumerState<ReconnectBanner> {
 class FailureCard extends ConsumerWidget {
   const FailureCard({super.key, required this.controller});
 
-  final TerminalController controller;
+  final ConnectionController controller;
 
   /// Its pane, or its tab when it is the only one.
   void _closeTab(WidgetRef ref) =>
-      ref.read(tabsProvider.notifier).closeSession(controller);
+      ref.read(tabsProvider.notifier).closeConnection(controller);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -424,7 +425,7 @@ class _KeyLine extends StatelessWidget {
 Future<void> showHostKeyChanged(
   BuildContext context,
   WidgetRef ref,
-  TerminalController c,
+  ConnectionController c,
 ) async {
   final f = c.closed?.failure;
   if (f == null || f.kind != FailureKind.hostKeyChanged) return;
@@ -549,7 +550,7 @@ class _HostKeyChangedDialogState extends State<_HostKeyChangedDialog> {
 }
 
 /// The details of a live connection.
-Future<void> showConnectionInfo(BuildContext context, TerminalController c) {
+Future<void> showConnectionInfo(BuildContext context, ConnectionController c) {
   final k = c.connected;
   if (k == null) return Future.value();
   final l = context.l10n;

@@ -1,71 +1,30 @@
 import 'dart:async';
-import 'dart:collection';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 
-import '../core/address.dart';
-import '../src/rust/api/app.dart';
+import '../core/connection.dart';
 import '../src/rust/api/session.dart';
 import 'frame.dart';
 import 'palette.dart';
 import 'renderer.dart';
 
-/// Where a tab's session stands.
-enum Phase { connecting, connected, reconnecting, running, closed }
+export '../core/connection.dart' show ConnectionController, Phase;
 
 /// One terminal tab: the Rust session, its renderer and what the session
 /// reported. Lives as long as the tab, visible or not.
-class TerminalController extends ChangeNotifier {
+class TerminalController extends ConnectionController {
   TerminalController({
-    required this.app,
-    required this.label,
-    this.hostId,
-    this.target,
+    required super.app,
+    required super.label,
+    super.hostId,
+    super.target,
     int scrollback = 0,
   }) : session = app.terminal(cols: 80, rows: 24, scrollback: scrollback);
-
-  final OpenWard app;
-
-  /// The saved host, if it is one.
-  final String? hostId;
-
-  /// An address that is not saved, if it is one.
-  final QuickTarget? target;
-
-  /// The host's label, or the shell's name.
-  final String label;
 
   /// Set by the user (rename); wins over [label] and the program's title.
   String? customTitle;
 
   final TerminalSession session;
-  StreamSubscription<SessionEvent>? _events;
-
-  Phase phase = Phase.connecting;
-
-  /// The hops of the connection, target last.
-  List<String> route = const [];
-  StageView? stage;
-  ConnectedView? connected;
-  ClosedView? closed;
-
-  /// While waiting to reconnect: why, and when the next try starts.
-  ReconnectingView? reconnecting;
-  DateTime? reconnectAt;
-
-  /// The session got as far as a shell at least once: the screen has
-  /// something worth keeping on view.
-  bool everConnected = false;
-
-  /// The user gave up on the connection.
-  bool cancelled = false;
-
-  /// An error before the session could start (a plan that cannot run).
-  String? error;
-
-  /// Questions from the session, oldest first.
-  final Queue<PromptView> prompts = Queue();
 
   // From the last frame.
   String title = '';
@@ -102,10 +61,6 @@ class TerminalController extends ChangeNotifier {
   /// The renderer in use, if the tab has been shown.
   TerminalRenderer? get currentRenderer => _renderer;
   Timer? _background;
-  bool _disposed = false;
-
-  /// A shell on this machine: neither a saved host nor an address.
-  bool get isLocal => hostId == null && target == null;
 
   /// What the tab shows.
   String get displayTitle {
@@ -114,19 +69,11 @@ class TerminalController extends ChangeNotifier {
     return isLocal && title.isNotEmpty ? title : label;
   }
 
-  /// Connects (or reconnects, keeping the screen), or starts the shell.
-  void start() {
-    phase = everConnected && !isLocal ? Phase.reconnecting : Phase.connecting;
-    stage = null;
-    connected = null;
-    closed = null;
-    error = null;
-    reconnectAt = null;
-    cancelled = false;
-    prompts.clear();
+  @override
+  Stream<SessionEvent> open() {
     final hostId = this.hostId;
     final target = this.target;
-    final events = hostId != null
+    return hostId != null
         ? app.connect(session: session, hostId: hostId)
         : target != null
         ? app.connectAddress(
@@ -136,75 +83,10 @@ class TerminalController extends ChangeNotifier {
             port: target.port,
           )
         : app.openLocal(session: session);
-    _events?.cancel();
-    _events = events.listen(
-      _onEvent,
-      onError: (Object e) {
-        phase = Phase.closed;
-        error = '$e';
-        _notify();
-      },
-    );
-    _notify();
   }
 
-  void _onEvent(SessionEvent e) {
-    switch (e.kind) {
-      case SessionEventKind.route:
-        route = e.route;
-      case SessionEventKind.stage:
-        stage = e.stage;
-        reconnectAt = null;
-      case SessionEventKind.prompt:
-        prompts.add(e.prompt!);
-      case SessionEventKind.connected:
-        phase = Phase.connected;
-        connected = e.connected;
-        stage = null;
-        reconnecting = null;
-        reconnectAt = null;
-        everConnected = true;
-      case SessionEventKind.reconnecting:
-        final r = e.reconnecting!;
-        phase = Phase.reconnecting;
-        reconnecting = r;
-        stage = null;
-        reconnectAt = DateTime.now().add(
-          Duration(milliseconds: r.delayMs.toInt()),
-        );
-      case SessionEventKind.started:
-        phase = Phase.running;
-        everConnected = true;
-      case SessionEventKind.closed:
-        phase = Phase.closed;
-        closed = e.closed;
-        stage = null;
-        reconnecting = null;
-        reconnectAt = null;
-        // Questions of a session that is gone cannot be answered.
-        prompts.clear();
-    }
-    _notify();
-  }
-
-  /// Gives up on the connection (or its reconnection); the screen stays.
-  void cancel() {
-    _events?.cancel();
-    session.close();
-    phase = Phase.closed;
-    cancelled = true;
-    stage = null;
-    reconnecting = null;
-    reconnectAt = null;
-    prompts.clear();
-    _notify();
-  }
-
-  void answer(PromptView prompt, PromptAnswer answer) {
-    prompts.remove(prompt);
-    app.answer(promptId: prompt.id, answer: answer);
-    _notify();
-  }
+  @override
+  void stop() => session.close();
 
   /// The renderer for this pixel density, font, palette and contrast, made
   /// anew (and the screen asked for again) when any of them changes.
@@ -297,7 +179,7 @@ class TerminalController extends ChangeNotifier {
   /// Applies what changed since the last poll. Returns true if anything did.
   bool poll() {
     final renderer = _renderer;
-    if (renderer == null || _disposed) return false;
+    if (renderer == null || isDisposed) return false;
     final f = session.poll();
     if (f == null) return false;
     renderer.apply(decodeFrame(f.frame));
@@ -349,21 +231,15 @@ class TerminalController extends ChangeNotifier {
       SchedulerBinding.instance.addPostFrameCallback((_) => _notify());
     }
     _background?.cancel();
-    _background = visible || _disposed
+    _background = visible || isDisposed
         ? null
         : Timer.periodic(const Duration(milliseconds: 250), (_) => poll());
   }
 
-  bool get isDisposed => _disposed;
-
-  void _notify() {
-    if (!_disposed) notifyListeners();
-  }
+  void _notify() => notify();
 
   @override
   void dispose() {
-    _disposed = true;
-    _events?.cancel();
     _background?.cancel();
     session.close();
     session.dispose();

@@ -1,0 +1,24 @@
+# sshprobe sftp (russh-sftp 3.0.1, russh 0.64.1), macOS, 2026-10-15
+## Local, 1 GiB, ventana SSH de 2 MiB
+OpenSSH 8.9   por defecto (16 × 32 KiB)  ok  subida  157.2 MiB/s  bajada  362.6 MiB/s  (9 s; enlace → b.txt, home /home/demo)
+OpenSSH 8.9   64 en vuelo × 255 KiB      ok  subida  154.2 MiB/s  bajada  333.9 MiB/s  (10 s; enlace → b.txt, home /home/demo)
+OpenSSH 9.2   por defecto (16 × 32 KiB)  ok  subida  149.5 MiB/s  bajada  325.1 MiB/s  (10 s; enlace → b.txt, home /home/demo)
+OpenSSH 9.2   64 en vuelo × 255 KiB      ok  subida  136.6 MiB/s  bajada  324.7 MiB/s  (11 s; enlace → b.txt, home /home/demo)
+OpenSSH 10.0  por defecto (16 × 32 KiB)  ok  subida  143.0 MiB/s  bajada  329.5 MiB/s  (10 s; enlace → b.txt, home /home/demo)
+OpenSSH 10.0  64 en vuelo × 255 KiB      ok  subida  119.4 MiB/s  bajada  318.5 MiB/s  (12 s; enlace → b.txt, home /home/demo)
+Dropbear      por defecto (16 × 32 KiB)  ok  subida   57.9 MiB/s  bajada  188.8 MiB/s  (23 s; enlace → b.txt, home /home/demo)
+Dropbear      64 en vuelo × 255 KiB      ok  subida   50.2 MiB/s  bajada  157.7 MiB/s  (27 s; enlace → b.txt, home /home/demo)
+## 50 ms de ida y vuelta, 256 MiB, ventana SSH de 2 MiB
+OpenSSH 8.9   por defecto (16 × 32 KiB)  ok  subida    8.2 MiB/s  bajada   17.5 MiB/s  (48 s; enlace → b.txt, home /home/demo)
+OpenSSH 8.9   64 en vuelo × 255 KiB      ok  subida   32.6 MiB/s  bajada   16.8 MiB/s  (25 s; enlace → b.txt, home /home/demo)
+OpenSSH 9.2   por defecto (16 × 32 KiB)  ok  subida    8.1 MiB/s  bajada   17.5 MiB/s  (48 s; enlace → b.txt, home /home/demo)
+OpenSSH 9.2   64 en vuelo × 255 KiB      ok  subida   32.7 MiB/s  bajada   16.5 MiB/s  (25 s; enlace → b.txt, home /home/demo)
+OpenSSH 10.0  por defecto (16 × 32 KiB)  ok  subida    8.1 MiB/s  bajada   17.5 MiB/s  (48 s; enlace → b.txt, home /home/demo)
+OpenSSH 10.0  64 en vuelo × 255 KiB      ok  subida   32.3 MiB/s  bajada   16.7 MiB/s  (25 s; enlace → b.txt, home /home/demo)
+Dropbear      por defecto (16 × 32 KiB)  ok  subida    0.4 MiB/s  bajada   17.2 MiB/s  (625 s; enlace → b.txt, home /home/demo)
+Dropbear      64 en vuelo × 255 KiB      FALLA Timeout
+## 50 ms de ida y vuelta, 256 MiB, ventana SSH de 16 MiB
+OpenSSH 10.0  por defecto (16 × 32 KiB)  ok  subida    8.1 MiB/s  bajada   63.6 MiB/s
+OpenSSH 10.0  64 en vuelo × 255 KiB      ok  subida   32.4 MiB/s  bajada  122.7 MiB/s
+## Referencia: cliente sftp de OpenSSH 10.3 contra OpenSSH 10.0, local, 1 GiB
+subida 160.4 MiB/s, bajada 347.4 MiB/s

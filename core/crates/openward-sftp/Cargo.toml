@@ -1,0 +1,23 @@
+[package]
+name = "openward-sftp"
+description = "SFTP on russh-sftp: listings, file operations and a transfer queue that resumes (plan v0.2, B4)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+# Pinned exactly, like russh: its raw session is what the pipeline drives.
+russh-sftp = "=3.0.1"
+tokio = { version = "1", features = ["rt", "sync", "time", "fs", "io-util", "macros"] }
+thiserror = "2"
+
+[dev-dependencies]
+openward-ssh = { path = "../openward-ssh" }
+tempfile = "3"
+tokio = { version = "1", features = ["full"] }
+
+[lints]
+workspace = true

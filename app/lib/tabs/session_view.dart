@@ -761,6 +761,15 @@ class _StatusBar extends ConsumerWidget {
               onPressed: () => showHostKeyChanged(context, ref, s),
               child: Text(l.reviewKey),
             ),
+          if (k != null)
+            TextButton.icon(
+              key: const ValueKey('status.sftp'),
+              onPressed: () => ref
+                  .read(tabsProvider.notifier)
+                  .openSftp(hostId: s.hostId, target: s.target, label: s.label),
+              icon: const Icon(Icons.folder_outlined, size: 14),
+              label: Text('${l.openSftp} ${isApple ? '⌘⇧O' : 'Ctrl+Shift+O'}'),
+            ),
           if (s.phase == Phase.closed)
             TextButton.icon(
               onPressed: s.start,

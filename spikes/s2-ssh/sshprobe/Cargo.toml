@@ -15,3 +15,4 @@ openward-ssh = { path = "../../../core/crates/openward-ssh" }
 tokio = { version = "1", features = ["full"] }
 anyhow = "1"
 serde_json = "1"
+russh-sftp = "=3.0.1"

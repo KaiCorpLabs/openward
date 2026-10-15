@@ -2,4 +2,5 @@
 
 pub mod app;
 pub mod session;
+pub mod sftp;
 pub mod vault;

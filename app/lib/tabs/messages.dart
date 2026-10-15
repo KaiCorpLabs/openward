@@ -10,6 +10,7 @@ String stageText(AppLocalizations l, StageView s) {
     StageKind.connecting => l.stageConnecting(s.label, hop),
     StageKind.authenticating => l.stageAuthenticating(s.label, hop),
     StageKind.openingShell => l.stageOpeningShell(s.label),
+    StageKind.openingSftp => l.stageOpeningSftp(s.label),
   };
 }
 
@@ -26,6 +27,7 @@ String failureText(AppLocalizations l, FailureView f) {
           ? l.failureAuth(f.user, f.label)
           : l.failureAuthMethods(f.user, f.label, f.methods.join(', ')),
     FailureKind.cancelled => l.cancelled,
+    FailureKind.noSftp => l.failureNoSftp(f.label),
     FailureKind.network => '${f.label}: ${networkReason(l, f.reason)}',
     FailureKind.other || null => f.reason.isEmpty ? f.message : f.reason,
   };
@@ -48,13 +50,13 @@ String networkReason(AppLocalizations l, String reason) {
 }
 
 /// The hops before the target, for "via bastion".
-String? viaText(AppLocalizations l, TerminalController c) {
+String? viaText(AppLocalizations l, ConnectionController c) {
   if (c.route.length < 2) return null;
   return l.via(c.route.sublist(0, c.route.length - 1).join(' → '));
 }
 
 /// One line about the session when it is not simply connected.
-String statusText(AppLocalizations l, TerminalController c) {
+String statusText(AppLocalizations l, ConnectionController c) {
   final error = c.error;
   if (error != null) return l.statusError(error);
   switch (c.phase) {

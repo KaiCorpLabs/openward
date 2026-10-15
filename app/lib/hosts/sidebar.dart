@@ -276,6 +276,12 @@ class _SidebarState extends ConsumerState<Sidebar> {
         setState(() => _selected = h.id);
         _menu(d.globalPosition, [
           _item(l.connect, () => _connect(h)),
+          _item(
+            l.openSftp,
+            () => ref
+                .read(tabsProvider.notifier)
+                .openSftp(hostId: h.id, label: h.label),
+          ),
           _item(l.editEllipsis, () => _editHost(id: h.id)),
           _item(l.delete, () => _delete(h.id, h.label, group: false)),
         ]);

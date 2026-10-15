@@ -1,7 +1,9 @@
 # Dropbear test server for spike S2 (common on routers and embedded Linux).
 FROM docker.io/library/alpine:3.22
 
-RUN apk add --no-cache dropbear dropbear-ssh openssh-keygen busybox-extras \
+# openssh-sftp-server: Dropbear runs /usr/lib/ssh/sftp-server for SFTP; many
+# devices lack it, and then there is no SFTP at all.
+RUN apk add --no-cache dropbear dropbear-ssh openssh-keygen openssh-sftp-server busybox-extras \
  && adduser -D -s /bin/sh demo \
  && mkdir -p /etc/dropbear
 

@@ -8,6 +8,7 @@ import 'home/start_page.dart';
 import 'hosts/editors.dart';
 import 'hosts/sidebar.dart';
 import 'settings/settings_page.dart';
+import 'sftp/sftp_view.dart';
 import 'tabs/session_view.dart';
 import 'tabs/tab_strip.dart';
 import 'tabs/tabs.dart';
@@ -107,6 +108,8 @@ class _HomeState extends ConsumerState<Home> {
         ): tabs.toggleMaximize,
         const SingleActivator(LogicalKeyboardKey.keyB, meta: true, shift: true):
             tabs.toggleBroadcast,
+        const SingleActivator(LogicalKeyboardKey.keyO, meta: true, shift: true):
+            tabs.openSftpHere,
         for (final (key, d) in _arrows)
           SingleActivator(key, meta: true, alt: true): () => go(d),
         const SingleActivator(
@@ -148,6 +151,11 @@ class _HomeState extends ConsumerState<Home> {
           control: true,
           shift: true,
         ): closeCurrent,
+        const SingleActivator(
+          LogicalKeyboardKey.keyO,
+          control: true,
+          shift: true,
+        ): tabs.openSftpHere,
         const SingleActivator(
           LogicalKeyboardKey.keyK,
           control: true,
@@ -223,6 +231,10 @@ class _HomeState extends ConsumerState<Home> {
                       final SessionTab tab => TabView(
                         key: ObjectKey(tab),
                         tab: tab,
+                      ),
+                      final SftpTab tab => SftpView(
+                        key: ObjectKey(tab),
+                        controller: tab.controller,
                       ),
                       PageTab(page: PageKind.settings) => const SettingsPage(),
                       null => StartPage(searchFocus: _search),

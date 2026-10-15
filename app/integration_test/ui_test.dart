@@ -35,6 +35,8 @@ import 'package:openward/terminal/controller.dart';
 import 'package:openward/terminal/keys.dart';
 import 'package:openward/terminal/renderer.dart';
 import 'package:openward/settings/settings_page.dart';
+import 'package:openward/sftp/sftp_controller.dart';
+import 'package:openward/sftp/transfers.dart';
 import 'package:openward/ui/tokens.dart';
 
 final _shots = Directory('${Directory.systemTemp.path}/openward-shots');
@@ -1009,4 +1011,177 @@ Host db
     container.read(tabsProvider.notifier).close(0);
     await _settle(tester);
   });
+  testWidgets(
+    'sftp: from the terminal, folders, copies both ways, conflicts, permissions',
+    (tester) async {
+      final fixtures = await _servers();
+      if (fixtures == null) return markTestSkipped('S2 servers not running');
+      await app.createHost(
+        spec: HostSpec(
+          label: 'bastion',
+          address: '127.0.0.1',
+          settings: SettingsSpec(
+            user: 'demo',
+            port: 22100,
+            identityFiles: ['$fixtures/id_ed25519'],
+            agent: AgentKind.off,
+            hostKeyPolicy: KeyPolicy.acceptNew,
+          ),
+        ),
+      );
+      final work = Directory('${dir.path}/work')..createSync();
+      File('${work.path}/hola.txt').writeAsStringSync('hola desde la ui\n');
+      File('${work.path}/otro.txt').writeAsStringSync('otro\n');
+      final container = await launch(tester);
+      await _doubleTap(tester, 'bastion');
+      final term = container.read(tabsProvider).currentSession!;
+      await _until(tester, () => term.phase == Phase.connected, 'the shell');
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // From the terminal's status bar, over the same connection.
+      await tester.tap(find.byKey(const ValueKey('status.sftp')));
+      await tester.pump();
+      final tab = container.read(tabsProvider).current! as SftpTab;
+      final c = tab.controller;
+      expect(find.text('SFTP · bastion'), findsOneWidget);
+      await _until(tester, () => c.remote.path == '/home/demo', 'home');
+      await c.local.open(work.path);
+      await tester.pump(const Duration(milliseconds: 100));
+      List<String> names(FilePane p) => [for (final e in p.entries) e.name];
+
+      // A folder of its own on the server, opened with a double click.
+      final folder = 'ow-ui-$pid';
+      await tester.tap(find.byKey(const ValueKey('remote.newFolder')));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.enterText(find.byKey(const ValueKey('name.field')), folder);
+      await tester.pump();
+      await tester.tap(find.text('Crear'));
+      await _until(
+        tester,
+        () => names(c.remote).contains(folder),
+        'the folder',
+      );
+      final row = find.byKey(ValueKey('remote.row.$folder'));
+      await tester.tap(row);
+      await tester.pump(const Duration(milliseconds: 60));
+      await tester.tap(row);
+      await _until(
+        tester,
+        () => c.remote.path == '/home/demo/$folder',
+        'inside the folder',
+      );
+
+      // Up with the button.
+      await tester.tap(find.byKey(const ValueKey('local.row.hola.txt')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('local.copy')));
+      await _until(
+        tester,
+        () => names(c.remote).contains('hola.txt'),
+        'upload',
+      );
+      // And by dragging it across.
+      final from = tester.getCenter(
+        find.byKey(const ValueKey('local.row.otro.txt')),
+      );
+      final to = tester.getCenter(find.byKey(const ValueKey('remote.filter')));
+      final gesture = await tester.startGesture(from);
+      for (var i = 1; i <= 10; i++) {
+        await gesture.moveTo(
+          Offset.lerp(from, to + const Offset(0, 120), i / 10)!,
+        );
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await gesture.up();
+      await _until(
+        tester,
+        () => names(c.remote).contains('otro.txt'),
+        'the drag',
+      );
+      await _shot(tester, '19-sftp');
+
+      // Again: it exists. Both kept.
+      await tester.tap(find.byKey(const ValueKey('local.row.hola.txt')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('local.copy')));
+      await _until(
+        tester,
+        () => find.text('Ya existe en bastion').evaluate().isNotEmpty,
+        'the question',
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      await _shot(tester, '20-sftp-conflict');
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Mantener los dos'));
+      await tester.pump();
+      await tester.tap(find.text('Seguir'));
+      await _until(
+        tester,
+        () => names(c.remote).contains('hola (1).txt'),
+        'the copy kept apart',
+      );
+
+      // Permissions with ⌘I, in octal.
+      await tester.tap(find.byKey(const ValueKey('remote.row.hola.txt')));
+      await tester.pump();
+      await _shortcut(tester, LogicalKeyboardKey.keyI);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Permisos de hola.txt'), findsOneWidget);
+      await tester.enterText(find.byKey(const ValueKey('perm.octal')), '600');
+      // The boxes follow the number: one frame starts their animation,
+      // the next one shows it done.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await _shot(tester, '21-sftp-permissions');
+      await tester.tap(find.text('Aplicar'));
+      await _until(
+        tester,
+        () =>
+            c.remote.entries.firstWhere((e) => e.name == 'hola.txt').mode ==
+            0x180,
+        'the new mode',
+      );
+
+      // Down with the button: it lands in the local folder on view.
+      await tester.tap(find.byKey(const ValueKey('remote.row.hola (1).txt')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('remote.copy')));
+      await _until(
+        tester,
+        () => names(c.local).contains('hola (1).txt'),
+        'the download',
+      );
+      expect(
+        File('${work.path}/hola (1).txt').readAsStringSync(),
+        'hola desde la ui\n',
+      );
+
+      // The folder goes, after asking.
+      await _shortcut(tester, LogicalKeyboardKey.arrowUp);
+      await _until(tester, () => c.remote.path == '/home/demo', 'back home');
+      await tester.tap(find.byKey(ValueKey('remote.row.$folder')));
+      await tester.pump();
+      await _shortcut(tester, LogicalKeyboardKey.backspace);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('¿Eliminar $folder?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Eliminar'));
+      await _until(
+        tester,
+        () => !names(c.remote).contains(folder),
+        'the folder gone',
+      );
+
+      // The queue, opened and cleared.
+      await tester.tap(find.byKey(const ValueKey('queue.open')));
+      await tester.pump();
+      expect(find.text('Todo terminado'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('queue.clear')));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(container.read(transferQueueProvider).jobs, isEmpty);
+
+      container.read(tabsProvider.notifier)
+        ..close(1)
+        ..close(0);
+      await _settle(tester);
+    },
+  );
 }

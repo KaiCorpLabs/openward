@@ -21,6 +21,7 @@
   "alreadyImported": "ya importado",
   "appearanceStepBody": "Puedes cambiarlo cuando quieras en Ajustes.",
   "appearanceStepTitle": "¿Cómo la quieres ver?",
+  "apply": "Aplicar",
   "asSystem": "Como el sistema",
   "back": "Atrás",
   "bellFlash": "Destello con la campana",
@@ -79,6 +80,14 @@
     }
   },
   "cancel": "Cancelar",
+  "cancelThese": "{count, plural, =1{No copiar este} other{No copiar estos {count}}}",
+  "@cancelThese": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "cancelled": "Cancelado.",
   "cannotConnect": "No se ha podido conectar con {label}",
   "@cannotConnect": {
@@ -91,13 +100,77 @@
   "change": "Cambiar",
   "changedMeanwhile": "Otro cambio ha llegado antes: cierra y vuelve a abrir el editor.",
   "checkedFingerprint": "He comprobado la huella nueva",
+  "choiceKeepBoth": "Mantener los dos",
+  "choiceNewer": "Solo si el mío es más nuevo",
+  "choiceReplace": "Reemplazar",
+  "choiceSkip": "Saltar",
   "cipher": "Cifrado",
   "clear": "Quitar",
+  "clearFinished": "Quitar las terminadas",
   "clearSelection": "Quitar la selección",
   "close": "Cerrar",
   "closePane": "Cerrar el panel",
   "closeTab": "Cerrar la pestaña",
   "closeTheTab": "Cerrar la pestaña",
+  "colModified": "Modificado",
+  "colName": "Nombre",
+  "colPermissions": "Permisos",
+  "colSize": "Tamaño",
+  "conflictChoose": ". Elige qué hacer con cada uno:",
+  "conflictFile": "Fichero",
+  "conflictFolder": "carpeta",
+  "conflictIn": "En ",
+  "conflictMerge": "las dos carpetas se juntan",
+  "conflictRest": "{count, plural, =1{. El otro se copia ya. Elige qué hacer con cada uno:} other{. Los otros {count} se copian ya. Elige qué hacer con cada uno:}}",
+  "@conflictRest": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conflictSame": "igual tamaño y fecha",
+  "conflictTheirs": "En {where}",
+  "@conflictTheirs": {
+    "placeholders": {
+      "where": {
+        "type": "String"
+      }
+    }
+  },
+  "conflictTheirsNewer": "el de {where} es más nuevo",
+  "@conflictTheirsNewer": {
+    "placeholders": {
+      "where": {
+        "type": "String"
+      }
+    }
+  },
+  "conflictTitle": "{count, plural, =1{1 de los {total} ya existe en {where}} other{{count} de los {total} ya existen en {where}}}",
+  "@conflictTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "where": {
+        "type": "String"
+      }
+    }
+  },
+  "conflictTitleOne": "Ya existe en {where}",
+  "@conflictTitleOne": {
+    "placeholders": {
+      "where": {
+        "type": "String"
+      }
+    }
+  },
+  "conflictWhat": "Qué hacer",
+  "conflictYours": "El tuyo",
+  "conflictYoursNewer": "el tuyo es más nuevo",
   "connect": "Conectar",
   "connectingEllipsis": "Conectando…",
   "connectingTo": "Conectando con {label}",
@@ -121,6 +194,7 @@
       }
     }
   },
+  "continueAction": "Seguir",
   "continueLabel": "Continuar",
   "contrastFails": "Contraste del texto {ratio}:1. No llega a AA (4,5:1).",
   "@contrastFails": {
@@ -148,6 +222,8 @@
   },
   "copy": "Copiar",
   "copyFingerprint": "Copiar la huella",
+  "copyPath": "Copiar la ruta",
+  "create": "Crear",
   "ctrlShiftPrefix": "Ctrl+Mayús+",
   "cursor": "Cursor",
   "cursorBar": "Barra",
@@ -166,6 +242,7 @@
   "customizeHint": "Cambia una capa y el resto se queda igual. Los cambios son solo de este tema.",
   "defaultKeys": "~/.ssh/id_ed25519, id_ecdsa, id_rsa (las habituales)",
   "delete": "Eliminar",
+  "deleteEllipsis": "Eliminar…",
   "deleteFailed": "No se ha podido eliminar: {error}",
   "@deleteFailed": {
     "placeholders": {
@@ -193,13 +270,52 @@
       }
     }
   },
+  "deleteLocalBody": "Se eliminan de este equipo sin pasar por la papelera: no se puede deshacer.",
+  "deleteMany": "¿Eliminar {count} elementos?",
+  "@deleteMany": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteOne": "¿Eliminar {name}?",
+  "@deleteOne": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteRemoteBody": "Se eliminan en {host}. En el servidor no hay papelera: no se puede deshacer.",
+  "@deleteRemoteBody": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "deletedHost": "(host eliminado)",
   "destination": "Destino",
   "dontTrust": "No confiar",
+  "download": "Descarga",
+  "downloadArrow": "← Descargar",
+  "downloadTo": "Descargar a {path}",
+  "@downloadTo": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "dropAskFirst": "Si alguno ya existe, te preguntamos antes de tocarlo.",
+  "dropToDownload": "Suelta para descargar aquí",
+  "dropToUpload": "Suelta para subir aquí",
   "editEllipsis": "Editar…",
   "editGroup": "Editar grupo…",
   "editGroupTitle": "Editar grupo",
   "editHostTitle": "Editar host",
+  "emptyFolder": "Esta carpeta está vacía",
   "failureAuth": "{user}@{label} no ha podido autenticarse.",
   "@failureAuth": {
     "placeholders": {
@@ -255,6 +371,48 @@
       }
     }
   },
+  "failureNoSftp": "{label} no tiene SFTP: al servidor le falta sftp-server.",
+  "@failureNoSftp": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "fileChanged": "{path} cambió mientras se copiaba.",
+  "@fileChanged": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "fileDenied": "Sin permiso: {path}",
+  "@fileDenied": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "fileExists": "Ya existe: {path}",
+  "@fileExists": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "fileLost": "Se perdió la conexión.",
+  "fileNotFound": "No existe: {path}",
+  "@fileNotFound": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "filterFolder": "Filtrar en esta carpeta",
   "findClose": "Cerrar la búsqueda (Esc)",
   "findCount": "{selected} de {total}",
   "@findCount": {
@@ -293,6 +451,7 @@
   "fontOtherTitle": "Otra fuente instalada",
   "fontSize": "Tamaño de letra",
   "fontSystem": "La del sistema",
+  "forAll": "A todos:",
   "fromDefault": "Valor por defecto",
   "fromGroup": "Del grupo {name}",
   "@fromGroup": {
@@ -307,6 +466,8 @@
   "groupInsideItself": "Un grupo no puede estar dentro de sí mismo.",
   "groupNeedsName": "El grupo necesita un nombre.",
   "groupSettingsSection": "Ajustes para todo lo que contiene",
+  "hideHiddenFiles": "No mostrar los ocultos",
+  "hideQueue": "Ocultar",
   "hostInUse": "Otros hosts saltan por «{name}»: cámbialos antes de eliminarlo.",
   "@hostInUse": {
     "placeholders": {
@@ -380,6 +541,83 @@
   "inLight": "En claro",
   "inputNotSent": "Lo que escribas ahora no se envía.",
   "inside": "Dentro de",
+  "itemCount": "{count, plural, =1{1 elemento} other{{count} elementos}}",
+  "@itemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "jobCancelled": "Cancelada",
+  "jobCounting": "Contando…",
+  "jobDone": "Hecho · {size}",
+  "@jobDone": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "jobFailed": "Ha fallado",
+  "jobFolder": "{count, plural, =1{carpeta, 1 fichero} other{carpeta, {count} ficheros}}",
+  "@jobFolder": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "jobLost": "Se cortó la conexión con {done} de {total} copiados",
+  "@jobLost": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "jobPaused": "En pausa · {done} de {total}",
+  "@jobPaused": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "jobProgress": "{done} de {total}",
+  "@jobProgress": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "jobQueued": "En cola · {size}",
+  "@jobQueued": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "jobQueuedNoSize": "En cola",
+  "jobSkipped": "{count, plural, =1{1 ya estaba} other{{count} ya estaban}}",
+  "@jobSkipped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "jumpThrough": "Saltar por, en orden",
   "jumpVia": "Saltando por {hosts}",
   "@jumpVia": {
@@ -471,10 +709,12 @@
   "moreActions": "Más acciones",
   "moreOptions": "Más opciones",
   "name": "Nombre",
+  "nameNoSlash": "Un nombre no puede llevar «/».",
   "netLost": "se ha perdido la conexión.",
   "netNotFound": "no se encuentra el host.",
   "netRefused": "conexión rechazada.",
   "netTimeout": "tiempo de espera agotado.",
+  "newFolder": "Nueva carpeta",
   "newGroup": "Nuevo grupo",
   "newGroupTitle": "Nuevo grupo",
   "newHost": "Nuevo host",
@@ -489,6 +729,14 @@
   "noHostsBody": "Añade uno o tráelos de tu ~/\u2060.ssh/\u2060config.",
   "noHostsTitle": "Aún no tienes hosts",
   "noJumpsYet": "Ninguno todavía.",
+  "noMatches": "Nada coincide con «{filter}»",
+  "@noMatches": {
+    "placeholders": {
+      "filter": {
+        "type": "String"
+      }
+    }
+  },
   "noParent": "Ningún grupo",
   "noPostQuantumNote": "El servidor no ofrece un intercambio poscuántico (mlkem768x25519; OpenSSH lo trae desde la 10.0).",
   "noResults": "Ningún host coincide.",
@@ -496,6 +744,7 @@
   "notes": "Notas",
   "ok": "Aceptar",
   "openLocal": "Abrir un terminal local",
+  "openSftp": "Abrir SFTP",
   "openSshStillWarns": "OpenWard no modifica ~/.ssh/known_hosts: ssh seguirá avisando hasta que quites la clave vieja de allí ({command}).",
   "@openSshStillWarns": {
     "placeholders": {
@@ -509,6 +758,7 @@
   "orAnAddress": "o una dirección: usuario@host:puerto",
   "paneOptions": "Opciones del panel",
   "paneWhat": "¿Qué abres en este panel?",
+  "partNote": "Se copia con un nombre temporal (.part) y se renombra al terminar: si se corta, el fichero bueno no queda a medias y la copia se puede reanudar.",
   "passphraseField": "Frase",
   "passphraseTitle": "Frase de la clave",
   "passwordTitle": "Contraseña",
@@ -531,11 +781,49 @@
       }
     }
   },
+  "pause": "Pausar",
+  "pauseAll": "Pausar todo",
   "percent": "{number} %",
   "@percent": {
     "placeholders": {
       "number": {
         "type": "int"
+      }
+    }
+  },
+  "permApplied": "{count, plural, =1{Permisos cambiados en 1 elemento} other{Permisos cambiados en {count} elementos}}",
+  "@permApplied": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "permBefore": "Antes: {mode}",
+  "@permBefore": {
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "permEnter": "Entrar",
+  "permExecute": "Ejecutar",
+  "permGroup": "Grupo",
+  "permOctal": "En octal",
+  "permOthers": "Otros",
+  "permOwner": "Propietario",
+  "permOwnerNote": "El propietario y el grupo no se cambian desde aquí.",
+  "permRead": "Leer",
+  "permRecursive": "Aplicar también a lo que hay dentro",
+  "permRecursiveNote": "A los ficheros solo se les deja «Ejecutar» si ya lo tenían.",
+  "permWrite": "Escribir",
+  "permissionsEllipsis": "Permisos…",
+  "permissionsOf": "Permisos de {name}",
+  "@permissionsOf": {
+    "placeholders": {
+      "name": {
+        "type": "String"
       }
     }
   },
@@ -563,6 +851,39 @@
   },
   "preview": "Vista previa",
   "previewLive": "Los cambios se ven al momento en toda la ventana.",
+  "queueAllDone": "Todo terminado",
+  "queueFailed": "{count} con error",
+  "@queueFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "queuePaused": "{count} en pausa",
+  "@queuePaused": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "queueQueued": "{count} en cola",
+  "@queueQueued": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "queueRunning": "{count} en curso",
+  "@queueRunning": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "quickConnectHint": "usuario@servidor:puerto",
   "quickConnectInvalid": "Escribe una dirección como usuario@servidor:puerto.",
   "readyBody": "Estos atajos te llevan a casi todo:",
@@ -579,6 +900,8 @@
     }
   },
   "reduceMotion": "Reducir movimiento",
+  "reload": "Recargar",
+  "remove": "Quitar",
   "removeTag": "Quitar {tag}",
   "@removeTag": {
     "placeholders": {
@@ -590,6 +913,14 @@
   "rename": "Renombrar",
   "renameTabHelp": "Vacío para volver al nombre del host",
   "renameTabTitle": "Renombrar pestaña",
+  "renameTitle": "Renombrar {name}",
+  "@renameTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "reportCreated": "{count, plural, =1{1 host nuevo} other{{count} hosts nuevos}}",
   "@reportCreated": {
     "placeholders": {
@@ -611,6 +942,7 @@
   "resetTheme": "Restablecer",
   "restart": "Reiniciar",
   "restorePanes": "Volver a los paneles",
+  "resume": "Reanudar",
   "retryIn": "Reintento {attempt} de {max} en {secs} s.",
   "@retryIn": {
     "placeholders": {
@@ -671,6 +1003,25 @@
   "sectionGeneral": "General",
   "selectAll": "Todos",
   "selectAllText": "Seleccionar todo",
+  "selectedCount": "{count, plural, =1{1 seleccionado ({size})} other{{count} seleccionados ({size})}}",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedCountOnly": "{count, plural, =1{1 seleccionado} other{{count} seleccionados}}",
+  "@selectedCountOnly": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "selectedOf": "{selected} de {total}",
   "@selectedOf": {
     "placeholders": {
@@ -703,11 +1054,31 @@
   "settingsAppearance": "Apariencia",
   "settingsGeneral": "General",
   "settingsTerminal": "Terminal",
+  "sftpConnected": "SFTP en {label}",
+  "@sftpConnected": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "sftpKeysApple": "Intro abre · ⌘↑ sube · Tab cambia de lado · F2 renombra · ⌘⌫ elimina",
+  "sftpKeysOther": "Intro abre · Retroceso sube · Tab cambia de lado · F2 renombra · Supr elimina",
+  "sftpTabTitle": "SFTP · {label}",
+  "@sftpTabTitle": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
   "shape": "Forma",
   "shortcutLocal": "Abre un terminal local",
   "shortcutNewHost": "Guarda un host nuevo",
   "shortcutSearch": "Busca entre tus hosts",
   "shortcutSettings": "Abre los ajustes",
+  "showHiddenFiles": "Mostrar los ocultos",
+  "showQueue": "Ver la cola",
   "showRest": "{count, plural, =1{Ver el que falta} other{Ver los {count} restantes}}",
   "@showRest": {
     "placeholders": {
@@ -741,6 +1112,14 @@
       }
     }
   },
+  "stageOpeningSftp": "Abriendo SFTP en {label}…",
+  "@stageOpeningSftp": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
   "stageOpeningShell": "Abriendo el shell en {label}…",
   "@stageOpeningShell": {
     "placeholders": {
@@ -768,6 +1147,7 @@
   "stepAuthenticating": "autenticando…",
   "stepConnecting": "conectando…",
   "stepImport": "Importar",
+  "stepOpeningSftp": "abriendo SFTP…",
   "stepOpeningShell": "abriendo el shell…",
   "stepReady": "Listo",
   "tags": "Etiquetas",
@@ -804,6 +1184,23 @@
   },
   "thisComputer": "Este equipo",
   "time": "Tiempo",
+  "timeLeft": "quedan {time}",
+  "@timeLeft": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "todayAt": "hoy {time}",
+  "@todayAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "transfers": "Transferencias",
   "trust": "Confianza",
   "trustAndConnect": "Confiar y conectar",
   "trustCertified": "certificada por la CA {ca}",
@@ -821,6 +1218,24 @@
   "tryAgain": "Reintentar",
   "uiColors": "Colores de la interfaz",
   "uiFont": "Fuente de la interfaz",
+  "upOneLevel": "Subir un nivel",
+  "upload": "Subida",
+  "uploadToArrow": "Subir a {where} →",
+  "@uploadToArrow": {
+    "placeholders": {
+      "where": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadToHost": "Subir a {host}",
+  "@uploadToHost": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "user": "Usuario",
   "variantDark": "oscuro",
   "variantDarkOnly": "Oscuro",
@@ -913,5 +1328,13 @@
   "wrongAnswer": "Respuesta incorrecta.",
   "wrongPassphrase": "Frase incorrecta.",
   "wrongPassword": "Contraseña incorrecta.",
-  "yes": "Sí"
+  "yes": "Sí",
+  "yesterdayAt": "ayer {time}",
+  "@yesterdayAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }

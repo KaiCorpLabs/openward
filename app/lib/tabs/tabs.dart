@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/address.dart';
 import '../core/providers.dart';
 import '../core/settings.dart';
+import '../sftp/sftp_controller.dart';
+import '../sftp/transfers.dart';
 import '../src/rust/api/vault.dart';
 import '../terminal/controller.dart';
 import 'panes.dart';
@@ -25,6 +27,13 @@ final class SessionTab extends OpenTab {
 
   /// The active pane's session; null while that pane asks what to open.
   TerminalController? get controller => panes.active.controller;
+}
+
+/// An SFTP browser for a host.
+final class SftpTab extends OpenTab {
+  SftpTab(this.controller);
+
+  final SftpController controller;
 }
 
 enum PageKind { settings }
@@ -61,7 +70,7 @@ class TabsState {
 class TabsNotifier extends Notifier<TabsState> {
   /// Every live controller, to dispose with the notifier (`state` cannot be
   /// read while disposing).
-  final Set<TerminalController> _live = {};
+  final Set<ConnectionController> _live = {};
 
   @override
   TabsState build() {
@@ -131,7 +140,7 @@ class TabsNotifier extends Notifier<TabsState> {
     select((state.active + step) % n);
   }
 
-  void _dispose(TerminalController c) {
+  void _dispose(ConnectionController c) {
     _live.remove(c);
     // After the frame that unmounts its pane, which may still poll it.
     SchedulerBinding.instance.addPostFrameCallback((_) => c.dispose());
@@ -142,8 +151,12 @@ class TabsNotifier extends Notifier<TabsState> {
     if (index < 0 || index >= state.tabs.length) return;
     final tabs = [...state.tabs];
     final closed = tabs.removeAt(index);
-    if (closed case SessionTab(:final panes)) {
-      panes.controllers.forEach(_dispose);
+    switch (closed) {
+      case SessionTab(:final panes):
+        panes.controllers.forEach(_dispose);
+      case SftpTab(:final controller):
+        _dispose(controller);
+      case PageTab():
     }
     var active = state.active;
     if (index < active || active >= tabs.length) active--;
@@ -169,6 +182,46 @@ class TabsNotifier extends Notifier<TabsState> {
     if (c != null) _dispose(c);
     _refresh();
     focusActive(tab);
+  }
+
+  /// Closes the tab or pane of a terminal or a browser.
+  void closeConnection(ConnectionController c) {
+    if (c is TerminalController) return closeSession(c);
+    final at = state.tabs.indexWhere(
+      (t) => t is SftpTab && identical(t.controller, c),
+    );
+    if (at >= 0) close(at);
+  }
+
+  /// An SFTP tab for a saved host or an address; the one open for it, if
+  /// there is one, comes to the front.
+  void openSftp({String? hostId, QuickTarget? target, required String label}) {
+    assert(hostId != null || target != null);
+    final at = state.tabs.indexWhere(
+      (t) =>
+          t is SftpTab &&
+          t.controller.hostId == hostId &&
+          t.controller.target?.label == target?.label,
+    );
+    if (at >= 0) return select(at);
+    final c = SftpController(
+      app: ref.read(openWardProvider),
+      label: label,
+      hostId: hostId,
+      target: target,
+      queue: ref.read(transferQueueProvider),
+    );
+    _live.add(c);
+    c.start();
+    final tabs = [...state.tabs, SftpTab(c)];
+    state = TabsState(tabs, tabs.length - 1);
+  }
+
+  /// The SFTP tab for the host of the front tab's session.
+  void openSftpHere() {
+    final c = state.currentSession;
+    if (c == null || c.isLocal) return;
+    openSftp(hostId: c.hostId, target: c.target, label: c.label);
   }
 
   /// Closes the pane (or tab) a session is in.

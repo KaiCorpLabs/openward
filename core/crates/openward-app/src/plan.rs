@@ -61,6 +61,20 @@ pub enum PlanError {
 }
 
 impl Plan {
+    /// Who connects where, and through what. Plans with the same key can
+    /// share one connection: a terminal and the SFTP browser of a host.
+    pub fn key(&self) -> String {
+        let hops: Vec<String> = self
+            .hops
+            .iter()
+            .map(|h| format!("{}@{}:{}", h.user, h.address, h.port))
+            .collect();
+        match self.hops.first().and_then(|h| h.proxy_command.as_deref()) {
+            Some(command) => format!("{} via {command}", hops.join(" > ")),
+            None => hops.join(" > "),
+        }
+    }
+
     /// To an address that is not saved: one hop, with the default settings
     /// and the user and port given.
     pub fn for_address(

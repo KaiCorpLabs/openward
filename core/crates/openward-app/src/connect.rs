@@ -31,6 +31,7 @@ use crate::events::{
     Answer, ChangedKey, Event, EventSink, Failure, KeySource, PreviousKey, Prompt, Prompts,
     Question, Stage,
 };
+use crate::live::Registry;
 use crate::local::Local;
 use crate::plan::{Hop, Plan};
 
@@ -41,6 +42,9 @@ pub(crate) struct Ctx {
     pub local: Local,
     pub prompts: Arc<Prompts>,
     pub sink: Arc<dyn EventSink>,
+    /// Connections that are up, to share.
+    pub live: Arc<Registry>,
+    pub runtime: tokio::runtime::Handle,
 }
 
 impl Ctx {
@@ -48,7 +52,7 @@ impl Ctx {
         self.prompts.ask(&self.sink, prompt).await
     }
 
-    fn stage(&self, plan: &Plan, hop: usize, stage: Stage) {
+    pub fn stage(&self, plan: &Plan, hop: usize, stage: Stage) {
         self.sink.send(Event::Stage {
             hop,
             hops: plan.hops.len(),

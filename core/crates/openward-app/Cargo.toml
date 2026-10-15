@@ -12,6 +12,7 @@ publish.workspace = true
 openward-ghostty = { path = "../openward-ghostty" }
 openward-import = { path = "../openward-import" }
 openward-pty = { path = "../openward-pty" }
+openward-sftp = { path = "../openward-sftp" }
 openward-ssh = { path = "../openward-ssh" }
 openward-term = { path = "../openward-term" }
 openward-vault = { path = "../openward-vault" }

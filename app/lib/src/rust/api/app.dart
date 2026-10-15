@@ -8,6 +8,7 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'session.dart';
+import 'sftp.dart';
 import 'vault.dart';
 
 // These functions are ignored because they are not marked as `pub`: `apply_group`, `apply_host`, `host_spec`, `warning`
@@ -16,6 +17,11 @@ import 'vault.dart';
 abstract class OpenWard implements RustOpaqueInterface {
   /// Answers a prompt; false if nothing waits for it any more.
   bool answer({required BigInt promptId, required PromptAnswer answer});
+
+  /// Stops it for good, deleting the file it was writing.
+  void cancelTransfer({required BigInt id});
+
+  void clearFinishedTransfers();
 
   /// Connects `session` to a saved host; again on the same session, it
   /// reconnects and keeps the screen. In Dart this returns the stream of
@@ -29,6 +35,22 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// default settings.
   Stream<SessionEvent> connectAddress({
     required TerminalSession session,
+    required String address,
+    String? user,
+    int? port,
+  });
+
+  /// Connects a browser to a saved host, over a terminal's connection to
+  /// it when one is up. The stream is the connection's events, as for
+  /// terminals; `connected` means it can browse.
+  Stream<SessionEvent> connectSftp({
+    required SftpBrowser browser,
+    required String hostId,
+  });
+
+  /// As [`OpenWard::connect_sftp`], to an address that is not saved.
+  Stream<SessionEvent> connectSftpAddress({
+    required SftpBrowser browser,
     required String address,
     String? user,
     int? port,
@@ -71,6 +93,10 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// returns the stream of its events (the end, with its exit code).
   Stream<SessionEvent> openLocal({required TerminalSession session});
 
+  void pauseTransfer({required BigInt id});
+
+  void pauseTransfers();
+
   /// What importing `~/.ssh/config` (or `file`) would bring, in the
   /// file's order. An empty list: no file, or no hosts in it.
   Future<List<ImportPreview>> previewSshConfig({String? file});
@@ -78,8 +104,16 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// Tries after losing a connection, before giving up.
   int reconnectAttempts();
 
+  /// Takes it off the list (cancelling it if it was not finished).
+  void removeTransfer({required BigInt id});
+
+  void resumeTransfer({required BigInt id});
+
   /// Ids of the hosts matching every word, sorted by label.
   List<String> search({required String query});
+
+  /// A new SFTP browser, not connected yet.
+  SftpBrowser sftp();
 
   List<TagCount> tags();
 
@@ -91,6 +125,19 @@ abstract class OpenWard implements RustOpaqueInterface {
     required int rows,
     required int scrollback,
   });
+
+  /// Queues a copy of a file or folder over `browser`'s connection;
+  /// returns its id. It goes on if the browser closes.
+  BigInt transfer({
+    required SftpBrowser browser,
+    required TransferDirection direction,
+    required String source,
+    required String destDir,
+    required ConflictChoice onConflict,
+  });
+
+  /// Every transfer, oldest first, with its progress now.
+  List<TransferView> transfers();
 
   /// Trusts a key the user checked, replacing the old one of its type
   /// (after a changed host key).

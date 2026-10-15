@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../hosts/sidebar.dart' show tabStatus;
 import '../l10n/l10n.dart';
+import '../sftp/queue_view.dart';
+import '../terminal/controller.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../window/chrome.dart';
@@ -88,6 +90,7 @@ class TabStrip extends ConsumerWidget {
             ),
           ),
           const Expanded(child: WindowDragArea()),
+          const TransferIndicator(),
         ],
       ),
     );
@@ -174,6 +177,28 @@ class _Tab extends StatelessWidget {
             waiting: all.any((s) => s.prompts.isNotEmpty),
             bell: all.any((s) => s.bellUnseen),
             onRename: onRename,
+          );
+        },
+      ),
+      SftpTab(:final controller) => ListenableBuilder(
+        listenable: controller,
+        builder: (context, _) {
+          final c = context.ow.colors;
+          return _frame(
+            context,
+            leading: Icon(
+              Icons.folder_outlined,
+              size: 14,
+              color: active && context.ow.shape.tabs == TabStyle.block
+                  ? c.onPrimary
+                  : switch (controller.phase) {
+                      Phase.connected => c.accent,
+                      Phase.closed => c.danger,
+                      _ => c.textMuted,
+                    },
+            ),
+            title: context.l10n.sftpTabTitle(controller.label),
+            waiting: controller.prompts.isNotEmpty,
           );
         },
       ),

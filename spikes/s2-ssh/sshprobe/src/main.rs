@@ -3,6 +3,7 @@
 
 mod bench;
 mod matrix;
+mod sftp;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -13,6 +14,9 @@ sshprobe — russh against real SSH servers (spike S2)
 USAGE:
   sshprobe matrix [--json] [--only NAME] [--fixtures DIR]
   sshprobe bench [--json] [--port P] [--fixtures DIR]   (default port 22100)
+  sshprobe sftp [--json] [--mib N] [--rtt MS] [--only NAME] [--fixtures DIR]
+              (russh-sftp: N MiB up and down, 1024 by default; --rtt
+              goes through a relay that adds that round-trip time)
 
   --fixtures  test material from servers/up.sh (default: $S2_FIXTURES, or
               the user cache: ~/Library/Caches/openward/s2-fixtures)
@@ -39,6 +43,8 @@ async fn main() -> ExitCode {
     let mut json = false;
     let mut only = None;
     let mut port = 22100u16;
+    let mut mib = 1024u64;
+    let mut rtt = None;
     let mut fixtures = default_fixtures();
     let mut it = args.iter().skip(1);
     while let Some(a) = it.next() {
@@ -46,6 +52,13 @@ async fn main() -> ExitCode {
             "--json" => json = true,
             "--only" => only = it.next().cloned(),
             "--port" => port = it.next().and_then(|p| p.parse().ok()).unwrap_or(port),
+            "--mib" => mib = it.next().and_then(|n| n.parse().ok()).unwrap_or(mib),
+            "--rtt" => {
+                rtt = it
+                    .next()
+                    .and_then(|ms| ms.parse().ok())
+                    .map(std::time::Duration::from_millis)
+            }
             "--fixtures" => fixtures = it.next().map(PathBuf::from).unwrap_or(fixtures),
             other => {
                 eprintln!("unknown option {other}\n\n{USAGE}");
@@ -60,6 +73,10 @@ async fn main() -> ExitCode {
         },
         Some("bench") => match matrix::Fixtures::new(fixtures) {
             Ok(fx) => bench::run(&fx, port, json).await,
+            Err(e) => Err(e),
+        },
+        Some("sftp") => match matrix::Fixtures::new(fixtures) {
+            Ok(fx) => sftp::run(&fx, json, sftp::Plan::mib(mib), rtt, only.as_deref()).await,
             Err(e) => Err(e),
         },
         _ => {

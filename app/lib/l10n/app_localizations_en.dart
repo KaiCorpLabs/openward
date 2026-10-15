@@ -54,6 +54,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appearanceStepTitle => 'How do you want it to look?';
 
   @override
+  String get apply => 'Apply';
+
+  @override
   String get asSystem => 'As the system';
 
   @override
@@ -128,6 +131,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cancel => 'Cancel';
 
   @override
+  String cancelThese(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Don\'t copy these $count',
+      one: 'Don\'t copy this one',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get cancelled => 'Cancelled.';
 
   @override
@@ -146,10 +160,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get checkedFingerprint => 'I have checked the new fingerprint';
 
   @override
+  String get choiceKeepBoth => 'Keep both';
+
+  @override
+  String get choiceNewer => 'Only if mine is newer';
+
+  @override
+  String get choiceReplace => 'Replace';
+
+  @override
+  String get choiceSkip => 'Skip';
+
+  @override
   String get cipher => 'Cipher';
 
   @override
   String get clear => 'Reset';
+
+  @override
+  String get clearFinished => 'Clear finished';
 
   @override
   String get clearSelection => 'Clear the selection';
@@ -165,6 +194,82 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get closeTheTab => 'Close the tab';
+
+  @override
+  String get colModified => 'Modified';
+
+  @override
+  String get colName => 'Name';
+
+  @override
+  String get colPermissions => 'Permissions';
+
+  @override
+  String get colSize => 'Size';
+
+  @override
+  String get conflictChoose => '. Choose what to do with each:';
+
+  @override
+  String get conflictFile => 'File';
+
+  @override
+  String get conflictFolder => 'folder';
+
+  @override
+  String get conflictIn => 'In ';
+
+  @override
+  String get conflictMerge => 'the folders are merged';
+
+  @override
+  String conflictRest(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '. The other $count are copied now. Choose what to do with each:',
+      one: '. The other one is copied now. Choose what to do with each:',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get conflictSame => 'same size and date';
+
+  @override
+  String conflictTheirs(String where) {
+    return 'On $where';
+  }
+
+  @override
+  String conflictTheirsNewer(String where) {
+    return 'the one on $where is newer';
+  }
+
+  @override
+  String conflictTitle(int count, int total, String where) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count of the $total already exist on $where',
+      one: '1 of the $total already exists on $where',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String conflictTitleOne(String where) {
+    return 'It already exists on $where';
+  }
+
+  @override
+  String get conflictWhat => 'What to do';
+
+  @override
+  String get conflictYours => 'Yours';
+
+  @override
+  String get conflictYoursNewer => 'yours is newer';
 
   @override
   String get connect => 'Connect';
@@ -190,6 +295,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get continueAction => 'Continue';
+
+  @override
   String get continueLabel => 'Continue';
 
   @override
@@ -212,6 +320,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get copyFingerprint => 'Copy the fingerprint';
+
+  @override
+  String get copyPath => 'Copy path';
+
+  @override
+  String get create => 'Create';
 
   @override
   String get ctrlShiftPrefix => 'Ctrl+Shift+';
@@ -251,6 +365,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get delete => 'Delete';
 
   @override
+  String get deleteEllipsis => 'Delete…';
+
+  @override
   String deleteFailed(String error) {
     return 'Could not delete: $error';
   }
@@ -276,6 +393,25 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get deleteLocalBody =>
+      'They are deleted from this computer without going to the trash: this cannot be undone.';
+
+  @override
+  String deleteMany(int count) {
+    return 'Delete $count items?';
+  }
+
+  @override
+  String deleteOne(String name) {
+    return 'Delete $name?';
+  }
+
+  @override
+  String deleteRemoteBody(String host) {
+    return 'They are deleted on $host. Servers have no trash: this cannot be undone.';
+  }
+
+  @override
   String get deletedHost => '(deleted host)';
 
   @override
@@ -283,6 +419,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dontTrust => 'Don\'t trust';
+
+  @override
+  String get download => 'Download';
+
+  @override
+  String get downloadArrow => '← Download';
+
+  @override
+  String downloadTo(String path) {
+    return 'Download to $path';
+  }
+
+  @override
+  String get dropAskFirst =>
+      'If something already exists, you are asked before it is touched.';
+
+  @override
+  String get dropToDownload => 'Drop to download here';
+
+  @override
+  String get dropToUpload => 'Drop to upload here';
 
   @override
   String get editEllipsis => 'Edit…';
@@ -295,6 +452,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editHostTitle => 'Edit host';
+
+  @override
+  String get emptyFolder => 'This folder is empty';
 
   @override
   String failureAuth(String user, String label) {
@@ -320,6 +480,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String failureHostKeyRejected(String label) {
     return 'The key of $label was not trusted.';
   }
+
+  @override
+  String failureNoSftp(String label) {
+    return '$label has no SFTP: the server lacks sftp-server.';
+  }
+
+  @override
+  String fileChanged(String path) {
+    return '$path changed while it was being copied.';
+  }
+
+  @override
+  String fileDenied(String path) {
+    return 'Permission denied: $path';
+  }
+
+  @override
+  String fileExists(String path) {
+    return 'Already exists: $path';
+  }
+
+  @override
+  String get fileLost => 'The connection was lost.';
+
+  @override
+  String fileNotFound(String path) {
+    return 'Not found: $path';
+  }
+
+  @override
+  String get filterFolder => 'Filter this folder';
 
   @override
   String get findClose => 'Close the search (Esc)';
@@ -377,6 +568,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fontSystem => 'The system\'s';
 
   @override
+  String get forAll => 'For all:';
+
+  @override
   String get fromDefault => 'Default value';
 
   @override
@@ -398,6 +592,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get groupSettingsSection => 'Settings for everything inside';
+
+  @override
+  String get hideHiddenFiles => 'Hide hidden files';
+
+  @override
+  String get hideQueue => 'Hide';
 
   @override
   String hostInUse(String name) {
@@ -501,6 +701,76 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get inside => 'Inside';
+
+  @override
+  String itemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '1 item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get jobCancelled => 'Cancelled';
+
+  @override
+  String get jobCounting => 'Counting…';
+
+  @override
+  String jobDone(String size) {
+    return 'Done · $size';
+  }
+
+  @override
+  String get jobFailed => 'Failed';
+
+  @override
+  String jobFolder(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'folder, $count files',
+      one: 'folder, 1 file',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String jobLost(String done, String total) {
+    return 'The connection dropped with $done of $total copied';
+  }
+
+  @override
+  String jobPaused(String done, String total) {
+    return 'Paused · $done of $total';
+  }
+
+  @override
+  String jobProgress(String done, String total) {
+    return '$done of $total';
+  }
+
+  @override
+  String jobQueued(String size) {
+    return 'Queued · $size';
+  }
+
+  @override
+  String get jobQueuedNoSize => 'Queued';
+
+  @override
+  String jobSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count were already there',
+      one: '1 was already there',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get jumpThrough => 'Jump through, in order';
@@ -627,6 +897,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get name => 'Name';
 
   @override
+  String get nameNoSlash => 'A name cannot contain “/”.';
+
+  @override
   String get netLost => 'the connection was lost.';
 
   @override
@@ -637,6 +910,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get netTimeout => 'timed out.';
+
+  @override
+  String get newFolder => 'New folder';
 
   @override
   String get newGroup => 'New group';
@@ -681,6 +957,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noJumpsYet => 'None yet.';
 
   @override
+  String noMatches(String filter) {
+    return 'Nothing matches “$filter”';
+  }
+
+  @override
   String get noParent => 'No group';
 
   @override
@@ -703,6 +984,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openLocal => 'Open a local terminal';
 
   @override
+  String get openSftp => 'Open SFTP';
+
+  @override
   String openSshStillWarns(String command) {
     return 'OpenWard does not change ~/.ssh/known_hosts: ssh will keep warning until you remove the old key from there ($command).';
   }
@@ -722,6 +1006,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get paneWhat => 'What do you open in this pane?';
+
+  @override
+  String get partNote =>
+      'Files are copied under a temporary name (.part) and renamed at the end: if it is cut short, the real file is never left half written and the copy can be resumed.';
 
   @override
   String get passphraseField => 'Passphrase';
@@ -753,8 +1041,72 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get pause => 'Pause';
+
+  @override
+  String get pauseAll => 'Pause all';
+
+  @override
   String percent(int number) {
     return '$number%';
+  }
+
+  @override
+  String permApplied(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Permissions changed on $count items',
+      one: 'Permissions changed on 1 item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String permBefore(String mode) {
+    return 'Before: $mode';
+  }
+
+  @override
+  String get permEnter => 'Enter';
+
+  @override
+  String get permExecute => 'Execute';
+
+  @override
+  String get permGroup => 'Group';
+
+  @override
+  String get permOctal => 'Octal';
+
+  @override
+  String get permOthers => 'Others';
+
+  @override
+  String get permOwner => 'Owner';
+
+  @override
+  String get permOwnerNote => 'The owner and the group are not changed here.';
+
+  @override
+  String get permRead => 'Read';
+
+  @override
+  String get permRecursive => 'Also apply to everything inside';
+
+  @override
+  String get permRecursiveNote =>
+      'Files keep “Execute” only if they already had it.';
+
+  @override
+  String get permWrite => 'Write';
+
+  @override
+  String get permissionsEllipsis => 'Permissions…';
+
+  @override
+  String permissionsOf(String name) {
+    return 'Permissions of $name';
   }
 
   @override
@@ -792,6 +1144,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get previewLive => 'Changes show at once across the window.';
 
   @override
+  String get queueAllDone => 'All finished';
+
+  @override
+  String queueFailed(int count) {
+    return '$count failed';
+  }
+
+  @override
+  String queuePaused(int count) {
+    return '$count paused';
+  }
+
+  @override
+  String queueQueued(int count) {
+    return '$count queued';
+  }
+
+  @override
+  String queueRunning(int count) {
+    return '$count running';
+  }
+
+  @override
   String get quickConnectHint => 'user@server:port';
 
   @override
@@ -821,6 +1196,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reduceMotion => 'Reduce motion';
 
   @override
+  String get reload => 'Reload';
+
+  @override
+  String get remove => 'Remove';
+
+  @override
   String removeTag(String tag) {
     return 'Remove $tag';
   }
@@ -833,6 +1214,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get renameTabTitle => 'Rename tab';
+
+  @override
+  String renameTitle(String name) {
+    return 'Rename $name';
+  }
 
   @override
   String reportCreated(int count) {
@@ -870,6 +1256,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get restorePanes => 'Back to the panes';
+
+  @override
+  String get resume => 'Resume';
 
   @override
   String retryIn(int attempt, int max, int secs) {
@@ -958,6 +1347,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get selectAllText => 'Select all';
 
   @override
+  String selectedCount(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count selected ($size)',
+      one: '1 selected ($size)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String selectedCountOnly(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count selected',
+      one: '1 selected',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String selectedOf(int selected, int total) {
     return '$selected of $total';
   }
@@ -988,6 +1399,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTerminal => 'Terminal';
 
   @override
+  String sftpConnected(String label) {
+    return 'SFTP on $label';
+  }
+
+  @override
+  String get sftpKeysApple =>
+      'Return opens · ⌘↑ goes up · Tab switches side · F2 renames · ⌘⌫ deletes';
+
+  @override
+  String get sftpKeysOther =>
+      'Enter opens · Backspace goes up · Tab switches side · F2 renames · Del deletes';
+
+  @override
+  String sftpTabTitle(String label) {
+    return 'SFTP · $label';
+  }
+
+  @override
   String get shape => 'Shape';
 
   @override
@@ -1001,6 +1430,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shortcutSettings => 'Opens the settings';
+
+  @override
+  String get showHiddenFiles => 'Show hidden files';
+
+  @override
+  String get showQueue => 'Show queue';
 
   @override
   String showRest(int count) {
@@ -1030,6 +1465,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String stageConnecting(String label, String hop) {
     return 'Connecting to $label$hop…';
+  }
+
+  @override
+  String stageOpeningSftp(String label) {
+    return 'Opening SFTP on $label…';
   }
 
   @override
@@ -1074,6 +1514,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get stepImport => 'Import';
+
+  @override
+  String get stepOpeningSftp => 'opening SFTP…';
 
   @override
   String get stepOpeningShell => 'opening the shell…';
@@ -1138,6 +1581,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get time => 'Time';
 
   @override
+  String timeLeft(String time) {
+    return '$time left';
+  }
+
+  @override
+  String todayAt(String time) {
+    return 'today $time';
+  }
+
+  @override
+  String get transfers => 'Transfers';
+
+  @override
   String get trust => 'Trust';
 
   @override
@@ -1168,6 +1624,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get uiFont => 'Interface font';
+
+  @override
+  String get upOneLevel => 'Up one level';
+
+  @override
+  String get upload => 'Upload';
+
+  @override
+  String uploadToArrow(String where) {
+    return 'Upload to $where →';
+  }
+
+  @override
+  String uploadToHost(String host) {
+    return 'Upload to $host';
+  }
 
   @override
   String get user => 'User';
@@ -1251,4 +1723,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get yes => 'Yes';
+
+  @override
+  String yesterdayAt(String time) {
+    return 'yesterday $time';
+  }
 }

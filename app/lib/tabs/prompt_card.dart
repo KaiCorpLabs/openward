@@ -12,7 +12,7 @@ import '../ui/widgets.dart';
 class PromptCard extends StatefulWidget {
   const PromptCard({super.key, required this.controller, required this.prompt});
 
-  final TerminalController controller;
+  final ConnectionController controller;
   final PromptView prompt;
 
   @override

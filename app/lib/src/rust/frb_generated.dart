@@ -5,6 +5,7 @@
 
 import 'api/app.dart';
 import 'api/session.dart';
+import 'api/sftp.dart';
 import 'api/vault.dart';
 
 import 'dart:async';
@@ -71,7 +72,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -1513952716;
+  int get rustContentHash => 1519413619;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -89,6 +90,13 @@ abstract class RustLibApi extends BaseApi {
     required PromptAnswer answer,
   });
 
+  void crateApiAppOpenWardCancelTransfer({
+    required OpenWard that,
+    required BigInt id,
+  });
+
+  void crateApiAppOpenWardClearFinishedTransfers({required OpenWard that});
+
   Stream<SessionEvent> crateApiAppOpenWardConnect({
     required OpenWard that,
     required TerminalSession session,
@@ -98,6 +106,20 @@ abstract class RustLibApi extends BaseApi {
   Stream<SessionEvent> crateApiAppOpenWardConnectAddress({
     required OpenWard that,
     required TerminalSession session,
+    required String address,
+    String? user,
+    int? port,
+  });
+
+  Stream<SessionEvent> crateApiAppOpenWardConnectSftp({
+    required OpenWard that,
+    required SftpBrowser browser,
+    required String hostId,
+  });
+
+  Stream<SessionEvent> crateApiAppOpenWardConnectSftpAddress({
+    required OpenWard that,
+    required SftpBrowser browser,
     required String address,
     String? user,
     int? port,
@@ -152,6 +174,13 @@ abstract class RustLibApi extends BaseApi {
     required TerminalSession session,
   });
 
+  void crateApiAppOpenWardPauseTransfer({
+    required OpenWard that,
+    required BigInt id,
+  });
+
+  void crateApiAppOpenWardPauseTransfers({required OpenWard that});
+
   Future<List<ImportPreview>> crateApiAppOpenWardPreviewSshConfig({
     required OpenWard that,
     String? file,
@@ -159,10 +188,22 @@ abstract class RustLibApi extends BaseApi {
 
   int crateApiAppOpenWardReconnectAttempts({required OpenWard that});
 
+  void crateApiAppOpenWardRemoveTransfer({
+    required OpenWard that,
+    required BigInt id,
+  });
+
+  void crateApiAppOpenWardResumeTransfer({
+    required OpenWard that,
+    required BigInt id,
+  });
+
   List<String> crateApiAppOpenWardSearch({
     required OpenWard that,
     required String query,
   });
+
+  SftpBrowser crateApiAppOpenWardSftp({required OpenWard that});
 
   List<TagCount> crateApiAppOpenWardTags({required OpenWard that});
 
@@ -172,6 +213,17 @@ abstract class RustLibApi extends BaseApi {
     required int rows,
     required int scrollback,
   });
+
+  BigInt crateApiAppOpenWardTransfer({
+    required OpenWard that,
+    required SftpBrowser browser,
+    required TransferDirection direction,
+    required String source,
+    required String destDir,
+    required ConflictChoice onConflict,
+  });
+
+  List<TransferView> crateApiAppOpenWardTransfers({required OpenWard that});
 
   Future<void> crateApiAppOpenWardTrustHostKey({
     required OpenWard that,
@@ -192,6 +244,55 @@ abstract class RustLibApi extends BaseApi {
     required String id,
     required BigInt rev,
     required HostSpec spec,
+  });
+
+  Future<PlatformInt64> crateApiSftpSftpBrowserChmod({
+    required SftpBrowser that,
+    required String path,
+    required int mode,
+    required bool recursive,
+  });
+
+  void crateApiSftpSftpBrowserClose({required SftpBrowser that});
+
+  Future<List<ConflictView>> crateApiSftpSftpBrowserConflicts({
+    required SftpBrowser that,
+    required TransferDirection direction,
+    required List<String> sources,
+    required String destDir,
+  });
+
+  Future<String> crateApiSftpSftpBrowserHome({required SftpBrowser that});
+
+  Future<List<FileEntry>> crateApiSftpSftpBrowserList({
+    required SftpBrowser that,
+    required String path,
+  });
+
+  Future<void> crateApiSftpSftpBrowserMkdir({
+    required SftpBrowser that,
+    required String path,
+  });
+
+  Future<String> crateApiSftpSftpBrowserRealpath({
+    required SftpBrowser that,
+    required String path,
+  });
+
+  Future<void> crateApiSftpSftpBrowserRemove({
+    required SftpBrowser that,
+    required List<String> paths,
+  });
+
+  Future<void> crateApiSftpSftpBrowserRename({
+    required SftpBrowser that,
+    required String from,
+    required String to,
+  });
+
+  Future<FileEntry?> crateApiSftpSftpBrowserStat({
+    required SftpBrowser that,
+    required String path,
   });
 
   void crateApiSessionTerminalSessionClearSelection({
@@ -335,6 +436,27 @@ abstract class RustLibApi extends BaseApi {
 
   Future<JumpSpec> crateApiVaultJumpSpecDefault();
 
+  Future<PlatformInt64> crateApiSftpLocalChmod({
+    required String path,
+    required int mode,
+    required bool recursive,
+  });
+
+  String crateApiSftpLocalHome();
+
+  Future<List<FileEntry>> crateApiSftpLocalList({required String path});
+
+  Future<void> crateApiSftpLocalMkdir({required String path});
+
+  Future<void> crateApiSftpLocalRemove({required List<String> paths});
+
+  Future<void> crateApiSftpLocalRename({
+    required String from,
+    required String to,
+  });
+
+  Future<FileEntry?> crateApiSftpLocalStat({required String path});
+
   Future<PromptView> crateApiSessionPromptViewDefault();
 
   Future<SettingsSpec> crateApiVaultSettingsSpecDefault();
@@ -346,6 +468,14 @@ abstract class RustLibApi extends BaseApi {
   get rust_arc_decrement_strong_count_OpenWard;
 
   CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_OpenWardPtr;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_SftpBrowser;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_SftpBrowser;
+
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_SftpBrowserPtr;
 
   RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_TerminalSession;
@@ -400,6 +530,68 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   );
 
   @override
+  void crateApiAppOpenWardCancelTransfer({
+    required OpenWard that,
+    required BigInt id,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
+            that,
+            serializer,
+          );
+          sse_encode_u_64(id, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAppOpenWardCancelTransferConstMeta,
+        argValues: [that, id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppOpenWardCancelTransferConstMeta =>
+      const TaskConstMeta(
+        debugName: "OpenWard_cancel_transfer",
+        argNames: ["that", "id"],
+      );
+
+  @override
+  void crateApiAppOpenWardClearFinishedTransfers({required OpenWard that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAppOpenWardClearFinishedTransfersConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppOpenWardClearFinishedTransfersConstMeta =>
+      const TaskConstMeta(
+        debugName: "OpenWard_clear_finished_transfers",
+        argNames: ["that"],
+      );
+
+  @override
   Stream<SessionEvent> crateApiAppOpenWardConnect({
     required OpenWard that,
     required TerminalSession session,
@@ -424,7 +616,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 2,
+              funcId: 4,
               port: port_,
             );
           },
@@ -475,7 +667,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 3,
+              funcId: 5,
               port: port_,
             );
           },
@@ -499,6 +691,106 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Stream<SessionEvent> crateApiAppOpenWardConnectSftp({
+    required OpenWard that,
+    required SftpBrowser browser,
+    required String hostId,
+  }) {
+    final events = RustStreamSink<SessionEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
+              that,
+              serializer,
+            );
+            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+              browser,
+              serializer,
+            );
+            sse_encode_String(hostId, serializer);
+            sse_encode_StreamSink_session_event_Sse(events, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 6,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_AnyhowException,
+          ),
+          constMeta: kCrateApiAppOpenWardConnectSftpConstMeta,
+          argValues: [that, browser, hostId, events],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return events.stream;
+  }
+
+  TaskConstMeta get kCrateApiAppOpenWardConnectSftpConstMeta =>
+      const TaskConstMeta(
+        debugName: "OpenWard_connect_sftp",
+        argNames: ["that", "browser", "hostId", "events"],
+      );
+
+  @override
+  Stream<SessionEvent> crateApiAppOpenWardConnectSftpAddress({
+    required OpenWard that,
+    required SftpBrowser browser,
+    required String address,
+    String? user,
+    int? port,
+  }) {
+    final events = RustStreamSink<SessionEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
+              that,
+              serializer,
+            );
+            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+              browser,
+              serializer,
+            );
+            sse_encode_String(address, serializer);
+            sse_encode_opt_String(user, serializer);
+            sse_encode_opt_box_autoadd_u_16(port, serializer);
+            sse_encode_StreamSink_session_event_Sse(events, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 7,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_AnyhowException,
+          ),
+          constMeta: kCrateApiAppOpenWardConnectSftpAddressConstMeta,
+          argValues: [that, browser, address, user, port, events],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return events.stream;
+  }
+
+  TaskConstMeta get kCrateApiAppOpenWardConnectSftpAddressConstMeta =>
+      const TaskConstMeta(
+        debugName: "OpenWard_connect_sftp_address",
+        argNames: ["that", "browser", "address", "user", "port", "events"],
+      );
+
+  @override
   Future<String> crateApiAppOpenWardCreateGroup({
     required OpenWard that,
     required GroupSpec spec,
@@ -515,7 +807,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 4,
+            funcId: 8,
             port: port_,
           );
         },
@@ -553,7 +845,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 9,
             port: port_,
           );
         },
@@ -591,7 +883,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 10,
             port: port_,
           );
         },
@@ -625,7 +917,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             serializer,
           );
           sse_encode_String(id, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_group_detail,
@@ -653,7 +945,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_group_view,
@@ -683,7 +975,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             serializer,
           );
           sse_encode_String(id, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_host_detail,
@@ -709,7 +1001,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_host_view,
@@ -744,7 +1036,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 15,
             port: port_,
           );
         },
@@ -779,7 +1071,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             serializer,
           );
           sse_encode_opt_String(groupId, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_inherited_view,
@@ -808,7 +1100,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_known_host_view,
@@ -837,7 +1129,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 18,
             port: port_,
           );
         },
@@ -879,7 +1171,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 15,
+              funcId: 19,
               port: port_,
             );
           },
@@ -903,6 +1195,68 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  void crateApiAppOpenWardPauseTransfer({
+    required OpenWard that,
+    required BigInt id,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
+            that,
+            serializer,
+          );
+          sse_encode_u_64(id, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAppOpenWardPauseTransferConstMeta,
+        argValues: [that, id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppOpenWardPauseTransferConstMeta =>
+      const TaskConstMeta(
+        debugName: "OpenWard_pause_transfer",
+        argNames: ["that", "id"],
+      );
+
+  @override
+  void crateApiAppOpenWardPauseTransfers({required OpenWard that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAppOpenWardPauseTransfersConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppOpenWardPauseTransfersConstMeta =>
+      const TaskConstMeta(
+        debugName: "OpenWard_pause_transfers",
+        argNames: ["that"],
+      );
+
+  @override
   Future<List<ImportPreview>> crateApiAppOpenWardPreviewSshConfig({
     required OpenWard that,
     String? file,
@@ -919,7 +1273,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 16,
+            funcId: 22,
             port: port_,
           );
         },
@@ -950,7 +1304,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_u_32,
@@ -970,6 +1324,72 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  void crateApiAppOpenWardRemoveTransfer({
+    required OpenWard that,
+    required BigInt id,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
+            that,
+            serializer,
+          );
+          sse_encode_u_64(id, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAppOpenWardRemoveTransferConstMeta,
+        argValues: [that, id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppOpenWardRemoveTransferConstMeta =>
+      const TaskConstMeta(
+        debugName: "OpenWard_remove_transfer",
+        argNames: ["that", "id"],
+      );
+
+  @override
+  void crateApiAppOpenWardResumeTransfer({
+    required OpenWard that,
+    required BigInt id,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
+            that,
+            serializer,
+          );
+          sse_encode_u_64(id, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAppOpenWardResumeTransferConstMeta,
+        argValues: [that, id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppOpenWardResumeTransferConstMeta =>
+      const TaskConstMeta(
+        debugName: "OpenWard_resume_transfer",
+        argNames: ["that", "id"],
+      );
+
+  @override
   List<String> crateApiAppOpenWardSearch({
     required OpenWard that,
     required String query,
@@ -983,7 +1403,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             serializer,
           );
           sse_encode_String(query, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_String,
@@ -1002,6 +1422,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   );
 
   @override
+  SftpBrowser crateApiAppOpenWardSftp({required OpenWard that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAppOpenWardSftpConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppOpenWardSftpConstMeta =>
+      const TaskConstMeta(debugName: "OpenWard_sftp", argNames: ["that"]);
+
+  @override
   List<TagCount> crateApiAppOpenWardTags({required OpenWard that}) {
     return handler.executeSync(
       SyncTask(
@@ -1011,7 +1458,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 28)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_tag_count,
@@ -1045,7 +1492,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_u_16(cols, serializer);
           sse_encode_u_16(rows, serializer);
           sse_encode_u_32(scrollback, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 29)!;
         },
         codec: SseCodec(
           decodeSuccessData:
@@ -1064,6 +1511,83 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         debugName: "OpenWard_terminal",
         argNames: ["that", "cols", "rows", "scrollback"],
       );
+
+  @override
+  BigInt crateApiAppOpenWardTransfer({
+    required OpenWard that,
+    required SftpBrowser browser,
+    required TransferDirection direction,
+    required String source,
+    required String destDir,
+    required ConflictChoice onConflict,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
+            that,
+            serializer,
+          );
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+            browser,
+            serializer,
+          );
+          sse_encode_transfer_direction(direction, serializer);
+          sse_encode_String(source, serializer);
+          sse_encode_String(destDir, serializer);
+          sse_encode_conflict_choice(onConflict, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 30)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_u_64,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAppOpenWardTransferConstMeta,
+        argValues: [that, browser, direction, source, destDir, onConflict],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppOpenWardTransferConstMeta =>
+      const TaskConstMeta(
+        debugName: "OpenWard_transfer",
+        argNames: [
+          "that",
+          "browser",
+          "direction",
+          "source",
+          "destDir",
+          "onConflict",
+        ],
+      );
+
+  @override
+  List<TransferView> crateApiAppOpenWardTransfers({required OpenWard that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 31)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_transfer_view,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAppOpenWardTransfersConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppOpenWardTransfersConstMeta =>
+      const TaskConstMeta(debugName: "OpenWard_transfers", argNames: ["that"]);
 
   @override
   Future<void> crateApiAppOpenWardTrustHostKey({
@@ -1086,7 +1610,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 32,
             port: port_,
           );
         },
@@ -1128,7 +1652,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 33,
             port: port_,
           );
         },
@@ -1170,7 +1694,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 23,
+            funcId: 34,
             port: port_,
           );
         },
@@ -1192,6 +1716,377 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<PlatformInt64> crateApiSftpSftpBrowserChmod({
+    required SftpBrowser that,
+    required String path,
+    required int mode,
+    required bool recursive,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+            that,
+            serializer,
+          );
+          sse_encode_String(path, serializer);
+          sse_encode_u_32(mode, serializer);
+          sse_encode_bool(recursive, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 35,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_i_64,
+          decodeErrorData: sse_decode_file_error,
+        ),
+        constMeta: kCrateApiSftpSftpBrowserChmodConstMeta,
+        argValues: [that, path, mode, recursive],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSftpSftpBrowserChmodConstMeta =>
+      const TaskConstMeta(
+        debugName: "SftpBrowser_chmod",
+        argNames: ["that", "path", "mode", "recursive"],
+      );
+
+  @override
+  void crateApiSftpSftpBrowserClose({required SftpBrowser that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 36)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSftpSftpBrowserCloseConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSftpSftpBrowserCloseConstMeta =>
+      const TaskConstMeta(debugName: "SftpBrowser_close", argNames: ["that"]);
+
+  @override
+  Future<List<ConflictView>> crateApiSftpSftpBrowserConflicts({
+    required SftpBrowser that,
+    required TransferDirection direction,
+    required List<String> sources,
+    required String destDir,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+            that,
+            serializer,
+          );
+          sse_encode_transfer_direction(direction, serializer);
+          sse_encode_list_String(sources, serializer);
+          sse_encode_String(destDir, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 37,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_conflict_view,
+          decodeErrorData: sse_decode_file_error,
+        ),
+        constMeta: kCrateApiSftpSftpBrowserConflictsConstMeta,
+        argValues: [that, direction, sources, destDir],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSftpSftpBrowserConflictsConstMeta =>
+      const TaskConstMeta(
+        debugName: "SftpBrowser_conflicts",
+        argNames: ["that", "direction", "sources", "destDir"],
+      );
+
+  @override
+  Future<String> crateApiSftpSftpBrowserHome({required SftpBrowser that}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 38,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_file_error,
+        ),
+        constMeta: kCrateApiSftpSftpBrowserHomeConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSftpSftpBrowserHomeConstMeta =>
+      const TaskConstMeta(debugName: "SftpBrowser_home", argNames: ["that"]);
+
+  @override
+  Future<List<FileEntry>> crateApiSftpSftpBrowserList({
+    required SftpBrowser that,
+    required String path,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+            that,
+            serializer,
+          );
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 39,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_file_entry,
+          decodeErrorData: sse_decode_file_error,
+        ),
+        constMeta: kCrateApiSftpSftpBrowserListConstMeta,
+        argValues: [that, path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSftpSftpBrowserListConstMeta =>
+      const TaskConstMeta(
+        debugName: "SftpBrowser_list",
+        argNames: ["that", "path"],
+      );
+
+  @override
+  Future<void> crateApiSftpSftpBrowserMkdir({
+    required SftpBrowser that,
+    required String path,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+            that,
+            serializer,
+          );
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 40,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_file_error,
+        ),
+        constMeta: kCrateApiSftpSftpBrowserMkdirConstMeta,
+        argValues: [that, path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSftpSftpBrowserMkdirConstMeta =>
+      const TaskConstMeta(
+        debugName: "SftpBrowser_mkdir",
+        argNames: ["that", "path"],
+      );
+
+  @override
+  Future<String> crateApiSftpSftpBrowserRealpath({
+    required SftpBrowser that,
+    required String path,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+            that,
+            serializer,
+          );
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 41,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_file_error,
+        ),
+        constMeta: kCrateApiSftpSftpBrowserRealpathConstMeta,
+        argValues: [that, path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSftpSftpBrowserRealpathConstMeta =>
+      const TaskConstMeta(
+        debugName: "SftpBrowser_realpath",
+        argNames: ["that", "path"],
+      );
+
+  @override
+  Future<void> crateApiSftpSftpBrowserRemove({
+    required SftpBrowser that,
+    required List<String> paths,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+            that,
+            serializer,
+          );
+          sse_encode_list_String(paths, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 42,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_file_error,
+        ),
+        constMeta: kCrateApiSftpSftpBrowserRemoveConstMeta,
+        argValues: [that, paths],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSftpSftpBrowserRemoveConstMeta =>
+      const TaskConstMeta(
+        debugName: "SftpBrowser_remove",
+        argNames: ["that", "paths"],
+      );
+
+  @override
+  Future<void> crateApiSftpSftpBrowserRename({
+    required SftpBrowser that,
+    required String from,
+    required String to,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+            that,
+            serializer,
+          );
+          sse_encode_String(from, serializer);
+          sse_encode_String(to, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 43,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_file_error,
+        ),
+        constMeta: kCrateApiSftpSftpBrowserRenameConstMeta,
+        argValues: [that, from, to],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSftpSftpBrowserRenameConstMeta =>
+      const TaskConstMeta(
+        debugName: "SftpBrowser_rename",
+        argNames: ["that", "from", "to"],
+      );
+
+  @override
+  Future<FileEntry?> crateApiSftpSftpBrowserStat({
+    required SftpBrowser that,
+    required String path,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+            that,
+            serializer,
+          );
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 44,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_file_entry,
+          decodeErrorData: sse_decode_file_error,
+        ),
+        constMeta: kCrateApiSftpSftpBrowserStatConstMeta,
+        argValues: [that, path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSftpSftpBrowserStatConstMeta =>
+      const TaskConstMeta(
+        debugName: "SftpBrowser_stat",
+        argNames: ["that", "path"],
+      );
+
+  @override
   void crateApiSessionTerminalSessionClearSelection({
     required TerminalSession that,
   }) {
@@ -1203,7 +2098,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 45)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1232,7 +2127,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 46)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1263,7 +2158,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 47)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1296,7 +2191,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             serializer,
           );
           sse_encode_bool(gained, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 48)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1337,7 +2232,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_u_16(mods, serializer);
           sse_encode_String(text, serializer);
           sse_encode_u_32(unshifted, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 28)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 49)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_bool,
@@ -1372,7 +2267,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
           sse_encode_f_32(x, serializer);
           sse_encode_f_32(y, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 29)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 50)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_opt_box_autoadd_link_view,
@@ -1407,7 +2302,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
           sse_encode_String(text, serializer);
           sse_encode_bool(allowUnsafe, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 30)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 51)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_bool,
@@ -1448,7 +2343,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_u_16(mods, serializer);
           sse_encode_f_32(x, serializer);
           sse_encode_f_32(y, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 31)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 52)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1479,7 +2374,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 32)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 53)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_opt_box_autoadd_term_frame,
@@ -1508,7 +2403,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 33)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 54)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1543,7 +2438,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
           sse_encode_u_16(cols, serializer);
           sse_encode_u_16(rows, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 34)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 55)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1574,7 +2469,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 35)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 56)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1607,7 +2502,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             serializer,
           );
           sse_encode_String(needle, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 36)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 57)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1640,7 +2535,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             serializer,
           );
           sse_encode_bool(older, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 37)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 58)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1671,7 +2566,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 38)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 59)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1708,7 +2603,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_f_32(x, serializer);
           sse_encode_f_32(y, serializer);
           sse_encode_bool(rectangle, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 39)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 60)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1743,7 +2638,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
           sse_encode_f_32(x, serializer);
           sse_encode_f_32(y, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 40)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 61)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1778,7 +2673,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
           sse_encode_f_32(x, serializer);
           sse_encode_f_32(y, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 41)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 62)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1809,7 +2704,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 42)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 63)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_opt_String,
@@ -1844,7 +2739,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
           sse_encode_f_32(width, serializer);
           sse_encode_f_32(height, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 43)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 64)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1879,7 +2774,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
           sse_encode_cursor_style(style, serializer);
           sse_encode_bool(blink, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 44)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 65)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1912,7 +2807,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             serializer,
           );
           sse_encode_bool(enabled, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 45)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 66)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1949,7 +2844,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_bool(dark, serializer);
           sse_encode_u_32(foreground, serializer);
           sse_encode_u_32(background, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 46)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 67)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1982,7 +2877,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             serializer,
           );
           sse_encode_String(text, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 47)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 68)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -2021,7 +2916,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_f_32(x, serializer);
           sse_encode_f_32(y, serializer);
           sse_encode_u_16(mods, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 48)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 69)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -2049,7 +2944,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 49,
+            funcId: 70,
             port: port_,
           );
         },
@@ -2076,7 +2971,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 50,
+            funcId: 71,
             port: port_,
           );
         },
@@ -2103,7 +2998,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 51,
+            funcId: 72,
             port: port_,
           );
         },
@@ -2130,7 +3025,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 52,
+            funcId: 73,
             port: port_,
           );
         },
@@ -2157,7 +3052,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 53,
+            funcId: 74,
             port: port_,
           );
         },
@@ -2176,6 +3071,208 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "jump_spec_default", argNames: []);
 
   @override
+  Future<PlatformInt64> crateApiSftpLocalChmod({
+    required String path,
+    required int mode,
+    required bool recursive,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          sse_encode_u_32(mode, serializer);
+          sse_encode_bool(recursive, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 75,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_i_64,
+          decodeErrorData: sse_decode_file_error,
+        ),
+        constMeta: kCrateApiSftpLocalChmodConstMeta,
+        argValues: [path, mode, recursive],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSftpLocalChmodConstMeta => const TaskConstMeta(
+    debugName: "local_chmod",
+    argNames: ["path", "mode", "recursive"],
+  );
+
+  @override
+  String crateApiSftpLocalHome() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 76)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSftpLocalHomeConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSftpLocalHomeConstMeta =>
+      const TaskConstMeta(debugName: "local_home", argNames: []);
+
+  @override
+  Future<List<FileEntry>> crateApiSftpLocalList({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 77,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_file_entry,
+          decodeErrorData: sse_decode_file_error,
+        ),
+        constMeta: kCrateApiSftpLocalListConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSftpLocalListConstMeta =>
+      const TaskConstMeta(debugName: "local_list", argNames: ["path"]);
+
+  @override
+  Future<void> crateApiSftpLocalMkdir({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 78,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_file_error,
+        ),
+        constMeta: kCrateApiSftpLocalMkdirConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSftpLocalMkdirConstMeta =>
+      const TaskConstMeta(debugName: "local_mkdir", argNames: ["path"]);
+
+  @override
+  Future<void> crateApiSftpLocalRemove({required List<String> paths}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_String(paths, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 79,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_file_error,
+        ),
+        constMeta: kCrateApiSftpLocalRemoveConstMeta,
+        argValues: [paths],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSftpLocalRemoveConstMeta =>
+      const TaskConstMeta(debugName: "local_remove", argNames: ["paths"]);
+
+  @override
+  Future<void> crateApiSftpLocalRename({
+    required String from,
+    required String to,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(from, serializer);
+          sse_encode_String(to, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 80,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_file_error,
+        ),
+        constMeta: kCrateApiSftpLocalRenameConstMeta,
+        argValues: [from, to],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSftpLocalRenameConstMeta =>
+      const TaskConstMeta(debugName: "local_rename", argNames: ["from", "to"]);
+
+  @override
+  Future<FileEntry?> crateApiSftpLocalStat({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 81,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_file_entry,
+          decodeErrorData: sse_decode_file_error,
+        ),
+        constMeta: kCrateApiSftpLocalStatConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSftpLocalStatConstMeta =>
+      const TaskConstMeta(debugName: "local_stat", argNames: ["path"]);
+
+  @override
   Future<PromptView> crateApiSessionPromptViewDefault() {
     return handler.executeNormal(
       NormalTask(
@@ -2184,7 +3281,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 54,
+            funcId: 82,
             port: port_,
           );
         },
@@ -2211,7 +3308,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 55,
+            funcId: 83,
             port: port_,
           );
         },
@@ -2238,6 +3335,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard;
 
   RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_SftpBrowser => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_SftpBrowser => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser;
+
+  RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_TerminalSession => wire
       .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession;
 
@@ -2261,6 +3366,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SftpBrowser
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return SftpBrowserImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
   TerminalSession
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
     dynamic raw,
@@ -2279,6 +3393,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SftpBrowser
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return SftpBrowserImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
   TerminalSession
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
     dynamic raw,
@@ -2294,6 +3417,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return OpenWardImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  SftpBrowser
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return SftpBrowserImpl.frbInternalDcoDecode(raw as List<dynamic>);
   }
 
   @protected
@@ -2374,6 +3506,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  FileEntry dco_decode_box_autoadd_file_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_file_entry(raw);
+  }
+
+  @protected
+  FileError dco_decode_box_autoadd_file_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_file_error(raw);
+  }
+
+  @protected
   GroupSpec dco_decode_box_autoadd_group_spec(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_group_spec(raw);
@@ -2383,6 +3527,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   HostSpec dco_decode_box_autoadd_host_spec(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_host_spec(raw);
+  }
+
+  @protected
+  PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_i_64(raw);
   }
 
   @protected
@@ -2466,6 +3616,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return ClosedView(
       exitCode: dco_decode_opt_box_autoadd_u_32(arr[0]),
       failure: dco_decode_opt_box_autoadd_failure_view(arr[1]),
+    );
+  }
+
+  @protected
+  ConflictChoice dco_decode_conflict_choice(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ConflictChoice.values[raw as int];
+  }
+
+  @protected
+  ConflictView dco_decode_conflict_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return ConflictView(
+      source: dco_decode_String(arr[0]),
+      ours: dco_decode_file_entry(arr[1]),
+      theirs: dco_decode_file_entry(arr[2]),
     );
   }
 
@@ -2562,6 +3731,50 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  FileEntry dco_decode_file_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return FileEntry(
+      name: dco_decode_String(arr[0]),
+      kind: dco_decode_file_kind(arr[1]),
+      linkDir: dco_decode_bool(arr[2]),
+      linkTarget: dco_decode_opt_String(arr[3]),
+      size: dco_decode_i_64(arr[4]),
+      modified: dco_decode_opt_box_autoadd_i_64(arr[5]),
+      mode: dco_decode_opt_box_autoadd_u_32(arr[6]),
+      owner: dco_decode_opt_String(arr[7]),
+      group: dco_decode_opt_String(arr[8]),
+    );
+  }
+
+  @protected
+  FileError dco_decode_file_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return FileError(
+      kind: dco_decode_file_error_kind(arr[0]),
+      path: dco_decode_String(arr[1]),
+      message: dco_decode_String(arr[2]),
+    );
+  }
+
+  @protected
+  FileErrorKind dco_decode_file_error_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return FileErrorKind.values[raw as int];
+  }
+
+  @protected
+  FileKind dco_decode_file_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return FileKind.values[raw as int];
+  }
+
+  @protected
   GroupDetail dco_decode_group_detail(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -2653,6 +3866,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   int dco_decode_i_32(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
+  }
+
+  @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeI64(raw);
   }
 
   @protected
@@ -2786,6 +4005,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<ConflictView> dco_decode_list_conflict_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_conflict_view).toList();
+  }
+
+  @protected
   List<EnvVar> dco_decode_list_env_var(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_env_var).toList();
@@ -2795,6 +4020,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<FieldOrigin> dco_decode_list_field_origin(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_field_origin).toList();
+  }
+
+  @protected
+  List<FileEntry> dco_decode_list_file_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_file_entry).toList();
   }
 
   @protected
@@ -2870,6 +4101,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<TransferView> dco_decode_list_transfer_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_transfer_view).toList();
+  }
+
+  @protected
   String? dco_decode_opt_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_String(raw);
@@ -2909,6 +4146,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   FailureView? dco_decode_opt_box_autoadd_failure_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_failure_view(raw);
+  }
+
+  @protected
+  FileEntry? dco_decode_opt_box_autoadd_file_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_file_entry(raw);
+  }
+
+  @protected
+  FileError? dco_decode_opt_box_autoadd_file_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_file_error(raw);
+  }
+
+  @protected
+  PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_i_64(raw);
   }
 
   @protected
@@ -3233,6 +4488,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  TransferDirection dco_decode_transfer_direction(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return TransferDirection.values[raw as int];
+  }
+
+  @protected
+  TransferState dco_decode_transfer_state(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return TransferState.values[raw as int];
+  }
+
+  @protected
+  TransferView dco_decode_transfer_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 16)
+      throw Exception('unexpected arr length: expect 16 but see ${arr.length}');
+    return TransferView(
+      id: dco_decode_u_64(arr[0]),
+      direction: dco_decode_transfer_direction(arr[1]),
+      name: dco_decode_String(arr[2]),
+      source: dco_decode_String(arr[3]),
+      destDir: dco_decode_String(arr[4]),
+      host: dco_decode_String(arr[5]),
+      isDir: dco_decode_bool(arr[6]),
+      files: dco_decode_u_32(arr[7]),
+      filesDone: dco_decode_u_32(arr[8]),
+      skipped: dco_decode_u_32(arr[9]),
+      total: dco_decode_i_64(arr[10]),
+      done: dco_decode_i_64(arr[11]),
+      rate: dco_decode_f_64(arr[12]),
+      state: dco_decode_transfer_state(arr[13]),
+      error: dco_decode_opt_box_autoadd_file_error(arr[14]),
+      endedAt: dco_decode_opt_box_autoadd_i_64(arr[15]),
+    );
+  }
+
+  @protected
   TrustKind dco_decode_trust_kind(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return TrustKind.values[raw as int];
@@ -3294,6 +4587,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SftpBrowser
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return SftpBrowserImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   TerminalSession
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
     SseDeserializer deserializer,
@@ -3318,6 +4623,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SftpBrowser
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return SftpBrowserImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   TerminalSession
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
     SseDeserializer deserializer,
@@ -3336,6 +4653,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return OpenWardImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  SftpBrowser
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return SftpBrowserImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
@@ -3431,6 +4760,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  FileEntry sse_decode_box_autoadd_file_entry(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_file_entry(deserializer));
+  }
+
+  @protected
+  FileError sse_decode_box_autoadd_file_error(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_file_error(deserializer));
+  }
+
+  @protected
   GroupSpec sse_decode_box_autoadd_group_spec(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_group_spec(deserializer));
@@ -3440,6 +4781,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   HostSpec sse_decode_box_autoadd_host_spec(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_host_spec(deserializer));
+  }
+
+  @protected
+  PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_i_64(deserializer));
   }
 
   @protected
@@ -3524,6 +4871,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_exitCode = sse_decode_opt_box_autoadd_u_32(deserializer);
     var var_failure = sse_decode_opt_box_autoadd_failure_view(deserializer);
     return ClosedView(exitCode: var_exitCode, failure: var_failure);
+  }
+
+  @protected
+  ConflictChoice sse_decode_conflict_choice(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return ConflictChoice.values[inner];
+  }
+
+  @protected
+  ConflictView sse_decode_conflict_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_source = sse_decode_String(deserializer);
+    var var_ours = sse_decode_file_entry(deserializer);
+    var var_theirs = sse_decode_file_entry(deserializer);
+    return ConflictView(source: var_source, ours: var_ours, theirs: var_theirs);
   }
 
   @protected
@@ -3634,6 +4997,54 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  FileEntry sse_decode_file_entry(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_name = sse_decode_String(deserializer);
+    var var_kind = sse_decode_file_kind(deserializer);
+    var var_linkDir = sse_decode_bool(deserializer);
+    var var_linkTarget = sse_decode_opt_String(deserializer);
+    var var_size = sse_decode_i_64(deserializer);
+    var var_modified = sse_decode_opt_box_autoadd_i_64(deserializer);
+    var var_mode = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_owner = sse_decode_opt_String(deserializer);
+    var var_group = sse_decode_opt_String(deserializer);
+    return FileEntry(
+      name: var_name,
+      kind: var_kind,
+      linkDir: var_linkDir,
+      linkTarget: var_linkTarget,
+      size: var_size,
+      modified: var_modified,
+      mode: var_mode,
+      owner: var_owner,
+      group: var_group,
+    );
+  }
+
+  @protected
+  FileError sse_decode_file_error(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_file_error_kind(deserializer);
+    var var_path = sse_decode_String(deserializer);
+    var var_message = sse_decode_String(deserializer);
+    return FileError(kind: var_kind, path: var_path, message: var_message);
+  }
+
+  @protected
+  FileErrorKind sse_decode_file_error_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return FileErrorKind.values[inner];
+  }
+
+  @protected
+  FileKind sse_decode_file_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return FileKind.values[inner];
+  }
+
+  @protected
   GroupDetail sse_decode_group_detail(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_id = sse_decode_String(deserializer);
@@ -3727,6 +5138,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   int sse_decode_i_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getInt32();
+  }
+
+  @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getPlatformInt64();
   }
 
   @protected
@@ -3873,6 +5290,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<ConflictView> sse_decode_list_conflict_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ConflictView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_conflict_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<EnvVar> sse_decode_list_env_var(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -3892,6 +5323,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <FieldOrigin>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_field_origin(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<FileEntry> sse_decode_list_file_entry(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <FileEntry>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_file_entry(deserializer));
     }
     return ans_;
   }
@@ -4050,6 +5493,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<TransferView> sse_decode_list_transfer_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <TransferView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_transfer_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -4131,6 +5588,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_failure_view(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  FileEntry? sse_decode_opt_box_autoadd_file_entry(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_file_entry(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  FileError? sse_decode_opt_box_autoadd_file_error(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_file_error(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_i_64(deserializer));
     } else {
       return null;
     }
@@ -4560,6 +6054,61 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  TransferDirection sse_decode_transfer_direction(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return TransferDirection.values[inner];
+  }
+
+  @protected
+  TransferState sse_decode_transfer_state(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return TransferState.values[inner];
+  }
+
+  @protected
+  TransferView sse_decode_transfer_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_u_64(deserializer);
+    var var_direction = sse_decode_transfer_direction(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_source = sse_decode_String(deserializer);
+    var var_destDir = sse_decode_String(deserializer);
+    var var_host = sse_decode_String(deserializer);
+    var var_isDir = sse_decode_bool(deserializer);
+    var var_files = sse_decode_u_32(deserializer);
+    var var_filesDone = sse_decode_u_32(deserializer);
+    var var_skipped = sse_decode_u_32(deserializer);
+    var var_total = sse_decode_i_64(deserializer);
+    var var_done = sse_decode_i_64(deserializer);
+    var var_rate = sse_decode_f_64(deserializer);
+    var var_state = sse_decode_transfer_state(deserializer);
+    var var_error = sse_decode_opt_box_autoadd_file_error(deserializer);
+    var var_endedAt = sse_decode_opt_box_autoadd_i_64(deserializer);
+    return TransferView(
+      id: var_id,
+      direction: var_direction,
+      name: var_name,
+      source: var_source,
+      destDir: var_destDir,
+      host: var_host,
+      isDir: var_isDir,
+      files: var_files,
+      filesDone: var_filesDone,
+      skipped: var_skipped,
+      total: var_total,
+      done: var_done,
+      rate: var_rate,
+      state: var_state,
+      error: var_error,
+      endedAt: var_endedAt,
+    );
+  }
+
+  @protected
   TrustKind sse_decode_trust_kind(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
@@ -4625,6 +6174,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+    SftpBrowser self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as SftpBrowserImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
     TerminalSession self,
     SseSerializer serializer,
@@ -4651,6 +6213,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+    SftpBrowser self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as SftpBrowserImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
     TerminalSession self,
     SseSerializer serializer,
@@ -4671,6 +6246,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
       (self as OpenWardImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
+    SftpBrowser self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as SftpBrowserImpl).frbInternalSseEncode(move: null),
       serializer,
     );
   }
@@ -4781,6 +6369,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_file_entry(
+    FileEntry self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_file_entry(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_file_error(
+    FileError self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_file_error(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_group_spec(
     GroupSpec self,
     SseSerializer serializer,
@@ -4796,6 +6402,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_host_spec(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_i_64(
+    PlatformInt64 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_64(self, serializer);
   }
 
   @protected
@@ -4908,6 +6523,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_conflict_choice(
+    ConflictChoice self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_conflict_view(ConflictView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.source, serializer);
+    sse_encode_file_entry(self.ours, serializer);
+    sse_encode_file_entry(self.theirs, serializer);
+  }
+
+  @protected
   void sse_encode_connected_view(ConnectedView self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.host, serializer);
@@ -4980,6 +6612,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_file_entry(FileEntry self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.name, serializer);
+    sse_encode_file_kind(self.kind, serializer);
+    sse_encode_bool(self.linkDir, serializer);
+    sse_encode_opt_String(self.linkTarget, serializer);
+    sse_encode_i_64(self.size, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.modified, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.mode, serializer);
+    sse_encode_opt_String(self.owner, serializer);
+    sse_encode_opt_String(self.group, serializer);
+  }
+
+  @protected
+  void sse_encode_file_error(FileError self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_file_error_kind(self.kind, serializer);
+    sse_encode_String(self.path, serializer);
+    sse_encode_String(self.message, serializer);
+  }
+
+  @protected
+  void sse_encode_file_error_kind(
+    FileErrorKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_file_kind(FileKind self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
   void sse_encode_group_detail(GroupDetail self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.id, serializer);
@@ -5041,6 +6710,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_i_32(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putInt32(self);
+  }
+
+  @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putPlatformInt64(self);
   }
 
   @protected
@@ -5151,6 +6826,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_conflict_view(
+    List<ConflictView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_conflict_view(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_env_var(List<EnvVar> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
@@ -5168,6 +6855,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_field_origin(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_file_entry(
+    List<FileEntry> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_file_entry(item, serializer);
     }
   }
 
@@ -5314,6 +7013,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_transfer_view(
+    List<TransferView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_transfer_view(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -5395,6 +7106,45 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_failure_view(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_file_entry(
+    FileEntry? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_file_entry(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_file_error(
+    FileError? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_file_error(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_64(
+    PlatformInt64? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_i_64(self, serializer);
     }
   }
 
@@ -5752,6 +7502,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_transfer_direction(
+    TransferDirection self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_transfer_state(TransferState self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_transfer_view(TransferView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self.id, serializer);
+    sse_encode_transfer_direction(self.direction, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.source, serializer);
+    sse_encode_String(self.destDir, serializer);
+    sse_encode_String(self.host, serializer);
+    sse_encode_bool(self.isDir, serializer);
+    sse_encode_u_32(self.files, serializer);
+    sse_encode_u_32(self.filesDone, serializer);
+    sse_encode_u_32(self.skipped, serializer);
+    sse_encode_i_64(self.total, serializer);
+    sse_encode_i_64(self.done, serializer);
+    sse_encode_f_64(self.rate, serializer);
+    sse_encode_transfer_state(self.state, serializer);
+    sse_encode_opt_box_autoadd_file_error(self.error, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.endedAt, serializer);
+  }
+
+  @protected
   void sse_encode_trust_kind(TrustKind self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.index, serializer);
@@ -5820,6 +7606,13 @@ class OpenWardImpl extends RustOpaque implements OpenWard {
         answer: answer,
       );
 
+  /// Stops it for good, deleting the file it was writing.
+  void cancelTransfer({required BigInt id}) => RustLib.instance.api
+      .crateApiAppOpenWardCancelTransfer(that: this, id: id);
+
+  void clearFinishedTransfers() => RustLib.instance.api
+      .crateApiAppOpenWardClearFinishedTransfers(that: this);
+
   /// Connects `session` to a saved host; again on the same session, it
   /// reconnects and keeps the screen. In Dart this returns the stream of
   /// the connection's events: progress, questions and the outcome.
@@ -5842,6 +7635,32 @@ class OpenWardImpl extends RustOpaque implements OpenWard {
   }) => RustLib.instance.api.crateApiAppOpenWardConnectAddress(
     that: this,
     session: session,
+    address: address,
+    user: user,
+    port: port,
+  );
+
+  /// Connects a browser to a saved host, over a terminal's connection to
+  /// it when one is up. The stream is the connection's events, as for
+  /// terminals; `connected` means it can browse.
+  Stream<SessionEvent> connectSftp({
+    required SftpBrowser browser,
+    required String hostId,
+  }) => RustLib.instance.api.crateApiAppOpenWardConnectSftp(
+    that: this,
+    browser: browser,
+    hostId: hostId,
+  );
+
+  /// As [`OpenWard::connect_sftp`], to an address that is not saved.
+  Stream<SessionEvent> connectSftpAddress({
+    required SftpBrowser browser,
+    required String address,
+    String? user,
+    int? port,
+  }) => RustLib.instance.api.crateApiAppOpenWardConnectSftpAddress(
+    that: this,
+    browser: browser,
     address: address,
     user: user,
     port: port,
@@ -5896,6 +7715,12 @@ class OpenWardImpl extends RustOpaque implements OpenWard {
       .api
       .crateApiAppOpenWardOpenLocal(that: this, session: session);
 
+  void pauseTransfer({required BigInt id}) =>
+      RustLib.instance.api.crateApiAppOpenWardPauseTransfer(that: this, id: id);
+
+  void pauseTransfers() =>
+      RustLib.instance.api.crateApiAppOpenWardPauseTransfers(that: this);
+
   /// What importing `~/.ssh/config` (or `file`) would bring, in the
   /// file's order. An empty list: no file, or no hosts in it.
   Future<List<ImportPreview>> previewSshConfig({String? file}) => RustLib
@@ -5907,9 +7732,20 @@ class OpenWardImpl extends RustOpaque implements OpenWard {
   int reconnectAttempts() =>
       RustLib.instance.api.crateApiAppOpenWardReconnectAttempts(that: this);
 
+  /// Takes it off the list (cancelling it if it was not finished).
+  void removeTransfer({required BigInt id}) => RustLib.instance.api
+      .crateApiAppOpenWardRemoveTransfer(that: this, id: id);
+
+  void resumeTransfer({required BigInt id}) => RustLib.instance.api
+      .crateApiAppOpenWardResumeTransfer(that: this, id: id);
+
   /// Ids of the hosts matching every word, sorted by label.
   List<String> search({required String query}) =>
       RustLib.instance.api.crateApiAppOpenWardSearch(that: this, query: query);
+
+  /// A new SFTP browser, not connected yet.
+  SftpBrowser sftp() =>
+      RustLib.instance.api.crateApiAppOpenWardSftp(that: this);
 
   List<TagCount> tags() =>
       RustLib.instance.api.crateApiAppOpenWardTags(that: this);
@@ -5927,6 +7763,27 @@ class OpenWardImpl extends RustOpaque implements OpenWard {
     rows: rows,
     scrollback: scrollback,
   );
+
+  /// Queues a copy of a file or folder over `browser`'s connection;
+  /// returns its id. It goes on if the browser closes.
+  BigInt transfer({
+    required SftpBrowser browser,
+    required TransferDirection direction,
+    required String source,
+    required String destDir,
+    required ConflictChoice onConflict,
+  }) => RustLib.instance.api.crateApiAppOpenWardTransfer(
+    that: this,
+    browser: browser,
+    direction: direction,
+    source: source,
+    destDir: destDir,
+    onConflict: onConflict,
+  );
+
+  /// Every transfer, oldest first, with its progress now.
+  List<TransferView> transfers() =>
+      RustLib.instance.api.crateApiAppOpenWardTransfers(that: this);
 
   /// Trusts a key the user checked, replacing the old one of its type
   /// (after a changed host key).
@@ -5963,6 +7820,83 @@ class OpenWardImpl extends RustOpaque implements OpenWard {
     rev: rev,
     spec: spec,
   );
+}
+
+@sealed
+class SftpBrowserImpl extends RustOpaque implements SftpBrowser {
+  // Not to be used by end users
+  SftpBrowserImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  SftpBrowserImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
+    : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        RustLib.instance.api.rust_arc_increment_strong_count_SftpBrowser,
+    rustArcDecrementStrongCount:
+        RustLib.instance.api.rust_arc_decrement_strong_count_SftpBrowser,
+    rustArcDecrementStrongCountPtr:
+        RustLib.instance.api.rust_arc_decrement_strong_count_SftpBrowserPtr,
+  );
+
+  /// With `recursive`, files keep execute only if they had it. Returns
+  /// how many entries changed.
+  Future<PlatformInt64> chmod({
+    required String path,
+    required int mode,
+    required bool recursive,
+  }) => RustLib.instance.api.crateApiSftpSftpBrowserChmod(
+    that: this,
+    path: path,
+    mode: mode,
+    recursive: recursive,
+  );
+
+  /// Stops connecting or watching the connection.
+  void close() => RustLib.instance.api.crateApiSftpSftpBrowserClose(that: this);
+
+  /// Which of `sources` already exist in `dest_dir` (on the other side).
+  Future<List<ConflictView>> conflicts({
+    required TransferDirection direction,
+    required List<String> sources,
+    required String destDir,
+  }) => RustLib.instance.api.crateApiSftpSftpBrowserConflicts(
+    that: this,
+    direction: direction,
+    sources: sources,
+    destDir: destDir,
+  );
+
+  /// The folder the server starts in.
+  Future<String> home() =>
+      RustLib.instance.api.crateApiSftpSftpBrowserHome(that: this);
+
+  /// What is in a folder, in no order.
+  Future<List<FileEntry>> list({required String path}) =>
+      RustLib.instance.api.crateApiSftpSftpBrowserList(that: this, path: path);
+
+  Future<void> mkdir({required String path}) =>
+      RustLib.instance.api.crateApiSftpSftpBrowserMkdir(that: this, path: path);
+
+  /// `path` made absolute, `..` and links resolved.
+  Future<String> realpath({required String path}) => RustLib.instance.api
+      .crateApiSftpSftpBrowserRealpath(that: this, path: path);
+
+  /// Files, links (not what they point to) and folders with all they
+  /// hold. There is no undo.
+  Future<void> remove({required List<String> paths}) => RustLib.instance.api
+      .crateApiSftpSftpBrowserRemove(that: this, paths: paths);
+
+  /// Never over something that exists.
+  Future<void> rename({required String from, required String to}) => RustLib
+      .instance
+      .api
+      .crateApiSftpSftpBrowserRename(that: this, from: from, to: to);
+
+  Future<FileEntry?> stat({required String path}) =>
+      RustLib.instance.api.crateApiSftpSftpBrowserStat(that: this, path: path);
 }
 
 @sealed

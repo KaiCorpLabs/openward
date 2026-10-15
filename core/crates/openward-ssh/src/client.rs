@@ -298,6 +298,10 @@ pub async fn open(target: &Target, hop: Hop<'_>, opts: &Options) -> anyhow::Resu
         nodelay: true,
         keepalive_interval: opts.keepalive,
         keepalive_max: 3,
+        // What a server may send before we ask for more. russh's 2 MiB,
+        // reopened by halves, caps a download at ~1 MiB per round trip
+        // (about 20 MiB/s at 50 ms); SFTP needs far more in flight.
+        window_size: 16 << 20,
         ..Default::default()
     };
     if opts.host_certificates {
@@ -378,6 +382,18 @@ impl std::fmt::Display for UntrustedHost {
 }
 
 impl std::error::Error for UntrustedHost {}
+
+/// The server has no SFTP subsystem.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NoSftp;
+
+impl std::fmt::Display for NoSftp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "the server has no SFTP subsystem")
+    }
+}
+
+impl std::error::Error for NoSftp {}
 
 /// Opens and authenticates with one method whose secrets are all at hand.
 pub async fn connect(
@@ -775,6 +791,23 @@ impl Session {
             .await?;
         channel.request_shell(true).await?;
         Ok(channel)
+    }
+
+    /// A channel running the server's SFTP subsystem, as a byte stream for
+    /// an SFTP client. Fails with [`NoSftp`] when the server has none (a
+    /// Dropbear without `sftp-server`, a router).
+    pub async fn sftp(&self) -> anyhow::Result<russh::ChannelStream<client::Msg>> {
+        let mut channel = self.handle.channel_open_session().await?;
+        channel.request_subsystem(true, "sftp").await?;
+        loop {
+            match channel.wait().await {
+                Some(ChannelMsg::Success) => return Ok(channel.into_stream()),
+                Some(ChannelMsg::Failure) | Some(ChannelMsg::Close) | None => {
+                    return Err(NoSftp.into());
+                }
+                Some(_) => {}
+            }
+        }
     }
 
     /// Asks the server to listen on `127.0.0.1:0` and relay connections to
