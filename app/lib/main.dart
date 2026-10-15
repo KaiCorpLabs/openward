@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'app.dart';
+import 'core/fonts.dart';
 import 'core/providers.dart';
 import 'core/settings.dart';
 import 'src/rust/api/app.dart';
@@ -12,6 +13,7 @@ import 'src/rust/frb_generated.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  registerFontLicenses();
   await RustLib.init();
   // OPENWARD_DATA: another data directory, to try things without touching
   // the real one.

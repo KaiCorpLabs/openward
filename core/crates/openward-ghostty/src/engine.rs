@@ -11,6 +11,7 @@ use openward_term::{
 
 use crate::sys;
 
+pub mod find;
 pub mod input;
 pub mod select;
 
@@ -32,6 +33,8 @@ struct Effects {
     cell_px: (u32, u32),
     /// The UI's theme, for color scheme queries (DSR 996).
     dark: bool,
+    /// A BEL arrived since the UI last asked.
+    bell: bool,
 }
 
 /// Theme defaults reported to OSC 10/11 queries (programs use them to pick
@@ -100,6 +103,15 @@ unsafe extern "C" fn on_color_scheme(
     true
 }
 
+unsafe extern "C" fn on_bell(_terminal: sys::GhosttyTerminal, userdata: *mut c_void) {
+    if userdata.is_null() {
+        return;
+    }
+    // SAFETY: userdata is the engine's boxed Effects, alive for as long as
+    // the terminal that calls back.
+    unsafe { (*userdata.cast::<Effects>()).bell = true };
+}
+
 unsafe extern "C" fn on_write_pty(
     _terminal: sys::GhosttyTerminal,
     userdata: *mut c_void,
@@ -150,6 +162,8 @@ pub struct GhosttyEngine {
     text: String,
     input: input::Input,
     select: select::Gesture,
+    /// The find bar's search, while one is open; null otherwise.
+    search: sys::GhosttySearch,
 }
 
 // SAFETY: the handles are only touched through `&mut self` or, for the
@@ -164,6 +178,7 @@ impl GhosttyEngine {
             size,
             cell_px: (CELL_W_PX, CELL_H_PX),
             dark: true,
+            bell: false,
         });
         // SAFETY: every out-pointer is valid; option values follow the
         // documented input types (pointer values, size_t*, function pointers).
@@ -206,6 +221,7 @@ impl GhosttyEngine {
                 *mut c_void,
                 *mut sys::GhosttySizeReportSize,
             ) -> bool = on_size;
+            let bell_fn: unsafe extern "C" fn(sys::GhosttyTerminal, *mut c_void) = on_bell;
             let scheme_fn: unsafe extern "C" fn(
                 sys::GhosttyTerminal,
                 *mut c_void,
@@ -221,6 +237,11 @@ impl GhosttyEngine {
                     sys::GHOSTTY_TERMINAL_OPT_SIZE,
                     size_fn as *const c_void,
                     "set size",
+                ),
+                (
+                    sys::GHOSTTY_TERMINAL_OPT_BELL,
+                    bell_fn as *const c_void,
+                    "set bell",
                 ),
                 (
                     sys::GHOSTTY_TERMINAL_OPT_COLOR_SCHEME,
@@ -317,6 +338,7 @@ impl GhosttyEngine {
                 text: String::with_capacity(16),
                 input: input::Input::new(),
                 select: select::Gesture::new(),
+                search: ptr::null_mut(),
             }
         }
     }
@@ -449,6 +471,61 @@ impl GhosttyEngine {
             resident_before: before,
             resident_after: self.resident_bytes(),
         }
+    }
+
+    /// Whether a BEL arrived since the last call.
+    pub fn take_bell(&mut self) -> bool {
+        std::mem::take(&mut self.effects.bell)
+    }
+
+    /// The cursor programs get until they set their own (and after they
+    /// reset it), and whether it blinks.
+    pub fn set_cursor_defaults(&mut self, shape: CursorShape, blink: bool) {
+        let style = match shape {
+            CursorShape::Beam => sys::GHOSTTY_TERMINAL_CURSOR_STYLE_BAR,
+            CursorShape::Underline => sys::GHOSTTY_TERMINAL_CURSOR_STYLE_UNDERLINE,
+            CursorShape::HollowBlock => sys::GHOSTTY_TERMINAL_CURSOR_STYLE_BLOCK_HOLLOW,
+            _ => sys::GHOSTTY_TERMINAL_CURSOR_STYLE_BLOCK,
+        };
+        // SAFETY: valid terminal; the values are GhosttyTerminalCursorStyle*
+        // and bool*, copied.
+        unsafe {
+            ok(
+                sys::ghostty_terminal_set(
+                    self.term,
+                    sys::GHOSTTY_TERMINAL_OPT_DEFAULT_CURSOR_STYLE,
+                    (&style as *const sys::GhosttyTerminalCursorStyle).cast::<c_void>(),
+                ),
+                "set default cursor style",
+            );
+            ok(
+                sys::ghostty_terminal_set(
+                    self.term,
+                    sys::GHOSTTY_TERMINAL_OPT_DEFAULT_CURSOR_BLINK,
+                    (&blink as *const bool).cast::<c_void>(),
+                ),
+                "set default cursor blink",
+            );
+        }
+        // DECSCUSR 0, here and not from the program: back to the default.
+        let reset = b"\x1b[0 q";
+        // SAFETY: valid terminal and buffer.
+        unsafe { sys::ghostty_terminal_vt_write(self.term, reset.as_ptr(), reset.len()) };
+        self.force_full = true;
+    }
+
+    /// Whether the cursor blinks, as the program (or the default) asks.
+    pub fn cursor_blinks(&self) -> bool {
+        let mut c = sized(|c: &mut sys::GhosttyRenderStateCursor, n| c.size = n);
+        // SAFETY: valid render state, correctly sized out-struct.
+        let r = unsafe {
+            sys::ghostty_render_state_get(
+                self.render,
+                sys::GHOSTTY_RENDER_STATE_DATA_CURSOR,
+                (&mut c as *mut sys::GhosttyRenderStateCursor).cast::<c_void>(),
+            )
+        };
+        r == sys::GHOSTTY_SUCCESS && c.blinking
     }
 
     fn display_offset(&self) -> u32 {
@@ -976,6 +1053,9 @@ impl Drop for GhosttyEngine {
         // SAFETY: handles created in `new`, freed once; the terminal goes
         // before `effects` (dropped after this) so no callback outlives it.
         unsafe {
+            if !self.search.is_null() {
+                sys::ghostty_search_free(self.search);
+            }
             self.select.free(self.term);
             sys::ghostty_render_state_row_cells_free(self.cells);
             sys::ghostty_render_state_row_iterator_free(self.rows);
@@ -1188,6 +1268,31 @@ mod tests {
         assert!(f.full);
         assert_eq!((f.cols, f.rows), (30, 8));
         assert_eq!(f.lines.len(), 8);
+    }
+
+    #[test]
+    fn rings_the_bell_once() {
+        let mut e = engine(20, 2);
+        assert!(!e.take_bell());
+        e.feed(b"ding\x07");
+        assert!(e.take_bell());
+        assert!(!e.take_bell());
+    }
+
+    #[test]
+    fn the_cursor_the_user_chose_until_a_program_sets_one() {
+        let mut e = engine(20, 2);
+        e.set_cursor_defaults(CursorShape::Beam, true);
+        let f = frame(&mut e);
+        assert_eq!(f.cursor.shape, CursorShape::Beam);
+        assert!(e.cursor_blinks());
+        // A program's DECSCUSR wins (2: steady block) ...
+        e.feed(b"\x1b[2 q");
+        assert_eq!(frame(&mut e).cursor.shape, CursorShape::Block);
+        assert!(!e.cursor_blinks());
+        // ... until it resets to the default.
+        e.feed(b"\x1b[0 q");
+        assert_eq!(frame(&mut e).cursor.shape, CursorShape::Beam);
     }
 
     #[test]

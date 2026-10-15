@@ -20,6 +20,7 @@ class TerminalRenderer extends ChangeNotifier {
     required this.metrics,
     required this.palette,
     required this.devicePixelRatio,
+    this.minimumContrast = 1,
   }) : _atlas = GlyphAtlas(
          metrics: metrics,
          devicePixelRatio: devicePixelRatio,
@@ -28,6 +29,10 @@ class TerminalRenderer extends ChangeNotifier {
   final CellMetrics metrics;
   final TermPalette palette;
   final double devicePixelRatio;
+
+  /// Text is made to reach this contrast on its background; 1 is off.
+  final double minimumContrast;
+  final Map<(int, int), Color> _contrasted = {};
   final GlyphAtlas? _atlas;
 
   int cols = 0;
@@ -38,6 +43,15 @@ class TerminalRenderer extends ChangeNotifier {
   /// Selected columns per visible row (both inclusive), painted over the
   /// text.
   List<({int row, int start, int end})> selection = const [];
+
+  /// The find bar's matches on screen; the selected one stands out.
+  List<({int row, int start, int end, bool selected})> search = const [];
+
+  /// The link under the pointer, underlined while it can be opened.
+  ({int row, int start, int end})? link;
+
+  /// Off during the dark half of a blink.
+  bool cursorOn = true;
   List<ui.Picture?> _rows = [];
   final Paint _paint = Paint();
   final Paint _atlasPaint = Paint()..filterQuality = FilterQuality.low;
@@ -56,6 +70,33 @@ class TerminalRenderer extends ChangeNotifier {
     if (rows.isEmpty && selection.isEmpty) return;
     selection = rows;
     notifyListeners();
+  }
+
+  void setSearch(List<({int row, int start, int end, bool selected})> hits) {
+    if (hits.isEmpty && search.isEmpty) return;
+    search = hits;
+    notifyListeners();
+  }
+
+  void setLink(({int row, int start, int end})? value) {
+    if (value == link) return;
+    link = value;
+    notifyListeners();
+  }
+
+  void setCursorOn(bool on) {
+    if (on == cursorOn) return;
+    cursorOn = on;
+    notifyListeners();
+  }
+
+  /// `fg`, or the nearest color that reads on `bg` (minimum contrast).
+  Color _readable(Color fg, Color bg) {
+    if (minimumContrast <= 1) return fg;
+    return _contrasted.putIfAbsent((
+      fg.toARGB32(),
+      bg.toARGB32(),
+    ), () => TermPalette.ensureContrast(fg, bg, minimumContrast));
   }
 
   /// Applies a frame and returns how long recording took, in microseconds.
@@ -119,6 +160,7 @@ class TerminalRenderer extends ChangeNotifier {
         );
       }
       if (s.attrs & Attr.hidden != 0) continue;
+      fg = _readable(fg, bg);
       if (s.attrs & Attr.dim != 0) fg = fg.withValues(alpha: 0.6);
 
       final glyphs = atlas == null ? null : _atlasGlyphs(s);
@@ -258,6 +300,37 @@ class TerminalRenderer extends ChangeNotifier {
         ..drawPicture(picture)
         ..restore();
     }
+    if (search.isNotEmpty) {
+      // Amber, readable over light and dark backgrounds alike.
+      final other = Paint()..color = const Color(0x59FFC94D);
+      final chosen = Paint()..color = const Color(0x99FF9F1A);
+      final ring = Paint()
+        ..color = const Color(0xFFFF9F1A)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+      for (final h in search) {
+        final rect = Rect.fromLTWH(
+          h.start * cw,
+          h.row * ch,
+          (h.end - h.start + 1) * cw,
+          ch,
+        );
+        canvas.drawRect(rect, h.selected ? chosen : other);
+        if (h.selected) canvas.drawRect(rect.deflate(0.75), ring);
+      }
+    }
+    final l = link;
+    if (l != null) {
+      canvas.drawRect(
+        Rect.fromLTWH(
+          l.start * cw,
+          (l.row + 1) * ch - 1.5,
+          (l.end - l.start + 1) * cw,
+          1.5,
+        ),
+        Paint()..color = palette.cursor,
+      );
+    }
     if (selection.isNotEmpty) {
       final paint = Paint()..color = palette.selection;
       for (final r in selection) {
@@ -273,7 +346,7 @@ class TerminalRenderer extends ChangeNotifier {
       }
     }
     final c = cursor;
-    if (c != null && c.visible && displayOffset == 0) {
+    if (c != null && c.visible && cursorOn && displayOffset == 0) {
       final rect = Rect.fromLTWH(c.col * cw, c.row * ch, cw, ch);
       final paint = _paint..color = palette.cursor;
       switch (c.shape) {

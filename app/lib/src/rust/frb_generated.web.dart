@@ -117,6 +117,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   KeyPolicy dco_decode_box_autoadd_key_policy(dynamic raw);
 
   @protected
+  LinkView dco_decode_box_autoadd_link_view(dynamic raw);
+
+  @protected
   PromptAnswer dco_decode_box_autoadd_prompt_answer(dynamic raw);
 
   @protected
@@ -130,6 +133,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RouteKind dco_decode_box_autoadd_route_kind(dynamic raw);
+
+  @protected
+  SearchView dco_decode_box_autoadd_search_view(dynamic raw);
 
   @protected
   StageView dco_decode_box_autoadd_stage_view(dynamic raw);
@@ -148,6 +154,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ConnectedView dco_decode_connected_view(dynamic raw);
+
+  @protected
+  CursorStyle dco_decode_cursor_style(dynamic raw);
 
   @protected
   EnvVar dco_decode_env_var(dynamic raw);
@@ -219,6 +228,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   KnownHostView dco_decode_known_host_view(dynamic raw);
 
   @protected
+  LinkView dco_decode_link_view(dynamic raw);
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
@@ -255,6 +267,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<QuestionView> dco_decode_list_question_view(dynamic raw);
 
   @protected
+  List<SearchHitView> dco_decode_list_search_hit_view(dynamic raw);
+
+  @protected
   List<SelectedRange> dco_decode_list_selected_range(dynamic raw);
 
   @protected
@@ -285,6 +300,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   KeyPolicy? dco_decode_opt_box_autoadd_key_policy(dynamic raw);
 
   @protected
+  LinkView? dco_decode_opt_box_autoadd_link_view(dynamic raw);
+
+  @protected
   PromptKind? dco_decode_opt_box_autoadd_prompt_kind(dynamic raw);
 
   @protected
@@ -295,6 +313,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RouteKind? dco_decode_opt_box_autoadd_route_kind(dynamic raw);
+
+  @protected
+  SearchView? dco_decode_opt_box_autoadd_search_view(dynamic raw);
 
   @protected
   StageView? dco_decode_opt_box_autoadd_stage_view(dynamic raw);
@@ -343,6 +364,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RouteKind dco_decode_route_kind(dynamic raw);
+
+  @protected
+  SearchHitView dco_decode_search_hit_view(dynamic raw);
+
+  @protected
+  SearchView dco_decode_search_view(dynamic raw);
 
   @protected
   SelectedRange dco_decode_selected_range(dynamic raw);
@@ -475,6 +502,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   KeyPolicy sse_decode_box_autoadd_key_policy(SseDeserializer deserializer);
 
   @protected
+  LinkView sse_decode_box_autoadd_link_view(SseDeserializer deserializer);
+
+  @protected
   PromptAnswer sse_decode_box_autoadd_prompt_answer(
     SseDeserializer deserializer,
   );
@@ -494,6 +524,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RouteKind sse_decode_box_autoadd_route_kind(SseDeserializer deserializer);
 
   @protected
+  SearchView sse_decode_box_autoadd_search_view(SseDeserializer deserializer);
+
+  @protected
   StageView sse_decode_box_autoadd_stage_view(SseDeserializer deserializer);
 
   @protected
@@ -510,6 +543,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ConnectedView sse_decode_connected_view(SseDeserializer deserializer);
+
+  @protected
+  CursorStyle sse_decode_cursor_style(SseDeserializer deserializer);
 
   @protected
   EnvVar sse_decode_env_var(SseDeserializer deserializer);
@@ -583,6 +619,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   KnownHostView sse_decode_known_host_view(SseDeserializer deserializer);
 
   @protected
+  LinkView sse_decode_link_view(SseDeserializer deserializer);
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
@@ -625,6 +664,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<QuestionView> sse_decode_list_question_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<SearchHitView> sse_decode_list_search_hit_view(
     SseDeserializer deserializer,
   );
 
@@ -673,6 +717,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  LinkView? sse_decode_opt_box_autoadd_link_view(SseDeserializer deserializer);
+
+  @protected
   PromptKind? sse_decode_opt_box_autoadd_prompt_kind(
     SseDeserializer deserializer,
   );
@@ -689,6 +736,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RouteKind? sse_decode_opt_box_autoadd_route_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  SearchView? sse_decode_opt_box_autoadd_search_view(
     SseDeserializer deserializer,
   );
 
@@ -743,6 +795,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RouteKind sse_decode_route_kind(SseDeserializer deserializer);
+
+  @protected
+  SearchHitView sse_decode_search_hit_view(SseDeserializer deserializer);
+
+  @protected
+  SearchView sse_decode_search_view(SseDeserializer deserializer);
 
   @protected
   SelectedRange sse_decode_selected_range(SseDeserializer deserializer);
@@ -907,6 +965,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_link_view(
+    LinkView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_prompt_answer(
     PromptAnswer self,
     SseSerializer serializer,
@@ -937,6 +1001,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_search_view(
+    SearchView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_stage_view(
     StageView self,
     SseSerializer serializer,
@@ -959,6 +1029,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_connected_view(ConnectedView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_cursor_style(CursorStyle self, SseSerializer serializer);
 
   @protected
   void sse_encode_env_var(EnvVar self, SseSerializer serializer);
@@ -1033,6 +1106,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_known_host_view(KnownHostView self, SseSerializer serializer);
 
   @protected
+  void sse_encode_link_view(LinkView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
   @protected
@@ -1093,6 +1169,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_search_hit_view(
+    List<SearchHitView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_selected_range(
     List<SelectedRange> self,
     SseSerializer serializer,
@@ -1144,6 +1226,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_link_view(
+    LinkView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_prompt_kind(
     PromptKind? self,
     SseSerializer serializer,
@@ -1164,6 +1252,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_route_kind(
     RouteKind? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_search_view(
+    SearchView? self,
     SseSerializer serializer,
   );
 
@@ -1229,6 +1323,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_route_kind(RouteKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_search_hit_view(SearchHitView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_search_view(SearchView self, SseSerializer serializer);
 
   @protected
   void sse_encode_selected_range(SelectedRange self, SseSerializer serializer);

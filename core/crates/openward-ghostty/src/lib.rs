@@ -17,6 +17,7 @@ pub mod sys;
 
 mod engine;
 
+pub use engine::find::{Link, SearchHit, SearchState, url_in_row};
 pub use engine::input::{
     InputModes, KeyAction, KeyInput, MouseAction, MouseButton, MouseInput, Paste, mods,
 };

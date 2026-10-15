@@ -12,14 +12,32 @@ class OpenWardApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final choice = ref.watch(settingsProvider.select((s) => s.theme));
-    final language = ref.watch(settingsProvider.select((s) => s.language));
+    final settings = ref.watch(settingsProvider);
+    final choice = settings.theme;
+    final language = settings.language;
     return MaterialApp(
       title: 'OpenWard',
       debugShowCheckedModeBanner: false,
-      // As the system is: Papel when it is light, Grafito when dark.
-      theme: materialTheme(OwThemes.papel),
-      darkTheme: materialTheme(OwThemes.grafito),
+      // The themes chosen for light and for dark, with their layers.
+      theme: materialTheme(resolveTheme(settings, Brightness.light)),
+      darkTheme: materialTheme(resolveTheme(settings, Brightness.dark)),
+      // Text size and fewer animations on top of what the system says.
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(
+            textScaler: TextScaler.linear(
+              mq.textScaler.scale(1) * settings.textScale,
+            ),
+            disableAnimations: switch (settings.motion) {
+              MotionChoice.system => mq.disableAnimations,
+              MotionChoice.reduce => true,
+              MotionChoice.full => false,
+            },
+          ),
+          child: child!,
+        );
+      },
       themeMode: switch (choice) {
         ThemeChoice.system => ThemeMode.system,
         ThemeChoice.dark => ThemeMode.dark,

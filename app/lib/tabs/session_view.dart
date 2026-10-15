@@ -8,6 +8,7 @@ import '../terminal/terminal_pane.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import 'connection_panels.dart';
+import 'find_bar.dart';
 import 'messages.dart';
 import 'prompt_card.dart';
 
@@ -44,9 +45,12 @@ class SessionView extends ConsumerWidget {
                 // One pane per tab: its focus and input method stay with it.
                 key: ObjectKey(c),
                 controller: c,
-                autofocus: card == null,
+                autofocus: card == null && !c.findOpen,
               ),
             ),
+            Positioned.fill(child: BellFlash(controller: c)),
+            if (c.findOpen && card == null)
+              Positioned(top: 8, right: 12, child: FindBar(controller: c)),
             if (card != null)
               Positioned.fill(
                 child: ColoredBox(

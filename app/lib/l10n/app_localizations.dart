@@ -104,6 +104,12 @@ abstract class AppLocalizations {
   /// **'OpenWard {version}'**
   String aboutVersion(String version);
 
+  /// No description provided for @accessibility.
+  ///
+  /// In es, this message translates to:
+  /// **'Accesibilidad'**
+  String get accessibility;
+
   /// No description provided for @add.
   ///
   /// In es, this message translates to:
@@ -176,11 +182,35 @@ abstract class AppLocalizations {
   /// **'¿Cómo la quieres ver?'**
   String get appearanceStepTitle;
 
+  /// No description provided for @asSystem.
+  ///
+  /// In es, this message translates to:
+  /// **'Como el sistema'**
+  String get asSystem;
+
   /// No description provided for @back.
   ///
   /// In es, this message translates to:
   /// **'Atrás'**
   String get back;
+
+  /// No description provided for @bellFlash.
+  ///
+  /// In es, this message translates to:
+  /// **'Destello con la campana'**
+  String get bellFlash;
+
+  /// No description provided for @bellFlashHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuando un programa hace sonar la campana. Si la pestaña no está delante, se marca igualmente.'**
+  String get bellFlashHelp;
+
+  /// No description provided for @bellRang.
+  ///
+  /// In es, this message translates to:
+  /// **'Ha sonado la campana'**
+  String get bellRang;
 
   /// No description provided for @cancel.
   ///
@@ -296,6 +326,24 @@ abstract class AppLocalizations {
   /// **'Continuar'**
   String get continueLabel;
 
+  /// No description provided for @contrastFails.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraste del texto {ratio}:1. No llega a AA (4,5:1).'**
+  String contrastFails(String ratio);
+
+  /// No description provided for @contrastPasses.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraste del texto {ratio}:1. Cumple AA.'**
+  String contrastPasses(String ratio);
+
+  /// No description provided for @contrastWarning.
+  ///
+  /// In es, this message translates to:
+  /// **'Con esta combinación, parte del texto no llega al contraste recomendado (queda en {ratio}:1).'**
+  String contrastWarning(String ratio);
+
   /// No description provided for @copy.
   ///
   /// In es, this message translates to:
@@ -313,6 +361,54 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ctrl+Mayús+'**
   String get ctrlShiftPrefix;
+
+  /// No description provided for @cursor.
+  ///
+  /// In es, this message translates to:
+  /// **'Cursor'**
+  String get cursor;
+
+  /// No description provided for @cursorBar.
+  ///
+  /// In es, this message translates to:
+  /// **'Barra'**
+  String get cursorBar;
+
+  /// No description provided for @cursorBlink.
+  ///
+  /// In es, this message translates to:
+  /// **'Cursor parpadeante'**
+  String get cursorBlink;
+
+  /// No description provided for @cursorBlock.
+  ///
+  /// In es, this message translates to:
+  /// **'Bloque'**
+  String get cursorBlock;
+
+  /// No description provided for @cursorHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Mientras el programa no pida otro.'**
+  String get cursorHelp;
+
+  /// No description provided for @cursorUnderline.
+  ///
+  /// In es, this message translates to:
+  /// **'Línea'**
+  String get cursorUnderline;
+
+  /// No description provided for @customize.
+  ///
+  /// In es, this message translates to:
+  /// **'Personalizar {name}'**
+  String customize(String name);
+
+  /// No description provided for @customizeHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambia una capa y el resto se queda igual. Los cambios son solo de este tema.'**
+  String get customizeHint;
 
   /// No description provided for @defaultKeys.
   ///
@@ -434,6 +530,42 @@ abstract class AppLocalizations {
   /// **'No se ha confiado en la clave de {label}.'**
   String failureHostKeyRejected(String label);
 
+  /// No description provided for @findClose.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar la búsqueda (Esc)'**
+  String get findClose;
+
+  /// No description provided for @findCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{selected} de {total}'**
+  String findCount(int selected, int total);
+
+  /// No description provided for @findHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar en el terminal'**
+  String get findHint;
+
+  /// No description provided for @findNewer.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiente, más abajo (Mayús+Intro)'**
+  String get findNewer;
+
+  /// No description provided for @findOlder.
+  ///
+  /// In es, this message translates to:
+  /// **'Anterior, más arriba (Intro)'**
+  String get findOlder;
+
+  /// No description provided for @findTotal.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{Sin resultados} =1{1 resultado} other{{count} resultados}}'**
+  String findTotal(int count);
+
   /// No description provided for @fingerprint.
   ///
   /// In es, this message translates to:
@@ -446,11 +578,41 @@ abstract class AppLocalizations {
   /// **'Primera conexión con {label}'**
   String firstConnectionTo(String label);
 
+  /// No description provided for @fontFromTheme.
+  ///
+  /// In es, this message translates to:
+  /// **'La del tema'**
+  String get fontFromTheme;
+
+  /// No description provided for @fontOther.
+  ///
+  /// In es, this message translates to:
+  /// **'Otra fuente instalada…'**
+  String get fontOther;
+
+  /// No description provided for @fontOtherHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Su nombre exacto, como «Fira Code»'**
+  String get fontOtherHint;
+
+  /// No description provided for @fontOtherTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Otra fuente instalada'**
+  String get fontOtherTitle;
+
   /// No description provided for @fontSize.
   ///
   /// In es, this message translates to:
   /// **'Tamaño de letra'**
   String get fontSize;
+
+  /// No description provided for @fontSystem.
+  ///
+  /// In es, this message translates to:
+  /// **'La del sistema'**
+  String get fontSystem;
 
   /// No description provided for @fromDefault.
   ///
@@ -578,6 +740,24 @@ abstract class AppLocalizations {
   /// **'No hay hosts nuevos en ~/.ssh/config (o no existe).'**
   String get importNothing;
 
+  /// No description provided for @importScheme.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar de iTerm2 o Ghostty…'**
+  String get importScheme;
+
+  /// No description provided for @importSchemeDone.
+  ///
+  /// In es, this message translates to:
+  /// **'«{name}» importado y puesto en el terminal.'**
+  String importSchemeDone(String name);
+
+  /// No description provided for @importSchemeFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese fichero no es un tema de iTerm2 (.itermcolors) ni de Ghostty.'**
+  String get importSchemeFailed;
+
   /// No description provided for @importSshConfigMenu.
   ///
   /// In es, this message translates to:
@@ -590,11 +770,23 @@ abstract class AppLocalizations {
   /// **'Importar ~/.ssh/config'**
   String get importTitle;
 
+  /// No description provided for @inDark.
+  ///
+  /// In es, this message translates to:
+  /// **'En oscuro'**
+  String get inDark;
+
   /// No description provided for @inGroup.
   ///
   /// In es, this message translates to:
   /// **'en el grupo {name}'**
   String inGroup(String name);
+
+  /// No description provided for @inLight.
+  ///
+  /// In es, this message translates to:
+  /// **'En claro'**
+  String get inLight;
 
   /// No description provided for @inputNotSent.
   ///
@@ -716,6 +908,30 @@ abstract class AppLocalizations {
   /// **'Como el sistema'**
   String get languageSystem;
 
+  /// No description provided for @licenses.
+  ///
+  /// In es, this message translates to:
+  /// **'Licencias'**
+  String get licenses;
+
+  /// No description provided for @lightAndDark.
+  ///
+  /// In es, this message translates to:
+  /// **'Claro y oscuro'**
+  String get lightAndDark;
+
+  /// No description provided for @lineHeight.
+  ///
+  /// In es, this message translates to:
+  /// **'Interlineado del terminal'**
+  String get lineHeight;
+
+  /// No description provided for @linkNotOpened.
+  ///
+  /// In es, this message translates to:
+  /// **'Los enlaces «{scheme}:» no se abren desde el terminal.'**
+  String linkNotOpened(String scheme);
+
   /// No description provided for @localTerminal.
   ///
   /// In es, this message translates to:
@@ -733,6 +949,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{ms} ms'**
   String milliseconds(int ms);
+
+  /// No description provided for @minimumContrast.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraste mínimo'**
+  String get minimumContrast;
+
+  /// No description provided for @minimumContrastHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Aclara u oscurece el texto del terminal que no se lee sobre su fondo.'**
+  String get minimumContrastHelp;
 
   /// No description provided for @missingAddress.
   ///
@@ -847,6 +1075,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Siguiente'**
   String get next;
+
+  /// No description provided for @no.
+  ///
+  /// In es, this message translates to:
+  /// **'No'**
+  String get no;
 
   /// No description provided for @noGroup.
   ///
@@ -974,6 +1208,12 @@ abstract class AppLocalizations {
   /// **'¿Pegar varias líneas?'**
   String get pasteMultiTitle;
 
+  /// No description provided for @percent.
+  ///
+  /// In es, this message translates to:
+  /// **'{number} %'**
+  String percent(int number);
+
   /// No description provided for @pixels.
   ///
   /// In es, this message translates to:
@@ -1022,6 +1262,18 @@ abstract class AppLocalizations {
   /// **'{kex} (poscuántico)'**
   String postQuantumKex(String kex);
 
+  /// No description provided for @preview.
+  ///
+  /// In es, this message translates to:
+  /// **'Vista previa'**
+  String get preview;
+
+  /// No description provided for @previewLive.
+  ///
+  /// In es, this message translates to:
+  /// **'Los cambios se ven al momento en toda la ventana.'**
+  String get previewLive;
+
   /// No description provided for @quickConnectHint.
   ///
   /// In es, this message translates to:
@@ -1063,6 +1315,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Reconectando: {stage}'**
   String reconnectingStage(String stage);
+
+  /// No description provided for @reduceMotion.
+  ///
+  /// In es, this message translates to:
+  /// **'Reducir movimiento'**
+  String get reduceMotion;
 
   /// No description provided for @removeTag.
   ///
@@ -1112,6 +1370,12 @@ abstract class AppLocalizations {
   /// **'Están en el grupo «~/.ssh/config».'**
   String get reportWhere;
 
+  /// No description provided for @resetTheme.
+  ///
+  /// In es, this message translates to:
+  /// **'Restablecer'**
+  String get resetTheme;
+
   /// No description provided for @restart.
   ///
   /// In es, this message translates to:
@@ -1159,6 +1423,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'este equipo'**
   String get routeStart;
+
+  /// No description provided for @sampleComment.
+  ///
+  /// In es, this message translates to:
+  /// **'comentario en gris'**
+  String get sampleComment;
+
+  /// No description provided for @sampleError.
+  ///
+  /// In es, this message translates to:
+  /// **'error:'**
+  String get sampleError;
+
+  /// No description provided for @sampleErrorText.
+  ///
+  /// In es, this message translates to:
+  /// **'no se pudo leer .env'**
+  String get sampleErrorText;
+
+  /// No description provided for @sampleWarning.
+  ///
+  /// In es, this message translates to:
+  /// **'aviso:'**
+  String get sampleWarning;
+
+  /// No description provided for @sampleWarningText.
+  ///
+  /// In es, this message translates to:
+  /// **'2 migraciones pendientes'**
+  String get sampleWarningText;
 
   /// No description provided for @save.
   ///
@@ -1285,6 +1579,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Terminal'**
   String get settingsTerminal;
+
+  /// No description provided for @shape.
+  ///
+  /// In es, this message translates to:
+  /// **'Forma'**
+  String get shape;
 
   /// No description provided for @shortcutLocal.
   ///
@@ -1430,6 +1730,54 @@ abstract class AppLocalizations {
   /// **'Etiquetas'**
   String get tags;
 
+  /// No description provided for @terminalAlwaysDark.
+  ///
+  /// In es, this message translates to:
+  /// **'Siempre oscuro'**
+  String get terminalAlwaysDark;
+
+  /// No description provided for @terminalAsTheme.
+  ///
+  /// In es, this message translates to:
+  /// **'Como el tema'**
+  String get terminalAsTheme;
+
+  /// No description provided for @terminalColors.
+  ///
+  /// In es, this message translates to:
+  /// **'Colores del terminal'**
+  String get terminalColors;
+
+  /// No description provided for @terminalFont.
+  ///
+  /// In es, this message translates to:
+  /// **'Fuente del terminal'**
+  String get terminalFont;
+
+  /// No description provided for @terminalScheme.
+  ///
+  /// In es, this message translates to:
+  /// **'Esquema propio'**
+  String get terminalScheme;
+
+  /// No description provided for @terminalShortcuts.
+  ///
+  /// In es, this message translates to:
+  /// **'{key}F busca en el terminal y su historial. {key}+ y {key}− cambian el tamaño de la letra de la pestaña, y {key}0 lo devuelve. Con {key} pulsado, un clic abre un enlace.'**
+  String terminalShortcuts(String key);
+
+  /// No description provided for @textSize.
+  ///
+  /// In es, this message translates to:
+  /// **'Tamaño del texto'**
+  String get textSize;
+
+  /// No description provided for @textSizeHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'De la interfaz, sobre el del sistema. El terminal tiene el suyo.'**
+  String get textSizeHelp;
+
   /// No description provided for @theme.
   ///
   /// In es, this message translates to:
@@ -1459,6 +1807,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Seguir al sistema'**
   String get themeSystem;
+
+  /// No description provided for @themeVariant.
+  ///
+  /// In es, this message translates to:
+  /// **'{name} ({variant})'**
+  String themeVariant(String name, String variant);
 
   /// No description provided for @thisComputer.
   ///
@@ -1520,11 +1874,47 @@ abstract class AppLocalizations {
   /// **'Reintentar'**
   String get tryAgain;
 
+  /// No description provided for @uiColors.
+  ///
+  /// In es, this message translates to:
+  /// **'Colores de la interfaz'**
+  String get uiColors;
+
+  /// No description provided for @uiFont.
+  ///
+  /// In es, this message translates to:
+  /// **'Fuente de la interfaz'**
+  String get uiFont;
+
   /// No description provided for @user.
   ///
   /// In es, this message translates to:
   /// **'Usuario'**
   String get user;
+
+  /// No description provided for @variantDark.
+  ///
+  /// In es, this message translates to:
+  /// **'oscuro'**
+  String get variantDark;
+
+  /// No description provided for @variantDarkOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'Oscuro'**
+  String get variantDarkOnly;
+
+  /// No description provided for @variantLight.
+  ///
+  /// In es, this message translates to:
+  /// **'claro'**
+  String get variantLight;
+
+  /// No description provided for @variantLightOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'Claro'**
+  String get variantLightOnly;
 
   /// No description provided for @verificationTitle.
   ///
@@ -1621,6 +2011,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Contraseña incorrecta.'**
   String get wrongPassword;
+
+  /// No description provided for @yes.
+  ///
+  /// In es, this message translates to:
+  /// **'Sí'**
+  String get yes;
 }
 
 class _AppLocalizationsDelegate

@@ -15,6 +15,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get accessibility => 'Accesibilidad';
+
+  @override
   String get add => 'Añadir';
 
   @override
@@ -52,7 +55,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get appearanceStepTitle => '¿Cómo la quieres ver?';
 
   @override
+  String get asSystem => 'Como el sistema';
+
+  @override
   String get back => 'Atrás';
+
+  @override
+  String get bellFlash => 'Destello con la campana';
+
+  @override
+  String get bellFlashHelp =>
+      'Cuando un programa hace sonar la campana. Si la pestaña no está delante, se marca igualmente.';
+
+  @override
+  String get bellRang => 'Ha sonado la campana';
 
   @override
   String get cancel => 'Cancelar';
@@ -120,6 +136,21 @@ class AppLocalizationsEs extends AppLocalizations {
   String get continueLabel => 'Continuar';
 
   @override
+  String contrastFails(String ratio) {
+    return 'Contraste del texto $ratio:1. No llega a AA (4,5:1).';
+  }
+
+  @override
+  String contrastPasses(String ratio) {
+    return 'Contraste del texto $ratio:1. Cumple AA.';
+  }
+
+  @override
+  String contrastWarning(String ratio) {
+    return 'Con esta combinación, parte del texto no llega al contraste recomendado (queda en $ratio:1).';
+  }
+
+  @override
   String get copy => 'Copiar';
 
   @override
@@ -127,6 +158,33 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get ctrlShiftPrefix => 'Ctrl+Mayús+';
+
+  @override
+  String get cursor => 'Cursor';
+
+  @override
+  String get cursorBar => 'Barra';
+
+  @override
+  String get cursorBlink => 'Cursor parpadeante';
+
+  @override
+  String get cursorBlock => 'Bloque';
+
+  @override
+  String get cursorHelp => 'Mientras el programa no pida otro.';
+
+  @override
+  String get cursorUnderline => 'Línea';
+
+  @override
+  String customize(String name) {
+    return 'Personalizar $name';
+  }
+
+  @override
+  String get customizeHint =>
+      'Cambia una capa y el resto se queda igual. Los cambios son solo de este tema.';
 
   @override
   String get defaultKeys =>
@@ -207,6 +265,35 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get findClose => 'Cerrar la búsqueda (Esc)';
+
+  @override
+  String findCount(int selected, int total) {
+    return '$selected de $total';
+  }
+
+  @override
+  String get findHint => 'Buscar en el terminal';
+
+  @override
+  String get findNewer => 'Siguiente, más abajo (Mayús+Intro)';
+
+  @override
+  String get findOlder => 'Anterior, más arriba (Intro)';
+
+  @override
+  String findTotal(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count resultados',
+      one: '1 resultado',
+      zero: 'Sin resultados',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get fingerprint => 'Huella';
 
   @override
@@ -215,7 +302,22 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get fontFromTheme => 'La del tema';
+
+  @override
+  String get fontOther => 'Otra fuente instalada…';
+
+  @override
+  String get fontOtherHint => 'Su nombre exacto, como «Fira Code»';
+
+  @override
+  String get fontOtherTitle => 'Otra fuente instalada';
+
+  @override
   String get fontSize => 'Tamaño de letra';
+
+  @override
+  String get fontSystem => 'La del sistema';
 
   @override
   String get fromDefault => 'Valor por defecto';
@@ -309,15 +411,33 @@ class AppLocalizationsEs extends AppLocalizations {
       'No hay hosts nuevos en ~/.ssh/config (o no existe).';
 
   @override
+  String get importScheme => 'Importar de iTerm2 o Ghostty…';
+
+  @override
+  String importSchemeDone(String name) {
+    return '«$name» importado y puesto en el terminal.';
+  }
+
+  @override
+  String get importSchemeFailed =>
+      'Ese fichero no es un tema de iTerm2 (.itermcolors) ni de Ghostty.';
+
+  @override
   String get importSshConfigMenu => 'Importar de ~/.ssh/config…';
 
   @override
   String get importTitle => 'Importar ~/.ssh/config';
 
   @override
+  String get inDark => 'En oscuro';
+
+  @override
   String inGroup(String name) {
     return 'en el grupo $name';
   }
+
+  @override
+  String get inLight => 'En claro';
 
   @override
   String get inputNotSent => 'Lo que escribas ahora no se envía.';
@@ -394,6 +514,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get languageSystem => 'Como el sistema';
 
   @override
+  String get licenses => 'Licencias';
+
+  @override
+  String get lightAndDark => 'Claro y oscuro';
+
+  @override
+  String get lineHeight => 'Interlineado del terminal';
+
+  @override
+  String linkNotOpened(String scheme) {
+    return 'Los enlaces «$scheme:» no se abren desde el terminal.';
+  }
+
+  @override
   String get localTerminal => 'Terminal local';
 
   @override
@@ -403,6 +537,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String milliseconds(int ms) {
     return '$ms ms';
   }
+
+  @override
+  String get minimumContrast => 'Contraste mínimo';
+
+  @override
+  String get minimumContrastHelp =>
+      'Aclara u oscurece el texto del terminal que no se lee sobre su fondo.';
 
   @override
   String get missingAddress => 'Falta la dirección.';
@@ -460,6 +601,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get next => 'Siguiente';
+
+  @override
+  String get no => 'No';
 
   @override
   String get noGroup => 'Sin grupo';
@@ -530,6 +674,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get pasteMultiTitle => '¿Pegar varias líneas?';
 
   @override
+  String percent(int number) {
+    return '$number %';
+  }
+
+  @override
   String pixels(int size) {
     return '$size px';
   }
@@ -558,6 +707,12 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get preview => 'Vista previa';
+
+  @override
+  String get previewLive => 'Los cambios se ven al momento en toda la ventana.';
+
+  @override
   String get quickConnectHint => 'usuario@servidor:puerto';
 
   @override
@@ -580,6 +735,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String reconnectingStage(String stage) {
     return 'Reconectando: $stage';
   }
+
+  @override
+  String get reduceMotion => 'Reducir movimiento';
 
   @override
   String removeTag(String tag) {
@@ -624,6 +782,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reportWhere => 'Están en el grupo «~/.ssh/config».';
 
   @override
+  String get resetTheme => 'Restablecer';
+
+  @override
   String get restart => 'Reiniciar';
 
   @override
@@ -648,6 +809,21 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get routeStart => 'este equipo';
+
+  @override
+  String get sampleComment => 'comentario en gris';
+
+  @override
+  String get sampleError => 'error:';
+
+  @override
+  String get sampleErrorText => 'no se pudo leer .env';
+
+  @override
+  String get sampleWarning => 'aviso:';
+
+  @override
+  String get sampleWarningText => '2 migraciones pendientes';
 
   @override
   String get save => 'Guardar';
@@ -723,6 +899,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsTerminal => 'Terminal';
+
+  @override
+  String get shape => 'Forma';
 
   @override
   String get shortcutLocal => 'Abre un terminal local';
@@ -813,6 +992,33 @@ class AppLocalizationsEs extends AppLocalizations {
   String get tags => 'Etiquetas';
 
   @override
+  String get terminalAlwaysDark => 'Siempre oscuro';
+
+  @override
+  String get terminalAsTheme => 'Como el tema';
+
+  @override
+  String get terminalColors => 'Colores del terminal';
+
+  @override
+  String get terminalFont => 'Fuente del terminal';
+
+  @override
+  String get terminalScheme => 'Esquema propio';
+
+  @override
+  String terminalShortcuts(String key) {
+    return '${key}F busca en el terminal y su historial. $key+ y $key− cambian el tamaño de la letra de la pestaña, y ${key}0 lo devuelve. Con $key pulsado, un clic abre un enlace.';
+  }
+
+  @override
+  String get textSize => 'Tamaño del texto';
+
+  @override
+  String get textSizeHelp =>
+      'De la interfaz, sobre el del sistema. El terminal tiene el suyo.';
+
+  @override
   String get theme => 'Tema';
 
   @override
@@ -826,6 +1032,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get themeSystem => 'Seguir al sistema';
+
+  @override
+  String themeVariant(String name, String variant) {
+    return '$name ($variant)';
+  }
 
   @override
   String get thisComputer => 'Este equipo';
@@ -860,7 +1071,25 @@ class AppLocalizationsEs extends AppLocalizations {
   String get tryAgain => 'Reintentar';
 
   @override
+  String get uiColors => 'Colores de la interfaz';
+
+  @override
+  String get uiFont => 'Fuente de la interfaz';
+
+  @override
   String get user => 'Usuario';
+
+  @override
+  String get variantDark => 'oscuro';
+
+  @override
+  String get variantDarkOnly => 'Oscuro';
+
+  @override
+  String get variantLight => 'claro';
+
+  @override
+  String get variantLightOnly => 'Claro';
 
   @override
   String get verificationTitle => 'Verificación';
@@ -926,4 +1155,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get wrongPassword => 'Contraseña incorrecta.';
+
+  @override
+  String get yes => 'Sí';
 }

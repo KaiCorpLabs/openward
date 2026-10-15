@@ -2,6 +2,9 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openward/core/settings.dart';
+import 'package:openward/terminal/palette.dart';
+import 'package:openward/terminal/schemes.dart';
 import 'package:openward/ui/themes.dart';
 import 'package:openward/ui/tokens.dart';
 
@@ -18,7 +21,7 @@ double _contrast(Color a, Color b) {
 }
 
 void main() {
-  for (final theme in [OwThemes.grafito, OwThemes.papel]) {
+  for (final theme in OwThemes.all.values) {
     test('${theme.id}: text reads at AA on every background it sits on', () {
       final c = theme.colors;
       final pairs = <String, (Color, Color)>{
@@ -82,5 +85,82 @@ void main() {
     OwColors g = OwThemes.grafito.colors, p = OwThemes.papel.colors;
     expect(g.window == p.window, isFalse);
     expect(g.text == p.text, isFalse);
+  });
+
+  test('a theme takes layers from others and keeps the rest', () {
+    final s = const Settings(darkTheme: 'grafito').withOverrides(
+      'grafito',
+      (o) => o.copyWith(colors: () => 'fosforo', uiFont: () => ''),
+    );
+    final t = resolveTheme(s, Brightness.dark);
+    expect(t.id, 'grafito');
+    expect(t.colors, same(OwThemes.fosforo.colors));
+    expect(t.shape, same(OwThemes.grafito.shape));
+    expect(t.fonts.ui, isNull, reason: 'the system font');
+    expect(t.fonts.terminal, 'JetBrains Mono');
+    // The terminal goes with the colors.
+    expect(t.terminal, same(ThemePalettes.fosforo));
+  });
+
+  test("Papel's terminal: light, always dark, or a scheme", () {
+    final papel = resolveTheme(const Settings(), Brightness.light);
+    expect(papel.id, 'papel');
+    expect(papel.terminal.dark, isFalse);
+    final dark = const Settings().withOverrides(
+      'papel',
+      (o) => o.copyWith(terminal: TerminalColors.dark),
+    );
+    expect(
+      resolveTheme(dark, Brightness.light).terminal,
+      same(ThemePalettes.papelOscuro),
+    );
+    final nord = const Settings().withOverrides(
+      'papel',
+      (o) => o.copyWith(terminal: TerminalColors.scheme, scheme: () => 'nord'),
+    );
+    expect(
+      resolveTheme(nord, Brightness.light).terminal.background.toARGB32(),
+      0xFF2E3440,
+    );
+  });
+
+  test('a family picked for the wrong brightness falls back', () {
+    final t = resolveTheme(
+      const Settings(lightTheme: 'grafito'),
+      Brightness.light,
+    );
+    expect(t.id, 'papel');
+    expect(
+      resolveTheme(const Settings(darkTheme: 'nativo'), Brightness.dark).id,
+      'nativo-oscuro',
+    );
+  });
+
+  test('minimum contrast lifts unreadable text and leaves the rest', () {
+    const bg = Color(0xFF0A0D0B);
+    const dim = Color(0xFF2A3A30);
+    final lifted = TermPalette.ensureContrast(dim, bg, 3);
+    expect(TermPalette.contrast(lifted, bg), greaterThanOrEqualTo(3));
+    expect(TermPalette.contrast(lifted, bg), lessThan(3.3));
+    const fine = Color(0xFFC9D6CE);
+    expect(TermPalette.ensureContrast(fine, bg, 3), fine);
+    // On white, towards black.
+    final onWhite = TermPalette.ensureContrast(
+      const Color(0xFFFFE14D),
+      const Color(0xFFFFFFFF),
+      4.5,
+    );
+    expect(TermPalette.luminance(onWhite), lessThan(0.3));
+  });
+
+  test('known schemes have 16 colors and read at least 3:1', () {
+    for (final s in knownSchemes) {
+      expect(s.palette.ansi16, hasLength(16), reason: s.id);
+      expect(
+        TermPalette.contrast(s.palette.foreground, s.palette.background),
+        greaterThanOrEqualTo(3),
+        reason: s.id,
+      );
+    }
   });
 }

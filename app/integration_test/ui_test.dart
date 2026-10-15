@@ -34,6 +34,8 @@ import 'package:openward/tabs/tabs.dart';
 import 'package:openward/terminal/controller.dart';
 import 'package:openward/terminal/keys.dart';
 import 'package:openward/terminal/renderer.dart';
+import 'package:openward/settings/settings_page.dart';
+import 'package:openward/ui/tokens.dart';
 
 final _shots = Directory('${Directory.systemTemp.path}/openward-shots');
 final _frame = GlobalKey();
@@ -82,6 +84,34 @@ Future<String?> _servers() async {
     timeout: const Duration(milliseconds: 300),
   ).then((s) => (s..destroy()) == s).catchError((_) => false);
   return up && File('$fixtures/id_ed25519').existsSync() ? fixtures : null;
+}
+
+/// A segment of the light / dark / system choice (cards say «Claro» too).
+Finder _segment(String text) => find.descendant(
+  of: find.byType(SegmentedButton<ThemeChoice>),
+  matching: find.text(text),
+);
+
+/// ⌘ and a key, or Ctrl (and Shift, for letters) off Apple platforms.
+Future<void> _shortcut(
+  WidgetTester tester,
+  LogicalKeyboardKey key, {
+  bool letter = false,
+}) async {
+  final mods = isApple
+      ? [LogicalKeyboardKey.metaLeft]
+      : [
+          LogicalKeyboardKey.controlLeft,
+          if (letter) LogicalKeyboardKey.shiftLeft,
+        ];
+  for (final k in mods) {
+    await tester.sendKeyDownEvent(k);
+  }
+  await tester.sendKeyEvent(key);
+  for (final k in mods.reversed) {
+    await tester.sendKeyUpEvent(k);
+  }
+  await tester.pump();
 }
 
 Future<void> _doubleTap(WidgetTester tester, String text) async {
@@ -314,11 +344,10 @@ Host web-1 web-2
     await _settle(tester);
     await tester.tap(find.text('Apariencia'));
     await _settle(tester);
-    await tester.tap(find.text('Claro'));
+    await tester.tap(_segment('Claro'));
     await _settle(tester);
     await _shot(tester, '10-settings');
-    await tester.tap(find.text('Terminal'));
-    await _settle(tester);
+    await tester.ensureVisible(find.text('13 px'));
     await tester.tap(find.text('13 px'));
     await _settle(tester);
     await tester.tap(find.text('16 px').last);
@@ -703,6 +732,146 @@ Host db
       await tester.tap(find.text('No confiar'));
       await _until(tester, () => c.phase == Phase.closed, 'the refusal');
     }
+    container.read(tabsProvider.notifier).close(0);
+    await _settle(tester);
+  });
+
+  testWidgets('appearance: a theme from the gallery, a layer, accessibility', (
+    tester,
+  ) async {
+    final container = await launch(tester);
+    Settings settings() => container.read(settingsProvider);
+    OwTheme shown() =>
+        Theme.of(tester.element(find.byType(SettingsPage)))
+            .extension<OwTheme>()!;
+    await tester.tap(find.byTooltip('Ajustes'));
+    await _settle(tester);
+    await tester.tap(find.text('Apariencia'));
+    await _settle(tester);
+
+    await tester.tap(_segment('Oscuro'));
+    await _settle(tester);
+    await tester.tap(find.byKey(const ValueKey('family.fosforo')));
+    await _settle(tester);
+    expect(settings().darkTheme, 'fosforo');
+    expect(shown().id, 'fosforo');
+    await _shot(tester, '14-fosforo');
+    await tester.tap(find.byKey(const ValueKey('family.nativo')));
+    await _settle(tester);
+    expect(shown().id, 'nativo-oscuro');
+    await _shot(tester, '14-nativo');
+
+    // A light-only theme switches the fixed mode to light.
+    await tester.tap(find.byKey(const ValueKey('family.papel')));
+    await _settle(tester);
+    expect(
+      (settings().theme, settings().lightTheme),
+      (ThemeChoice.light, 'papel'),
+    );
+    expect(shown().terminal.dark, isFalse);
+    await tester.ensureVisible(find.text('Siempre oscuro'));
+    await _settle(tester);
+    await tester.tap(find.text('Siempre oscuro'));
+    await _settle(tester);
+    expect(settings().overrides['papel']!.terminal, TerminalColors.dark);
+    expect(shown().terminal.dark, isTrue);
+    await _shot(tester, '15-papel-dark-terminal');
+    await tester.ensureVisible(find.text('Restablecer'));
+    await _settle(tester);
+    await tester.tap(find.text('Restablecer'));
+    await _settle(tester);
+    expect(settings().overrides, isEmpty);
+
+    await tester.ensureVisible(find.text('Barra'));
+    await tester.tap(find.text('Barra'));
+    await _settle(tester);
+    expect(settings().cursor, CursorChoice.bar);
+    container.read(tabsProvider.notifier).close(0);
+    await _settle(tester);
+  });
+
+  testWidgets('terminal: find, links, bell and the tab\'s text size', (
+    tester,
+  ) async {
+    final container = await launch(tester);
+    await tester.tap(find.text('Abrir un terminal local'));
+    await tester.pump();
+    final c = container.read(tabsProvider).currentSession!;
+    await _until(tester, () => c.phase == Phase.running, 'the shell');
+    // Printed so that the command line itself holds none of it.
+    c.session.text(
+      text:
+          r"printf 'uno\nlinea FIND-%s\n\033]8;;https://openward.dev\033\\docs\033]8;;\033\\ http://x.%s/a\n\a' ME test"
+          '\n',
+    );
+    await _until(
+      tester,
+      () => c.session.screenText().contains('http://x.test/a'),
+      'the output',
+    );
+    await _until(tester, () => c.bells > 0, 'the bell');
+    expect(c.bellUnseen, isFalse, reason: 'the tab is in front');
+
+    await _shortcut(tester, LogicalKeyboardKey.keyF, letter: true);
+    expect(c.findOpen, isTrue);
+    await tester.enterText(find.byKey(const ValueKey('find.text')), 'find-me');
+    await _until(
+      tester,
+      () => c.findTotal == 1 && c.findSelected == 1,
+      'the match',
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(c.currentRenderer!.search.where((h) => h.selected), hasLength(1));
+    expect(find.text('1 de 1'), findsOneWidget);
+    await _shot(tester, '16-find');
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(c.findOpen, isFalse);
+
+    final m = c.currentRenderer!.metrics;
+    final row = c.session
+        .screenText()
+        .split('\n')
+        .indexWhere((l) => l.startsWith('docs '));
+    expect(row, isNonNegative);
+    double y = (row + 0.5) * m.height;
+    expect(
+      c.session.linkAt(x: 1.5 * m.width, y: y)?.url,
+      'https://openward.dev',
+    );
+    expect(c.session.linkAt(x: 8.5 * m.width, y: y)?.url, 'http://x.test/a');
+
+    final size = c.currentRenderer!.metrics.fontSize;
+    await _shortcut(tester, LogicalKeyboardKey.equal);
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(c.zoom, 1);
+    expect(c.currentRenderer!.metrics.fontSize, size + 1);
+    await _shortcut(tester, LogicalKeyboardKey.digit0);
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(c.currentRenderer!.metrics.fontSize, size);
+
+    // A selection dragged past the top edge scrolls back through history.
+    c.session.text(text: 'for i in \$(seq 1 80); do echo line\$i; done\n');
+    await _until(
+      tester,
+      () => c.session.screenText().contains('line80'),
+      'the lines',
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    final grid = tester.getTopLeft(find.byType(TerminalGrid));
+    final drag = await tester.startGesture(
+      grid + Offset(m.width * 2, m.height * 3),
+      kind: PointerDeviceKind.mouse,
+      buttons: kPrimaryMouseButton,
+    );
+    await drag.moveTo(grid + Offset(m.width * 2, -m.height * 2));
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 60));
+    }
+    await drag.up();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(c.currentRenderer!.displayOffset, greaterThan(0));
+    expect(c.session.selectionText(), isNotNull);
     container.read(tabsProvider.notifier).close(0);
     await _settle(tester);
   });

@@ -71,7 +71,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -272492483;
+  int get rustContentHash => -1513952716;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -200,6 +200,8 @@ abstract class RustLibApi extends BaseApi {
 
   void crateApiSessionTerminalSessionClose({required TerminalSession that});
 
+  void crateApiSessionTerminalSessionEndSearch({required TerminalSession that});
+
   void crateApiSessionTerminalSessionFocus({
     required TerminalSession that,
     required bool gained,
@@ -212,6 +214,12 @@ abstract class RustLibApi extends BaseApi {
     required int mods,
     required String text,
     required int unshifted,
+  });
+
+  LinkView? crateApiSessionTerminalSessionLinkAt({
+    required TerminalSession that,
+    required double x,
+    required double y,
   });
 
   bool crateApiSessionTerminalSessionPaste({
@@ -245,6 +253,16 @@ abstract class RustLibApi extends BaseApi {
     required TerminalSession that,
   });
 
+  void crateApiSessionTerminalSessionSearch({
+    required TerminalSession that,
+    required String needle,
+  });
+
+  void crateApiSessionTerminalSessionSearchStep({
+    required TerminalSession that,
+    required bool older,
+  });
+
   void crateApiSessionTerminalSessionSelectAll({required TerminalSession that});
 
   void crateApiSessionTerminalSessionSelectDrag({
@@ -274,6 +292,12 @@ abstract class RustLibApi extends BaseApi {
     required TerminalSession that,
     required double width,
     required double height,
+  });
+
+  void crateApiSessionTerminalSessionSetCursor({
+    required TerminalSession that,
+    required CursorStyle style,
+    required bool blink,
   });
 
   void crateApiSessionTerminalSessionSetOptionAsAlt({
@@ -1228,6 +1252,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  void crateApiSessionTerminalSessionEndSearch({
+    required TerminalSession that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSessionTerminalSessionEndSearchConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSessionTerminalSessionEndSearchConstMeta =>
+      const TaskConstMeta(
+        debugName: "TerminalSession_end_search",
+        argNames: ["that"],
+      );
+
+  @override
   void crateApiSessionTerminalSessionFocus({
     required TerminalSession that,
     required bool gained,
@@ -1241,7 +1296,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             serializer,
           );
           sse_encode_bool(gained, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1282,7 +1337,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_u_16(mods, serializer);
           sse_encode_String(text, serializer);
           sse_encode_u_32(unshifted, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 28)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_bool,
@@ -1302,6 +1357,41 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  LinkView? crateApiSessionTerminalSessionLinkAt({
+    required TerminalSession that,
+    required double x,
+    required double y,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
+            that,
+            serializer,
+          );
+          sse_encode_f_32(x, serializer);
+          sse_encode_f_32(y, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 29)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_link_view,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSessionTerminalSessionLinkAtConstMeta,
+        argValues: [that, x, y],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSessionTerminalSessionLinkAtConstMeta =>
+      const TaskConstMeta(
+        debugName: "TerminalSession_link_at",
+        argNames: ["that", "x", "y"],
+      );
+
+  @override
   bool crateApiSessionTerminalSessionPaste({
     required TerminalSession that,
     required String text,
@@ -1317,7 +1407,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
           sse_encode_String(text, serializer);
           sse_encode_bool(allowUnsafe, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 28)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 30)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_bool,
@@ -1358,7 +1448,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_u_16(mods, serializer);
           sse_encode_f_32(x, serializer);
           sse_encode_f_32(y, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 29)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 31)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1389,7 +1479,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 30)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 32)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_opt_box_autoadd_term_frame,
@@ -1418,7 +1508,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 31)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 33)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1453,7 +1543,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
           sse_encode_u_16(cols, serializer);
           sse_encode_u_16(rows, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 32)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 34)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1484,7 +1574,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 33)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 35)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1504,6 +1594,72 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  void crateApiSessionTerminalSessionSearch({
+    required TerminalSession that,
+    required String needle,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(needle, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 36)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSessionTerminalSessionSearchConstMeta,
+        argValues: [that, needle],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSessionTerminalSessionSearchConstMeta =>
+      const TaskConstMeta(
+        debugName: "TerminalSession_search",
+        argNames: ["that", "needle"],
+      );
+
+  @override
+  void crateApiSessionTerminalSessionSearchStep({
+    required TerminalSession that,
+    required bool older,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
+            that,
+            serializer,
+          );
+          sse_encode_bool(older, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 37)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSessionTerminalSessionSearchStepConstMeta,
+        argValues: [that, older],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSessionTerminalSessionSearchStepConstMeta =>
+      const TaskConstMeta(
+        debugName: "TerminalSession_search_step",
+        argNames: ["that", "older"],
+      );
+
+  @override
   void crateApiSessionTerminalSessionSelectAll({
     required TerminalSession that,
   }) {
@@ -1515,7 +1671,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 34)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 38)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1552,7 +1708,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_f_32(x, serializer);
           sse_encode_f_32(y, serializer);
           sse_encode_bool(rectangle, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 35)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 39)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1587,7 +1743,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
           sse_encode_f_32(x, serializer);
           sse_encode_f_32(y, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 36)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 40)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1622,7 +1778,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
           sse_encode_f_32(x, serializer);
           sse_encode_f_32(y, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 37)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 41)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1653,7 +1809,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 38)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 42)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_opt_String,
@@ -1688,7 +1844,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
           sse_encode_f_32(width, serializer);
           sse_encode_f_32(height, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 39)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 43)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1708,6 +1864,41 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  void crateApiSessionTerminalSessionSetCursor({
+    required TerminalSession that,
+    required CursorStyle style,
+    required bool blink,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
+            that,
+            serializer,
+          );
+          sse_encode_cursor_style(style, serializer);
+          sse_encode_bool(blink, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 44)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSessionTerminalSessionSetCursorConstMeta,
+        argValues: [that, style, blink],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSessionTerminalSessionSetCursorConstMeta =>
+      const TaskConstMeta(
+        debugName: "TerminalSession_set_cursor",
+        argNames: ["that", "style", "blink"],
+      );
+
+  @override
   void crateApiSessionTerminalSessionSetOptionAsAlt({
     required TerminalSession that,
     required bool enabled,
@@ -1721,7 +1912,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             serializer,
           );
           sse_encode_bool(enabled, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 40)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 45)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1758,7 +1949,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_bool(dark, serializer);
           sse_encode_u_32(foreground, serializer);
           sse_encode_u_32(background, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 41)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 46)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1791,7 +1982,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             serializer,
           );
           sse_encode_String(text, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 42)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 47)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1830,7 +2021,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_f_32(x, serializer);
           sse_encode_f_32(y, serializer);
           sse_encode_u_16(mods, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 43)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 48)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1858,7 +2049,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 44,
+            funcId: 49,
             port: port_,
           );
         },
@@ -1885,7 +2076,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 45,
+            funcId: 50,
             port: port_,
           );
         },
@@ -1912,7 +2103,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 46,
+            funcId: 51,
             port: port_,
           );
         },
@@ -1939,7 +2130,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 47,
+            funcId: 52,
             port: port_,
           );
         },
@@ -1966,7 +2157,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 48,
+            funcId: 53,
             port: port_,
           );
         },
@@ -1993,7 +2184,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 49,
+            funcId: 54,
             port: port_,
           );
         },
@@ -2020,7 +2211,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 50,
+            funcId: 55,
             port: port_,
           );
         },
@@ -2201,6 +2392,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  LinkView dco_decode_box_autoadd_link_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_link_view(raw);
+  }
+
+  @protected
   PromptAnswer dco_decode_box_autoadd_prompt_answer(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_prompt_answer(raw);
@@ -2228,6 +2425,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   RouteKind dco_decode_box_autoadd_route_kind(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_route_kind(raw);
+  }
+
+  @protected
+  SearchView dco_decode_box_autoadd_search_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_search_view(raw);
   }
 
   @protected
@@ -2285,6 +2488,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       hops: dco_decode_u_32(arr[9]),
       connectMs: dco_decode_f_64(arr[10]),
     );
+  }
+
+  @protected
+  CursorStyle dco_decode_cursor_style(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CursorStyle.values[raw as int];
   }
 
   @protected
@@ -2557,6 +2766,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  LinkView dco_decode_link_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return LinkView(
+      url: dco_decode_String(arr[0]),
+      row: dco_decode_u_16(arr[1]),
+      start: dco_decode_u_16(arr[2]),
+      end: dco_decode_u_16(arr[3]),
+    );
+  }
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_String).toList();
@@ -2629,6 +2852,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<SearchHitView> dco_decode_list_search_hit_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_search_hit_view).toList();
+  }
+
+  @protected
   List<SelectedRange> dco_decode_list_selected_range(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_selected_range).toList();
@@ -2689,6 +2918,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  LinkView? dco_decode_opt_box_autoadd_link_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_link_view(raw);
+  }
+
+  @protected
   PromptKind? dco_decode_opt_box_autoadd_prompt_kind(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_prompt_kind(raw);
@@ -2710,6 +2945,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   RouteKind? dco_decode_opt_box_autoadd_route_kind(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_route_kind(raw);
+  }
+
+  @protected
+  SearchView? dco_decode_opt_box_autoadd_search_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_search_view(raw);
   }
 
   @protected
@@ -2851,6 +3092,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SearchHitView dco_decode_search_hit_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return SearchHitView(
+      row: dco_decode_u_16(arr[0]),
+      start: dco_decode_u_16(arr[1]),
+      end: dco_decode_u_16(arr[2]),
+      selected: dco_decode_bool(arr[3]),
+    );
+  }
+
+  @protected
+  SearchView dco_decode_search_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return SearchView(
+      total: dco_decode_u_32(arr[0]),
+      selected: dco_decode_opt_box_autoadd_u_32(arr[1]),
+      hits: dco_decode_list_search_hit_view(arr[2]),
+    );
+  }
+
+  @protected
   SelectedRange dco_decode_selected_range(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -2948,8 +3216,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TermFrame dco_decode_term_frame(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 7)
-      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
     return TermFrame(
       frame: dco_decode_list_prim_u_8_strict(arr[0]),
       mouseTracking: dco_decode_bool(arr[1]),
@@ -2958,6 +3226,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       altScreen: dco_decode_bool(arr[4]),
       title: dco_decode_String(arr[5]),
       selection: dco_decode_list_selected_range(arr[6]),
+      bell: dco_decode_bool(arr[7]),
+      cursorBlinks: dco_decode_bool(arr[8]),
+      search: dco_decode_opt_box_autoadd_search_view(arr[9]),
     );
   }
 
@@ -3178,6 +3449,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  LinkView sse_decode_box_autoadd_link_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_link_view(deserializer));
+  }
+
+  @protected
   PromptAnswer sse_decode_box_autoadd_prompt_answer(
     SseDeserializer deserializer,
   ) {
@@ -3209,6 +3486,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   RouteKind sse_decode_box_autoadd_route_kind(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_route_kind(deserializer));
+  }
+
+  @protected
+  SearchView sse_decode_box_autoadd_search_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_search_view(deserializer));
   }
 
   @protected
@@ -3270,6 +3553,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       hops: var_hops,
       connectMs: var_connectMs,
     );
+  }
+
+  @protected
+  CursorStyle sse_decode_cursor_style(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return CursorStyle.values[inner];
   }
 
   @protected
@@ -3561,6 +3851,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  LinkView sse_decode_link_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_url = sse_decode_String(deserializer);
+    var var_row = sse_decode_u_16(deserializer);
+    var var_start = sse_decode_u_16(deserializer);
+    var var_end = sse_decode_u_16(deserializer);
+    return LinkView(url: var_url, row: var_row, start: var_start, end: var_end);
+  }
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -3710,6 +4010,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<SearchHitView> sse_decode_list_search_hit_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <SearchHitView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_search_hit_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<SelectedRange> sse_decode_list_selected_range(
     SseDeserializer deserializer,
   ) {
@@ -3836,6 +4150,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  LinkView? sse_decode_opt_box_autoadd_link_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_link_view(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   PromptKind? sse_decode_opt_box_autoadd_prompt_kind(
     SseDeserializer deserializer,
   ) {
@@ -3882,6 +4207,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_route_kind(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  SearchView? sse_decode_opt_box_autoadd_search_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_search_view(deserializer));
     } else {
       return null;
     }
@@ -4063,6 +4401,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SearchHitView sse_decode_search_hit_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_row = sse_decode_u_16(deserializer);
+    var var_start = sse_decode_u_16(deserializer);
+    var var_end = sse_decode_u_16(deserializer);
+    var var_selected = sse_decode_bool(deserializer);
+    return SearchHitView(
+      row: var_row,
+      start: var_start,
+      end: var_end,
+      selected: var_selected,
+    );
+  }
+
+  @protected
+  SearchView sse_decode_search_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_total = sse_decode_u_32(deserializer);
+    var var_selected = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_hits = sse_decode_list_search_hit_view(deserializer);
+    return SearchView(total: var_total, selected: var_selected, hits: var_hits);
+  }
+
+  @protected
   SelectedRange sse_decode_selected_range(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_row = sse_decode_u_16(deserializer);
@@ -4180,6 +4542,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_altScreen = sse_decode_bool(deserializer);
     var var_title = sse_decode_String(deserializer);
     var var_selection = sse_decode_list_selected_range(deserializer);
+    var var_bell = sse_decode_bool(deserializer);
+    var var_cursorBlinks = sse_decode_bool(deserializer);
+    var var_search = sse_decode_opt_box_autoadd_search_view(deserializer);
     return TermFrame(
       frame: var_frame,
       mouseTracking: var_mouseTracking,
@@ -4188,6 +4553,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       altScreen: var_altScreen,
       title: var_title,
       selection: var_selection,
+      bell: var_bell,
+      cursorBlinks: var_cursorBlinks,
+      search: var_search,
     );
   }
 
@@ -4440,6 +4808,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_link_view(
+    LinkView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_link_view(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_prompt_answer(
     PromptAnswer self,
     SseSerializer serializer,
@@ -4482,6 +4859,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_route_kind(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_search_view(
+    SearchView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_search_view(self, serializer);
   }
 
   @protected
@@ -4535,6 +4921,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.ca, serializer);
     sse_encode_u_32(self.hops, serializer);
     sse_encode_f_64(self.connectMs, serializer);
+  }
+
+  @protected
+  void sse_encode_cursor_style(CursorStyle self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
   }
 
   @protected
@@ -4741,6 +5133,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_link_view(LinkView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.url, serializer);
+    sse_encode_u_16(self.row, serializer);
+    sse_encode_u_16(self.start, serializer);
+    sse_encode_u_16(self.end, serializer);
+  }
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
@@ -4877,6 +5278,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_search_hit_view(
+    List<SearchHitView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_search_hit_view(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_selected_range(
     List<SelectedRange> self,
     SseSerializer serializer,
@@ -4999,6 +5412,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_link_view(
+    LinkView? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_link_view(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_box_autoadd_prompt_kind(
     PromptKind? self,
     SseSerializer serializer,
@@ -5047,6 +5473,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_route_kind(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_search_view(
+    SearchView? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_search_view(self, serializer);
     }
   }
 
@@ -5206,6 +5645,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_search_hit_view(
+    SearchHitView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_16(self.row, serializer);
+    sse_encode_u_16(self.start, serializer);
+    sse_encode_u_16(self.end, serializer);
+    sse_encode_bool(self.selected, serializer);
+  }
+
+  @protected
+  void sse_encode_search_view(SearchView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.total, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.selected, serializer);
+    sse_encode_list_search_hit_view(self.hits, serializer);
+  }
+
+  @protected
   void sse_encode_selected_range(SelectedRange self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_u_16(self.row, serializer);
@@ -5287,6 +5746,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.altScreen, serializer);
     sse_encode_String(self.title, serializer);
     sse_encode_list_selected_range(self.selection, serializer);
+    sse_encode_bool(self.bell, serializer);
+    sse_encode_bool(self.cursorBlinks, serializer);
+    sse_encode_opt_box_autoadd_search_view(self.search, serializer);
   }
 
   @protected
@@ -5529,6 +5991,9 @@ class TerminalSessionImpl extends RustOpaque implements TerminalSession {
   void close() =>
       RustLib.instance.api.crateApiSessionTerminalSessionClose(that: this);
 
+  void endSearch() =>
+      RustLib.instance.api.crateApiSessionTerminalSessionEndSearch(that: this);
+
   void focus({required bool gained}) => RustLib.instance.api
       .crateApiSessionTerminalSessionFocus(that: this, gained: gained);
 
@@ -5547,6 +6012,12 @@ class TerminalSessionImpl extends RustOpaque implements TerminalSession {
     text: text,
     unshifted: unshifted,
   );
+
+  /// The link under a point, in the logical pixels of [`Self::pointer`].
+  LinkView? linkAt({required double x, required double y}) => RustLib
+      .instance
+      .api
+      .crateApiSessionTerminalSessionLinkAt(that: this, x: x, y: y);
 
   /// False, sending nothing, if the text could run commands: confirm and
   /// call again with `allow_unsafe`.
@@ -5587,6 +6058,17 @@ class TerminalSessionImpl extends RustOpaque implements TerminalSession {
   String screenText() =>
       RustLib.instance.api.crateApiSessionTerminalSessionScreenText(that: this);
 
+  /// Looks for `needle` through the screen and the history (ASCII letters
+  /// in any case); an empty needle ends the search. Matches come with the
+  /// next frames.
+  void search({required String needle}) => RustLib.instance.api
+      .crateApiSessionTerminalSessionSearch(that: this, needle: needle);
+
+  /// The next match towards older output (`older`), or towards newer;
+  /// scrolls to it.
+  void searchStep({required bool older}) => RustLib.instance.api
+      .crateApiSessionTerminalSessionSearchStep(that: this, older: older);
+
   void selectAll() =>
       RustLib.instance.api.crateApiSessionTerminalSessionSelectAll(that: this);
 
@@ -5623,6 +6105,14 @@ class TerminalSessionImpl extends RustOpaque implements TerminalSession {
         that: this,
         width: width,
         height: height,
+      );
+
+  /// The cursor until a program sets its own, and whether it blinks.
+  void setCursor({required CursorStyle style, required bool blink}) =>
+      RustLib.instance.api.crateApiSessionTerminalSessionSetCursor(
+        that: this,
+        style: style,
+        blink: blink,
       );
 
   void setOptionAsAlt({required bool enabled}) =>

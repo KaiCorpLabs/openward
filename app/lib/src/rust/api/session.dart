@@ -9,7 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `event_view`, `failure_view`, `into_answer`, `prompt_view`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DartSink`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<TerminalSession>>
 abstract class TerminalSession implements RustOpaqueInterface {
@@ -17,6 +17,8 @@ abstract class TerminalSession implements RustOpaqueInterface {
 
   /// Ends the connection or program; the screen stays until dropped.
   void close();
+
+  void endSearch();
 
   void focus({required bool gained});
 
@@ -28,6 +30,9 @@ abstract class TerminalSession implements RustOpaqueInterface {
     required String text,
     required int unshifted,
   });
+
+  /// The link under a point, in the logical pixels of [`Self::pointer`].
+  LinkView? linkAt({required double x, required double y});
 
   /// False, sending nothing, if the text could run commands: confirm and
   /// call again with `allow_unsafe`.
@@ -52,6 +57,15 @@ abstract class TerminalSession implements RustOpaqueInterface {
 
   String screenText();
 
+  /// Looks for `needle` through the screen and the history (ASCII letters
+  /// in any case); an empty needle ends the search. Matches come with the
+  /// next frames.
+  void search({required String needle});
+
+  /// The next match towards older output (`older`), or towards newer;
+  /// scrolls to it.
+  void searchStep({required bool older});
+
   void selectAll();
 
   void selectDrag({
@@ -71,6 +85,9 @@ abstract class TerminalSession implements RustOpaqueInterface {
   String? selectionText();
 
   void setCellPixels({required double width, required double height});
+
+  /// The cursor until a program sets its own, and whether it blinks.
+  void setCursor({required CursorStyle style, required bool blink});
 
   void setOptionAsAlt({required bool enabled});
 
@@ -179,6 +196,9 @@ class ConnectedView {
           connectMs == other.connectMs;
 }
 
+/// The cursor's shape, when the program does not choose one.
+enum CursorStyle { block, bar, underline }
+
 enum FailureKind {
   hostKeyChanged,
   hostKeyRejected,
@@ -269,6 +289,35 @@ enum KeySourceKind {
 
   /// `~/.ssh/known_hosts`, which OpenWard does not write.
   openSsh,
+}
+
+/// A link on screen (OSC 8, or a URL in the text); columns inclusive.
+class LinkView {
+  final String url;
+  final int row;
+  final int start;
+  final int end;
+
+  const LinkView({
+    required this.url,
+    required this.row,
+    required this.start,
+    required this.end,
+  });
+
+  @override
+  int get hashCode =>
+      url.hashCode ^ row.hashCode ^ start.hashCode ^ end.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LinkView &&
+          runtimeType == other.runtimeType &&
+          url == other.url &&
+          row == other.row &&
+          start == other.start &&
+          end == other.end;
 }
 
 enum PointerAction { down, up, move }
@@ -445,6 +494,60 @@ class ReconnectingView {
           reason == other.reason;
 }
 
+/// A search match's part on one visible row; columns inclusive.
+class SearchHitView {
+  final int row;
+  final int start;
+  final int end;
+
+  /// The match the find bar points at.
+  final bool selected;
+
+  const SearchHitView({
+    required this.row,
+    required this.start,
+    required this.end,
+    required this.selected,
+  });
+
+  @override
+  int get hashCode =>
+      row.hashCode ^ start.hashCode ^ end.hashCode ^ selected.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SearchHitView &&
+          runtimeType == other.runtimeType &&
+          row == other.row &&
+          start == other.start &&
+          end == other.end &&
+          selected == other.selected;
+}
+
+/// The find bar's search: "selected of total", and what to highlight.
+class SearchView {
+  final int total;
+
+  /// 1-based from the newest match; none before the first step.
+  final int? selected;
+  final List<SearchHitView> hits;
+
+  const SearchView({required this.total, this.selected, required this.hits});
+
+  @override
+  int get hashCode => total.hashCode ^ selected.hashCode ^ hits.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SearchView &&
+          runtimeType == other.runtimeType &&
+          total == other.total &&
+          selected == other.selected &&
+          hits == other.hits;
+}
+
 /// One visible row's selected columns, both inclusive.
 class SelectedRange {
   final int row;
@@ -578,6 +681,13 @@ class TermFrame {
   /// screen.
   final List<SelectedRange> selection;
 
+  /// A BEL arrived since the last frame.
+  final bool bell;
+  final bool cursorBlinks;
+
+  /// While the find bar is open.
+  final SearchView? search;
+
   const TermFrame({
     required this.frame,
     required this.mouseTracking,
@@ -586,6 +696,9 @@ class TermFrame {
     required this.altScreen,
     required this.title,
     required this.selection,
+    required this.bell,
+    required this.cursorBlinks,
+    this.search,
   });
 
   @override
@@ -596,7 +709,10 @@ class TermFrame {
       reportAllKeys.hashCode ^
       altScreen.hashCode ^
       title.hashCode ^
-      selection.hashCode;
+      selection.hashCode ^
+      bell.hashCode ^
+      cursorBlinks.hashCode ^
+      search.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -609,7 +725,10 @@ class TermFrame {
           reportAllKeys == other.reportAllKeys &&
           altScreen == other.altScreen &&
           title == other.title &&
-          selection == other.selection;
+          selection == other.selection &&
+          bell == other.bell &&
+          cursorBlinks == other.cursorBlinks &&
+          search == other.search;
 }
 
 enum TrustKind { known, certified, new_ }

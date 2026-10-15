@@ -134,15 +134,29 @@ class SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ow = context.ow;
-    final style = Theme.of(context).textTheme.labelSmall
-        ?.copyWith(color: ow.colors.textSubtle);
+    final fonts = ow.fonts;
+    final serif = fonts.serifLabels && fonts.display != null;
+    // Small capitals, or (Papel) the display face in italics.
+    final style = serif
+        ? TextStyle(
+            fontFamily: fonts.display,
+            fontStyle: FontStyle.italic,
+            fontSize: 16,
+            color: ow.colors.text,
+          )
+        : Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: ow.colors.textSubtle,
+            fontFamily: fonts.label ?? fonts.ui,
+            fontSize: fonts.label != null ? 10 : 11,
+            letterSpacing: fonts.label != null ? 1.2 : 0.6,
+          );
     return Semantics(
       header: true,
       child: Row(
         children: [
           Expanded(
             child: Text(
-              text.toUpperCase(),
+              serif ? text : text.toUpperCase(),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: style,
@@ -153,6 +167,9 @@ class SectionLabel extends StatelessWidget {
               trailing!,
               style: style?.copyWith(
                 fontFamily: ow.fonts.mono,
+                fontStyle: FontStyle.normal,
+                fontSize: 11,
+                color: ow.colors.textSubtle,
                 fontWeight: FontWeight.w400,
                 letterSpacing: 0,
               ),

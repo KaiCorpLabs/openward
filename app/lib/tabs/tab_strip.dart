@@ -22,23 +22,34 @@ class TabStrip extends ConsumerWidget {
     final tabs = ref.read(tabsProvider.notifier);
     final ow = context.ow;
     final l = context.l10n;
+    final style = ow.shape.tabs;
+    // Folder tabs sit on the line under the bar; blocks fill the bar; pills
+    // and segments float in the middle of it.
+    final (
+      double height,
+      double gap,
+      CrossAxisAlignment align,
+    ) = switch (style) {
+      TabStyle.folder => (33, 2, CrossAxisAlignment.end),
+      TabStyle.pill => (30, 6, CrossAxisAlignment.center),
+      TabStyle.block => (topBarHeight - 1, 0, CrossAxisAlignment.start),
+      TabStyle.segment => (28, 4, CrossAxisAlignment.center),
+    };
     return Container(
       height: topBarHeight,
       decoration: BoxDecoration(
         color: ow.colors.window,
-        border: ow.shape.pills
+        border: style == TabStyle.pill
             ? null
             : Border(bottom: BorderSide(color: ow.colors.border)),
       ),
-      padding: EdgeInsets.only(left: ow.shape.pills ? 4 : 8),
+      padding: EdgeInsets.only(left: style == TabStyle.block ? 0 : 6),
       child: Row(
-        crossAxisAlignment: ow.shape.pills
-            ? CrossAxisAlignment.center
-            : CrossAxisAlignment.end,
+        crossAxisAlignment: align,
         children: [
           Flexible(
             child: SizedBox(
-              height: ow.shape.pills ? 30 : 33,
+              height: height,
               child: ReorderableListView.builder(
                 scrollDirection: Axis.horizontal,
                 shrinkWrap: true,
@@ -51,7 +62,7 @@ class TabStrip extends ConsumerWidget {
                   key: ObjectKey(state.tabs[i]),
                   index: i,
                   child: Padding(
-                    padding: EdgeInsets.only(right: ow.shape.pills ? 6 : 2),
+                    padding: EdgeInsets.only(right: gap),
                     child: _Tab(
                       tab: state.tabs[i],
                       active: i == state.active,
@@ -65,7 +76,11 @@ class TabStrip extends ConsumerWidget {
             ),
           ),
           Padding(
-            padding: EdgeInsets.only(left: 2, bottom: ow.shape.pills ? 0 : 3),
+            padding: EdgeInsets.only(
+              left: 2,
+              bottom: style == TabStyle.folder ? 3 : 0,
+              top: style == TabStyle.block ? 4 : 0,
+            ),
             child: IconButton(
               tooltip: l.newLocalTerminal,
               icon: const Icon(Icons.add, size: 16),
@@ -135,9 +150,17 @@ class _Tab extends StatelessWidget {
         listenable: controller,
         builder: (context, _) => _frame(
           context,
-          leading: StatusDot(tabStatus(controller), size: 7),
+          leading: StatusDot(
+            tabStatus(controller),
+            size: 7,
+            // On an accent block the accent would not show.
+            onAccent: active && context.ow.shape.tabs == TabStyle.block
+                ? context.ow.colors.onPrimary
+                : null,
+          ),
           title: controller.displayTitle,
           waiting: controller.prompts.isNotEmpty,
+          bell: controller.bellUnseen,
           onRename: onRename,
         ),
       ),
@@ -158,34 +181,49 @@ class _Tab extends StatelessWidget {
     required Widget leading,
     required String title,
     bool waiting = false,
+    bool bell = false,
     VoidCallback? onRename,
   }) {
     final ow = context.ow;
     final c = ow.colors;
     final l = context.l10n;
-    final pills = ow.shape.pills;
-    final fg = active
-        ? (pills ? c.onPrimary : c.text)
-        : (pills ? c.text : c.textMuted);
-    final decoration = pills
-        ? BoxDecoration(
-            color: active ? c.primary : c.raised,
-            borderRadius: BorderRadius.circular(999),
-            border: active ? null : Border.all(color: c.border),
-          )
-        : BoxDecoration(
-            color: active ? c.surface : Colors.transparent,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(ow.shape.radius + 1),
-            ),
-            border: active
-                ? Border(
-                    top: BorderSide(color: c.border),
-                    left: BorderSide(color: c.border),
-                    right: BorderSide(color: c.border),
-                  )
-                : null,
-          );
+    final style = ow.shape.tabs;
+    // The active tab inverted: ink pills, accent blocks.
+    final inverted =
+        active && (style == TabStyle.pill || style == TabStyle.block);
+    final fg = inverted
+        ? c.onPrimary
+        : active || style == TabStyle.pill
+        ? c.text
+        : c.textMuted;
+    final decoration = switch (style) {
+      TabStyle.pill => BoxDecoration(
+        color: active ? c.primary : c.raised,
+        borderRadius: BorderRadius.circular(999),
+        border: active ? null : Border.all(color: c.border),
+      ),
+      TabStyle.block => BoxDecoration(
+        color: active ? c.accent : Colors.transparent,
+        border: Border(right: BorderSide(color: c.border)),
+      ),
+      TabStyle.segment => BoxDecoration(
+        color: active ? c.selected : Colors.transparent,
+        borderRadius: BorderRadius.circular(ow.shape.radius),
+      ),
+      TabStyle.folder => BoxDecoration(
+        color: active ? c.surface : Colors.transparent,
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(ow.shape.radius + 1),
+        ),
+        border: active
+            ? Border(
+                top: BorderSide(color: c.border),
+                left: BorderSide(color: c.border),
+                right: BorderSide(color: c.border),
+              )
+            : null,
+      ),
+    };
     return Semantics(
       selected: active,
       button: true,
@@ -210,6 +248,18 @@ class _Tab extends StatelessWidget {
                 children: [
                   leading,
                   const SizedBox(width: 8),
+                  if (bell)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Tooltip(
+                        message: l.bellRang,
+                        child: Icon(
+                          Icons.notifications_active_outlined,
+                          size: 14,
+                          color: inverted ? fg : c.warn,
+                        ),
+                      ),
+                    ),
                   if (waiting)
                     Padding(
                       padding: const EdgeInsets.only(right: 4),
@@ -218,7 +268,7 @@ class _Tab extends StatelessWidget {
                         child: Icon(
                           Icons.help_outline,
                           size: 14,
-                          color: pills && active ? fg : c.warn,
+                          color: inverted ? fg : c.warn,
                         ),
                       ),
                     ),

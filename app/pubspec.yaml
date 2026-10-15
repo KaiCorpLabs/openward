@@ -20,6 +20,8 @@ dependencies:
   openward_ffi:
     path: rust_builder
   path_provider: ^2.1.6
+  url_launcher: ^6.3.3
+  file_selector: ^1.1.0
 
 dev_dependencies:
   flutter_test:
@@ -32,3 +34,50 @@ flutter:
   uses-material-design: true
   # Texts in lib/l10n/*.arb; `flutter gen-l10n` writes the Dart next to them.
   generate: true
+  # The fonts' licenses, shown with the others (lib/core/fonts.dart).
+  assets:
+    - assets/fonts/jetbrains-mono/OFL.txt
+    - assets/fonts/ibm-plex/OFL.txt
+    - assets/fonts/instrument/OFL-InstrumentSans.txt
+    - assets/fonts/instrument/OFL-InstrumentSerif.txt
+    - assets/fonts/martian-mono/OFL.txt
+  # The themes' fonts, all OFL-1.1 (NOTICE). Instrument Sans is a variable
+  # font: Flutter maps FontWeight to its weight axis.
+  fonts:
+    - family: JetBrains Mono
+      fonts:
+        - asset: assets/fonts/jetbrains-mono/JetBrainsMono-Regular.ttf
+        - asset: assets/fonts/jetbrains-mono/JetBrainsMono-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/jetbrains-mono/JetBrainsMono-Italic.ttf
+          style: italic
+        - asset: assets/fonts/jetbrains-mono/JetBrainsMono-BoldItalic.ttf
+          weight: 700
+          style: italic
+    - family: IBM Plex Sans
+      fonts:
+        - asset: assets/fonts/ibm-plex/IBMPlexSans-Regular.ttf
+        - asset: assets/fonts/ibm-plex/IBMPlexSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/ibm-plex/IBMPlexSans-SemiBold.ttf
+          weight: 600
+    - family: IBM Plex Mono
+      fonts:
+        - asset: assets/fonts/ibm-plex/IBMPlexMono-Regular.ttf
+        - asset: assets/fonts/ibm-plex/IBMPlexMono-Medium.ttf
+          weight: 500
+    - family: Instrument Sans
+      fonts:
+        - asset: assets/fonts/instrument/InstrumentSans-Variable.ttf
+    - family: Instrument Serif
+      fonts:
+        - asset: assets/fonts/instrument/InstrumentSerif-Regular.ttf
+        - asset: assets/fonts/instrument/InstrumentSerif-Italic.ttf
+          style: italic
+    - family: Martian Mono
+      fonts:
+        - asset: assets/fonts/martian-mono/MartianMono-Regular.ttf
+        - asset: assets/fonts/martian-mono/MartianMono-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/martian-mono/MartianMono-Bold.ttf
+          weight: 700

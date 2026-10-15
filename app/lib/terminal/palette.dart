@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 /// Resolves wire colors (see `Span.fg`) against a theme.
@@ -10,7 +11,105 @@ final class TermPalette {
     required this.selection,
     required List<Color> ansi16,
   }) : assert(ansi16.length == 16),
+       ansi16 = List.unmodifiable(ansi16),
        _indexed = _buildIndexed(ansi16);
+
+  /// From `#rrggbb` strings; dark when the background is.
+  factory TermPalette.hex({
+    required String foreground,
+    required String background,
+    String? cursor,
+    String? selection,
+    required List<String> ansi,
+  }) {
+    final bg = parseHex(background)!;
+    final fg = parseHex(foreground)!;
+    final cur = cursor == null ? fg : parseHex(cursor)!;
+    return TermPalette(
+      dark: luminance(bg) < 0.4,
+      foreground: fg,
+      background: bg,
+      cursor: cur,
+      selection: selection == null
+          ? cur.withValues(alpha: 0.35)
+          : parseHex(selection)!.withValues(alpha: 0.6),
+      ansi16: [for (final h in ansi) parseHex(h)!],
+    );
+  }
+
+  /// The 16 base colors, as given.
+  final List<Color> ansi16;
+
+  /// `#rrggbb` or `rrggbb`; null if it is neither.
+  static Color? parseHex(String text) {
+    var t = text.trim();
+    if (t.startsWith('#')) t = t.substring(1);
+    if (t.length != 6) return null;
+    final v = int.tryParse(t, radix: 16);
+    return v == null ? null : Color(0xFF000000 | v);
+  }
+
+  static String toHex(Color c) =>
+      '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+
+  Map<String, Object> toJson() => {
+    'foreground': toHex(foreground),
+    'background': toHex(background),
+    'cursor': toHex(cursor),
+    'selection': toHex(selection.withValues(alpha: 1)),
+    'ansi': [for (final c in ansi16) toHex(c)],
+  };
+
+  static TermPalette? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final ansi = json['ansi'];
+    if (ansi is! List || ansi.length != 16) return null;
+    try {
+      return TermPalette.hex(
+        foreground: json['foreground'] as String,
+        background: json['background'] as String,
+        cursor: json['cursor'] as String?,
+        selection: json['selection'] as String?,
+        ansi: [for (final a in ansi) a as String],
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Relative luminance (WCAG 2).
+  static double luminance(Color c) {
+    double ch(double v) => v <= 0.03928
+        ? v / 12.92
+        : math.pow((v + 0.055) / 1.055, 2.4).toDouble();
+    return 0.2126 * ch(c.r) + 0.7152 * ch(c.g) + 0.0722 * ch(c.b);
+  }
+
+  /// WCAG 2 contrast ratio, from 1 to 21.
+  static double contrast(Color a, Color b) {
+    final x = luminance(a), y = luminance(b);
+    return (math.max(x, y) + 0.05) / (math.min(x, y) + 0.05);
+  }
+
+  /// `fg`, or the closest color to it (towards black or white, away from
+  /// `bg`) that reads at `ratio` on `bg`: the minimum contrast option.
+  static Color ensureContrast(Color fg, Color bg, double ratio) {
+    if (ratio <= 1 || contrast(fg, bg) >= ratio) return fg;
+    final toward = luminance(bg) > 0.18
+        ? const Color(0xFF000000)
+        : const Color(0xFFFFFFFF);
+    if (contrast(toward, bg) < ratio) return toward;
+    var lo = 0.0, hi = 1.0;
+    for (var i = 0; i < 12; i++) {
+      final mid = (lo + hi) / 2;
+      if (contrast(Color.lerp(fg, toward, mid)!, bg) >= ratio) {
+        hi = mid;
+      } else {
+        lo = mid;
+      }
+    }
+    return Color.lerp(fg, toward, hi)!.withValues(alpha: fg.a);
+  }
 
   /// Programs are told whether the theme is dark (DSR 996).
   final bool dark;

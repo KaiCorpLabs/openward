@@ -105,6 +105,21 @@ class OwColors {
   bool get dark => brightness == Brightness.dark;
 }
 
+/// How tabs look.
+enum TabStyle {
+  /// Folder tabs joined to the content below (Grafito).
+  folder,
+
+  /// Rounded pills on the bar (Papel).
+  pill,
+
+  /// Square blocks; the active one filled with the accent (Fósforo).
+  block,
+
+  /// Plain segments, the active one lighter (Nativo).
+  segment,
+}
+
 /// Corners and spacing: another layer.
 @immutable
 class OwShape {
@@ -114,6 +129,7 @@ class OwShape {
     this.radiusLarge = 10,
     this.pills = false,
     this.insetTerminal = false,
+    this.tabs = TabStyle.folder,
   });
 
   /// Tags and key caps.
@@ -125,20 +141,36 @@ class OwShape {
   /// Cards and panels.
   final double radiusLarge;
 
-  /// Buttons, tabs and the search field fully rounded.
+  /// Buttons and the search field fully rounded.
   final bool pills;
 
   /// The terminal as a card inside the window instead of edge to edge.
   final bool insetTerminal;
 
-  /// For buttons and tabs.
+  final TabStyle tabs;
+
+  /// For buttons.
   double get control => pills ? 999 : radius;
 }
+
+/// The platform's monospace font.
+String get platformMono => Platform.isMacOS || Platform.isIOS
+    ? 'Menlo'
+    : Platform.isWindows
+    ? 'Consolas'
+    : 'DejaVu Sans Mono';
 
 /// Type: another layer. Null families mean the platform's own.
 @immutable
 class OwFonts {
-  const OwFonts({this.ui, this.display});
+  const OwFonts({
+    this.ui,
+    this.display,
+    this.label,
+    this.monoFont,
+    this.terminal,
+    this.serifLabels = false,
+  });
 
   /// The interface.
   final String? ui;
@@ -146,12 +178,30 @@ class OwFonts {
   /// Large titles; falls back to [ui].
   final String? display;
 
+  /// Section labels; falls back to [ui].
+  final String? label;
+
+  /// For [mono]; null for the platform's.
+  final String? monoFont;
+
+  /// The terminal; null for the platform's monospace font.
+  final String? terminal;
+
+  /// Section labels in [display] italics instead of small capitals.
+  final bool serifLabels;
+
   /// Addresses, fingerprints and commands outside the terminal.
-  String get mono => Platform.isMacOS || Platform.isIOS
-      ? 'Menlo'
-      : Platform.isWindows
-      ? 'Consolas'
-      : 'DejaVu Sans Mono';
+  String get mono => monoFont ?? platformMono;
+
+  OwFonts copyWith({String? Function()? ui, String? Function()? terminal}) =>
+      OwFonts(
+        ui: ui == null ? this.ui : ui(),
+        display: ui == null ? display : null,
+        label: ui == null ? label : null,
+        monoFont: monoFont,
+        terminal: terminal == null ? this.terminal : terminal(),
+        serifLabels: ui == null && serifLabels,
+      );
 }
 
 /// A whole theme: its layers and the terminal's colors. Reach it with
@@ -162,8 +212,10 @@ class OwTheme extends ThemeExtension<OwTheme> {
     required this.id,
     required this.colors,
     required this.terminal,
+    this.terminalDark,
     this.shape = const OwShape(),
     this.fonts = const OwFonts(),
+    this.minimumContrast = 3,
   });
 
   /// Stable name, as settings keep it.
@@ -172,6 +224,12 @@ class OwTheme extends ThemeExtension<OwTheme> {
   final OwShape shape;
   final OwFonts fonts;
   final TermPalette terminal;
+
+  /// The terminal when it is set to stay dark, for a light theme.
+  final TermPalette? terminalDark;
+
+  /// What the terminal's minimum contrast option asks for with this theme.
+  final double minimumContrast;
 
   @override
   OwTheme copyWith({
@@ -185,6 +243,8 @@ class OwTheme extends ThemeExtension<OwTheme> {
     shape: shape ?? this.shape,
     fonts: fonts ?? this.fonts,
     terminal: terminal ?? this.terminal,
+    terminalDark: terminalDark,
+    minimumContrast: minimumContrast,
   );
 
   /// Themes switch at once: nothing in between makes sense for a terminal.

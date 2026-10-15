@@ -462,6 +462,39 @@ pub struct SelectedRange {
     pub end: u16,
 }
 
+/// A search match's part on one visible row; columns inclusive.
+pub struct SearchHitView {
+    pub row: u16,
+    pub start: u16,
+    pub end: u16,
+    /// The match the find bar points at.
+    pub selected: bool,
+}
+
+/// The find bar's search: "selected of total", and what to highlight.
+pub struct SearchView {
+    pub total: u32,
+    /// 1-based from the newest match; none before the first step.
+    pub selected: Option<u32>,
+    pub hits: Vec<SearchHitView>,
+}
+
+/// A link on screen (OSC 8, or a URL in the text); columns inclusive.
+pub struct LinkView {
+    pub url: String,
+    pub row: u16,
+    pub start: u16,
+    pub end: u16,
+}
+
+/// The cursor's shape, when the program does not choose one.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CursorStyle {
+    Block,
+    Bar,
+    Underline,
+}
+
 /// Damage since the last poll, and how input should be routed.
 pub struct TermFrame {
     /// Damage frame v1 (`openward-term`, frame.rs).
@@ -474,6 +507,11 @@ pub struct TermFrame {
     /// The selection as it stands now (empty: none), to paint over the
     /// screen.
     pub selection: Vec<SelectedRange>,
+    /// A BEL arrived since the last frame.
+    pub bell: bool,
+    pub cursor_blinks: bool,
+    /// While the find bar is open.
+    pub search: Option<SearchView>,
 }
 
 /// A terminal tab: a remote shell, or a local one.
@@ -502,7 +540,67 @@ impl TerminalSession {
                     end: r.end,
                 })
                 .collect(),
+            bell: f.bell,
+            cursor_blinks: f.cursor_blinks,
+            search: f.search.map(|s| SearchView {
+                total: s.total as u32,
+                selected: s.selected.map(|i| i as u32),
+                hits: s
+                    .hits
+                    .into_iter()
+                    .map(|h| SearchHitView {
+                        row: h.row,
+                        start: h.start,
+                        end: h.end,
+                        selected: h.selected,
+                    })
+                    .collect(),
+            }),
         })
+    }
+
+    /// Looks for `needle` through the screen and the history (ASCII letters
+    /// in any case); an empty needle ends the search. Matches come with the
+    /// next frames.
+    #[frb(sync)]
+    pub fn search(&self, needle: String) {
+        self.term.search(&needle);
+    }
+
+    /// The next match towards older output (`older`), or towards newer;
+    /// scrolls to it.
+    #[frb(sync)]
+    pub fn search_step(&self, older: bool) {
+        self.term.search_step(older);
+    }
+
+    #[frb(sync)]
+    pub fn end_search(&self) {
+        self.term.end_search();
+    }
+
+    /// The link under a point, in the logical pixels of [`Self::pointer`].
+    #[frb(sync)]
+    pub fn link_at(&self, x: f32, y: f32) -> Option<LinkView> {
+        self.term.link_at(x, y).map(|l| LinkView {
+            url: l.url,
+            row: l.row,
+            start: l.start,
+            end: l.end,
+        })
+    }
+
+    /// The cursor until a program sets its own, and whether it blinks.
+    #[frb(sync)]
+    pub fn set_cursor(&self, style: CursorStyle, blink: bool) {
+        self.term.set_cursor(
+            match style {
+                CursorStyle::Block => terminal::CursorShape::Block,
+                CursorStyle::Bar => terminal::CursorShape::Beam,
+                CursorStyle::Underline => terminal::CursorShape::Underline,
+            },
+            blink,
+        );
     }
 
     /// Selection with the mouse, in the logical pixels of [`Self::pointer`]:

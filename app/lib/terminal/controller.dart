@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../core/address.dart';
 import '../src/rust/api/app.dart';
@@ -71,6 +72,30 @@ class TerminalController extends ChangeNotifier {
   bool mouseTracking = false;
   bool bracketedPaste = false;
   bool reportAllKeys = false;
+
+  /// The find bar is open, and what it shows.
+  bool findOpen = false;
+  String findText = '';
+  int findTotal = 0;
+
+  /// 1-based from the newest match; null before the first step.
+  int? findSelected;
+
+  /// Extra font size for this tab only (⌘+ and ⌘−).
+  double zoom = 0;
+
+  /// BELs so far, for the flash; and one rang while the tab was hidden.
+  int bells = 0;
+  bool bellUnseen = false;
+
+  /// The program (or the default) wants a blinking cursor.
+  bool cursorBlinks = false;
+
+  /// Set by the visible pane: gives it the keyboard back (after the find
+  /// bar, say).
+  VoidCallback? focusTerminal;
+
+  bool _shown = false;
 
   TerminalRenderer? _renderer;
 
@@ -181,17 +206,24 @@ class TerminalController extends ChangeNotifier {
     _notify();
   }
 
-  /// The renderer for this pixel density, font size and palette, made anew
-  /// (and the screen asked for again) when any of them changes.
+  /// The renderer for this pixel density, font, palette and contrast, made
+  /// anew (and the screen asked for again) when any of them changes.
   TerminalRenderer renderer(
     double devicePixelRatio, {
     required double fontSize,
     required TermPalette palette,
+    String? fontFamily,
+    double lineHeight = 1.2,
+    double minimumContrast = 1,
   }) {
     final current = _renderer;
     if (current != null &&
         current.devicePixelRatio == devicePixelRatio &&
         current.metrics.fontSize == fontSize &&
+        current.metrics.lineHeight == lineHeight &&
+        current.metrics.fontFamily ==
+            (fontFamily ?? current.metrics.fontFamily) &&
+        current.minimumContrast == minimumContrast &&
         identical(current.palette, palette)) {
       return current;
     }
@@ -205,7 +237,9 @@ class TerminalController extends ChangeNotifier {
     current?.dispose();
     final metrics = CellMetrics.measure(
       fontSize: fontSize,
+      lineHeight: lineHeight,
       devicePixelRatio: devicePixelRatio,
+      family: fontFamily,
     );
     session.setCellPixels(width: metrics.width, height: metrics.height);
     session.redraw();
@@ -213,7 +247,51 @@ class TerminalController extends ChangeNotifier {
       metrics: metrics,
       palette: palette,
       devicePixelRatio: devicePixelRatio,
+      minimumContrast: minimumContrast,
     );
+  }
+
+  // ------------------------------------------------------------------ find
+
+  void openFind() {
+    findOpen = true;
+    _notify();
+  }
+
+  /// Looks for `text` through the screen and the history.
+  void find(String text) {
+    findText = text;
+    session.search(needle: text);
+  }
+
+  /// The next match towards older output, or newer.
+  void findStep({bool older = true}) {
+    if (findText.isEmpty) return;
+    session.searchStep(older: older);
+  }
+
+  void closeFind() {
+    findOpen = false;
+    findText = '';
+    findTotal = 0;
+    findSelected = null;
+    session.endSearch();
+    _renderer?.setSearch(const []);
+    _notify();
+    focusTerminal?.call();
+  }
+
+  // ------------------------------------------------------------------ zoom
+
+  void zoomBy(double step) {
+    zoom = (zoom + step).clamp(-6, 24);
+    _notify();
+  }
+
+  void resetZoom() {
+    if (zoom == 0) return;
+    zoom = 0;
+    _notify();
   }
 
   /// Applies what changed since the last poll. Returns true if anything did.
@@ -226,6 +304,28 @@ class TerminalController extends ChangeNotifier {
     renderer.setSelection([
       for (final r in f.selection) (row: r.row, start: r.start, end: r.end),
     ]);
+    final search = f.search;
+    renderer.setSearch([
+      for (final h in search?.hits ?? const <SearchHitView>[])
+        (row: h.row, start: h.start, end: h.end, selected: h.selected),
+    ]);
+    var changed = false;
+    if (search != null &&
+        (search.total != findTotal || search.selected != findSelected)) {
+      findTotal = search.total;
+      findSelected = search.selected;
+      changed = true;
+    }
+    if (f.bell) {
+      bells++;
+      if (!_shown) bellUnseen = true;
+      changed = true;
+    }
+    if (f.cursorBlinks != cursorBlinks) {
+      cursorBlinks = f.cursorBlinks;
+      changed = true;
+    }
+    if (changed) _notify();
     if (f.title != title ||
         f.mouseTracking != mouseTracking ||
         f.bracketedPaste != bracketedPaste ||
@@ -242,6 +342,12 @@ class TerminalController extends ChangeNotifier {
   /// A visible tab is polled every frame by its pane; a hidden one a few
   /// times a second, so its title stays current and damage does not pile up.
   set visible(bool visible) {
+    _shown = visible;
+    if (visible && bellUnseen) {
+      bellUnseen = false;
+      // Shown from a pane's build: tell the tab after it.
+      SchedulerBinding.instance.addPostFrameCallback((_) => _notify());
+    }
     _background?.cancel();
     _background = visible || _disposed
         ? null

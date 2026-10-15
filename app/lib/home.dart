@@ -11,6 +11,7 @@ import 'settings/settings_page.dart';
 import 'tabs/session_view.dart';
 import 'tabs/tab_strip.dart';
 import 'tabs/tabs.dart';
+import 'terminal/controller.dart';
 import 'terminal/keys.dart';
 import 'ui/tokens.dart';
 import 'welcome/first_run.dart';
@@ -45,6 +46,13 @@ class _HomeState extends ConsumerState<Home> {
     void closeCurrent() => tabs.close(ref.read(tabsProvider).active);
     void settings() => tabs.openPage(PageKind.settings);
     void last() => tabs.select(ref.read(tabsProvider).tabs.length - 1);
+    TerminalController? session() => ref.read(tabsProvider).currentSession;
+    void find() => session()?.openFind();
+    void next() => session()?.findStep(older: true);
+    void previous() => session()?.findStep(older: false);
+    void bigger() => session()?.zoomBy(1);
+    void smaller() => session()?.zoomBy(-1);
+    void actualSize() => session()?.resetZoom();
     final bindings = <ShortcutActivator, VoidCallback>{
       const SingleActivator(LogicalKeyboardKey.tab, control: true): () =>
           tabs.cycle(1),
@@ -65,6 +73,19 @@ class _HomeState extends ConsumerState<Home> {
             closeCurrent,
         const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
             _search.requestFocus,
+        const SingleActivator(LogicalKeyboardKey.keyF, meta: true): find,
+        const SingleActivator(LogicalKeyboardKey.keyG, meta: true): next,
+        const SingleActivator(LogicalKeyboardKey.keyG, meta: true, shift: true):
+            previous,
+        const SingleActivator(LogicalKeyboardKey.equal, meta: true): bigger,
+        const SingleActivator(
+          LogicalKeyboardKey.equal,
+          meta: true,
+          shift: true,
+        ): bigger,
+        const SingleActivator(LogicalKeyboardKey.minus, meta: true): smaller,
+        const SingleActivator(LogicalKeyboardKey.digit0, meta: true):
+            actualSize,
         const SingleActivator(
           LogicalKeyboardKey.bracketRight,
           meta: true,
@@ -109,6 +130,20 @@ class _HomeState extends ConsumerState<Home> {
           control: true,
           shift: true,
         ): _search.requestFocus,
+        const SingleActivator(
+          LogicalKeyboardKey.keyF,
+          control: true,
+          shift: true,
+        ): find,
+        const SingleActivator(
+          LogicalKeyboardKey.keyG,
+          control: true,
+          shift: true,
+        ): next,
+        const SingleActivator(LogicalKeyboardKey.equal, control: true): bigger,
+        const SingleActivator(LogicalKeyboardKey.minus, control: true): smaller,
+        const SingleActivator(LogicalKeyboardKey.digit0, control: true):
+            actualSize,
       });
     }
     return bindings;

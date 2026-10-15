@@ -7,6 +7,7 @@ import '../l10n/l10n.dart';
 import '../terminal/keys.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
+import 'appearance_page.dart';
 
 enum _Section { general, appearance, terminal }
 
@@ -58,10 +59,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: Align(
                 alignment: Alignment.topLeft,
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 680),
+                  constraints: BoxConstraints(
+                    maxWidth: _section == _Section.appearance ? 1100 : 680,
+                  ),
                   child: switch (_section) {
                     _Section.general => const _General(),
-                    _Section.appearance => const _Appearance(),
+                    _Section.appearance => const AppearanceSection(),
                     _Section.terminal => const _Terminal(),
                   },
                 ),
@@ -206,46 +209,22 @@ class _General extends ConsumerWidget {
             ),
           ),
         const SizedBox(height: 24),
-        Text(
-          l.aboutVersion(appVersion),
-          style: TextStyle(fontSize: 12, color: c.textSubtle),
-        ),
-      ],
-    );
-  }
-}
-
-class _Appearance extends ConsumerWidget {
-  const _Appearance();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final s = ref.watch(settingsProvider);
-    final notifier = ref.read(settingsProvider.notifier);
-    final l = context.l10n;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _Row(
-          label: l.theme,
-          help: l.themeHelp,
-          control: SegmentedButton<ThemeChoice>(
-            showSelectedIcon: false,
-            segments: [
-              ButtonSegment(
-                value: ThemeChoice.system,
-                label: Text(l.themeSystem),
+        Row(
+          children: [
+            Text(
+              l.aboutVersion(appVersion),
+              style: TextStyle(fontSize: 12, color: c.textSubtle),
+            ),
+            const SizedBox(width: 12),
+            TextButton(
+              onPressed: () => showLicensePage(
+                context: context,
+                applicationName: 'OpenWard',
+                applicationVersion: appVersion,
               ),
-              ButtonSegment(
-                value: ThemeChoice.light,
-                label: Text(l.themeLight),
-              ),
-              ButtonSegment(value: ThemeChoice.dark, label: Text(l.themeDark)),
-            ],
-            selected: {s.theme},
-            onSelectionChanged: (v) =>
-                notifier.update((s) => s.copyWith(theme: v.single)),
-          ),
+              child: Text(l.licenses),
+            ),
+          ],
         ),
       ],
     );
@@ -267,21 +246,6 @@ class _Terminal extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _Row(
-          label: l.fontSize,
-          control: DropdownButton<double>(
-            style: fieldTextStyle(context),
-            value: s.fontSize,
-            items: [
-              for (final size in {...Settings.fontSizes, s.fontSize})
-                DropdownMenuItem(
-                  value: size,
-                  child: Text(l.pixels(size.round())),
-                ),
-            ],
-            onChanged: (v) => notifier.update((s) => s.copyWith(fontSize: v)),
-          ),
-        ),
-        _Row(
           label: l.scrollback,
           help: l.scrollbackHelp,
           control: DropdownButton<int>(
@@ -296,6 +260,19 @@ class _Terminal extends ConsumerWidget {
             ],
             onChanged: (v) => notifier.update((s) => s.copyWith(scrollback: v)),
           ),
+        ),
+        _Row(
+          label: l.bellFlash,
+          help: l.bellFlashHelp,
+          control: Switch(
+            value: s.bellFlash,
+            onChanged: (v) => notifier.update((s) => s.copyWith(bellFlash: v)),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          l.terminalShortcuts(isApple ? '⌘' : l.ctrlShiftPrefix),
+          style: TextStyle(fontSize: 12, color: context.ow.colors.textMuted),
         ),
       ],
     );

@@ -94,7 +94,7 @@ unsafe fn set<T>(event: sys::GhosttySelectionGestureEvent, option: i32, value: &
 
 impl GhosttyEngine {
     /// The cell under a position in logical pixels, clamped to the screen.
-    fn cell_at(&self, x: f32, y: f32) -> (u16, u16) {
+    pub(super) fn cell_at(&self, x: f32, y: f32) -> (u16, u16) {
         let col = (x / self.input.cell_w).floor().max(0.0) as u32;
         let row = (y / self.input.cell_h).floor().max(0.0) as u32;
         (
@@ -103,7 +103,7 @@ impl GhosttyEngine {
         )
     }
 
-    fn grid_ref(&self, col: u16, row: u16) -> Option<sys::GhosttyGridRef> {
+    pub(super) fn grid_ref(&self, col: u16, row: u16) -> Option<sys::GhosttyGridRef> {
         let mut point = sys::GhosttyPoint {
             tag: sys::GHOSTTY_POINT_TAG_VIEWPORT,
             ..Default::default()

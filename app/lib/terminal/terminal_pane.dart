@@ -2,6 +2,7 @@
 // and keyboard, input method, paste and mouse sent to it. Grown from the
 // S1.5 bench (spikes/s1-terminal/render_harness/lib/shell/shell_page.dart).
 
+import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:math' as math;
 
@@ -10,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/settings.dart';
 import '../l10n/l10n.dart';
@@ -69,15 +71,46 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
 
   bool _optionAsAlt = false;
 
+  /// Blinks the cursor when the program (or the setting) asks for it.
+  Timer? _blink;
+  bool _stillMotion = false;
+
+  /// Scrolls the history while a selection is dragged past an edge.
+  Timer? _autoScroll;
+  Offset _dragAt = Offset.zero;
+
+  /// The link under the pointer while ⌘ (Ctrl elsewhere) is held.
+  String? _linkUrl;
+
   @override
   void initState() {
     super.initState();
     focusNode.addListener(_onFocusChange);
     _c.visible = true;
+    _c.focusTerminal = _focusSoon;
     _ticker.start();
-    _optionAsAlt = ref.read(settingsProvider).optionAsAlt;
+    final settings = ref.read(settingsProvider);
+    _optionAsAlt = settings.optionAsAlt;
     _session.setOptionAsAlt(enabled: _optionAsAlt);
+    _applyCursor(settings);
+    _blink = Timer.periodic(const Duration(milliseconds: 530), (_) {
+      final r = _renderer;
+      if (r == null) return;
+      final blinking = _c.cursorBlinks && focusNode.hasFocus && !_stillMotion;
+      r.setCursorOn(blinking ? !r.cursorOn : true);
+    });
     if (widget.autofocus) _focusSoon();
+  }
+
+  void _applyCursor(Settings s) {
+    _session.setCursor(
+      style: switch (s.cursor) {
+        CursorChoice.block => CursorStyle.block,
+        CursorChoice.bar => CursorStyle.bar,
+        CursorChoice.underline => CursorStyle.underline,
+      },
+      blink: s.cursorBlink,
+    );
   }
 
   /// Takes the keyboard after this frame, even from another field (the
@@ -88,13 +121,18 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     });
   }
 
-  /// The renderer for the current pixel density, font size and theme.
+  /// The renderer for the current pixel density, font, theme and the
+  /// accessibility settings.
   TerminalRenderer _look() {
     final settings = ref.watch(settingsProvider);
+    final ow = context.ow;
     return _renderer = _c.renderer(
       MediaQuery.devicePixelRatioOf(context),
-      fontSize: settings.fontSize,
-      palette: context.ow.terminal,
+      fontSize: (settings.fontSize + _c.zoom).clamp(6, 48),
+      palette: ow.terminal,
+      fontFamily: ow.fonts.terminal,
+      lineHeight: settings.lineHeight,
+      minimumContrast: settings.minimumContrast ? ow.minimumContrast : 1,
     );
   }
 
@@ -104,7 +142,12 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     if (widget.autofocus && !oldWidget.autofocus) _focusSoon();
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.visible = false;
+      if (oldWidget.controller.focusTerminal == _focusSoon) {
+        oldWidget.controller.focusTerminal = null;
+      }
       _c.visible = true;
+      _c.focusTerminal = _focusSoon;
+      _applyCursor(ref.read(settingsProvider));
       _cols = _rows = 0;
     }
   }
@@ -112,9 +155,12 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   @override
   void dispose() {
     _ticker.dispose();
+    _blink?.cancel();
+    _autoScroll?.cancel();
     _input?.close();
     focusNode.dispose();
     _c.visible = false;
+    if (_c.focusTerminal == _focusSoon) _c.focusTerminal = null;
     super.dispose();
   }
 
@@ -176,6 +222,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     }
 
     final mods = hardwareMods();
+    _renderer?.setCursorOn(true);
     if (event is KeyDownEvent && _isPasteShortcut(event, mods)) {
       _paste();
       return KeyEventResult.handled;
@@ -519,12 +566,44 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   bool get _toProgram =>
       _c.mouseTracking && !HardwareKeyboard.instance.isShiftPressed;
 
+  /// ⌘ on Apple platforms, Ctrl elsewhere: what makes links clickable.
+  bool get _linkModifier => isApple
+      ? HardwareKeyboard.instance.isMetaPressed
+      : HardwareKeyboard.instance.isControlPressed;
+
+  void _updateLink(Offset at) {
+    final link = _linkModifier ? _session.linkAt(x: at.dx, y: at.dy) : null;
+    _renderer?.setLink(
+      link == null ? null : (row: link.row, start: link.start, end: link.end),
+    );
+    if (link?.url != _linkUrl) setState(() => _linkUrl = link?.url);
+  }
+
+  /// Web and mail links open in their apps; others are not opened from a
+  /// terminal, where anyone's output can carry them.
+  Future<void> _openLink(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    if (!const {'http', 'https', 'mailto', 'ftp'}.contains(uri.scheme)) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text(context.l10n.linkNotOpened(uri.scheme))),
+      );
+      return;
+    }
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
   void _onPointerDown(PointerDownEvent e) {
     focusNode.requestFocus();
     _scrollPixels = 0;
     if (_isTouch(e)) return;
     final pressed = e.buttons & ~_buttons;
     _buttons = e.buttons;
+    final link = _linkUrl;
+    if (link != null && pressed & kPrimaryMouseButton != 0 && _linkModifier) {
+      _openLink(link);
+      return;
+    }
     if (!_toProgram) {
       if (pressed & kSecondaryMouseButton != 0) {
         _contextMenu(e.position);
@@ -550,11 +629,49 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
         // Option/Alt drags a block, as in other terminals.
         rectangle: HardwareKeyboard.instance.isAltPressed,
       );
+      _dragAt = e.localPosition;
+      final height = _rows * (_renderer?.metrics.height ?? 1);
+      final outside = e.localPosition.dy < 0 || e.localPosition.dy > height;
+      if (!outside) {
+        _autoScroll?.cancel();
+        _autoScroll = null;
+      } else {
+        _autoScroll ??= Timer.periodic(
+          const Duration(milliseconds: 60),
+          (_) => _autoScrollTick(),
+        );
+      }
       return;
     }
+    _updateLink(e.localPosition);
     if (_c.mouseTracking) {
       _pointer(PointerAction.move, PointerButton.none, e.localPosition);
     }
+  }
+
+  /// Past the top edge the history scrolls back, past the bottom forward;
+  /// further out, faster. The selection follows to the edge row.
+  void _autoScrollTick() {
+    final r = _renderer;
+    if (r == null || !_selecting) return;
+    final ch = r.metrics.height;
+    final height = _rows * ch;
+    final y = _dragAt.dy;
+    final over = y < 0 ? -y : y - height;
+    if (over <= 0) return;
+    final lines = (1 + over / ch).clamp(1, 6).floor();
+    final edge = y < 0 ? 0.0 : height - 1;
+    _session.wheel(
+      lines: y < 0 ? lines : -lines,
+      x: _dragAt.dx,
+      y: edge,
+      mods: 0,
+    );
+    _session.selectDrag(
+      x: _dragAt.dx,
+      y: edge,
+      rectangle: HardwareKeyboard.instance.isAltPressed,
+    );
   }
 
   void _onPointerUp(PointerUpEvent e) {
@@ -563,6 +680,8 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     _buttons = e.buttons;
     if (_selecting && released & kPrimaryMouseButton != 0) {
       _selecting = false;
+      _autoScroll?.cancel();
+      _autoScroll = null;
       _session.selectRelease(x: e.localPosition.dx, y: e.localPosition.dy);
       return;
     }
@@ -571,6 +690,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   }
 
   void _onHover(PointerHoverEvent e) {
+    _updateLink(e.localPosition);
     if (_c.mouseTracking) {
       _pointer(PointerAction.move, PointerButton.none, e.localPosition);
     }
@@ -605,6 +725,11 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
       _optionAsAlt = on;
       _session.setOptionAsAlt(enabled: on);
     });
+    ref.listen(
+      settingsProvider.select((s) => (s.cursor, s.cursorBlink)),
+      (_, _) => _applyCursor(ref.read(settingsProvider)),
+    );
+    _stillMotion = MediaQuery.disableAnimationsOf(context);
     final r = _look();
     final m = r.metrics;
     final cursor = r.cursor;
@@ -619,7 +744,9 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
               focusNode: focusNode,
               onKeyEvent: _onKey,
               child: MouseRegion(
-                cursor: _c.mouseTracking
+                cursor: _linkUrl != null
+                    ? SystemMouseCursors.click
+                    : _c.mouseTracking
                     ? SystemMouseCursors.basic
                     : SystemMouseCursors.text,
                 child: Listener(

@@ -11,11 +11,13 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
 
 use openward_ghostty::{
-    GhosttyEngine, KeyAction, KeyInput, MouseAction, MouseButton, MouseInput, Paste, SelectedRow,
+    GhosttyEngine, KeyAction, KeyInput, Link, MouseAction, MouseButton, MouseInput, Paste,
+    SearchState, SelectedRow,
 };
 use openward_pty::{Pty, Spawn};
 use openward_ssh::russh::ChannelMsg;
 use openward_ssh::russh::client::Msg;
+pub use openward_term::CursorShape;
 use openward_term::{FrameEncoder, Size, TermEngine};
 use tokio::io::AsyncWriteExt;
 use tokio::sync::mpsc;
@@ -59,6 +61,11 @@ pub struct Frame {
     /// The selected range of each visible row that has one; empty without
     /// a selection.
     pub selection: Vec<SelectedRow>,
+    /// A BEL arrived since the last poll.
+    pub bell: bool,
+    pub cursor_blinks: bool,
+    /// The find bar's search and its matches on screen, while it is open.
+    pub search: Option<SearchState>,
 }
 
 struct State {
@@ -227,6 +234,9 @@ impl Terminal {
             alt_screen: modes.alt_screen,
             title: engine.title().unwrap_or_default(),
             selection: engine.selected_rows(),
+            bell: engine.take_bell(),
+            cursor_blinks: engine.cursor_blinks(),
+            search: engine.search_state(),
         })
     }
 
@@ -381,6 +391,39 @@ impl Terminal {
     /// The selected text, for the clipboard.
     pub fn selection_text(&self) -> Option<String> {
         lock(&self.state).engine.selection_text()
+    }
+
+    /// Looks for `needle` through the screen and the history; an empty one
+    /// ends the search. The matches come with the next frames.
+    pub fn search(&self, needle: &str) {
+        let mut s = lock(&self.state);
+        s.engine.search(needle);
+        s.dirty = true;
+    }
+
+    /// The next match towards older output, or towards newer.
+    pub fn search_step(&self, older: bool) {
+        let mut s = lock(&self.state);
+        s.engine.search_step(older);
+        s.dirty = true;
+    }
+
+    pub fn end_search(&self) {
+        let mut s = lock(&self.state);
+        s.engine.end_search();
+        s.dirty = true;
+    }
+
+    /// The link under a point, in the logical pixels of [`Terminal::pointer`].
+    pub fn link_at(&self, x: f32, y: f32) -> Option<Link> {
+        lock(&self.state).engine.link_at(x, y)
+    }
+
+    /// The cursor until a program sets its own.
+    pub fn set_cursor(&self, shape: CursorShape, blink: bool) {
+        let mut s = lock(&self.state);
+        s.engine.set_cursor_defaults(shape, blink);
+        s.dirty = true;
     }
 
     /// See [`GhosttyEngine::set_theme`]; the screen is sent again, for the

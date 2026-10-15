@@ -8,6 +8,7 @@ final class CellMetrics {
     this.fontFamily,
     this.fallback,
     this.fontSize,
+    this.lineHeight,
     this.width,
     this.height,
     this.paragraphStyle,
@@ -20,14 +21,19 @@ final class CellMetrics {
     double fontSize = 13,
     double lineHeight = 1.2,
     double devicePixelRatio = 1,
+    String? family,
   }) {
-    final families = Platform.isMacOS || Platform.isIOS
-        ? const ['Menlo', 'Courier New']
-        : Platform.isWindows
-        ? const ['Consolas', 'Courier New']
-        : Platform.isAndroid
-        ? const ['monospace', 'Roboto Mono', 'Droid Sans Mono']
-        : const ['DejaVu Sans Mono', 'Liberation Mono', 'monospace'];
+    // The chosen font first, then the platform's as a fallback.
+    final families = [
+      ?family,
+      ...(Platform.isMacOS || Platform.isIOS
+          ? const ['Menlo', 'Courier New']
+          : Platform.isWindows
+          ? const ['Consolas', 'Courier New']
+          : Platform.isAndroid
+          ? const ['monospace', 'Roboto Mono', 'Droid Sans Mono']
+          : const ['DejaVu Sans Mono', 'Liberation Mono', 'monospace']),
+    ];
     final style = ui.ParagraphStyle(
       fontFamily: families.first,
       fontSize: fontSize,
@@ -55,6 +61,7 @@ final class CellMetrics {
       families.first,
       families.skip(1).toList(),
       fontSize,
+      lineHeight,
       _snap(p.maxIntrinsicWidth / 64, devicePixelRatio),
       _snap(p.height, devicePixelRatio),
       style,
@@ -73,6 +80,7 @@ final class CellMetrics {
   final String fontFamily;
   final List<String> fallback;
   final double fontSize;
+  final double lineHeight;
   final double width;
   final double height;
   final ui.ParagraphStyle paragraphStyle;

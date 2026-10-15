@@ -15,6 +15,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get accessibility => 'Accessibility';
+
+  @override
   String get add => 'Add';
 
   @override
@@ -51,7 +54,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appearanceStepTitle => 'How do you want it to look?';
 
   @override
+  String get asSystem => 'As the system';
+
+  @override
   String get back => 'Back';
+
+  @override
+  String get bellFlash => 'Flash on bell';
+
+  @override
+  String get bellFlashHelp =>
+      'When a program rings the bell. A tab in the background is marked anyway.';
+
+  @override
+  String get bellRang => 'The bell rang';
 
   @override
   String get cancel => 'Cancel';
@@ -119,6 +135,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get continueLabel => 'Continue';
 
   @override
+  String contrastFails(String ratio) {
+    return 'Text contrast $ratio:1. Below AA (4.5:1).';
+  }
+
+  @override
+  String contrastPasses(String ratio) {
+    return 'Text contrast $ratio:1. Meets AA.';
+  }
+
+  @override
+  String contrastWarning(String ratio) {
+    return 'With this combination, some text falls short of the recommended contrast ($ratio:1).';
+  }
+
+  @override
   String get copy => 'Copy';
 
   @override
@@ -126,6 +157,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ctrlShiftPrefix => 'Ctrl+Shift+';
+
+  @override
+  String get cursor => 'Cursor';
+
+  @override
+  String get cursorBar => 'Bar';
+
+  @override
+  String get cursorBlink => 'Blinking cursor';
+
+  @override
+  String get cursorBlock => 'Block';
+
+  @override
+  String get cursorHelp => 'Unless the program asks for another.';
+
+  @override
+  String get cursorUnderline => 'Underline';
+
+  @override
+  String customize(String name) {
+    return 'Customize $name';
+  }
+
+  @override
+  String get customizeHint =>
+      'Change a layer and the rest stays. Changes apply to this theme only.';
 
   @override
   String get defaultKeys =>
@@ -206,6 +264,35 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get findClose => 'Close the search (Esc)';
+
+  @override
+  String findCount(int selected, int total) {
+    return '$selected of $total';
+  }
+
+  @override
+  String get findHint => 'Search the terminal';
+
+  @override
+  String get findNewer => 'Next, further down (Shift+Enter)';
+
+  @override
+  String get findOlder => 'Previous, further up (Enter)';
+
+  @override
+  String findTotal(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count results',
+      one: '1 result',
+      zero: 'No results',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get fingerprint => 'Fingerprint';
 
   @override
@@ -214,7 +301,22 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get fontFromTheme => 'The theme\'s';
+
+  @override
+  String get fontOther => 'Another installed font…';
+
+  @override
+  String get fontOtherHint => 'Its exact name, like “Fira Code”';
+
+  @override
+  String get fontOtherTitle => 'Another installed font';
+
+  @override
   String get fontSize => 'Font size';
+
+  @override
+  String get fontSystem => 'The system\'s';
 
   @override
   String get fromDefault => 'Default value';
@@ -308,15 +410,33 @@ class AppLocalizationsEn extends AppLocalizations {
       'There are no new hosts in ~/.ssh/config (or it does not exist).';
 
   @override
+  String get importScheme => 'Import from iTerm2 or Ghostty…';
+
+  @override
+  String importSchemeDone(String name) {
+    return '“$name” imported and set on the terminal.';
+  }
+
+  @override
+  String get importSchemeFailed =>
+      'That file is not an iTerm2 (.itermcolors) or Ghostty theme.';
+
+  @override
   String get importSshConfigMenu => 'Import from ~/.ssh/config…';
 
   @override
   String get importTitle => 'Import ~/.ssh/config';
 
   @override
+  String get inDark => 'In dark';
+
+  @override
   String inGroup(String name) {
     return 'in the group $name';
   }
+
+  @override
+  String get inLight => 'In light';
 
   @override
   String get inputNotSent => 'What you type now is not sent.';
@@ -393,6 +513,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get languageSystem => 'As the system';
 
   @override
+  String get licenses => 'Licenses';
+
+  @override
+  String get lightAndDark => 'Light and dark';
+
+  @override
+  String get lineHeight => 'Terminal line height';
+
+  @override
+  String linkNotOpened(String scheme) {
+    return '“$scheme:” links are not opened from the terminal.';
+  }
+
+  @override
   String get localTerminal => 'Local terminal';
 
   @override
@@ -402,6 +536,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String milliseconds(int ms) {
     return '$ms ms';
   }
+
+  @override
+  String get minimumContrast => 'Minimum contrast';
+
+  @override
+  String get minimumContrastHelp =>
+      'Lightens or darkens terminal text that does not read on its background.';
 
   @override
   String get missingAddress => 'The address is missing.';
@@ -459,6 +600,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get next => 'Next';
+
+  @override
+  String get no => 'No';
 
   @override
   String get noGroup => 'No group';
@@ -529,6 +673,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pasteMultiTitle => 'Paste several lines?';
 
   @override
+  String percent(int number) {
+    return '$number%';
+  }
+
+  @override
   String pixels(int size) {
     return '$size px';
   }
@@ -557,6 +706,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get preview => 'Preview';
+
+  @override
+  String get previewLive => 'Changes show at once across the window.';
+
+  @override
   String get quickConnectHint => 'user@server:port';
 
   @override
@@ -578,6 +733,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String reconnectingStage(String stage) {
     return 'Reconnecting: $stage';
   }
+
+  @override
+  String get reduceMotion => 'Reduce motion';
 
   @override
   String removeTag(String tag) {
@@ -622,6 +780,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportWhere => 'They are in the group “~/.ssh/config”.';
 
   @override
+  String get resetTheme => 'Reset';
+
+  @override
   String get restart => 'Restart';
 
   @override
@@ -646,6 +807,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get routeStart => 'this computer';
+
+  @override
+  String get sampleComment => 'a grey comment';
+
+  @override
+  String get sampleError => 'error:';
+
+  @override
+  String get sampleErrorText => 'could not read .env';
+
+  @override
+  String get sampleWarning => 'warning:';
+
+  @override
+  String get sampleWarningText => '2 pending migrations';
 
   @override
   String get save => 'Save';
@@ -721,6 +897,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsTerminal => 'Terminal';
+
+  @override
+  String get shape => 'Shape';
 
   @override
   String get shortcutLocal => 'Opens a local terminal';
@@ -811,6 +990,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tags => 'Tags';
 
   @override
+  String get terminalAlwaysDark => 'Always dark';
+
+  @override
+  String get terminalAsTheme => 'As the theme';
+
+  @override
+  String get terminalColors => 'Terminal colors';
+
+  @override
+  String get terminalFont => 'Terminal font';
+
+  @override
+  String get terminalScheme => 'Own scheme';
+
+  @override
+  String terminalShortcuts(String key) {
+    return '${key}F searches the terminal and its history. $key+ and $key− size the tab\'s text, and ${key}0 resets it. Holding $key, a click opens a link.';
+  }
+
+  @override
+  String get textSize => 'Text size';
+
+  @override
+  String get textSizeHelp =>
+      'Of the interface, on top of the system\'s. The terminal has its own.';
+
+  @override
   String get theme => 'Theme';
 
   @override
@@ -824,6 +1030,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get themeSystem => 'Follow the system';
+
+  @override
+  String themeVariant(String name, String variant) {
+    return '$name ($variant)';
+  }
 
   @override
   String get thisComputer => 'This computer';
@@ -858,7 +1069,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tryAgain => 'Try again';
 
   @override
+  String get uiColors => 'Interface colors';
+
+  @override
+  String get uiFont => 'Interface font';
+
+  @override
   String get user => 'User';
+
+  @override
+  String get variantDark => 'dark';
+
+  @override
+  String get variantDarkOnly => 'Dark';
+
+  @override
+  String get variantLight => 'light';
+
+  @override
+  String get variantLightOnly => 'Light';
 
   @override
   String get verificationTitle => 'Verification';
@@ -924,4 +1153,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wrongPassword => 'Wrong password.';
+
+  @override
+  String get yes => 'Yes';
 }

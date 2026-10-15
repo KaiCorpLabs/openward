@@ -8,6 +8,7 @@
       }
     }
   },
+  "accessibility": "Accesibilidad",
   "add": "Añadir",
   "addSavedHost": "Añadir un host guardado",
   "addTag": "Añadir",
@@ -20,7 +21,11 @@
   "alreadyImported": "ya importado",
   "appearanceStepBody": "Puedes cambiarlo cuando quieras en Ajustes.",
   "appearanceStepTitle": "¿Cómo la quieres ver?",
+  "asSystem": "Como el sistema",
   "back": "Atrás",
+  "bellFlash": "Destello con la campana",
+  "bellFlashHelp": "Cuando un programa hace sonar la campana. Si la pestaña no está delante, se marca igualmente.",
+  "bellRang": "Ha sonado la campana",
   "cancel": "Cancelar",
   "cancelled": "Cancelado.",
   "cannotConnect": "No se ha podido conectar con {label}",
@@ -64,9 +69,48 @@
     }
   },
   "continueLabel": "Continuar",
+  "contrastFails": "Contraste del texto {ratio}:1. No llega a AA (4,5:1).",
+  "@contrastFails": {
+    "placeholders": {
+      "ratio": {
+        "type": "String"
+      }
+    }
+  },
+  "contrastPasses": "Contraste del texto {ratio}:1. Cumple AA.",
+  "@contrastPasses": {
+    "placeholders": {
+      "ratio": {
+        "type": "String"
+      }
+    }
+  },
+  "contrastWarning": "Con esta combinación, parte del texto no llega al contraste recomendado (queda en {ratio}:1).",
+  "@contrastWarning": {
+    "placeholders": {
+      "ratio": {
+        "type": "String"
+      }
+    }
+  },
   "copy": "Copiar",
   "copyFingerprint": "Copiar la huella",
   "ctrlShiftPrefix": "Ctrl+Mayús+",
+  "cursor": "Cursor",
+  "cursorBar": "Barra",
+  "cursorBlink": "Cursor parpadeante",
+  "cursorBlock": "Bloque",
+  "cursorHelp": "Mientras el programa no pida otro.",
+  "cursorUnderline": "Línea",
+  "customize": "Personalizar {name}",
+  "@customize": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "customizeHint": "Cambia una capa y el resto se queda igual. Los cambios son solo de este tema.",
   "defaultKeys": "~/.ssh/id_ed25519, id_ecdsa, id_rsa (las habituales)",
   "delete": "Eliminar",
   "deleteFailed": "No se ha podido eliminar: {error}",
@@ -158,6 +202,29 @@
       }
     }
   },
+  "findClose": "Cerrar la búsqueda (Esc)",
+  "findCount": "{selected} de {total}",
+  "@findCount": {
+    "placeholders": {
+      "selected": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "findHint": "Buscar en el terminal",
+  "findNewer": "Siguiente, más abajo (Mayús+Intro)",
+  "findOlder": "Anterior, más arriba (Intro)",
+  "findTotal": "{count, plural, =0{Sin resultados} =1{1 resultado} other{{count} resultados}}",
+  "@findTotal": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "fingerprint": "Huella",
   "firstConnectionTo": "Primera conexión con {label}",
   "@firstConnectionTo": {
@@ -167,7 +234,12 @@
       }
     }
   },
+  "fontFromTheme": "La del tema",
+  "fontOther": "Otra fuente instalada…",
+  "fontOtherHint": "Su nombre exacto, como «Fira Code»",
+  "fontOtherTitle": "Otra fuente instalada",
   "fontSize": "Tamaño de letra",
+  "fontSystem": "La del sistema",
   "fromDefault": "Valor por defecto",
   "fromGroup": "Del grupo {name}",
   "@fromGroup": {
@@ -231,8 +303,19 @@
     }
   },
   "importNothing": "No hay hosts nuevos en ~/.ssh/config (o no existe).",
+  "importScheme": "Importar de iTerm2 o Ghostty…",
+  "importSchemeDone": "«{name}» importado y puesto en el terminal.",
+  "@importSchemeDone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "importSchemeFailed": "Ese fichero no es un tema de iTerm2 (.itermcolors) ni de Ghostty.",
   "importSshConfigMenu": "Importar de ~/.ssh/config…",
   "importTitle": "Importar ~/.ssh/config",
+  "inDark": "En oscuro",
   "inGroup": "en el grupo {name}",
   "@inGroup": {
     "placeholders": {
@@ -241,6 +324,7 @@
       }
     }
   },
+  "inLight": "En claro",
   "inputNotSent": "Lo que escribas ahora no se envía.",
   "inside": "Dentro de",
   "jumpThrough": "Saltar por, en orden",
@@ -303,6 +387,17 @@
   "keysHelp": "Una ruta por línea. OpenWard guarda la ruta, nunca la clave.",
   "language": "Idioma",
   "languageSystem": "Como el sistema",
+  "licenses": "Licencias",
+  "lightAndDark": "Claro y oscuro",
+  "lineHeight": "Interlineado del terminal",
+  "linkNotOpened": "Los enlaces «{scheme}:» no se abren desde el terminal.",
+  "@linkNotOpened": {
+    "placeholders": {
+      "scheme": {
+        "type": "String"
+      }
+    }
+  },
   "localTerminal": "Terminal local",
   "localUser": "tu usuario local",
   "milliseconds": "{ms} ms",
@@ -313,6 +408,8 @@
       }
     }
   },
+  "minimumContrast": "Contraste mínimo",
+  "minimumContrastHelp": "Aclara u oscurece el texto del terminal que no se lee sobre su fondo.",
   "missingAddress": "Falta la dirección.",
   "missingJump": "Añade al menos un host por el que saltar.",
   "missingProxyCommand": "Falta el ProxyCommand.",
@@ -332,6 +429,7 @@
   "newLocalTerminal": "Terminal local nuevo",
   "newSubgroup": "Nuevo subgrupo",
   "next": "Siguiente",
+  "no": "No",
   "noGroup": "Sin grupo",
   "noHostsBody": "Añade uno o tráelos de tu ~/\u2060.ssh/\u2060config.",
   "noHostsTitle": "Aún no tienes hosts",
@@ -360,6 +458,14 @@
   "paste": "Pegar",
   "pasteMultiBody": "El texto contiene saltos de línea u otras secuencias que pueden ejecutar comandos al pegarlo.",
   "pasteMultiTitle": "¿Pegar varias líneas?",
+  "percent": "{number} %",
+  "@percent": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "pixels": "{size} px",
   "@pixels": {
     "placeholders": {
@@ -382,6 +488,8 @@
       }
     }
   },
+  "preview": "Vista previa",
+  "previewLive": "Los cambios se ven al momento en toda la ventana.",
   "quickConnectHint": "usuario@servidor:puerto",
   "quickConnectInvalid": "Escribe una dirección como usuario@servidor:puerto.",
   "readyBody": "Estos atajos te llevan a casi todo:",
@@ -396,6 +504,7 @@
       }
     }
   },
+  "reduceMotion": "Reducir movimiento",
   "removeTag": "Quitar {tag}",
   "@removeTag": {
     "placeholders": {
@@ -425,6 +534,7 @@
     }
   },
   "reportWhere": "Están en el grupo «~/.ssh/config».",
+  "resetTheme": "Restablecer",
   "restart": "Reiniciar",
   "retryIn": "Reintento {attempt} de {max} en {secs} s.",
   "@retryIn": {
@@ -446,6 +556,11 @@
   "routeDirect": "Directo",
   "routeJump": "Saltando por otro host",
   "routeStart": "este equipo",
+  "sampleComment": "comentario en gris",
+  "sampleError": "error:",
+  "sampleErrorText": "no se pudo leer .env",
+  "sampleWarning": "aviso:",
+  "sampleWarningText": "2 migraciones pendientes",
   "save": "Guardar",
   "saveAndConnect": "Guardar y conectar",
   "saveFailed": "No se ha podido guardar: {error}",
@@ -512,6 +627,7 @@
   "settingsAppearance": "Apariencia",
   "settingsGeneral": "General",
   "settingsTerminal": "Terminal",
+  "shape": "Forma",
   "shortcutLocal": "Abre un terminal local",
   "shortcutNewHost": "Guarda un host nuevo",
   "shortcutSearch": "Busca entre tus hosts",
@@ -577,11 +693,37 @@
   "stepOpeningShell": "abriendo el shell…",
   "stepReady": "Listo",
   "tags": "Etiquetas",
+  "terminalAlwaysDark": "Siempre oscuro",
+  "terminalAsTheme": "Como el tema",
+  "terminalColors": "Colores del terminal",
+  "terminalFont": "Fuente del terminal",
+  "terminalScheme": "Esquema propio",
+  "terminalShortcuts": "{key}F busca en el terminal y su historial. {key}+ y {key}− cambian el tamaño de la letra de la pestaña, y {key}0 lo devuelve. Con {key} pulsado, un clic abre un enlace.",
+  "@terminalShortcuts": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
+  "textSize": "Tamaño del texto",
+  "textSizeHelp": "De la interfaz, sobre el del sistema. El terminal tiene el suyo.",
   "theme": "Tema",
   "themeDark": "Oscuro",
   "themeHelp": "En claro, Papel; en oscuro, Grafito.",
   "themeLight": "Claro",
   "themeSystem": "Seguir al sistema",
+  "themeVariant": "{name} ({variant})",
+  "@themeVariant": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "variant": {
+        "type": "String"
+      }
+    }
+  },
   "thisComputer": "Este equipo",
   "time": "Tiempo",
   "trust": "Confianza",
@@ -599,7 +741,13 @@
   "trustNewKey": "Confiar en la clave nueva",
   "trustNewKeyEllipsis": "Confiar en la clave nueva…",
   "tryAgain": "Reintentar",
+  "uiColors": "Colores de la interfaz",
+  "uiFont": "Fuente de la interfaz",
   "user": "Usuario",
+  "variantDark": "oscuro",
+  "variantDarkOnly": "Oscuro",
+  "variantLight": "claro",
+  "variantLightOnly": "Claro",
   "verificationTitle": "Verificación",
   "via": "vía {hops}",
   "@via": {
@@ -686,5 +834,6 @@
   "welcomeTitle": "Te damos la bienvenida a OpenWard",
   "wrongAnswer": "Respuesta incorrecta.",
   "wrongPassphrase": "Frase incorrecta.",
-  "wrongPassword": "Contraseña incorrecta."
+  "wrongPassword": "Contraseña incorrecta.",
+  "yes": "Sí"
 }
