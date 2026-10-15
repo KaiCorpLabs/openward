@@ -3,6 +3,7 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 
+import '../core/address.dart';
 import '../src/rust/api/app.dart';
 import '../src/rust/api/session.dart';
 import 'frame.dart';
@@ -19,13 +20,17 @@ class TerminalController extends ChangeNotifier {
     required this.app,
     required this.label,
     this.hostId,
+    this.target,
     int scrollback = 0,
   }) : session = app.terminal(cols: 80, rows: 24, scrollback: scrollback);
 
   final OpenWard app;
 
-  /// The saved host, or null for a local shell.
+  /// The saved host, if it is one.
   final String? hostId;
+
+  /// An address that is not saved, if it is one.
+  final QuickTarget? target;
 
   /// The host's label, or the shell's name.
   final String label;
@@ -74,7 +79,8 @@ class TerminalController extends ChangeNotifier {
   Timer? _background;
   bool _disposed = false;
 
-  bool get isLocal => hostId == null;
+  /// A shell on this machine: neither a saved host nor an address.
+  bool get isLocal => hostId == null && target == null;
 
   /// What the tab shows.
   String get displayTitle {
@@ -94,9 +100,17 @@ class TerminalController extends ChangeNotifier {
     cancelled = false;
     prompts.clear();
     final hostId = this.hostId;
-    final events = hostId == null
-        ? app.openLocal(session: session)
-        : app.connect(session: session, hostId: hostId);
+    final target = this.target;
+    final events = hostId != null
+        ? app.connect(session: session, hostId: hostId)
+        : target != null
+        ? app.connectAddress(
+            session: session,
+            address: target.address,
+            user: target.user,
+            port: target.port,
+          )
+        : app.openLocal(session: session);
     _events?.cancel();
     _events = events.listen(
       _onEvent,

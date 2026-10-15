@@ -61,6 +61,29 @@ pub enum PlanError {
 }
 
 impl Plan {
+    /// To an address that is not saved: one hop, with the default settings
+    /// and the user and port given.
+    pub fn for_address(
+        address: &str,
+        user: Option<String>,
+        port: Option<u16>,
+        local: &Local,
+    ) -> Self {
+        let settings = defaults();
+        let bare = Settings {
+            user,
+            port,
+            ..defaults()
+        };
+        let target = hop(address, None, address, &bare, local, true);
+        Self {
+            term: settings.term.unwrap_or_else(|| "xterm-256color".into()),
+            env: settings.env.unwrap_or_default().into_iter().collect(),
+            agent_forward: settings.agent_forward.unwrap_or(false) && target.agent.is_some(),
+            hops: vec![target],
+        }
+    }
+
     pub fn for_host(vault: &Vault, host: ItemId, local: &Local) -> Result<Self, PlanError> {
         let mut hops = Vec::new();
         chain(vault, host, local, &mut Vec::new(), &mut hops)?;
@@ -195,6 +218,31 @@ mod tests {
             ..Host::default()
         }))
         .unwrap()
+    }
+
+    #[test]
+    fn an_address_gets_one_hop_with_the_defaults() {
+        let plan = Plan::for_address("10.0.0.7", Some("root".into()), Some(2222), &local());
+        let [hop] = plan.hops.as_slice() else {
+            panic!("one hop: {plan:?}")
+        };
+        assert_eq!(
+            (
+                hop.label.as_str(),
+                hop.address.as_str(),
+                hop.user.as_str(),
+                hop.port
+            ),
+            ("10.0.0.7", "10.0.0.7", "root", 2222)
+        );
+        assert_eq!(hop.host, None);
+        assert_eq!(
+            hop.identity_files[0],
+            PathBuf::from("/home/ana/.ssh/id_ed25519")
+        );
+
+        let bare = Plan::for_address("db", None, None, &local());
+        assert_eq!((bare.hops[0].user.as_str(), bare.hops[0].port), ("ana", 22));
     }
 
     #[test]

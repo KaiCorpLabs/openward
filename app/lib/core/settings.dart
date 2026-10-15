@@ -7,6 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Light, dark, or as the system is.
 enum ThemeChoice { system, dark, light }
 
+/// The interface language: the system's (English when it is neither), or
+/// one chosen.
+enum Language { system, es, en }
+
 /// How the app looks and behaves on this machine. Not in the vault: these
 /// are preferences of the device, not data (ARCHITECTURE §4.1).
 @immutable
@@ -16,6 +20,8 @@ class Settings {
     this.theme = ThemeChoice.dark,
     this.optionAsAlt = false,
     this.scrollback = 10000,
+    this.language = Language.system,
+    this.welcomed = false,
   });
 
   /// Terminal font size, in logical pixels.
@@ -27,6 +33,11 @@ class Settings {
 
   /// Lines of history for new terminals.
   final int scrollback;
+
+  final Language language;
+
+  /// The first-run guide was done or skipped.
+  final bool welcomed;
 
   static const fontSizes = [
     10.0,
@@ -47,11 +58,15 @@ class Settings {
     ThemeChoice? theme,
     bool? optionAsAlt,
     int? scrollback,
+    Language? language,
+    bool? welcomed,
   }) => Settings(
     fontSize: fontSize ?? this.fontSize,
     theme: theme ?? this.theme,
     optionAsAlt: optionAsAlt ?? this.optionAsAlt,
     scrollback: scrollback ?? this.scrollback,
+    language: language ?? this.language,
+    welcomed: welcomed ?? this.welcomed,
   );
 
   Map<String, Object> toJson() => {
@@ -59,6 +74,8 @@ class Settings {
     'theme': theme.name,
     'option_as_alt': optionAsAlt,
     'scrollback': scrollback,
+    'language': language.name,
+    'welcomed': welcomed,
   };
 
   /// Unknown or broken values fall back to the defaults, one by one.
@@ -67,6 +84,7 @@ class Settings {
     final size = json['font_size'];
     final theme = json['theme'];
     final scroll = json['scrollback'];
+    final language = json['language'];
     return Settings(
       fontSize: size is num && size >= 8 && size <= 40
           ? size.toDouble()
@@ -81,6 +99,13 @@ class Settings {
       scrollback: scroll is int && scroll >= 100 && scroll <= 1000000
           ? scroll
           : d.scrollback,
+      language: Language.values.firstWhere(
+        (l) => l.name == language,
+        orElse: () => d.language,
+      ),
+      welcomed: json['welcomed'] is bool
+          ? json['welcomed']! as bool
+          : d.welcomed,
     );
   }
 
@@ -90,10 +115,13 @@ class Settings {
       other.fontSize == fontSize &&
       other.theme == theme &&
       other.optionAsAlt == optionAsAlt &&
-      other.scrollback == scrollback;
+      other.scrollback == scrollback &&
+      other.language == language &&
+      other.welcomed == welcomed;
 
   @override
-  int get hashCode => Object.hash(fontSize, theme, optionAsAlt, scrollback);
+  int get hashCode =>
+      Object.hash(fontSize, theme, optionAsAlt, scrollback, language, welcomed);
 }
 
 /// Where the settings are kept: `settings.json` in the data directory,

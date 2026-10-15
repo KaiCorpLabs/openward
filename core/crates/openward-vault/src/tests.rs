@@ -127,6 +127,16 @@ fn settings_inherit_from_groups_with_their_origin() {
     let e = v.effective(h).unwrap();
     assert_eq!(e.settings.port, Some(2222));
     assert_eq!(e.origin("port"), Some(Origin::Group(root)));
+
+    // What a new host in the subgroup would get, before its own settings.
+    let i = v.inherited(Some(eu)).unwrap();
+    assert_eq!(i.settings.user.as_deref(), Some("deploy"));
+    assert_eq!(i.origin("user"), Some(Origin::Group(root)));
+    assert_eq!(i.origin("agent"), Some(Origin::Group(eu)));
+    let top = v.inherited(None).unwrap();
+    assert_eq!(top.settings.port, Some(22));
+    assert_eq!(top.origin("port"), Some(Origin::Default));
+    assert_eq!(top.origin("user"), None);
 }
 
 #[test]

@@ -1,0 +1,6 @@
+# Spanish is where the texts are written first; English must have all of
+# them (test/l10n_test.dart).
+arb-dir: lib/l10n
+template-arb-file: app_es.arb
+output-localization-file: app_localizations.dart
+nullable-getter: false

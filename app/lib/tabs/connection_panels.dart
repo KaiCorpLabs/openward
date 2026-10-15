@@ -9,15 +9,46 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/providers.dart';
+import '../l10n/l10n.dart';
 import '../src/rust/api/session.dart';
 import '../terminal/controller.dart';
+import '../ui/tokens.dart';
+import '../ui/widgets.dart';
 import 'messages.dart';
+import 'tabs.dart';
 
-TextStyle? _mono(BuildContext context) =>
-    Theme.of(context).textTheme.bodyMedium?.copyWith(fontFamily: 'Menlo');
+/// A card over the terminal, in the theme's raised color.
+class _Panel extends StatelessWidget {
+  const _Panel({required this.child, this.width = 440});
+
+  final Widget child;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    final ow = context.ow;
+    return Container(
+      constraints: BoxConstraints(maxWidth: width),
+      padding: const EdgeInsets.fromLTRB(22, 20, 22, 16),
+      decoration: BoxDecoration(
+        color: ow.colors.raised,
+        borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
+        border: Border.all(color: ow.colors.control),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 32,
+            offset: Offset(0, 12),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
 
 /// The route, hop by hop: done, in progress (and what it is doing), or
-/// still ahead.
+/// still ahead. Each state has its own mark, not just a color.
 class _RouteSteps extends StatelessWidget {
   const _RouteSteps({required this.controller});
 
@@ -25,71 +56,66 @@ class _RouteSteps extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final c = controller;
-    final stage = c.stage;
+    final ow = context.ow;
+    final c = ow.colors;
+    final l = context.l10n;
+    final s = controller;
+    final stage = s.stage;
     final current = stage?.hop ?? 0;
-    final steps = c.route.isEmpty ? [c.label] : c.route;
-    Widget row(Widget icon, String text, {String? detail, bool dim = false}) =>
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              SizedBox(width: 20, height: 20, child: Center(child: icon)),
-              const SizedBox(width: 12),
-              Text(
-                text,
-                style: TextStyle(
-                  color: dim ? theme.colorScheme.onSurfaceVariant : null,
-                ),
+    final steps = s.route.isEmpty ? [s.label] : s.route;
+    Widget row(
+      Widget icon,
+      String text, {
+      String? detail,
+      bool dim = false,
+      bool now = false,
+    }) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          SizedBox(width: 18, height: 18, child: Center(child: icon)),
+          const SizedBox(width: 10),
+          Flexible(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: dim ? c.textSubtle : c.text,
+                fontWeight: now ? FontWeight.w600 : FontWeight.w400,
               ),
-              if (detail != null) ...[
-                const SizedBox(width: 8),
-                Text(
-                  detail,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ],
+            ),
           ),
-        );
+          if (detail != null) ...[
+            const SizedBox(width: 8),
+            Text(detail, style: TextStyle(fontSize: 12, color: c.textMuted)),
+          ],
+        ],
+      ),
+    );
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        row(
-          Icon(Icons.laptop, size: 16, color: theme.colorScheme.primary),
-          'Este equipo',
-        ),
+        row(Icon(Icons.laptop, size: 16, color: c.accent), l.thisComputer),
         for (var i = 0; i < steps.length; i++)
           if (i < current)
-            row(
-              Icon(Icons.check, size: 16, color: theme.colorScheme.primary),
-              steps[i],
-            )
+            row(Icon(Icons.check, size: 16, color: c.accent), steps[i])
           else if (i == current && stage != null)
             row(
-              const SizedBox(
-                width: 14,
-                height: 14,
-                child: CircularProgressIndicator(strokeWidth: 2),
+              SizedBox.square(
+                dimension: 13,
+                child: CircularProgressIndicator(strokeWidth: 2, color: c.text),
               ),
               steps[i],
+              now: true,
               detail: switch (stage.stage) {
-                StageKind.connecting => 'conectando…',
-                StageKind.authenticating => 'autenticando…',
-                StageKind.openingShell => 'abriendo el shell…',
+                StageKind.connecting => l.stepConnecting,
+                StageKind.authenticating => l.stepAuthenticating,
+                StageKind.openingShell => l.stepOpeningShell,
               },
             )
           else
             row(
-              Icon(
-                Icons.radio_button_unchecked,
-                size: 14,
-                color: theme.colorScheme.outline,
-              ),
+              Icon(Icons.radio_button_unchecked, size: 14, color: c.textSubtle),
               steps[i],
               dim: true,
             ),
@@ -106,51 +132,45 @@ class ConnectingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 320, maxWidth: 440),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Conectando con ${controller.label}',
-                style: theme.textTheme.titleMedium,
-              ),
-              const SizedBox(height: 12),
-              _RouteSteps(controller: controller),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: controller.cancel,
-                  child: const Text('Cancelar'),
-                ),
-              ),
-            ],
+    final l = context.l10n;
+    return _Panel(
+      width: 420,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l.connectingTo(controller.label),
+            style: Theme.of(context).textTheme.titleMedium,
           ),
-        ),
+          const SizedBox(height: 12),
+          _RouteSteps(controller: controller),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton(
+              onPressed: controller.cancel,
+              child: Text(l.cancel),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// Across the top of a terminal whose connection was lost: why, the
-/// countdown to the next try, and what to do instead.
-class ReconnectBanner extends StatefulWidget {
+/// Across the top of a terminal whose connection was lost: why, which
+/// try is next and when, and that typing goes nowhere meanwhile.
+class ReconnectBanner extends ConsumerStatefulWidget {
   const ReconnectBanner({super.key, required this.controller});
 
   final TerminalController controller;
 
   @override
-  State<ReconnectBanner> createState() => _ReconnectBannerState();
+  ConsumerState<ReconnectBanner> createState() => _ReconnectBannerState();
 }
 
-class _ReconnectBannerState extends State<ReconnectBanner> {
+class _ReconnectBannerState extends ConsumerState<ReconnectBanner> {
   late final Timer _tick = Timer.periodic(
     const Duration(milliseconds: 250),
     (_) => setState(() {}),
@@ -164,52 +184,69 @@ class _ReconnectBannerState extends State<ReconnectBanner> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final c = widget.controller;
-    final r = c.reconnecting;
-    final at = c.reconnectAt;
+    final ow = context.ow;
+    final c = ow.colors;
+    final l = context.l10n;
+    final s = widget.controller;
+    final r = s.reconnecting;
+    final at = s.reconnectAt;
     final String text;
-    if (at != null) {
+    if (at != null && r != null) {
       final left = at.difference(DateTime.now()).inMilliseconds;
       final secs = (left / 1000).ceil().clamp(0, 60);
-      final reason = r == null ? '' : failureText(r.reason);
+      final f = r.reason;
+      var reason = f.kind == FailureKind.network
+          ? networkReason(l, f.reason)
+          : failureText(l, f);
+      if (reason == l.netLost) reason = '';
       final why = reason.isEmpty
           ? ''
           : ' (${reason.endsWith('.') ? reason.substring(0, reason.length - 1) : reason})';
+      final max = ref.read(openWardProvider).reconnectAttempts();
       text =
-          'Conexión perdida$why. Reconectando en $secs s'
-          '${r != null && r.attempt > 1 ? ' · intento ${r.attempt}' : ''}…';
+          '${l.connectionLost(s.label, why)} '
+          '${l.retryIn(r.attempt, max, secs)} ${l.inputNotSent}';
     } else {
-      final s = c.stage;
-      text = s == null ? 'Reconectando…' : 'Reconectando: ${stageText(s)}';
+      final stage = s.stage;
+      text = stage == null
+          ? l.reconnectingEllipsis
+          : l.reconnectingStage(stageText(l, stage));
     }
-    return Material(
-      color: theme.colorScheme.tertiaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
-        child: Row(
-          children: [
-            Icon(
-              Icons.sync_problem,
-              size: 18,
-              color: theme.colorScheme.onTertiaryContainer,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                text,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: theme.colorScheme.onTertiaryContainer),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 2),
+      child: Semantics(
+        liveRegion: true,
+        child: Callout(
+          tone: Tone.warn,
+          padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+          child: Row(
+            children: [
+              Icon(Icons.sync, size: 16, color: c.warn),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  text,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: c.text),
+                ),
               ),
-            ),
-            if (at != null)
+              if (at != null)
+                OutlinedButton(
+                  onPressed: s.start,
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 28),
+                    side: BorderSide(color: c.warnLine),
+                  ),
+                  child: Text(l.retryNow),
+                ),
               TextButton(
-                onPressed: c.start,
-                child: const Text('Reconectar ya'),
+                onPressed: s.cancel,
+                style: TextButton.styleFrom(foregroundColor: c.textMuted),
+                child: Text(l.cancel),
               ),
-            TextButton(onPressed: c.cancel, child: const Text('Cancelar')),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -217,66 +254,170 @@ class _ReconnectBannerState extends State<ReconnectBanner> {
 }
 
 /// Over a terminal that never connected: what went wrong and what can be
-/// done.
+/// done. A changed host key gets its own card: stopping is what it offers
+/// first, trusting the new key takes a second look.
 class FailureCard extends ConsumerWidget {
   const FailureCard({super.key, required this.controller});
 
   final TerminalController controller;
 
+  void _closeTab(WidgetRef ref) {
+    final tabs = ref.read(tabsProvider);
+    final i = tabs.tabs.indexWhere(
+      (t) => t is SessionTab && t.controller == controller,
+    );
+    ref.read(tabsProvider.notifier).close(i);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final ow = context.ow;
+    final c = ow.colors;
+    final l = context.l10n;
+    final s = controller;
+    final failure = s.closed?.failure;
     final theme = Theme.of(context);
-    final c = controller;
-    final failure = c.closed?.failure;
-    final changed = failure?.kind == FailureKind.hostKeyChanged;
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
+    if (failure != null && failure.kind == FailureKind.hostKeyChanged) {
+      final saved = failure.previous.isEmpty
+          ? null
+          : failure.previous.first.fingerprint;
+      return ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 500),
+        child: Callout(
+          tone: Tone.danger,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Icon(
-                    changed ? Icons.gpp_maybe : Icons.error_outline,
-                    color: theme.colorScheme.error,
-                  ),
-                  const SizedBox(width: 10),
+                  Icon(Icons.warning_amber_rounded, size: 18, color: c.danger),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      changed
-                          ? 'La clave de ${failure!.label} ha cambiado'
-                          : 'No se ha podido conectar con ${c.label}',
-                      style: theme.textTheme.titleMedium,
+                      l.keyChangedTitle(failure.label),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: c.danger,
+                      ),
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 10),
+              Text(l.keyChangedBody, style: const TextStyle(height: 1.45)),
               const SizedBox(height: 12),
-              Text(statusText(c)),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  if (changed)
-                    TextButton(
-                      onPressed: () => showHostKeyChanged(context, ref, c),
-                      child: const Text('Revisar la clave…'),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: c.sunken,
+                  borderRadius: BorderRadius.circular(ow.shape.radius),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (saved != null)
+                      _KeyLine(label: l.keySaved, fingerprint: saved),
+                    _KeyLine(
+                      label: l.keyReceived,
+                      fingerprint: failure.fingerprint,
+                      highlight: true,
                     ),
-                  const SizedBox(width: 8),
-                  FilledButton.tonal(
-                    onPressed: c.start,
-                    child: const Text('Reintentar'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () => showHostKeyChanged(context, ref, s),
+                    style: TextButton.styleFrom(foregroundColor: c.danger),
+                    child: Text(l.trustNewKeyEllipsis),
+                  ),
+                  FilledButton(
+                    onPressed: () => _closeTab(ref),
+                    child: Text(l.closeTheTab),
                   ),
                 ],
               ),
             ],
           ),
         ),
+      );
+    }
+    return _Panel(
+      width: 480,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.error_outline, color: c.danger),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  l.cannotConnect(s.label),
+                  style: theme.textTheme.titleMedium,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(statusText(l, s), style: const TextStyle(height: 1.45)),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              OutlinedButton(
+                onPressed: () => _closeTab(ref),
+                child: Text(l.closeTheTab),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(onPressed: s.start, child: Text(l.tryAgain)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _KeyLine extends StatelessWidget {
+  const _KeyLine({
+    required this.label,
+    required this.fingerprint,
+    this.highlight = false,
+  });
+
+  final String label;
+  final String fingerprint;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ow.colors;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 76,
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 12, color: c.textMuted),
+            ),
+          ),
+          Expanded(
+            child: SelectableText(
+              fingerprint,
+              style: monoStyle(context, color: highlight ? c.danger : c.text),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -291,6 +432,7 @@ Future<void> showHostKeyChanged(
 ) async {
   final f = c.closed?.failure;
   if (f == null || f.kind != FailureKind.hostKeyChanged) return;
+  final l = context.l10n;
   final trusted = await showDialog<bool>(
     context: context,
     builder: (context) => _HostKeyChangedDialog(failure: f),
@@ -302,9 +444,8 @@ Future<void> showHostKeyChanged(
         .trustHostKey(host: f.host, port: f.port, key: f.key);
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se ha podido guardar la clave: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l.saveKeyFailed('$e'))));
     }
     return;
   }
@@ -325,13 +466,16 @@ class _HostKeyChangedDialogState extends State<_HostKeyChangedDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final ow = context.ow;
+    final c = ow.colors;
+    final l = context.l10n;
     final theme = Theme.of(context);
     final f = widget.failure;
     final where = f.port == 22 ? f.host : '${f.host}:${f.port}';
     final inOpenSsh = f.previous.any((p) => p.source == KeySourceKind.openSsh);
     return AlertDialog(
-      icon: Icon(Icons.gpp_maybe, color: theme.colorScheme.error, size: 32),
-      title: Text('La clave de ${f.label} ha cambiado'),
+      icon: Icon(Icons.gpp_maybe_outlined, color: c.danger, size: 30),
+      title: Text(l.keyChangedTitle(f.label)),
       content: SizedBox(
         width: 520,
         child: Column(
@@ -339,43 +483,44 @@ class _HostKeyChangedDialogState extends State<_HostKeyChangedDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '$where se presenta con una clave distinta de la que tenías '
-              'como buena. Puede que el servidor se haya reinstalado o haya '
-              'cambiado de clave, pero también que alguien esté interceptando '
-              'la conexión. No sigas sin comprobar la huella nueva con quien '
-              'administra el servidor.',
+              l.keyChangedDialogBody(where),
+              style: const TextStyle(height: 1.45),
             ),
             const SizedBox(height: 16),
-            Text('Antes', style: theme.textTheme.titleSmall),
+            Text(l.keyBefore, style: theme.textTheme.titleSmall),
             for (final p in f.previous)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SelectableText(p.fingerprint, style: _mono(context)),
+                    SelectableText(
+                      p.fingerprint,
+                      style: monoStyle(context, color: c.text),
+                    ),
                     Text(
                       p.source == KeySourceKind.openWard
-                          ? 'guardada en OpenWard'
-                          : 'en ~/.ssh/known_hosts',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                          ? l.keyInOpenWard
+                          : l.keyInKnownHosts,
+                      style: TextStyle(fontSize: 12, color: c.textMuted),
                     ),
                   ],
                 ),
               ),
             const SizedBox(height: 12),
-            Text('Ahora (${f.algorithm})', style: theme.textTheme.titleSmall),
+            Text(l.keyNow(f.algorithm), style: theme.textTheme.titleSmall),
             const SizedBox(height: 4),
-            SelectableText(f.fingerprint, style: _mono(context)),
+            SelectableText(
+              f.fingerprint,
+              style: monoStyle(context, color: c.text),
+            ),
             if (inOpenSsh) ...[
               const SizedBox(height: 12),
               Text(
-                'OpenWard no modifica ~/.ssh/known_hosts: ssh seguirá '
-                'avisando hasta que quites la clave vieja de allí '
-                '(ssh-keygen -R ${f.port == 22 ? f.host : '"[${f.host}]:${f.port}"'}).',
-                style: theme.textTheme.bodySmall,
+                l.openSshStillWarns(
+                  'ssh-keygen -R ${f.port == 22 ? f.host : '"[${f.host}]:${f.port}"'}',
+                ),
+                style: TextStyle(fontSize: 12, color: c.textMuted),
               ),
             ],
             const SizedBox(height: 12),
@@ -384,23 +529,23 @@ class _HostKeyChangedDialogState extends State<_HostKeyChangedDialog> {
               onChanged: (v) => setState(() => _checked = v ?? false),
               contentPadding: EdgeInsets.zero,
               controlAffinity: ListTileControlAffinity.leading,
-              title: const Text('He comprobado la huella nueva'),
+              title: Text(l.checkedFingerprint),
             ),
           ],
         ),
       ),
       actions: [
-        TextButton(
+        OutlinedButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancelar'),
+          child: Text(l.cancel),
         ),
         FilledButton(
           style: FilledButton.styleFrom(
-            backgroundColor: theme.colorScheme.error,
-            foregroundColor: theme.colorScheme.onError,
+            backgroundColor: c.danger,
+            foregroundColor: c.surface,
           ),
           onPressed: _checked ? () => Navigator.pop(context, true) : null,
-          child: const Text('Confiar en la clave nueva'),
+          child: Text(l.trustNewKey),
         ),
       ],
     );
@@ -411,16 +556,17 @@ class _HostKeyChangedDialogState extends State<_HostKeyChangedDialog> {
 Future<void> showConnectionInfo(BuildContext context, TerminalController c) {
   final k = c.connected;
   if (k == null) return Future.value();
+  final l = context.l10n;
   final where = k.port == 22 ? k.host : '${k.host}:${k.port}';
   final trust = switch (k.trust) {
-    TrustKind.known => 'conocida',
-    TrustKind.new_ => 'nueva, guardada ahora',
-    TrustKind.certified => 'certificada por la CA ${k.ca}',
+    TrustKind.known => l.trustKnown,
+    TrustKind.new_ => l.trustNew,
+    TrustKind.certified => l.trustCertified(k.ca),
   };
   return showDialog<void>(
     context: context,
     builder: (context) {
-      final theme = Theme.of(context);
+      final ow = context.ow;
       Widget row(String name, String value, {bool mono = false}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
@@ -428,13 +574,13 @@ Future<void> showConnectionInfo(BuildContext context, TerminalController c) {
           children: [
             SizedBox(
               width: 140,
-              child: Text(
-                name,
-                style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-              ),
+              child: Text(name, style: TextStyle(color: ow.colors.textMuted)),
             ),
             Expanded(
-              child: SelectableText(value, style: mono ? _mono(context) : null),
+              child: SelectableText(
+                value,
+                style: mono ? monoStyle(context, color: ow.colors.text) : null,
+              ),
             ),
           ],
         ),
@@ -447,42 +593,41 @@ Future<void> showConnectionInfo(BuildContext context, TerminalController c) {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              row('Destino', where),
+              row(l.destination, where),
               if (c.route.length > 1)
-                row('Ruta', ['este equipo', ...c.route].join(' → ')),
+                row(l.route, [l.routeStart, ...c.route].join(' → ')),
               row(
-                'Intercambio',
-                k.postQuantum ? '${k.kex} (poscuántico)' : k.kex,
+                l.keyExchange,
+                k.postQuantum ? l.postQuantumKex(k.kex) : k.kex,
                 mono: true,
               ),
               if (!k.postQuantum)
                 Padding(
                   padding: const EdgeInsets.only(left: 140, bottom: 4),
                   child: Text(
-                    'El servidor no ofrece un intercambio poscuántico '
-                    '(mlkem768x25519; OpenSSH lo trae desde la 10.0).',
-                    style: theme.textTheme.bodySmall,
+                    l.noPostQuantumNote,
+                    style: TextStyle(fontSize: 12, color: ow.colors.textMuted),
                   ),
                 ),
-              row('Cifrado', k.cipher, mono: true),
-              row('Clave del host', k.hostKeyAlgorithm, mono: true),
-              row('Huella', k.fingerprint, mono: true),
-              row('Confianza', trust),
-              row('Tiempo', '${k.connectMs.round()} ms'),
+              row(l.cipher, k.cipher, mono: true),
+              row(l.hostKey, k.hostKeyAlgorithm, mono: true),
+              row(l.fingerprint, k.fingerprint, mono: true),
+              row(l.trust, trust),
+              row(l.time, l.milliseconds(k.connectMs.round())),
             ],
           ),
         ),
         actions: [
-          TextButton(
+          OutlinedButton(
             onPressed: () {
               Clipboard.setData(ClipboardData(text: k.fingerprint));
               Navigator.pop(context);
             },
-            child: const Text('Copiar huella'),
+            child: Text(l.copyFingerprint),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
+            child: Text(l.close),
           ),
         ],
       );

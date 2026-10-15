@@ -115,6 +115,53 @@ Host app
     expect((again.created, again.skipped), (0, 2));
   });
 
+  test('previewing an ssh config and importing part of it', () async {
+    final config = File('${dir.path}/config')
+      ..writeAsStringSync('''
+Host bastion
+    HostName bastion.example.com
+    User ops
+Host app
+    ProxyJump bastion
+    Port 2222
+Host db
+''');
+    final preview = await app.previewSshConfig(file: config.path);
+    expect(preview.map((p) => p.alias), ['bastion', 'app', 'db']);
+    final appHost = preview[1];
+    expect(appHost.jumps, ['bastion']);
+    expect((appHost.port, appHost.existing), (2222, false));
+    // The bastion comes along with the host that jumps through it.
+    final report = await app.importSshConfig(file: config.path, only: ['app']);
+    expect(report.created, 2);
+    expect(app.hosts().map((h) => h.label).toSet(), {'bastion', 'app'});
+    final after = await app.previewSshConfig(file: config.path);
+    expect(after.where((p) => p.existing).map((p) => p.alias), [
+      'bastion',
+      'app',
+    ]);
+  });
+
+  test('what a group passes down, for editors', () async {
+    final group = await app.createGroup(
+      spec: const GroupSpec(
+        name: 'prod',
+        settings: SettingsSpec(user: 'deploy'),
+      ),
+    );
+    final inGroup = app.inherited(groupId: group);
+    expect(inGroup.effective.user, 'deploy');
+    final user = inGroup.origins.firstWhere((o) => o.field == 'user');
+    expect((user.origin, user.groupId), (OriginKind.group, group));
+    final top = app.inherited();
+    expect(top.effective.port, 22);
+    expect(
+      top.origins.firstWhere((o) => o.field == 'port').origin,
+      OriginKind.default_,
+    );
+    expect(app.reconnectAttempts(), 8);
+  });
+
   test('a local shell', () async {
     final session = app.terminal(cols: 80, rows: 24, scrollback: 0);
     final events = <SessionEvent>[];

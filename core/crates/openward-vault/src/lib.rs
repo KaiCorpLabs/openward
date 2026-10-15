@@ -293,8 +293,18 @@ impl Vault {
     /// The settings a connection to `host` uses, and where each came from.
     pub fn effective(&self, host: ItemId) -> Result<Effective> {
         let h = self.host(host)?;
+        self.resolve(h.group, &h.settings)
+    }
+
+    /// What a host in `group` (or at the top level) gets before its own
+    /// settings, as an editor shows it: the defaults and the groups'.
+    pub fn inherited(&self, group: Option<ItemId>) -> Result<Effective> {
+        self.resolve(group, &Settings::default())
+    }
+
+    fn resolve(&self, group: Option<ItemId>, own: &Settings) -> Result<Effective> {
         let mut chain = Vec::new();
-        let mut next = h.group;
+        let mut next = group;
         while let Some(gid) = next {
             if chain.iter().any(|(id, _)| *id == gid) {
                 return Err(Error::Cycle);
@@ -303,7 +313,7 @@ impl Vault {
             chain.push((gid, &g.settings));
             next = g.parent;
         }
-        Ok(Effective::resolve(chain.into_iter().rev(), &h.settings))
+        Ok(Effective::resolve(chain.into_iter().rev(), own))
     }
 
     /// Hosts matching every word of `query` (case-insensitive) in their

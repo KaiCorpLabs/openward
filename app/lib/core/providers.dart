@@ -8,6 +8,10 @@ final openWardProvider = Provider<OpenWard>(
   (ref) => throw UnimplementedError('override openWardProvider'),
 );
 
+/// The `ssh_config` to import from; null for the user's `~/.ssh/config`.
+/// Tests point it at a file of their own.
+final sshConfigFileProvider = Provider<String?>((ref) => null);
+
 /// Saved hosts and groups, as the vault has them now.
 class Library {
   const Library({required this.hosts, required this.groups});

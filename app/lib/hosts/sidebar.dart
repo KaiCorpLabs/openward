@@ -3,15 +3,20 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/providers.dart';
+import '../l10n/l10n.dart';
 import '../src/rust/api/vault.dart';
-import '../settings_dialog.dart';
 import '../tabs/tabs.dart';
+import '../terminal/controller.dart';
+import '../terminal/keys.dart';
+import '../ui/tokens.dart';
+import '../ui/widgets.dart';
+import '../window/chrome.dart';
 import 'editors.dart';
 import 'import_ssh_config.dart';
 
 /// Saved hosts in their groups, a search box over them, and the actions
-/// that add to them. Double-click (or Enter) on a host connects in a new
-/// tab.
+/// that add to them. Double-click (or Enter in the search) connects in a
+/// new tab.
 class Sidebar extends ConsumerStatefulWidget {
   const Sidebar({super.key, required this.searchFocus});
 
@@ -51,24 +56,26 @@ class _SidebarState extends ConsumerState<Sidebar> {
     }
   }
 
-  Future<void> _delete(String id, String what, String name) async {
+  Future<void> _import() async {
+    await importSshConfig(context, ref);
+    _refresh();
+  }
+
+  Future<void> _delete(String id, String name, {required bool group}) async {
+    final l = context.l10n;
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('¿Eliminar $what?'),
-        content: Text(
-          what == 'el grupo'
-              ? '«$name» desaparece; lo que contiene pasa a su grupo padre.'
-              : '«$name» desaparece de la lista. Esto no se puede deshacer.',
-        ),
+        title: Text(group ? l.deleteGroupTitle(name) : l.deleteHostTitle(name)),
+        content: Text(group ? l.deleteGroupBody : l.deleteHostBody),
         actions: [
-          TextButton(
+          OutlinedButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(l.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Eliminar'),
+            child: Text(l.delete),
           ),
         ],
       ),
@@ -81,11 +88,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
       final inUse = '$e'.contains('jump host');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            inUse
-                ? 'Otros hosts saltan por «$name»: cámbialos antes de eliminarlo.'
-                : 'No se ha podido eliminar: $e',
-          ),
+          content: Text(inUse ? l.hostInUse(name) : l.deleteFailed('$e')),
         ),
       );
     }
@@ -105,215 +108,225 @@ class _SidebarState extends ConsumerState<Sidebar> {
   }
 
   PopupMenuItem<VoidCallback> _item(String text, VoidCallback action) =>
-      PopupMenuItem(value: action, child: Text(text));
+      PopupMenuItem(value: action, height: 36, child: Text(text));
 
   @override
   Widget build(BuildContext context) {
     final library = ref.watch(libraryProvider);
     final results = ref.watch(searchResultsProvider);
-    final theme = Theme.of(context);
-    return Container(
-      color: theme.colorScheme.surfaceContainerLow,
+    final sessions = ref.watch(tabsProvider).sessions.toList();
+    final ow = context.ow;
+    final l = context.l10n;
+    final empty = library.hosts.isEmpty && library.groups.isEmpty;
+    return ColoredBox(
+      color: ow.colors.window,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const WindowButtonsSpace(),
           Padding(
-            padding: const EdgeInsets.fromLTRB(10, 10, 10, 6),
-            child: CallbackShortcuts(
-              bindings: {
-                const SingleActivator(LogicalKeyboardKey.enter): () {
-                  final first = results?.firstOrNull;
-                  if (first != null) _connect(first);
-                },
-                const SingleActivator(LogicalKeyboardKey.escape): () {
-                  _search.clear();
-                  ref.read(searchProvider.notifier).set('');
-                },
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
+            child: _SearchField(
+              controller: _search,
+              focusNode: widget.searchFocus,
+              onSubmitted: () {
+                final first = results?.firstOrNull;
+                if (first != null) _connect(first);
               },
-              child: TextField(
-                controller: _search,
-                focusNode: widget.searchFocus,
-                onChanged: ref.read(searchProvider.notifier).set,
-                decoration: const InputDecoration(
-                  isDense: true,
-                  prefixIcon: Icon(Icons.search, size: 18),
-                  hintText: 'Buscar hosts',
-                  border: OutlineInputBorder(),
-                ),
-              ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+          Expanded(
+            child: empty
+                ? _Empty(onNew: () => _editHost(), onImport: _import)
+                : results != null && results.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Text(
+                      l.noResults,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: ow.colors.textSubtle),
+                    ),
+                  )
+                : ListView(
+                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                    children: results != null
+                        ? [for (final h in results) _hostRow(h, 0, sessions)]
+                        : _tree(library, null, 0, sessions),
+                  ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: ow.colors.border)),
+            ),
             child: Row(
               children: [
-                TextButton.icon(
-                  onPressed: () => _editHost(),
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('Host'),
+                // When empty, the empty state has its own button.
+                Expanded(
+                  child: empty
+                      ? const SizedBox.shrink()
+                      : OutlinedButton.icon(
+                          onPressed: () => _editHost(),
+                          icon: const Icon(Icons.add, size: 16),
+                          label: Text(l.newHost),
+                        ),
                 ),
-                TextButton.icon(
-                  onPressed: () => _editGroup(),
-                  icon: const Icon(Icons.create_new_folder_outlined, size: 16),
-                  label: const Text('Grupo'),
+                const SizedBox(width: 6),
+                Builder(
+                  builder: (context) => IconButton(
+                    tooltip: l.moreActions,
+                    icon: const Icon(Icons.more_horiz, size: 18),
+                    onPressed: () {
+                      final box = context.findRenderObject()! as RenderBox;
+                      final at = box.localToGlobal(
+                        Offset(0, box.size.height + 4),
+                      );
+                      _menu(at, [
+                        _item(l.newGroup, () => _editGroup()),
+                        _item(l.importSshConfigMenu, _import),
+                      ]);
+                    },
+                  ),
                 ),
-                const Spacer(),
                 IconButton(
-                  tooltip: 'Ajustes',
+                  tooltip: l.settings,
                   icon: const Icon(Icons.settings_outlined, size: 18),
-                  onPressed: () => showSettings(context),
-                ),
-                IconButton(
-                  tooltip: 'Importar ~/.ssh/config',
-                  icon: const Icon(Icons.download_outlined, size: 18),
-                  onPressed: () async {
-                    await importSshConfig(context, ref);
-                    _refresh();
-                  },
+                  onPressed: () => ref
+                      .read(tabsProvider.notifier)
+                      .openPage(PageKind.settings),
                 ),
               ],
             ),
-          ),
-          const Divider(height: 1),
-          Expanded(
-            child: library.hosts.isEmpty && library.groups.isEmpty
-                ? _Empty(
-                    onImport: () async {
-                      await importSshConfig(context, ref);
-                      _refresh();
-                    },
-                  )
-                : ListView(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    children: results != null
-                        ? [for (final h in results) _hostRow(h, 0, library)]
-                        : _tree(library, null, 0),
-                  ),
           ),
         ],
       ),
     );
   }
 
-  List<Widget> _tree(Library library, String? parent, int depth) {
+  List<Widget> _tree(
+    Library library,
+    String? parent,
+    int depth,
+    List<TerminalController> sessions,
+  ) {
     return [
       for (final g in library.groupsIn(parent)) ...[
         _groupRow(g, depth, library),
-        if (!_collapsed.contains(g.id)) ..._tree(library, g.id, depth + 1),
+        if (!_collapsed.contains(g.id))
+          ..._tree(library, g.id, depth + 1, sessions),
       ],
-      for (final h in library.hostsIn(parent)) _hostRow(h, depth, library),
+      for (final h in library.hostsIn(parent)) _hostRow(h, depth, sessions),
     ];
   }
 
   Widget _groupRow(GroupView g, int depth, Library library) {
     final open = !_collapsed.contains(g.id);
-    final theme = Theme.of(context);
+    final l = context.l10n;
+    final ow = context.ow;
     return GestureDetector(
       onSecondaryTapDown: (d) => _menu(d.globalPosition, [
-        _item('Nuevo host aquí', () => _editHost(groupId: g.id)),
-        _item('Nuevo subgrupo', () => _editGroup(parentId: g.id)),
-        _item('Editar grupo…', () => _editGroup(id: g.id)),
-        _item('Eliminar grupo', () => _delete(g.id, 'el grupo', g.name)),
+        _item(l.newHostHere, () => _editHost(groupId: g.id)),
+        _item(l.newSubgroup, () => _editGroup(parentId: g.id)),
+        _item(l.editGroup, () => _editGroup(id: g.id)),
+        _item(l.deleteGroup, () => _delete(g.id, g.name, group: true)),
       ]),
-      child: InkWell(
-        onTap: () => setState(() {
-          open ? _collapsed.add(g.id) : _collapsed.remove(g.id);
-        }),
-        onDoubleTap: () => _editGroup(id: g.id),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(8.0 + depth * 14, 6, 10, 6),
-          child: Row(
-            children: [
-              Icon(open ? Icons.expand_more : Icons.chevron_right, size: 16),
-              const SizedBox(width: 4),
-              Icon(
-                Icons.folder_outlined,
-                size: 16,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  g.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+      child: Semantics(
+        expanded: open,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(ow.shape.radius),
+          onTap: () => setState(() {
+            open ? _collapsed.add(g.id) : _collapsed.remove(g.id);
+          }),
+          onDoubleTap: () => _editGroup(id: g.id),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(8.0 + depth * 12, 12, 8, 6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SectionLabel(
+                    g.name,
+                    trailing: '${library.countUnder(g.id)}',
                   ),
                 ),
-              ),
-              Text(
-                '${library.countUnder(g.id)}',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                const SizedBox(width: 4),
+                Icon(
+                  open ? Icons.expand_more : Icons.chevron_right,
+                  size: 14,
+                  color: ow.colors.textSubtle,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _hostRow(HostView h, int depth, Library library) {
-    final theme = Theme.of(context);
+  Widget _hostRow(HostView h, int depth, List<TerminalController> sessions) {
+    final ow = context.ow;
+    final l = context.l10n;
     final selected = h.id == _selected;
     final address = h.port == 22 ? h.address : '${h.address}:${h.port}';
+    final mine = [
+      for (final c in sessions)
+        if (c.hostId == h.id) c,
+    ];
     return GestureDetector(
       onSecondaryTapDown: (d) {
         setState(() => _selected = h.id);
         _menu(d.globalPosition, [
-          _item('Conectar', () => _connect(h)),
-          _item('Editar…', () => _editHost(id: h.id)),
-          _item('Eliminar', () => _delete(h.id, 'el host', h.label)),
+          _item(l.connect, () => _connect(h)),
+          _item(l.editEllipsis, () => _editHost(id: h.id)),
+          _item(l.delete, () => _delete(h.id, h.label, group: false)),
         ]);
       },
-      child: Material(
-        color: selected
-            ? theme.colorScheme.secondaryContainer
-            : Colors.transparent,
-        child: InkWell(
-          onTap: () => setState(() => _selected = h.id),
-          onDoubleTap: () {
-            setState(() => _selected = h.id);
-            _connect(h);
-          },
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(28.0 + depth * 14, 5, 10, 5),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.dns_outlined,
-                  size: 16,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        h.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        '${h.user}@$address',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+      child: Padding(
+        padding: EdgeInsets.only(left: depth * 12.0, bottom: 2),
+        child: Material(
+          color: selected ? ow.colors.selected : Colors.transparent,
+          shadowColor: Colors.black26,
+          elevation: selected && !ow.colors.dark ? 1 : 0,
+          borderRadius: BorderRadius.circular(ow.shape.radius + 2),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(ow.shape.radius + 2),
+            onTap: () => setState(() => _selected = h.id),
+            onDoubleTap: () {
+              setState(() => _selected = h.id);
+              _connect(h);
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+              child: Row(
+                children: [
+                  _HostStatus(sessions: mine),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          h.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w500),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 1),
+                        Text(
+                          '${h.user}@$address',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: monoStyle(context, size: 11),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                for (final t in h.tags.take(2))
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4),
-                    child: _Tag(t),
-                  ),
-              ],
+                  for (final t in h.tags.take(2))
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Pill.tag(t),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -322,57 +335,149 @@ class _SidebarState extends ConsumerState<Sidebar> {
   }
 }
 
-class _Tag extends StatelessWidget {
-  const _Tag(this.text);
+/// A host's mark: how its open tabs are doing, if it has any.
+class _HostStatus extends StatelessWidget {
+  const _HostStatus({required this.sessions});
 
-  final String text;
+  final List<TerminalController> sessions;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      decoration: BoxDecoration(
-        color: scheme.tertiaryContainer,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 10, color: scheme.onTertiaryContainer),
+    return ListenableBuilder(
+      listenable: Listenable.merge(sessions),
+      builder: (context, _) {
+        final l = context.l10n;
+        final status = hostStatus(sessions);
+        return Tooltip(
+          message: switch (status) {
+            Status.connected => l.statusConnected,
+            Status.connecting => l.statusConnecting,
+            Status.failed => l.statusFailed,
+            _ => l.statusIdle,
+          },
+          child: StatusDot(status),
+        );
+      },
+    );
+  }
+}
+
+/// The best of a host's sessions: connected wins over connecting, which
+/// wins over a failure.
+Status hostStatus(Iterable<TerminalController> sessions) {
+  var best = Status.idle;
+  for (final c in sessions) {
+    final s = tabStatus(c);
+    if (s == Status.connected) return s;
+    if (s == Status.connecting) best = s;
+    if (s == Status.failed && best == Status.idle) best = s;
+  }
+  return best;
+}
+
+/// One session's mark.
+Status tabStatus(TerminalController c) => switch (c.phase) {
+  Phase.connecting || Phase.reconnecting => Status.connecting,
+  Phase.connected || Phase.running => Status.connected,
+  Phase.closed =>
+    c.closed?.failure != null || c.error != null ? Status.failed : Status.idle,
+};
+
+class _SearchField extends StatelessWidget {
+  const _SearchField({
+    required this.controller,
+    required this.focusNode,
+    required this.onSubmitted,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final VoidCallback onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    final ow = context.ow;
+    final l = context.l10n;
+    return Consumer(
+      builder: (context, ref, _) => CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.enter): onSubmitted,
+          const SingleActivator(LogicalKeyboardKey.escape): () {
+            controller.clear();
+            ref.read(searchProvider.notifier).set('');
+          },
+        },
+        child: TextField(
+          controller: controller,
+          focusNode: focusNode,
+          onChanged: ref.read(searchProvider.notifier).set,
+          style: const TextStyle(fontSize: 13),
+          decoration: InputDecoration(
+            hintText: l.searchHosts,
+            prefixIcon: const Icon(Icons.search, size: 16),
+            prefixIconConstraints: const BoxConstraints(minWidth: 34),
+            suffixIcon: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: KeyCap(isApple ? '⌘K' : '${l.ctrlShiftPrefix}K'),
+            ),
+            suffixIconConstraints: const BoxConstraints(minHeight: 0),
+            contentPadding: const EdgeInsets.symmetric(vertical: 9),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(ow.shape.control),
+              borderSide: BorderSide(color: ow.colors.control),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(ow.shape.control),
+              borderSide: BorderSide(color: ow.colors.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(ow.shape.control),
+              borderSide: BorderSide(color: ow.colors.accent, width: 1.5),
+            ),
+          ),
+        ),
       ),
     );
   }
 }
 
 class _Empty extends StatelessWidget {
-  const _Empty({required this.onImport});
+  const _Empty({required this.onNew, required this.onImport});
 
+  final VoidCallback onNew;
   final VoidCallback onImport;
 
   @override
   Widget build(BuildContext context) {
+    final ow = context.ow;
+    final l = context.l10n;
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          Icon(Icons.dns_outlined, size: 30, color: ow.colors.textSubtle),
+          const SizedBox(height: 10),
+          Text(l.noHostsTitle, style: theme.textTheme.titleSmall),
+          const SizedBox(height: 6),
           Text(
-            'Todavía no hay hosts.',
-            style: theme.textTheme.titleSmall,
+            l.noHostsBody,
             textAlign: TextAlign.center,
+            style: TextStyle(color: ow.colors.textMuted, height: 1.45),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: 200,
+            child: FilledButton(onPressed: onNew, child: Text(l.newHost)),
           ),
           const SizedBox(height: 8),
-          Text(
-            'Añade uno o trae los de tu ~/.ssh/config.',
-            style: theme.textTheme.bodySmall,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          FilledButton.tonalIcon(
-            onPressed: onImport,
-            icon: const Icon(Icons.download_outlined),
-            label: const Text('Importar ~/.ssh/config'),
+          SizedBox(
+            width: 200,
+            child: OutlinedButton(
+              onPressed: onImport,
+              child: Text(l.importEllipsis),
+            ),
           ),
         ],
       ),

@@ -8,7 +8,7 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `apply`, `from_settings`, `id`, `opt_id`, `origin`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 enum AgentKind { off, system, socket }
 
@@ -252,6 +252,51 @@ class HostView {
           importedAlias == other.importedAlias;
 }
 
+/// One alias as an import would bring it.
+class ImportPreview {
+  final String alias;
+  final String address;
+  final String? user;
+  final int? port;
+
+  /// What it jumps through, in order: aliases of the same file, or
+  /// addresses. Importing it brings those aliases along.
+  final List<String> jumps;
+
+  /// Imported before: importing again leaves it as it is.
+  final bool existing;
+
+  const ImportPreview({
+    required this.alias,
+    required this.address,
+    this.user,
+    this.port,
+    required this.jumps,
+    required this.existing,
+  });
+
+  @override
+  int get hashCode =>
+      alias.hashCode ^
+      address.hashCode ^
+      user.hashCode ^
+      port.hashCode ^
+      jumps.hashCode ^
+      existing.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ImportPreview &&
+          runtimeType == other.runtimeType &&
+          alias == other.alias &&
+          address == other.address &&
+          user == other.user &&
+          port == other.port &&
+          jumps == other.jumps &&
+          existing == other.existing;
+}
+
 class ImportReport {
   final String groupId;
   final int created;
@@ -331,6 +376,25 @@ enum ImportWarningKind {
   includeTooDeep,
   unreadable,
   jumpLossy,
+}
+
+/// What a host or group placed in a group gets before its own settings.
+class InheritedView {
+  final SettingsSpec effective;
+  final List<FieldOrigin> origins;
+
+  const InheritedView({required this.effective, required this.origins});
+
+  @override
+  int get hashCode => effective.hashCode ^ origins.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is InheritedView &&
+          runtimeType == other.runtimeType &&
+          effective == other.effective &&
+          origins == other.origins;
 }
 
 /// One jump: a saved host (`host_id`) or a bare `address`.

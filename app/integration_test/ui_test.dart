@@ -104,18 +104,29 @@ void main() {
   });
   tearDown(() => dir.delete(recursive: true));
 
-  Future<ProviderContainer> launch(WidgetTester tester) async {
+  /// The window, in Spanish whatever the machine's language, past the
+  /// first-run guide unless `welcomed` is false.
+  Future<ProviderContainer> launch(
+    WidgetTester tester, {
+    bool welcomed = true,
+    String? sshConfig,
+  }) async {
     tester.view.physicalSize = const Size(1280, 800) * 2;
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.reset);
+    final settings = File('${dir.path}/data/settings.json');
+    if (!settings.existsSync()) {
+      settings.writeAsStringSync('{"language": "es", "welcomed": $welcomed}');
+    }
     await tester.pumpWidget(
       RepaintBoundary(
         key: _frame,
         child: ProviderScope(
           overrides: [
             openWardProvider.overrideWithValue(app),
-            settingsFileProvider.overrideWithValue(
-              File('${dir.path}/data/settings.json'),
+            settingsFileProvider.overrideWithValue(settings),
+            sshConfigFileProvider.overrideWithValue(
+              sshConfig ?? '${dir.path}/no-ssh-config',
             ),
           ],
           child: const OpenWardApp(),
@@ -149,7 +160,8 @@ Host web-1 web-2
     );
     final container = await launch(tester);
 
-    expect(find.text('~/.ssh/config'), findsOneWidget);
+    // Group names are section labels, in capitals.
+    expect(find.text('~/.SSH/CONFIG'), findsOneWidget);
     expect(find.text('web-1'), findsOneWidget);
     expect(find.text('admin@10.0.0.5'), findsOneWidget);
     expect(find.text('postgres'), findsOneWidget);
@@ -162,11 +174,11 @@ Host web-1 web-2
     await tester.enterText(find.byType(TextField).first, '');
     await _settle(tester);
 
-    await tester.tap(find.textContaining('Terminal local'));
+    await tester.tap(find.text('Abrir un terminal local'));
     await tester.pump();
     final tabs = container.read(tabsProvider);
     expect(tabs.tabs, hasLength(1));
-    final c = tabs.current!;
+    final c = tabs.currentSession!;
     await _until(tester, () => c.phase == Phase.running, 'the shell');
     c.session.text(text: 'echo ui-\$((6*7))\n');
     await _until(
@@ -294,29 +306,49 @@ Host web-1 web-2
     expect(container.read(tabsProvider).tabs, isEmpty);
   });
 
-  testWidgets('settings: light theme and a bigger font, kept on disk', (
+  testWidgets('settings in a tab: light theme, a bigger font, the language', (
     tester,
   ) async {
     final container = await launch(tester);
     await tester.tap(find.byTooltip('Ajustes'));
     await _settle(tester);
+    await tester.tap(find.text('Apariencia'));
+    await _settle(tester);
     await tester.tap(find.text('Claro'));
+    await _settle(tester);
+    await _shot(tester, '10-settings');
+    await tester.tap(find.text('Terminal'));
     await _settle(tester);
     await tester.tap(find.text('13 px'));
     await _settle(tester);
     await tester.tap(find.text('16 px').last);
     await _settle(tester);
-    await _shot(tester, '10-settings');
-    await tester.tap(find.text('Cerrar'));
+    // ⌘, on the open page brings it to the front instead of a second one.
+    container.read(tabsProvider.notifier).openPage(PageKind.settings);
+    expect(container.read(tabsProvider).tabs, hasLength(1));
+
+    await tester.tap(find.text('General'));
+    await _settle(tester);
+    await tester.tap(find.text('Español'));
+    await _settle(tester);
+    await tester.tap(find.text('English').last);
+    await _settle(tester);
+    expect(find.text('Appearance'), findsOneWidget);
+    await tester.tap(find.text('English'));
+    await _settle(tester);
+    await tester.tap(find.text('Español').last);
     await _settle(tester);
     expect(container.read(settingsProvider).theme, ThemeChoice.light);
     final saved = File('${dir.path}/data/settings.json').readAsStringSync();
     expect(saved, contains('"theme": "light"'));
     expect(saved, contains('"font_size": 16.0'));
+    expect(saved, contains('"language": "es"'));
+    container.read(tabsProvider.notifier).close(0);
+    await _settle(tester);
 
-    await tester.tap(find.textContaining('Terminal local'));
+    await tester.tap(find.text('Abrir un terminal local'));
     await tester.pump();
-    final c = container.read(tabsProvider).current!;
+    final c = container.read(tabsProvider).currentSession!;
     await _until(tester, () => c.phase == Phase.running, 'the shell');
     c.session.text(text: 'printf "\\033[31mrojo\\033[0m normal\\n"\n');
     await _until(
@@ -336,25 +368,34 @@ Host web-1 web-2
     tester,
   ) async {
     await launch(tester);
-    Finder field(String label) => find.widgetWithText(TextField, label);
+    Finder field(String key) => find.byKey(ValueKey(key));
 
-    await tester.tap(find.text('Grupo'));
+    await tester.tap(find.byTooltip('Más acciones'));
     await _settle(tester);
-    await tester.enterText(field('Nombre'), 'prod');
-    await tester.enterText(field('Usuario'), 'deploy');
+    await tester.tap(find.text('Nuevo grupo'));
+    await _settle(tester);
+    await tester.enterText(field('group.name'), 'prod');
+    // Inherited until changed here: the user is the first setting.
+    await tester.tap(find.text('Cambiar').first);
+    await _settle(tester);
+    await tester.enterText(field('settings.user'), 'deploy');
     await tester.tap(find.text('Guardar'));
     await _settle(tester);
-    expect(find.text('prod'), findsOneWidget);
+    expect(find.text('PROD'), findsOneWidget);
 
-    await tester.tap(find.text('Host'));
+    await tester.tap(find.text('Nuevo host'));
     await _settle(tester);
-    await tester.enterText(field('Nombre'), 'web');
-    await tester.enterText(field('Dirección'), 'web.example.com');
-    await tester.enterText(field('Puerto'), '2222');
-    await tester.tap(find.text('Sin grupo'));
+    await tester.enterText(field('host.label'), 'web');
+    await tester.enterText(field('host.address'), 'web.example.com');
+    await tester.tap(find.text('Cambiar').at(1));
+    await _settle(tester);
+    await tester.enterText(field('settings.port'), '2222');
+    await tester.tap(field('host.group'));
     await _settle(tester);
     await tester.tap(find.text('prod').last);
     await _settle(tester);
+    // The group's user shows in the host, with where it comes from.
+    expect(find.text('Del grupo prod'), findsWidgets);
     await tester.tap(find.text('Guardar'));
     await _settle(tester);
     // The user comes from the group.
@@ -369,7 +410,9 @@ Host web-1 web-2
     await _settle(tester);
     await tester.tap(find.text('Editar…'));
     await _settle(tester);
-    expect(find.text('Heredado: deploy (grupo prod)'), findsOneWidget);
+    expect(find.text('deploy'), findsOneWidget);
+    expect(find.text('Del grupo prod'), findsWidgets);
+    expect(find.text('Cambiado aquí; heredaría 22'), findsOneWidget);
     await _shot(tester, '5-host-editor');
     await tester.tap(find.text('Cancelar'));
     await _settle(tester);
@@ -401,15 +444,16 @@ Host web-1 web-2
     );
     final container = await launch(tester);
     await _doubleTap(tester, 'ninetwo');
-    final c = container.read(tabsProvider).current!;
+    final c = container.read(tabsProvider).currentSession!;
     await _until(tester, () => c.phase == Phase.closed, 'the refusal');
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('La clave de ninetwo ha cambiado'), findsOneWidget);
     await tester.tap(find.text('Revisar la clave…').first);
     await tester.pump(const Duration(milliseconds: 400));
+    // In the dialog, and in the card behind it.
     expect(
       find.text('SHA256:OcXwgqVGP3Hoo1XR2bnfs1DJan7drTyBcfSdQo6EdIE'),
-      findsOneWidget,
+      findsWidgets,
     );
     expect(find.text('guardada en OpenWard'), findsOneWidget);
     await _shot(tester, '6-host-key-changed');
@@ -468,7 +512,7 @@ Host web-1 web-2
     );
     final container = await launch(tester);
     await _doubleTap(tester, 'target1');
-    final c = container.read(tabsProvider).current!;
+    final c = container.read(tabsProvider).currentSession!;
     await _until(tester, () => c.phase == Phase.connected, 'the connection');
     expect(c.route, ['bastion', 'target1']);
     await tester.pump(const Duration(milliseconds: 100));
@@ -512,7 +556,7 @@ Host web-1 web-2
       'the reconnection banner',
     );
     await tester.pump();
-    expect(find.textContaining('Conexión perdida'), findsOneWidget);
+    expect(find.textContaining('Se perdió la conexión'), findsOneWidget);
     await _shot(tester, '8-reconnecting');
     await _until(tester, () => c.phase == Phase.connected, 'the reconnection');
     container.read(tabsProvider.notifier).close(0);
@@ -539,7 +583,7 @@ Host web-1 web-2
     final container = await launch(tester);
 
     await _doubleTap(tester, 'bastion');
-    final c = container.read(tabsProvider).current!;
+    final c = container.read(tabsProvider).currentSession!;
     await _until(tester, () => c.prompts.isNotEmpty, 'the host key question');
     // Not pumpAndSettle: a terminal pane repaints every frame.
     await tester.pump(const Duration(milliseconds: 300));
@@ -557,6 +601,108 @@ Host web-1 web-2
       'the echo',
     );
     await _shot(tester, '4-ssh');
+    container.read(tabsProvider.notifier).close(0);
+    await _settle(tester);
+  });
+
+  testWidgets('first run: pick hosts from ~/.ssh/config, a theme, and go', (
+    tester,
+  ) async {
+    final config = File('${dir.path}/config')
+      ..writeAsStringSync('''
+Host bastion
+    HostName bastion.example.com
+    User ops
+Host web-1
+    HostName web-1.example.com
+    ProxyJump bastion
+Host db
+    HostName 10.0.0.5
+''');
+    final container = await launch(
+      tester,
+      welcomed: false,
+      sshConfig: config.path,
+    );
+    await _until(
+      tester,
+      () => find.text('Importar 3 hosts').evaluate().isNotEmpty,
+      'the preview',
+    );
+    expect(find.text('Te damos la bienvenida a OpenWard'), findsOneWidget);
+    await _shot(tester, '12-first-run');
+
+    // Leaving out the bastion leaves out what jumps through it ...
+    await tester.tap(find.text('bastion'));
+    await _settle(tester);
+    expect(find.text('Importar 1 host'), findsOneWidget);
+    // ... and picking web-1 brings the bastion back.
+    await tester.tap(find.text('web-1'));
+    await _settle(tester);
+    await tester.tap(find.text('db'));
+    await _settle(tester);
+    expect(find.text('Importar 2 hosts'), findsOneWidget);
+    await tester.tap(find.text('Importar 2 hosts'));
+    await _settle(tester);
+
+    await tester.tap(find.text('Claro'));
+    await _settle(tester);
+    expect(container.read(settingsProvider).theme, ThemeChoice.light);
+    await tester.tap(find.text('Siguiente'));
+    await _settle(tester);
+    await tester.tap(find.text('Empezar'));
+    await _settle(tester);
+
+    expect(container.read(settingsProvider).welcomed, isTrue);
+    expect(app.hosts().map((h) => h.label).toSet(), {'bastion', 'web-1'});
+    expect(find.text('Empieza aquí'), findsOneWidget);
+    expect(find.text('web-1'), findsOneWidget);
+    await _shot(tester, '13-start-light');
+  });
+
+  testWidgets('ssh: a quick connection to an address that is not saved', (
+    tester,
+  ) async {
+    final fixtures = await _servers();
+    if (fixtures == null) return markTestSkipped('S2 servers not running');
+    final container = await launch(tester);
+    await tester.enterText(
+      find.byKey(const ValueKey('quick.address')),
+      'web 1',
+    );
+    await tester.tap(find.text('Conectar'));
+    await _settle(tester);
+    expect(container.read(tabsProvider).tabs, isEmpty);
+    expect(
+      find.text('Escribe una dirección como usuario@servidor:puerto.'),
+      findsOneWidget,
+    );
+
+    // The button took the focus: back to the field first.
+    await tester.tap(find.byKey(const ValueKey('quick.address')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const ValueKey('quick.address')),
+      'demo@127.0.0.1:22100',
+    );
+    await tester.tap(find.text('Conectar'));
+    await tester.pump();
+    final c = container.read(tabsProvider).currentSession!;
+    expect(c.target?.port, 22100);
+    expect(c.displayTitle, 'demo@127.0.0.1:22100');
+    // A new key asks first (unless ~/.ssh/known_hosts already has it, and
+    // then the user's own keys decide): either way the session runs.
+    await _until(
+      tester,
+      () => c.prompts.isNotEmpty || c.phase != Phase.connecting,
+      'the address to answer',
+    );
+    if (c.prompts.isNotEmpty) {
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Primera conexión con 127.0.0.1'), findsOneWidget);
+      await tester.tap(find.text('No confiar'));
+      await _until(tester, () => c.phase == Phase.closed, 'the refusal');
+    }
     container.read(tabsProvider.notifier).close(0);
     await _settle(tester);
   });

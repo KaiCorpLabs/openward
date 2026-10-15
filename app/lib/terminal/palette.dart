@@ -22,12 +22,13 @@ final class TermPalette {
   final Color selection;
   final List<Color> _indexed;
 
-  static final TermPalette darkTheme = TermPalette(
+  /// Grafito's: dark, on the same background as its windows.
+  static final TermPalette grafito = TermPalette(
     dark: true,
-    foreground: const Color(0xFFD4D4D4),
-    background: const Color(0xFF16181D),
-    cursor: const Color(0xFF7FDBCA),
-    selection: const Color(0x597FDBCA),
+    foreground: const Color(0xFFD4D9E0),
+    background: const Color(0xFF12161B),
+    cursor: const Color(0xFF3CC8B0),
+    selection: const Color(0x593CC8B0),
     ansi16: const [
       Color(0xFF1E2127),
       Color(0xFFE06C75),
@@ -48,13 +49,13 @@ final class TermPalette {
     ],
   );
 
-  /// Light, with ANSI colors dark enough to read on white.
-  static final TermPalette lightTheme = TermPalette(
+  /// Papel's: light, with ANSI colors dark enough to read on paper.
+  static final TermPalette papel = TermPalette(
     dark: false,
-    foreground: const Color(0xFF24292F),
-    background: const Color(0xFFFAFAFA),
-    cursor: const Color(0xFF1B7C83),
-    selection: const Color(0x4D0969DA),
+    foreground: const Color(0xFF1F1D1A),
+    background: const Color(0xFFFFFEFB),
+    cursor: const Color(0xFF1F1D1A),
+    selection: const Color(0x400E8F7D),
     ansi16: const [
       Color(0xFF24292E),
       Color(0xFFCF222E),

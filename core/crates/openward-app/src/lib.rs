@@ -94,8 +94,38 @@ impl App {
         host: ItemId,
         sink: Arc<dyn EventSink>,
     ) -> Result<(), PlanError> {
+        self.connect_to(terminal, Target::Host(host), sink)
+    }
+
+    /// As [`App::connect`], to an address that is not saved, with the
+    /// default settings.
+    pub fn connect_address(
+        &self,
+        terminal: &Arc<Terminal>,
+        address: String,
+        user: Option<String>,
+        port: Option<u16>,
+        sink: Arc<dyn EventSink>,
+    ) -> Result<(), PlanError> {
+        self.connect_to(
+            terminal,
+            Target::Address {
+                address,
+                user,
+                port,
+            },
+            sink,
+        )
+    }
+
+    fn connect_to(
+        &self,
+        terminal: &Arc<Terminal>,
+        target: Target,
+        sink: Arc<dyn EventSink>,
+    ) -> Result<(), PlanError> {
         // Checked now so that a plan that cannot run fails at once.
-        self.plan(host)?;
+        target.plan(&self.vault(), &self.local)?;
         terminal.close();
         let ctx = Ctx {
             vault: Arc::clone(&self.vault),
@@ -108,7 +138,7 @@ impl App {
             let mut attempt = 0;
             loop {
                 // Again on every attempt: the host may have been edited.
-                let plan = match Plan::for_host(&lock(&ctx.vault), host, &ctx.local) {
+                let plan = match target.plan(&lock(&ctx.vault), &ctx.local) {
                     Ok(plan) => plan,
                     Err(e) => {
                         return sink.send(Event::Closed {
@@ -175,19 +205,58 @@ impl App {
         self.vault().trust_host_key(host, port, key).map(|_| ())
     }
 
-    /// Imports `file`, or `~/.ssh/config`.
-    pub fn import_ssh_config(&self, file: Option<&Path>) -> openward_vault::Result<import::Report> {
+    /// What importing `file` (or `~/.ssh/config`) would bring.
+    pub fn preview_ssh_config(&self, file: Option<&Path>) -> Vec<import::Preview> {
+        let (paths, file) = self.ssh_config_file(file);
+        import::preview(&self.vault(), &file, &paths)
+    }
+
+    /// Imports `file`, or `~/.ssh/config`; with `only`, just those aliases
+    /// and the hosts they jump through.
+    pub fn import_ssh_config(
+        &self,
+        file: Option<&Path>,
+        only: Option<&[String]>,
+    ) -> openward_vault::Result<import::Report> {
+        let (paths, file) = self.ssh_config_file(file);
+        import::ssh_config(&mut self.vault(), &file, &paths, only)
+    }
+
+    fn ssh_config_file(&self, file: Option<&Path>) -> (Paths, PathBuf) {
         let paths = Paths {
             home: self.local.home.clone(),
             ssh_dir: self.local.ssh_dir.clone(),
         };
-        let file: PathBuf = file.map_or_else(|| paths.user_config(), Path::to_owned);
-        import::ssh_config(&mut self.vault(), &file, &paths)
+        let file = file.map_or_else(|| paths.user_config(), Path::to_owned);
+        (paths, file)
+    }
+}
+
+/// What a connection goes to.
+enum Target {
+    Host(ItemId),
+    Address {
+        address: String,
+        user: Option<String>,
+        port: Option<u16>,
+    },
+}
+
+impl Target {
+    fn plan(&self, vault: &Vault, local: &Local) -> Result<Plan, PlanError> {
+        match self {
+            Self::Host(id) => Plan::for_host(vault, *id, local),
+            Self::Address {
+                address,
+                user,
+                port,
+            } => Ok(Plan::for_address(address, user.clone(), *port, local)),
+        }
     }
 }
 
 /// Tries after losing a connection, before giving up.
-const RECONNECT_ATTEMPTS: u32 = 8;
+pub const RECONNECT_ATTEMPTS: u32 = 8;
 
 /// 1, 2, 4, 8, 16 and then 30 seconds.
 fn reconnect_delay(attempt: u32) -> Duration {

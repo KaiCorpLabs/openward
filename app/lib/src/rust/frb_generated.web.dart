@@ -189,6 +189,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int dco_decode_i_32(dynamic raw);
 
   @protected
+  ImportPreview dco_decode_import_preview(dynamic raw);
+
+  @protected
   ImportReport dco_decode_import_report(dynamic raw);
 
   @protected
@@ -196,6 +199,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ImportWarningKind dco_decode_import_warning_kind(dynamic raw);
+
+  @protected
+  InheritedView dco_decode_inherited_view(dynamic raw);
 
   @protected
   JumpSpec dco_decode_jump_spec(dynamic raw);
@@ -226,6 +232,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<HostView> dco_decode_list_host_view(dynamic raw);
+
+  @protected
+  List<ImportPreview> dco_decode_list_import_preview(dynamic raw);
 
   @protected
   List<ImportWarning> dco_decode_list_import_warning(dynamic raw);
@@ -542,6 +551,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
+  ImportPreview sse_decode_import_preview(SseDeserializer deserializer);
+
+  @protected
   ImportReport sse_decode_import_report(SseDeserializer deserializer);
 
   @protected
@@ -551,6 +563,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ImportWarningKind sse_decode_import_warning_kind(
     SseDeserializer deserializer,
   );
+
+  @protected
+  InheritedView sse_decode_inherited_view(SseDeserializer deserializer);
 
   @protected
   JumpSpec sse_decode_jump_spec(SseDeserializer deserializer);
@@ -581,6 +596,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<HostView> sse_decode_list_host_view(SseDeserializer deserializer);
+
+  @protected
+  List<ImportPreview> sse_decode_list_import_preview(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<ImportWarning> sse_decode_list_import_warning(
@@ -980,6 +1000,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_i_32(int self, SseSerializer serializer);
 
   @protected
+  void sse_encode_import_preview(ImportPreview self, SseSerializer serializer);
+
+  @protected
   void sse_encode_import_report(ImportReport self, SseSerializer serializer);
 
   @protected
@@ -990,6 +1013,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     ImportWarningKind self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_inherited_view(InheritedView self, SseSerializer serializer);
 
   @protected
   void sse_encode_jump_spec(JumpSpec self, SseSerializer serializer);
@@ -1026,6 +1052,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_host_view(List<HostView> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_import_preview(
+    List<ImportPreview> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_import_warning(

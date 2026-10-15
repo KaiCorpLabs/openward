@@ -1,0 +1,690 @@
+{
+  "@@locale": "es",
+  "aboutVersion": "OpenWard {version}",
+  "@aboutVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "add": "Añadir",
+  "addSavedHost": "Añadir un host guardado",
+  "addTag": "Añadir",
+  "address": "Dirección",
+  "addressHint": "servidor.example.com o 10.0.0.5",
+  "agent": "Agente SSH",
+  "agentNone": "Ninguno",
+  "agentSocket": "Otro socket…",
+  "agentSystem": "El del sistema",
+  "alreadyImported": "ya importado",
+  "appearanceStepBody": "Puedes cambiarlo cuando quieras en Ajustes.",
+  "appearanceStepTitle": "¿Cómo la quieres ver?",
+  "back": "Atrás",
+  "cancel": "Cancelar",
+  "cancelled": "Cancelado.",
+  "cannotConnect": "No se ha podido conectar con {label}",
+  "@cannotConnect": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "change": "Cambiar",
+  "changedMeanwhile": "Otro cambio ha llegado antes: cierra y vuelve a abrir el editor.",
+  "checkedFingerprint": "He comprobado la huella nueva",
+  "cipher": "Cifrado",
+  "clear": "Quitar",
+  "clearSelection": "Quitar la selección",
+  "close": "Cerrar",
+  "closeTab": "Cerrar la pestaña",
+  "closeTheTab": "Cerrar la pestaña",
+  "connect": "Conectar",
+  "connectingEllipsis": "Conectando…",
+  "connectingTo": "Conectando con {label}",
+  "@connectingTo": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "connectionDetails": "Detalles de la conexión",
+  "connectionHint": "Lo que no cambies aquí se hereda. Debajo de cada valor ves de dónde viene; los heredados llevan el borde discontinuo.",
+  "connectionLost": "Se perdió la conexión con {label}{why}.",
+  "@connectionLost": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "why": {
+        "type": "String"
+      }
+    }
+  },
+  "continueLabel": "Continuar",
+  "copy": "Copiar",
+  "copyFingerprint": "Copiar la huella",
+  "ctrlShiftPrefix": "Ctrl+Mayús+",
+  "defaultKeys": "~/.ssh/id_ed25519, id_ecdsa, id_rsa (las habituales)",
+  "delete": "Eliminar",
+  "deleteFailed": "No se ha podido eliminar: {error}",
+  "@deleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteGroup": "Eliminar grupo",
+  "deleteGroupBody": "Lo que contiene pasa a su grupo padre.",
+  "deleteGroupTitle": "¿Eliminar el grupo «{name}»?",
+  "@deleteGroupTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteHostBody": "Desaparece de la lista. Esto no se puede deshacer.",
+  "deleteHostTitle": "¿Eliminar el host «{name}»?",
+  "@deleteHostTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deletedHost": "(host eliminado)",
+  "destination": "Destino",
+  "dontTrust": "No confiar",
+  "editEllipsis": "Editar…",
+  "editGroup": "Editar grupo…",
+  "editGroupTitle": "Editar grupo",
+  "editHostTitle": "Editar host",
+  "failureAuth": "{user}@{label} no ha podido autenticarse.",
+  "@failureAuth": {
+    "placeholders": {
+      "user": {
+        "type": "String"
+      },
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "failureAuthMethods": "{user}@{label} no ha podido autenticarse (el servidor acepta: {methods}).",
+  "@failureAuthMethods": {
+    "placeholders": {
+      "user": {
+        "type": "String"
+      },
+      "label": {
+        "type": "String"
+      },
+      "methods": {
+        "type": "String"
+      }
+    }
+  },
+  "failureBadCertificate": "El certificado de {label} no es válido: {reason}.",
+  "@failureBadCertificate": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "failureHostKeyChanged": "La clave de {label} ha cambiado (ahora {fingerprint}). Puede ser un ataque: no se ha conectado.",
+  "@failureHostKeyChanged": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "failureHostKeyRejected": "No se ha confiado en la clave de {label}.",
+  "@failureHostKeyRejected": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "fingerprint": "Huella",
+  "firstConnectionTo": "Primera conexión con {label}",
+  "@firstConnectionTo": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "fontSize": "Tamaño de letra",
+  "fromDefault": "Valor por defecto",
+  "fromGroup": "Del grupo {name}",
+  "@fromGroup": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "fromNowhere": "Sin valor: lo decide la conexión",
+  "group": "Grupo",
+  "groupInsideItself": "Un grupo no puede estar dentro de sí mismo.",
+  "groupNeedsName": "El grupo necesita un nombre.",
+  "groupSettingsSection": "Ajustes para todo lo que contiene",
+  "hostInUse": "Otros hosts saltan por «{name}»: cámbialos antes de eliminarlo.",
+  "@hostInUse": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hostKey": "Clave del host",
+  "hostKeyUnknownBody": "OpenWard aún no conoce la clave de {where}. Compara la huella con la que te dé quien administra el servidor antes de confiar en ella.",
+  "@hostKeyUnknownBody": {
+    "placeholders": {
+      "where": {
+        "type": "String"
+      }
+    }
+  },
+  "hostKeys": "Claves de host nuevas",
+  "hostNeedsName": "El host necesita un nombre.",
+  "importEllipsis": "Importar…",
+  "importFailed": "No se ha podido importar: {error}",
+  "@importFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "importFound": "{count, plural, =1{Hemos encontrado 1 host en tu ~/.ssh/config.} other{Hemos encontrado {count} hosts en tu ~/.ssh/config.}}",
+  "@importFound": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importFrom": "Importar de ~/.ssh/config",
+  "importIntoGroup": "Se guardan en el grupo «~/.ssh/config». Un host trae consigo los hosts por los que salta.",
+  "importKeepsFile": "El fichero no se toca, y las claves se quedan donde están: OpenWard guarda la ruta, nunca la clave.",
+  "importLater": "Puedes importar más tarde desde la barra lateral.",
+  "importN": "{count, plural, =0{Importar} =1{Importar 1 host} other{Importar {count} hosts}}",
+  "@importN": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importNothing": "No hay hosts nuevos en ~/.ssh/config (o no existe).",
+  "importSshConfigMenu": "Importar de ~/.ssh/config…",
+  "importTitle": "Importar ~/.ssh/config",
+  "inGroup": "en el grupo {name}",
+  "@inGroup": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "inputNotSent": "Lo que escribas ahora no se envía.",
+  "inside": "Dentro de",
+  "jumpThrough": "Saltar por, en orden",
+  "jumpVia": "Saltando por {hosts}",
+  "@jumpVia": {
+    "placeholders": {
+      "hosts": {
+        "type": "String"
+      }
+    }
+  },
+  "jumpsVia": "salta por {hosts}",
+  "@jumpsVia": {
+    "placeholders": {
+      "hosts": {
+        "type": "String"
+      }
+    }
+  },
+  "keyBefore": "Antes",
+  "keyChangedBody": "Puede ser una reinstalación del servidor o alguien interceptando la conexión. No se ha enviado ninguna contraseña ni clave.",
+  "keyChangedDialogBody": "{where} se presenta con una clave distinta de la que tenías como buena. Puede que el servidor se haya reinstalado o haya cambiado de clave, pero también que alguien esté interceptando la conexión. No sigas sin comprobar la huella nueva con quien administra el servidor.",
+  "@keyChangedDialogBody": {
+    "placeholders": {
+      "where": {
+        "type": "String"
+      }
+    }
+  },
+  "keyChangedTitle": "La clave de {label} ha cambiado",
+  "@keyChangedTitle": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "keyExchange": "Intercambio",
+  "keyInKnownHosts": "en ~/.ssh/known_hosts",
+  "keyInOpenWard": "guardada en OpenWard",
+  "keyNow": "Ahora ({algorithm})",
+  "@keyNow": {
+    "placeholders": {
+      "algorithm": {
+        "type": "String"
+      }
+    }
+  },
+  "keyProtected": "La clave {key} está protegida.",
+  "@keyProtected": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
+  "keyReceived": "Recibida",
+  "keySaved": "Guardada",
+  "keys": "Claves",
+  "keysHelp": "Una ruta por línea. OpenWard guarda la ruta, nunca la clave.",
+  "language": "Idioma",
+  "languageSystem": "Como el sistema",
+  "localTerminal": "Terminal local",
+  "localUser": "tu usuario local",
+  "milliseconds": "{ms} ms",
+  "@milliseconds": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "missingAddress": "Falta la dirección.",
+  "missingJump": "Añade al menos un host por el que saltar.",
+  "missingProxyCommand": "Falta el ProxyCommand.",
+  "missingSocket": "Falta la ruta del socket del agente.",
+  "moreActions": "Más acciones",
+  "moreOptions": "Más opciones",
+  "name": "Nombre",
+  "netLost": "se ha perdido la conexión.",
+  "netNotFound": "no se encuentra el host.",
+  "netRefused": "conexión rechazada.",
+  "netTimeout": "tiempo de espera agotado.",
+  "newGroup": "Nuevo grupo",
+  "newGroupTitle": "Nuevo grupo",
+  "newHost": "Nuevo host",
+  "newHostHere": "Nuevo host aquí",
+  "newHostTitle": "Nuevo host",
+  "newLocalTerminal": "Terminal local nuevo",
+  "newSubgroup": "Nuevo subgrupo",
+  "next": "Siguiente",
+  "noGroup": "Sin grupo",
+  "noHostsBody": "Añade uno o tráelos de tu ~/\u2060.ssh/\u2060config.",
+  "noHostsTitle": "Aún no tienes hosts",
+  "noJumpsYet": "Ninguno todavía.",
+  "noParent": "Ningún grupo",
+  "noPostQuantumNote": "El servidor no ofrece un intercambio poscuántico (mlkem768x25519; OpenSSH lo trae desde la 10.0).",
+  "noResults": "Ningún host coincide.",
+  "notNow": "Ahora no",
+  "notes": "Notas",
+  "ok": "Aceptar",
+  "openLocal": "Abrir un terminal local",
+  "openSshStillWarns": "OpenWard no modifica ~/.ssh/known_hosts: ssh seguirá avisando hasta que quites la clave vieja de allí ({command}).",
+  "@openSshStillWarns": {
+    "placeholders": {
+      "command": {
+        "type": "String"
+      }
+    }
+  },
+  "optionAsAlt": "Opción como Alt",
+  "optionAsAltHelp": "Opción envía Esc + tecla, como esperan emacs y readline, en vez de escribir símbolos como @ o €.",
+  "orAnAddress": "o una dirección: usuario@host:puerto",
+  "passphraseField": "Frase",
+  "passphraseTitle": "Frase de la clave",
+  "passwordTitle": "Contraseña",
+  "paste": "Pegar",
+  "pasteMultiBody": "El texto contiene saltos de línea u otras secuencias que pueden ejecutar comandos al pegarlo.",
+  "pasteMultiTitle": "¿Pegar varias líneas?",
+  "pixels": "{size} px",
+  "@pixels": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "policyAcceptNew": "Aceptar nuevas",
+  "policyAsk": "Preguntar",
+  "policyStrict": "Estricta",
+  "port": "Puerto",
+  "portRange": "El puerto va de 1 a 65535.",
+  "postQuantum": "poscuántico",
+  "postQuantumKex": "{kex} (poscuántico)",
+  "@postQuantumKex": {
+    "placeholders": {
+      "kex": {
+        "type": "String"
+      }
+    }
+  },
+  "quickConnectHint": "usuario@servidor:puerto",
+  "quickConnectInvalid": "Escribe una dirección como usuario@servidor:puerto.",
+  "readyBody": "Estos atajos te llevan a casi todo:",
+  "readyTitle": "Todo listo",
+  "reconnect": "Reconectar",
+  "reconnectingEllipsis": "Reconectando…",
+  "reconnectingStage": "Reconectando: {stage}",
+  "@reconnectingStage": {
+    "placeholders": {
+      "stage": {
+        "type": "String"
+      }
+    }
+  },
+  "removeTag": "Quitar {tag}",
+  "@removeTag": {
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      }
+    }
+  },
+  "rename": "Renombrar",
+  "renameTabHelp": "Vacío para volver al nombre del host",
+  "renameTabTitle": "Renombrar pestaña",
+  "reportCreated": "{count, plural, =1{1 host nuevo} other{{count} hosts nuevos}}",
+  "@reportCreated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reportNotEverything": "No todo se ha podido traer:",
+  "reportSkipped": "{count, plural, =1{1 ya estaba importado y no se ha tocado} other{{count} ya estaban importados y no se han tocado}}",
+  "@reportSkipped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reportWhere": "Están en el grupo «~/.ssh/config».",
+  "restart": "Reiniciar",
+  "retryIn": "Reintento {attempt} de {max} en {secs} s.",
+  "@retryIn": {
+    "placeholders": {
+      "attempt": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      },
+      "secs": {
+        "type": "int"
+      }
+    }
+  },
+  "retryNow": "Reintentar ahora",
+  "reviewKey": "Revisar la clave…",
+  "route": "Cómo llegar",
+  "routeDirect": "Directo",
+  "routeJump": "Saltando por otro host",
+  "routeStart": "este equipo",
+  "save": "Guardar",
+  "saveAndConnect": "Guardar y conectar",
+  "saveFailed": "No se ha podido guardar: {error}",
+  "@saveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "saveKeyFailed": "No se ha podido guardar la clave: {error}",
+  "@saveKeyFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "saveNewHost": "Guardar un host nuevo",
+  "scrollback": "Historial",
+  "scrollbackHelp": "Para las pestañas nuevas.",
+  "scrollbackLines": "{lines} líneas",
+  "@scrollbackLines": {
+    "placeholders": {
+      "lines": {
+        "type": "String"
+      }
+    }
+  },
+  "searchHosts": "Buscar hosts",
+  "sectionConnection": "Conexión",
+  "sectionGeneral": "General",
+  "selectAll": "Todos",
+  "selectAllText": "Seleccionar todo",
+  "selectedOf": "{selected} de {total}",
+  "@selectedOf": {
+    "placeholders": {
+      "selected": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionClosed": "Sesión cerrada.",
+  "sessionClosedCode": "Sesión cerrada (código {code}).",
+  "@sessionClosedCode": {
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "setHereWouldInherit": "Cambiado aquí; heredaría {value}",
+  "@setHereWouldInherit": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "settings": "Ajustes",
+  "settingsAppearance": "Apariencia",
+  "settingsGeneral": "General",
+  "settingsTerminal": "Terminal",
+  "shortcutLocal": "Abre un terminal local",
+  "shortcutNewHost": "Guarda un host nuevo",
+  "shortcutSearch": "Busca entre tus hosts",
+  "shortcutSettings": "Abre los ajustes",
+  "showRest": "{count, plural, =1{Ver el que falta} other{Ver los {count} restantes}}",
+  "@showRest": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "skipGuide": "Saltar la guía",
+  "stageAuthenticating": "Autenticando en {label}{hop}…",
+  "@stageAuthenticating": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "hop": {
+        "type": "String"
+      }
+    }
+  },
+  "stageConnecting": "Conectando con {label}{hop}…",
+  "@stageConnecting": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "hop": {
+        "type": "String"
+      }
+    }
+  },
+  "stageOpeningShell": "Abriendo el shell en {label}…",
+  "@stageOpeningShell": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "start": "Empezar",
+  "startHere": "Empieza aquí",
+  "starting": "Arrancando…",
+  "statusConnected": "Conectado",
+  "statusConnecting": "Conectando",
+  "statusError": "Error: {error}",
+  "@statusError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "statusFailed": "Ha fallado la conexión",
+  "statusIdle": "Sin conectar",
+  "stepAppearance": "Apariencia",
+  "stepAuthenticating": "autenticando…",
+  "stepConnecting": "conectando…",
+  "stepImport": "Importar",
+  "stepOpeningShell": "abriendo el shell…",
+  "stepReady": "Listo",
+  "tags": "Etiquetas",
+  "theme": "Tema",
+  "themeDark": "Oscuro",
+  "themeHelp": "En claro, Papel; en oscuro, Grafito.",
+  "themeLight": "Claro",
+  "themeSystem": "Seguir al sistema",
+  "thisComputer": "Este equipo",
+  "time": "Tiempo",
+  "trust": "Confianza",
+  "trustAndConnect": "Confiar y conectar",
+  "trustCertified": "certificada por la CA {ca}",
+  "@trustCertified": {
+    "placeholders": {
+      "ca": {
+        "type": "String"
+      }
+    }
+  },
+  "trustKnown": "conocida",
+  "trustNew": "nueva, guardada ahora",
+  "trustNewKey": "Confiar en la clave nueva",
+  "trustNewKeyEllipsis": "Confiar en la clave nueva…",
+  "tryAgain": "Reintentar",
+  "user": "Usuario",
+  "verificationTitle": "Verificación",
+  "via": "vía {hops}",
+  "@via": {
+    "placeholders": {
+      "hops": {
+        "type": "String"
+      }
+    }
+  },
+  "waitingAnswer": "Esperando respuesta…",
+  "waitingForYou": "Espera tu respuesta",
+  "warnBadValue": "Valor no válido en {subject}{at}: {detail}.",
+  "@warnBadValue": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      },
+      "at": {
+        "type": "String"
+      },
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "warnIncludeTooDeep": "Include anidado demasiado hondo{at}.",
+  "@warnIncludeTooDeep": {
+    "placeholders": {
+      "at": {
+        "type": "String"
+      }
+    }
+  },
+  "warnJumpLossy": "{alias} salta por {jump}, que no es un host importado: se guarda como dirección, sin sus claves ni su ruta.",
+  "@warnJumpLossy": {
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      },
+      "jump": {
+        "type": "String"
+      }
+    }
+  },
+  "warnMatch": "Bloque Match{at}: OpenWard no lo evalúa y sus líneas se han saltado.",
+  "@warnMatch": {
+    "placeholders": {
+      "at": {
+        "type": "String"
+      }
+    }
+  },
+  "warnStricter": "StrictHostKeyChecking no{at}: se importa como «aceptar nuevas»; una clave que cambia nunca se acepta sin preguntar.",
+  "@warnStricter": {
+    "placeholders": {
+      "at": {
+        "type": "String"
+      }
+    }
+  },
+  "warnUnreadable": "No se ha podido leer {file}: {error}.",
+  "@warnUnreadable": {
+    "placeholders": {
+      "file": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "warnUnsupported": "{subject}: no se importa{at}.",
+  "@warnUnsupported": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      },
+      "at": {
+        "type": "String"
+      }
+    }
+  },
+  "welcomeNoConfig": "No hemos encontrado hosts en ~/.ssh/config. Podrás añadirlos a mano en un momento.",
+  "welcomeTitle": "Te damos la bienvenida a OpenWard",
+  "wrongAnswer": "Respuesta incorrecta.",
+  "wrongPassphrase": "Frase incorrecta.",
+  "wrongPassword": "Contraseña incorrecta."
+}

@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use flutter_rust_bridge::frb;
 use openward_app::vault::proto::{Data, Group, Host, Marker, Settings, Source};
-use openward_app::{App, DEFAULT_SCROLLBACK};
+use openward_app::{App, DEFAULT_SCROLLBACK, RECONNECT_ATTEMPTS};
 use openward_import::ssh_config::Warning;
 
 use super::session::{DartSink, PromptAnswer, SessionEvent, TerminalSession};
@@ -196,6 +196,22 @@ impl OpenWard {
         })
     }
 
+    /// What a host in `group_id` (none: the top level) gets before its own
+    /// settings, and where each value comes from. For editors, so a new
+    /// host or a host moved to another group shows what it will inherit.
+    #[frb(sync)]
+    pub fn inherited(&self, group_id: Option<String>) -> anyhow::Result<InheritedView> {
+        let vault = self.app.vault();
+        let inherited = vault.inherited(opt_id(&group_id)?)?;
+        Ok(InheritedView {
+            effective: SettingsSpec::from_settings(&inherited.settings),
+            origins: Settings::FIELDS
+                .iter()
+                .map(|f| origin(f, inherited.origin(f)))
+                .collect(),
+        })
+    }
+
     #[frb(sync)]
     pub fn group(&self, id: String) -> anyhow::Result<GroupDetail> {
         let gid = super::vault::id(&id)?;
@@ -248,12 +264,34 @@ impl OpenWard {
         Ok(())
     }
 
-    /// Imports `~/.ssh/config` (or `file`). Aliases imported before stay
-    /// as they are.
-    pub fn import_ssh_config(&self, file: Option<String>) -> anyhow::Result<ImportReport> {
+    /// What importing `~/.ssh/config` (or `file`) would bring, in the
+    /// file's order. An empty list: no file, or no hosts in it.
+    pub fn preview_ssh_config(&self, file: Option<String>) -> Vec<ImportPreview> {
+        self.app
+            .preview_ssh_config(file.map(PathBuf::from).as_deref())
+            .into_iter()
+            .map(|p| ImportPreview {
+                alias: p.alias,
+                address: p.address,
+                user: p.user,
+                port: p.port,
+                jumps: p.jumps,
+                existing: p.existing,
+            })
+            .collect()
+    }
+
+    /// Imports `~/.ssh/config` (or `file`); with `only`, just those aliases
+    /// and the hosts they jump through. Aliases imported before stay as
+    /// they are.
+    pub fn import_ssh_config(
+        &self,
+        file: Option<String>,
+        only: Option<Vec<String>>,
+    ) -> anyhow::Result<ImportReport> {
         let report = self
             .app
-            .import_ssh_config(file.map(PathBuf::from).as_deref())?;
+            .import_ssh_config(file.map(PathBuf::from).as_deref(), only.as_deref())?;
         Ok(ImportReport {
             group_id: report.group.to_string(),
             created: report.created as u32,
@@ -319,6 +357,32 @@ impl OpenWard {
             Arc::new(DartSink(events)),
         )?;
         Ok(())
+    }
+
+    /// As [`OpenWard::connect`], to an address that is not saved, with the
+    /// default settings.
+    pub fn connect_address(
+        &self,
+        session: &TerminalSession,
+        address: String,
+        user: Option<String>,
+        port: Option<u16>,
+        events: StreamSink<SessionEvent>,
+    ) -> anyhow::Result<()> {
+        self.app.connect_address(
+            &session.term,
+            address,
+            user,
+            port,
+            Arc::new(DartSink(events)),
+        )?;
+        Ok(())
+    }
+
+    /// Tries after losing a connection, before giving up.
+    #[frb(sync)]
+    pub fn reconnect_attempts(&self) -> u32 {
+        RECONNECT_ATTEMPTS
     }
 
     /// Runs the user's shell on this machine in `session`. In Dart this

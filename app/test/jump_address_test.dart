@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openward/hosts/editors.dart';
+import 'package:openward/core/address.dart';
 
 void main() {
   test('jump addresses', () {
@@ -17,5 +17,11 @@ void main() {
     expect(show('a b'), isNull);
     expect(show('host:70000'), isNull);
     expect(show(''), isNull);
+  });
+
+  test('quick connect labels', () {
+    expect(QuickTarget.parse('ops@[::1]:2222')!.label, 'ops@[::1]:2222');
+    expect(QuickTarget.parse('web-1')!.label, 'web-1');
+    expect(QuickTarget.parse('root@10.0.0.7')!.port, isNull);
   });
 }

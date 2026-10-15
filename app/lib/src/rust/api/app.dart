@@ -25,6 +25,15 @@ abstract class OpenWard implements RustOpaqueInterface {
     required String hostId,
   });
 
+  /// As [`OpenWard::connect`], to an address that is not saved, with the
+  /// default settings.
+  Stream<SessionEvent> connectAddress({
+    required TerminalSession session,
+    required String address,
+    String? user,
+    int? port,
+  });
+
   Future<String> createGroup({required GroupSpec spec});
 
   Future<String> createHost({required HostSpec spec});
@@ -41,9 +50,15 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   List<HostView> hosts();
 
-  /// Imports `~/.ssh/config` (or `file`). Aliases imported before stay
-  /// as they are.
-  Future<ImportReport> importSshConfig({String? file});
+  /// Imports `~/.ssh/config` (or `file`); with `only`, just those aliases
+  /// and the hosts they jump through. Aliases imported before stay as
+  /// they are.
+  Future<ImportReport> importSshConfig({String? file, List<String>? only});
+
+  /// What a host in `group_id` (none: the top level) gets before its own
+  /// settings, and where each value comes from. For editors, so a new
+  /// host or a host moved to another group shows what it will inherit.
+  InheritedView inherited({String? groupId});
 
   List<KnownHostView> knownHosts();
 
@@ -55,6 +70,13 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// Runs the user's shell on this machine in `session`. In Dart this
   /// returns the stream of its events (the end, with its exit code).
   Stream<SessionEvent> openLocal({required TerminalSession session});
+
+  /// What importing `~/.ssh/config` (or `file`) would bring, in the
+  /// file's order. An empty list: no file, or no hosts in it.
+  Future<List<ImportPreview>> previewSshConfig({String? file});
+
+  /// Tries after losing a connection, before giving up.
+  int reconnectAttempts();
 
   /// Ids of the hosts matching every word, sorted by label.
   List<String> search({required String query});

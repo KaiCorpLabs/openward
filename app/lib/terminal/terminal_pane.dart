@@ -12,10 +12,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/settings.dart';
+import '../l10n/l10n.dart';
 import '../src/rust/api/session.dart';
+import '../ui/tokens.dart';
 import 'controller.dart';
 import 'keys.dart';
-import 'palette.dart';
 import 'renderer.dart';
 
 class TerminalPane extends ConsumerStatefulWidget {
@@ -90,11 +91,10 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   /// The renderer for the current pixel density, font size and theme.
   TerminalRenderer _look() {
     final settings = ref.watch(settingsProvider);
-    final dark = Theme.of(context).brightness == Brightness.dark;
     return _renderer = _c.renderer(
       MediaQuery.devicePixelRatioOf(context),
       fontSize: settings.fontSize,
-      palette: dark ? TermPalette.darkTheme : TermPalette.lightTheme,
+      palette: context.ow.terminal,
     );
   }
 
@@ -239,7 +239,8 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
 
   Future<void> _contextMenu(Offset at) async {
     final hasSelection = _session.selectionText()?.isNotEmpty ?? false;
-    final key = isApple ? '⌘' : 'Ctrl+Mayús+';
+    final l = context.l10n;
+    final key = isApple ? '⌘' : l.ctrlShiftPrefix;
     final action = await showMenu<VoidCallback>(
       context: context,
       position: RelativeRect.fromLTRB(at.dx, at.dy, at.dx, at.dy),
@@ -247,18 +248,18 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
         PopupMenuItem(
           enabled: hasSelection,
           value: _copy,
-          child: _MenuRow('Copiar', '${key}C'),
+          child: _MenuRow(l.copy, '${key}C'),
         ),
-        PopupMenuItem(value: _paste, child: _MenuRow('Pegar', '${key}V')),
+        PopupMenuItem(value: _paste, child: _MenuRow(l.paste, '${key}V')),
         const PopupMenuDivider(),
         PopupMenuItem(
           value: _session.selectAll,
-          child: _MenuRow('Seleccionar todo', isApple ? '⌘A' : ''),
+          child: _MenuRow(l.selectAllText, isApple ? '⌘A' : ''),
         ),
         PopupMenuItem(
           enabled: hasSelection,
           value: _session.clearSelection,
-          child: const _MenuRow('Quitar la selección', ''),
+          child: _MenuRow(l.clearSelection, ''),
         ),
       ],
     );
@@ -281,39 +282,45 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     if (text == null || text.isEmpty || !mounted) return;
     if (_session.paste(text: text, allowUnsafe: false)) return;
     final preview = text.length > 400 ? '${text.substring(0, 400)}…' : text;
+    final l = context.l10n;
+    final ow = context.ow;
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('¿Pegar varias líneas?'),
+        title: Text(l.pasteMultiTitle),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'El texto contiene saltos de línea u otras secuencias que '
-                'pueden ejecutar comandos al pegarlo.',
-              ),
+              Text(l.pasteMultiBody),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(8),
-                color: Colors.black,
+                decoration: BoxDecoration(
+                  color: ow.terminal.background,
+                  border: Border.all(color: ow.colors.border),
+                  borderRadius: BorderRadius.circular(ow.shape.radius),
+                ),
                 child: Text(
                   preview,
-                  style: TextStyle(fontFamily: _renderer?.metrics.fontFamily),
+                  style: TextStyle(
+                    fontFamily: _renderer?.metrics.fontFamily,
+                    color: ow.terminal.foreground,
+                  ),
                 ),
               ),
             ],
           ),
         ),
         actions: [
-          TextButton(
+          OutlinedButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(l.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Pegar'),
+            child: Text(l.paste),
           ),
         ],
       ),

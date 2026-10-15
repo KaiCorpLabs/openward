@@ -1,84 +1,83 @@
-// What a session's state looks like in words. Spanish only for the alpha;
-// the other languages come with i18n (ARCHITECTURE §3.1).
+// What a session's state looks like in words, in the interface's language.
 
+import '../l10n/l10n.dart';
 import '../src/rust/api/session.dart';
 import '../terminal/controller.dart';
 
-String stageText(StageView s) {
+String stageText(AppLocalizations l, StageView s) {
   final hop = s.hops > 1 ? ' (${s.hop + 1}/${s.hops})' : '';
   return switch (s.stage) {
-    StageKind.connecting => 'Conectando con ${s.label}$hop…',
-    StageKind.authenticating => 'Autenticando en ${s.label}$hop…',
-    StageKind.openingShell => 'Abriendo el shell en ${s.label}…',
+    StageKind.connecting => l.stageConnecting(s.label, hop),
+    StageKind.authenticating => l.stageAuthenticating(s.label, hop),
+    StageKind.openingShell => l.stageOpeningShell(s.label),
   };
 }
 
-String failureText(FailureView f) {
+String failureText(AppLocalizations l, FailureView f) {
   return switch (f.kind) {
-    FailureKind.hostKeyChanged =>
-      'La clave de ${f.label} ha cambiado (ahora ${f.fingerprint}). '
-          'Puede ser un ataque: no se ha conectado.',
-    FailureKind.hostKeyRejected =>
-      'No se ha confiado en la clave de ${f.label}.',
-    FailureKind.badCertificate =>
-      'El certificado de ${f.label} no es válido: ${f.reason}.',
+    FailureKind.hostKeyChanged => l.failureHostKeyChanged(
+      f.label,
+      f.fingerprint,
+    ),
+    FailureKind.hostKeyRejected => l.failureHostKeyRejected(f.label),
+    FailureKind.badCertificate => l.failureBadCertificate(f.label, f.reason),
     FailureKind.authFailed =>
-      '${f.user}@${f.label} no ha podido autenticarse'
-          '${f.methods.isEmpty ? '' : ' (el servidor acepta: ${f.methods.join(', ')})'}.',
-    FailureKind.cancelled => 'Cancelado.',
-    FailureKind.network => '${f.label}: ${networkReason(f.reason)}',
+      f.methods.isEmpty
+          ? l.failureAuth(f.user, f.label)
+          : l.failureAuthMethods(f.user, f.label, f.methods.join(', ')),
+    FailureKind.cancelled => l.cancelled,
+    FailureKind.network => '${f.label}: ${networkReason(l, f.reason)}',
     FailureKind.other || null => f.reason.isEmpty ? f.message : f.reason,
   };
 }
 
 /// The usual network errors, in words; the rest as they come.
-String networkReason(String reason) {
+String networkReason(AppLocalizations l, String reason) {
   final r = reason.toLowerCase();
-  if (r.contains('connection refused')) return 'conexión rechazada.';
-  if (r.contains('timed out')) return 'tiempo de espera agotado.';
+  if (r.contains('connection refused')) return l.netRefused;
+  if (r.contains('timed out')) return l.netTimeout;
   if (r.contains('failed to lookup') ||
       r.contains('nodename nor servname') ||
       r.contains('name or service not known')) {
-    return 'no se encuentra el host.';
+    return l.netNotFound;
   }
   if (r.contains('connection lost') || r.contains('disconnected')) {
-    return 'se ha perdido la conexión.';
+    return l.netLost;
   }
   return reason;
 }
 
-/// One line for the status bar.
-String statusText(TerminalController c) {
+/// The hops before the target, for "via bastion".
+String? viaText(AppLocalizations l, TerminalController c) {
+  if (c.route.length < 2) return null;
+  return l.via(c.route.sublist(0, c.route.length - 1).join(' → '));
+}
+
+/// One line about the session when it is not simply connected.
+String statusText(AppLocalizations l, TerminalController c) {
   final error = c.error;
-  if (error != null) return 'Error: $error';
+  if (error != null) return l.statusError(error);
   switch (c.phase) {
     case Phase.connecting:
       final s = c.stage;
-      if (c.prompts.isNotEmpty) return 'Esperando respuesta…';
+      if (c.prompts.isNotEmpty) return l.waitingAnswer;
       return s == null
-          ? (c.isLocal ? 'Arrancando…' : 'Conectando…')
-          : stageText(s);
+          ? (c.isLocal ? l.starting : l.connectingEllipsis)
+          : stageText(l, s);
     case Phase.reconnecting:
       final s = c.stage;
-      if (s != null) return 'Reconectando: ${stageText(s)}';
-      return 'Reconectando…';
+      if (s != null) return l.reconnectingStage(stageText(l, s));
+      return l.reconnectingEllipsis;
     case Phase.running:
-      return 'Terminal local';
+      return l.localTerminal;
     case Phase.connected:
-      final k = c.connected!;
-      final pq = k.postQuantum ? 'poscuántico (${k.kex})' : k.kex;
-      final via = k.hops > 1
-          ? ' · ${k.hops - 1} salto${k.hops > 2 ? 's' : ''}'
-          : '';
-      return 'Conectado · $pq · ${k.cipher}$via';
+      return l.statusConnected;
     case Phase.closed:
-      if (c.cancelled) return 'Cancelado.';
+      if (c.cancelled) return l.cancelled;
       final closed = c.closed;
       final failure = closed?.failure;
-      if (failure != null) return failureText(failure);
+      if (failure != null) return failureText(l, failure);
       final code = closed?.exitCode;
-      return code == null
-          ? 'Sesión cerrada.'
-          : 'Sesión cerrada (código $code).';
+      return code == null ? l.sessionClosed : l.sessionClosedCode(code);
   }
 }

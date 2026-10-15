@@ -286,6 +286,13 @@ pub struct HostDetail {
     pub origins: Vec<FieldOrigin>,
 }
 
+/// What a host or group placed in a group gets before its own settings.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct InheritedView {
+    pub effective: SettingsSpec,
+    pub origins: Vec<FieldOrigin>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GroupDetail {
     pub id: String,
@@ -323,6 +330,20 @@ pub struct ImportWarning {
     pub subject: String,
     /// The value, or the jump.
     pub detail: String,
+}
+
+/// One alias as an import would bring it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ImportPreview {
+    pub alias: String,
+    pub address: String,
+    pub user: Option<String>,
+    pub port: Option<u16>,
+    /// What it jumps through, in order: aliases of the same file, or
+    /// addresses. Importing it brings those aliases along.
+    pub jumps: Vec<String>,
+    /// Imported before: importing again leaves it as it is.
+    pub existing: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

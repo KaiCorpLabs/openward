@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/l10n.dart';
 import '../src/rust/api/session.dart';
 import '../terminal/controller.dart';
 import '../terminal/terminal_pane.dart';
+import '../ui/tokens.dart';
+import '../ui/widgets.dart';
 import 'connection_panels.dart';
 import 'messages.dart';
 import 'prompt_card.dart';
@@ -17,7 +20,7 @@ class SessionView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
+    final ow = context.ow;
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
@@ -34,103 +37,159 @@ class SessionView extends ConsumerWidget {
             : failed
             ? FailureCard(controller: c)
             : null;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        Widget terminal = Stack(
           children: [
-            if (c.phase == Phase.reconnecting && prompt == null)
-              ReconnectBanner(controller: c),
-            Expanded(
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: TerminalPane(
-                      // One pane per tab: its focus and input method stay
-                      // with it.
-                      key: ObjectKey(c),
-                      controller: c,
-                      autofocus: card == null,
-                    ),
-                  ),
-                  if (card != null)
-                    Positioned.fill(
-                      child: ColoredBox(
-                        color: Colors.black54,
-                        child: Center(child: card),
-                      ),
-                    ),
-                ],
+            Positioned.fill(
+              child: TerminalPane(
+                // One pane per tab: its focus and input method stay with it.
+                key: ObjectKey(c),
+                controller: c,
+                autofocus: card == null,
               ),
             ),
-            _StatusBar(controller: c, theme: theme, ref: ref),
+            if (card != null)
+              Positioned.fill(
+                child: ColoredBox(
+                  color: ow.colors.scrim,
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: card,
+                    ),
+                  ),
+                ),
+              ),
           ],
+        );
+        if (ow.shape.insetTerminal) {
+          // A card on the page, with room around the text.
+          terminal = Container(
+            margin: const EdgeInsets.fromLTRB(4, 6, 12, 0),
+            padding: const EdgeInsets.fromLTRB(12, 10, 6, 6),
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: ow.terminal.background,
+              borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
+              border: Border.all(color: ow.colors.border),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x14281E0A),
+                  blurRadius: 24,
+                  offset: Offset(0, 8),
+                ),
+              ],
+            ),
+            child: terminal,
+          );
+        }
+        return ColoredBox(
+          color: ow.shape.insetTerminal ? ow.colors.window : ow.colors.surface,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (c.phase == Phase.reconnecting && prompt == null)
+                ReconnectBanner(controller: c),
+              Expanded(child: terminal),
+              _StatusBar(controller: c),
+            ],
+          ),
         );
       },
     );
   }
 }
 
-class _StatusBar extends StatelessWidget {
-  const _StatusBar({
-    required this.controller,
-    required this.theme,
-    required this.ref,
-  });
+class _StatusBar extends ConsumerWidget {
+  const _StatusBar({required this.controller});
 
   final TerminalController controller;
-  final ThemeData theme;
-  final WidgetRef ref;
 
   @override
-  Widget build(BuildContext context) {
-    final c = controller;
-    final failure = c.closed?.failure;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ow = context.ow;
+    final c = ow.colors;
+    final l = context.l10n;
+    final s = controller;
+    final failure = s.closed?.failure;
     final failed =
-        c.phase == Phase.closed && (failure != null || c.error != null);
-    final connected = c.phase == Phase.connected;
-    final pq = connected && c.connected!.postQuantum;
-    final color = failed
-        ? theme.colorScheme.error
-        : theme.colorScheme.onSurfaceVariant;
-    final compact = TextButton.styleFrom(
-      visualDensity: VisualDensity.compact,
-      textStyle: theme.textTheme.bodySmall,
-    );
-    final line = Row(
-      children: [
-        Icon(
-          switch (c.phase) {
-            Phase.connecting => Icons.hourglass_empty,
-            Phase.reconnecting => Icons.sync,
-            Phase.connected => pq ? Icons.verified_user : Icons.lock,
-            Phase.running => Icons.computer,
-            Phase.closed => failed ? Icons.error_outline : Icons.link_off,
-          },
-          size: 14,
-          color: pq ? theme.colorScheme.primary : color,
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            statusText(c),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodySmall?.copyWith(color: color),
+        s.phase == Phase.closed && (failure != null || s.error != null);
+    final k = s.phase == Phase.connected ? s.connected : null;
+    final pq = k?.postQuantum ?? false;
+    final color = failed ? c.danger : c.textMuted;
+    final small = TextStyle(fontSize: 12, color: color);
+    final Widget line;
+    if (k != null) {
+      final via = viaText(l, s);
+      line = Row(
+        children: [
+          Icon(
+            pq ? Icons.verified_user_outlined : Icons.lock_outline,
+            size: 14,
+            color: pq ? c.accent : c.textMuted,
           ),
-        ),
-      ],
-    );
+          const SizedBox(width: 8),
+          Text(
+            l.statusConnected,
+            style: TextStyle(
+              fontSize: 12,
+              color: c.text,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          if (pq) ...[const SizedBox(width: 8), Pill(l.postQuantum)],
+          const SizedBox(width: 10),
+          Flexible(
+            child: Text(
+              [k.kex, k.cipher, ?via].join(' · '),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: monoStyle(context, size: 11),
+            ),
+          ),
+        ],
+      );
+    } else {
+      line = Row(
+        children: [
+          Icon(
+            switch (s.phase) {
+              Phase.connecting => Icons.hourglass_empty,
+              Phase.reconnecting => Icons.sync,
+              Phase.connected => Icons.lock_outline,
+              Phase.running => Icons.computer,
+              Phase.closed => failed ? Icons.error_outline : Icons.link_off,
+            },
+            size: 14,
+            color: color,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              statusText(l, s),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: small,
+            ),
+          ),
+        ],
+      );
+    }
+    final inset = ow.shape.insetTerminal;
     return Container(
-      height: 28,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      color: theme.colorScheme.surfaceContainer,
+      height: 30,
+      padding: EdgeInsets.symmetric(horizontal: inset ? 16 : 12),
+      decoration: BoxDecoration(
+        color: inset ? c.window : c.sunken,
+        border: inset ? null : Border(top: BorderSide(color: c.border)),
+      ),
       child: Row(
         children: [
           Expanded(
-            child: connected
+            child: k != null
                 ? Tooltip(
-                    message: 'Detalles de la conexión',
+                    message: l.connectionDetails,
                     child: InkWell(
-                      onTap: () => showConnectionInfo(context, c),
+                      onTap: () => showConnectionInfo(context, s),
                       child: line,
                     ),
                   )
@@ -138,16 +197,14 @@ class _StatusBar extends StatelessWidget {
           ),
           if (failure?.kind == FailureKind.hostKeyChanged)
             TextButton(
-              onPressed: () => showHostKeyChanged(context, ref, c),
-              style: compact,
-              child: const Text('Revisar la clave…'),
+              onPressed: () => showHostKeyChanged(context, ref, s),
+              child: Text(l.reviewKey),
             ),
-          if (c.phase == Phase.closed)
+          if (s.phase == Phase.closed)
             TextButton.icon(
-              onPressed: c.start,
+              onPressed: s.start,
               icon: const Icon(Icons.refresh, size: 14),
-              label: Text(c.isLocal ? 'Reiniciar' : 'Reconectar'),
-              style: compact,
+              label: Text(s.isLocal ? l.restart : l.reconnect),
             ),
         ],
       ),

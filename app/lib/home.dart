@@ -2,15 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/providers.dart';
+import 'core/settings.dart';
+import 'home/start_page.dart';
+import 'hosts/editors.dart';
 import 'hosts/sidebar.dart';
-import 'settings_dialog.dart';
+import 'settings/settings_page.dart';
 import 'tabs/session_view.dart';
 import 'tabs/tab_strip.dart';
 import 'tabs/tabs.dart';
 import 'terminal/keys.dart';
+import 'ui/tokens.dart';
+import 'welcome/first_run.dart';
 
-/// The main window: hosts on the left, tabs and the front terminal on the
-/// right.
+/// The main window: hosts on the left; tabs on the right, with the front
+/// one below them. On the first run with nothing saved, the guide instead.
 class Home extends ConsumerStatefulWidget {
   const Home({super.key});
 
@@ -27,14 +33,18 @@ class _HomeState extends ConsumerState<Home> {
     super.dispose();
   }
 
+  Future<void> _newHost() async {
+    if (await showHostEditor(context, ref)) {
+      ref.read(libraryProvider.notifier).refresh();
+    }
+  }
+
   /// Window shortcuts. Terminal panes let these through (`isAppShortcut`).
   Map<ShortcutActivator, VoidCallback> _shortcuts() {
     final tabs = ref.read(tabsProvider.notifier);
     void closeCurrent() => tabs.close(ref.read(tabsProvider).active);
-    void search() {
-      _search.requestFocus();
-    }
-
+    void settings() => tabs.openPage(PageKind.settings);
+    void last() => tabs.select(ref.read(tabsProvider).tabs.length - 1);
     final bindings = <ShortcutActivator, VoidCallback>{
       const SingleActivator(LogicalKeyboardKey.tab, control: true): () =>
           tabs.cycle(1),
@@ -45,15 +55,16 @@ class _HomeState extends ConsumerState<Home> {
       ): () =>
           tabs.cycle(-1),
     };
-    void settings() => showSettings(context);
     if (isApple) {
       bindings.addAll({
         const SingleActivator(LogicalKeyboardKey.comma, meta: true): settings,
         const SingleActivator(LogicalKeyboardKey.keyT, meta: true):
             tabs.openLocal,
+        const SingleActivator(LogicalKeyboardKey.keyN, meta: true): _newHost,
         const SingleActivator(LogicalKeyboardKey.keyW, meta: true):
             closeCurrent,
-        const SingleActivator(LogicalKeyboardKey.keyK, meta: true): search,
+        const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
+            _search.requestFocus,
         const SingleActivator(
           LogicalKeyboardKey.bracketRight,
           meta: true,
@@ -70,9 +81,9 @@ class _HomeState extends ConsumerState<Home> {
           SingleActivator(
             LogicalKeyboardKey(LogicalKeyboardKey.digit1.keyId + i - 1),
             meta: true,
-          ): () => tabs.select(
-            i == 9 ? ref.read(tabsProvider).tabs.length - 1 : i - 1,
-          ),
+          ): i == 9
+              ? last
+              : () => tabs.select(i - 1),
       });
     } else {
       bindings.addAll({
@@ -84,6 +95,11 @@ class _HomeState extends ConsumerState<Home> {
           shift: true,
         ): tabs.openLocal,
         const SingleActivator(
+          LogicalKeyboardKey.keyN,
+          control: true,
+          shift: true,
+        ): _newHost,
+        const SingleActivator(
           LogicalKeyboardKey.keyW,
           control: true,
           shift: true,
@@ -92,7 +108,7 @@ class _HomeState extends ConsumerState<Home> {
           LogicalKeyboardKey.keyK,
           control: true,
           shift: true,
-        ): search,
+        ): _search.requestFocus,
       });
     }
     return bindings;
@@ -100,72 +116,43 @@ class _HomeState extends ConsumerState<Home> {
 
   @override
   Widget build(BuildContext context) {
+    final welcomed = ref.watch(settingsProvider.select((s) => s.welcomed));
+    final empty = ref.watch(
+      libraryProvider.select((l) => l.hosts.isEmpty && l.groups.isEmpty),
+    );
+    if (!welcomed && empty) return const FirstRun();
     final current = ref.watch(tabsProvider.select((s) => s.current));
-    final hasTabs = ref.watch(tabsProvider.select((s) => s.tabs.isNotEmpty));
+    final ow = context.ow;
     return CallbackShortcuts(
       bindings: _shortcuts(),
       child: Scaffold(
+        backgroundColor: ow.colors.window,
         body: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SizedBox(width: 280, child: Sidebar(searchFocus: _search)),
-            const VerticalDivider(width: 1, thickness: 1),
+            SizedBox(width: 272, child: Sidebar(searchFocus: _search)),
+            if (!ow.shape.pills)
+              VerticalDivider(width: 1, thickness: 1, color: ow.colors.border),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (hasTabs) const TabStrip(),
+                  const TabStrip(),
                   Expanded(
-                    child: current == null
-                        ? const _Welcome()
-                        : SessionView(
-                            key: ObjectKey(current),
-                            controller: current,
-                          ),
+                    child: switch (current) {
+                      SessionTab(:final controller) => SessionView(
+                        key: ObjectKey(controller),
+                        controller: controller,
+                      ),
+                      PageTab(page: PageKind.settings) => const SettingsPage(),
+                      null => StartPage(searchFocus: _search),
+                    },
                   ),
                 ],
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _Welcome extends ConsumerWidget {
-  const _Welcome();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final key = isApple ? '⌘' : 'Ctrl+Mayús+';
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.terminal, size: 48, color: theme.colorScheme.primary),
-          const SizedBox(height: 16),
-          Text('OpenWard', style: theme.textTheme.headlineSmall),
-          const SizedBox(height: 8),
-          Text(
-            'Doble clic en un host para conectar, o abre un terminal local.',
-            style: theme.textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 16),
-          FilledButton.tonalIcon(
-            onPressed: ref.read(tabsProvider.notifier).openLocal,
-            icon: const Icon(Icons.add),
-            label: Text('Terminal local (${key}T)'),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${key}K busca hosts · ${key}W cierra la pestaña',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
       ),
     );
   }

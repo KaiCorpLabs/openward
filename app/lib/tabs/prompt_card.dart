@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/l10n.dart';
 import '../src/rust/api/session.dart';
 import '../terminal/controller.dart';
+import '../ui/tokens.dart';
+import '../ui/widgets.dart';
 
 /// A question from the session (host key, passphrase, password, 2FA), over
 /// its own tab: other tabs stay usable while it waits.
@@ -46,57 +49,77 @@ class _PromptCardState extends State<PromptCard> {
     widget.controller.answer(_p, PromptAnswer(kind: kind, texts: texts));
   }
 
-  String get _title => switch (_p.kind) {
-    PromptKind.hostKey => 'Primera conexión con ${_p.label}',
-    PromptKind.passphrase => 'Frase de la clave',
-    PromptKind.password => 'Contraseña',
+  String _title(AppLocalizations l) => switch (_p.kind) {
+    PromptKind.hostKey => l.firstConnectionTo(_p.label),
+    PromptKind.passphrase => l.passphraseTitle,
+    PromptKind.password => l.passwordTitle,
     PromptKind.keyboardInteractive =>
       _p.name.isNotEmpty
           ? _p.name
           // PAM asks for the password this way.
           : _p.questions.length == 1 &&
                 _p.questions.single.text.toLowerCase().contains('password')
-          ? 'Contraseña'
-          : 'Verificación',
+          ? l.passwordTitle
+          : l.verificationTitle,
     null => '',
   };
 
-  List<Widget> _body(ThemeData theme) {
-    final mono = theme.textTheme.bodyMedium?.copyWith(fontFamily: 'Menlo');
+  List<Widget> _body(BuildContext context, AppLocalizations l) {
+    final ow = context.ow;
     switch (_p.kind) {
       case PromptKind.hostKey:
         final where = _p.port == 22 ? _p.host : '${_p.host}:${_p.port}';
         return [
           Text(
-            'OpenWard no conoce todavía la clave de $where. Compara la '
-            'huella con la que te dé el administrador del servidor antes de '
-            'confiar en ella.',
+            l.hostKeyUnknownBody(where),
+            style: const TextStyle(height: 1.45),
           ),
           const SizedBox(height: 12),
-          SelectableText('${_p.algorithm}\n${_p.fingerprint}', style: mono),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: ow.colors.sunken,
+              borderRadius: BorderRadius.circular(ow.shape.radius),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _p.algorithm,
+                  style: TextStyle(fontSize: 11, color: ow.colors.textMuted),
+                ),
+                const SizedBox(height: 2),
+                SelectableText(
+                  _p.fingerprint,
+                  style: monoStyle(context, color: ow.colors.text),
+                ),
+              ],
+            ),
+          ),
         ];
       case PromptKind.passphrase:
         return [
-          Text('La clave ${_p.key} está protegida.'),
-          if (_p.retry) _retry(theme, 'Frase incorrecta.'),
+          Text(l.keyProtected(_p.key)),
+          if (_p.retry) _retry(context, l.wrongPassphrase),
           const SizedBox(height: 12),
-          _field(0, 'Frase', obscure: true),
+          _field(0, l.passphraseField, obscure: true),
         ];
       case PromptKind.password:
         return [
-          Text('${_p.user}@${_p.host}'),
-          if (_p.retry) _retry(theme, 'Contraseña incorrecta.'),
+          Text('${_p.user}@${_p.host}', style: monoStyle(context)),
+          if (_p.retry) _retry(context, l.wrongPassword),
           const SizedBox(height: 12),
-          _field(0, 'Contraseña', obscure: true),
+          _field(0, l.passwordTitle, obscure: true),
         ];
       case PromptKind.keyboardInteractive:
         return [
-          Text('${_p.user}@${_p.host}'),
+          Text('${_p.user}@${_p.host}', style: monoStyle(context)),
           if (_p.instructions.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(_p.instructions),
           ],
-          if (_p.retry) _retry(theme, 'Respuesta incorrecta.'),
+          if (_p.retry) _retry(context, l.wrongAnswer),
           for (var i = 0; i < _p.questions.length; i++) ...[
             const SizedBox(height: 12),
             _field(
@@ -111,9 +134,9 @@ class _PromptCardState extends State<PromptCard> {
     }
   }
 
-  Widget _retry(ThemeData theme, String text) => Padding(
+  Widget _retry(BuildContext context, String text) => Padding(
     padding: const EdgeInsets.only(top: 8),
-    child: Text(text, style: TextStyle(color: theme.colorScheme.error)),
+    child: Text(text, style: TextStyle(color: context.ow.colors.danger)),
   );
 
   Widget _field(int i, String label, {required bool obscure}) => TextField(
@@ -131,6 +154,8 @@ class _PromptCardState extends State<PromptCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final ow = context.ow;
+    final l = context.l10n;
     final hostKey = _p.kind == PromptKind.hostKey;
     return CallbackShortcuts(
       bindings: {
@@ -139,41 +164,47 @@ class _PromptCardState extends State<PromptCard> {
       },
       child: Focus(
         autofocus: hostKey,
-        child: Card(
-          elevation: 8,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 440),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 460),
+          padding: const EdgeInsets.fromLTRB(22, 20, 22, 16),
+          decoration: BoxDecoration(
+            color: hostKey ? ow.colors.infoSoft : ow.colors.raised,
+            borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
+            border: Border.all(
+              color: hostKey ? ow.colors.infoLine : ow.colors.control,
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 32,
+                offset: Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_title(l), style: theme.textTheme.titleMedium),
+              const SizedBox(height: 12),
+              ..._body(context, l),
+              const SizedBox(height: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Text(_title, style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 12),
-                  ..._body(theme),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => _answer(AnswerKind.cancel),
-                        child: Text(hostKey ? 'No confiar' : 'Cancelar'),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: () => _answer(
-                          hostKey ? AnswerKind.accept : AnswerKind.text,
-                        ),
-                        child: Text(
-                          hostKey ? 'Confiar y conectar' : 'Continuar',
-                        ),
-                      ),
-                    ],
+                  OutlinedButton(
+                    onPressed: () => _answer(AnswerKind.cancel),
+                    child: Text(hostKey ? l.dontTrust : l.cancel),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: () =>
+                        _answer(hostKey ? AnswerKind.accept : AnswerKind.text),
+                    child: Text(hostKey ? l.trustAndConnect : l.continueLabel),
                   ),
                 ],
               ),
-            ),
+            ],
           ),
         ),
       ),
