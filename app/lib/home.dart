@@ -44,6 +44,10 @@ class Home extends ConsumerStatefulWidget {
 class _HomeState extends ConsumerState<Home> {
   bool _newsShown = false;
 
+  /// The first-run guide was shown: it stays until it is done, even once
+  /// an import there has filled the library.
+  bool _guide = false;
+
   final FocusNode _search = FocusNode(debugLabel: 'host search');
 
   @override
@@ -225,7 +229,10 @@ class _HomeState extends ConsumerState<Home> {
     final empty = ref.watch(
       libraryProvider.select((l) => l.hosts.isEmpty && l.groups.isEmpty),
     );
-    if (!welcomed && empty) return const FirstRun();
+    if (!welcomed && (empty || _guide)) {
+      _guide = true;
+      return const FirstRun();
+    }
     // Once per release, for who used an earlier one.
     if (!_newsShown && shouldShowNews(ref.read(settingsProvider))) {
       _newsShown = true;
@@ -237,59 +244,67 @@ class _HomeState extends ConsumerState<Home> {
     final ow = context.ow;
     return CallbackShortcuts(
       bindings: _shortcuts(),
-      child: Announcer(
-        child: Scaffold(
-          backgroundColor: ow.colors.window,
-          body: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Tab goes through the sidebar, then the tabs and what they show.
-              SizedBox(
-                width: 272,
-                child: FocusTraversalGroup(
-                  child: Sidebar(searchFocus: _search),
-                ),
-              ),
-              if (!ow.shape.pills)
-                VerticalDivider(
-                  width: 1,
-                  thickness: 1,
-                  color: ow.colors.border,
-                ),
-              Expanded(
-                child: FocusTraversalGroup(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const TabStrip(),
-                      Expanded(
-                        child: switch (current) {
-                          final SessionTab tab => TabView(
-                            key: ObjectKey(tab),
-                            tab: tab,
-                          ),
-                          final SftpTab tab => SftpView(
-                            key: ObjectKey(tab),
-                            controller: tab.controller,
-                          ),
-                          PageTab(page: PageKind.settings) =>
-                            const SettingsPage(),
-                          PageTab(page: PageKind.tunnels) =>
-                            const TunnelsPage(),
-                          PageTab(page: PageKind.identities) =>
-                            const IdentitiesPage(),
-                          PageTab(page: PageKind.snippets) =>
-                            const SnippetsPage(),
-                          PageTab(page: PageKind.knownHosts) =>
-                            const KnownHostsPage(),
-                          null => StartPage(searchFocus: _search),
-                        },
-                      ),
-                    ],
+      // Shortcuts only hear keys from below them. With no field focused (at
+      // start, or once the focused terminal or page is gone), the focus would
+      // fall back to the route's scope, above this widget; this scope keeps
+      // it here, so the window's shortcuts work with nothing focused too.
+      child: FocusScope(
+        debugLabel: 'window',
+        autofocus: true,
+        child: Announcer(
+          child: Scaffold(
+            backgroundColor: ow.colors.window,
+            body: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Tab goes through the sidebar, then the tabs and what they show.
+                SizedBox(
+                  width: 272,
+                  child: FocusTraversalGroup(
+                    child: Sidebar(searchFocus: _search),
                   ),
                 ),
-              ),
-            ],
+                if (!ow.shape.pills)
+                  VerticalDivider(
+                    width: 1,
+                    thickness: 1,
+                    color: ow.colors.border,
+                  ),
+                Expanded(
+                  child: FocusTraversalGroup(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const TabStrip(),
+                        Expanded(
+                          child: switch (current) {
+                            final SessionTab tab => TabView(
+                              key: ObjectKey(tab),
+                              tab: tab,
+                            ),
+                            final SftpTab tab => SftpView(
+                              key: ObjectKey(tab),
+                              controller: tab.controller,
+                            ),
+                            PageTab(page: PageKind.settings) =>
+                              const SettingsPage(),
+                            PageTab(page: PageKind.tunnels) =>
+                              const TunnelsPage(),
+                            PageTab(page: PageKind.identities) =>
+                              const IdentitiesPage(),
+                            PageTab(page: PageKind.snippets) =>
+                              const SnippetsPage(),
+                            PageTab(page: PageKind.knownHosts) =>
+                              const KnownHostsPage(),
+                            null => StartPage(searchFocus: _search),
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

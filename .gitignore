@@ -38,6 +38,8 @@ authorized_keys
 !app/lib/known_hosts/
 .ssh/
 *.log
+# …except the importers' fixtures, which hold made-up data only.
+!core/crates/openward-import/tests/fixtures/**
 .local/
 
 # Local assistant notes

@@ -31,7 +31,11 @@ Future<bool> showGroupEditor(
 
 /// A panel on the right of the window, as editors open. True if it
 /// closed saying something was saved.
-Future<bool> showSidePanel(BuildContext context, WidgetBuilder builder) async {
+Future<bool> showSidePanel(
+  BuildContext context,
+  WidgetBuilder builder, {
+  double width = 560,
+}) async {
   final ow = context.ow;
   final still = MediaQuery.of(context).disableAnimations;
   final saved = await showGeneralDialog<bool>(
@@ -45,7 +49,7 @@ Future<bool> showSidePanel(BuildContext context, WidgetBuilder builder) async {
     pageBuilder: (context, _, _) => Align(
       alignment: Alignment.centerRight,
       child: SizedBox(
-        width: 560,
+        width: width,
         height: double.infinity,
         child: Material(
           color: ow.colors.raised,
@@ -1214,6 +1218,8 @@ class EditorFrame extends StatelessWidget {
     this.onSaveAndConnect,
     this.saveAndConnectLabel,
     this.onDelete,
+    this.saveLabel,
+    this.saveEnabled = true,
   });
 
   final String title;
@@ -1227,6 +1233,14 @@ class EditorFrame extends StatelessWidget {
   final VoidCallback? onDelete;
   final List<Widget> children;
 
+  /// The main button's text; "Save" by default.
+  final String? saveLabel;
+  final bool saveEnabled;
+
+  void save() {
+    if (saveEnabled) onSave();
+  }
+
   @override
   Widget build(BuildContext context) {
     final ow = context.ow;
@@ -1235,8 +1249,8 @@ class EditorFrame extends StatelessWidget {
     final theme = Theme.of(context);
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.enter, meta: true): onSave,
-        const SingleActivator(LogicalKeyboardKey.enter, control: true): onSave,
+        const SingleActivator(LogicalKeyboardKey.enter, meta: true): save,
+        const SingleActivator(LogicalKeyboardKey.enter, control: true): save,
         // Also with the cursor in a field, which would keep Esc otherwise.
         const SingleActivator(LogicalKeyboardKey.escape): () =>
             Navigator.maybePop(context, false),
@@ -1325,7 +1339,10 @@ class EditorFrame extends StatelessWidget {
                     child: Text(l.cancel),
                   ),
                   const SizedBox(width: 8),
-                  FilledButton(onPressed: onSave, child: Text(l.save)),
+                  FilledButton(
+                    onPressed: saveEnabled ? onSave : null,
+                    child: Text(saveLabel ?? l.save),
+                  ),
                 ],
               ),
             ),

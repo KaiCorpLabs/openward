@@ -13,6 +13,7 @@ pub mod keys;
 pub mod known;
 pub mod local;
 pub mod plan;
+pub mod programs;
 pub mod sftp;
 pub mod snippets;
 pub mod terminal;
@@ -432,6 +433,35 @@ impl App {
     ) -> openward_vault::Result<import::Report> {
         let (paths, file) = self.ssh_config_file(file);
         import::ssh_config(&mut self.vault(), &file, &paths, only)
+    }
+
+    /// Other programs' data on this computer, ready to import.
+    pub fn installed_programs(&self) -> Vec<openward_import::detect::Found> {
+        openward_import::detect::installed(&self.local.home)
+    }
+
+    /// Reads another program's file or folder, recognizing whose it is.
+    /// Termius's data asks the keychain for its key unless `termius_keys`
+    /// gives it (tests).
+    pub fn read_program(
+        &self,
+        path: &Path,
+        termius_keys: Option<Vec<[u8; 32]>>,
+    ) -> Result<programs::Read, openward_import::detect::Error> {
+        let (program, bundle) = openward_import::detect::read(path, termius_keys)?;
+        Ok(programs::read(program, bundle, &self.local))
+    }
+
+    pub fn preview_program(&self, read: &programs::Read) -> programs::Preview {
+        programs::preview(&self.vault(), read)
+    }
+
+    pub fn import_program(
+        &self,
+        read: &programs::Read,
+        choice: &programs::Choice,
+    ) -> Result<programs::Report, programs::Error> {
+        programs::apply(&mut self.vault(), &self.local, read, choice)
     }
 
     fn ssh_config_file(&self, file: Option<&Path>) -> (Paths, PathBuf) {

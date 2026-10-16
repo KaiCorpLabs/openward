@@ -1,0 +1,315 @@
+<!doctype html><meta charset="utf-8"><title>wait</title>
+<script>
+// Written by tests/termius.rs (write_page): made-up data, test key.
+const TABLES = {
+  "groups": [
+    {
+      "id": 101,
+      "label": "BAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQGkIfl8uO3ws3CvEDRSAh/sMjltK7hv+E9usRY=",
+      "local_id": 1,
+      "parent_group": null,
+      "ssh_config": {
+        "id": 201,
+        "local_id": 1
+      },
+      "updated_at": "2026-10-01T10:00:00"
+    },
+    {
+      "id": 102,
+      "label": "BAECAgICAgICAgICAgICAgICAgICAgICAgJmuNRl/2YhH5RUZMxNGt5ebCDd",
+      "local_id": 2,
+      "parent_group": {
+        "id": 101,
+        "local_id": 1
+      },
+      "ssh_config": null,
+      "updated_at": "2026-10-01T10:00:00"
+    }
+  ],
+  "host_chains": [],
+  "hosts": [
+    {
+      "address": "BAEYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBjQ4a1hNimcNS+b/AoKOhODYQbh+NvUlyDTdhyJYdVf2Jp6dw==",
+      "group": null,
+      "id": 801,
+      "label": "BAEXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxeFgp/wNf7CubiKTRXhuwjq5BD9oQOycA==",
+      "local_id": 1,
+      "ssh_config": {
+        "id": 202,
+        "local_id": 2
+      },
+      "updated_at": "2026-10-01T10:00:00"
+    },
+    {
+      "content": "BAEaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhp0WrymdV0835cr8JPY9L4JoxQs6GgnyDKwt0tNbW71NShr3luHWr1KsgbBvdObeWRfXbxIIv4Itqsn0Z3eQevMeHg=",
+      "group": {
+        "id": 102,
+        "local_id": 2
+      },
+      "id": 802,
+      "label": "BAEZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRn5bv3cb642JE0NbUl7naXY+hY7Thk=",
+      "local_id": 2,
+      "ssh_config": {
+        "id": 203,
+        "local_id": 3
+      }
+    },
+    {
+      "address": "BAEcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBzikd6j1VgVt3AtkXw8Vws76nePyoWIGK5Yq1GpHIOr",
+      "id": 803,
+      "label": "BAEbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxuD9ECP1NXKrP+AbvEvIyqofWl7AwPnIME=",
+      "local_id": 3,
+      "ssh_config": {
+        "id": 204,
+        "local_id": 4
+      }
+    },
+    {
+      "address": "BAEeHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh5hyAlTn3NYmUZQ+iV3+H2UCxyGpo8uBVU=",
+      "id": 804,
+      "label": "BAEdHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR2QqkkVuknsTGVfTm3UqUWs8zvIAPcabEI5eA==",
+      "local_id": 4,
+      "ssh_config": null,
+      "telnet_config": {
+        "id": 901,
+        "local_id": 1
+      }
+    },
+    {
+      "address": "BAEgICAgICAgICAgICAgICAgICAgICAgICBHl4ApJsLf9bq/yUVq3OxkyHrmhzLzA6RByw==",
+      "id": null,
+      "label": "BAEfHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx/F+niRBl001xsU+O4i9iOqglgFCp/4",
+      "local_id": 5,
+      "ssh_config": {
+        "id": null,
+        "local_id": 5
+      }
+    },
+    {
+      "address": "team.example.com",
+      "encrypted_with": "team-key",
+      "id": 806,
+      "label": "shared",
+      "local_id": 6
+    },
+    {
+      "address": "BAEiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiKvq9+XRb2w+SVvbaV1Cqe+tkoV4BEyoQEfuOyB5ll36A==",
+      "id": 807,
+      "label": "BAEhISEhISEhISEhISEhISEhISEhISEhISGJQ5pdr13VSkZEkuEryNh4SmNmDw==",
+      "local_id": 7,
+      "status": "deleted"
+    }
+  ],
+  "keys": [
+    {
+      "id": 301,
+      "label": "BAEDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwOmW6CF7cAajjla5M9XXhfJkQ6g+lYI",
+      "local_id": 1,
+      "passphrase": "BAEFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUpYSdo0rtsevB8y44te0Yv",
+      "private_key": "BAEEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQKbxoOJUy7b0ZCnaHTeel07yXC2jm1OcXFam+rHYD39dv5CiUvGmJZH7oAevN4Gv2jyQkng3BjrpsdbcpBHcMSsNEDz3OdhAWGZEQ7R00frCBP6WavsEkbkPcZJHKL9MBd11SrOw==",
+      "public_key": "BAEGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBga1wYi8IzX1ovyDPM++oWuo"
+    },
+    {
+      "id": 302,
+      "label": "BAEHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwe6JMDfOE8TlI+bUq0GWPSX6Eg=",
+      "local_id": 2,
+      "passphrase": "BAEJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkAtQPGbdrsnVJh1B1v/OVtYlbyCPQ=",
+      "private_key": "BAEICAgICAgICAgICAgICAgICAgICAgICAiVKkr1CewBJP/jzN7unDOKQIMO+u9wMc8A8gIMm+nrETk4tUsOYshUfvb4PqRO+MlFB5FqUcB/7c7VHTBNjuH2pe6XocvAaPehlrluBjTBe3Tj9i0U8BIc7u5dBzT2FpLd",
+      "public_key": "BAEKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgr280Oq9RCtYk00ex3qyPZG"
+    }
+  ],
+  "known_hosts": [
+    {
+      "comment": null,
+      "hostnames": "BAEpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSlEhSTarJnCYCGuKLOEDe3f938tSTkA18R3l8kv1r9+pu8cVg==",
+      "id": 1301,
+      "key": "BAEqKioqKioqKioqKioqKioqKioqKioqKiry0gAJRoWeIv9VzHBhGDEtklvUNt2A068AVErkGQfH1n1figBXbNDKDpy24vXRBHRulLJ0Lecz7b/9pC72ebJK/wc2iZ88tAbDS3sraToKCc1wU3bGHIGpwJxXNmhXqmQ=",
+      "local_id": 1,
+      "marker": null
+    }
+  ],
+  "pf_rules": [
+    {
+      "bound_address": "127.0.0.1",
+      "host": {
+        "id": 802,
+        "local_id": 2
+      },
+      "hostname": "BAEkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCTg0XVQ3d8cVNnCDfJeCdZpY937EO+jhiOE",
+      "id": 1001,
+      "label": "BAEjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyOiAVaK48zt2qa6lCsZqwoEDg6A5MBt0ig=",
+      "local_id": 1,
+      "local_port": 5433,
+      "pf_type": "Local Rule",
+      "remote_port": 5432
+    },
+    {
+      "bound_address": "0.0.0.0",
+      "host": {
+        "id": 801,
+        "local_id": 1
+      },
+      "id": 1002,
+      "label": "BAElJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSWdU+0vEtHGtLOstBVaPmRiRaWCFk8=",
+      "local_id": 2,
+      "local_port": 1080,
+      "pf_type": "Dynamic Rule"
+    }
+  ],
+  "proxies": [
+    {
+      "hostname": "BAEWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhY2X/E6fjJXKh8xYbUA6pcwO0N4wU8k+8u5GFjl6JFDFv0=",
+      "id": 501,
+      "identity": null,
+      "local_id": 1,
+      "port": 1080,
+      "type": "socks5"
+    }
+  ],
+  "snippets": [
+    {
+      "id": 601,
+      "label": "BAEmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJia9E3QGGJVwTDVTF9bGeVgz8r2TNl+sPXoWFRy0+qvG",
+      "local_id": 1,
+      "script": "BAEnJycnJycnJycnJycnJycnJycnJycnJydsthy3Z4oaDq1uECwvuOOSCebigIJLZlaruleYlmFWrNUCUQ5TsenxovG/LQ=="
+    }
+  ],
+  "ssh_config_identities": [
+    {
+      "id": 701,
+      "identity": {
+        "id": 403,
+        "local_id": 3
+      },
+      "local_id": 1,
+      "ssh_config": {
+        "id": 203,
+        "local_id": 3
+      }
+    }
+  ],
+  "ssh_configs": [
+    {
+      "id": 201,
+      "identity": {
+        "id": 401,
+        "local_id": 1
+      },
+      "local_id": 1,
+      "port": 2222
+    },
+    {
+      "agent_forwarding": true,
+      "env_variables": "BAEUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQxfS30zqkDyY9OedsHUyboSo3c2GNihqKz8i4MdFGfc9r3QifYz+w=",
+      "id": 202,
+      "identity": {
+        "id": 402,
+        "local_id": 2
+      },
+      "local_id": 2,
+      "proxycommand": {
+        "id": 501,
+        "local_id": 1
+      },
+      "strict_host_key_check": true
+    },
+    {
+      "id": 203,
+      "identity": null,
+      "local_id": 3
+    },
+    {
+      "content": "BAEVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRW+h7f5YqRXpDfyMefQN1LwS5/U7bJ1S6Ul7NOgUw+k3WM3ZA32cdjI5W+IgtuDKOU=",
+      "id": 204,
+      "local_id": 4,
+      "startup_snippet": {
+        "id": 601,
+        "local_id": 1
+      },
+      "use_mosh": true
+    },
+    {
+      "id": null,
+      "local_id": 5,
+      "port": 70000
+    }
+  ],
+  "ssh_identities": [
+    {
+      "id": 401,
+      "is_visible": true,
+      "label": "BAELCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwt82O2JZeljRxGr8S/003ESDYqa9AhA",
+      "local_id": 1,
+      "password": "BAENDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ3yMYnep52kiHDb79fW+TgC",
+      "ssh_key": {
+        "id": 301,
+        "local_id": 1
+      },
+      "username": "BAEMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwne2wuKsJKAn5TJIWlZjjuajtTYv2x"
+    },
+    {
+      "id": 402,
+      "is_visible": false,
+      "label": "BAEODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg5H4RmuLanYSAZn62l5SkfQ",
+      "local_id": 2,
+      "password": "BAEQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBBVYgTenngibQdiYfJG0P12d+/piI2IoA==",
+      "ssh_key": null,
+      "username": "BAEPDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw+9P0MgwS/j6nrWMIefrk55n4zi"
+    },
+    {
+      "id": 403,
+      "is_visible": true,
+      "label": "BAERERERERERERERERERERERERERERERERGAjmUDDPElFKjuLy/73iUAWzQ=",
+      "local_id": 3,
+      "password": "BAETExMTExMTExMTExMTExMTExMTExMTExMJBaTzI06ReSXfVFIR4QrQ",
+      "ssh_key": {
+        "id": 302,
+        "local_id": 2
+      },
+      "username": "BAESEhISEhISEhISEhISEhISEhISEhISEhK7e1qE7uTGsqvgVTCil8KEs0E="
+    }
+  ],
+  "tag_hosts": [
+    {
+      "host": {
+        "id": 802,
+        "local_id": 2
+      },
+      "id": 1201,
+      "local_id": 1,
+      "tag": {
+        "id": 1101,
+        "local_id": 1
+      }
+    }
+  ],
+  "tags": [
+    {
+      "id": 1101,
+      "label": "BAEoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCiupxYJhCmP0YTdwVy+CIInH1z7SA==",
+      "local_id": 1
+    }
+  ]
+};
+function openDb(name) {
+  return new Promise((ok, bad) => {
+    const r = indexedDB.open(name, 1);
+    r.onupgradeneeded = () => r.result.createObjectStore(name, { keyPath: "local_id" });
+    r.onsuccess = () => ok(r.result);
+    r.onerror = () => bad(r.error);
+  });
+}
+(async () => {
+  for (const [name, rows] of Object.entries(TABLES)) {
+    const db = await openDb(name);
+    await new Promise((ok, bad) => {
+      const t = db.transaction(name, "readwrite");
+      for (const row of rows) t.objectStore(name).put(row);
+      t.oncomplete = ok;
+      t.onerror = () => bad(t.error);
+    });
+    db.close();
+  }
+  document.title = "done";
+})();
+</script>

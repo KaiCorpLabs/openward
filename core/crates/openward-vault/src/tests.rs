@@ -389,6 +389,7 @@ fn tunnel(label: &str, host: ItemId, kind: ForwardKind, dest: Option<(&str, u16)
         dest_port: dest.map(|(_, p)| p),
         autostart: false,
         source: None,
+        imported: None,
         extra: Default::default(),
     })
 }

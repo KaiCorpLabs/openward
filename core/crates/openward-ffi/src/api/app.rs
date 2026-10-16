@@ -132,6 +132,20 @@ impl OpenWard {
         })
     }
 
+    /// As [`OpenWard::open`], with another home folder and its `.ssh`
+    /// (tests: nothing of the tester's, such as their Termius, is seen).
+    pub fn open_with_home(data_dir: String, home: String) -> anyhow::Result<OpenWard> {
+        let home = PathBuf::from(home);
+        let local = openward_app::Local {
+            ssh_dir: home.join(".ssh"),
+            home,
+            ..openward_app::Local::from_env()
+        };
+        Ok(Self {
+            app: Arc::new(App::open_as(&PathBuf::from(data_dir), local)?),
+        })
+    }
+
     #[frb(sync)]
     pub fn hosts(&self) -> Vec<HostView> {
         let vault = self.app.vault();

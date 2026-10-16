@@ -9,6 +9,7 @@ import 'known_hosts.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+import 'programs.dart';
 import 'session.dart';
 import 'sftp.dart';
 import 'snippets.dart';
@@ -107,6 +108,11 @@ abstract class OpenWard implements RustOpaqueInterface {
     required List<String> choosers,
   });
 
+  Future<ProgramReport> importProgram({
+    required ProgramData data,
+    required ProgramChoice choice,
+  });
+
   /// Imports `~/.ssh/config` (or `file`); with `only`, just those aliases
   /// and the hosts they jump through. Aliases imported before stay as
   /// they are.
@@ -121,6 +127,10 @@ abstract class OpenWard implements RustOpaqueInterface {
     IdentityChoice? identity,
     required String identityId,
   });
+
+  /// Other programs' data on this computer: Termius, Tabby, PuTTY's
+  /// sessions, SecureCRT's, MobaXterm's.
+  List<FoundProgram> installedPrograms();
 
   /// What the key at `path` is on this machine, and which of
   /// `certificate_files` (or `<key>-cert.pub`) goes with it.
@@ -151,6 +161,16 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// connection's events (questions, and `connected` once it listens).
   Stream<SessionEvent> openTunnel({required String id});
 
+  /// As [`OpenWard::open`], with another home folder and its `.ssh`
+  /// (tests: nothing of the tester's, such as their Termius, is seen).
+  static Future<OpenWard> openWithHome({
+    required String dataDir,
+    required String home,
+  }) => RustLib.instance.api.crateApiAppOpenWardOpenWithHome(
+    dataDir: dataDir,
+    home: home,
+  );
+
   /// As [`OpenWard::open`], with another `~/.ssh` (tests: the tester's
   /// own keys and `known_hosts` stay out).
   static Future<OpenWard> openWithSshDir({
@@ -165,9 +185,23 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   void pauseTransfers();
 
+  /// What importing it would bring, and what is there already.
+  ProgramPreview previewProgram({required ProgramData data});
+
   /// What importing `~/.ssh/config` (or `file`) would bring, in the
   /// file's order. An empty list: no file, or no hosts in it.
   Future<List<ImportPreview>> previewSshConfig({String? file});
+
+  /// Reads a file or folder of another program, recognizing whose it
+  /// is. For Termius's data the system asks the user first, to let
+  /// OpenWard use Termius's key from the keychain.
+  Future<ProgramRead> readProgram({required String path});
+
+  /// As [`Self::read_program`], with Termius's key given (tests).
+  Future<ProgramRead> readProgramWithKey({
+    required String path,
+    required List<int> termiusKey,
+  });
 
   /// Tries after losing a connection, before giving up.
   int reconnectAttempts();

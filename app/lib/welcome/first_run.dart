@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/providers.dart';
 import '../core/settings.dart';
 import '../hosts/import_ssh_config.dart';
+import '../import/import_dialog.dart';
+import '../import/programs.dart';
+import '../src/rust/api/programs.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/vault.dart';
 import '../terminal/keys.dart';
@@ -28,6 +31,11 @@ class _FirstRunState extends ConsumerState<FirstRun> {
   List<ImportPreview>? _previews;
   List<String> _only = const [];
   bool _importing = false;
+
+  /// Other programs on this computer: Termius, Tabby…
+  late final List<FoundProgram> _found = ref
+      .read(openWardProvider)
+      .installedPrograms();
 
   @override
   void initState() {
@@ -160,6 +168,8 @@ class _FirstRunState extends ConsumerState<FirstRun> {
           style: TextStyle(fontSize: 12, color: c.textSubtle),
         ),
       ],
+      const SizedBox(height: 18),
+      _otherPrograms(context),
       const SizedBox(height: 20),
       Row(
         children: [
@@ -189,6 +199,83 @@ class _FirstRunState extends ConsumerState<FirstRun> {
         ],
       ),
     ];
+  }
+
+  /// Termius, Tabby… found here, and a way to a file another program
+  /// exported.
+  Widget _otherPrograms(BuildContext context) {
+    final l = context.l10n;
+    final ow = context.ow;
+    final c = ow.colors;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+      decoration: BoxDecoration(
+        border: Border.all(color: c.border),
+        borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_found.isNotEmpty) ...[
+            SectionLabel(l.alsoOnThisComputer),
+            for (final f in _found)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    ProgramTile(programInitial(f.program)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            programName(f.program),
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          Text(
+                            foundText(l, f),
+                            style: TextStyle(fontSize: 12, color: c.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    OutlinedButton(
+                      onPressed: () => runImport(
+                        context,
+                        ref,
+                        ProgramSource(f.path, f.program),
+                      ),
+                      child: Text(
+                        f.program == ProgramKind.termius
+                            ? l.readTermius
+                            : l.review,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            Divider(height: 1, color: c.border),
+          ],
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  l.comingFromOther,
+                  style: TextStyle(fontSize: 12, color: c.textMuted),
+                ),
+                TextButton(
+                  onPressed: () => showImport(context, ref, sshConfig: false),
+                  child: Text(l.chooseExportedFile),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   List<Widget> _appearanceStep(BuildContext context, ThemeData theme) {

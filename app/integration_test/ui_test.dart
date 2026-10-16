@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:openward/app.dart';
@@ -38,6 +39,7 @@ import 'package:openward/terminal/controller.dart';
 import 'package:openward/terminal/keys.dart';
 import 'package:openward/terminal/renderer.dart';
 import 'package:openward/settings/settings_page.dart';
+import 'package:openward/snippets/snippets.dart';
 import 'package:openward/sftp/sftp_controller.dart';
 import 'package:openward/sftp/transfers.dart';
 import 'package:openward/src/rust/api/tunnels.dart';
@@ -88,6 +90,38 @@ Future<void> _until(
     await tester.pump(const Duration(milliseconds: 50));
   }
 }
+
+/// The repository, found up from the test app's executable (the app does
+/// not see the environment or the working directory of `flutter test`).
+String get _repo {
+  var dir = File(Platform.resolvedExecutable).parent;
+  while (!Directory('${dir.path}/core/crates/openward-import').existsSync()) {
+    if (dir.parent.path == dir.path) fail('repository not found');
+    dir = dir.parent;
+  }
+  return dir.path;
+}
+
+/// Copies the made-up Termius data (core/crates/openward-import/tests/
+/// fixtures/termius) to where Termius keeps it under `home`.
+void _termiusIn(String home) {
+  final from = Directory(
+    '$_repo/core/crates/openward-import/tests/fixtures/termius/Termius/IndexedDB/file__0.indexeddb.leveldb',
+  );
+  final data = Platform.isMacOS
+      ? '$home/Library/Application Support/Termius'
+      : Platform.isWindows
+      ? '$home/AppData/Roaming/Termius'
+      : '$home/.config/Termius';
+  final to = Directory('$data/IndexedDB/file__0.indexeddb.leveldb')
+    ..createSync(recursive: true);
+  for (final f in from.listSync().whereType<File>()) {
+    f.copySync('${to.path}/${f.uri.pathSegments.last}');
+  }
+}
+
+/// The key the Termius fixture is encrypted with.
+final _termiusKey = List.filled(32, 0x42);
 
 /// The S2 fixtures directory if the test servers are up, else null.
 Future<String?> _servers() async {
@@ -157,6 +191,7 @@ void main() {
     WidgetTester tester, {
     bool welcomed = true,
     String? sshConfig,
+    List<Override> overrides = const [],
   }) async {
     tester.view.physicalSize = const Size(1280, 800) * 2;
     tester.view.devicePixelRatio = 2;
@@ -182,6 +217,7 @@ void main() {
             sshConfigFileProvider.overrideWithValue(
               sshConfig ?? '${dir.path}/no-ssh-config',
             ),
+            ...overrides,
           ],
           child: const OpenWardApp(),
         ),
@@ -415,6 +451,110 @@ Host web-1 web-2
     await _shot(tester, '11-light-terminal');
     container.read(tabsProvider.notifier).close(0);
     await _settle(tester);
+  });
+
+  testWidgets('window shortcuts with nothing focused: at start, after a page '
+      'and after a terminal', (tester) async {
+    final container = await launch(tester);
+    // At start no field has the focus, and ⌘, still opens the settings…
+    await _shortcut(tester, LogicalKeyboardKey.comma);
+    await _settle(tester);
+    expect(container.read(tabsProvider).current, isA<PageTab>());
+    // …and ⌘W closes them, though the page took its focus with it.
+    await _shortcut(tester, LogicalKeyboardKey.keyW, letter: true);
+    await _settle(tester);
+    expect(container.read(tabsProvider).tabs, isEmpty);
+    // ⌘T opens a terminal, which takes the focus; closing its tab with the
+    // mouse leaves nothing focused, and ⌘K still goes to the search.
+    await _shortcut(tester, LogicalKeyboardKey.keyT, letter: true);
+    await tester.pump();
+    final c = container.read(tabsProvider).currentSession!;
+    await _until(tester, () => c.phase == Phase.running, 'the shell');
+    container.read(tabsProvider.notifier).close(0);
+    await _settle(tester);
+    await _shortcut(tester, LogicalKeyboardKey.keyK, letter: true);
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'host search');
+  });
+
+  testWidgets('import from Termius: read it, pick, save a key, and again', (
+    tester,
+  ) async {
+    // A home of its own: the tester's own Termius and ~/.ssh stay out.
+    final home = Directory('${dir.path}/home')..createSync();
+    _termiusIn(home.path);
+    app = await OpenWard.openWithHome(
+      dataDir: '${dir.path}/data',
+      home: home.path,
+    );
+    final container = await launch(
+      tester,
+      overrides: [termiusKeyProvider.overrideWithValue(_termiusKey)],
+    );
+    Future<void> openImport() async {
+      await tester.tap(find.byTooltip('Más acciones'));
+      await _settle(tester);
+      await tester.tap(find.text('Importar…').last);
+      await _settle(tester);
+    }
+
+    await openImport();
+    expect(find.text('Importar hosts'), findsOneWidget);
+    expect(find.text('Termius'), findsOneWidget);
+    await _shot(tester, '50-import-origin');
+    await tester.tap(find.text('Leer Termius'));
+    await _settle(tester);
+    await _shot(tester, '51-import-termius');
+    await tester.tap(find.text('Continuar'));
+    await _until(
+      tester,
+      () => find.text('Importar de Termius').evaluate().isNotEmpty,
+      'the preview',
+    );
+    await _settle(tester);
+    // Its groups and hosts; the telnet one cannot come.
+    for (final t in ['Producción', 'Web', 'bastion', 'web-1', 'old-switch']) {
+      expect(find.text(t), findsOneWidget, reason: t);
+    }
+    expect(find.text('Telnet: aún no se puede usar'), findsOneWidget);
+    // Neither stored key is in this home's ~/.ssh: save the ci one.
+    await tester.tap(find.textContaining('~/.ssh/termius-ci,'));
+    await tester.pump();
+    await _shot(tester, '52-import-preview');
+    await tester.tap(find.text('Importar 4 hosts'));
+    await _settle(tester);
+    expect(find.text('4 hosts importados de Termius'), findsOneWidget);
+    expect(find.text('Clave guardada en ~/.ssh/termius-ci'), findsOneWidget);
+    expect(find.textContaining('lab-mosh usaba Mosh'), findsOneWidget);
+    await _shot(tester, '53-import-report');
+    await tester.tap(find.text('Aceptar'));
+    await _settle(tester);
+
+    final hosts = app.hosts().map((h) => h.label).toSet();
+    expect(hosts, {'bastion', 'web-1', 'lab-mosh', 'packed'});
+    expect(File('${dir.path}/home/.ssh/termius-ci').existsSync(), isTrue);
+    expect(container.read(snippetsProvider).map((s) => s.spec.label), [
+      'Reiniciar nginx',
+    ]);
+
+    // Again: everything is there already, so there is nothing to import.
+    await openImport();
+    await tester.tap(find.text('Leer Termius'));
+    await _settle(tester);
+    await tester.tap(find.text('Continuar'));
+    await _until(
+      tester,
+      () => find.text('Importar de Termius').evaluate().isNotEmpty,
+      'the preview again',
+    );
+    await _settle(tester);
+    expect(find.text('ya importado'), findsWidgets);
+    final button = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Importar'),
+    );
+    expect(button.onPressed, isNull);
+    await tester.tap(find.text('Cancelar'));
+    await _settle(tester);
+    expect(app.hosts(), hasLength(4));
   });
 
   testWidgets('a group and a host from the editors, with inheritance', (

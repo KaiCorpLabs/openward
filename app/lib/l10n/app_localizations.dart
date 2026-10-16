@@ -212,6 +212,12 @@ abstract class AppLocalizations {
   /// **'Ya la usa'**
   String get alreadyUses;
 
+  /// No description provided for @alsoOnThisComputer.
+  ///
+  /// In es, this message translates to:
+  /// **'También en este equipo'**
+  String get alsoOnThisComputer;
+
   /// No description provided for @announceClosed.
   ///
   /// In es, this message translates to:
@@ -500,6 +506,24 @@ abstract class AppLocalizations {
   /// **'Otro cambio ha llegado antes: cierra y vuelve a abrir el editor.'**
   String get changedMeanwhile;
 
+  /// No description provided for @checkNotImported.
+  ///
+  /// In es, this message translates to:
+  /// **'{label} usa {protocol} y no se ha importado.'**
+  String checkNotImported(String label, String protocol);
+
+  /// No description provided for @checkTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Revisa 1 cosa} other{Revisa {count} cosas}}'**
+  String checkTitle(int count);
+
+  /// No description provided for @checkWithoutKey.
+  ///
+  /// In es, this message translates to:
+  /// **'«{label}» se ha quedado sin clave: la suya no está en ~/.ssh.'**
+  String checkWithoutKey(String label);
+
   /// No description provided for @checkedFingerprint.
   ///
   /// In es, this message translates to:
@@ -529,6 +553,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Saltar'**
   String get choiceSkip;
+
+  /// No description provided for @chooseExportedFile.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige el archivo exportado'**
+  String get chooseExportedFile;
+
+  /// No description provided for @chooseFile.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir…'**
+  String get chooseFile;
 
   /// No description provided for @cipher.
   ///
@@ -607,6 +643,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Tamaño'**
   String get colSize;
+
+  /// No description provided for @collapse.
+  ///
+  /// In es, this message translates to:
+  /// **'Plegar'**
+  String get collapse;
+
+  /// No description provided for @comingFromOther.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Vienes de PuTTY, MobaXterm o SecureCRT?'**
+  String get comingFromOther;
 
   /// No description provided for @command.
   ///
@@ -799,6 +847,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Copiar la ruta'**
   String get copyPath;
+
+  /// No description provided for @copyReport.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar el informe'**
+  String get copyReport;
 
   /// No description provided for @create.
   ///
@@ -1016,6 +1070,12 @@ abstract class AppLocalizations {
   /// **'Suelta para descargar aquí'**
   String get dropToDownload;
 
+  /// No description provided for @dropToImport.
+  ///
+  /// In es, this message translates to:
+  /// **'O arrastra aquí el archivo o la carpeta: se reconoce solo.'**
+  String get dropToImport;
+
   /// No description provided for @dropToUpload.
   ///
   /// In es, this message translates to:
@@ -1088,6 +1148,12 @@ abstract class AppLocalizations {
   /// **'nombre'**
   String get exampleVariable;
 
+  /// No description provided for @expand.
+  ///
+  /// In es, this message translates to:
+  /// **'Desplegar'**
+  String get expand;
+
   /// No description provided for @failureAuth.
   ///
   /// In es, this message translates to:
@@ -1129,6 +1195,72 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{label} no tiene SFTP: al servidor le falta sftp-server.'**
   String failureNoSftp(String label);
+
+  /// No description provided for @featureFirewall.
+  ///
+  /// In es, this message translates to:
+  /// **'el firewall «{name}» de SecureCRT'**
+  String featureFirewall(String name);
+
+  /// No description provided for @featureHardwareKey.
+  ///
+  /// In es, this message translates to:
+  /// **'una llave de seguridad'**
+  String get featureHardwareKey;
+
+  /// No description provided for @featureJumpNotSsh.
+  ///
+  /// In es, this message translates to:
+  /// **'un salto por un perfil que no es SSH'**
+  String get featureJumpNotSsh;
+
+  /// No description provided for @featureJumpThrough.
+  ///
+  /// In es, this message translates to:
+  /// **'un salto por {target}, que no está'**
+  String featureJumpThrough(String target);
+
+  /// No description provided for @featureMobaCredential.
+  ///
+  /// In es, this message translates to:
+  /// **'una credencial guardada en MobaXterm'**
+  String get featureMobaCredential;
+
+  /// No description provided for @featureProxy.
+  ///
+  /// In es, this message translates to:
+  /// **'un proxy {kind}'**
+  String featureProxy(String kind);
+
+  /// No description provided for @featureSecureCrtGlobalKey.
+  ///
+  /// In es, this message translates to:
+  /// **'la clave global de SecureCRT'**
+  String get featureSecureCrtGlobalKey;
+
+  /// No description provided for @featureSocks4.
+  ///
+  /// In es, this message translates to:
+  /// **'un proxy SOCKS4'**
+  String get featureSocks4;
+
+  /// No description provided for @featureTabbyVault.
+  ///
+  /// In es, this message translates to:
+  /// **'una clave del almacén de Tabby'**
+  String get featureTabbyVault;
+
+  /// No description provided for @featureTelnetProxy.
+  ///
+  /// In es, this message translates to:
+  /// **'un proxy Telnet'**
+  String get featureTelnetProxy;
+
+  /// No description provided for @featureX11.
+  ///
+  /// In es, this message translates to:
+  /// **'el reenvío de X11'**
+  String get featureX11;
 
   /// No description provided for @fileChanged.
   ///
@@ -1334,11 +1466,47 @@ abstract class AppLocalizations {
   /// **'Reenvío'**
   String get forward;
 
+  /// No description provided for @foundMobaXterm.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesiones en {path}'**
+  String foundMobaXterm(String path);
+
+  /// No description provided for @foundSessions.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesiones guardadas en {path}'**
+  String foundSessions(String path);
+
+  /// No description provided for @foundSshConfig.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 host} other{{count} hosts}}{existing, plural, =0{} other{ · {existing} ya importados}}'**
+  String foundSshConfig(int count, int existing);
+
+  /// No description provided for @foundTabby.
+  ///
+  /// In es, this message translates to:
+  /// **'Su configuración, en {path}'**
+  String foundTabby(String path);
+
+  /// No description provided for @foundTermius.
+  ///
+  /// In es, this message translates to:
+  /// **'Instalado: se leen sus datos directamente, sin exportar nada'**
+  String get foundTermius;
+
   /// No description provided for @fromDefault.
   ///
   /// In es, this message translates to:
   /// **'Valor por defecto'**
   String get fromDefault;
+
+  /// No description provided for @fromExportedFile.
+  ///
+  /// In es, this message translates to:
+  /// **'Desde un archivo exportado'**
+  String get fromExportedFile;
 
   /// No description provided for @fromGroup.
   ///
@@ -1478,6 +1646,30 @@ abstract class AppLocalizations {
   /// **'Hosts'**
   String get hostsSection;
 
+  /// No description provided for @howMobaXterm.
+  ///
+  /// In es, this message translates to:
+  /// **'Sessions › Export all sessions to file: un archivo .mxtsessions'**
+  String get howMobaXterm;
+
+  /// No description provided for @howPutty.
+  ///
+  /// In es, this message translates to:
+  /// **'Un .reg exportado del registro (reg export HKCU\\Software\\SimonTatham\\PuTTY\\Sessions putty.reg)'**
+  String get howPutty;
+
+  /// No description provided for @howSecureCrt.
+  ///
+  /// In es, this message translates to:
+  /// **'Tools › Export Settings…: un archivo .xml'**
+  String get howSecureCrt;
+
+  /// No description provided for @howTabby.
+  ///
+  /// In es, this message translates to:
+  /// **'Su config.yaml, si no está en este equipo'**
+  String get howTabby;
+
   /// No description provided for @identities.
   ///
   /// In es, this message translates to:
@@ -1592,11 +1784,23 @@ abstract class AppLocalizations {
   /// **'Importar de ~/.ssh/config'**
   String get importFromSshConfig;
 
+  /// No description provided for @importHostsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar hosts'**
+  String get importHostsTitle;
+
   /// No description provided for @importIntoGroup.
   ///
   /// In es, this message translates to:
   /// **'Se guardan en el grupo «~/.ssh/config». Un host trae consigo los hosts por los que salta.'**
   String get importIntoGroup;
+
+  /// No description provided for @importIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Trae tus hosts de otro programa. Solo se leen: el original no cambia.'**
+  String get importIntro;
 
   /// No description provided for @importKeepsFile.
   ///
@@ -1622,6 +1826,12 @@ abstract class AppLocalizations {
   /// **'No hay hosts nuevos en ~/.ssh/config (o no existe).'**
   String get importNothing;
 
+  /// No description provided for @importReportCopied.
+  ///
+  /// In es, this message translates to:
+  /// **'Informe copiado'**
+  String get importReportCopied;
+
   /// No description provided for @importScheme.
   ///
   /// In es, this message translates to:
@@ -1639,12 +1849,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ese fichero no es un tema de iTerm2 (.itermcolors) ni de Ghostty.'**
   String get importSchemeFailed;
-
-  /// No description provided for @importSshConfigMenu.
-  ///
-  /// In es, this message translates to:
-  /// **'Importar de ~/.ssh/config…'**
-  String get importSshConfigMenu;
 
   /// No description provided for @importTitle.
   ///
@@ -2041,6 +2245,48 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'tu usuario local'**
   String get localUser;
+
+  /// No description provided for @madeGroups.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 grupo, con sus ajustes} other{{count} grupos, con sus ajustes}}'**
+  String madeGroups(int count);
+
+  /// No description provided for @madeIdentities.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 identidad} other{{count} identidades}}'**
+  String madeIdentities(int count);
+
+  /// No description provided for @madeKey.
+  ///
+  /// In es, this message translates to:
+  /// **'Clave guardada en {path}'**
+  String madeKey(String path);
+
+  /// No description provided for @madeKnownHosts.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 clave de host de confianza, en Biblioteca › Hosts conocidos} other{{count} claves de host de confianza, en Biblioteca › Hosts conocidos}}'**
+  String madeKnownHosts(int count);
+
+  /// No description provided for @madeSkipped.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 host ya estaba de antes y se ha dejado como estaba} other{{count} hosts ya estaban de antes y se han dejado como estaban}}'**
+  String madeSkipped(int count);
+
+  /// No description provided for @madeSnippets.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 snippet, en Biblioteca › Snippets} other{{count} snippets, en Biblioteca › Snippets}}'**
+  String madeSnippets(int count);
+
+  /// No description provided for @madeTunnels.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 túnel, en Biblioteca › Túneles} other{{count} túneles, en Biblioteca › Túneles}}'**
+  String madeTunnels(int count);
 
   /// No description provided for @manageSnippets.
   ///
@@ -2552,6 +2798,12 @@ abstract class AppLocalizations {
   /// **'Al enviar'**
   String get onSend;
 
+  /// No description provided for @onThisComputer.
+  ///
+  /// In es, this message translates to:
+  /// **'En este equipo'**
+  String get onThisComputer;
+
   /// No description provided for @onlyTheServer.
   ///
   /// In es, this message translates to:
@@ -2695,6 +2947,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Contraseña'**
   String get passwordTitle;
+
+  /// No description provided for @passwordsNever.
+  ///
+  /// In es, this message translates to:
+  /// **'Las contraseñas no se traen nunca: OpenWard las pide al conectar.'**
+  String get passwordsNever;
 
   /// No description provided for @paste.
   ///
@@ -2924,11 +3182,101 @@ abstract class AppLocalizations {
   /// **'Vista previa'**
   String get preview;
 
+  /// No description provided for @previewCannotImport.
+  ///
+  /// In es, this message translates to:
+  /// **'{protocol}: aún no se puede usar'**
+  String previewCannotImport(String protocol);
+
+  /// No description provided for @previewHostsOf.
+  ///
+  /// In es, this message translates to:
+  /// **'{selected} de {total} hosts'**
+  String previewHostsOf(int selected, int total);
+
+  /// No description provided for @previewIdentities.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 identidad} other{{count} identidades}}'**
+  String previewIdentities(int count);
+
+  /// No description provided for @previewIntoExisting.
+  ///
+  /// In es, this message translates to:
+  /// **'En «{name}», el grupo de la importación anterior'**
+  String previewIntoExisting(String name);
+
+  /// No description provided for @previewIntoGroup.
+  ///
+  /// In es, this message translates to:
+  /// **'Dentro del grupo'**
+  String get previewIntoGroup;
+
+  /// No description provided for @previewKeyFound.
+  ///
+  /// In es, this message translates to:
+  /// **'→ {path} · la misma clave pública'**
+  String previewKeyFound(String path);
+
+  /// No description provided for @previewKeyMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{No está en ~/.ssh.} =1{No está en ~/.ssh. Sin ella, quien la usa se queda sin clave.} other{No está en ~/.ssh. Sin ella, los {count} que la usan se quedan sin clave.}}'**
+  String previewKeyMissing(int count);
+
+  /// No description provided for @previewKeys.
+  ///
+  /// In es, this message translates to:
+  /// **'Claves'**
+  String get previewKeys;
+
+  /// No description provided for @previewKnownHosts.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 host conocido} other{{count} hosts conocidos}}'**
+  String previewKnownHosts(int count);
+
   /// No description provided for @previewLive.
   ///
   /// In es, this message translates to:
   /// **'Los cambios se ven al momento en toda la ventana.'**
   String get previewLive;
+
+  /// No description provided for @previewNoPasswords.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{No se trae la contraseña o frase de paso guardada: OpenWard la pide al conectar.} other{No se traen las {count} contraseñas y frases de paso guardadas: OpenWard las pide al conectar.}}'**
+  String previewNoPasswords(int count);
+
+  /// No description provided for @previewSaveKey.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardarla en {path}, que solo podrás leer tú'**
+  String previewSaveKey(String path);
+
+  /// No description provided for @previewSnippets.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 snippet} other{{count} snippets}}'**
+  String previewSnippets(int count);
+
+  /// No description provided for @previewSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'{hosts, plural, =1{1 host} other{{hosts} hosts}}{groups, plural, =0{} =1{ en 1 grupo} other{ en {groups} grupos}}'**
+  String previewSubtitle(int hosts, int groups);
+
+  /// No description provided for @previewTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar de {program}'**
+  String previewTitle(String program);
+
+  /// No description provided for @previewTunnels.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 túnel} other{{count} túneles}}'**
+  String previewTunnels(int count);
 
   /// No description provided for @proxy.
   ///
@@ -3032,6 +3380,72 @@ abstract class AppLocalizations {
   /// **'Escribe una dirección como usuario@servidor:puerto.'**
   String get quickConnectInvalid;
 
+  /// No description provided for @readFailedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No se ha podido leer'**
+  String get readFailedTitle;
+
+  /// No description provided for @readFormat.
+  ///
+  /// In es, this message translates to:
+  /// **'Es de {program}, pero no está como se esperaba: {message}'**
+  String readFormat(String program, String message);
+
+  /// No description provided for @readNotRecognized.
+  ///
+  /// In es, this message translates to:
+  /// **'No se reconoce de qué programa es. Elige el que exporta PuTTY (.reg), MobaXterm (.mxtsessions), SecureCRT (.xml) o el config.yaml de Tabby.'**
+  String get readNotRecognized;
+
+  /// No description provided for @readTermius.
+  ///
+  /// In es, this message translates to:
+  /// **'Leer Termius'**
+  String get readTermius;
+
+  /// No description provided for @readTermiusKeychain.
+  ///
+  /// In es, this message translates to:
+  /// **'El sistema no dejó usar la clave de Termius del llavero. Vuelve a intentarlo y elige «Permitir».'**
+  String get readTermiusKeychain;
+
+  /// No description provided for @readTermiusNoKey.
+  ///
+  /// In es, this message translates to:
+  /// **'La clave de Termius no está en el llavero. Abre Termius una vez en este equipo y vuelve a intentarlo.'**
+  String get readTermiusNoKey;
+
+  /// No description provided for @readTermiusNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay datos de Termius en este equipo.'**
+  String get readTermiusNotFound;
+
+  /// No description provided for @readTermiusWrongKey.
+  ///
+  /// In es, this message translates to:
+  /// **'La clave del llavero no abre los datos de Termius; puede que Termius haya cambiado su formato. No se ha importado nada.'**
+  String get readTermiusWrongKey;
+
+  /// No description provided for @readUnreadable.
+  ///
+  /// In es, this message translates to:
+  /// **'No se ha podido leer: {message}'**
+  String readUnreadable(String message);
+
+  /// No description provided for @readingFile.
+  ///
+  /// In es, this message translates to:
+  /// **'Leyendo el archivo…'**
+  String get readingFile;
+
+  /// No description provided for @readingProgram.
+  ///
+  /// In es, this message translates to:
+  /// **'Leyendo los datos de {program}…'**
+  String readingProgram(String program);
+
   /// No description provided for @readyBody.
   ///
   /// In es, this message translates to:
@@ -3073,6 +3487,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Reducir movimiento'**
   String get reduceMotion;
+
+  /// No description provided for @reimportNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Si vuelves a importar, lo que ya trajiste se queda como está, con tus cambios. Solo entra lo nuevo.'**
+  String get reimportNote;
 
   /// No description provided for @reload.
   ///
@@ -3218,6 +3638,12 @@ abstract class AppLocalizations {
   /// **'Tema'**
   String get reportTheme;
 
+  /// No description provided for @reportTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{Nada nuevo de {program}} =1{1 host importado de {program}} other{{count} hosts importados de {program}}}'**
+  String reportTitle(int count, String program);
+
   /// No description provided for @reportTunnels.
   ///
   /// In es, this message translates to:
@@ -3235,6 +3661,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Están en el grupo «~/.ssh/config».'**
   String get reportWhere;
+
+  /// No description provided for @reportWhere2.
+  ///
+  /// In es, this message translates to:
+  /// **'Están en el grupo «{group}» de la barra lateral, con sus subgrupos.'**
+  String reportWhere2(String group);
 
   /// No description provided for @resetTheme.
   ///
@@ -3277,6 +3709,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Reintentar ahora'**
   String get retryNow;
+
+  /// No description provided for @review.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisar'**
+  String get review;
 
   /// No description provided for @reviewKey.
   ///
@@ -3884,6 +4322,90 @@ abstract class AppLocalizations {
   /// **'{key}F busca en el terminal y su historial. {key}+ y {key}− cambian el tamaño de la letra de la pestaña, y {key}0 lo devuelve. Con {key} pulsado, un clic abre un enlace.'**
   String terminalShortcuts(String key);
 
+  /// No description provided for @termiusBrings.
+  ///
+  /// In es, this message translates to:
+  /// **'Se trae'**
+  String get termiusBrings;
+
+  /// No description provided for @termiusBringsHosts.
+  ///
+  /// In es, this message translates to:
+  /// **'Hosts y grupos anidados, con sus ajustes'**
+  String get termiusBringsHosts;
+
+  /// No description provided for @termiusBringsIdentities.
+  ///
+  /// In es, this message translates to:
+  /// **'Identidades: usuario y clave'**
+  String get termiusBringsIdentities;
+
+  /// No description provided for @termiusBringsSnippets.
+  ///
+  /// In es, this message translates to:
+  /// **'Snippets, etiquetas y hosts conocidos'**
+  String get termiusBringsSnippets;
+
+  /// No description provided for @termiusBringsTunnels.
+  ///
+  /// In es, this message translates to:
+  /// **'Túneles y proxy'**
+  String get termiusBringsTunnels;
+
+  /// No description provided for @termiusIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Termius guarda tus hosts cifrados en este equipo, con la clave en el llavero. Para leerlos, el sistema te va a pedir permiso: con «Permitir» basta para esta vez.'**
+  String get termiusIntro;
+
+  /// No description provided for @termiusLeaves.
+  ///
+  /// In es, this message translates to:
+  /// **'No se trae'**
+  String get termiusLeaves;
+
+  /// No description provided for @termiusLeavesChains.
+  ///
+  /// In es, this message translates to:
+  /// **'Cadenas de saltos (host chaining): añádelas a mano'**
+  String get termiusLeavesChains;
+
+  /// No description provided for @termiusLeavesKeys.
+  ///
+  /// In es, this message translates to:
+  /// **'Claves privadas: se busca la misma en ~/.ssh, o se guarda allí si lo pides'**
+  String get termiusLeavesKeys;
+
+  /// No description provided for @termiusLeavesPasswords.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseñas y frases de paso'**
+  String get termiusLeavesPasswords;
+
+  /// No description provided for @termiusLeavesTelnet.
+  ///
+  /// In es, this message translates to:
+  /// **'Hosts de Telnet o serie; los de Mosh entran como SSH'**
+  String get termiusLeavesTelnet;
+
+  /// No description provided for @termiusReadOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'Es una lectura sin cambios: Termius no se modifica y puede seguir abierto.'**
+  String get termiusReadOnly;
+
+  /// No description provided for @termiusTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Leer los datos de Termius'**
+  String get termiusTitle;
+
+  /// No description provided for @termiusUnofficial.
+  ///
+  /// In es, this message translates to:
+  /// **'No es una función de Termius: OpenWard entiende su formato, y una versión nueva de Termius puede cambiarlo. Si algo no se entiende, no se importa nada a medias y te lo decimos.'**
+  String get termiusUnofficial;
+
   /// No description provided for @textSize.
   ///
   /// In es, this message translates to:
@@ -4328,6 +4850,24 @@ abstract class AppLocalizations {
   /// **'Valor no válido en {subject}{at}: {detail}.'**
   String warnBadValue(String subject, String at, String detail);
 
+  /// No description provided for @warnFeature.
+  ///
+  /// In es, this message translates to:
+  /// **'{host}: no se ha traído {feature}.'**
+  String warnFeature(String host, String feature);
+
+  /// No description provided for @warnFeatureGeneral.
+  ///
+  /// In es, this message translates to:
+  /// **'No se ha traído {feature}.'**
+  String warnFeatureGeneral(String feature);
+
+  /// No description provided for @warnHostChain.
+  ///
+  /// In es, this message translates to:
+  /// **'Las cadenas de saltos de Termius no se han traído: añade los saltos a mano en cada host.'**
+  String get warnHostChain;
+
   /// No description provided for @warnIncludeTooDeep.
   ///
   /// In es, this message translates to:
@@ -4346,6 +4886,30 @@ abstract class AppLocalizations {
   /// **'Bloque Match{at}: OpenWard no lo evalúa y sus líneas se han saltado.'**
   String warnMatch(String at);
 
+  /// No description provided for @warnMosh.
+  ///
+  /// In es, this message translates to:
+  /// **'{host} usaba Mosh: se conectará por SSH.'**
+  String warnMosh(String host);
+
+  /// No description provided for @warnPartlyUnreadable.
+  ///
+  /// In es, this message translates to:
+  /// **'Una parte de los datos no se ha podido leer: {detail}.'**
+  String warnPartlyUnreadable(String detail);
+
+  /// No description provided for @warnShared.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 elemento compartido de un equipo no se puede leer en este ordenador.} other{{count} elementos compartidos de un equipo no se pueden leer en este ordenador.}}'**
+  String warnShared(int count);
+
+  /// No description provided for @warnStartupCommand.
+  ///
+  /// In es, this message translates to:
+  /// **'{host} ejecutaba un comando al conectar; OpenWard aún no lo hace solo.'**
+  String warnStartupCommand(String host);
+
   /// No description provided for @warnStricter.
   ///
   /// In es, this message translates to:
@@ -4363,6 +4927,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{subject}: no se importa{at}.'**
   String warnUnsupported(String subject, String at);
+
+  /// No description provided for @warnValue.
+  ///
+  /// In es, this message translates to:
+  /// **'{host}: el valor «{value}» de {field} no es válido y no se ha traído.'**
+  String warnValue(String host, String field, String value);
 
   /// No description provided for @welcomeNoConfig.
   ///

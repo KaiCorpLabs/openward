@@ -219,6 +219,7 @@ impl OpenWard {
             dest_port: None,
             autostart: false,
             source: None,
+            imported: None,
             extra: Default::default(),
         };
         apply(&spec, &mut f)?;

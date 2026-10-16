@@ -16,7 +16,7 @@ import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../window/chrome.dart';
 import 'editors.dart';
-import 'import_ssh_config.dart';
+import '../import/import_dialog.dart';
 
 /// Saved hosts in their groups, a search box over them, and the actions
 /// that add to them. Double-click (or Enter in the search) connects in a
@@ -61,7 +61,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
   }
 
   Future<void> _import() async {
-    await importSshConfig(context, ref);
+    await showImport(context, ref);
     _refresh();
   }
 
@@ -188,7 +188,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
                       );
                       _menu(at, [
                         _item(l.newGroup, () => _editGroup()),
-                        _item(l.importSshConfigMenu, _import),
+                        _item(l.importEllipsis, _import),
                       ]);
                     },
                   ),

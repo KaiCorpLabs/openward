@@ -1,6 +1,6 @@
 [package]
 name = "openward-import"
-description = "Importers into the vault; for now OpenSSH's ~/.ssh/config"
+description = "Importers into the vault: OpenSSH, Termius, PuTTY, MobaXterm, Tabby and SecureCRT"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,6 +11,18 @@ publish.workspace = true
 [dependencies]
 openward-proto = { path = "../openward-proto" }
 glob = "0.3"
+base64 = "0.22"
+crypto_secretbox = "0.1"
+quick-xml = "0.42"
+serde_json = "1"
+snap = "1"
+yaml-rust2 = "0.10"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = "3"
+
+[target.'cfg(windows)'.dependencies]
+keyring = { version = "3", features = ["windows-native"] }
 
 [dev-dependencies]
 openward-vault = { path = "../openward-vault" }

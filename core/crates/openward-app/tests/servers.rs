@@ -756,6 +756,7 @@ impl Fixture {
                 dest_port: dest.map(|(_, p)| p),
                 autostart,
                 source: None,
+                imported: None,
                 extra: Default::default(),
             }))
             .unwrap()

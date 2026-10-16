@@ -120,6 +120,9 @@ pub struct Group {
     pub parent: Option<ItemId>,
     #[serde(default, skip_serializing_if = "Settings::is_empty")]
     pub settings: Settings,
+    /// Set when it came from another program's import.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub imported: Option<Imported>,
     #[serde(flatten)]
     pub extra: Extra,
 }
@@ -141,6 +144,9 @@ pub struct Host {
     /// Where the host came from; `None` when created by hand.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source: Option<Source>,
+    /// Set when it came from another program's import.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub imported: Option<Imported>,
     #[serde(flatten)]
     pub extra: Extra,
 }
@@ -155,6 +161,9 @@ pub struct Identity {
     /// vault in phase 1, no secrets: keys go by path.
     #[serde(default, skip_serializing_if = "Settings::is_empty")]
     pub settings: Settings,
+    /// Set when it came from another program's import.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub imported: Option<Imported>,
     #[serde(flatten)]
     pub extra: Extra,
 }
@@ -164,6 +173,16 @@ pub struct Identity {
 pub enum Source {
     /// A `Host` alias of an imported `~/.ssh/config`.
     SshConfig { alias: String },
+}
+
+/// What another program called an item: the program (`termius`, `putty`,
+/// `kitty`, `mobaxterm`, `tabby`, `securecrt`) and its own id for it, so
+/// importing again leaves what came before alone. A field and not a
+/// [`Source`] variant, which would break older versions' decoding.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Imported {
+    pub from: String,
+    pub id: String,
 }
 
 /// A saved tunnel: a port forward over the connection to a host.
@@ -191,6 +210,9 @@ pub struct PortForward {
     pub autostart: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source: Option<Source>,
+    /// Set when it came from another program's import.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub imported: Option<Imported>,
     #[serde(flatten)]
     pub extra: Extra,
 }
@@ -208,6 +230,9 @@ pub struct Snippet {
     /// Leave it typed without pressing Enter.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub type_only: bool,
+    /// Set when it came from another program's import.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub imported: Option<Imported>,
     #[serde(flatten)]
     pub extra: Extra,
 }
@@ -235,6 +260,9 @@ pub struct KnownHost {
     pub marker: Option<Marker>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub comment: Option<String>,
+    /// Set when it came from another program's import.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub imported: Option<Imported>,
     #[serde(flatten)]
     pub extra: Extra,
 }
@@ -393,6 +421,7 @@ mod tests {
                 dest_port: Some(5432),
                 autostart: true,
                 source: None,
+                imported: None,
                 extra: Extra::new(),
             }),
         };
@@ -418,6 +447,10 @@ mod tests {
                 script: "sudo systemctl restart {{servicio}}".into(),
                 defaults: [("servicio".to_owned(), "nginx".to_owned())].into(),
                 type_only: true,
+                imported: Some(Imported {
+                    from: "termius".into(),
+                    id: "42".into(),
+                }),
                 extra: Extra::new(),
             }),
         };
@@ -437,6 +470,7 @@ mod tests {
                     agent: Some(Agent::System),
                     ..Settings::default()
                 },
+                imported: None,
                 extra: Extra::new(),
             }),
         };

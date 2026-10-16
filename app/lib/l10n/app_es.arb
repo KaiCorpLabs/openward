@@ -33,6 +33,7 @@
   },
   "alreadyImported": "ya importado",
   "alreadyUses": "Ya la usa",
+  "alsoOnThisComputer": "También en este equipo",
   "announceClosed": "{name}: desconectado",
   "@announceClosed": {
     "placeholders": {
@@ -232,11 +233,40 @@
   "certificateTitle": "Certificado",
   "change": "Cambiar",
   "changedMeanwhile": "Otro cambio ha llegado antes: cierra y vuelve a abrir el editor.",
+  "checkNotImported": "{label} usa {protocol} y no se ha importado.",
+  "@checkNotImported": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "protocol": {
+        "type": "String"
+      }
+    }
+  },
+  "checkTitle": "{count, plural, =1{Revisa 1 cosa} other{Revisa {count} cosas}}",
+  "@checkTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "checkWithoutKey": "«{label}» se ha quedado sin clave: la suya no está en ~/.ssh.",
+  "@checkWithoutKey": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
   "checkedFingerprint": "He comprobado la huella nueva",
   "choiceKeepBoth": "Mantener los dos",
   "choiceNewer": "Solo si el mío es más nuevo",
   "choiceReplace": "Reemplazar",
   "choiceSkip": "Saltar",
+  "chooseExportedFile": "Elige el archivo exportado",
+  "chooseFile": "Elegir…",
   "cipher": "Cifrado",
   "clear": "Quitar",
   "clearFinished": "Quitar las terminadas",
@@ -250,6 +280,8 @@
   "colName": "Nombre",
   "colPermissions": "Permisos",
   "colSize": "Tamaño",
+  "collapse": "Plegar",
+  "comingFromOther": "¿Vienes de PuTTY, MobaXterm o SecureCRT?",
   "command": "Comando",
   "commandHint": "Cada línea se envía como si la escribieras. Para escribir {open} tal cual, pon {escaped}.",
   "@commandHint": {
@@ -371,6 +403,7 @@
   "copyAddress": "Copiar dirección",
   "copyFingerprint": "Copiar la huella",
   "copyPath": "Copiar la ruta",
+  "copyReport": "Copiar el informe",
   "create": "Crear",
   "ctrlShiftPrefix": "Ctrl+Mayús+",
   "cursor": "Cursor",
@@ -477,6 +510,7 @@
   },
   "dropAskFirst": "Si alguno ya existe, te preguntamos antes de tocarlo.",
   "dropToDownload": "Suelta para descargar aquí",
+  "dropToImport": "O arrastra aquí el archivo o la carpeta: se reconoce solo.",
   "dropToUpload": "Suelta para subir aquí",
   "dynamicSentence": "Usa {here} como proxy SOCKS5: las conexiones salen de {host}.",
   "@dynamicSentence": {
@@ -499,6 +533,7 @@
   "editTunnel": "Editar túnel",
   "emptyFolder": "Esta carpeta está vacía",
   "exampleVariable": "nombre",
+  "expand": "Desplegar",
   "failureAuth": "{user}@{label} no ha podido autenticarse.",
   "@failureAuth": {
     "placeholders": {
@@ -573,6 +608,38 @@
       }
     }
   },
+  "featureFirewall": "el firewall «{name}» de SecureCRT",
+  "@featureFirewall": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "featureHardwareKey": "una llave de seguridad",
+  "featureJumpNotSsh": "un salto por un perfil que no es SSH",
+  "featureJumpThrough": "un salto por {target}, que no está",
+  "@featureJumpThrough": {
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "featureMobaCredential": "una credencial guardada en MobaXterm",
+  "featureProxy": "un proxy {kind}",
+  "@featureProxy": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "featureSecureCrtGlobalKey": "la clave global de SecureCRT",
+  "featureSocks4": "un proxy SOCKS4",
+  "featureTabbyVault": "una clave del almacén de Tabby",
+  "featureTelnetProxy": "un proxy Telnet",
+  "featureX11": "el reenvío de X11",
   "fileChanged": "{path} cambió mientras se copiaba.",
   "@fileChanged": {
     "placeholders": {
@@ -676,7 +743,44 @@
     }
   },
   "forward": "Reenvío",
+  "foundMobaXterm": "Sesiones en {path}",
+  "@foundMobaXterm": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "foundSessions": "Sesiones guardadas en {path}",
+  "@foundSessions": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "foundSshConfig": "{count, plural, =1{1 host} other{{count} hosts}}{existing, plural, =0{} other{ · {existing} ya importados}}",
+  "@foundSshConfig": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "existing": {
+        "type": "int"
+      }
+    }
+  },
+  "foundTabby": "Su configuración, en {path}",
+  "@foundTabby": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "foundTermius": "Instalado: se leen sus datos directamente, sin exportar nada",
   "fromDefault": "Valor por defecto",
+  "fromExportedFile": "Desde un archivo exportado",
   "fromGroup": "Del grupo {name}",
   "@fromGroup": {
     "placeholders": {
@@ -742,6 +846,10 @@
   "hostKeys": "Claves de host nuevas",
   "hostNeedsName": "El host necesita un nombre.",
   "hostsSection": "Hosts",
+  "howMobaXterm": "Sessions › Export all sessions to file: un archivo .mxtsessions",
+  "howPutty": "Un .reg exportado del registro (reg export HKCU\\Software\\SimonTatham\\PuTTY\\Sessions putty.reg)",
+  "howSecureCrt": "Tools › Export Settings…: un archivo .xml",
+  "howTabby": "Su config.yaml, si no está en este equipo",
   "identities": "Identidades",
   "identitiesCount": "{total, plural, =1{1 identidad} other{{total} identidades}} · {used} en uso",
   "@identitiesCount": {
@@ -806,7 +914,9 @@
   },
   "importFrom": "Importar de ~/.ssh/config",
   "importFromSshConfig": "Importar de ~/.ssh/config",
+  "importHostsTitle": "Importar hosts",
   "importIntoGroup": "Se guardan en el grupo «~/.ssh/config». Un host trae consigo los hosts por los que salta.",
+  "importIntro": "Trae tus hosts de otro programa. Solo se leen: el original no cambia.",
   "importKeepsFile": "El fichero no se toca, y las claves se quedan donde están: OpenWard guarda la ruta, nunca la clave.",
   "importLater": "Puedes importar más tarde desde la barra lateral.",
   "importN": "{count, plural, =0{Importar} =1{Importar 1 host} other{Importar {count} hosts}}",
@@ -818,6 +928,7 @@
     }
   },
   "importNothing": "No hay hosts nuevos en ~/.ssh/config (o no existe).",
+  "importReportCopied": "Informe copiado",
   "importScheme": "Importar de iTerm2 o Ghostty…",
   "importSchemeDone": "«{name}» importado y puesto en el terminal.",
   "@importSchemeDone": {
@@ -828,7 +939,6 @@
     }
   },
   "importSchemeFailed": "Ese fichero no es un tema de iTerm2 (.itermcolors) ni de Ghostty.",
-  "importSshConfigMenu": "Importar de ~/.ssh/config…",
   "importTitle": "Importar ~/.ssh/config",
   "inDark": "En oscuro",
   "inGroup": "en el grupo {name}",
@@ -1074,6 +1184,62 @@
   },
   "localTerminal": "Terminal local",
   "localUser": "tu usuario local",
+  "madeGroups": "{count, plural, =1{1 grupo, con sus ajustes} other{{count} grupos, con sus ajustes}}",
+  "@madeGroups": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "madeIdentities": "{count, plural, =1{1 identidad} other{{count} identidades}}",
+  "@madeIdentities": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "madeKey": "Clave guardada en {path}",
+  "@madeKey": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "madeKnownHosts": "{count, plural, =1{1 clave de host de confianza, en Biblioteca › Hosts conocidos} other{{count} claves de host de confianza, en Biblioteca › Hosts conocidos}}",
+  "@madeKnownHosts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "madeSkipped": "{count, plural, =1{1 host ya estaba de antes y se ha dejado como estaba} other{{count} hosts ya estaban de antes y se han dejado como estaban}}",
+  "@madeSkipped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "madeSnippets": "{count, plural, =1{1 snippet, en Biblioteca › Snippets} other{{count} snippets, en Biblioteca › Snippets}}",
+  "@madeSnippets": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "madeTunnels": "{count, plural, =1{1 túnel, en Biblioteca › Túneles} other{{count} túneles, en Biblioteca › Túneles}}",
+  "@madeTunnels": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "manageSnippets": "Gestionar snippets…",
   "markerCertAuthority": "Autoridad de certificados: confía en los hosts que firma",
   "markerRevoked": "Revocada: se rechaza siempre",
@@ -1255,6 +1421,7 @@
   "ok": "Aceptar",
   "onConnect": "Al conectar",
   "onSend": "Al enviar",
+  "onThisComputer": "En este equipo",
   "onlyTheServer": "Solo el servidor",
   "onlyThisComputer": "Solo este equipo (127.0.0.1)",
   "openATerminalFirst": "Abre un terminal para ejecutarlo",
@@ -1307,6 +1474,7 @@
   "passphraseField": "Frase",
   "passphraseTitle": "Frase de la clave",
   "passwordTitle": "Contraseña",
+  "passwordsNever": "Las contraseñas no se traen nunca: OpenWard las pide al conectar.",
   "paste": "Pegar",
   "pasteInPanes": "Pegar en {total} paneles",
   "@pasteInPanes": {
@@ -1408,7 +1576,119 @@
   "pressEnterAtTheEnd": "Pulsar Intro al final",
   "pressEnterAtTheEndNote": "Apágalo para dejar el comando escrito y revisarlo antes de ejecutarlo.",
   "preview": "Vista previa",
+  "previewCannotImport": "{protocol}: aún no se puede usar",
+  "@previewCannotImport": {
+    "placeholders": {
+      "protocol": {
+        "type": "String"
+      }
+    }
+  },
+  "previewHostsOf": "{selected} de {total} hosts",
+  "@previewHostsOf": {
+    "placeholders": {
+      "selected": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "previewIdentities": "{count, plural, =1{1 identidad} other{{count} identidades}}",
+  "@previewIdentities": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "previewIntoExisting": "En «{name}», el grupo de la importación anterior",
+  "@previewIntoExisting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "previewIntoGroup": "Dentro del grupo",
+  "previewKeyFound": "→ {path} · la misma clave pública",
+  "@previewKeyFound": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "previewKeyMissing": "{count, plural, =0{No está en ~/.ssh.} =1{No está en ~/.ssh. Sin ella, quien la usa se queda sin clave.} other{No está en ~/.ssh. Sin ella, los {count} que la usan se quedan sin clave.}}",
+  "@previewKeyMissing": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "previewKeys": "Claves",
+  "previewKnownHosts": "{count, plural, =1{1 host conocido} other{{count} hosts conocidos}}",
+  "@previewKnownHosts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "previewLive": "Los cambios se ven al momento en toda la ventana.",
+  "previewNoPasswords": "{count, plural, =1{No se trae la contraseña o frase de paso guardada: OpenWard la pide al conectar.} other{No se traen las {count} contraseñas y frases de paso guardadas: OpenWard las pide al conectar.}}",
+  "@previewNoPasswords": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "previewSaveKey": "Guardarla en {path}, que solo podrás leer tú",
+  "@previewSaveKey": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "previewSnippets": "{count, plural, =1{1 snippet} other{{count} snippets}}",
+  "@previewSnippets": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "previewSubtitle": "{hosts, plural, =1{1 host} other{{hosts} hosts}}{groups, plural, =0{} =1{ en 1 grupo} other{ en {groups} grupos}}",
+  "@previewSubtitle": {
+    "placeholders": {
+      "hosts": {
+        "type": "int"
+      },
+      "groups": {
+        "type": "int"
+      }
+    }
+  },
+  "previewTitle": "Importar de {program}",
+  "@previewTitle": {
+    "placeholders": {
+      "program": {
+        "type": "String"
+      }
+    }
+  },
+  "previewTunnels": "{count, plural, =1{1 túnel} other{{count} túneles}}",
+  "@previewTunnels": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "proxy": "Proxy",
   "proxyHttpNote": "Con un proxy HTTP, la petición CONNECT va sin cifrar: el proxy ve a qué host y puerto te conectas, pero no lo que pasa por SSH.",
   "proxyLoginBody": "{proxy} pide usuario y contraseña para dejarte pasar. No se guardan.",
@@ -1461,6 +1741,41 @@
   },
   "quickConnectHint": "usuario@servidor:puerto",
   "quickConnectInvalid": "Escribe una dirección como usuario@servidor:puerto.",
+  "readFailedTitle": "No se ha podido leer",
+  "readFormat": "Es de {program}, pero no está como se esperaba: {message}",
+  "@readFormat": {
+    "placeholders": {
+      "program": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "readNotRecognized": "No se reconoce de qué programa es. Elige el que exporta PuTTY (.reg), MobaXterm (.mxtsessions), SecureCRT (.xml) o el config.yaml de Tabby.",
+  "readTermius": "Leer Termius",
+  "readTermiusKeychain": "El sistema no dejó usar la clave de Termius del llavero. Vuelve a intentarlo y elige «Permitir».",
+  "readTermiusNoKey": "La clave de Termius no está en el llavero. Abre Termius una vez en este equipo y vuelve a intentarlo.",
+  "readTermiusNotFound": "No hay datos de Termius en este equipo.",
+  "readTermiusWrongKey": "La clave del llavero no abre los datos de Termius; puede que Termius haya cambiado su formato. No se ha importado nada.",
+  "readUnreadable": "No se ha podido leer: {message}",
+  "@readUnreadable": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "readingFile": "Leyendo el archivo…",
+  "readingProgram": "Leyendo los datos de {program}…",
+  "@readingProgram": {
+    "placeholders": {
+      "program": {
+        "type": "String"
+      }
+    }
+  },
   "readyBody": "Estos atajos te llevan a casi todo:",
   "readyTitle": "Todo listo",
   "receives": "Recibe",
@@ -1475,6 +1790,7 @@
     }
   },
   "reduceMotion": "Reducir movimiento",
+  "reimportNote": "Si vuelves a importar, lo que ya trajiste se queda como está, con tus cambios. Solo entra lo nuevo.",
   "reload": "Recargar",
   "remoteSentence": "Lo que se conecte en {host} al puerto {port} llega a {dest} de este equipo.",
   "@remoteSentence": {
@@ -1558,6 +1874,17 @@
   },
   "reportText": "texto",
   "reportTheme": "Tema",
+  "reportTitle": "{count, plural, =0{Nada nuevo de {program}} =1{1 host importado de {program}} other{{count} hosts importados de {program}}}",
+  "@reportTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "program": {
+        "type": "String"
+      }
+    }
+  },
   "reportTunnels": "{count, plural, =1{1 túnel nuevo} other{{count} túneles nuevos}}",
   "@reportTunnels": {
     "placeholders": {
@@ -1568,6 +1895,14 @@
   },
   "reportWhat": "Esto es lo que se copia. No incluye hosts, direcciones, usuarios ni claves.",
   "reportWhere": "Están en el grupo «~/.ssh/config».",
+  "reportWhere2": "Están en el grupo «{group}» de la barra lateral, con sus subgrupos.",
+  "@reportWhere2": {
+    "placeholders": {
+      "group": {
+        "type": "String"
+      }
+    }
+  },
   "resetTheme": "Restablecer",
   "restart": "Reiniciar",
   "restorePanes": "Volver a los paneles",
@@ -1588,6 +1923,7 @@
     }
   },
   "retryNow": "Reintentar ahora",
+  "review": "Revisar",
   "reviewKey": "Revisar la clave…",
   "route": "Cómo llegar",
   "routeDirect": "Directo",
@@ -1883,6 +2219,20 @@
       }
     }
   },
+  "termiusBrings": "Se trae",
+  "termiusBringsHosts": "Hosts y grupos anidados, con sus ajustes",
+  "termiusBringsIdentities": "Identidades: usuario y clave",
+  "termiusBringsSnippets": "Snippets, etiquetas y hosts conocidos",
+  "termiusBringsTunnels": "Túneles y proxy",
+  "termiusIntro": "Termius guarda tus hosts cifrados en este equipo, con la clave en el llavero. Para leerlos, el sistema te va a pedir permiso: con «Permitir» basta para esta vez.",
+  "termiusLeaves": "No se trae",
+  "termiusLeavesChains": "Cadenas de saltos (host chaining): añádelas a mano",
+  "termiusLeavesKeys": "Claves privadas: se busca la misma en ~/.ssh, o se guarda allí si lo pides",
+  "termiusLeavesPasswords": "Contraseñas y frases de paso",
+  "termiusLeavesTelnet": "Hosts de Telnet o serie; los de Mosh entran como SSH",
+  "termiusReadOnly": "Es una lectura sin cambios: Termius no se modifica y puede seguir abierto.",
+  "termiusTitle": "Leer los datos de Termius",
+  "termiusUnofficial": "No es una función de Termius: OpenWard entiende su formato, y una versión nueva de Termius puede cambiarlo. Si algo no se entiende, no se importa nada a medias y te lo decimos.",
   "textSize": "Tamaño del texto",
   "textSizeHelp": "De la interfaz, sobre el del sistema. El terminal tiene el suyo.",
   "theHost": "el host",
@@ -2128,6 +2478,26 @@
       }
     }
   },
+  "warnFeature": "{host}: no se ha traído {feature}.",
+  "@warnFeature": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      },
+      "feature": {
+        "type": "String"
+      }
+    }
+  },
+  "warnFeatureGeneral": "No se ha traído {feature}.",
+  "@warnFeatureGeneral": {
+    "placeholders": {
+      "feature": {
+        "type": "String"
+      }
+    }
+  },
+  "warnHostChain": "Las cadenas de saltos de Termius no se han traído: añade los saltos a mano en cada host.",
   "warnIncludeTooDeep": "Include anidado demasiado hondo{at}.",
   "@warnIncludeTooDeep": {
     "placeholders": {
@@ -2151,6 +2521,38 @@
   "@warnMatch": {
     "placeholders": {
       "at": {
+        "type": "String"
+      }
+    }
+  },
+  "warnMosh": "{host} usaba Mosh: se conectará por SSH.",
+  "@warnMosh": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "warnPartlyUnreadable": "Una parte de los datos no se ha podido leer: {detail}.",
+  "@warnPartlyUnreadable": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "warnShared": "{count, plural, =1{1 elemento compartido de un equipo no se puede leer en este ordenador.} other{{count} elementos compartidos de un equipo no se pueden leer en este ordenador.}}",
+  "@warnShared": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "warnStartupCommand": "{host} ejecutaba un comando al conectar; OpenWard aún no lo hace solo.",
+  "@warnStartupCommand": {
+    "placeholders": {
+      "host": {
         "type": "String"
       }
     }
@@ -2181,6 +2583,20 @@
         "type": "String"
       },
       "at": {
+        "type": "String"
+      }
+    }
+  },
+  "warnValue": "{host}: el valor «{value}» de {field} no es válido y no se ha traído.",
+  "@warnValue": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      },
+      "field": {
+        "type": "String"
+      },
+      "value": {
         "type": "String"
       }
     }

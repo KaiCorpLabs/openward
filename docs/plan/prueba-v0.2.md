@@ -105,6 +105,11 @@ OpenWard lee `~/.ssh/config` y `~/.ssh/known_hosts`. Solo escribe en `known_host
    - ejecútalos con ⌘⇧S en un panel y con broadcast en varios.
 7. **Hosts conocidos:** busca un servidor y olvida una clave. Si tu `known_hosts` tiene nombres cifrados, busca uno por su nombre.
 8. **Teclado y lector de pantalla:** si usas VoiceOver, NVDA u Orca, recorre la app con Tab y dinos lo que no se entienda.
+9. **Importar desde tu cliente anterior** (menú «…» › Importar…):
+   - si usas Termius, léelo desde ahí. Comprueba que están tus hosts, grupos, identidades y túneles, y que las claves se encuentran en `~/.ssh` o se guardan allí;
+   - si vienes de PuTTY, MobaXterm, Tabby o SecureCRT, importa su archivo exportado;
+   - importa una segunda vez y comprueba que no se duplica nada;
+   - conéctate a los hosts importados.
 
 En Windows y Linux, ⌘ es Ctrl+Mayús: Ctrl+Mayús+D, Ctrl+Mayús+O, Ctrl+Mayús+S…
 

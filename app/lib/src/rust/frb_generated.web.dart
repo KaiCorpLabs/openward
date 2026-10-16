@@ -9,6 +9,7 @@
 import 'api/app.dart';
 import 'api/identities.dart';
 import 'api/known_hosts.dart';
+import 'api/programs.dart';
 import 'api/session.dart';
 import 'api/sftp.dart';
 import 'api/snippets.dart';
@@ -35,6 +36,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard;
 
   CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_ProgramDataPtr => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData;
+
+  CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_SftpBrowserPtr => wire
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser;
 
@@ -48,6 +53,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   OpenWard
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
+    dynamic raw,
+  );
+
+  @protected
+  ProgramData
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
     dynamic raw,
   );
 
@@ -70,6 +81,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ProgramData
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
+    dynamic raw,
+  );
+
+  @protected
   SftpBrowser
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
     dynamic raw,
@@ -84,6 +101,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   OpenWard
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
+    dynamic raw,
+  );
+
+  @protected
+  ProgramData
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
     dynamic raw,
   );
 
@@ -115,6 +138,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   bool dco_decode_bool(dynamic raw);
+
+  @protected
+  ProgramData
+  dco_decode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
+    dynamic raw,
+  );
 
   @protected
   AgentKind dco_decode_box_autoadd_agent_kind(dynamic raw);
@@ -171,6 +200,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   LinkView dco_decode_box_autoadd_link_view(dynamic raw);
 
   @protected
+  ProgramChoice dco_decode_box_autoadd_program_choice(dynamic raw);
+
+  @protected
+  ProgramKind dco_decode_box_autoadd_program_kind(dynamic raw);
+
+  @protected
   PromptAnswer dco_decode_box_autoadd_prompt_answer(dynamic raw);
 
   @protected
@@ -181,6 +216,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ProxyKind dco_decode_box_autoadd_proxy_kind(dynamic raw);
+
+  @protected
+  ReadFailure dco_decode_box_autoadd_read_failure(dynamic raw);
 
   @protected
   ReconnectingView dco_decode_box_autoadd_reconnecting_view(dynamic raw);
@@ -259,6 +297,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FileKind dco_decode_file_kind(dynamic raw);
+
+  @protected
+  FoundProgram dco_decode_found_program(dynamic raw);
 
   @protected
   GroupDetail dco_decode_group_detail(dynamic raw);
@@ -360,6 +401,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<FileEntry> dco_decode_list_file_entry(dynamic raw);
 
   @protected
+  List<FoundProgram> dco_decode_list_found_program(dynamic raw);
+
+  @protected
   List<GroupView> dco_decode_list_group_view(dynamic raw);
 
   @protected
@@ -393,7 +437,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<PreviousKeyView> dco_decode_list_previous_key_view(dynamic raw);
 
   @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
+
+  @protected
+  List<ProgramItem> dco_decode_list_program_item(dynamic raw);
+
+  @protected
+  List<ProgramKey> dco_decode_list_program_key(dynamic raw);
+
+  @protected
+  List<ProgramWarning> dco_decode_list_program_warning(dynamic raw);
 
   @protected
   List<QuestionView> dco_decode_list_question_view(dynamic raw);
@@ -421,6 +477,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  ProgramData?
+  dco_decode_opt_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
+    dynamic raw,
+  );
 
   @protected
   AgentKind? dco_decode_opt_box_autoadd_agent_kind(dynamic raw);
@@ -465,6 +527,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   LinkView? dco_decode_opt_box_autoadd_link_view(dynamic raw);
 
   @protected
+  ProgramKind? dco_decode_opt_box_autoadd_program_kind(dynamic raw);
+
+  @protected
   PromptKind? dco_decode_opt_box_autoadd_prompt_kind(dynamic raw);
 
   @protected
@@ -472,6 +537,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ProxyKind? dco_decode_opt_box_autoadd_proxy_kind(dynamic raw);
+
+  @protected
+  ReadFailure? dco_decode_opt_box_autoadd_read_failure(dynamic raw);
 
   @protected
   ReconnectingView? dco_decode_opt_box_autoadd_reconnecting_view(dynamic raw);
@@ -516,6 +584,33 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PreviousKeyView dco_decode_previous_key_view(dynamic raw);
 
   @protected
+  ProgramChoice dco_decode_program_choice(dynamic raw);
+
+  @protected
+  ProgramItem dco_decode_program_item(dynamic raw);
+
+  @protected
+  ProgramKey dco_decode_program_key(dynamic raw);
+
+  @protected
+  ProgramKind dco_decode_program_kind(dynamic raw);
+
+  @protected
+  ProgramPreview dco_decode_program_preview(dynamic raw);
+
+  @protected
+  ProgramRead dco_decode_program_read(dynamic raw);
+
+  @protected
+  ProgramReport dco_decode_program_report(dynamic raw);
+
+  @protected
+  ProgramWarning dco_decode_program_warning(dynamic raw);
+
+  @protected
+  ProgramWarningKind dco_decode_program_warning_kind(dynamic raw);
+
+  @protected
   PromptAnswer dco_decode_prompt_answer(dynamic raw);
 
   @protected
@@ -529,6 +624,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   QuestionView dco_decode_question_view(dynamic raw);
+
+  @protected
+  ReadFailure dco_decode_read_failure(dynamic raw);
+
+  @protected
+  ReadFailureKind dco_decode_read_failure_kind(dynamic raw);
 
   @protected
   ReconnectingView dco_decode_reconnecting_view(dynamic raw);
@@ -636,6 +737,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ProgramData
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   SftpBrowser
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
     SseDeserializer deserializer,
@@ -654,6 +761,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ProgramData
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   SftpBrowser
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
     SseDeserializer deserializer,
@@ -668,6 +781,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   OpenWard
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ProgramData
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
     SseDeserializer deserializer,
   );
 
@@ -699,6 +818,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   bool sse_decode_bool(SseDeserializer deserializer);
+
+  @protected
+  ProgramData
+  sse_decode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
+    SseDeserializer deserializer,
+  );
 
   @protected
   AgentKind sse_decode_box_autoadd_agent_kind(SseDeserializer deserializer);
@@ -765,6 +890,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   LinkView sse_decode_box_autoadd_link_view(SseDeserializer deserializer);
 
   @protected
+  ProgramChoice sse_decode_box_autoadd_program_choice(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ProgramKind sse_decode_box_autoadd_program_kind(SseDeserializer deserializer);
+
+  @protected
   PromptAnswer sse_decode_box_autoadd_prompt_answer(
     SseDeserializer deserializer,
   );
@@ -777,6 +910,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ProxyKind sse_decode_box_autoadd_proxy_kind(SseDeserializer deserializer);
+
+  @protected
+  ReadFailure sse_decode_box_autoadd_read_failure(SseDeserializer deserializer);
 
   @protected
   ReconnectingView sse_decode_box_autoadd_reconnecting_view(
@@ -859,6 +995,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FileKind sse_decode_file_kind(SseDeserializer deserializer);
+
+  @protected
+  FoundProgram sse_decode_found_program(SseDeserializer deserializer);
 
   @protected
   GroupDetail sse_decode_group_detail(SseDeserializer deserializer);
@@ -964,6 +1103,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<FileEntry> sse_decode_list_file_entry(SseDeserializer deserializer);
 
   @protected
+  List<FoundProgram> sse_decode_list_found_program(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<GroupView> sse_decode_list_group_view(SseDeserializer deserializer);
 
   @protected
@@ -1011,7 +1155,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
+
+  @protected
+  List<ProgramItem> sse_decode_list_program_item(SseDeserializer deserializer);
+
+  @protected
+  List<ProgramKey> sse_decode_list_program_key(SseDeserializer deserializer);
+
+  @protected
+  List<ProgramWarning> sse_decode_list_program_warning(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<QuestionView> sse_decode_list_question_view(
@@ -1049,6 +1207,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  ProgramData?
+  sse_decode_opt_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
+    SseDeserializer deserializer,
+  );
 
   @protected
   AgentKind? sse_decode_opt_box_autoadd_agent_kind(
@@ -1113,6 +1277,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   LinkView? sse_decode_opt_box_autoadd_link_view(SseDeserializer deserializer);
 
   @protected
+  ProgramKind? sse_decode_opt_box_autoadd_program_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   PromptKind? sse_decode_opt_box_autoadd_prompt_kind(
     SseDeserializer deserializer,
   );
@@ -1124,6 +1293,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ProxyKind? sse_decode_opt_box_autoadd_proxy_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ReadFailure? sse_decode_opt_box_autoadd_read_failure(
     SseDeserializer deserializer,
   );
 
@@ -1182,6 +1356,35 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PreviousKeyView sse_decode_previous_key_view(SseDeserializer deserializer);
 
   @protected
+  ProgramChoice sse_decode_program_choice(SseDeserializer deserializer);
+
+  @protected
+  ProgramItem sse_decode_program_item(SseDeserializer deserializer);
+
+  @protected
+  ProgramKey sse_decode_program_key(SseDeserializer deserializer);
+
+  @protected
+  ProgramKind sse_decode_program_kind(SseDeserializer deserializer);
+
+  @protected
+  ProgramPreview sse_decode_program_preview(SseDeserializer deserializer);
+
+  @protected
+  ProgramRead sse_decode_program_read(SseDeserializer deserializer);
+
+  @protected
+  ProgramReport sse_decode_program_report(SseDeserializer deserializer);
+
+  @protected
+  ProgramWarning sse_decode_program_warning(SseDeserializer deserializer);
+
+  @protected
+  ProgramWarningKind sse_decode_program_warning_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   PromptAnswer sse_decode_prompt_answer(SseDeserializer deserializer);
 
   @protected
@@ -1195,6 +1398,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   QuestionView sse_decode_question_view(SseDeserializer deserializer);
+
+  @protected
+  ReadFailure sse_decode_read_failure(SseDeserializer deserializer);
+
+  @protected
+  ReadFailureKind sse_decode_read_failure_kind(SseDeserializer deserializer);
 
   @protected
   ReconnectingView sse_decode_reconnecting_view(SseDeserializer deserializer);
@@ -1307,6 +1516,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
+    ProgramData self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
     SftpBrowser self,
     SseSerializer serializer,
@@ -1328,6 +1544,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
+    ProgramData self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
     SftpBrowser self,
     SseSerializer serializer,
@@ -1344,6 +1567,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
     OpenWard self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
+    ProgramData self,
     SseSerializer serializer,
   );
 
@@ -1378,6 +1608,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
+
+  @protected
+  void
+  sse_encode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
+    ProgramData self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_box_autoadd_agent_kind(
@@ -1485,6 +1722,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_program_choice(
+    ProgramChoice self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_program_kind(
+    ProgramKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_prompt_answer(
     PromptAnswer self,
     SseSerializer serializer,
@@ -1505,6 +1754,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_proxy_kind(
     ProxyKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_read_failure(
+    ReadFailure self,
     SseSerializer serializer,
   );
 
@@ -1612,6 +1867,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_file_kind(FileKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_found_program(FoundProgram self, SseSerializer serializer);
 
   @protected
   void sse_encode_group_detail(GroupDetail self, SseSerializer serializer);
@@ -1737,6 +1995,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_found_program(
+    List<FoundProgram> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_group_view(
     List<GroupView> self,
     SseSerializer serializer,
@@ -1794,8 +2058,29 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_program_item(
+    List<ProgramItem> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_program_key(
+    List<ProgramKey> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_program_warning(
+    List<ProgramWarning> self,
     SseSerializer serializer,
   );
 
@@ -1846,6 +2131,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void
+  sse_encode_opt_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
+    ProgramData? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_box_autoadd_agent_kind(
@@ -1929,6 +2221,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_program_kind(
+    ProgramKind? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_prompt_kind(
     PromptKind? self,
     SseSerializer serializer,
@@ -1943,6 +2241,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_proxy_kind(
     ProxyKind? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_read_failure(
+    ReadFailure? self,
     SseSerializer serializer,
   );
 
@@ -2013,6 +2317,42 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_program_choice(ProgramChoice self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_program_item(ProgramItem self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_program_key(ProgramKey self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_program_kind(ProgramKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_program_preview(
+    ProgramPreview self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_program_read(ProgramRead self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_program_report(ProgramReport self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_program_warning(
+    ProgramWarning self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_program_warning_kind(
+    ProgramWarningKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_prompt_answer(PromptAnswer self, SseSerializer serializer);
 
   @protected
@@ -2026,6 +2366,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_question_view(QuestionView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_read_failure(ReadFailure self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_read_failure_kind(
+    ReadFailureKind self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_reconnecting_view(
@@ -2167,6 +2516,22 @@ class RustLibWire implements BaseWire {
       );
 
   void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
+        ptr,
+      );
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
+        ptr,
+      );
+
+  void
   rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSftpBrowser(
     int ptr,
   ) => wasmModule
@@ -2212,6 +2577,16 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
 
   external void
   rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
+    int ptr,
+  );
+
+  external void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
+    int ptr,
+  );
+
+  external void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProgramData(
     int ptr,
   );
 

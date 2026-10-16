@@ -9,6 +9,7 @@
 @Timeout(Duration(minutes: 5))
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -22,6 +23,7 @@ import 'package:openward/app.dart';
 import 'package:openward/core/providers.dart';
 import 'package:openward/core/settings.dart';
 import 'package:openward/hosts/sidebar.dart';
+import 'package:openward/import/program_preview.dart';
 import 'package:openward/src/rust/api/app.dart';
 import 'package:openward/src/rust/api/tunnels.dart';
 import 'package:openward/src/rust/api/vault.dart';
@@ -30,6 +32,16 @@ import 'package:openward/tabs/tabs.dart';
 import 'package:openward/terminal/controller.dart';
 
 final _frame = GlobalKey();
+
+/// The repository, found up from the test app's executable.
+String get _repo {
+  var dir = File(Platform.resolvedExecutable).parent;
+  while (!Directory('${dir.path}/core/crates/openward-import').existsSync()) {
+    if (dir.parent.path == dir.path) fail('repository not found');
+    dir = dir.parent;
+  }
+  return dir.path;
+}
 
 /// Where screenshots go: `--dart-define=OPENWARD_SHOTS=…` (the CI), or the
 /// temporary folder. A define, because the test app does not see the
@@ -98,6 +110,12 @@ void main() {
         autostart: true,
       ),
     );
+    // What importing the made-up Termius data would bring.
+    final termius = await app.readProgramWithKey(
+      path: '$_repo/core/crates/openward-import/tests/fixtures/termius/Termius',
+      termiusKey: List.filled(32, 0x42),
+    );
+    final importPreview = app.previewProgram(data: termius.data!);
     final settings = File('${dir.path}/data/settings.json')
       ..writeAsStringSync(
         '{"language": "es", "welcomed": true, "seen_news": "0.2"}',
@@ -181,6 +199,14 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
       await tester.tap(find.text('Apariencia').first);
       await shot('$name-4-appearance');
+
+      unawaited(
+        showProgramPreview(tester.element(find.byType(Sidebar)), importPreview),
+      );
+      await tester.pump(const Duration(milliseconds: 500));
+      await shot('$name-5-import');
+      await tester.tap(find.text('Cancelar'));
+      await tester.pump(const Duration(milliseconds: 400));
       // Back to the terminal alone.
       while (container.read(tabsProvider).tabs.length > 1) {
         tabs.select(1);
@@ -188,7 +214,7 @@ void main() {
       }
       await tester.pump(const Duration(milliseconds: 200));
     }
-    expect(out.listSync().length, _themes.length * 4);
+    expect(out.listSync().length, _themes.length * 5);
     binding.reportData = {'screenshots': reported};
     tabs.closeCurrent();
     await tester.pump(const Duration(milliseconds: 300));

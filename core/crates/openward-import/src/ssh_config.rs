@@ -755,6 +755,7 @@ fn tunnel(alias: &str, host: ItemId, f: &ForwardSpec) -> PortForward {
         source: Some(Source::SshConfig {
             alias: alias.to_owned(),
         }),
+        imported: None,
         extra: Extra::new(),
     }
 }

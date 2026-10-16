@@ -385,6 +385,7 @@ mod tests {
             dest_port: None,
             autostart: false,
             source: None,
+            imported: None,
             extra: Extra::new(),
         }
     }

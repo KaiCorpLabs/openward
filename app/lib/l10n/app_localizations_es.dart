@@ -71,6 +71,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get alreadyUses => 'Ya la usa';
 
   @override
+  String get alsoOnThisComputer => 'También en este equipo';
+
+  @override
   String announceClosed(String name) {
     return '$name: desconectado';
   }
@@ -290,6 +293,27 @@ class AppLocalizationsEs extends AppLocalizations {
       'Otro cambio ha llegado antes: cierra y vuelve a abrir el editor.';
 
   @override
+  String checkNotImported(String label, String protocol) {
+    return '$label usa $protocol y no se ha importado.';
+  }
+
+  @override
+  String checkTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Revisa $count cosas',
+      one: 'Revisa 1 cosa',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String checkWithoutKey(String label) {
+    return '«$label» se ha quedado sin clave: la suya no está en ~/.ssh.';
+  }
+
+  @override
   String get checkedFingerprint => 'He comprobado la huella nueva';
 
   @override
@@ -303,6 +327,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get choiceSkip => 'Saltar';
+
+  @override
+  String get chooseExportedFile => 'Elige el archivo exportado';
+
+  @override
+  String get chooseFile => 'Elegir…';
 
   @override
   String get cipher => 'Cifrado';
@@ -342,6 +372,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get colSize => 'Tamaño';
+
+  @override
+  String get collapse => 'Plegar';
+
+  @override
+  String get comingFromOther => '¿Vienes de PuTTY, MobaXterm o SecureCRT?';
 
   @override
   String get command => 'Comando';
@@ -473,6 +509,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get copyPath => 'Copiar la ruta';
+
+  @override
+  String get copyReport => 'Copiar el informe';
 
   @override
   String get create => 'Crear';
@@ -616,6 +655,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get dropToDownload => 'Suelta para descargar aquí';
 
   @override
+  String get dropToImport =>
+      'O arrastra aquí el archivo o la carpeta: se reconoce solo.';
+
+  @override
   String get dropToUpload => 'Suelta para subir aquí';
 
   @override
@@ -654,6 +697,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get exampleVariable => 'nombre';
 
   @override
+  String get expand => 'Desplegar';
+
+  @override
   String failureAuth(String user, String label) {
     return '$user@$label no ha podido autenticarse.';
   }
@@ -687,6 +733,45 @@ class AppLocalizationsEs extends AppLocalizations {
   String failureNoSftp(String label) {
     return '$label no tiene SFTP: al servidor le falta sftp-server.';
   }
+
+  @override
+  String featureFirewall(String name) {
+    return 'el firewall «$name» de SecureCRT';
+  }
+
+  @override
+  String get featureHardwareKey => 'una llave de seguridad';
+
+  @override
+  String get featureJumpNotSsh => 'un salto por un perfil que no es SSH';
+
+  @override
+  String featureJumpThrough(String target) {
+    return 'un salto por $target, que no está';
+  }
+
+  @override
+  String get featureMobaCredential => 'una credencial guardada en MobaXterm';
+
+  @override
+  String featureProxy(String kind) {
+    return 'un proxy $kind';
+  }
+
+  @override
+  String get featureSecureCrtGlobalKey => 'la clave global de SecureCRT';
+
+  @override
+  String get featureSocks4 => 'un proxy SOCKS4';
+
+  @override
+  String get featureTabbyVault => 'una clave del almacén de Tabby';
+
+  @override
+  String get featureTelnetProxy => 'un proxy Telnet';
+
+  @override
+  String get featureX11 => 'el reenvío de X11';
 
   @override
   String fileChanged(String path) {
@@ -818,7 +903,46 @@ class AppLocalizationsEs extends AppLocalizations {
   String get forward => 'Reenvío';
 
   @override
+  String foundMobaXterm(String path) {
+    return 'Sesiones en $path';
+  }
+
+  @override
+  String foundSessions(String path) {
+    return 'Sesiones guardadas en $path';
+  }
+
+  @override
+  String foundSshConfig(int count, int existing) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hosts',
+      one: '1 host',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      existing,
+      locale: localeName,
+      other: ' · $existing ya importados',
+      zero: '',
+    );
+    return '$_temp0$_temp1';
+  }
+
+  @override
+  String foundTabby(String path) {
+    return 'Su configuración, en $path';
+  }
+
+  @override
+  String get foundTermius =>
+      'Instalado: se leen sus datos directamente, sin exportar nada';
+
+  @override
   String get fromDefault => 'Valor por defecto';
+
+  @override
+  String get fromExportedFile => 'Desde un archivo exportado';
 
   @override
   String fromGroup(String name) {
@@ -907,6 +1031,20 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get hostsSection => 'Hosts';
+
+  @override
+  String get howMobaXterm =>
+      'Sessions › Export all sessions to file: un archivo .mxtsessions';
+
+  @override
+  String get howPutty =>
+      'Un .reg exportado del registro (reg export HKCU\\Software\\SimonTatham\\PuTTY\\Sessions putty.reg)';
+
+  @override
+  String get howSecureCrt => 'Tools › Export Settings…: un archivo .xml';
+
+  @override
+  String get howTabby => 'Su config.yaml, si no está en este equipo';
 
   @override
   String get identities => 'Identidades';
@@ -1000,8 +1138,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get importFromSshConfig => 'Importar de ~/.ssh/config';
 
   @override
+  String get importHostsTitle => 'Importar hosts';
+
+  @override
   String get importIntoGroup =>
       'Se guardan en el grupo «~/.ssh/config». Un host trae consigo los hosts por los que salta.';
+
+  @override
+  String get importIntro =>
+      'Trae tus hosts de otro programa. Solo se leen: el original no cambia.';
 
   @override
   String get importKeepsFile =>
@@ -1027,6 +1172,9 @@ class AppLocalizationsEs extends AppLocalizations {
       'No hay hosts nuevos en ~/.ssh/config (o no existe).';
 
   @override
+  String get importReportCopied => 'Informe copiado';
+
+  @override
   String get importScheme => 'Importar de iTerm2 o Ghostty…';
 
   @override
@@ -1037,9 +1185,6 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get importSchemeFailed =>
       'Ese fichero no es un tema de iTerm2 (.itermcolors) ni de Ghostty.';
-
-  @override
-  String get importSshConfigMenu => 'Importar de ~/.ssh/config…';
 
   @override
   String get importTitle => 'Importar ~/.ssh/config';
@@ -1317,6 +1462,78 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get localUser => 'tu usuario local';
+
+  @override
+  String madeGroups(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count grupos, con sus ajustes',
+      one: '1 grupo, con sus ajustes',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String madeIdentities(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count identidades',
+      one: '1 identidad',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String madeKey(String path) {
+    return 'Clave guardada en $path';
+  }
+
+  @override
+  String madeKnownHosts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count claves de host de confianza, en Biblioteca › Hosts conocidos',
+      one: '1 clave de host de confianza, en Biblioteca › Hosts conocidos',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String madeSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hosts ya estaban de antes y se han dejado como estaban',
+      one: '1 host ya estaba de antes y se ha dejado como estaba',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String madeSnippets(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count snippets, en Biblioteca › Snippets',
+      one: '1 snippet, en Biblioteca › Snippets',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String madeTunnels(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count túneles, en Biblioteca › Túneles',
+      one: '1 túnel, en Biblioteca › Túneles',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get manageSnippets => 'Gestionar snippets…';
@@ -1617,6 +1834,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get onSend => 'Al enviar';
 
   @override
+  String get onThisComputer => 'En este equipo';
+
+  @override
   String get onlyTheServer => 'Solo el servidor';
 
   @override
@@ -1704,6 +1924,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get passwordTitle => 'Contraseña';
+
+  @override
+  String get passwordsNever =>
+      'Las contraseñas no se traen nunca: OpenWard las pide al conectar.';
 
   @override
   String get paste => 'Pegar';
@@ -1848,7 +2072,130 @@ class AppLocalizationsEs extends AppLocalizations {
   String get preview => 'Vista previa';
 
   @override
+  String previewCannotImport(String protocol) {
+    return '$protocol: aún no se puede usar';
+  }
+
+  @override
+  String previewHostsOf(int selected, int total) {
+    return '$selected de $total hosts';
+  }
+
+  @override
+  String previewIdentities(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count identidades',
+      one: '1 identidad',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String previewIntoExisting(String name) {
+    return 'En «$name», el grupo de la importación anterior';
+  }
+
+  @override
+  String get previewIntoGroup => 'Dentro del grupo';
+
+  @override
+  String previewKeyFound(String path) {
+    return '→ $path · la misma clave pública';
+  }
+
+  @override
+  String previewKeyMissing(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'No está en ~/.ssh. Sin ella, los $count que la usan se quedan sin clave.',
+      one: 'No está en ~/.ssh. Sin ella, quien la usa se queda sin clave.',
+      zero: 'No está en ~/.ssh.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get previewKeys => 'Claves';
+
+  @override
+  String previewKnownHosts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hosts conocidos',
+      one: '1 host conocido',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get previewLive => 'Los cambios se ven al momento en toda la ventana.';
+
+  @override
+  String previewNoPasswords(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'No se traen las $count contraseñas y frases de paso guardadas: OpenWard las pide al conectar.',
+      one: 'No se trae la contraseña o frase de paso guardada: OpenWard la pide al conectar.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String previewSaveKey(String path) {
+    return 'Guardarla en $path, que solo podrás leer tú';
+  }
+
+  @override
+  String previewSnippets(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count snippets',
+      one: '1 snippet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String previewSubtitle(int hosts, int groups) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hosts,
+      locale: localeName,
+      other: '$hosts hosts',
+      one: '1 host',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      groups,
+      locale: localeName,
+      other: ' en $groups grupos',
+      one: ' en 1 grupo',
+      zero: '',
+    );
+    return '$_temp0$_temp1';
+  }
+
+  @override
+  String previewTitle(String program) {
+    return 'Importar de $program';
+  }
+
+  @override
+  String previewTunnels(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count túneles',
+      one: '1 túnel',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get proxy => 'Proxy';
@@ -1915,6 +2262,49 @@ class AppLocalizationsEs extends AppLocalizations {
       'Escribe una dirección como usuario@servidor:puerto.';
 
   @override
+  String get readFailedTitle => 'No se ha podido leer';
+
+  @override
+  String readFormat(String program, String message) {
+    return 'Es de $program, pero no está como se esperaba: $message';
+  }
+
+  @override
+  String get readNotRecognized =>
+      'No se reconoce de qué programa es. Elige el que exporta PuTTY (.reg), MobaXterm (.mxtsessions), SecureCRT (.xml) o el config.yaml de Tabby.';
+
+  @override
+  String get readTermius => 'Leer Termius';
+
+  @override
+  String get readTermiusKeychain =>
+      'El sistema no dejó usar la clave de Termius del llavero. Vuelve a intentarlo y elige «Permitir».';
+
+  @override
+  String get readTermiusNoKey =>
+      'La clave de Termius no está en el llavero. Abre Termius una vez en este equipo y vuelve a intentarlo.';
+
+  @override
+  String get readTermiusNotFound => 'No hay datos de Termius en este equipo.';
+
+  @override
+  String get readTermiusWrongKey =>
+      'La clave del llavero no abre los datos de Termius; puede que Termius haya cambiado su formato. No se ha importado nada.';
+
+  @override
+  String readUnreadable(String message) {
+    return 'No se ha podido leer: $message';
+  }
+
+  @override
+  String get readingFile => 'Leyendo el archivo…';
+
+  @override
+  String readingProgram(String program) {
+    return 'Leyendo los datos de $program…';
+  }
+
+  @override
   String get readyBody => 'Estos atajos te llevan a casi todo:';
 
   @override
@@ -1936,6 +2326,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get reduceMotion => 'Reducir movimiento';
+
+  @override
+  String get reimportNote =>
+      'Si vuelves a importar, lo que ya trajiste se queda como está, con tus cambios. Solo entra lo nuevo.';
 
   @override
   String get reload => 'Recargar';
@@ -2039,6 +2433,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reportTheme => 'Tema';
 
   @override
+  String reportTitle(int count, String program) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hosts importados de $program',
+      one: '1 host importado de $program',
+      zero: 'Nada nuevo de $program',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String reportTunnels(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -2055,6 +2461,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get reportWhere => 'Están en el grupo «~/.ssh/config».';
+
+  @override
+  String reportWhere2(String group) {
+    return 'Están en el grupo «$group» de la barra lateral, con sus subgrupos.';
+  }
 
   @override
   String get resetTheme => 'Restablecer';
@@ -2078,6 +2489,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get retryNow => 'Reintentar ahora';
+
+  @override
+  String get review => 'Revisar';
 
   @override
   String get reviewKey => 'Revisar la clave…';
@@ -2463,6 +2877,54 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get termiusBrings => 'Se trae';
+
+  @override
+  String get termiusBringsHosts => 'Hosts y grupos anidados, con sus ajustes';
+
+  @override
+  String get termiusBringsIdentities => 'Identidades: usuario y clave';
+
+  @override
+  String get termiusBringsSnippets => 'Snippets, etiquetas y hosts conocidos';
+
+  @override
+  String get termiusBringsTunnels => 'Túneles y proxy';
+
+  @override
+  String get termiusIntro =>
+      'Termius guarda tus hosts cifrados en este equipo, con la clave en el llavero. Para leerlos, el sistema te va a pedir permiso: con «Permitir» basta para esta vez.';
+
+  @override
+  String get termiusLeaves => 'No se trae';
+
+  @override
+  String get termiusLeavesChains =>
+      'Cadenas de saltos (host chaining): añádelas a mano';
+
+  @override
+  String get termiusLeavesKeys =>
+      'Claves privadas: se busca la misma en ~/.ssh, o se guarda allí si lo pides';
+
+  @override
+  String get termiusLeavesPasswords => 'Contraseñas y frases de paso';
+
+  @override
+  String get termiusLeavesTelnet =>
+      'Hosts de Telnet o serie; los de Mosh entran como SSH';
+
+  @override
+  String get termiusReadOnly =>
+      'Es una lectura sin cambios: Termius no se modifica y puede seguir abierto.';
+
+  @override
+  String get termiusTitle => 'Leer los datos de Termius';
+
+  @override
+  String get termiusUnofficial =>
+      'No es una función de Termius: OpenWard entiende su formato, y una versión nueva de Termius puede cambiarlo. Si algo no se entiende, no se importa nada a medias y te lo decimos.';
+
+  @override
   String get textSize => 'Tamaño del texto';
 
   @override
@@ -2771,6 +3233,20 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String warnFeature(String host, String feature) {
+    return '$host: no se ha traído $feature.';
+  }
+
+  @override
+  String warnFeatureGeneral(String feature) {
+    return 'No se ha traído $feature.';
+  }
+
+  @override
+  String get warnHostChain =>
+      'Las cadenas de saltos de Termius no se han traído: añade los saltos a mano en cada host.';
+
+  @override
   String warnIncludeTooDeep(String at) {
     return 'Include anidado demasiado hondo$at.';
   }
@@ -2786,6 +3262,33 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String warnMosh(String host) {
+    return '$host usaba Mosh: se conectará por SSH.';
+  }
+
+  @override
+  String warnPartlyUnreadable(String detail) {
+    return 'Una parte de los datos no se ha podido leer: $detail.';
+  }
+
+  @override
+  String warnShared(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count elementos compartidos de un equipo no se pueden leer en este ordenador.',
+      one: '1 elemento compartido de un equipo no se puede leer en este ordenador.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String warnStartupCommand(String host) {
+    return '$host ejecutaba un comando al conectar; OpenWard aún no lo hace solo.';
+  }
+
+  @override
   String warnStricter(String at) {
     return 'StrictHostKeyChecking no$at: se importa como «aceptar nuevas»; una clave que cambia nunca se acepta sin preguntar.';
   }
@@ -2798,6 +3301,11 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String warnUnsupported(String subject, String at) {
     return '$subject: no se importa$at.';
+  }
+
+  @override
+  String warnValue(String host, String field, String value) {
+    return '$host: el valor «$value» de $field no es válido y no se ha traído.';
   }
 
   @override

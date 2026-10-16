@@ -127,7 +127,7 @@ flowchart TB
 | `openward-pty` | Terminal local en escritorio | `portable-pty` 0.9.0 fijado (probado en S1.5; sin versión desde febrero de 2025, fork si hace falta) |
 | `openward-serial` | Puertos serie en escritorio (Android con USB en una fase posterior; iOS no tiene) | `serialport` (MPL-2.0; busca mantenedores) |
 | `openward-mosh` | Cliente Mosh clean-room (fase 4) | — |
-| `openward-import` | Importar ssh_config, Termius, PuTTY (registro/.reg), MobaXterm (.mxtsessions), SecureCRT (XML) y CSV | — |
+| `openward-import` | Importar ssh_config, Termius (sus datos del equipo: IndexedDB de Chromium sobre LevelDB, campos cifrados con secretbox y la clave del llavero), PuTTY y KiTTY (.reg y carpetas de sesiones), MobaXterm (.mxtsessions), Tabby (config.yaml) y SecureCRT (XML y .ini). CSV, más adelante | — |
 | `openward-integrations` | Tailscale, Vault/OpenBao, step-ca, Teleport, Cloudflare, inventario cloud | `reqwest` |
 | `openward-ai` | Proveedores BYOK y locales, redacción de secretos, servidor MCP | `rmcp` |
 | `openward-agent` | Agente SSH (socket Unix o named pipe) respaldado por el vault | `ssh-agent-lib` |

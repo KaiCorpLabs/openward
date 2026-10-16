@@ -7,6 +7,7 @@
 @Timeout(Duration(minutes: 3))
 library;
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -20,6 +21,9 @@ import 'package:integration_test/integration_test.dart';
 import 'package:openward/app.dart';
 import 'package:openward/core/providers.dart';
 import 'package:openward/core/settings.dart';
+import 'package:openward/hosts/sidebar.dart';
+import 'package:openward/import/program_preview.dart';
+import 'package:openward/import/termius_consent.dart';
 import 'package:openward/src/rust/api/app.dart';
 import 'package:openward/src/rust/api/identities.dart';
 import 'package:openward/src/rust/api/snippets.dart';
@@ -31,6 +35,16 @@ import 'package:openward/terminal/controller.dart';
 import 'package:openward/terminal/keys.dart';
 
 final _frame = GlobalKey();
+
+/// The repository, found up from the test app's executable.
+String get _repo {
+  var dir = File(Platform.resolvedExecutable).parent;
+  while (!Directory('${dir.path}/core/crates/openward-import').existsSync()) {
+    if (dir.parent.path == dir.path) fail('repository not found');
+    dir = dir.parent;
+  }
+  return dir.path;
+}
 
 /// Where screenshots go: `--dart-define=OPENWARD_SHOTS=…` (the CI), or the
 /// temporary folder. A define, because the test app does not see the
@@ -203,6 +217,27 @@ void main() {
     await audit('snippets');
     await tapText('Logs');
     await audit('snippet editor');
+    await close();
+
+    // Importing from another program: where from, Termius's warning, and
+    // what would come (the made-up Termius data).
+    await tester.tap(find.byTooltip('Más acciones'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tapText('Importar…');
+    await audit('import: where from');
+    await close();
+    final sidebar = tester.element(find.byType(Sidebar));
+    unawaited(confirmTermius(sidebar));
+    await audit("import: Termius's warning");
+    await close();
+    final termius = await app.readProgramWithKey(
+      path: '$_repo/core/crates/openward-import/tests/fixtures/termius/Termius',
+      termiusKey: List.filled(32, 0x42),
+    );
+    unawaited(
+      showProgramPreview(sidebar, app.previewProgram(data: termius.data!)),
+    );
+    await audit('import: what comes');
     await close();
 
     tabs.openPage(PageKind.knownHosts);

@@ -12,6 +12,9 @@ final openWardProvider = Provider<OpenWard>(
 /// Tests point it at a file of their own.
 final sshConfigFileProvider = Provider<String?>((ref) => null);
 
+/// Termius's key instead of the keychain's (tests).
+final termiusKeyProvider = Provider<List<int>?>((ref) => null);
+
 /// Saved hosts and groups, as the vault has them now.
 class Library {
   const Library({required this.hosts, required this.groups});
