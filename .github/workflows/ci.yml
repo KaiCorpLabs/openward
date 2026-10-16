@@ -259,9 +259,6 @@ jobs:
           itest integration_test/ui_test.dart
           itest integration_test/a11y_test.dart
           itest integration_test/gallery_test.dart
-          # Where the screenshots ended up (they did not reach the artifact).
-          echo "screenshots in $OPENWARD_SHOTS: $(find "$OPENWARD_SHOTS" -name '*.png' 2>/dev/null | wc -l)"
-          find / -name '*-1-terminal.png' -not -path '/proc/*' 2>/dev/null | head -3 || true
       - name: Stop SSH test servers
         if: always() && runner.os == 'Linux'
         env:

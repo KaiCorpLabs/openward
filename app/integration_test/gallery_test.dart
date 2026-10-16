@@ -53,15 +53,6 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() => RustLib.init());
 
-  // Temporary: where a test app writes, as the CI log shows a skip reason.
-  testWidgets('where the screenshots go', (tester) async {
-    markTestSkipped(
-      'shots: $_shotsPath · temp: ${Directory.systemTemp.path} · '
-      'cwd: ${Directory.current.path} · '
-      'env: ${Platform.environment['OPENWARD_SHOTS']}',
-    );
-  });
-
   testWidgets('the main screens with every theme, light and dark', (
     tester,
   ) async {
@@ -131,7 +122,6 @@ void main() {
     );
     final tabs = container.read(tabsProvider.notifier);
     final out = Directory('$_shotsPath/gallery')..createSync(recursive: true);
-    debugPrint('gallery: ${out.absolute.path}');
 
     Future<void> shot(String name) async {
       await tester.pump(const Duration(milliseconds: 400));
