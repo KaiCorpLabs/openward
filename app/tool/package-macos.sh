@@ -3,6 +3,7 @@
 #
 #   app/tool/package-macos.sh        # → app/build/OpenWard-<version>-macos.dmg
 #
+# app/tool/release-tap.sh then publishes it in the Homebrew tap.
 # macOS 13 or later (libghostty-vt targets it).
 # Unsigned and not notarized (alpha): the app is signed ad hoc, so macOS
 # asks before opening it the first time (see docs/plan/alfa-escritorio.md).

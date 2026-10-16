@@ -4,29 +4,49 @@ La puerta de salida de la [v0.2](v0.2.md) es esta: el equipo usa OpenWard dos se
 
 ## Instalar
 
-Los paquetes salen del CI:
+Los paquetes salen de la CI, y el de macOS también de Homebrew:
+- **Con Homebrew (macOS):** el cask `openward` de `kaicorplabs/tap`, que también trae las betas siguientes. Lo explica la sección de macOS.
 - **De una release:** en GitHub, **Releases**, el borrador o la beta `v0.2.0-beta.N`, con los tres paquetes.
 - **De una ejecución:** **Actions → CI**, la semanal o una lanzada con «Run workflow». Baja el artefacto `OpenWard-macOS`, `OpenWard-Linux` u `OpenWard-Windows`. El de Linux sale en cada push.
 
 ### macOS 13 o posterior (Apple silicon e Intel)
 
+Lo más cómodo es Homebrew. Una vez, añade el tap y confía en él:
+
+```bash
+brew tap kaicorplabs/tap && brew trust kaicorplabs/tap
+```
+
+Después, instala:
+
+```bash
+brew install --cask openward
+```
+
+Y con cada beta nueva, actualiza:
+
+```bash
+brew upgrade --cask openward
+```
+
+Si ya tenías OpenWard en Aplicaciones (la alfa, por ejemplo), llévala antes a la Papelera: Homebrew no instala encima de una app que no puso él, y tus datos no se pierden.
+
+Sin Homebrew, abre `OpenWard-<versión>-macos.dmg` y arrastra OpenWard a Aplicaciones. Para crear el `.dmg` desde el repositorio:
+
 ```bash
 app/tool/package-macos.sh
 ```
 
-Ese es el atajo para crear el `.dmg` desde el repositorio.
+De las dos formas, la primera vez hay que dejarla abrir. No está firmada ni notarizada, así que macOS se niega a abrirla:
+1. Intenta abrirla una vez.
+2. Ve a **Ajustes del Sistema → Privacidad y seguridad**.
+3. Pulsa **Abrir igualmente**.
 
-1. Abre `OpenWard-<versión>-macos.dmg` y arrastra OpenWard a Aplicaciones.
-2. No está firmada ni notarizada, así que macOS se niega a abrirla la primera vez. Para abrirla:
-   1. Intenta abrirla una vez.
-   2. Ve a **Ajustes del Sistema → Privacidad y seguridad**.
-   3. Pulsa **Abrir igualmente**.
+También se puede quitar la cuarentena desde un terminal:
 
-   También se puede quitar la cuarentena desde un terminal:
-
-   ```bash
-   xattr -dr com.apple.quarantine /Applications/OpenWard.app
-   ```
+```bash
+xattr -dr com.apple.quarantine /Applications/OpenWard.app
+```
 
 ### Linux (x86_64, GTK 3)
 
