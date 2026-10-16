@@ -571,15 +571,14 @@ Host web-1 web-2
           r'echo ppid-$PPID-end'
           '\n',
     );
+    // The output line, not the echo of the command (which has `-end` too).
+    bool pidLine(String l) => l.startsWith('ppid-') && l.endsWith('-end');
     await _until(
       tester,
-      () => c.session.screenText().contains('-end\n'),
+      () => c.session.screenText().split('\n').any(pidLine),
       'the pid',
     );
-    final line = c.session
-        .screenText()
-        .split('\n')
-        .firstWhere((l) => l.startsWith('ppid-'));
+    final line = c.session.screenText().split('\n').firstWhere(pidLine);
     final pid = line.substring(5, line.length - 4);
     final runtime = Platform.environment['S2_RUNTIME'] ?? 'podman';
     // The shell runs on target1; its sshd's connection is the one carried

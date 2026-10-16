@@ -220,6 +220,9 @@ jobs:
       - name: Integration tests
         if: runner.os == 'Linux'
         working-directory: app
+        env:
+          # The reconnection case drops a connection inside a container.
+          S2_RUNTIME: docker
         run: |
           # One X server for the whole step.
           Xvfb :99 -screen 0 1920x1200x24 >/dev/null 2>&1 &
