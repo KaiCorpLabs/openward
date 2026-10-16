@@ -1,13 +1,18 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/settings.dart';
 import '../core/version.dart';
 import '../l10n/l10n.dart';
+import '../src/rust/api/app.dart';
 import '../terminal/keys.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
+import '../welcome/whats_new.dart';
 import 'appearance_page.dart';
+import 'report.dart';
 
 enum _Section { general, appearance, terminal }
 
@@ -131,33 +136,36 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.ow.colors;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label),
-                if (help != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      help!,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: c.textMuted,
-                        height: 1.4,
+    // The switch or menu is named by the label and help next to it.
+    return MergeSemantics(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label),
+                  if (help != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        help!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: c.textMuted,
+                          height: 1.4,
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 24),
-          control,
-        ],
+            const SizedBox(width: 24),
+            control,
+          ],
+        ),
       ),
     );
   }
@@ -209,20 +217,63 @@ class _General extends ConsumerWidget {
             ),
           ),
         const SizedBox(height: 24),
+        SectionLabel(l.about),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+          decoration: BoxDecoration(
+            color: c.sunken,
+            border: Border.all(color: c.border),
+            borderRadius: BorderRadius.circular(context.ow.shape.radiusLarge),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'OpenWard $appVersion',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      '${Platform.operatingSystem} · ${l.reportCore} ${coreVersion()}',
+                      style: TextStyle(fontSize: 12, color: c.textSubtle),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                key: const ValueKey('about.news'),
+                onPressed: () => showWhatsNew(context, ref),
+                child: Text(l.whatsNew),
+              ),
+              TextButton(
+                onPressed: () => showLicensePage(
+                  context: context,
+                  applicationName: 'OpenWard',
+                  applicationVersion: appVersion,
+                ),
+                child: Text(l.licenses),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
         Row(
           children: [
-            Text(
-              l.aboutVersion(appVersion),
-              style: TextStyle(fontSize: 12, color: c.textSubtle),
+            OutlinedButton.icon(
+              key: const ValueKey('about.report'),
+              onPressed: () => showReport(context, ref),
+              icon: const Icon(Icons.bug_report_outlined, size: 16),
+              label: Text(l.reportProblemEllipsis),
             ),
-            const SizedBox(width: 12),
-            TextButton(
-              onPressed: () => showLicensePage(
-                context: context,
-                applicationName: 'OpenWard',
-                applicationVersion: appVersion,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                l.reportProblemHint,
+                style: TextStyle(fontSize: 12, color: c.textSubtle),
               ),
-              child: Text(l.licenses),
             ),
           ],
         ),

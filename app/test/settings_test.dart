@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openward/welcome/whats_new.dart';
 import 'package:openward/core/settings.dart';
 import 'package:openward/terminal/schemes.dart';
 
@@ -60,5 +61,15 @@ void main() {
         .withOverrides('grafito', (o) => o.copyWith(shape: () => 'papel'))
         .withOverrides('grafito', (_) => const ThemeOverrides());
     expect(s.overrides, isEmpty);
+  });
+
+  test("a release's news is shown once, and not on a first run", () {
+    expect(shouldShowNews(const Settings()), isFalse);
+    const updated = Settings(welcomed: true);
+    expect(shouldShowNews(updated), isTrue);
+    final seen = updated.copyWith(seenNews: newsVersion);
+    expect(shouldShowNews(seen), isFalse);
+    expect(Settings.fromJson(seen.toJson()).seenNews, newsVersion);
+    expect(updated.toJson().containsKey('seen_news'), isFalse);
   });
 }

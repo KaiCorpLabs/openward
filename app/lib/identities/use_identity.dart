@@ -288,57 +288,59 @@ class _Pick extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.ow.colors;
     final enabled = onChanged != null;
-    return InkWell(
-      onTap: enabled ? () => onChanged!(!checked) : null,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(6, 4, 12, 6),
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: c.border)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Checkbox(
-              value: checked,
-              onChanged: enabled ? (v) => onChanged!(v ?? false) : null,
-            ),
-            if (icon != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 12, right: 8),
-                child: Icon(icon, size: 15, color: c.textMuted),
+    return MergeSemantics(
+      child: InkWell(
+        onTap: enabled ? () => onChanged!(!checked) : null,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(6, 4, 12, 6),
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: c.border)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Checkbox(
+                value: checked,
+                onChanged: enabled ? (v) => onChanged!(v ?? false) : null,
               ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        color: enabled ? c.text : c.textMuted,
-                      ),
-                    ),
-                    Text(
-                      detail,
-                      style: TextStyle(fontSize: 11, color: c.textSubtle),
-                    ),
-                    if (warning != null)
+              if (icon != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12, right: 8),
+                  child: Icon(icon, size: 15, color: c.textMuted),
+                ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        warning!,
-                        style: TextStyle(fontSize: 11, color: warnColor),
+                        label,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: enabled ? c.text : c.textMuted,
+                        ),
                       ),
-                  ],
+                      Text(
+                        detail,
+                        style: TextStyle(fontSize: 11, color: c.textSubtle),
+                      ),
+                      if (warning != null)
+                        Text(
+                          warning!,
+                          style: TextStyle(fontSize: 11, color: warnColor),
+                        ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            if (badge != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 10, left: 8),
-                child: Pill(badge!),
-              ),
-          ],
+              if (badge != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10, left: 8),
+                  child: Pill(badge!),
+                ),
+            ],
+          ),
         ),
       ),
     );

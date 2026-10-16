@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -228,39 +229,66 @@ class _SidebarState extends ConsumerState<Sidebar> {
     final l = context.l10n;
     final ow = context.ow;
     return GestureDetector(
+      // The menu's actions are on the row itself for screen readers.
+      excludeFromSemantics: true,
       onSecondaryTapDown: (d) => _menu(d.globalPosition, [
         _item(l.newHostHere, () => _editHost(groupId: g.id)),
         _item(l.newSubgroup, () => _editGroup(parentId: g.id)),
         _item(l.editGroup, () => _editGroup(id: g.id)),
         _item(l.deleteGroup, () => _delete(g.id, g.name, group: true)),
       ]),
-      child: Semantics(
-        expanded: open,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(ow.shape.radius),
-          onTap: () => setState(() {
-            open ? _collapsed.add(g.id) : _collapsed.remove(g.id);
-          }),
-          onDoubleTap: () => _editGroup(id: g.id),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(8.0 + depth * 12, 12, 8, 6),
-            child: Row(
-              children: [
-                Expanded(
-                  child: SectionLabel(
-                    g.name,
-                    trailing: '${library.countUnder(g.id)}',
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Icon(
-                  open ? Icons.expand_more : Icons.chevron_right,
-                  size: 14,
-                  color: ow.colors.textSubtle,
-                ),
-              ],
+      child: CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.arrowLeft): () =>
+              setState(() => _collapsed.add(g.id)),
+          const SingleActivator(LogicalKeyboardKey.arrowRight): () =>
+              setState(() => _collapsed.remove(g.id)),
+        },
+        child: FocusOutline(
+          radius: ow.shape.radius,
+          child: MergeSemantics(
+            child: Semantics(
+              expanded: open,
+              button: true,
+              customSemanticsActions: {
+                CustomSemanticsAction(label: l.newHostHere): () =>
+                    _editHost(groupId: g.id),
+                CustomSemanticsAction(label: l.editGroup): () =>
+                    _editGroup(id: g.id),
+              },
+              child: _groupInk(g, depth, library, open),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _groupInk(GroupView g, int depth, Library library, bool open) {
+    final ow = context.ow;
+    return InkWell(
+      borderRadius: BorderRadius.circular(ow.shape.radius),
+      onTap: () => setState(() {
+        open ? _collapsed.add(g.id) : _collapsed.remove(g.id);
+      }),
+      onDoubleTap: () => _editGroup(id: g.id),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(8.0 + depth * 12, 12, 8, 6),
+        child: Row(
+          children: [
+            Expanded(
+              child: SectionLabel(
+                g.name,
+                trailing: '${library.countUnder(g.id)}',
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              open ? Icons.expand_more : Icons.chevron_right,
+              size: 14,
+              color: ow.colors.textSubtle,
+            ),
+          ],
         ),
       ),
     );
@@ -276,6 +304,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
         if (c.hostId == h.id) c,
     ];
     return GestureDetector(
+      excludeFromSemantics: true,
       onSecondaryTapDown: (d) {
         setState(() => _selected = h.id);
         _menu(d.globalPosition, [
@@ -297,48 +326,84 @@ class _SidebarState extends ConsumerState<Sidebar> {
           shadowColor: Colors.black26,
           elevation: selected && !ow.colors.dark ? 1 : 0,
           borderRadius: BorderRadius.circular(ow.shape.radius + 2),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(ow.shape.radius + 2),
-            onTap: () => setState(() => _selected = h.id),
-            onDoubleTap: () {
-              setState(() => _selected = h.id);
-              _connect(h);
+          // Enter connects; the row is named by its status, label and
+          // address, with «connect» among its actions.
+          child: CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.enter): () =>
+                  _connect(h),
+              const SingleActivator(LogicalKeyboardKey.numpadEnter): () =>
+                  _connect(h),
             },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-              child: Row(
-                children: [
-                  _HostStatus(sessions: mine),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          h.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                        const SizedBox(height: 1),
-                        Text(
-                          '${h.user}@$address',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: monoStyle(context, size: 11),
-                        ),
-                      ],
-                    ),
-                  ),
-                  for (final t in h.tags.take(2))
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4),
-                      child: Pill.tag(t),
-                    ),
-                ],
+            child: FocusOutline(
+              child: MergeSemantics(
+                child: Semantics(
+                  button: true,
+                  selected: selected,
+                  customSemanticsActions: {
+                    CustomSemanticsAction(label: l.connect): () => _connect(h),
+                    CustomSemanticsAction(label: l.openSftp): () => ref
+                        .read(tabsProvider.notifier)
+                        .openSftp(hostId: h.id, label: h.label),
+                    CustomSemanticsAction(label: l.editEllipsis): () =>
+                        _editHost(id: h.id),
+                  },
+                  child: _hostInk(h, selected, address, mine),
+                ),
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _hostInk(
+    HostView h,
+    bool selected,
+    String address,
+    List<TerminalController> mine,
+  ) {
+    final ow = context.ow;
+    return InkWell(
+      borderRadius: BorderRadius.circular(ow.shape.radius + 2),
+      onTap: () => setState(() => _selected = h.id),
+      onDoubleTap: () {
+        setState(() => _selected = h.id);
+        _connect(h);
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+        child: Row(
+          children: [
+            _HostStatus(sessions: mine),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    h.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    '${h.user}@$address',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: monoStyle(context, size: 11),
+                  ),
+                ],
+              ),
+            ),
+            for (final t in h.tags.take(2))
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Pill.tag(t),
+              ),
+          ],
         ),
       ),
     );
@@ -519,22 +584,24 @@ class _Library extends ConsumerWidget {
       required IconData icon,
       required String label,
       required List<Widget> trailing,
-    }) => Material(
-      color: here(page) ? c.selected : Colors.transparent,
-      borderRadius: BorderRadius.circular(ow.shape.radius + 2),
-      child: InkWell(
-        key: ValueKey(key),
+    }) => FocusOutline(
+      child: Material(
+        color: here(page) ? c.selected : Colors.transparent,
         borderRadius: BorderRadius.circular(ow.shape.radius + 2),
-        onTap: () => ref.read(tabsProvider.notifier).openPage(page),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-          child: Row(
-            children: [
-              Icon(icon, size: 16, color: c.textMuted),
-              const SizedBox(width: 10),
-              Expanded(child: Text(label)),
-              ...trailing,
-            ],
+        child: InkWell(
+          key: ValueKey(key),
+          borderRadius: BorderRadius.circular(ow.shape.radius + 2),
+          onTap: () => ref.read(tabsProvider.notifier).openPage(page),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+            child: Row(
+              children: [
+                Icon(icon, size: 16, color: c.textMuted),
+                const SizedBox(width: 10),
+                Expanded(child: Text(label)),
+                ...trailing,
+              ],
+            ),
           ),
         ),
       ),

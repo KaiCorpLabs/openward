@@ -222,67 +222,72 @@ class _SnippetsPageState extends ConsumerState<SnippetsPage> {
         if (t is SessionTab && t.controller != null)
           (i, t.controller!.displayTitle),
     ];
-    return InkWell(
-      key: ValueKey('snippet.${s.spec.label}'),
-      onTap: () => showSnippetEditor(context, ref, snippet: s),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: c.border)),
-        ),
-        child: _cells([
-          Text(
-            s.spec.label,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.w500),
+    return FocusOutline(
+      radius: 0,
+      child: InkWell(
+        key: ValueKey('snippet.${s.spec.label}'),
+        onTap: () => showSnippetEditor(context, ref, snippet: s),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: c.border)),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              HighlightedScript(lines.first, maxLines: 1),
-              if (lines.length > 1)
-                Text(
-                  l.linesCount(lines.length),
-                  style: TextStyle(fontSize: 11, color: c.textSubtle),
-                ),
-            ],
-          ),
-          VariableChips(s.variables),
-          Text(
-            s.spec.typeOnly ? l.typeOnly : l.withEnter,
-            style: TextStyle(color: s.spec.typeOnly ? c.textMuted : c.text),
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: PopupMenuButton<int>(
-              key: ValueKey('snippet.run.${s.spec.label}'),
-              enabled: terminals.isNotEmpty,
-              tooltip: terminals.isEmpty ? l.openATerminalFirst : l.runIn,
-              onSelected: (i) => _runIn(s, i),
-              itemBuilder: (_) => [
-                for (final (i, title) in terminals)
-                  PopupMenuItem(value: i, child: Text(title)),
+          child: _cells([
+            Text(
+              s.spec.label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                HighlightedScript(lines.first, maxLines: 1),
+                if (lines.length > 1)
+                  Text(
+                    l.linesCount(lines.length),
+                    style: TextStyle(fontSize: 11, color: c.textSubtle),
+                  ),
               ],
-              child: Container(
-                height: 28,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  border: Border.all(color: c.control),
-                  borderRadius: BorderRadius.circular(context.ow.shape.radius),
-                ),
-                child: Text(
-                  l.runEllipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: terminals.isEmpty ? c.textSubtle : c.accentText,
+            ),
+            VariableChips(s.variables),
+            Text(
+              s.spec.typeOnly ? l.typeOnly : l.withEnter,
+              style: TextStyle(color: s.spec.typeOnly ? c.textMuted : c.text),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: PopupMenuButton<int>(
+                key: ValueKey('snippet.run.${s.spec.label}'),
+                enabled: terminals.isNotEmpty,
+                tooltip: terminals.isEmpty ? l.openATerminalFirst : l.runIn,
+                onSelected: (i) => _runIn(s, i),
+                itemBuilder: (_) => [
+                  for (final (i, title) in terminals)
+                    PopupMenuItem(value: i, child: Text(title)),
+                ],
+                child: Container(
+                  height: 28,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: c.control),
+                    borderRadius: BorderRadius.circular(
+                      context.ow.shape.radius,
+                    ),
+                  ),
+                  child: Text(
+                    l.runEllipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: terminals.isEmpty ? c.textSubtle : c.accentText,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ]),
+          ]),
+        ),
       ),
     );
   }

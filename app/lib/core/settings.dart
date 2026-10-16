@@ -119,6 +119,7 @@ class Settings {
     this.scrollback = 10000,
     this.language = Language.system,
     this.welcomed = false,
+    this.seenNews = '',
     this.textScale = 1,
     this.lineHeight = 1.2,
     this.minimumContrast = true,
@@ -152,6 +153,9 @@ class Settings {
 
   /// The first-run guide was done or skipped.
   final bool welcomed;
+
+  /// The version whose «what's new» was shown (`newsVersion`).
+  final String seenNews;
 
   /// The interface's text size, on top of the system's.
   final double textScale;
@@ -194,6 +198,7 @@ class Settings {
     int? scrollback,
     Language? language,
     bool? welcomed,
+    String? seenNews,
     double? textScale,
     double? lineHeight,
     bool? minimumContrast,
@@ -212,6 +217,7 @@ class Settings {
     scrollback: scrollback ?? this.scrollback,
     language: language ?? this.language,
     welcomed: welcomed ?? this.welcomed,
+    seenNews: seenNews ?? this.seenNews,
     textScale: textScale ?? this.textScale,
     lineHeight: lineHeight ?? this.lineHeight,
     minimumContrast: minimumContrast ?? this.minimumContrast,
@@ -252,6 +258,7 @@ class Settings {
     'scrollback': scrollback,
     'language': language.name,
     'welcomed': welcomed,
+    if (seenNews.isNotEmpty) 'seen_news': seenNews,
     'text_scale': textScale,
     'line_height': lineHeight,
     'minimum_contrast': minimumContrast,
@@ -298,6 +305,7 @@ class Settings {
           : d.scrollback,
       language: pick(Language.values, 'language', d.language),
       welcomed: flag('welcomed', d.welcomed),
+      seenNews: text('seen_news', d.seenNews),
       textScale: number('text_scale', 0.8, 2, d.textScale),
       lineHeight: number('line_height', 1, 2, d.lineHeight),
       minimumContrast: flag('minimum_contrast', d.minimumContrast),

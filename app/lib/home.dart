@@ -19,6 +19,8 @@ import 'known_hosts/known_hosts_page.dart';
 import 'snippets/palette.dart';
 import 'snippets/snippets_page.dart';
 import 'tunnels/tunnels_page.dart';
+import 'ui/announcer.dart';
+import 'welcome/whats_new.dart';
 import 'ui/tokens.dart';
 import 'welcome/first_run.dart';
 
@@ -40,6 +42,8 @@ class Home extends ConsumerStatefulWidget {
 }
 
 class _HomeState extends ConsumerState<Home> {
+  bool _newsShown = false;
+
   final FocusNode _search = FocusNode(debugLabel: 'host search');
 
   @override
@@ -222,47 +226,71 @@ class _HomeState extends ConsumerState<Home> {
       libraryProvider.select((l) => l.hosts.isEmpty && l.groups.isEmpty),
     );
     if (!welcomed && empty) return const FirstRun();
+    // Once per release, for who used an earlier one.
+    if (!_newsShown && shouldShowNews(ref.read(settingsProvider))) {
+      _newsShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) showWhatsNew(context, ref);
+      });
+    }
     final current = ref.watch(tabsProvider.select((s) => s.current));
     final ow = context.ow;
     return CallbackShortcuts(
       bindings: _shortcuts(),
-      child: Scaffold(
-        backgroundColor: ow.colors.window,
-        body: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SizedBox(width: 272, child: Sidebar(searchFocus: _search)),
-            if (!ow.shape.pills)
-              VerticalDivider(width: 1, thickness: 1, color: ow.colors.border),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const TabStrip(),
-                  Expanded(
-                    child: switch (current) {
-                      final SessionTab tab => TabView(
-                        key: ObjectKey(tab),
-                        tab: tab,
-                      ),
-                      final SftpTab tab => SftpView(
-                        key: ObjectKey(tab),
-                        controller: tab.controller,
-                      ),
-                      PageTab(page: PageKind.settings) => const SettingsPage(),
-                      PageTab(page: PageKind.tunnels) => const TunnelsPage(),
-                      PageTab(page: PageKind.identities) =>
-                        const IdentitiesPage(),
-                      PageTab(page: PageKind.snippets) => const SnippetsPage(),
-                      PageTab(page: PageKind.knownHosts) =>
-                        const KnownHostsPage(),
-                      null => StartPage(searchFocus: _search),
-                    },
-                  ),
-                ],
+      child: Announcer(
+        child: Scaffold(
+          backgroundColor: ow.colors.window,
+          body: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Tab goes through the sidebar, then the tabs and what they show.
+              SizedBox(
+                width: 272,
+                child: FocusTraversalGroup(
+                  child: Sidebar(searchFocus: _search),
+                ),
               ),
-            ),
-          ],
+              if (!ow.shape.pills)
+                VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  color: ow.colors.border,
+                ),
+              Expanded(
+                child: FocusTraversalGroup(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const TabStrip(),
+                      Expanded(
+                        child: switch (current) {
+                          final SessionTab tab => TabView(
+                            key: ObjectKey(tab),
+                            tab: tab,
+                          ),
+                          final SftpTab tab => SftpView(
+                            key: ObjectKey(tab),
+                            controller: tab.controller,
+                          ),
+                          PageTab(page: PageKind.settings) =>
+                            const SettingsPage(),
+                          PageTab(page: PageKind.tunnels) =>
+                            const TunnelsPage(),
+                          PageTab(page: PageKind.identities) =>
+                            const IdentitiesPage(),
+                          PageTab(page: PageKind.snippets) =>
+                            const SnippetsPage(),
+                          PageTab(page: PageKind.knownHosts) =>
+                            const KnownHostsPage(),
+                          null => StartPage(searchFocus: _search),
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

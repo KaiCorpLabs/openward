@@ -10,6 +10,9 @@ class AppLocalizationsEs extends AppLocalizations {
   AppLocalizationsEs([String locale = 'es']) : super(locale);
 
   @override
+  String get about => 'Acerca de';
+
+  @override
   String aboutVersion(String version) {
     return 'OpenWard $version';
   }
@@ -66,6 +69,46 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get alreadyUses => 'Ya la usa';
+
+  @override
+  String announceClosed(String name) {
+    return '$name: desconectado';
+  }
+
+  @override
+  String announceConnected(String name) {
+    return '$name: conectado';
+  }
+
+  @override
+  String announceFailed(String name, String why) {
+    return '$name: no se pudo conectar. $why';
+  }
+
+  @override
+  String announcePrompt(String name) {
+    return '$name pregunta algo antes de seguir';
+  }
+
+  @override
+  String announceReconnecting(String name) {
+    return '$name: se cortó, reconectando';
+  }
+
+  @override
+  String announceTunnelFailed(String name, String why) {
+    return 'El túnel «$name» no se abrió: $why';
+  }
+
+  @override
+  String announceTunnelLost(String name) {
+    return 'Se cortó el túnel «$name»';
+  }
+
+  @override
+  String announceTunnelOpen(String name, int port) {
+    return 'Túnel «$name» abierto en el puerto $port';
+  }
 
   @override
   String get anyDestination => 'Cualquier destino';
@@ -418,6 +461,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get copy => 'Copiar';
+
+  @override
+  String get copyAction => 'Copiar';
 
   @override
   String get copyAddress => 'Copiar dirección';
@@ -1409,6 +1455,51 @@ class AppLocalizationsEs extends AppLocalizations {
   String get newTunnel => 'Nuevo túnel';
 
   @override
+  String get newsIdentitiesBody =>
+      'Usuario, claves y agente con un nombre, para un grupo entero o varios hosts a la vez.';
+
+  @override
+  String get newsIdentitiesTitle => 'Identidades';
+
+  @override
+  String newsPanesBody(String split, String broadcast) {
+    return 'Divide una pestaña ($split) y escribe en varios paneles a la vez ($broadcast), con aviso fijo y pegado confirmado.';
+  }
+
+  @override
+  String get newsPanesTitle => 'Paneles y broadcast';
+
+  @override
+  String newsSftpBody(String shortcut) {
+    return 'Arrastra entre este equipo y el servidor, con cola, reanudación y lo que ya existe resuelto a tu manera ($shortcut).';
+  }
+
+  @override
+  String get newsSftpTitle => 'SFTP de doble panel';
+
+  @override
+  String newsSnippetsBody(String shortcut) {
+    return 'Comandos con variables a un atajo ($shortcut), y las claves en las que confías, con las de ~/.ssh/known_hosts.';
+  }
+
+  @override
+  String get newsSnippetsTitle => 'Snippets y hosts conocidos';
+
+  @override
+  String get newsThemesBody =>
+      'Cinco temas en claro y oscuro, capas que se combinan, tamaño del texto, contraste mínimo y reducir movimiento.';
+
+  @override
+  String get newsThemesTitle => 'Temas y accesibilidad visual';
+
+  @override
+  String get newsTunnelsBody =>
+      'Local, remoto y SOCKS5, que se abren al conectar; también proxy HTTP y SOCKS5 para llegar al servidor.';
+
+  @override
+  String get newsTunnelsTitle => 'Túneles guardados y proxy';
+
+  @override
   String get next => 'Siguiente';
 
   @override
@@ -1886,6 +1977,23 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get reportCopied => 'Copiado. Pégalo en tu informe.';
+
+  @override
+  String get reportCore => 'núcleo';
+
+  @override
+  String reportCounts(
+    int hosts,
+    int groups,
+    int tunnels,
+    int identities,
+    int snippets,
+  ) {
+    return 'Hosts: $hosts · grupos: $groups · túneles: $tunnels · identidades: $identities · snippets: $snippets';
+  }
+
+  @override
   String reportCreated(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1897,7 +2005,21 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get reportHow =>
+      'Pégalo en la issue junto con qué hacías, qué esperabas y qué pasó, como pide la guía de prueba.';
+
+  @override
   String get reportNotEverything => 'No todo se ha podido traer:';
+
+  @override
+  String get reportProblem => 'Informar de un problema';
+
+  @override
+  String get reportProblemEllipsis => 'Informar de un problema…';
+
+  @override
+  String get reportProblemHint =>
+      'Copia la versión y el sistema para pegarlos en tu informe.';
 
   @override
   String reportSkipped(int count) {
@@ -1911,6 +2033,12 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get reportText => 'texto';
+
+  @override
+  String get reportTheme => 'Tema';
+
+  @override
   String reportTunnels(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1920,6 +2048,10 @@ class AppLocalizationsEs extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get reportWhat =>
+      'Esto es lo que se copia. No incluye hosts, direcciones, usuarios ni claves.';
 
   @override
   String get reportWhere => 'Están en el grupo «~/.ssh/config».';
@@ -2256,6 +2388,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get start => 'Empezar';
+
+  @override
+  String get startAction => 'Empezar';
 
   @override
   String get startHere => 'Empieza aquí';
@@ -2671,6 +2806,17 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get welcomeTitle => 'Te damos la bienvenida a OpenWard';
+
+  @override
+  String get whatsNew => 'Qué hay de nuevo';
+
+  @override
+  String get whatsNewIntro =>
+      'Todo lo que hacías con tu cliente anterior, ya aquí. Lo verás una vez; está también en Ajustes › General.';
+
+  @override
+  String get whatsNewReport =>
+      '¿Algo no va? Ajustes › General › Informar de un problema copia lo que hace falta para contarlo.';
 
   @override
   String get whereItIs => 'Dónde está';

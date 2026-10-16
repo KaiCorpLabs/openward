@@ -33,15 +33,28 @@ void identitiesChanged(WidgetRef ref) {
   ref.read(identitiesProvider.notifier).refresh();
 }
 
-/// `/Users/ana/.ssh/deploy` as `~/.ssh/deploy`.
-String tildePath(String path) {
-  final home =
-      Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
-  if (home == null || home.isEmpty) return path;
-  if (path == home) return '~';
-  final sep = Platform.pathSeparator;
-  final prefix = home.endsWith(sep) ? home : '$home$sep';
-  return path.startsWith(prefix) ? '~/${path.substring(prefix.length)}' : path;
+/// `/Users/ana/.ssh/deploy` as `~/.ssh/deploy`, and on Windows
+/// `C:\Users\ana\.ssh\deploy` (or with `/`) too. The core reads `~/` on
+/// every system.
+String tildePath(String path, {String? home}) {
+  final h =
+      home ??
+      Platform.environment['HOME'] ??
+      Platform.environment['USERPROFILE'];
+  if (h == null || h.isEmpty) return path;
+  final windows = h.contains(r'\') || RegExp('^[A-Za-z]:').hasMatch(h);
+  String norm(String p) => windows ? p.replaceAll(r'\', '/') : p;
+  final base = norm(h).replaceFirst(RegExp(r'/+$'), '');
+  final full = norm(path);
+  bool same(String a, String b) =>
+      windows ? a.toLowerCase() == b.toLowerCase() : a == b;
+  if (same(full, base)) return '~';
+  if (full.length > base.length &&
+      full[base.length] == '/' &&
+      same(full.substring(0, base.length), base)) {
+    return '~/${full.substring(base.length + 1)}';
+  }
+  return path;
 }
 
 /// The last part of a path: `deploy_ed25519`.

@@ -15,8 +15,8 @@ app_dir="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$app_dir"
 flutter=(${FLUTTER:-fvm flutter})
 
-# 0.1.0+1 in pubspec.yaml → 0.1.0-alfa
-version="$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)-alfa"
+# 0.2.0-beta.1+2 in pubspec.yaml → 0.2.0-beta.1
+version="$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)"
 
 rustup target add aarch64-apple-darwin x86_64-apple-darwin >/dev/null
 "${flutter[@]}" build macos --release

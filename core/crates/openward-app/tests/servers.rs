@@ -281,13 +281,20 @@ fn a_lost_connection_comes_back() {
     // The shell's parent is this connection's sshd: killing it drops the
     // connection without a goodbye, like a network that goes away.
     term.text("echo ppid-$PPID-end\n");
-    wait_for(&term, "-end\n");
-    let screen = term.screen_text();
-    let pid = screen
-        .lines()
-        .find_map(|l| l.strip_prefix("ppid-")?.strip_suffix("-end"))
-        .expect("the pid line")
-        .to_owned();
+    // The output line, not the echo of the command (which has `-end` too).
+    wait_for(&term, "\nppid-");
+    let deadline = Instant::now() + Duration::from_secs(10);
+    let pid = loop {
+        let screen = term.screen_text();
+        if let Some(pid) = screen
+            .lines()
+            .find_map(|l| l.strip_prefix("ppid-")?.strip_suffix("-end"))
+        {
+            break pid.to_owned();
+        }
+        assert!(Instant::now() < deadline, "the pid line:\n{screen}");
+        std::thread::sleep(Duration::from_millis(20));
+    };
     let killed = std::process::Command::new(runtime())
         .args(["exec", "bastion", "kill", "-9", &pid])
         .status()

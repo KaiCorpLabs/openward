@@ -18,6 +18,12 @@ pub fn init_app() {
     flutter_rust_bridge::setup_default_user_utils();
 }
 
+/// The core's version, for «Acerca de» and problem reports.
+#[frb(sync)]
+pub fn core_version() -> String {
+    env!("CARGO_PKG_VERSION").to_owned()
+}
+
 #[frb(opaque)]
 pub struct OpenWard {
     pub(crate) app: Arc<App>,

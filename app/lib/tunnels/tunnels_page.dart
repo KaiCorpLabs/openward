@@ -348,6 +348,7 @@ class _TunnelsPageState extends ConsumerState<TunnelsPage> {
     final suggestion = failed ? suggestedPort(ref, t) : null;
     final small = OutlinedButton.styleFrom(
       minimumSize: const Size(0, 28),
+      visualDensity: VisualDensity.standard,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       textStyle: const TextStyle(fontSize: 12),
     );
@@ -372,93 +373,99 @@ class _TunnelsPageState extends ConsumerState<TunnelsPage> {
         child: Text(failed ? l.retry : l.openAction),
       ),
     };
-    return InkWell(
-      onTap: () => showTunnelEditor(context, ref, tunnel: t),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: c.border)),
-        ),
-        child: Column(
-          children: [
-            _cells([
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    t.spec.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                  if (t.imported)
+    return FocusOutline(
+      radius: 0,
+      child: InkWell(
+        onTap: () => showTunnelEditor(context, ref, tunnel: t),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: c.border)),
+          ),
+          child: Column(
+            children: [
+              _cells([
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      l.fromSshConfig,
-                      style: TextStyle(fontSize: 11, color: c.textSubtle),
-                    ),
-                ],
-              ),
-              Text(kindText(l, t.spec.kind)),
-              Text(forwardText(t), style: monoStyle(context, color: c.text)),
-              Text(t.hostLabel, overflow: TextOverflow.ellipsis),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Switch(
-                  value: t.spec.autostart,
-                  onChanged: (v) => _setAutostart(t, v),
-                ),
-              ),
-              Row(
-                children: [
-                  StatusDot(switch (t.state) {
-                    TunnelStateKind.open => Status.connected,
-                    TunnelStateKind.failed => Status.failed,
-                    TunnelStateKind.opening => Status.connecting,
-                    TunnelStateKind.closed => Status.idle,
-                  }, size: 8),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      stateText(l, t),
+                      t.spec.label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: tone),
+                      style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
-                  ),
-                  action,
-                ],
-              ),
-            ]),
-            if (failed) ...[
-              const SizedBox(height: 8),
-              Callout(
-                tone: Tone.danger,
-                padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _sentence(tunnelErrorText(l, t)),
-                        style: const TextStyle(fontSize: 12),
+                    if (t.imported)
+                      Text(
+                        l.fromSshConfig,
+                        style: TextStyle(fontSize: 11, color: c.textSubtle),
                       ),
-                    ),
-                    if (suggestion != null)
-                      OutlinedButton(
-                        style: small,
-                        onPressed: () =>
-                            useOtherPort(context, ref, t, suggestion),
-                        child: Text(l.usePort(suggestion)),
-                      ),
-                    TextButton(
-                      onPressed: () =>
-                          showTunnelEditor(context, ref, tunnel: t),
-                      child: Text(l.editEllipsis),
-                    ),
                   ],
                 ),
-              ),
+                Text(kindText(l, t.spec.kind)),
+                Text(forwardText(t), style: monoStyle(context, color: c.text)),
+                Text(t.hostLabel, overflow: TextOverflow.ellipsis),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Semantics(
+                    label: '${l.onConnect}: ${t.spec.label}',
+                    child: Switch(
+                      value: t.spec.autostart,
+                      onChanged: (v) => _setAutostart(t, v),
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    StatusDot(switch (t.state) {
+                      TunnelStateKind.open => Status.connected,
+                      TunnelStateKind.failed => Status.failed,
+                      TunnelStateKind.opening => Status.connecting,
+                      TunnelStateKind.closed => Status.idle,
+                    }, size: 8),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        stateText(l, t),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: tone),
+                      ),
+                    ),
+                    action,
+                  ],
+                ),
+              ]),
+              if (failed) ...[
+                const SizedBox(height: 8),
+                Callout(
+                  tone: Tone.danger,
+                  padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _sentence(tunnelErrorText(l, t)),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                      if (suggestion != null)
+                        OutlinedButton(
+                          style: small,
+                          onPressed: () =>
+                              useOtherPort(context, ref, t, suggestion),
+                          child: Text(l.usePort(suggestion)),
+                        ),
+                      TextButton(
+                        onPressed: () =>
+                            showTunnelEditor(context, ref, tunnel: t),
+                        child: Text(l.editEllipsis),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

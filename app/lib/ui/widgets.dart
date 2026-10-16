@@ -258,3 +258,46 @@ class Callout extends StatelessWidget {
     );
   }
 }
+
+/// A ring around something while the keyboard is on it (or inside it):
+/// rows of lists and tables, which have no outline of their own. Not
+/// drawn for mouse clicks.
+class FocusOutline extends StatefulWidget {
+  const FocusOutline({super.key, required this.child, this.radius});
+
+  final Widget child;
+
+  /// The corner radius; the theme's by default.
+  final double? radius;
+
+  @override
+  State<FocusOutline> createState() => _FocusOutlineState();
+}
+
+class _FocusOutlineState extends State<FocusOutline> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final ow = context.ow;
+    final keyboard =
+        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (f) => setState(() => _focused = f),
+      child: DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: _focused && keyboard
+            ? BoxDecoration(
+                border: Border.all(color: ow.colors.accent, width: 2),
+                borderRadius: BorderRadius.circular(
+                  widget.radius ?? ow.shape.radius + 2,
+                ),
+              )
+            : const BoxDecoration(),
+        child: widget.child,
+      ),
+    );
+  }
+}

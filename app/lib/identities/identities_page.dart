@@ -233,118 +233,125 @@ class _IdentitiesPageState extends ConsumerState<IdentitiesPage> {
     final l = context.l10n;
     final missing = missingKeys(i);
     final mono = monoStyle(context, color: c.text);
-    return InkWell(
-      key: ValueKey('identity.${i.spec.label}'),
-      onTap: () => showIdentityEditor(context, ref, id: i.id),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: c.border)),
-        ),
-        child: Column(
-          children: [
-            _cells([
-              Text(
-                i.spec.label,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w500),
-              ),
-              Text(i.spec.user ?? '—', style: mono),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (i.keys.isEmpty)
-                    Text(l.usualKeys, style: TextStyle(color: c.textMuted)),
-                  for (final k in i.keys)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 1),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Wrap(
-                            spacing: 8,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Text(
-                                k.path,
-                                style: monoStyle(
-                                  context,
-                                  color: k.state == KeyStateKind.missing
-                                      ? c.warn
-                                      : c.text,
+    return FocusOutline(
+      radius: 0,
+      child: InkWell(
+        key: ValueKey('identity.${i.spec.label}'),
+        onTap: () => showIdentityEditor(context, ref, id: i.id),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: c.border)),
+          ),
+          child: Column(
+            children: [
+              _cells([
+                Text(
+                  i.spec.label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                Text(i.spec.user ?? '—', style: mono),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (i.keys.isEmpty)
+                      Text(l.usualKeys, style: TextStyle(color: c.textMuted)),
+                    for (final k in i.keys)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 1),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Wrap(
+                              spacing: 8,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  k.path,
+                                  style: monoStyle(
+                                    context,
+                                    color: k.state == KeyStateKind.missing
+                                        ? c.warn
+                                        : c.text,
+                                  ),
                                 ),
+                                if (k.certificate != null)
+                                  Pill(
+                                    k.certificate!.expired
+                                        ? l.certificateExpired
+                                        : l.certificate,
+                                    tone: PillTone.neutral,
+                                  ),
+                              ],
+                            ),
+                            Text(
+                              keyDetail(l, k),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: c.textSubtle,
                               ),
-                              if (k.certificate != null)
-                                Pill(
-                                  k.certificate!.expired
-                                      ? l.certificateExpired
-                                      : l.certificate,
-                                  tone: PillTone.neutral,
-                                ),
-                            ],
-                          ),
-                          Text(
-                            keyDetail(l, k),
-                            style: TextStyle(fontSize: 11, color: c.textSubtle),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-              Text(agentText(l, i.spec)),
-              Text(
-                usedByText(l, i),
-                style: TextStyle(
-                  color: i.chooserIds.isEmpty ? c.textSubtle : c.text,
-                ),
-              ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: OutlinedButton(
-                  key: ValueKey('identity.use.${i.spec.label}'),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, 28),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    textStyle: const TextStyle(fontSize: 12),
-                    foregroundColor: c.accentText,
-                  ),
-                  onPressed: () => showUseIdentity(context, ref, i),
-                  child: Text(l.useOn),
-                ),
-              ),
-            ]),
-            for (final k in missing)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Callout(
-                  tone: Tone.warn,
-                  padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.warning_amber_rounded,
-                        size: 16,
-                        color: c.warn,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          l.keyMissingWarning(k.path, i.hostCount),
-                          style: TextStyle(fontSize: 12, color: c.warn),
+                            ),
+                          ],
                         ),
                       ),
-                      TextButton(
-                        onPressed: () =>
-                            showIdentityEditor(context, ref, id: i.id),
-                        child: Text(l.editEllipsis),
-                      ),
-                    ],
+                  ],
+                ),
+                Text(agentText(l, i.spec)),
+                Text(
+                  usedByText(l, i),
+                  style: TextStyle(
+                    color: i.chooserIds.isEmpty ? c.textSubtle : c.text,
                   ),
                 ),
-              ),
-          ],
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: OutlinedButton(
+                    key: ValueKey('identity.use.${i.spec.label}'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 28),
+                      visualDensity: VisualDensity.standard,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      textStyle: const TextStyle(fontSize: 12),
+                      foregroundColor: c.accentText,
+                    ),
+                    onPressed: () => showUseIdentity(context, ref, i),
+                    child: Text(l.useOn),
+                  ),
+                ),
+              ]),
+              for (final k in missing)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Callout(
+                    tone: Tone.warn,
+                    padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          size: 16,
+                          color: c.warn,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            l.keyMissingWarning(k.path, i.hostCount),
+                            style: TextStyle(fontSize: 12, color: c.warn),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () =>
+                              showIdentityEditor(context, ref, id: i.id),
+                          child: Text(l.editEllipsis),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

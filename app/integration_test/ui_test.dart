@@ -156,7 +156,10 @@ void main() {
     addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
     final settings = File('${dir.path}/data/settings.json');
     if (!settings.existsSync()) {
-      settings.writeAsStringSync('{"language": "es", "welcomed": $welcomed}');
+      // Past this release's news too, unless the first run is under test.
+      settings.writeAsStringSync(
+        '{"language": "es", "welcomed": $welcomed, "seen_news": "0.2"}',
+      );
     }
     await tester.pumpWidget(
       RepaintBoundary(

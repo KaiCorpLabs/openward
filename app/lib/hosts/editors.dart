@@ -1237,6 +1237,9 @@ class EditorFrame extends StatelessWidget {
       bindings: {
         const SingleActivator(LogicalKeyboardKey.enter, meta: true): onSave,
         const SingleActivator(LogicalKeyboardKey.enter, control: true): onSave,
+        // Also with the cursor in a field, which would keep Esc otherwise.
+        const SingleActivator(LogicalKeyboardKey.escape): () =>
+            Navigator.maybePop(context, false),
       },
       child: FocusTraversalGroup(
         child: Column(

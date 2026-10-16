@@ -43,7 +43,8 @@ impl Local {
         }
     }
 
-    /// OpenSSH's own `known_hosts`, read but never written.
+    /// OpenSSH's own `known_hosts`: read, and written only to remove a line
+    /// the user asked to (with a `.old` copy first).
     pub fn known_hosts_file(&self) -> PathBuf {
         self.ssh_dir.join("known_hosts")
     }

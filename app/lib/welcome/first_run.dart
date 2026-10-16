@@ -11,6 +11,7 @@ import '../ui/themes.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../window/chrome.dart';
+import 'whats_new.dart';
 
 /// The guide on the first run, with nothing saved yet: bring the hosts of
 /// `~/.ssh/config`, choose how the app looks, and the shortcuts to start.
@@ -43,7 +44,7 @@ class _FirstRunState extends ConsumerState<FirstRun> {
     ref.read(libraryProvider.notifier).refresh();
     ref
         .read(settingsProvider.notifier)
-        .update((s) => s.copyWith(welcomed: true));
+        .update((s) => s.copyWith(welcomed: true, seenNews: newsVersion));
   }
 
   Future<void> _import() async {

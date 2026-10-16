@@ -17,6 +17,9 @@ import 'vault.dart';
 
 // These functions are ignored because they are not marked as `pub`: `apply_group`, `apply_host`, `host_spec`, `warning`
 
+/// The core's version, for «Acerca de» and problem reports.
+String coreVersion() => RustLib.instance.api.crateApiAppCoreVersion();
+
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<OpenWard>>
 abstract class OpenWard implements RustOpaqueInterface {
   /// Answers a prompt; false if nothing waits for it any more.

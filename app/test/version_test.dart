@@ -10,6 +10,6 @@ void main() {
       r'^version: *([^+\s]+)',
       multiLine: true,
     ).firstMatch(pubspec)!.group(1);
-    expect(appVersion, '$version-alfa');
+    expect(appVersion, version);
   });
 }

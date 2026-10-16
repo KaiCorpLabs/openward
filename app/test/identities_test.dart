@@ -87,11 +87,22 @@ void main() {
   });
 
   test('paths under the home folder are shown with ~', () {
-    final home = Platform.environment['HOME'];
-    if (home == null) return;
-    expect(tildePath('$home/.ssh/deploy'), '~/.ssh/deploy');
-    expect(tildePath('/etc/ssh/key'), '/etc/ssh/key');
-    expect(tildePath('${home}x/key'), '${home}x/key');
+    const mac = '/Users/ana';
+    expect(tildePath('/Users/ana/.ssh/deploy', home: mac), '~/.ssh/deploy');
+    expect(tildePath('/etc/ssh/key', home: mac), '/etc/ssh/key');
+    expect(tildePath('/Users/anax/key', home: mac), '/Users/anax/key');
+    expect(tildePath('/Users/ana', home: '/Users/ana/'), '~');
+    // Windows: either separator, and any case.
+    const win = r'C:\Users\ana';
+    expect(tildePath(r'C:\Users\ana\.ssh\deploy', home: win), '~/.ssh/deploy');
+    expect(tildePath('c:/users/ana/.ssh/deploy', home: win), '~/.ssh/deploy');
+    expect(tildePath(r'D:\keys\deploy', home: win), r'D:\keys\deploy');
+    // This machine's own home.
+    final home =
+        Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
+    if (home != null) {
+      expect(tildePath('$home${Platform.pathSeparator}.ssh'), '~/.ssh');
+    }
   });
 
   test('certificates end on a date', () {

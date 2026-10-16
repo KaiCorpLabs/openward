@@ -3,11 +3,13 @@ name: CI
 # While the repository is private, Actions minutes are billed: macOS counts
 # 10x and Windows 2x. Pushes and PRs therefore run on Linux only (including
 # the iOS/Android compile check), and the macOS/Windows matrix runs weekly or
-# on demand. When the repository goes public, run the full matrix on every
-# push again.
+# on demand, and for a release tag (v…), which also leaves a draft release
+# with the three packages. When the repository goes public, run the full
+# matrix on every push again.
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
   schedule:
     - cron: "0 5 * * 1"
@@ -22,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
+        os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -126,7 +128,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
+        os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -163,7 +165,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
+        os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     defaults:
@@ -209,7 +211,12 @@ jobs:
           flutter pub get
           flutter analyze
           flutter test test/
-      # Without the S2 servers the SSH cases skip.
+      # The SSH cases of the window tests run against the S2 servers too.
+      - name: Start SSH test servers
+        if: runner.os == 'Linux'
+        env:
+          S2_RUNTIME: docker
+        run: spikes/s2-ssh/servers/up.sh
       - name: Integration tests
         if: runner.os == 'Linux'
         working-directory: app
@@ -224,7 +231,8 @@ jobs:
           # `-r expanded` the app never got past setUpAll here. On Linux
           # `flutter test -d linux` ends with "No tests were found" and a
           # failing exit code even when every test passed, so a run counts
-          # as good when no test failed and every test in the file passed.
+          # as good when no test failed and every test in the file passed
+          # or was skipped (✅ or ⏭️).
           once() {
             local log want got
             log="$(mktemp)"
@@ -232,8 +240,8 @@ jobs:
               return 0
             fi
             want="$(grep -cE '^\s*(testWidgets|test)\(' "$1")"
-            got="$(grep -c '^✅' "$log" || true)"
-            echo "$1: $got of $want tests passed"
+            got="$(grep -cE '^(✅|⏭️)' "$log" || true)"
+            echo "$1: $got of $want tests passed or skipped"
             ! grep -q "❌" "$log" && [ "$got" -eq "$want" ]
           }
           itest() {
@@ -243,10 +251,42 @@ jobs:
           }
           itest integration_test/ffi_test.dart
           itest integration_test/ui_test.dart
+          itest integration_test/a11y_test.dart
+          itest integration_test/gallery_test.dart
+      - name: Stop SSH test servers
+        if: always() && runner.os == 'Linux'
+        env:
+          S2_RUNTIME: docker
+        run: spikes/s2-ssh/servers/down.sh
+      # The gallery on macOS and Windows too, in the full runs; a hiccup
+      # there does not hold up the packages.
+      - name: Review gallery
+        if: runner.os != 'Linux'
+        continue-on-error: true
+        working-directory: app
+        run: flutter test integration_test/gallery_test.dart -d "$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')"
+      - name: Collect screenshots
+        if: always()
+        run: |
+          # Where the tests wrote them: the system's temporary folder.
+          py="$(command -v python3 || command -v python)"
+          tmp="$("$py" -c 'import tempfile; print(tempfile.gettempdir())')"
+          [[ "$RUNNER_OS" == Windows ]] && tmp="$(cygpath -u "$tmp")"
+          shots="$tmp/openward-shots"
+          mkdir -p app/build/shots
+          if [[ -d "$shots" ]]; then cp -R "$shots"/. app/build/shots/; fi
+          ls -R app/build/shots | head -50
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: OpenWard-screenshots-${{ runner.os }}
+          path: app/build/shots
+          retention-days: 14
+          if-no-files-found: ignore
       - name: Package
         working-directory: app
         run: |
-          version="$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)-alfa"
+          version="$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)"
           case "$RUNNER_OS" in
             Linux)
               flutter build linux --release
@@ -281,3 +321,30 @@ jobs:
       - name: Check
         working-directory: core
         run: cargo deny check
+
+  release:
+    name: Draft release
+    # Only for a version tag, once the three packages are built. It stays
+    # a draft: publishing it is a person's decision.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: app
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh run download "$GITHUB_RUN_ID" --dir dist \
+            --pattern 'OpenWard-Linux' --pattern 'OpenWard-macOS' --pattern 'OpenWard-Windows'
+          version="${TAG#v}"
+          # v0.2.0-beta.1 → docs/notas/v0.2.md
+          notes="docs/notas/v$(echo "$version" | cut -d. -f1-2).md"
+          [[ -f "$notes" ]] || { echo "::error::no release notes at $notes"; exit 1; }
+          pre=()
+          [[ "$version" == *-* ]] && pre=(--prerelease)
+          gh release create "$TAG" --draft "${pre[@]}" --verify-tag \
+            --title "OpenWard $version" --notes-file "$notes" dist/*/OpenWard-*

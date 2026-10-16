@@ -98,6 +98,12 @@ abstract class AppLocalizations {
     Locale('es'),
   ];
 
+  /// No description provided for @about.
+  ///
+  /// In es, this message translates to:
+  /// **'Acerca de'**
+  String get about;
+
   /// No description provided for @aboutVersion.
   ///
   /// In es, this message translates to:
@@ -205,6 +211,54 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ya la usa'**
   String get alreadyUses;
+
+  /// No description provided for @announceClosed.
+  ///
+  /// In es, this message translates to:
+  /// **'{name}: desconectado'**
+  String announceClosed(String name);
+
+  /// No description provided for @announceConnected.
+  ///
+  /// In es, this message translates to:
+  /// **'{name}: conectado'**
+  String announceConnected(String name);
+
+  /// No description provided for @announceFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'{name}: no se pudo conectar. {why}'**
+  String announceFailed(String name, String why);
+
+  /// No description provided for @announcePrompt.
+  ///
+  /// In es, this message translates to:
+  /// **'{name} pregunta algo antes de seguir'**
+  String announcePrompt(String name);
+
+  /// No description provided for @announceReconnecting.
+  ///
+  /// In es, this message translates to:
+  /// **'{name}: se cortó, reconectando'**
+  String announceReconnecting(String name);
+
+  /// No description provided for @announceTunnelFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'El túnel «{name}» no se abrió: {why}'**
+  String announceTunnelFailed(String name, String why);
+
+  /// No description provided for @announceTunnelLost.
+  ///
+  /// In es, this message translates to:
+  /// **'Se cortó el túnel «{name}»'**
+  String announceTunnelLost(String name);
+
+  /// No description provided for @announceTunnelOpen.
+  ///
+  /// In es, this message translates to:
+  /// **'Túnel «{name}» abierto en el puerto {port}'**
+  String announceTunnelOpen(String name, int port);
 
   /// No description provided for @anyDestination.
   ///
@@ -721,6 +775,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Copiar'**
   String get copy;
+
+  /// No description provided for @copyAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar'**
+  String get copyAction;
 
   /// No description provided for @copyAddress.
   ///
@@ -2216,6 +2276,78 @@ abstract class AppLocalizations {
   /// **'Nuevo túnel'**
   String get newTunnel;
 
+  /// No description provided for @newsIdentitiesBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Usuario, claves y agente con un nombre, para un grupo entero o varios hosts a la vez.'**
+  String get newsIdentitiesBody;
+
+  /// No description provided for @newsIdentitiesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Identidades'**
+  String get newsIdentitiesTitle;
+
+  /// No description provided for @newsPanesBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Divide una pestaña ({split}) y escribe en varios paneles a la vez ({broadcast}), con aviso fijo y pegado confirmado.'**
+  String newsPanesBody(String split, String broadcast);
+
+  /// No description provided for @newsPanesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Paneles y broadcast'**
+  String get newsPanesTitle;
+
+  /// No description provided for @newsSftpBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Arrastra entre este equipo y el servidor, con cola, reanudación y lo que ya existe resuelto a tu manera ({shortcut}).'**
+  String newsSftpBody(String shortcut);
+
+  /// No description provided for @newsSftpTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'SFTP de doble panel'**
+  String get newsSftpTitle;
+
+  /// No description provided for @newsSnippetsBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Comandos con variables a un atajo ({shortcut}), y las claves en las que confías, con las de ~/.ssh/known_hosts.'**
+  String newsSnippetsBody(String shortcut);
+
+  /// No description provided for @newsSnippetsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Snippets y hosts conocidos'**
+  String get newsSnippetsTitle;
+
+  /// No description provided for @newsThemesBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Cinco temas en claro y oscuro, capas que se combinan, tamaño del texto, contraste mínimo y reducir movimiento.'**
+  String get newsThemesBody;
+
+  /// No description provided for @newsThemesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Temas y accesibilidad visual'**
+  String get newsThemesTitle;
+
+  /// No description provided for @newsTunnelsBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Local, remoto y SOCKS5, que se abren al conectar; también proxy HTTP y SOCKS5 para llegar al servidor.'**
+  String get newsTunnelsBody;
+
+  /// No description provided for @newsTunnelsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Túneles guardados y proxy'**
+  String get newsTunnelsTitle;
+
   /// No description provided for @next.
   ///
   /// In es, this message translates to:
@@ -3008,11 +3140,41 @@ abstract class AppLocalizations {
   /// **'Renombrar {name}'**
   String renameTitle(String name);
 
+  /// No description provided for @reportCopied.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiado. Pégalo en tu informe.'**
+  String get reportCopied;
+
+  /// No description provided for @reportCore.
+  ///
+  /// In es, this message translates to:
+  /// **'núcleo'**
+  String get reportCore;
+
+  /// No description provided for @reportCounts.
+  ///
+  /// In es, this message translates to:
+  /// **'Hosts: {hosts} · grupos: {groups} · túneles: {tunnels} · identidades: {identities} · snippets: {snippets}'**
+  String reportCounts(
+    int hosts,
+    int groups,
+    int tunnels,
+    int identities,
+    int snippets,
+  );
+
   /// No description provided for @reportCreated.
   ///
   /// In es, this message translates to:
   /// **'{count, plural, =1{1 host nuevo} other{{count} hosts nuevos}}'**
   String reportCreated(int count);
+
+  /// No description provided for @reportHow.
+  ///
+  /// In es, this message translates to:
+  /// **'Pégalo en la issue junto con qué hacías, qué esperabas y qué pasó, como pide la guía de prueba.'**
+  String get reportHow;
 
   /// No description provided for @reportNotEverything.
   ///
@@ -3020,17 +3182,53 @@ abstract class AppLocalizations {
   /// **'No todo se ha podido traer:'**
   String get reportNotEverything;
 
+  /// No description provided for @reportProblem.
+  ///
+  /// In es, this message translates to:
+  /// **'Informar de un problema'**
+  String get reportProblem;
+
+  /// No description provided for @reportProblemEllipsis.
+  ///
+  /// In es, this message translates to:
+  /// **'Informar de un problema…'**
+  String get reportProblemEllipsis;
+
+  /// No description provided for @reportProblemHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Copia la versión y el sistema para pegarlos en tu informe.'**
+  String get reportProblemHint;
+
   /// No description provided for @reportSkipped.
   ///
   /// In es, this message translates to:
   /// **'{count, plural, =1{1 ya estaba importado y no se ha tocado} other{{count} ya estaban importados y no se han tocado}}'**
   String reportSkipped(int count);
 
+  /// No description provided for @reportText.
+  ///
+  /// In es, this message translates to:
+  /// **'texto'**
+  String get reportText;
+
+  /// No description provided for @reportTheme.
+  ///
+  /// In es, this message translates to:
+  /// **'Tema'**
+  String get reportTheme;
+
   /// No description provided for @reportTunnels.
   ///
   /// In es, this message translates to:
   /// **'{count, plural, =1{1 túnel nuevo} other{{count} túneles nuevos}}'**
   String reportTunnels(int count);
+
+  /// No description provided for @reportWhat.
+  ///
+  /// In es, this message translates to:
+  /// **'Esto es lo que se copia. No incluye hosts, direcciones, usuarios ni claves.'**
+  String get reportWhat;
 
   /// No description provided for @reportWhere.
   ///
@@ -3547,6 +3745,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Empezar'**
   String get start;
+
+  /// No description provided for @startAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Empezar'**
+  String get startAction;
 
   /// No description provided for @startHere.
   ///
@@ -4171,6 +4375,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Te damos la bienvenida a OpenWard'**
   String get welcomeTitle;
+
+  /// No description provided for @whatsNew.
+  ///
+  /// In es, this message translates to:
+  /// **'Qué hay de nuevo'**
+  String get whatsNew;
+
+  /// No description provided for @whatsNewIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Todo lo que hacías con tu cliente anterior, ya aquí. Lo verás una vez; está también en Ajustes › General.'**
+  String get whatsNewIntro;
+
+  /// No description provided for @whatsNewReport.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Algo no va? Ajustes › General › Informar de un problema copia lo que hace falta para contarlo.'**
+  String get whatsNewReport;
 
   /// No description provided for @whereItIs.
   ///

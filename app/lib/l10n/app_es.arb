@@ -1,5 +1,6 @@
 {
   "@@locale": "es",
+  "about": "Acerca de",
   "aboutVersion": "OpenWard {version}",
   "@aboutVersion": {
     "placeholders": {
@@ -32,6 +33,79 @@
   },
   "alreadyImported": "ya importado",
   "alreadyUses": "Ya la usa",
+  "announceClosed": "{name}: desconectado",
+  "@announceClosed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "announceConnected": "{name}: conectado",
+  "@announceConnected": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "announceFailed": "{name}: no se pudo conectar. {why}",
+  "@announceFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "why": {
+        "type": "String"
+      }
+    }
+  },
+  "announcePrompt": "{name} pregunta algo antes de seguir",
+  "@announcePrompt": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "announceReconnecting": "{name}: se cortó, reconectando",
+  "@announceReconnecting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "announceTunnelFailed": "El túnel «{name}» no se abrió: {why}",
+  "@announceTunnelFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "why": {
+        "type": "String"
+      }
+    }
+  },
+  "announceTunnelLost": "Se cortó el túnel «{name}»",
+  "@announceTunnelLost": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "announceTunnelOpen": "Túnel «{name}» abierto en el puerto {port}",
+  "@announceTunnelOpen": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "port": {
+        "type": "int"
+      }
+    }
+  },
   "anyDestination": "Cualquier destino",
   "appearanceStepBody": "Puedes cambiarlo cuando quieras en Ajustes.",
   "appearanceStepTitle": "¿Cómo la quieres ver?",
@@ -293,6 +367,7 @@
     }
   },
   "copy": "Copiar",
+  "copyAction": "Copiar",
   "copyAddress": "Copiar dirección",
   "copyFingerprint": "Copiar la huella",
   "copyPath": "Copiar la ruta",
@@ -1079,6 +1154,42 @@
   "newSnippet": "Nuevo snippet",
   "newSubgroup": "Nuevo subgrupo",
   "newTunnel": "Nuevo túnel",
+  "newsIdentitiesBody": "Usuario, claves y agente con un nombre, para un grupo entero o varios hosts a la vez.",
+  "newsIdentitiesTitle": "Identidades",
+  "newsPanesBody": "Divide una pestaña ({split}) y escribe en varios paneles a la vez ({broadcast}), con aviso fijo y pegado confirmado.",
+  "@newsPanesBody": {
+    "placeholders": {
+      "split": {
+        "type": "String"
+      },
+      "broadcast": {
+        "type": "String"
+      }
+    }
+  },
+  "newsPanesTitle": "Paneles y broadcast",
+  "newsSftpBody": "Arrastra entre este equipo y el servidor, con cola, reanudación y lo que ya existe resuelto a tu manera ({shortcut}).",
+  "@newsSftpBody": {
+    "placeholders": {
+      "shortcut": {
+        "type": "String"
+      }
+    }
+  },
+  "newsSftpTitle": "SFTP de doble panel",
+  "newsSnippetsBody": "Comandos con variables a un atajo ({shortcut}), y las claves en las que confías, con las de ~/.ssh/known_hosts.",
+  "@newsSnippetsBody": {
+    "placeholders": {
+      "shortcut": {
+        "type": "String"
+      }
+    }
+  },
+  "newsSnippetsTitle": "Snippets y hosts conocidos",
+  "newsThemesBody": "Cinco temas en claro y oscuro, capas que se combinan, tamaño del texto, contraste mínimo y reducir movimiento.",
+  "newsThemesTitle": "Temas y accesibilidad visual",
+  "newsTunnelsBody": "Local, remoto y SOCKS5, que se abren al conectar; también proxy HTTP y SOCKS5 para llegar al servidor.",
+  "newsTunnelsTitle": "Túneles guardados y proxy",
   "next": "Siguiente",
   "no": "No",
   "noGroup": "Sin grupo",
@@ -1402,6 +1513,28 @@
       }
     }
   },
+  "reportCopied": "Copiado. Pégalo en tu informe.",
+  "reportCore": "núcleo",
+  "reportCounts": "Hosts: {hosts} · grupos: {groups} · túneles: {tunnels} · identidades: {identities} · snippets: {snippets}",
+  "@reportCounts": {
+    "placeholders": {
+      "hosts": {
+        "type": "int"
+      },
+      "groups": {
+        "type": "int"
+      },
+      "tunnels": {
+        "type": "int"
+      },
+      "identities": {
+        "type": "int"
+      },
+      "snippets": {
+        "type": "int"
+      }
+    }
+  },
   "reportCreated": "{count, plural, =1{1 host nuevo} other{{count} hosts nuevos}}",
   "@reportCreated": {
     "placeholders": {
@@ -1410,7 +1543,11 @@
       }
     }
   },
+  "reportHow": "Pégalo en la issue junto con qué hacías, qué esperabas y qué pasó, como pide la guía de prueba.",
   "reportNotEverything": "No todo se ha podido traer:",
+  "reportProblem": "Informar de un problema",
+  "reportProblemEllipsis": "Informar de un problema…",
+  "reportProblemHint": "Copia la versión y el sistema para pegarlos en tu informe.",
   "reportSkipped": "{count, plural, =1{1 ya estaba importado y no se ha tocado} other{{count} ya estaban importados y no se han tocado}}",
   "@reportSkipped": {
     "placeholders": {
@@ -1419,6 +1556,8 @@
       }
     }
   },
+  "reportText": "texto",
+  "reportTheme": "Tema",
   "reportTunnels": "{count, plural, =1{1 túnel nuevo} other{{count} túneles nuevos}}",
   "@reportTunnels": {
     "placeholders": {
@@ -1427,6 +1566,7 @@
       }
     }
   },
+  "reportWhat": "Esto es lo que se copia. No incluye hosts, direcciones, usuarios ni claves.",
   "reportWhere": "Están en el grupo «~/.ssh/config».",
   "resetTheme": "Restablecer",
   "restart": "Reiniciar",
@@ -1706,6 +1846,7 @@
     }
   },
   "start": "Empezar",
+  "startAction": "Empezar",
   "startHere": "Empieza aquí",
   "starting": "Arrancando…",
   "state": "Estado",
@@ -2046,6 +2187,9 @@
   },
   "welcomeNoConfig": "No hemos encontrado hosts en ~/.ssh/config. Podrás añadirlos a mano en un momento.",
   "welcomeTitle": "Te damos la bienvenida a OpenWard",
+  "whatsNew": "Qué hay de nuevo",
+  "whatsNewIntro": "Todo lo que hacías con tu cliente anterior, ya aquí. Lo verás una vez; está también en Ajustes › General.",
+  "whatsNewReport": "¿Algo no va? Ajustes › General › Informar de un problema copia lo que hace falta para contarlo.",
   "whereItIs": "Dónde está",
   "whoCanUse": "Quién puede usarlo",
   "withEnter": "Intro al final",
