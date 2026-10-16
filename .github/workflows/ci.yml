@@ -258,7 +258,10 @@ jobs:
           itest integration_test/ffi_test.dart
           itest integration_test/ui_test.dart
           itest integration_test/a11y_test.dart
-          itest integration_test/gallery_test.dart
+          # The gallery through `flutter drive`: its driver saves the
+          # screenshots, which `flutter test` on Linux does not always keep.
+          flutter drive -d linux --driver=test_driver/integration_test.dart \
+            --target=integration_test/gallery_test.dart
       - name: Stop SSH test servers
         if: always() && runner.os == 'Linux'
         env:
@@ -271,9 +274,9 @@ jobs:
         continue-on-error: true
         working-directory: app
         run: |
-          flutter test integration_test/gallery_test.dart \
-            -d "$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')" \
-            --dart-define=OPENWARD_SHOTS="$OPENWARD_SHOTS"
+          flutter drive -d "$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')" \
+            --driver=test_driver/integration_test.dart \
+            --target=integration_test/gallery_test.dart
       - name: List screenshots
         if: always()
         run: ls -R "$OPENWARD_SHOTS" 2>/dev/null | head -50 || echo "no screenshots"

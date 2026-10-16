@@ -1,12 +1,15 @@
 // The review gallery: the main screens with each theme, light and dark,
-// to look at without installing on every system. CI keeps them as an
-// artifact; locally they go to $TMPDIR/openward-shots/gallery.
+// to look at without installing on every system. They go to
+// $TMPDIR/openward-shots/gallery, and are also reported to
+// test_driver/integration_test.dart when run with `flutter drive` (the
+// CI, which keeps them as an artifact).
 //
 //   fvm flutter test integration_test/gallery_test.dart -d macos
 
 @Timeout(Duration(minutes: 5))
 library;
 
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -50,7 +53,7 @@ const _themes = [
 ];
 
 void main() {
-  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() => RustLib.init());
 
   testWidgets('the main screens with every theme, light and dark', (
@@ -122,6 +125,7 @@ void main() {
     );
     final tabs = container.read(tabsProvider.notifier);
     final out = Directory('$_shotsPath/gallery')..createSync(recursive: true);
+    final reported = <String, String>{};
 
     Future<void> shot(String name) async {
       await tester.pump(const Duration(milliseconds: 400));
@@ -130,7 +134,9 @@ void main() {
       final image = await boundary.toImage(pixelRatio: 1);
       final png = await image.toByteData(format: ui.ImageByteFormat.png);
       image.dispose();
-      File('${out.path}/$name.png').writeAsBytesSync(png!.buffer.asUint8List());
+      final bytes = png!.buffer.asUint8List();
+      File('${out.path}/$name.png').writeAsBytesSync(bytes);
+      reported['gallery/$name'] = base64Encode(bytes);
     }
 
     // A terminal to show, with something in it.
@@ -183,6 +189,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
     }
     expect(out.listSync().length, _themes.length * 4);
+    binding.reportData = {'screenshots': reported};
     tabs.closeCurrent();
     await tester.pump(const Duration(milliseconds: 300));
   });
