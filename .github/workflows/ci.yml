@@ -168,6 +168,9 @@ jobs:
         os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    env:
+      # Where the window tests leave their screenshots.
+      OPENWARD_SHOTS: ${{ github.workspace }}/app/build/shots
     defaults:
       run:
         shell: bash
@@ -268,17 +271,16 @@ jobs:
         continue-on-error: true
         working-directory: app
         run: flutter test integration_test/gallery_test.dart -d "$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')"
-      - name: Collect screenshots
+      - name: List screenshots
         if: always()
         run: |
-          # Where the tests wrote them: the system's temporary folder.
-          py="$(command -v python3 || command -v python)"
-          tmp="$("$py" -c 'import tempfile; print(tempfile.gettempdir())')"
-          [[ "$RUNNER_OS" == Windows ]] && tmp="$(cygpath -u "$tmp")"
-          shots="$tmp/openward-shots"
-          mkdir -p app/build/shots
-          if [[ -d "$shots" ]]; then cp -R "$shots"/. app/build/shots/; fi
-          ls -R app/build/shots | head -50
+          # On macOS the app starts through `open`, without OPENWARD_SHOTS:
+          # it leaves them in the user's temporary folder.
+          if [[ "$RUNNER_OS" == macOS && -d "$TMPDIR/openward-shots" ]]; then
+            mkdir -p app/build/shots
+            cp -R "$TMPDIR/openward-shots"/. app/build/shots/
+          fi
+          ls -R app/build/shots 2>/dev/null | head -50 || echo "no screenshots"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:

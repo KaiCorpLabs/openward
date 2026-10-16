@@ -1,6 +1,7 @@
 // The review gallery: the main screens with each theme, light and dark,
 // to look at without installing on every system. CI keeps them as an
-// artifact; locally they go to $TMPDIR/openward-shots/gallery.
+// artifact; locally they go to $TMPDIR/openward-shots/gallery (or
+// $OPENWARD_SHOTS/gallery).
 //
 //   fvm flutter test integration_test/gallery_test.dart -d macos
 
@@ -111,8 +112,9 @@ void main() {
       tester.element(find.byType(OpenWardApp)),
     );
     final tabs = container.read(tabsProvider.notifier);
-    final out = Directory('${Directory.systemTemp.path}/openward-shots/gallery')
-      ..createSync(recursive: true);
+    final out = Directory(
+      '${Platform.environment['OPENWARD_SHOTS'] ?? '${Directory.systemTemp.path}/openward-shots'}/gallery',
+    )..createSync(recursive: true);
 
     Future<void> shot(String name) async {
       await tester.pump(const Duration(milliseconds: 400));

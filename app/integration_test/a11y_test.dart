@@ -40,8 +40,10 @@ Future<void> _shot(WidgetTester tester, String name) async {
   final image = await boundary.toImage(pixelRatio: 1.5);
   final png = await image.toByteData(format: ui.ImageByteFormat.png);
   image.dispose();
-  final dir = Directory('${Directory.systemTemp.path}/openward-shots')
-    ..createSync(recursive: true);
+  final dir = Directory(
+    Platform.environment['OPENWARD_SHOTS'] ??
+        '${Directory.systemTemp.path}/openward-shots',
+  )..createSync(recursive: true);
   File('${dir.path}/$name.png').writeAsBytesSync(png!.buffer.asUint8List());
 }
 

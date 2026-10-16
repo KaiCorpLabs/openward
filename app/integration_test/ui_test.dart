@@ -2,7 +2,8 @@
 //
 //   fvm flutter test integration_test/ui_test.dart -d macos
 //
-// Screenshots (rendered by the app itself) go to $TMPDIR/openward-shots.
+// Screenshots (rendered by the app itself) go to $OPENWARD_SHOTS, or else
+// $TMPDIR/openward-shots.
 // The SSH part needs the S2 test servers (spikes/s2-ssh/servers/up.sh).
 
 @Timeout(Duration(minutes: 3))
@@ -43,7 +44,10 @@ import 'package:openward/src/rust/api/tunnels.dart';
 import 'package:openward/tunnels/tunnels.dart';
 import 'package:openward/ui/tokens.dart';
 
-final _shots = Directory('${Directory.systemTemp.path}/openward-shots');
+final _shots = Directory(
+  Platform.environment['OPENWARD_SHOTS'] ??
+      '${Directory.systemTemp.path}/openward-shots',
+);
 final _frame = GlobalKey();
 
 Future<void> _shot(WidgetTester tester, String name) async {
