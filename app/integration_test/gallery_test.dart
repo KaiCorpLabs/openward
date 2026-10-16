@@ -118,7 +118,7 @@ void main() {
     final importPreview = app.previewProgram(data: termius.data!);
     final settings = File('${dir.path}/data/settings.json')
       ..writeAsStringSync(
-        '{"language": "es", "welcomed": true, "seen_news": "0.2"}',
+        '{"language": "es", "welcomed": true, "seen_news": "0.2.0-beta.3"}',
       );
 
     tester.view.physicalSize = const Size(1280, 800) * 2;

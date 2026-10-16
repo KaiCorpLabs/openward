@@ -18,7 +18,9 @@ import '../ui/widgets.dart';
 import 'connection_panels.dart';
 import 'find_bar.dart';
 import 'messages.dart';
+import 'drag.dart';
 import 'prompt_card.dart';
+import 'tab_strip.dart' show menuHint, menuItem;
 import 'tabs.dart';
 
 /// A session tab: its panes (or the one maximized), a banner while
@@ -80,9 +82,60 @@ class _Single extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = pane.controller;
-    if (c == null) return _PanePicker(tab: tab, pane: pane);
-    return PaneContent(controller: c, active: true, inset: true);
+    return PaneDropTarget(
+      tab: tab,
+      pane: pane,
+      child: c == null
+          ? _PanePicker(tab: tab, pane: pane)
+          : PaneContent(
+              controller: c,
+              active: true,
+              inset: true,
+              menu: (context) => paneMenu(context, tab, pane),
+            ),
+    );
   }
+}
+
+/// What a terminal's right-click menu adds for its pane: split it,
+/// maximize it, close it, and that tabs and hosts can be dropped on it.
+List<PopupMenuEntry<VoidCallback>> paneMenu(
+  BuildContext context,
+  SessionTab tab,
+  Pane pane,
+) {
+  final l = context.l10n;
+  final tabs = ProviderScope.containerOf(context).read(tabsProvider.notifier);
+  final key = isApple ? '⌘' : l.ctrlShiftPrefix;
+  void here(void Function() f) {
+    tab.panes.focus(pane);
+    f();
+  }
+
+  return [
+    const PopupMenuDivider(),
+    menuItem(context, l.splitRight, '${key}D', () {
+      here(() => tabs.split(Axis.horizontal));
+    }),
+    menuItem(context, l.splitDown, isApple ? '⌘⇧D' : '${key}E', () {
+      here(() => tabs.split(Axis.vertical));
+    }),
+    if (tab.panes.isSplit)
+      menuItem(
+        context,
+        tab.panes.maximized == null ? l.maximizePane : l.restorePanes,
+        isApple ? '⌘⇧↩' : '$key↩',
+        () => here(tabs.toggleMaximize),
+      ),
+    const PopupMenuDivider(),
+    menuItem(
+      context,
+      tab.panes.isSplit ? l.closePane : l.closeTab,
+      '${key}W',
+      () => tabs.closePane(tab, pane),
+    ),
+    menuHint(context, l.terminalMenuHint),
+  ];
 }
 
 /// A split: two parts and the handle between them, which drags.
@@ -155,7 +208,7 @@ class _PaneFrame extends ConsumerWidget {
     final active = identical(panes.active, pane);
     final receives = panes.receives(pane);
     final controller = pane.controller;
-    return Container(
+    final frame = Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: ow.terminal.background,
@@ -172,7 +225,15 @@ class _PaneFrame extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _PaneHeader(tab: tab, pane: pane, active: active),
+          // The header drags the pane: to another half, tab or the bar.
+          WindowDraggable(
+            data: PaneDrag(
+              tab,
+              pane,
+              controller?.displayTitle ?? context.l10n.newPane,
+            ),
+            child: _PaneHeader(tab: tab, pane: pane, active: active),
+          ),
           Expanded(
             // A click in the terminal gives it the keyboard; the header's
             // controls do not take it from the pane being typed in.
@@ -185,12 +246,14 @@ class _PaneFrame extends ConsumerWidget {
                       controller: controller,
                       active: active,
                       mirrors: () => panes.mirrorsOf(controller),
+                      menu: (context) => paneMenu(context, tab, pane),
                     ),
             ),
           ),
         ],
       ),
     );
+    return PaneDropTarget(tab: tab, pane: pane, child: frame);
   }
 }
 
@@ -555,9 +618,13 @@ class PaneContent extends ConsumerWidget {
     required this.active,
     this.inset = false,
     this.mirrors,
+    this.menu,
   });
 
   final TerminalController controller;
+
+  /// What the terminal's right-click menu adds for its pane.
+  final List<PopupMenuEntry<VoidCallback>> Function(BuildContext)? menu;
 
   /// Has the keyboard.
   final bool active;
@@ -597,6 +664,7 @@ class PaneContent extends ConsumerWidget {
                 controller: c,
                 autofocus: active && card == null && !c.findOpen,
                 mirrors: mirrors,
+                paneMenu: menu,
               ),
             ),
             Positioned.fill(child: BellFlash(controller: c)),

@@ -320,6 +320,21 @@ class _Terminal extends ConsumerWidget {
             onChanged: (v) => notifier.update((s) => s.copyWith(bellFlash: v)),
           ),
         ),
+        _Row(
+          label: l.onExit,
+          help: l.onExitHelp,
+          control: SegmentedButton<OnExit>(
+            showSelectedIcon: false,
+            segments: [
+              ButtonSegment(value: OnExit.clean, label: Text(l.onExitClean)),
+              ButtonSegment(value: OnExit.always, label: Text(l.onExitAlways)),
+              ButtonSegment(value: OnExit.never, label: Text(l.onExitNever)),
+            ],
+            selected: {s.onExit},
+            onSelectionChanged: (v) =>
+                notifier.update((s) => s.copyWith(onExit: v.single)),
+          ),
+        ),
         const SizedBox(height: 12),
         Text(
           l.terminalShortcuts(isApple ? '⌘' : l.ctrlShiftPrefix),

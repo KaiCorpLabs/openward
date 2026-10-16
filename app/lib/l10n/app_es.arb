@@ -273,6 +273,7 @@
   "clearSelection": "Quitar la selección",
   "close": "Cerrar",
   "closeAction": "Cerrar",
+  "closeOtherTabs": "Cerrar las demás",
   "closePane": "Cerrar el panel",
   "closeTab": "Cerrar la pestaña",
   "closeTheTab": "Cerrar la pestaña",
@@ -509,9 +510,36 @@
     }
   },
   "dropAskFirst": "Si alguno ya existe, te preguntamos antes de tocarlo.",
+  "dropBottom": "abajo",
+  "dropLeft": "a la izquierda",
+  "dropMove": "Soltar: {name} {where}",
+  "@dropMove": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "where": {
+        "type": "String"
+      }
+    }
+  },
+  "dropOpenHost": "Soltar: abrir {name} {where}",
+  "@dropOpenHost": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "where": {
+        "type": "String"
+      }
+    }
+  },
+  "dropRight": "a la derecha",
   "dropToDownload": "Suelta para descargar aquí",
   "dropToImport": "O arrastra aquí el archivo o la carpeta: se reconoce solo.",
   "dropToUpload": "Suelta para subir aquí",
+  "dropTop": "arriba",
+  "duplicateTab": "Duplicar",
   "dynamicSentence": "Usa {here} como proxy SOCKS5: las conexiones salen de {host}.",
   "@dynamicSentence": {
     "placeholders": {
@@ -1320,9 +1348,12 @@
   "newSnippet": "Nuevo snippet",
   "newSubgroup": "Nuevo subgrupo",
   "newTunnel": "Nuevo túnel",
+  "newsFresh": "nuevo",
   "newsIdentitiesBody": "Usuario, claves y agente con un nombre, para un grupo entero o varios hosts a la vez.",
   "newsIdentitiesTitle": "Identidades",
-  "newsPanesBody": "Divide una pestaña ({split}) y escribe en varios paneles a la vez ({broadcast}), con aviso fijo y pegado confirmado.",
+  "newsImportBody": "Hosts, grupos, identidades y túneles de Termius, PuTTY, KiTTY, MobaXterm, Tabby o SecureCRT, desde «…» › Importar… en la barra lateral. Las contraseñas no se traen.",
+  "newsImportTitle": "Importar desde tu cliente anterior",
+  "newsPanesBody": "Divide una pestaña ({split}) o arrastra otra, o un host, sobre un terminal; escribe en varios paneles a la vez ({broadcast}). Con exit, la pestaña se cierra sola.",
   "@newsPanesBody": {
     "placeholders": {
       "split": {
@@ -1420,6 +1451,11 @@
   "offerOnlyTheseKeysNote": "No probar las demás claves del agente (IdentitiesOnly). Útil si el servidor corta tras varios intentos.",
   "ok": "Aceptar",
   "onConnect": "Al conectar",
+  "onExit": "Al salir del shell",
+  "onExitAlways": "Cerrar siempre",
+  "onExitClean": "Cerrar si sale bien",
+  "onExitHelp": "Con exit o logout, el panel (o la pestaña, si es el último) se cierra solo. Si el programa acaba con un error, se queda abierto para que leas qué pasó, salvo con «Cerrar siempre». Una conexión que se corta nunca se cierra sola: sigue reconectando.",
+  "onExitNever": "Dejarla abierta",
   "onSend": "Al enviar",
   "onThisComputer": "En este equipo",
   "onlyTheServer": "Solo el servidor",
@@ -1819,6 +1855,7 @@
   },
   "removeTheLine": "Quitar la línea",
   "rename": "Renombrar",
+  "renameTab": "Renombrar…",
   "renameTabHelp": "Vacío para volver al nombre del host",
   "renameTabTitle": "Renombrar pestaña",
   "renameTitle": "Renombrar {name}",
@@ -2047,6 +2084,7 @@
       }
     }
   },
+  "separatePanes": "Separar los paneles en pestañas",
   "sessionClosed": "Sesión cerrada.",
   "sessionClosedCode": "Sesión cerrada (código {code}).",
   "@sessionClosedCode": {
@@ -2205,11 +2243,13 @@
   "stepOpeningSftp": "abriendo SFTP…",
   "stepOpeningShell": "abriendo el shell…",
   "stepReady": "Listo",
+  "tabMenuHint": "También puedes arrastrar la pestaña sobre un terminal para dividirlo, o a otro sitio de la barra para ordenarla.",
   "tags": "Etiquetas",
   "terminalAlwaysDark": "Siempre oscuro",
   "terminalAsTheme": "Como el tema",
   "terminalColors": "Colores del terminal",
   "terminalFont": "Fuente del terminal",
+  "terminalMenuHint": "Arrastra aquí una pestaña o un host para abrirlo en una mitad de este panel.",
   "terminalScheme": "Esquema propio",
   "terminalShortcuts": "{key}F busca en el terminal y su historial. {key}+ y {key}− cambian el tamaño de la letra de la pestaña, y {key}0 lo devuelve. Con {key} pulsado, un clic abre un enlace.",
   "@terminalShortcuts": {

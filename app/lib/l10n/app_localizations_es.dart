@@ -353,6 +353,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get closeAction => 'Cerrar';
 
   @override
+  String get closeOtherTabs => 'Cerrar las demás';
+
+  @override
   String get closePane => 'Cerrar el panel';
 
   @override
@@ -652,6 +655,25 @@ class AppLocalizationsEs extends AppLocalizations {
       'Si alguno ya existe, te preguntamos antes de tocarlo.';
 
   @override
+  String get dropBottom => 'abajo';
+
+  @override
+  String get dropLeft => 'a la izquierda';
+
+  @override
+  String dropMove(String name, String where) {
+    return 'Soltar: $name $where';
+  }
+
+  @override
+  String dropOpenHost(String name, String where) {
+    return 'Soltar: abrir $name $where';
+  }
+
+  @override
+  String get dropRight => 'a la derecha';
+
+  @override
   String get dropToDownload => 'Suelta para descargar aquí';
 
   @override
@@ -660,6 +682,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get dropToUpload => 'Suelta para subir aquí';
+
+  @override
+  String get dropTop => 'arriba';
+
+  @override
+  String get duplicateTab => 'Duplicar';
 
   @override
   String dynamicSentence(String here, String host) {
@@ -1672,6 +1700,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get newTunnel => 'Nuevo túnel';
 
   @override
+  String get newsFresh => 'nuevo';
+
+  @override
   String get newsIdentitiesBody =>
       'Usuario, claves y agente con un nombre, para un grupo entero o varios hosts a la vez.';
 
@@ -1679,8 +1710,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get newsIdentitiesTitle => 'Identidades';
 
   @override
+  String get newsImportBody =>
+      'Hosts, grupos, identidades y túneles de Termius, PuTTY, KiTTY, MobaXterm, Tabby o SecureCRT, desde «…» › Importar… en la barra lateral. Las contraseñas no se traen.';
+
+  @override
+  String get newsImportTitle => 'Importar desde tu cliente anterior';
+
+  @override
   String newsPanesBody(String split, String broadcast) {
-    return 'Divide una pestaña ($split) y escribe en varios paneles a la vez ($broadcast), con aviso fijo y pegado confirmado.';
+    return 'Divide una pestaña ($split) o arrastra otra, o un host, sobre un terminal; escribe en varios paneles a la vez ($broadcast). Con exit, la pestaña se cierra sola.';
   }
 
   @override
@@ -1829,6 +1867,22 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get onConnect => 'Al conectar';
+
+  @override
+  String get onExit => 'Al salir del shell';
+
+  @override
+  String get onExitAlways => 'Cerrar siempre';
+
+  @override
+  String get onExitClean => 'Cerrar si sale bien';
+
+  @override
+  String get onExitHelp =>
+      'Con exit o logout, el panel (o la pestaña, si es el último) se cierra solo. Si el programa acaba con un error, se queda abierto para que leas qué pasó, salvo con «Cerrar siempre». Una conexión que se corta nunca se cierra sola: sigue reconectando.';
+
+  @override
+  String get onExitNever => 'Dejarla abierta';
 
   @override
   String get onSend => 'Al enviar';
@@ -2360,6 +2414,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get rename => 'Renombrar';
 
   @override
+  String get renameTab => 'Renombrar…';
+
+  @override
   String get renameTabHelp => 'Vacío para volver al nombre del host';
 
   @override
@@ -2648,6 +2705,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get separatePanes => 'Separar los paneles en pestañas';
+
+  @override
   String get sessionClosed => 'Sesión cerrada.';
 
   @override
@@ -2854,6 +2914,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get stepReady => 'Listo';
 
   @override
+  String get tabMenuHint =>
+      'También puedes arrastrar la pestaña sobre un terminal para dividirlo, o a otro sitio de la barra para ordenarla.';
+
+  @override
   String get tags => 'Etiquetas';
 
   @override
@@ -2867,6 +2931,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get terminalFont => 'Fuente del terminal';
+
+  @override
+  String get terminalMenuHint =>
+      'Arrastra aquí una pestaña o un host para abrirlo en una mitad de este panel.';
 
   @override
   String get terminalScheme => 'Esquema propio';

@@ -87,6 +87,9 @@ OpenWard lee `~/.ssh/config` y `~/.ssh/known_hosts`. Solo escribe en `known_host
    - busca con ⌘F;
    - abre enlaces con ⌘ y clic;
    - divide paneles con ⌘D y ⌘⇧D, y muévete entre ellos con ⌘⌥ y las flechas;
+   - arrastra pestañas para ordenarlas, y suelta una pestaña o un host de la barra lateral sobre un terminal para dividirlo;
+   - prueba el clic derecho en una pestaña y en el terminal;
+   - sal de un shell con `exit` y comprueba que su pestaña se cierra sola;
    - activa el broadcast con ⌘⇧B y pega con él.
 3. **SFTP (⌘⇧O):**
    - copia en las dos direcciones, también carpetas enteras;

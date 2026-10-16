@@ -17,6 +17,7 @@ import '../ui/widgets.dart';
 import '../window/chrome.dart';
 import 'editors.dart';
 import '../import/import_dialog.dart';
+import '../tabs/drag.dart';
 
 /// Saved hosts in their groups, a search box over them, and the actions
 /// that add to them. Double-click (or Enter in the search) connects in a
@@ -303,52 +304,59 @@ class _SidebarState extends ConsumerState<Sidebar> {
       for (final c in sessions)
         if (c.hostId == h.id) c,
     ];
-    return GestureDetector(
-      excludeFromSemantics: true,
-      onSecondaryTapDown: (d) {
-        setState(() => _selected = h.id);
-        _menu(d.globalPosition, [
-          _item(l.connect, () => _connect(h)),
-          _item(
-            l.openSftp,
-            () => ref
-                .read(tabsProvider.notifier)
-                .openSftp(hostId: h.id, label: h.label),
-          ),
-          _item(l.editEllipsis, () => _editHost(id: h.id)),
-          _item(l.delete, () => _delete(h.id, h.label, group: false)),
-        ]);
-      },
-      child: Padding(
-        padding: EdgeInsets.only(left: depth * 12.0, bottom: 2),
-        child: Material(
-          color: selected ? ow.colors.selected : Colors.transparent,
-          shadowColor: Colors.black26,
-          elevation: selected && !ow.colors.dark ? 1 : 0,
-          borderRadius: BorderRadius.circular(ow.shape.radius + 2),
-          // Enter connects; the row is named by its status, label and
-          // address, with «connect» among its actions.
-          child: CallbackShortcuts(
-            bindings: {
-              const SingleActivator(LogicalKeyboardKey.enter): () =>
-                  _connect(h),
-              const SingleActivator(LogicalKeyboardKey.numpadEnter): () =>
-                  _connect(h),
-            },
-            child: FocusOutline(
-              child: MergeSemantics(
-                child: Semantics(
-                  button: true,
-                  selected: selected,
-                  customSemanticsActions: {
-                    CustomSemanticsAction(label: l.connect): () => _connect(h),
-                    CustomSemanticsAction(label: l.openSftp): () => ref
-                        .read(tabsProvider.notifier)
-                        .openSftp(hostId: h.id, label: h.label),
-                    CustomSemanticsAction(label: l.editEllipsis): () =>
-                        _editHost(id: h.id),
-                  },
-                  child: _hostInk(h, selected, address, mine),
+    // Dragged onto a terminal, it opens in a pane there; onto the tab bar,
+    // in a tab.
+    return WindowDraggable(
+      data: HostDrag(h),
+      subtitle: '${h.user}@$address',
+      child: GestureDetector(
+        excludeFromSemantics: true,
+        onSecondaryTapDown: (d) {
+          setState(() => _selected = h.id);
+          _menu(d.globalPosition, [
+            _item(l.connect, () => _connect(h)),
+            _item(
+              l.openSftp,
+              () => ref
+                  .read(tabsProvider.notifier)
+                  .openSftp(hostId: h.id, label: h.label),
+            ),
+            _item(l.editEllipsis, () => _editHost(id: h.id)),
+            _item(l.delete, () => _delete(h.id, h.label, group: false)),
+          ]);
+        },
+        child: Padding(
+          padding: EdgeInsets.only(left: depth * 12.0, bottom: 2),
+          child: Material(
+            color: selected ? ow.colors.selected : Colors.transparent,
+            shadowColor: Colors.black26,
+            elevation: selected && !ow.colors.dark ? 1 : 0,
+            borderRadius: BorderRadius.circular(ow.shape.radius + 2),
+            // Enter connects; the row is named by its status, label and
+            // address, with «connect» among its actions.
+            child: CallbackShortcuts(
+              bindings: {
+                const SingleActivator(LogicalKeyboardKey.enter): () =>
+                    _connect(h),
+                const SingleActivator(LogicalKeyboardKey.numpadEnter): () =>
+                    _connect(h),
+              },
+              child: FocusOutline(
+                child: MergeSemantics(
+                  child: Semantics(
+                    button: true,
+                    selected: selected,
+                    customSemanticsActions: {
+                      CustomSemanticsAction(label: l.connect): () =>
+                          _connect(h),
+                      CustomSemanticsAction(label: l.openSftp): () => ref
+                          .read(tabsProvider.notifier)
+                          .openSftp(hostId: h.id, label: h.label),
+                      CustomSemanticsAction(label: l.editEllipsis): () =>
+                          _editHost(id: h.id),
+                    },
+                    child: _hostInk(h, selected, address, mine),
+                  ),
                 ),
               ),
             ),

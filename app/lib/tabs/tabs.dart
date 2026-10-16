@@ -11,7 +11,7 @@ import '../src/rust/api/vault.dart';
 import '../terminal/controller.dart';
 import 'panes.dart';
 
-export 'panes.dart' show Pane, PaneNode, PaneSplit, Panes;
+export 'panes.dart' show DropSide, Pane, PaneNode, PaneSplit, Panes;
 
 /// What a tab holds: terminal sessions in panes, or one of the app's
 /// pages. Pages open once; asking for one again brings its tab to the
@@ -22,6 +22,9 @@ sealed class OpenTab {
 
 final class SessionTab extends OpenTab {
   SessionTab(TerminalController first) : panes = Panes(first);
+
+  /// With panes taken from elsewhere: a pane dragged out, say.
+  SessionTab.withPanes(this.panes);
 
   final Panes panes;
 
@@ -88,8 +91,29 @@ class TabsNotifier extends Notifier<TabsState> {
 
   TerminalController _start(TerminalController c) {
     _live.add(c);
+    c.addListener(() => _closeOnExit(c));
     c.start();
     return c;
+  }
+
+  /// When a shell ends by itself, its pane (or tab) closes, as the user's
+  /// setting says: when it ended well (`exit`, `logout`), or always. Never
+  /// for a connection that failed, nor one the user gave up on.
+  void _closeOnExit(TerminalController c) {
+    final closed = c.closed;
+    if (c.phase != Phase.closed || closed == null || c.cancelled) return;
+    if (c.isDisposed || closed.failure != null || !_live.contains(c)) return;
+    final close = switch (ref.read(settingsProvider).onExit) {
+      OnExit.clean => (closed.exitCode ?? 0) == 0,
+      OnExit.always => true,
+      OnExit.never => false,
+    };
+    // After the frame: the event that closed it is still being handled.
+    if (close) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (_live.contains(c) && c.phase == Phase.closed) closeSession(c);
+      });
+    }
   }
 
   void _add(TerminalController c) {
@@ -309,6 +333,115 @@ class TabsNotifier extends Notifier<TabsState> {
     tab.panes.setBroadcast(!tab.panes.broadcast);
     _refresh();
     focusActive(tab);
+  }
+
+  /// Moves a tab to the gap before `gap` (0 to the number of tabs), as
+  /// dropping between tabs says.
+  void moveToGap(int from, int gap) => move(from, gap > from ? gap - 1 : gap);
+
+  /// A tab dropped on the `side` half of `at`: its panes join `target`,
+  /// and it closes (its sessions go on, in their new place).
+  void dropTab(OpenTab dragged, SessionTab target, Pane at, DropSide side) {
+    if (dragged is! SessionTab || identical(dragged, target)) return;
+    if (!state.tabs.contains(dragged) || !state.tabs.contains(target)) return;
+    final tabs = [...state.tabs]..remove(dragged);
+    target.panes.insertBeside(
+      at,
+      dragged.panes.root,
+      side,
+      focus: dragged.panes.active,
+    );
+    state = TabsState(tabs, tabs.indexOf(target));
+    focusActive(target);
+  }
+
+  /// A pane dragged by its header onto the `side` half of `at`, in its own
+  /// tab or another. A tab left without panes closes.
+  void dropPane(
+    SessionTab from,
+    Pane pane,
+    SessionTab target,
+    Pane at,
+    DropSide side,
+  ) {
+    if (identical(pane, at)) return;
+    final alone = !from.panes.isSplit;
+    if (alone && identical(from, target)) return;
+    final tabs = [...state.tabs];
+    if (alone) {
+      tabs.remove(from);
+    } else {
+      from.panes.remove(pane);
+    }
+    target.panes.insertBeside(at, pane, side, focus: pane);
+    state = TabsState(tabs, tabs.indexOf(target));
+    focusActive(target);
+  }
+
+  /// A pane dragged onto the tab bar: a tab of its own, in that gap.
+  void detachPane(SessionTab from, Pane pane, int gap) {
+    final at = state.tabs.indexOf(from);
+    if (at < 0) return;
+    if (!from.panes.isSplit) return moveToGap(at, gap);
+    from.panes.remove(pane);
+    final tab = SessionTab.withPanes(Panes.of(pane));
+    final tabs = [...state.tabs]..insert(gap.clamp(0, state.tabs.length), tab);
+    state = TabsState(tabs, tabs.indexOf(tab));
+    focusActive(tab);
+  }
+
+  /// A host dropped on the `side` half of `at`: connected in a new pane.
+  void dropHost(HostView host, SessionTab target, Pane at, DropSide side) {
+    final pane = Pane(_start(_controller(label: host.label, hostId: host.id)));
+    target.panes.insertBeside(at, pane, side, focus: pane);
+    state = TabsState(state.tabs, state.tabs.indexOf(target));
+    focusActive(target);
+  }
+
+  /// A host dropped on the tab bar: a tab for it, in that gap.
+  void openHostAt(HostView host, int gap) {
+    openHost(host);
+    moveToGap(state.tabs.length - 1, gap);
+  }
+
+  /// Another tab with the same host (or address, or a local shell) as the
+  /// tab's active pane, right after it.
+  void duplicate(int index) {
+    if (index < 0 || index >= state.tabs.length) return;
+    final tab = state.tabs[index];
+    final c = tab is SessionTab
+        ? tab.controller ?? tab.panes.controllers.firstOrNull
+        : null;
+    if (c == null) return;
+    _add(_controller(label: c.label, hostId: c.hostId, target: c.target));
+    moveToGap(state.tabs.length - 1, index + 1);
+  }
+
+  /// Each pane of a tab in a tab of its own, after it; the active one
+  /// stays.
+  void separate(int index) {
+    if (index < 0 || index >= state.tabs.length) return;
+    final tab = state.tabs[index];
+    if (tab is! SessionTab || !tab.panes.isSplit) return;
+    final keep = tab.panes.active;
+    final others = tab.panes.leaves.where((p) => !identical(p, keep)).toList();
+    for (final p in others) {
+      tab.panes.remove(p);
+    }
+    final tabs = [...state.tabs]
+      ..insertAll(index + 1, [
+        for (final p in others) SessionTab.withPanes(Panes.of(p)),
+      ]);
+    state = TabsState(tabs, index);
+  }
+
+  /// Closes every tab but this one.
+  void closeOthers(int index) {
+    if (index < 0 || index >= state.tabs.length) return;
+    final keep = state.tabs[index];
+    for (var i = state.tabs.length - 1; i >= 0; i--) {
+      if (!identical(state.tabs[i], keep)) close(i);
+    }
   }
 
   /// Moves a tab to index `to` of the resulting list.

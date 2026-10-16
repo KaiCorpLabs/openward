@@ -6,9 +6,12 @@ import '../core/version.dart';
 import '../l10n/l10n.dart';
 import '../terminal/keys.dart';
 import '../ui/tokens.dart';
+import '../ui/widgets.dart';
 
-/// The release whose news [showWhatsNew] tells; seen once per person.
-const newsVersion = '0.2';
+/// The edition of the news [showWhatsNew] tells, seen once per person. A
+/// new one shows them again to who saw an earlier one: 0.2.0-beta.2 added
+/// the importers, 0.2.0-beta.3 dragging tabs and panes.
+const newsVersion = '0.2.0-beta.3';
 
 /// Who updated and has not seen this release's news yet.
 bool shouldShowNews(Settings s) => s.welcomed && s.seenNews != newsVersion;
@@ -30,8 +33,10 @@ class _WhatsNew extends StatelessWidget {
     final c = ow.colors;
     final l = context.l10n;
     String keys(String apple, String other) => isApple ? apple : other;
+    // Marked new: what came after who saw the news before.
     final items = [
-      (Icons.visibility_outlined, l.newsThemesTitle, l.newsThemesBody),
+      (Icons.file_download_outlined, l.newsImportTitle, l.newsImportBody, true),
+      (Icons.visibility_outlined, l.newsThemesTitle, l.newsThemesBody, false),
       (
         Icons.vertical_split_outlined,
         l.newsPanesTitle,
@@ -39,18 +44,26 @@ class _WhatsNew extends StatelessWidget {
           keys('⌘D', 'Ctrl+Shift+D'),
           keys('⌘⇧B', 'Ctrl+Shift+B'),
         ),
+        true,
       ),
       (
         Icons.folder_outlined,
         l.newsSftpTitle,
         l.newsSftpBody(keys('⌘⇧O', 'Ctrl+Shift+O')),
+        false,
       ),
-      (Icons.swap_horiz, l.newsTunnelsTitle, l.newsTunnelsBody),
-      (Icons.badge_outlined, l.newsIdentitiesTitle, l.newsIdentitiesBody),
+      (Icons.swap_horiz, l.newsTunnelsTitle, l.newsTunnelsBody, false),
+      (
+        Icons.badge_outlined,
+        l.newsIdentitiesTitle,
+        l.newsIdentitiesBody,
+        false,
+      ),
       (
         Icons.terminal,
         l.newsSnippetsTitle,
         l.newsSnippetsBody(keys('⌘⇧S', 'Ctrl+Shift+S')),
+        false,
       ),
     ];
     return AlertDialog(
@@ -85,7 +98,7 @@ class _WhatsNew extends StatelessWidget {
             children: [
               Text(l.whatsNewIntro, style: TextStyle(color: c.textMuted)),
               const SizedBox(height: 8),
-              for (final (icon, title, body) in items)
+              for (final (icon, title, body, fresh) in items)
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
@@ -108,11 +121,21 @@ class _WhatsNew extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              title,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    title,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                if (fresh) ...[
+                                  const SizedBox(width: 8),
+                                  Pill(l.newsFresh),
+                                ],
+                              ],
                             ),
                             const SizedBox(height: 2),
                             Text(

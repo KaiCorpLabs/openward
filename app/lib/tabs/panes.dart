@@ -29,6 +29,20 @@ final class PaneSplit extends PaneNode {
   double ratio;
 }
 
+/// Where something dropped on a pane goes: the half of it that it takes.
+enum DropSide {
+  left,
+  right,
+  top,
+  bottom;
+
+  Axis get axis =>
+      this == left || this == right ? Axis.horizontal : Axis.vertical;
+
+  /// What is dropped comes first (left of, or above, the pane).
+  bool get before => this == left || this == top;
+}
+
 /// A tab's panes: how they are laid out, which one has the keyboard, and
 /// whether what is typed goes to several (broadcast). Broadcast lives with
 /// the tab only and is never saved.
@@ -36,6 +50,11 @@ class Panes extends ChangeNotifier {
   /// With one pane; its session may come later (tests leave it out).
   Panes(TerminalController? first) : root = Pane(first) {
     active = root as Pane;
+  }
+
+  /// Panes laid out already: one taken from another tab, or all of them.
+  Panes.of(this.root, {Pane? active}) {
+    this.active = active ?? _leaves(root).first;
   }
 
   PaneNode root;
@@ -111,6 +130,20 @@ class Panes extends ChangeNotifier {
     if (leaves.length < 2) broadcast = false;
     notifyListeners();
     return true;
+  }
+
+  /// Puts `node` (a pane, or another tab's panes) in the `side` half of
+  /// `at`; `focus` (or the first of them) gets the keyboard. While
+  /// broadcasting, what comes in does not receive until it is let in.
+  void insertBeside(Pane at, PaneNode node, DropSide side, {Pane? focus}) {
+    final split = side.before
+        ? PaneSplit(side.axis, node, at)
+        : PaneSplit(side.axis, at, node);
+    _replace(at, split);
+    if (broadcast) _left.addAll(_leaves(node));
+    active = focus ?? _leaves(node).first;
+    maximized = null;
+    notifyListeners();
   }
 
   void focus(Pane pane) {

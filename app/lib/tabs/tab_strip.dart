@@ -1,5 +1,5 @@
 import 'package:flutter/gestures.dart'
-    show kMiddleMouseButton, kPrimaryMouseButton;
+    show kMiddleMouseButton, kPrimaryMouseButton, kSecondaryMouseButton;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,14 +7,18 @@ import '../hosts/sidebar.dart' show tabStatus;
 import '../l10n/l10n.dart';
 import '../sftp/queue_view.dart';
 import '../terminal/controller.dart';
+import '../terminal/keys.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../window/chrome.dart';
+import 'drag.dart';
 import 'tabs.dart';
 
 /// The row of tabs at the top of the window: click to bring to front, drag
-/// to reorder, double-click to rename, middle-click or × to close. Its
-/// empty part moves the window, as a title bar does.
+/// to reorder (or onto a terminal, to split it), double-click to rename,
+/// right-click for a menu, middle-click or × to close. Panes and hosts
+/// dropped on it get a tab of their own. Its empty part moves the window,
+/// as a title bar does.
 class TabStrip extends ConsumerWidget {
   const TabStrip({super.key});
 
@@ -52,28 +56,10 @@ class TabStrip extends ConsumerWidget {
           Flexible(
             child: SizedBox(
               height: height,
-              child: ReorderableListView.builder(
-                scrollDirection: Axis.horizontal,
-                shrinkWrap: true,
-                buildDefaultDragHandles: false,
-                itemCount: state.tabs.length,
-                onReorderItem: tabs.move,
-                proxyDecorator: (child, _, _) =>
-                    Material(color: Colors.transparent, child: child),
-                itemBuilder: (context, i) => ReorderableDragStartListener(
-                  key: ObjectKey(state.tabs[i]),
-                  index: i,
-                  child: Padding(
-                    padding: EdgeInsets.only(right: gap),
-                    child: _Tab(
-                      tab: state.tabs[i],
-                      active: i == state.active,
-                      onSelect: () => tabs.select(i),
-                      onClose: () => tabs.close(i),
-                      onRename: () => _rename(context, ref, i),
-                    ),
-                  ),
-                ),
+              child: _TabRow(
+                state: state,
+                gap: gap,
+                onRename: (i) => _rename(context, ref, i),
               ),
             ),
           ),
@@ -133,6 +119,270 @@ class TabStrip extends ConsumerWidget {
   }
 }
 
+/// The tabs, each draggable, and where something dragged over them would
+/// land: a line in the gap.
+class _TabRow extends ConsumerStatefulWidget {
+  const _TabRow({
+    required this.state,
+    required this.gap,
+    required this.onRename,
+  });
+
+  final TabsState state;
+  final double gap;
+  final ValueChanged<int> onRename;
+
+  @override
+  ConsumerState<_TabRow> createState() => _TabRowState();
+}
+
+class _TabRowState extends ConsumerState<_TabRow> {
+  final Map<OpenTab, GlobalKey> _keys = {};
+  final GlobalKey _row = GlobalKey();
+
+  /// The gap something dragged would land in: 0 is before the first tab.
+  int? _over;
+
+  /// The tab in front before a press brought another: while that one is
+  /// dragged, this one stays in view, to drop it on.
+  OpenTab? _before;
+
+  GlobalKey _key(OpenTab t) => _keys.putIfAbsent(t, GlobalKey.new);
+
+  /// The gap nearest to a point of the screen.
+  int _gapAt(Offset global) {
+    final tabs = widget.state.tabs;
+    for (var i = 0; i < tabs.length; i++) {
+      final box = _keys[tabs[i]]?.currentContext?.findRenderObject();
+      if (box is! RenderBox || !box.hasSize) continue;
+      final center = box.localToGlobal(box.size.center(Offset.zero));
+      if (global.dx < center.dx) return i;
+    }
+    return tabs.length;
+  }
+
+  /// Where the line of a gap goes, from the left of the row.
+  double? _lineAt(int gap) {
+    final tabs = widget.state.tabs;
+    final row = _row.currentContext?.findRenderObject();
+    if (row is! RenderBox || tabs.isEmpty) return null;
+    final at = gap < tabs.length ? tabs[gap] : tabs.last;
+    final box = _keys[at]?.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return null;
+    final edge = gap < tabs.length
+        ? Offset.zero
+        : Offset(box.size.width - widget.gap, 0);
+    return row.globalToLocal(box.localToGlobal(edge)).dx;
+  }
+
+  void _drop(WindowDrag d) {
+    final gap = _over;
+    setState(() => _over = null);
+    if (gap == null || dragCancelled.value) return;
+    final tabs = ref.read(tabsProvider.notifier);
+    switch (d) {
+      case TabDrag(:final tab):
+        final from = widget.state.tabs.indexOf(tab);
+        if (from >= 0) tabs.moveToGap(from, gap);
+        // Reordered, it comes to the front, as in a browser.
+        final now = ref.read(tabsProvider).tabs.indexOf(tab);
+        if (now >= 0) tabs.select(now);
+      case PaneDrag(:final tab, :final pane):
+        tabs.detachPane(tab, pane, gap);
+      case HostDrag(:final host):
+        tabs.openHostAt(host, gap);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = widget.state;
+    final tabs = ref.read(tabsProvider.notifier);
+    final c = context.ow.colors;
+    _keys.removeWhere((t, _) => !state.tabs.contains(t));
+    return DragTarget<WindowDrag>(
+      onMove: (d) {
+        final gap = _gapAt(d.offset);
+        if (gap != _over) setState(() => _over = gap);
+      },
+      onLeave: (_) => setState(() => _over = null),
+      onAcceptWithDetails: (d) => _drop(d.data),
+      builder: (context, candidates, _) {
+        final line = _over == null || candidates.isEmpty
+            ? null
+            : _lineAt(_over!);
+        return Stack(
+          key: _row,
+          clipBehavior: Clip.none,
+          children: [
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final (i, t) in state.tabs.indexed)
+                    WindowDraggable(
+                      key: ObjectKey(t),
+                      data: TabDrag(t, tabTitle(context, t)),
+                      onStarted: () {
+                        final before = _before;
+                        if (before == null || identical(before, t)) return;
+                        final at = ref.read(tabsProvider).tabs.indexOf(before);
+                        if (at >= 0) tabs.select(at);
+                      },
+                      child: Padding(
+                        key: _key(t),
+                        padding: EdgeInsets.only(right: widget.gap),
+                        child: _Tab(
+                          tab: t,
+                          active: i == state.active,
+                          onSelect: () {
+                            _before = ref.read(tabsProvider).current;
+                            tabs.select(i);
+                          },
+                          onClose: () => tabs.close(i),
+                          onRename: () => widget.onRename(i),
+                          onMenu: (at) => _menu(context, i, at),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (line != null)
+              ValueListenableBuilder(
+                valueListenable: dragCancelled,
+                builder: (context, cancelled, _) => cancelled
+                    ? const SizedBox.shrink()
+                    : Positioned(
+                        left: line - 2,
+                        top: 4,
+                        bottom: 4,
+                        child: IgnorePointer(
+                          child: Container(
+                            width: 3,
+                            decoration: BoxDecoration(
+                              color: c.accent,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                      ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Right-click on a tab: what can be done with it, and that it drags.
+  Future<void> _menu(BuildContext context, int index, Offset at) async {
+    final l = context.l10n;
+    final tabs = ref.read(tabsProvider.notifier);
+    final tab = widget.state.tabs[index];
+    final key = isApple ? '⌘' : l.ctrlShiftPrefix;
+    final split = tab is SessionTab && tab.panes.isSplit;
+    final many = widget.state.tabs.length > 1;
+    final action = await showMenu<VoidCallback>(
+      context: context,
+      position: RelativeRect.fromLTRB(at.dx, at.dy, at.dx, at.dy),
+      items: [
+        if (tab is SessionTab) ...[
+          menuItem(context, l.renameTab, '', () => widget.onRename(index)),
+          menuItem(context, l.duplicateTab, '', () => tabs.duplicate(index)),
+          const PopupMenuDivider(),
+          menuItem(context, l.splitRight, '${key}D', () {
+            tabs.select(index);
+            tabs.split(Axis.horizontal);
+          }),
+          menuItem(context, l.splitDown, isApple ? '⌘⇧D' : '${key}E', () {
+            tabs.select(index);
+            tabs.split(Axis.vertical);
+          }),
+          if (split)
+            menuItem(context, l.separatePanes, '', () => tabs.separate(index)),
+          const PopupMenuDivider(),
+        ],
+        menuItem(context, l.closeTab, '${key}W', () => tabs.close(index)),
+        if (many)
+          menuItem(
+            context,
+            l.closeOtherTabs,
+            '',
+            () => tabs.closeOthers(index),
+          ),
+        menuHint(context, l.tabMenuHint),
+      ],
+    );
+    action?.call();
+  }
+}
+
+/// A tab's name, as its label says.
+String tabTitle(BuildContext context, OpenTab tab) {
+  final l = context.l10n;
+  return switch (tab) {
+    SessionTab(:final panes) =>
+      (panes.active.controller ?? panes.controllers.firstOrNull)
+              ?.displayTitle ??
+          l.newPane,
+    SftpTab(:final controller) => l.sftpTabTitle(controller.label),
+    PageTab(:final page) => switch (page) {
+      PageKind.settings => l.settings,
+      PageKind.tunnels => l.tunnels,
+      PageKind.identities => l.identities,
+      PageKind.snippets => l.snippets,
+      PageKind.knownHosts => l.knownHosts,
+    },
+  };
+}
+
+/// A row of a context menu: what it does, and its shortcut.
+PopupMenuItem<VoidCallback> menuItem(
+  BuildContext context,
+  String text,
+  String keys,
+  VoidCallback f,
+) => PopupMenuItem(
+  value: f,
+  height: 34,
+  child: Row(
+    children: [
+      Expanded(child: Text(text)),
+      const SizedBox(width: 16),
+      Text(keys, style: monoStyle(context, size: 11)),
+    ],
+  ),
+);
+
+/// The last line of a menu: a note, not an action.
+PopupMenuItem<VoidCallback> menuHint(BuildContext context, String text) {
+  final c = context.ow.colors;
+  return PopupMenuItem(
+    enabled: false,
+    height: 40,
+    child: SizedBox(
+      width: 260,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Icon(Icons.open_with, size: 13, color: c.textSubtle),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 11, color: c.textSubtle, height: 1.35),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 class _Tab extends StatelessWidget {
   const _Tab({
     required this.tab,
@@ -140,6 +390,7 @@ class _Tab extends StatelessWidget {
     required this.onSelect,
     required this.onClose,
     required this.onRename,
+    required this.onMenu,
   });
 
   final OpenTab tab;
@@ -147,6 +398,7 @@ class _Tab extends StatelessWidget {
   final VoidCallback onSelect;
   final VoidCallback onClose;
   final VoidCallback onRename;
+  final ValueChanged<Offset> onMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -280,6 +532,7 @@ class _Tab extends StatelessWidget {
         onPointerDown: (e) {
           if (e.buttons == kPrimaryMouseButton) onSelect();
           if (e.buttons == kMiddleMouseButton) onClose();
+          if (e.buttons == kSecondaryMouseButton) onMenu(e.position);
         },
         child: GestureDetector(
           onDoubleTap: onRename,

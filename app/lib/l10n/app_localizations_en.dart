@@ -352,6 +352,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get closeAction => 'Close';
 
   @override
+  String get closeOtherTabs => 'Close the others';
+
+  @override
   String get closePane => 'Close the pane';
 
   @override
@@ -651,6 +654,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'If something already exists, you are asked before it is touched.';
 
   @override
+  String get dropBottom => 'below';
+
+  @override
+  String get dropLeft => 'on the left';
+
+  @override
+  String dropMove(String name, String where) {
+    return 'Drop: $name $where';
+  }
+
+  @override
+  String dropOpenHost(String name, String where) {
+    return 'Drop: open $name $where';
+  }
+
+  @override
+  String get dropRight => 'on the right';
+
+  @override
   String get dropToDownload => 'Drop to download here';
 
   @override
@@ -659,6 +681,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dropToUpload => 'Drop to upload here';
+
+  @override
+  String get dropTop => 'above';
+
+  @override
+  String get duplicateTab => 'Duplicate';
 
   @override
   String dynamicSentence(String here, String host) {
@@ -1669,6 +1697,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newTunnel => 'New tunnel';
 
   @override
+  String get newsFresh => 'new';
+
+  @override
   String get newsIdentitiesBody =>
       'A user, keys and an agent with a name, for a whole group or several hosts at once.';
 
@@ -1676,8 +1707,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newsIdentitiesTitle => 'Identities';
 
   @override
+  String get newsImportBody =>
+      'Hosts, groups, identities and tunnels from Termius, PuTTY, KiTTY, MobaXterm, Tabby or SecureCRT, from «…» › Import… in the sidebar. Passwords do not come along.';
+
+  @override
+  String get newsImportTitle => 'Import from your previous client';
+
+  @override
   String newsPanesBody(String split, String broadcast) {
-    return 'Split a tab ($split) and type into several panes at once ($broadcast), with a fixed notice and confirmed pasting.';
+    return 'Split a tab ($split) or drag another one, or a host, onto a terminal; type into several panes at once ($broadcast). With exit, the tab closes by itself.';
   }
 
   @override
@@ -1826,6 +1864,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onConnect => 'On connect';
+
+  @override
+  String get onExit => 'When the shell exits';
+
+  @override
+  String get onExitAlways => 'Always close';
+
+  @override
+  String get onExitClean => 'Close if it ends well';
+
+  @override
+  String get onExitHelp =>
+      'With exit or logout, the pane (or the tab, if it is the last one) closes by itself. If the program ends with an error, it stays open so you can read what happened, unless “Always close” is on. A connection that drops never closes by itself: it keeps reconnecting.';
+
+  @override
+  String get onExitNever => 'Keep it open';
 
   @override
   String get onSend => 'On send';
@@ -2351,6 +2405,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rename => 'Rename';
 
   @override
+  String get renameTab => 'Rename…';
+
+  @override
   String get renameTabHelp => 'Empty to go back to the host\'s name';
 
   @override
@@ -2639,6 +2696,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get separatePanes => 'Split the panes into tabs';
+
+  @override
   String get sessionClosed => 'Session closed.';
 
   @override
@@ -2845,6 +2905,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get stepReady => 'Done';
 
   @override
+  String get tabMenuHint =>
+      'You can also drag the tab onto a terminal to split it, or elsewhere in the bar to reorder it.';
+
+  @override
   String get tags => 'Tags';
 
   @override
@@ -2858,6 +2922,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get terminalFont => 'Terminal font';
+
+  @override
+  String get terminalMenuHint =>
+      'Drag a tab or a host here to open it in one half of this pane.';
 
   @override
   String get terminalScheme => 'Own scheme';

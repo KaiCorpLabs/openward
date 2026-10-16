@@ -19,6 +19,18 @@ enum MotionChoice { system, reduce, full }
 /// The cursor's shape when the program does not choose one.
 enum CursorChoice { block, bar, underline }
 
+/// What happens to a terminal's pane (or tab) when its shell ends.
+enum OnExit {
+  /// Closed when it ends well: `exit` or `logout`, without an error.
+  clean,
+
+  /// Closed whenever the program ends, also with an error.
+  always,
+
+  /// Left open.
+  never,
+}
+
 /// Where the terminal's colors come from.
 enum TerminalColors {
   /// The theme's own, light or dark with it.
@@ -127,6 +139,7 @@ class Settings {
     this.cursor = CursorChoice.block,
     this.cursorBlink = false,
     this.bellFlash = true,
+    this.onExit = OnExit.clean,
   });
 
   /// Terminal font size, in logical pixels.
@@ -172,6 +185,10 @@ class Settings {
   /// A BEL flashes the terminal (besides marking its tab).
   final bool bellFlash;
 
+  /// Whether a pane closes by itself when its shell ends. A connection
+  /// that drops never does: it reconnects.
+  final OnExit onExit;
+
   static const fontSizes = [
     10.0,
     11.0,
@@ -206,6 +223,7 @@ class Settings {
     CursorChoice? cursor,
     bool? cursorBlink,
     bool? bellFlash,
+    OnExit? onExit,
   }) => Settings(
     fontSize: fontSize ?? this.fontSize,
     theme: theme ?? this.theme,
@@ -225,6 +243,7 @@ class Settings {
     cursor: cursor ?? this.cursor,
     cursorBlink: cursorBlink ?? this.cursorBlink,
     bellFlash: bellFlash ?? this.bellFlash,
+    onExit: onExit ?? this.onExit,
   );
 
   /// The same settings with one theme's layers changed (or reset).
@@ -266,6 +285,7 @@ class Settings {
     'cursor': cursor.name,
     'cursor_blink': cursorBlink,
     'bell_flash': bellFlash,
+    'on_exit': onExit.name,
   };
 
   /// Unknown or broken values fall back to the defaults, one by one.
@@ -313,6 +333,7 @@ class Settings {
       cursor: pick(CursorChoice.values, 'cursor', d.cursor),
       cursorBlink: flag('cursor_blink', d.cursorBlink),
       bellFlash: flag('bell_flash', d.bellFlash),
+      onExit: pick(OnExit.values, 'on_exit', d.onExit),
     );
   }
 

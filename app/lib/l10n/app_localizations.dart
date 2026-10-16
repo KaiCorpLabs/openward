@@ -602,6 +602,12 @@ abstract class AppLocalizations {
   /// **'Cerrar'**
   String get closeAction;
 
+  /// No description provided for @closeOtherTabs.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar las demás'**
+  String get closeOtherTabs;
+
   /// No description provided for @closePane.
   ///
   /// In es, this message translates to:
@@ -1064,6 +1070,36 @@ abstract class AppLocalizations {
   /// **'Si alguno ya existe, te preguntamos antes de tocarlo.'**
   String get dropAskFirst;
 
+  /// No description provided for @dropBottom.
+  ///
+  /// In es, this message translates to:
+  /// **'abajo'**
+  String get dropBottom;
+
+  /// No description provided for @dropLeft.
+  ///
+  /// In es, this message translates to:
+  /// **'a la izquierda'**
+  String get dropLeft;
+
+  /// No description provided for @dropMove.
+  ///
+  /// In es, this message translates to:
+  /// **'Soltar: {name} {where}'**
+  String dropMove(String name, String where);
+
+  /// No description provided for @dropOpenHost.
+  ///
+  /// In es, this message translates to:
+  /// **'Soltar: abrir {name} {where}'**
+  String dropOpenHost(String name, String where);
+
+  /// No description provided for @dropRight.
+  ///
+  /// In es, this message translates to:
+  /// **'a la derecha'**
+  String get dropRight;
+
   /// No description provided for @dropToDownload.
   ///
   /// In es, this message translates to:
@@ -1081,6 +1117,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Suelta para subir aquí'**
   String get dropToUpload;
+
+  /// No description provided for @dropTop.
+  ///
+  /// In es, this message translates to:
+  /// **'arriba'**
+  String get dropTop;
+
+  /// No description provided for @duplicateTab.
+  ///
+  /// In es, this message translates to:
+  /// **'Duplicar'**
+  String get duplicateTab;
 
   /// No description provided for @dynamicSentence.
   ///
@@ -2522,6 +2570,12 @@ abstract class AppLocalizations {
   /// **'Nuevo túnel'**
   String get newTunnel;
 
+  /// No description provided for @newsFresh.
+  ///
+  /// In es, this message translates to:
+  /// **'nuevo'**
+  String get newsFresh;
+
   /// No description provided for @newsIdentitiesBody.
   ///
   /// In es, this message translates to:
@@ -2534,10 +2588,22 @@ abstract class AppLocalizations {
   /// **'Identidades'**
   String get newsIdentitiesTitle;
 
+  /// No description provided for @newsImportBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Hosts, grupos, identidades y túneles de Termius, PuTTY, KiTTY, MobaXterm, Tabby o SecureCRT, desde «…» › Importar… en la barra lateral. Las contraseñas no se traen.'**
+  String get newsImportBody;
+
+  /// No description provided for @newsImportTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar desde tu cliente anterior'**
+  String get newsImportTitle;
+
   /// No description provided for @newsPanesBody.
   ///
   /// In es, this message translates to:
-  /// **'Divide una pestaña ({split}) y escribe en varios paneles a la vez ({broadcast}), con aviso fijo y pegado confirmado.'**
+  /// **'Divide una pestaña ({split}) o arrastra otra, o un host, sobre un terminal; escribe en varios paneles a la vez ({broadcast}). Con exit, la pestaña se cierra sola.'**
   String newsPanesBody(String split, String broadcast);
 
   /// No description provided for @newsPanesTitle.
@@ -2791,6 +2857,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Al conectar'**
   String get onConnect;
+
+  /// No description provided for @onExit.
+  ///
+  /// In es, this message translates to:
+  /// **'Al salir del shell'**
+  String get onExit;
+
+  /// No description provided for @onExitAlways.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar siempre'**
+  String get onExitAlways;
+
+  /// No description provided for @onExitClean.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar si sale bien'**
+  String get onExitClean;
+
+  /// No description provided for @onExitHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Con exit o logout, el panel (o la pestaña, si es el último) se cierra solo. Si el programa acaba con un error, se queda abierto para que leas qué pasó, salvo con «Cerrar siempre». Una conexión que se corta nunca se cierra sola: sigue reconectando.'**
+  String get onExitHelp;
+
+  /// No description provided for @onExitNever.
+  ///
+  /// In es, this message translates to:
+  /// **'Dejarla abierta'**
+  String get onExitNever;
 
   /// No description provided for @onSend.
   ///
@@ -3542,6 +3638,12 @@ abstract class AppLocalizations {
   /// **'Renombrar'**
   String get rename;
 
+  /// No description provided for @renameTab.
+  ///
+  /// In es, this message translates to:
+  /// **'Renombrar…'**
+  String get renameTab;
+
   /// No description provided for @renameTabHelp.
   ///
   /// In es, this message translates to:
@@ -3956,6 +4058,12 @@ abstract class AppLocalizations {
   /// **'Enviar a {count} paneles'**
   String sendToPanes(int count);
 
+  /// No description provided for @separatePanes.
+  ///
+  /// In es, this message translates to:
+  /// **'Separar los paneles en pestañas'**
+  String get separatePanes;
+
   /// No description provided for @sessionClosed.
   ///
   /// In es, this message translates to:
@@ -4280,6 +4388,12 @@ abstract class AppLocalizations {
   /// **'Listo'**
   String get stepReady;
 
+  /// No description provided for @tabMenuHint.
+  ///
+  /// In es, this message translates to:
+  /// **'También puedes arrastrar la pestaña sobre un terminal para dividirlo, o a otro sitio de la barra para ordenarla.'**
+  String get tabMenuHint;
+
   /// No description provided for @tags.
   ///
   /// In es, this message translates to:
@@ -4309,6 +4423,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Fuente del terminal'**
   String get terminalFont;
+
+  /// No description provided for @terminalMenuHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Arrastra aquí una pestaña o un host para abrirlo en una mitad de este panel.'**
+  String get terminalMenuHint;
 
   /// No description provided for @terminalScheme.
   ///

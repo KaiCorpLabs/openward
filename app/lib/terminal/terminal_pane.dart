@@ -27,10 +27,15 @@ class TerminalPane extends ConsumerStatefulWidget {
     required this.controller,
     this.autofocus = true,
     this.mirrors,
+    this.paneMenu,
   });
 
   final TerminalController controller;
   final bool autofocus;
+
+  /// What the right-click menu adds for the pane it is in: splitting,
+  /// closing, and that things can be dropped on it.
+  final List<PopupMenuEntry<VoidCallback>> Function(BuildContext)? paneMenu;
 
   /// Other sessions that get what is typed here (broadcast), asked for at
   /// each key: panes join and leave while it is on.
@@ -325,19 +330,27 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
         PopupMenuItem(
           enabled: hasSelection,
           value: _copy,
+          height: 34,
           child: _MenuRow(l.copy, '${key}C'),
         ),
-        PopupMenuItem(value: _paste, child: _MenuRow(l.paste, '${key}V')),
+        PopupMenuItem(
+          value: _paste,
+          height: 34,
+          child: _MenuRow(l.paste, '${key}V'),
+        ),
         const PopupMenuDivider(),
         PopupMenuItem(
           value: _session.selectAll,
+          height: 34,
           child: _MenuRow(l.selectAllText, isApple ? '⌘A' : ''),
         ),
         PopupMenuItem(
           enabled: hasSelection,
           value: _session.clearSelection,
+          height: 34,
           child: _MenuRow(l.clearSelection, ''),
         ),
+        ...?widget.paneMenu?.call(context),
       ],
     );
     action?.call();

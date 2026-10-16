@@ -34,7 +34,11 @@ import 'package:openward/src/rust/api/identities.dart';
 import 'package:openward/src/rust/api/session.dart';
 import 'package:openward/src/rust/api/vault.dart';
 import 'package:openward/src/rust/frb_generated.dart';
+import 'package:openward/hosts/sidebar.dart';
+import 'package:openward/tabs/session_view.dart';
+import 'package:openward/tabs/tab_strip.dart';
 import 'package:openward/tabs/tabs.dart';
+import 'package:openward/terminal/terminal_pane.dart';
 import 'package:openward/terminal/controller.dart';
 import 'package:openward/terminal/keys.dart';
 import 'package:openward/terminal/renderer.dart';
@@ -123,6 +127,28 @@ void _termiusIn(String home) {
 /// The key the Termius fixture is encrypted with.
 final _termiusKey = List.filled(32, 0x42);
 
+/// A mouse drag from one point to another, in steps, as a hand moves.
+Future<void> _drag(WidgetTester tester, Offset from, Offset to) async {
+  // A pointer of its own: a real mouse on the test machine uses low ones.
+  final g = await tester.startGesture(
+    from,
+    kind: PointerDeviceKind.mouse,
+    pointer: 900,
+  );
+  for (var i = 1; i <= 12; i++) {
+    await g.moveTo(Offset.lerp(from, to, i / 12)!);
+    await tester.pump(const Duration(milliseconds: 16));
+  }
+  await g.up();
+  await tester.pump(const Duration(milliseconds: 100));
+}
+
+/// A tab of the tab bar, by its title.
+Finder _tab(String title) => find.descendant(
+  of: find.byType(TabStrip),
+  matching: find.textContaining(title),
+);
+
 /// The S2 fixtures directory if the test servers are up, else null.
 Future<String?> _servers() async {
   final cache = Platform.isMacOS ? 'Library/Caches' : '.cache';
@@ -204,7 +230,7 @@ void main() {
     if (!settings.existsSync()) {
       // Past this release's news too, unless the first run is under test.
       settings.writeAsStringSync(
-        '{"language": "es", "welcomed": $welcomed, "seen_news": "0.2"}',
+        '{"language": "es", "welcomed": $welcomed, "seen_news": "0.2.0-beta.3"}',
       );
     }
     await tester.pumpWidget(
@@ -556,6 +582,152 @@ Host web-1 web-2
     await _settle(tester);
     expect(app.hosts(), hasLength(4));
   });
+
+  testWidgets(
+    'tabs and panes: drag to reorder and split, menus, close on exit',
+    (tester) async {
+      await app.createHost(
+        spec: const HostSpec(label: 'lejos', address: '192.0.2.1'),
+      );
+      final container = await launch(tester);
+      final tabs = container.read(tabsProvider.notifier);
+      List<String> titles() => [
+        for (final t in container.read(tabsProvider).tabs)
+          switch (t) {
+            SessionTab() => t.controller?.displayTitle ?? '',
+            PageTab(:final page) => page.name,
+            _ => '',
+          },
+      ];
+      Future<TerminalController> local(String name) async {
+        tabs.openLocal();
+        await tester.pump();
+        final c = container.read(tabsProvider).currentSession!;
+        await _until(tester, () => c.phase == Phase.running, 'the shell');
+        c.customTitle = name;
+        return c;
+      }
+
+      final uno = await local('uno');
+      final dos = await local('dos');
+      tabs.openPage(PageKind.tunnels);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(titles(), ['uno', 'dos', 'tunnels']);
+
+      // Dragging a tab along the bar reorders it.
+      await _drag(
+        tester,
+        tester.getCenter(_tab('Túneles')),
+        tester.getTopLeft(_tab('uno')) + const Offset(2, 8),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(titles(), ['tunnels', 'uno', 'dos']);
+
+      // Onto a terminal's right half, a tab joins it: two panes, one tab.
+      tabs.select(1);
+      await tester.pump(const Duration(milliseconds: 400));
+      final term = tester.getRect(find.byType(TerminalPane).first);
+      await _drag(
+        tester,
+        tester.getCenter(_tab('dos')),
+        term.centerRight - const Offset(40, 0),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      // The pane dropped has the keyboard, so the tab is named after it.
+      expect(titles(), ['tunnels', 'dos']);
+      final split = container.read(tabsProvider).current! as SessionTab;
+      expect(split.panes.leaves.map((p) => p.controller), [uno, dos]);
+      await _shot(tester, '60-dropped-tab');
+      split.panes.focus(split.panes.leaves.first);
+      await tester.pump();
+
+      // A host from the sidebar, onto the bottom half of the first pane.
+      final first = tester.getRect(find.byType(TerminalPane).first);
+      await _drag(
+        tester,
+        tester.getCenter(
+          find.descendant(
+            of: find.byType(Sidebar),
+            matching: find.text('lejos'),
+          ),
+        ),
+        first.bottomCenter - const Offset(0, 30),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(split.panes.leaves, hasLength(3));
+      expect(split.panes.active.controller?.label, 'lejos');
+      split.panes.focus(split.panes.leaves.first);
+      await tester.pump();
+
+      // A pane by its header, onto the tab bar: a tab of its own.
+      await _drag(
+        tester,
+        tester.getCenter(
+          find.descendant(of: find.byType(TabView), matching: find.text('dos')),
+        ),
+        tester.getTopRight(_tab('uno')) + const Offset(30, 8),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(titles(), ['tunnels', 'uno', 'dos']);
+      expect(split.panes.leaves, hasLength(2));
+
+      // The tab's menu splits it and separates its panes again.
+      tabs.select(1);
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(_tab('uno'), buttons: kSecondaryButton);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Duplicar'), findsOneWidget);
+      await _shot(tester, '61-tab-menu');
+      await tester.tap(find.text('Separar los paneles en pestañas'));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(titles(), hasLength(4));
+
+      // The terminal's menu splits the pane it was opened on.
+      tabs.select(titles().indexOf('dos'));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(
+        find.byType(TerminalPane).first,
+        buttons: kSecondaryButton,
+        kind: PointerDeviceKind.mouse,
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Dividir abajo'), findsOneWidget);
+      await _shot(tester, '62-terminal-menu');
+      await tester.tap(find.text('Dividir abajo'));
+      await tester.pump(const Duration(milliseconds: 400));
+      final dosTab = container.read(tabsProvider).current! as SessionTab;
+      expect(dosTab.panes.leaves, hasLength(2));
+      // The new pane asks what to open; it goes again.
+      final fresh = dosTab.panes.leaves.last;
+      if (fresh.controller == null) tabs.closePane(dosTab, fresh);
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // exit closes the pane (and the tab, with the last one); an error stays.
+      final failing = await local('falla');
+      failing.session.text(text: 'exit 3\n');
+      await _until(tester, () => failing.phase == Phase.closed, 'exit 3');
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(titles(), contains('falla'));
+      final n = titles().length;
+      dos.session.text(text: 'exit\n');
+      await _until(tester, () => titles().length == n - 1, 'dos to close');
+      expect(titles(), isNot(contains('dos')));
+
+      // Unless the setting says to keep it.
+      container
+          .read(settingsProvider.notifier)
+          .update((s) => s.copyWith(onExit: OnExit.never));
+      final stays = await local('se queda');
+      stays.session.text(text: 'exit\n');
+      await _until(tester, () => stays.phase == Phase.closed, 'its exit');
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(titles(), contains('se queda'));
+      while (container.read(tabsProvider).tabs.isNotEmpty) {
+        tabs.close(0);
+      }
+      await tester.pump(const Duration(milliseconds: 400));
+    },
+  );
 
   testWidgets('a group and a host from the editors, with inheritance', (
     tester,
