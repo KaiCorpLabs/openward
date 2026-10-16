@@ -32,6 +32,16 @@ import 'package:openward/terminal/keys.dart';
 
 final _frame = GlobalKey();
 
+/// Where screenshots go: `--dart-define=OPENWARD_SHOTS=…` (the CI), or the
+/// temporary folder. A define, because the test app does not see the
+/// environment of `flutter test`.
+String get _shotsPath {
+  const defined = String.fromEnvironment('OPENWARD_SHOTS');
+  return defined.isNotEmpty
+      ? defined
+      : '${Directory.systemTemp.path}/openward-shots';
+}
+
 /// A screenshot, next to those of the window tests.
 Future<void> _shot(WidgetTester tester, String name) async {
   await tester.pump();
@@ -40,10 +50,7 @@ Future<void> _shot(WidgetTester tester, String name) async {
   final image = await boundary.toImage(pixelRatio: 1.5);
   final png = await image.toByteData(format: ui.ImageByteFormat.png);
   image.dispose();
-  final dir = Directory(
-    Platform.environment['OPENWARD_SHOTS'] ??
-        '${Directory.systemTemp.path}/openward-shots',
-  )..createSync(recursive: true);
+  final dir = Directory(_shotsPath)..createSync(recursive: true);
   File('${dir.path}/$name.png').writeAsBytesSync(png!.buffer.asUint8List());
 }
 

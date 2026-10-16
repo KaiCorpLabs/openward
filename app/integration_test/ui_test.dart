@@ -2,8 +2,8 @@
 //
 //   fvm flutter test integration_test/ui_test.dart -d macos
 //
-// Screenshots (rendered by the app itself) go to $OPENWARD_SHOTS, or else
-// $TMPDIR/openward-shots.
+// Screenshots (rendered by the app itself) go to $TMPDIR/openward-shots, or
+// where --dart-define=OPENWARD_SHOTS says.
 // The SSH part needs the S2 test servers (spikes/s2-ssh/servers/up.sh).
 
 @Timeout(Duration(minutes: 3))
@@ -44,10 +44,17 @@ import 'package:openward/src/rust/api/tunnels.dart';
 import 'package:openward/tunnels/tunnels.dart';
 import 'package:openward/ui/tokens.dart';
 
-final _shots = Directory(
-  Platform.environment['OPENWARD_SHOTS'] ??
-      '${Directory.systemTemp.path}/openward-shots',
-);
+/// Where screenshots go: `--dart-define=OPENWARD_SHOTS=…` (the CI), or the
+/// temporary folder. A define, because the test app does not see the
+/// environment of `flutter test`.
+String get _shotsPath {
+  const defined = String.fromEnvironment('OPENWARD_SHOTS');
+  return defined.isNotEmpty
+      ? defined
+      : '${Directory.systemTemp.path}/openward-shots';
+}
+
+final _shots = Directory(_shotsPath);
 final _frame = GlobalKey();
 
 Future<void> _shot(WidgetTester tester, String name) async {

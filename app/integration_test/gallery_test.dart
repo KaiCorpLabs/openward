@@ -1,7 +1,6 @@
 // The review gallery: the main screens with each theme, light and dark,
 // to look at without installing on every system. CI keeps them as an
-// artifact; locally they go to $TMPDIR/openward-shots/gallery (or
-// $OPENWARD_SHOTS/gallery).
+// artifact; locally they go to $TMPDIR/openward-shots/gallery.
 //
 //   fvm flutter test integration_test/gallery_test.dart -d macos
 
@@ -28,6 +27,16 @@ import 'package:openward/tabs/tabs.dart';
 import 'package:openward/terminal/controller.dart';
 
 final _frame = GlobalKey();
+
+/// Where screenshots go: `--dart-define=OPENWARD_SHOTS=…` (the CI), or the
+/// temporary folder. A define, because the test app does not see the
+/// environment of `flutter test`.
+String get _shotsPath {
+  const defined = String.fromEnvironment('OPENWARD_SHOTS');
+  return defined.isNotEmpty
+      ? defined
+      : '${Directory.systemTemp.path}/openward-shots';
+}
 
 /// Every theme in the gallery: (family, light?).
 const _themes = [
@@ -112,9 +121,7 @@ void main() {
       tester.element(find.byType(OpenWardApp)),
     );
     final tabs = container.read(tabsProvider.notifier);
-    final out = Directory(
-      '${Platform.environment['OPENWARD_SHOTS'] ?? '${Directory.systemTemp.path}/openward-shots'}/gallery',
-    )..createSync(recursive: true);
+    final out = Directory('$_shotsPath/gallery')..createSync(recursive: true);
 
     Future<void> shot(String name) async {
       await tester.pump(const Duration(milliseconds: 400));

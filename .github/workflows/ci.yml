@@ -169,7 +169,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     env:
-      # Where the window tests leave their screenshots.
+      # Where the window tests leave their screenshots (passed to them as a
+      # --dart-define).
       OPENWARD_SHOTS: ${{ github.workspace }}/app/build/shots
     defaults:
       run:
@@ -242,7 +243,7 @@ jobs:
           once() {
             local log want got
             log="$(mktemp)"
-            if flutter test "$1" -d linux 2>&1 | tee "$log"; then
+            if flutter test "$1" -d linux --dart-define=OPENWARD_SHOTS="$OPENWARD_SHOTS" 2>&1 | tee "$log"; then
               return 0
             fi
             want="$(grep -cE '^\s*(testWidgets|test)\(' "$1")"
@@ -270,17 +271,13 @@ jobs:
         if: runner.os != 'Linux'
         continue-on-error: true
         working-directory: app
-        run: flutter test integration_test/gallery_test.dart -d "$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')"
+        run: |
+          flutter test integration_test/gallery_test.dart \
+            -d "$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')" \
+            --dart-define=OPENWARD_SHOTS="$OPENWARD_SHOTS"
       - name: List screenshots
         if: always()
-        run: |
-          # On macOS the app starts through `open`, without OPENWARD_SHOTS:
-          # it leaves them in the user's temporary folder.
-          if [[ "$RUNNER_OS" == macOS && -d "$TMPDIR/openward-shots" ]]; then
-            mkdir -p app/build/shots
-            cp -R "$TMPDIR/openward-shots"/. app/build/shots/
-          fi
-          ls -R app/build/shots 2>/dev/null | head -50 || echo "no screenshots"
+        run: ls -R app/build/shots 2>/dev/null | head -50 || echo "no screenshots"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
