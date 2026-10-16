@@ -1,8 +1,9 @@
 //! Host key trust, decided in the core and not in the UI (ADR-003).
 //!
 //! Reads OpenSSH `known_hosts` lines: plain and hashed (`|1|salt|hmac`)
-//! host patterns, `[host]:port` for non-standard ports, and
-//! `@cert-authority` lines that trust host certificates from a CA.
+//! host patterns, `[host]:port` for non-standard ports, `@cert-authority`
+//! lines that trust host certificates from a CA, and `@revoked` keys that
+//! are refused whatever else says.
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -34,6 +35,8 @@ pub enum Verdict {
     Changed,
     /// A certificate that does not check out.
     BadCertificate(String),
+    /// The key, or the CA that signed it, is marked `@revoked`.
+    Revoked,
 }
 
 impl Verdict {
@@ -45,8 +48,39 @@ impl Verdict {
 #[derive(Clone, Debug)]
 struct Entry {
     patterns: Patterns,
-    cert_authority: bool,
+    marker: Option<Marker>,
     key: PublicKey,
+}
+
+/// What a line's marker says of its key.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Marker {
+    /// `@cert-authority`: a CA whose host certificates are trusted.
+    CertAuthority,
+    /// `@revoked`: refused for the hosts it names.
+    Revoked,
+}
+
+/// One line of a `known_hosts` file, as a screen lists it.
+#[derive(Clone, Debug)]
+pub struct Line {
+    /// 1-based, as editors count.
+    pub number: usize,
+    /// The line as written, to make sure it is the same one when removing it.
+    pub text: String,
+    pub marker: Option<Marker>,
+    /// The patterns as written; `None` when the name is hashed.
+    pub hosts: Option<String>,
+    pub key: PublicKey,
+    pub comment: Option<String>,
+    patterns: Patterns,
+}
+
+impl Line {
+    /// The line names `host:port` (a hashed name only says yes or no).
+    pub fn matches(&self, host: &str, port: u16) -> bool {
+        self.patterns.matches(&host_spec(host, port))
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -135,44 +169,14 @@ impl KnownHosts {
     /// Parses `known_hosts` text; unparseable lines are skipped, as OpenSSH does.
     pub fn parse(text: &str, unknown: Unknown) -> Self {
         let mut hosts = Self::new(unknown);
-        for line in text.lines() {
-            let line = line.trim();
-            if line.is_empty() || line.starts_with('#') {
-                continue;
-            }
-            let mut fields = line.split_whitespace();
-            let mut first = fields.next().unwrap_or_default();
-            let mut cert_authority = false;
-            if first.starts_with('@') {
-                if first != "@cert-authority" {
-                    continue; // @revoked and unknown markers: not handled here
-                }
-                cert_authority = true;
-                first = fields.next().unwrap_or_default();
-            }
-            let key_text = fields.collect::<Vec<_>>().join(" ");
-            let Ok(key) = PublicKey::from_openssh(&key_text) else {
-                continue;
-            };
-            let patterns = if let Some(rest) = first.strip_prefix("|1|") {
-                let b64 = data_encoding::BASE64;
-                let mut parts = rest.split('|');
-                match (
-                    parts.next().map(|s| b64.decode(s.as_bytes())),
-                    parts.next().map(|s| b64.decode(s.as_bytes())),
-                ) {
-                    (Some(Ok(salt)), Some(Ok(hash))) => Patterns::Hashed { salt, hash },
-                    _ => continue,
-                }
-            } else {
-                Patterns::Plain(first.split(',').map(str::to_owned).collect())
-            };
-            hosts.entries.push(Entry {
-                patterns,
-                cert_authority,
-                key,
-            });
-        }
+        hosts.entries = lines(text)
+            .into_iter()
+            .map(|l| Entry {
+                patterns: l.patterns,
+                marker: l.marker,
+                key: l.key,
+            })
+            .collect();
         hosts
     }
 
@@ -180,7 +184,7 @@ impl KnownHosts {
     pub fn add(&mut self, host: &str, port: u16, key: PublicKey) {
         self.entries.push(Entry {
             patterns: Patterns::Plain(vec![host_spec(host, port)]),
-            cert_authority: false,
+            marker: None,
             key,
         });
     }
@@ -190,13 +194,29 @@ impl KnownHosts {
         let spec = host_spec(host, port);
         self.entries
             .iter()
-            .filter(|e| !e.cert_authority && e.patterns.matches(&spec))
+            .filter(|e| e.marker.is_none() && e.patterns.matches(&spec))
             .map(|e| &e.key)
             .collect()
     }
 
+    /// `key` is marked `@revoked` for `spec`.
+    fn revoked(&self, spec: &str, key: &russh::keys::ssh_key::public::KeyData) -> bool {
+        self.entries.iter().any(|e| {
+            e.marker == Some(Marker::Revoked) && e.key.key_data() == key && e.patterns.matches(spec)
+        })
+    }
+
     pub fn check(&mut self, host: &str, port: u16, offered: &PublicKeyOrCertificate) -> Verdict {
         let spec = host_spec(host, port);
+        let revoked = match offered {
+            PublicKeyOrCertificate::Certificate(cert) => {
+                self.revoked(&spec, cert.public_key()) || self.revoked(&spec, cert.signature_key())
+            }
+            PublicKeyOrCertificate::PublicKey { key, .. } => self.revoked(&spec, key.key_data()),
+        };
+        if revoked {
+            return Verdict::Revoked;
+        }
         match offered {
             PublicKeyOrCertificate::Certificate(cert) => self.check_certificate(host, &spec, cert),
             PublicKeyOrCertificate::PublicKey { key, .. } => {
@@ -228,7 +248,7 @@ impl KnownHosts {
         let cas: Vec<&PublicKey> = self
             .entries
             .iter()
-            .filter(|e| e.cert_authority && e.patterns.matches(spec))
+            .filter(|e| e.marker == Some(Marker::CertAuthority) && e.patterns.matches(spec))
             .map(|e| &e.key)
             .collect();
         if cas.is_empty() {
@@ -257,6 +277,62 @@ impl KnownHosts {
             key_id: cert.key_id().to_owned(),
         }
     }
+}
+
+/// The lines of `known_hosts` text that hold a key, numbered from 1.
+/// Comments and lines that do not parse are left out, as OpenSSH does.
+pub fn lines(text: &str) -> Vec<Line> {
+    let mut out = Vec::new();
+    for (i, raw) in text.lines().enumerate() {
+        let line = raw.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let mut fields = line.split_whitespace();
+        let mut first = fields.next().unwrap_or_default();
+        let marker = match first {
+            "@cert-authority" => Some(Marker::CertAuthority),
+            "@revoked" => Some(Marker::Revoked),
+            m if m.starts_with('@') => continue, // unknown markers
+            _ => None,
+        };
+        if marker.is_some() {
+            first = fields.next().unwrap_or_default();
+        }
+        let (Some(algorithm), Some(data)) = (fields.next(), fields.next()) else {
+            continue;
+        };
+        let Ok(key) = PublicKey::from_openssh(&format!("{algorithm} {data}")) else {
+            continue;
+        };
+        let comment = Some(fields.collect::<Vec<_>>().join(" ")).filter(|c| !c.is_empty());
+        let (patterns, hosts) = if let Some(rest) = first.strip_prefix("|1|") {
+            let b64 = data_encoding::BASE64;
+            let mut parts = rest.split('|');
+            match (
+                parts.next().map(|s| b64.decode(s.as_bytes())),
+                parts.next().map(|s| b64.decode(s.as_bytes())),
+            ) {
+                (Some(Ok(salt)), Some(Ok(hash))) => (Patterns::Hashed { salt, hash }, None),
+                _ => continue,
+            }
+        } else {
+            (
+                Patterns::Plain(first.split(',').map(str::to_owned).collect()),
+                Some(first.to_owned()),
+            )
+        };
+        out.push(Line {
+            number: i + 1,
+            text: raw.to_owned(),
+            marker,
+            hosts,
+            key,
+            comment,
+            patterns,
+        });
+    }
+    out
 }
 
 #[cfg(test)]
@@ -309,6 +385,40 @@ mod tests {
         let mut kh = KnownHosts::parse(&line, Unknown::Reject);
         assert_eq!(kh.check("127.0.0.1", 2222, &offered(KEY)), Verdict::Known);
         assert_eq!(kh.check("127.0.0.2", 2222, &offered(KEY)), Verdict::Unknown);
+    }
+
+    #[test]
+    fn revoked_keys_are_refused_even_if_listed() {
+        let text = format!("h {KEY}\n@revoked * {KEY}\n");
+        let mut kh = KnownHosts::parse(&text, Unknown::Learn);
+        assert_eq!(kh.check("h", 22, &offered(KEY)), Verdict::Revoked);
+        assert_eq!(kh.check("other", 22, &offered(KEY)), Verdict::Revoked);
+        assert_eq!(kh.check("h", 22, &offered(OTHER)), Verdict::Changed);
+        assert!(!Verdict::Revoked.trusted());
+    }
+
+    #[test]
+    fn lines_are_numbered_with_their_marker_and_comment() {
+        let salt = b"0123456789abcdefghij";
+        let mut mac = Hmac::<Sha1>::new_from_slice(salt).unwrap();
+        mac.update(b"bastion.example.com");
+        let b64 = data_encoding::BASE64;
+        let text = format!(
+            "# mine\nweb,10.0.0.1 {KEY} ana@laptop\n\nnot a key line\n|1|{}|{} {OTHER}\n@cert-authority *.example.com {KEY}\n",
+            b64.encode(salt),
+            b64.encode(&mac.finalize().into_bytes())
+        );
+        let all = lines(&text);
+        let numbers: Vec<usize> = all.iter().map(|l| l.number).collect();
+        assert_eq!(numbers, [2, 5, 6]);
+        assert_eq!(all[0].hosts.as_deref(), Some("web,10.0.0.1"));
+        assert_eq!(all[0].comment.as_deref(), Some("ana@laptop"));
+        assert!(all[0].matches("10.0.0.1", 22) && !all[0].matches("10.0.0.1", 2222));
+        assert_eq!(all[1].hosts, None);
+        assert!(all[1].matches("bastion.example.com", 22));
+        assert!(!all[1].matches("web", 22));
+        assert_eq!(all[2].marker, Some(Marker::CertAuthority));
+        assert!(all[2].text.starts_with("@cert-authority"));
     }
 
     #[test]

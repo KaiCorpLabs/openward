@@ -22,6 +22,14 @@
   "agentShort": "Agente",
   "agentSocket": "Otro socket…",
   "agentSystem": "El del sistema",
+  "allCount": "Todas · {count}",
+  "@allCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "alreadyImported": "ya importado",
   "alreadyUses": "Ya la usa",
   "anyDestination": "Cualquier destino",
@@ -29,6 +37,17 @@
   "appearanceStepTitle": "¿Cómo la quieres ver?",
   "apply": "Aplicar",
   "asSystem": "Como el sistema",
+  "askedWhenRun": "Se pregunta al ejecutarlo",
+  "askedWhenRunHint": "Sale de lo que escribes entre llaves.",
+  "asks": "Pregunta",
+  "asksNothing": "No pregunta nada. Escribe {example} donde quieras que pregunte.",
+  "@asksNothing": {
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
   "back": "Atrás",
   "badgeChanges": "cambia",
   "badgeLeaves": "la deja",
@@ -36,6 +55,7 @@
   "bellFlash": "Destello con la campana",
   "bellFlashHelp": "Cuando un programa hace sonar la campana. Si la pestaña no está delante, se marca igualmente.",
   "bellRang": "Ha sonado la campana",
+  "bracesWord": "llaves",
   "bringsTunnels": "{count, plural, =1{trae 1 túnel} other{trae {count} túneles}}",
   "@bringsTunnels": {
     "placeholders": {
@@ -156,6 +176,18 @@
   "colName": "Nombre",
   "colPermissions": "Permisos",
   "colSize": "Tamaño",
+  "command": "Comando",
+  "commandHint": "Cada línea se envía como si la escribieras. Para escribir {open} tal cual, pon {escaped}.",
+  "@commandHint": {
+    "placeholders": {
+      "open": {
+        "type": "String"
+      },
+      "escaped": {
+        "type": "String"
+      }
+    }
+  },
   "conflictChoose": ". Elige qué hacer con cada uno:",
   "conflictFile": "Fichero",
   "conflictFolder": "carpeta",
@@ -282,6 +314,7 @@
   },
   "customizeHint": "Cambia una capa y el resto se queda igual. Los cambios son solo de este tema.",
   "defaultKeys": "~/.ssh/id_ed25519, id_ecdsa, id_rsa (las habituales)",
+  "defaultValueOptional": "Valor por defecto (opcional)",
   "delete": "Eliminar",
   "deleteEllipsis": "Eliminar…",
   "deleteFailed": "No se ha podido eliminar: {error}",
@@ -386,9 +419,11 @@
   "editGroupTitle": "Editar grupo",
   "editHostTitle": "Editar host",
   "editIdentity": "Editar identidad",
+  "editSnippet": "Editar snippet",
   "editTheIdentity": "Editar la identidad",
   "editTunnel": "Editar túnel",
   "emptyFolder": "Esta carpeta está vacía",
+  "exampleVariable": "nombre",
   "failureAuth": "{user}@{label} no ha podido autenticarse.",
   "@failureAuth": {
     "placeholders": {
@@ -444,6 +479,17 @@
       }
     }
   },
+  "failureHostKeyRevoked": "{label} usa una clave revocada ({fingerprint}): se rechaza siempre. Si es un error, quítala de la lista de hosts conocidos.",
+  "@failureHostKeyRevoked": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
   "failureNoSftp": "{label} no tiene SFTP: al servidor le falta sftp-server.",
   "@failureNoSftp": {
     "placeholders": {
@@ -485,10 +531,13 @@
       }
     }
   },
+  "filledInEachPane": "También se rellenan solas, en cada panel:",
   "filterFolder": "Filtrar en esta carpeta",
   "filterHostsAndGroups": "Filtrar hosts y grupos",
   "filterIdentities": "Filtrar por nombre, usuario o clave",
+  "filterSnippets": "Filtrar por nombre o comando",
   "filterTunnels": "Filtrar por nombre, host o puerto",
+  "findASnippet": "Buscar un snippet",
   "findClose": "Cerrar la búsqueda (Esc)",
   "findCount": "{selected} de {total}",
   "@findCount": {
@@ -528,6 +577,29 @@
   "fontSize": "Tamaño de letra",
   "fontSystem": "La del sistema",
   "forAll": "A todos:",
+  "forgetAction": "Olvidar",
+  "forgetFileKeyBody": "Se borra esa línea del fichero, que también usa el ssh de tu sistema, y antes se guarda una copia en known_hosts.old, como hace ssh-keygen -R.",
+  "forgetFileKeyTitle": "¿Quitar la clave de {name} de {file}?",
+  "@forgetFileKeyTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "forgetKeyBody": "OpenWard deja de confiar en esta clave.",
+  "forgetKeyThen": "La próxima vez que conectes se preguntará otra vez por su clave, salvo que haya otra en la que confíes.",
+  "forgetKeyTitle": "¿Olvidar la clave de {name}?",
+  "@forgetKeyTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "forward": "Reenvío",
   "fromDefault": "Valor por defecto",
   "fromGroup": "Del grupo {name}",
@@ -563,6 +635,7 @@
   "groupNeedsName": "El grupo necesita un nombre.",
   "groupSettingsSection": "Ajustes para todo lo que contiene",
   "groups": "Grupos",
+  "hashedName": "Nombre cifrado",
   "hideHiddenFiles": "No mostrar los ocultos",
   "hideQueue": "Ocultar",
   "host": "Host",
@@ -692,6 +765,14 @@
     }
   },
   "inLight": "En claro",
+  "inWhere": "en {where}",
+  "@inWhere": {
+    "placeholders": {
+      "where": {
+        "type": "String"
+      }
+    }
+  },
   "inheritsFrom": "La hereda de {group}",
   "@inheritsFrom": {
     "placeholders": {
@@ -815,6 +896,7 @@
       }
     }
   },
+  "keyColumn": "Clave",
   "keyExchange": "Intercambio",
   "keyInKnownHosts": "en ~/.ssh/known_hosts",
   "keyInOpenWard": "guardada en OpenWard",
@@ -859,6 +941,16 @@
   "kindLocalShort": "Local",
   "kindRemote": "Remoto (-R)",
   "kindRemoteShort": "Remoto",
+  "knownHosts": "Hosts conocidos",
+  "knownHostsFileChanged": "El fichero ha cambiado desde que se mostró. Vuelve a mirarlo antes de quitar nada.",
+  "knownHostsIntro": "Las claves de servidor en las que confías. Al conectar se miran las de OpenWard y las de {file}; las nuevas se guardan en OpenWard.",
+  "@knownHostsIntro": {
+    "placeholders": {
+      "file": {
+        "type": "String"
+      }
+    }
+  },
   "lanLocalNote": "Cualquiera de tu red podrá usarlo mientras esté abierto.",
   "lanRemoteNote": "El servidor tiene que permitirlo (GatewayPorts en sshd); si no, escucha solo en sí mismo.",
   "language": "Idioma",
@@ -867,6 +959,22 @@
   "licenses": "Licencias",
   "lightAndDark": "Claro y oscuro",
   "lineHeight": "Interlineado del terminal",
+  "lineNumber": "línea {line}",
+  "@lineNumber": {
+    "placeholders": {
+      "line": {
+        "type": "int"
+      }
+    }
+  },
+  "linesCount": "{count} líneas",
+  "@linesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "linkNotOpened": "Los enlaces «{scheme}:» no se abren desde el terminal.",
   "@linkNotOpened": {
     "placeholders": {
@@ -891,6 +999,25 @@
   },
   "localTerminal": "Terminal local",
   "localUser": "tu usuario local",
+  "manageSnippets": "Gestionar snippets…",
+  "markerCertAuthority": "Autoridad de certificados: confía en los hosts que firma",
+  "markerRevoked": "Revocada: se rechaza siempre",
+  "matchCount": "{count, plural, =0{ninguna coincide} =1{1 coincide} other{{count} coinciden}}",
+  "@matchCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "matchesHost": "Coincide con {host}",
+  "@matchesHost": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "maximizePane": "Maximizar el panel",
   "milliseconds": "{ms} ms",
   "@milliseconds": {
@@ -949,6 +1076,7 @@
   "newIdentityEllipsis": "Nueva identidad…",
   "newLocalTerminal": "Terminal local nuevo",
   "newPane": "Panel nuevo",
+  "newSnippet": "Nuevo snippet",
   "newSubgroup": "Nuevo subgrupo",
   "newTunnel": "Nuevo túnel",
   "next": "Siguiente",
@@ -962,6 +1090,9 @@
   "noIdentityNow": "Sin identidad",
   "noJumpsYet": "Ninguno todavía.",
   "noKeysYet": "Sin claves: se prueban las habituales de ~/.ssh y las del agente.",
+  "noKnownHostMatches": "Ninguna clave coincide",
+  "noKnownHosts": "Aún no confías en ninguna clave",
+  "noKnownHostsBody": "Las claves de los servidores aparecen aquí cuando conectas y confías en ellas.",
   "noMatches": "Nada coincide con «{filter}»",
   "@noMatches": {
     "placeholders": {
@@ -973,6 +1104,17 @@
   "noParent": "Ningún grupo",
   "noPostQuantumNote": "El servidor no ofrece un intercambio poscuántico (mlkem768x25519; OpenSSH lo trae desde la 10.0).",
   "noResults": "Ningún host coincide.",
+  "noSnippetMatches": "Ningún snippet coincide",
+  "noSnippets": "Aún no hay snippets",
+  "noSnippetsBody": "Un snippet es un comando guardado que envías a un terminal con un atajo. Lo que escribas entre {braces} se pregunta al ejecutarlo.",
+  "@noSnippetsBody": {
+    "placeholders": {
+      "braces": {
+        "type": "String"
+      }
+    }
+  },
+  "noSnippetsYet": "Aún no hay snippets. Crea uno en Biblioteca › Snippets.",
   "noTunnels": "Aún no hay túneles",
   "noTunnelsBody": "Un túnel lleva un puerto de este equipo a un servicio que solo ve el servidor (una base de datos, un panel), o al revés. Crea uno o tráelos de tu ~/.ssh/config.",
   "notNow": "Ahora no",
@@ -1001,8 +1143,10 @@
   "offerOnlyTheseKeysNote": "No probar las demás claves del agente (IdentitiesOnly). Útil si el servidor corta tras varios intentos.",
   "ok": "Aceptar",
   "onConnect": "Al conectar",
+  "onSend": "Al enviar",
   "onlyTheServer": "Solo el servidor",
   "onlyThisComputer": "Solo este equipo (127.0.0.1)",
+  "openATerminalFirst": "Abre un terminal para ejecutarlo",
   "openAction": "Abrir",
   "openCount": "{count, plural, =1{1 abierto} other{{count} abiertos}}",
   "@openCount": {
@@ -1043,6 +1187,9 @@
       }
     }
   },
+  "paletteChoose": "elegir",
+  "paletteRun": "ejecutar",
+  "paletteTypeOnly": "solo escribir",
   "paneOptions": "Opciones del panel",
   "paneWhat": "¿Qué abres en este panel?",
   "partNote": "Se copia con un nombre temporal (.part) y se renombra al terminar: si se corta, el fichero bueno no queda a medias y la copia se puede reanudar.",
@@ -1147,6 +1294,8 @@
       }
     }
   },
+  "pressEnterAtTheEnd": "Pulsar Intro al final",
+  "pressEnterAtTheEndNote": "Apágalo para dejar el comando escrito y revisarlo antes de ejecutarlo.",
   "preview": "Vista previa",
   "previewLive": "Los cambios se ven al momento en toda la ventana.",
   "proxy": "Proxy",
@@ -1241,6 +1390,7 @@
       }
     }
   },
+  "removeTheLine": "Quitar la línea",
   "rename": "Renombrar",
   "renameTabHelp": "Vacío para volver al nombre del host",
   "renameTabTitle": "Renombrar pestaña",
@@ -1303,6 +1453,33 @@
   "routeDirect": "Directo",
   "routeJump": "Saltando por otro host",
   "routeStart": "este equipo",
+  "runEllipsis": "Ejecutar…",
+  "runIn": "Ejecutar en…",
+  "runSnippetBroadcast": "Va a los {count} paneles que reciben el broadcast",
+  "@runSnippetBroadcast": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "runSnippetHint": "Rellena lo que pregunta. No se guarda.",
+  "runSnippetIn": "En {where}",
+  "@runSnippetIn": {
+    "placeholders": {
+      "where": {
+        "type": "String"
+      }
+    }
+  },
+  "runSnippetTitle": "Ejecutar «{name}»",
+  "@runSnippetTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sameHost": "el mismo host",
   "sampleComment": "comentario en gris",
   "sampleError": "error:",
@@ -1329,6 +1506,7 @@
     }
   },
   "saveNewHost": "Guardar un host nuevo",
+  "savedHost": "Host guardado",
   "scrollback": "Historial",
   "scrollbackHelp": "Para las pestañas nuevas.",
   "scrollbackLines": "{lines} líneas",
@@ -1340,6 +1518,7 @@
     }
   },
   "searchHosts": "Buscar hosts",
+  "searchKnownHosts": "Buscar un host, una huella…",
   "sectionConnection": "Conexión",
   "sectionGeneral": "General",
   "seenFrom": "visto desde {host}",
@@ -1379,6 +1558,15 @@
         "type": "int"
       },
       "total": {
+        "type": "int"
+      }
+    }
+  },
+  "sendAction": "Enviar",
+  "sendToPanes": "Enviar a {count} paneles",
+  "@sendToPanes": {
+    "placeholders": {
+      "count": {
         "type": "int"
       }
     }
@@ -1446,6 +1634,37 @@
     }
   },
   "skipGuide": "Saltar la guía",
+  "snippetEditorHint": "Comandos que envías a un terminal; lo que va entre llaves se pregunta.",
+  "snippetNeedsCommand": "Escribe el comando.",
+  "snippetNeedsName": "Ponle un nombre.",
+  "snippetNoSecrets": "Se guarda sin secretos, como el resto del vault. Lo que escribas al ejecutarlo no se guarda.",
+  "snippetTypeOnlyNote": "Se deja escrito, sin pulsar Intro.",
+  "snippetWithEnter": "Con Intro al final.",
+  "snippets": "Snippets",
+  "snippetsCount": "{count, plural, =1{1 snippet} other{{count} snippets}}",
+  "@snippetsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "snippetsHowToRun": "En un terminal: {shortcut} o el botón «Snippets» de la barra de estado. Con broadcast, van a todos los paneles que reciben.",
+  "@snippetsHowToRun": {
+    "placeholders": {
+      "shortcut": {
+        "type": "String"
+      }
+    }
+  },
+  "snippetsIntro": "Comandos guardados que envías a un terminal con un atajo. Lo que va entre {braces} se pregunta al ejecutarlo.",
+  "@snippetsIntro": {
+    "placeholders": {
+      "braces": {
+        "type": "String"
+      }
+    }
+  },
   "splitDown": "Dividir abajo",
   "splitRight": "Dividir a la derecha",
   "stageAuthenticating": "Autenticando en {label}{hop}…",
@@ -1577,6 +1796,14 @@
   "trustNew": "nueva, guardada ahora",
   "trustNewKey": "Confiar en la clave nueva",
   "trustNewKeyEllipsis": "Confiar en la clave nueva…",
+  "trustedOn": "confiada el {date}",
+  "@trustedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "tryAgain": "Reintentar",
   "tunnelBadAddress": "Esa dirección no existe en este equipo.",
   "tunnelClosed": "Cerrado",
@@ -1677,6 +1904,7 @@
       }
     }
   },
+  "typeOnly": "Solo escribe",
   "uiColors": "Colores de la interfaz",
   "uiFont": "Fuente de la interfaz",
   "upOneLevel": "Subir un nivel",
@@ -1818,7 +2046,9 @@
   },
   "welcomeNoConfig": "No hemos encontrado hosts en ~/.ssh/config. Podrás añadirlos a mano en un momento.",
   "welcomeTitle": "Te damos la bienvenida a OpenWard",
+  "whereItIs": "Dónde está",
   "whoCanUse": "Quién puede usarlo",
+  "withEnter": "Intro al final",
   "wrongAnswer": "Respuesta incorrecta.",
   "wrongPassphrase": "Frase incorrecta.",
   "wrongPassword": "Contraseña incorrecta.",

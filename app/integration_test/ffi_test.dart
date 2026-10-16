@@ -14,6 +14,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:openward/src/rust/api/app.dart';
 import 'package:openward/src/rust/api/identities.dart';
+import 'package:openward/src/rust/api/known_hosts.dart';
+import 'package:openward/src/rust/api/snippets.dart';
 import 'package:openward/src/rust/api/session.dart';
 import 'package:openward/src/rust/api/tunnels.dart';
 import 'package:openward/src/rust/api/vault.dart';
@@ -320,5 +322,85 @@ Host db
     await until(() => session.screenText().contains('ssh-42'), 'the echo');
     session.close();
     await sub.cancel();
+  });
+
+  test('snippets: saved, what they ask, and filled in', () async {
+    final id = await app.createSnippet(
+      spec: const SnippetSpec(
+        label: 'Logs',
+        script: "journalctl -u {{servicio}} -n {{líneas}} --format '{{.X}}' # {{host}}\n",
+        defaults: [SnippetValue(name: 'líneas', value: '20')],
+      ),
+    );
+    final s = app.snippets().single;
+    expect(s.id, id);
+    expect(s.spec.script, endsWith('# {{host}}'));
+    expect(s.variables.asked, ['servicio', 'líneas']);
+    expect(s.variables.builtins, ['host']);
+    expect(s.spec.defaults.single.value, '20');
+    expect(
+      renderSnippet(
+        script: s.spec.script,
+        values: const [
+          SnippetValue(name: 'servicio', value: 'nginx'),
+          SnippetValue(name: 'líneas', value: '50'),
+          SnippetValue(name: 'host', value: 'web-1'),
+        ],
+      ),
+      "journalctl -u nginx -n 50 --format '{{.X}}' # web-1",
+    );
+    expect(snippetVariables(script: r'echo \{{x}} {{y}}').asked, ['y']);
+    await app.updateSnippet(
+      id: id,
+      rev: s.rev,
+      spec: const SnippetSpec(label: 'Logs', script: 'uptime', typeOnly: true),
+    );
+    expect(app.snippets().single.spec.typeOnly, isTrue);
+    await app.delete(id: id);
+    expect(app.snippets(), isEmpty);
+  });
+
+  test('known hosts: OpenWard\'s and the file\'s, a hashed line, forgetting', () async {
+    const key =
+        'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILg+ccEU+buKk8f5ORMPyzCAzWM04Omv+MOaI8CvGd7f';
+    const other =
+        'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILJON9ypgHeCkesivXcy8heayyTUCM9gTjTKSUZit/91';
+    const hashed =
+        '|1|MDEyMzQ1Njc4OWFiY2RlZmdoaWo=|xBEZ8so+rs/llqU4DkVYMFhGsbE=';
+    final ssh = Directory('${dir.path}/ssh')..createSync();
+    final file = File('${ssh.path}/known_hosts')
+      ..writeAsStringSync('# mine\n$hashed $other\n10.0.4.21 $key db\n');
+    final own = await OpenWard.openWithSshDir(
+      dataDir: '${dir.path}/own',
+      sshDir: ssh.path,
+    );
+    await own.createHost(
+      spec: const HostSpec(label: 'bastion', address: 'bastion.example.com'),
+    );
+    await own.trustHostKey(host: 'web.example.com', port: 2222, key: key);
+    expect(own.knownHostsFile(), file.path);
+
+    final rows = own.knownHostRows(query: '');
+    expect(rows.map((r) => r.source), [
+      KnownSourceKind.openWard,
+      KnownSourceKind.file,
+      KnownSourceKind.file,
+    ]);
+    expect(rows[0].hosts, '[web.example.com]:2222');
+    expect(rows[0].addedMs, isNotNull);
+    expect((rows[1].line, rows[1].hosts), (2, null));
+    expect(rows[1].revealed, 'bastion.example.com');
+    expect(rows[1].saved, ['bastion']);
+    expect(rows[2].comment, 'db');
+    final found = own.knownHostRows(query: 'bastion.example.com');
+    expect(found.single.line, 2);
+
+    await own.forgetKnownHost(row: found.single);
+    expect(file.readAsStringSync(), '# mine\n10.0.4.21 $key db\n');
+    expect(File('${file.path}.old').readAsStringSync(), contains(hashed));
+    // A stale row (the file moved on) is refused.
+    await expectLater(own.forgetKnownHost(row: rows[2]), throwsA(anything));
+    await own.forgetKnownHost(row: rows[0]);
+    expect(own.knownHosts(), isEmpty);
   });
 }

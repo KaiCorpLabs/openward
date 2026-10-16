@@ -2,7 +2,9 @@
 
 pub mod app;
 pub mod identities;
+pub mod known_hosts;
 pub mod session;
 pub mod sftp;
+pub mod snippets;
 pub mod tunnels;
 pub mod vault;

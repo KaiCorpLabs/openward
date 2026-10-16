@@ -188,6 +188,12 @@ abstract class AppLocalizations {
   /// **'El del sistema'**
   String get agentSystem;
 
+  /// No description provided for @allCount.
+  ///
+  /// In es, this message translates to:
+  /// **'Todas · {count}'**
+  String allCount(int count);
+
   /// No description provided for @alreadyImported.
   ///
   /// In es, this message translates to:
@@ -230,6 +236,30 @@ abstract class AppLocalizations {
   /// **'Como el sistema'**
   String get asSystem;
 
+  /// No description provided for @askedWhenRun.
+  ///
+  /// In es, this message translates to:
+  /// **'Se pregunta al ejecutarlo'**
+  String get askedWhenRun;
+
+  /// No description provided for @askedWhenRunHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Sale de lo que escribes entre llaves.'**
+  String get askedWhenRunHint;
+
+  /// No description provided for @asks.
+  ///
+  /// In es, this message translates to:
+  /// **'Pregunta'**
+  String get asks;
+
+  /// No description provided for @asksNothing.
+  ///
+  /// In es, this message translates to:
+  /// **'No pregunta nada. Escribe {example} donde quieras que pregunte.'**
+  String asksNothing(String example);
+
   /// No description provided for @back.
   ///
   /// In es, this message translates to:
@@ -271,6 +301,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ha sonado la campana'**
   String get bellRang;
+
+  /// No description provided for @bracesWord.
+  ///
+  /// In es, this message translates to:
+  /// **'llaves'**
+  String get bracesWord;
 
   /// No description provided for @bringsTunnels.
   ///
@@ -518,6 +554,18 @@ abstract class AppLocalizations {
   /// **'Tamaño'**
   String get colSize;
 
+  /// No description provided for @command.
+  ///
+  /// In es, this message translates to:
+  /// **'Comando'**
+  String get command;
+
+  /// No description provided for @commandHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Cada línea se envía como si la escribieras. Para escribir {open} tal cual, pon {escaped}.'**
+  String commandHint(String open, String escaped);
+
   /// No description provided for @conflictChoose.
   ///
   /// In es, this message translates to:
@@ -758,6 +806,12 @@ abstract class AppLocalizations {
   /// **'~/.ssh/id_ed25519, id_ecdsa, id_rsa (las habituales)'**
   String get defaultKeys;
 
+  /// No description provided for @defaultValueOptional.
+  ///
+  /// In es, this message translates to:
+  /// **'Valor por defecto (opcional)'**
+  String get defaultValueOptional;
+
   /// No description provided for @delete.
   ///
   /// In es, this message translates to:
@@ -944,6 +998,12 @@ abstract class AppLocalizations {
   /// **'Editar identidad'**
   String get editIdentity;
 
+  /// No description provided for @editSnippet.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar snippet'**
+  String get editSnippet;
+
   /// No description provided for @editTheIdentity.
   ///
   /// In es, this message translates to:
@@ -961,6 +1021,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Esta carpeta está vacía'**
   String get emptyFolder;
+
+  /// No description provided for @exampleVariable.
+  ///
+  /// In es, this message translates to:
+  /// **'nombre'**
+  String get exampleVariable;
 
   /// No description provided for @failureAuth.
   ///
@@ -991,6 +1057,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No se ha confiado en la clave de {label}.'**
   String failureHostKeyRejected(String label);
+
+  /// No description provided for @failureHostKeyRevoked.
+  ///
+  /// In es, this message translates to:
+  /// **'{label} usa una clave revocada ({fingerprint}): se rechaza siempre. Si es un error, quítala de la lista de hosts conocidos.'**
+  String failureHostKeyRevoked(String label, String fingerprint);
 
   /// No description provided for @failureNoSftp.
   ///
@@ -1028,6 +1100,12 @@ abstract class AppLocalizations {
   /// **'No existe: {path}'**
   String fileNotFound(String path);
 
+  /// No description provided for @filledInEachPane.
+  ///
+  /// In es, this message translates to:
+  /// **'También se rellenan solas, en cada panel:'**
+  String get filledInEachPane;
+
   /// No description provided for @filterFolder.
   ///
   /// In es, this message translates to:
@@ -1046,11 +1124,23 @@ abstract class AppLocalizations {
   /// **'Filtrar por nombre, usuario o clave'**
   String get filterIdentities;
 
+  /// No description provided for @filterSnippets.
+  ///
+  /// In es, this message translates to:
+  /// **'Filtrar por nombre o comando'**
+  String get filterSnippets;
+
   /// No description provided for @filterTunnels.
   ///
   /// In es, this message translates to:
   /// **'Filtrar por nombre, host o puerto'**
   String get filterTunnels;
+
+  /// No description provided for @findASnippet.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar un snippet'**
+  String get findASnippet;
 
   /// No description provided for @findClose.
   ///
@@ -1142,6 +1232,42 @@ abstract class AppLocalizations {
   /// **'A todos:'**
   String get forAll;
 
+  /// No description provided for @forgetAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Olvidar'**
+  String get forgetAction;
+
+  /// No description provided for @forgetFileKeyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se borra esa línea del fichero, que también usa el ssh de tu sistema, y antes se guarda una copia en known_hosts.old, como hace ssh-keygen -R.'**
+  String get forgetFileKeyBody;
+
+  /// No description provided for @forgetFileKeyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Quitar la clave de {name} de {file}?'**
+  String forgetFileKeyTitle(String name, String file);
+
+  /// No description provided for @forgetKeyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'OpenWard deja de confiar en esta clave.'**
+  String get forgetKeyBody;
+
+  /// No description provided for @forgetKeyThen.
+  ///
+  /// In es, this message translates to:
+  /// **'La próxima vez que conectes se preguntará otra vez por su clave, salvo que haya otra en la que confíes.'**
+  String get forgetKeyThen;
+
+  /// No description provided for @forgetKeyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Olvidar la clave de {name}?'**
+  String forgetKeyTitle(String name);
+
   /// No description provided for @forward.
   ///
   /// In es, this message translates to:
@@ -1225,6 +1351,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Grupos'**
   String get groups;
+
+  /// No description provided for @hashedName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre cifrado'**
+  String get hashedName;
 
   /// No description provided for @hideHiddenFiles.
   ///
@@ -1478,6 +1610,12 @@ abstract class AppLocalizations {
   /// **'En claro'**
   String get inLight;
 
+  /// No description provided for @inWhere.
+  ///
+  /// In es, this message translates to:
+  /// **'en {where}'**
+  String inWhere(String where);
+
   /// No description provided for @inheritsFrom.
   ///
   /// In es, this message translates to:
@@ -1616,6 +1754,12 @@ abstract class AppLocalizations {
   /// **'La clave de {label} ha cambiado'**
   String keyChangedTitle(String label);
 
+  /// No description provided for @keyColumn.
+  ///
+  /// In es, this message translates to:
+  /// **'Clave'**
+  String get keyColumn;
+
   /// No description provided for @keyExchange.
   ///
   /// In es, this message translates to:
@@ -1736,6 +1880,24 @@ abstract class AppLocalizations {
   /// **'Remoto'**
   String get kindRemoteShort;
 
+  /// No description provided for @knownHosts.
+  ///
+  /// In es, this message translates to:
+  /// **'Hosts conocidos'**
+  String get knownHosts;
+
+  /// No description provided for @knownHostsFileChanged.
+  ///
+  /// In es, this message translates to:
+  /// **'El fichero ha cambiado desde que se mostró. Vuelve a mirarlo antes de quitar nada.'**
+  String get knownHostsFileChanged;
+
+  /// No description provided for @knownHostsIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Las claves de servidor en las que confías. Al conectar se miran las de OpenWard y las de {file}; las nuevas se guardan en OpenWard.'**
+  String knownHostsIntro(String file);
+
   /// No description provided for @lanLocalNote.
   ///
   /// In es, this message translates to:
@@ -1784,6 +1946,18 @@ abstract class AppLocalizations {
   /// **'Interlineado del terminal'**
   String get lineHeight;
 
+  /// No description provided for @lineNumber.
+  ///
+  /// In es, this message translates to:
+  /// **'línea {line}'**
+  String lineNumber(int line);
+
+  /// No description provided for @linesCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} líneas'**
+  String linesCount(int count);
+
   /// No description provided for @linkNotOpened.
   ///
   /// In es, this message translates to:
@@ -1807,6 +1981,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'tu usuario local'**
   String get localUser;
+
+  /// No description provided for @manageSnippets.
+  ///
+  /// In es, this message translates to:
+  /// **'Gestionar snippets…'**
+  String get manageSnippets;
+
+  /// No description provided for @markerCertAuthority.
+  ///
+  /// In es, this message translates to:
+  /// **'Autoridad de certificados: confía en los hosts que firma'**
+  String get markerCertAuthority;
+
+  /// No description provided for @markerRevoked.
+  ///
+  /// In es, this message translates to:
+  /// **'Revocada: se rechaza siempre'**
+  String get markerRevoked;
+
+  /// No description provided for @matchCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{ninguna coincide} =1{1 coincide} other{{count} coinciden}}'**
+  String matchCount(int count);
+
+  /// No description provided for @matchesHost.
+  ///
+  /// In es, this message translates to:
+  /// **'Coincide con {host}'**
+  String matchesHost(String host);
 
   /// No description provided for @maximizePane.
   ///
@@ -1994,6 +2198,12 @@ abstract class AppLocalizations {
   /// **'Panel nuevo'**
   String get newPane;
 
+  /// No description provided for @newSnippet.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo snippet'**
+  String get newSnippet;
+
   /// No description provided for @newSubgroup.
   ///
   /// In es, this message translates to:
@@ -2072,6 +2282,24 @@ abstract class AppLocalizations {
   /// **'Sin claves: se prueban las habituales de ~/.ssh y las del agente.'**
   String get noKeysYet;
 
+  /// No description provided for @noKnownHostMatches.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguna clave coincide'**
+  String get noKnownHostMatches;
+
+  /// No description provided for @noKnownHosts.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no confías en ninguna clave'**
+  String get noKnownHosts;
+
+  /// No description provided for @noKnownHostsBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Las claves de los servidores aparecen aquí cuando conectas y confías en ellas.'**
+  String get noKnownHostsBody;
+
   /// No description provided for @noMatches.
   ///
   /// In es, this message translates to:
@@ -2095,6 +2323,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ningún host coincide.'**
   String get noResults;
+
+  /// No description provided for @noSnippetMatches.
+  ///
+  /// In es, this message translates to:
+  /// **'Ningún snippet coincide'**
+  String get noSnippetMatches;
+
+  /// No description provided for @noSnippets.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay snippets'**
+  String get noSnippets;
+
+  /// No description provided for @noSnippetsBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Un snippet es un comando guardado que envías a un terminal con un atajo. Lo que escribas entre {braces} se pregunta al ejecutarlo.'**
+  String noSnippetsBody(String braces);
+
+  /// No description provided for @noSnippetsYet.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay snippets. Crea uno en Biblioteca › Snippets.'**
+  String get noSnippetsYet;
 
   /// No description provided for @noTunnels.
   ///
@@ -2162,6 +2414,12 @@ abstract class AppLocalizations {
   /// **'Al conectar'**
   String get onConnect;
 
+  /// No description provided for @onSend.
+  ///
+  /// In es, this message translates to:
+  /// **'Al enviar'**
+  String get onSend;
+
   /// No description provided for @onlyTheServer.
   ///
   /// In es, this message translates to:
@@ -2173,6 +2431,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Solo este equipo (127.0.0.1)'**
   String get onlyThisComputer;
+
+  /// No description provided for @openATerminalFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Abre un terminal para ejecutarlo'**
+  String get openATerminalFirst;
 
   /// No description provided for @openAction.
   ///
@@ -2245,6 +2509,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Pone su propio usuario ({user}), que seguirá mandando.'**
   String ownUserWins(String user);
+
+  /// No description provided for @paletteChoose.
+  ///
+  /// In es, this message translates to:
+  /// **'elegir'**
+  String get paletteChoose;
+
+  /// No description provided for @paletteRun.
+  ///
+  /// In es, this message translates to:
+  /// **'ejecutar'**
+  String get paletteRun;
+
+  /// No description provided for @paletteTypeOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'solo escribir'**
+  String get paletteTypeOnly;
 
   /// No description provided for @paneOptions.
   ///
@@ -2492,6 +2774,18 @@ abstract class AppLocalizations {
   /// **'{kex} (poscuántico)'**
   String postQuantumKex(String kex);
 
+  /// No description provided for @pressEnterAtTheEnd.
+  ///
+  /// In es, this message translates to:
+  /// **'Pulsar Intro al final'**
+  String get pressEnterAtTheEnd;
+
+  /// No description provided for @pressEnterAtTheEndNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Apágalo para dejar el comando escrito y revisarlo antes de ejecutarlo.'**
+  String get pressEnterAtTheEndNote;
+
   /// No description provided for @preview.
   ///
   /// In es, this message translates to:
@@ -2684,6 +2978,12 @@ abstract class AppLocalizations {
   /// **'Quitar {tag}'**
   String removeTag(String tag);
 
+  /// No description provided for @removeTheLine.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar la línea'**
+  String get removeTheLine;
+
   /// No description provided for @rename.
   ///
   /// In es, this message translates to:
@@ -2810,6 +3110,42 @@ abstract class AppLocalizations {
   /// **'este equipo'**
   String get routeStart;
 
+  /// No description provided for @runEllipsis.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejecutar…'**
+  String get runEllipsis;
+
+  /// No description provided for @runIn.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejecutar en…'**
+  String get runIn;
+
+  /// No description provided for @runSnippetBroadcast.
+  ///
+  /// In es, this message translates to:
+  /// **'Va a los {count} paneles que reciben el broadcast'**
+  String runSnippetBroadcast(int count);
+
+  /// No description provided for @runSnippetHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Rellena lo que pregunta. No se guarda.'**
+  String get runSnippetHint;
+
+  /// No description provided for @runSnippetIn.
+  ///
+  /// In es, this message translates to:
+  /// **'En {where}'**
+  String runSnippetIn(String where);
+
+  /// No description provided for @runSnippetTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejecutar «{name}»'**
+  String runSnippetTitle(String name);
+
   /// No description provided for @sameHost.
   ///
   /// In es, this message translates to:
@@ -2882,6 +3218,12 @@ abstract class AppLocalizations {
   /// **'Guardar un host nuevo'**
   String get saveNewHost;
 
+  /// No description provided for @savedHost.
+  ///
+  /// In es, this message translates to:
+  /// **'Host guardado'**
+  String get savedHost;
+
   /// No description provided for @scrollback.
   ///
   /// In es, this message translates to:
@@ -2905,6 +3247,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Buscar hosts'**
   String get searchHosts;
+
+  /// No description provided for @searchKnownHosts.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar un host, una huella…'**
+  String get searchKnownHosts;
 
   /// No description provided for @sectionConnection.
   ///
@@ -2959,6 +3307,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{selected} de {total}'**
   String selectedOf(int selected, int total);
+
+  /// No description provided for @sendAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar'**
+  String get sendAction;
+
+  /// No description provided for @sendToPanes.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar a {count} paneles'**
+  String sendToPanes(int count);
 
   /// No description provided for @sessionClosed.
   ///
@@ -3085,6 +3445,66 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Saltar la guía'**
   String get skipGuide;
+
+  /// No description provided for @snippetEditorHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Comandos que envías a un terminal; lo que va entre llaves se pregunta.'**
+  String get snippetEditorHint;
+
+  /// No description provided for @snippetNeedsCommand.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe el comando.'**
+  String get snippetNeedsCommand;
+
+  /// No description provided for @snippetNeedsName.
+  ///
+  /// In es, this message translates to:
+  /// **'Ponle un nombre.'**
+  String get snippetNeedsName;
+
+  /// No description provided for @snippetNoSecrets.
+  ///
+  /// In es, this message translates to:
+  /// **'Se guarda sin secretos, como el resto del vault. Lo que escribas al ejecutarlo no se guarda.'**
+  String get snippetNoSecrets;
+
+  /// No description provided for @snippetTypeOnlyNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Se deja escrito, sin pulsar Intro.'**
+  String get snippetTypeOnlyNote;
+
+  /// No description provided for @snippetWithEnter.
+  ///
+  /// In es, this message translates to:
+  /// **'Con Intro al final.'**
+  String get snippetWithEnter;
+
+  /// No description provided for @snippets.
+  ///
+  /// In es, this message translates to:
+  /// **'Snippets'**
+  String get snippets;
+
+  /// No description provided for @snippetsCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 snippet} other{{count} snippets}}'**
+  String snippetsCount(int count);
+
+  /// No description provided for @snippetsHowToRun.
+  ///
+  /// In es, this message translates to:
+  /// **'En un terminal: {shortcut} o el botón «Snippets» de la barra de estado. Con broadcast, van a todos los paneles que reciben.'**
+  String snippetsHowToRun(String shortcut);
+
+  /// No description provided for @snippetsIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Comandos guardados que envías a un terminal con un atajo. Lo que va entre {braces} se pregunta al ejecutarlo.'**
+  String snippetsIntro(String braces);
 
   /// No description provided for @splitDown.
   ///
@@ -3398,6 +3818,12 @@ abstract class AppLocalizations {
   /// **'Confiar en la clave nueva…'**
   String get trustNewKeyEllipsis;
 
+  /// No description provided for @trustedOn.
+  ///
+  /// In es, this message translates to:
+  /// **'confiada el {date}'**
+  String trustedOn(String date);
+
   /// No description provided for @tryAgain.
   ///
   /// In es, this message translates to:
@@ -3547,6 +3973,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{a} y {b}'**
   String twoNames(String a, String b);
+
+  /// No description provided for @typeOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo escribe'**
+  String get typeOnly;
 
   /// No description provided for @uiColors.
   ///
@@ -3740,11 +4172,23 @@ abstract class AppLocalizations {
   /// **'Te damos la bienvenida a OpenWard'**
   String get welcomeTitle;
 
+  /// No description provided for @whereItIs.
+  ///
+  /// In es, this message translates to:
+  /// **'Dónde está'**
+  String get whereItIs;
+
   /// No description provided for @whoCanUse.
   ///
   /// In es, this message translates to:
   /// **'Quién puede usarlo'**
   String get whoCanUse;
+
+  /// No description provided for @withEnter.
+  ///
+  /// In es, this message translates to:
+  /// **'Intro al final'**
+  String get withEnter;
 
   /// No description provided for @wrongAnswer.
   ///

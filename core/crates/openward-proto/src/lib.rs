@@ -91,6 +91,7 @@ pub enum Data {
     Identity(Identity),
     KnownHost(KnownHost),
     PortForward(PortForward),
+    Snippet(Snippet),
     /// A type from a newer version. Never encoded: the stored bytes stay.
     #[serde(other)]
     Unsupported,
@@ -104,6 +105,7 @@ impl Data {
             Self::Identity(_) => "identity",
             Self::KnownHost(_) => "known_host",
             Self::PortForward(_) => "port_forward",
+            Self::Snippet(_) => "snippet",
             Self::Unsupported => "unsupported",
         }
     }
@@ -189,6 +191,23 @@ pub struct PortForward {
     pub autostart: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source: Option<Source>,
+    #[serde(flatten)]
+    pub extra: Extra,
+}
+
+/// A saved command to send to a terminal. What it writes between `{{` and
+/// `}}` is asked for when it runs (or filled in from the session).
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct Snippet {
+    pub label: String,
+    /// One or more lines, sent as if typed.
+    pub script: String,
+    /// Values offered for some of its variables.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub defaults: BTreeMap<String, String>,
+    /// Leave it typed without pressing Enter.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub type_only: bool,
     #[serde(flatten)]
     pub extra: Extra,
 }
@@ -390,6 +409,22 @@ mod tests {
     }
 
     #[test]
+    fn snippets_round_trip() {
+        let snippet = Body {
+            created: 1,
+            modified: 2,
+            data: Data::Snippet(Snippet {
+                label: "Reiniciar".into(),
+                script: "sudo systemctl restart {{servicio}}".into(),
+                defaults: [("servicio".to_owned(), "nginx".to_owned())].into(),
+                type_only: true,
+                extra: Extra::new(),
+            }),
+        };
+        assert_eq!(Body::from_cbor(&snippet.to_cbor()).unwrap(), snippet);
+    }
+
+    #[test]
     fn identities_and_their_use_round_trip() {
         let identity = Body {
             created: 1,
@@ -451,7 +486,10 @@ mod tests {
         let value = Value::Map(vec![
             (Value::Text("created".into()), Value::Integer(1.into())),
             (Value::Text("modified".into()), Value::Integer(1.into())),
-            (Value::Text("type".into()), Value::Text("snippet".into())),
+            (
+                Value::Text("type".into()),
+                Value::Text("ai_provider".into()),
+            ),
             (Value::Text("script".into()), Value::Text("uptime".into())),
         ]);
         let mut bytes = Vec::new();

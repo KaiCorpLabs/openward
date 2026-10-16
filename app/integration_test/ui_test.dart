@@ -1470,4 +1470,161 @@ Host db
       await _settle(tester);
     },
   );
+
+  testWidgets('snippets: made on the page, run with ⌘⇧S, and to every pane', (
+    tester,
+  ) async {
+    final container = await launch(tester);
+    Finder field(String key) => find.byKey(ValueKey(key));
+    Future<void> keys(
+      List<LogicalKeyboardKey> mods,
+      LogicalKeyboardKey key,
+    ) async {
+      for (final k in mods) {
+        await tester.sendKeyDownEvent(k);
+      }
+      await tester.sendKeyEvent(key);
+      for (final k in mods.reversed) {
+        await tester.sendKeyUpEvent(k);
+      }
+      await tester.pump(const Duration(milliseconds: 150));
+    }
+
+    final cmdShift = isApple
+        ? [LogicalKeyboardKey.metaLeft, LogicalKeyboardKey.shiftLeft]
+        : [LogicalKeyboardKey.controlLeft, LogicalKeyboardKey.shiftLeft];
+
+    await tester.tap(find.text('Abrir un terminal local'));
+    await tester.pump();
+    final tab = container.read(tabsProvider).current! as SessionTab;
+    final a = tab.panes.active.controller!;
+    await _until(tester, () => a.phase == Phase.running, 'the shell');
+
+    await tester.tap(field('library.snippets'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Aún no hay snippets'), findsOneWidget);
+    await tester.tap(field('snippets.new'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.enterText(field('snippet.label'), 'Saludo');
+    await tester.enterText(
+      field('snippet.script'),
+      'echo hola-{{nombre}}-{{host}}',
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.enterText(field('snippet.default.nombre'), 'mundo');
+    await tester.pump(const Duration(milliseconds: 100));
+    await _shot(tester, '31-snippet-editor');
+    await tester.tap(find.text('Guardar'));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Saludo'), findsOneWidget);
+    await _shot(tester, '32-snippets');
+
+    // Back in the terminal: ⌘⇧S, find it, Enter, fill in the variable.
+    container.read(tabsProvider.notifier).select(0);
+    await tester.pump(const Duration(milliseconds: 300));
+    await keys(cmdShift, LogicalKeyboardKey.keyS);
+    expect(field('snippets.query'), findsOneWidget);
+    await tester.enterText(field('snippets.query'), 'salu');
+    await tester.pump(const Duration(milliseconds: 100));
+    await _shot(tester, '33-snippet-palette');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Ejecutar «Saludo»'), findsOneWidget);
+    await tester.enterText(field('snippet.var.nombre'), 'ana');
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(field('snippet.send'));
+    await tester.pump(const Duration(milliseconds: 200));
+    await _until(
+      tester,
+      () => a.session.screenText().contains('hola-ana-Local'),
+      'the snippet run',
+    );
+
+    // With broadcast, to both panes, each with its own values.
+    container.read(tabsProvider.notifier).split(Axis.horizontal);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump(const Duration(milliseconds: 100));
+    final b = tab.panes.active.controller!;
+    await _until(tester, () => b.phase == Phase.running, 'the second shell');
+    await keys(cmdShift, LogicalKeyboardKey.keyB);
+    expect(tab.panes.broadcast, isTrue);
+    await tester.tap(field('status.snippets').first);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(field('palette.Saludo'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(
+      find.text('Va a los 2 paneles que reciben el broadcast'),
+      findsOneWidget,
+    );
+    expect(find.text('Enviar a 2 paneles'), findsOneWidget);
+    await _shot(tester, '34-snippet-broadcast');
+    await tester.tap(field('snippet.send'));
+    for (final c in [a, b]) {
+      await _until(
+        tester,
+        () => c.session.screenText().contains('hola-mundo-Local'),
+        'the snippet in every pane',
+      );
+    }
+    container.read(tabsProvider.notifier)
+      ..close(1)
+      ..close(0);
+    await _settle(tester);
+  });
+
+  testWidgets('known hosts: both sources, a hashed line, and forgetting one', (
+    tester,
+  ) async {
+    const key =
+        'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILg+ccEU+buKk8f5ORMPyzCAzWM04Omv+MOaI8CvGd7f';
+    const other =
+        'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILJON9ypgHeCkesivXcy8heayyTUCM9gTjTKSUZit/91';
+    const hashed =
+        '|1|MDEyMzQ1Njc4OWFiY2RlZmdoaWo=|xBEZ8so+rs/llqU4DkVYMFhGsbE=';
+    // A ~/.ssh of its own: the tester's known_hosts stays out.
+    final ssh = Directory('${dir.path}/ssh')..createSync();
+    final file = File('${ssh.path}/known_hosts')
+      ..writeAsStringSync(
+        '$hashed $other\n10.0.4.21 $key db\n@revoked old.example.com $other\n',
+      );
+    app = await OpenWard.openWithSshDir(
+      dataDir: '${dir.path}/own',
+      sshDir: ssh.path,
+    );
+    await app.createHost(
+      spec: const HostSpec(label: 'bastion', address: 'bastion.example.com'),
+    );
+    await app.trustHostKey(host: 'bastion.example.com', port: 22, key: key);
+    await launch(tester);
+    Finder field(String key) => find.byKey(ValueKey(key));
+
+    await tester.tap(field('library.knownHosts'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Nombre cifrado'), findsOneWidget);
+    expect(find.text('Coincide con bastion.example.com'), findsOneWidget);
+    expect(find.text('Revocada: se rechaza siempre'), findsOneWidget);
+    expect(find.text('Todas · 4'), findsOneWidget);
+    await tester.enterText(field('known.query'), 'bastion.example.com');
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.text('2 coinciden'), findsOneWidget);
+    await _shot(tester, '35-known-hosts');
+
+    await tester.tap(field('known.forget.line1'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(
+      find.textContaining('¿Quitar la clave de bastion de'),
+      findsOneWidget,
+    );
+    await _shot(tester, '36-known-hosts-forget');
+    await tester.tap(field('known.forget.confirm'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(file.readAsStringSync(), isNot(contains(hashed)));
+    expect(File('${file.path}.old').existsSync(), isTrue);
+    expect(find.text('1 coincide'), findsOneWidget);
+    ProviderScope.containerOf(tester.element(find.byType(OpenWardApp)))
+        .read(tabsProvider.notifier)
+        .close(0);
+    await _settle(tester);
+  });
 }

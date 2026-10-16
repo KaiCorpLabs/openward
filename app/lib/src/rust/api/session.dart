@@ -202,6 +202,9 @@ enum CursorStyle { block, bar, underline }
 enum FailureKind {
   hostKeyChanged,
   hostKeyRejected,
+
+  /// Marked `@revoked` in a `known_hosts`.
+  hostKeyRevoked,
   badCertificate,
   authFailed,
   cancelled,

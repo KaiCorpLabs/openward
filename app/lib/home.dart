@@ -15,6 +15,9 @@ import 'tabs/tabs.dart';
 import 'terminal/controller.dart';
 import 'terminal/keys.dart';
 import 'identities/identities_page.dart';
+import 'known_hosts/known_hosts_page.dart';
+import 'snippets/palette.dart';
+import 'snippets/snippets_page.dart';
 import 'tunnels/tunnels_page.dart';
 import 'ui/tokens.dart';
 import 'welcome/first_run.dart';
@@ -67,6 +70,7 @@ class _HomeState extends ConsumerState<Home> {
     void bigger() => session()?.zoomBy(1);
     void smaller() => session()?.zoomBy(-1);
     void actualSize() => session()?.resetZoom();
+    void snippets() => showSnippetPalette(context);
     final bindings = <ShortcutActivator, VoidCallback>{
       const SingleActivator(LogicalKeyboardKey.tab, control: true): () =>
           tabs.cycle(1),
@@ -112,6 +116,8 @@ class _HomeState extends ConsumerState<Home> {
             tabs.toggleBroadcast,
         const SingleActivator(LogicalKeyboardKey.keyO, meta: true, shift: true):
             tabs.openSftpHere,
+        const SingleActivator(LogicalKeyboardKey.keyS, meta: true, shift: true):
+            snippets,
         for (final (key, d) in _arrows)
           SingleActivator(key, meta: true, alt: true): () => go(d),
         const SingleActivator(
@@ -158,6 +164,11 @@ class _HomeState extends ConsumerState<Home> {
           control: true,
           shift: true,
         ): tabs.openSftpHere,
+        const SingleActivator(
+          LogicalKeyboardKey.keyS,
+          control: true,
+          shift: true,
+        ): snippets,
         const SingleActivator(
           LogicalKeyboardKey.keyK,
           control: true,
@@ -242,6 +253,9 @@ class _HomeState extends ConsumerState<Home> {
                       PageTab(page: PageKind.tunnels) => const TunnelsPage(),
                       PageTab(page: PageKind.identities) =>
                         const IdentitiesPage(),
+                      PageTab(page: PageKind.snippets) => const SnippetsPage(),
+                      PageTab(page: PageKind.knownHosts) =>
+                        const KnownHostsPage(),
                       null => StartPage(searchFocus: _search),
                     },
                   ),

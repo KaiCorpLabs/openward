@@ -208,11 +208,15 @@ class _Tab extends StatelessWidget {
           PageKind.settings => Icons.settings_outlined,
           PageKind.tunnels => Icons.swap_horiz,
           PageKind.identities => Icons.badge_outlined,
+          PageKind.snippets => Icons.terminal,
+          PageKind.knownHosts => Icons.verified_user_outlined,
         }, size: 14),
         title: switch (page) {
           PageKind.settings => context.l10n.settings,
           PageKind.tunnels => context.l10n.tunnels,
           PageKind.identities => context.l10n.identities,
+          PageKind.snippets => context.l10n.snippets,
+          PageKind.knownHosts => context.l10n.knownHosts,
         },
       ),
     };

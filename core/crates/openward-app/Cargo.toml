@@ -17,12 +17,17 @@ openward-ssh = { path = "../openward-ssh" }
 openward-term = { path = "../openward-term" }
 openward-vault = { path = "../openward-vault" }
 anyhow = "1"
+# Writes known_hosts next to itself and then over it.
+tempfile = "3"
 thiserror = "2"
 tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "io-util", "macros"] }
 zeroize = "1"
 
 [dev-dependencies]
-tempfile = "3"
+# Hashed known_hosts names in tests.
+data-encoding = "2"
+hmac = "0.12"
+sha1 = "0.10"
 # Integration tests answer 2FA prompts with codes.
 openward-ssh = { path = "../openward-ssh" }
 

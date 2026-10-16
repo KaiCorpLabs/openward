@@ -21,6 +21,10 @@ String failureText(AppLocalizations l, FailureView f) {
       f.fingerprint,
     ),
     FailureKind.hostKeyRejected => l.failureHostKeyRejected(f.label),
+    FailureKind.hostKeyRevoked => l.failureHostKeyRevoked(
+      f.label,
+      f.fingerprint,
+    ),
     FailureKind.badCertificate => l.failureBadCertificate(f.label, f.reason),
     FailureKind.authFailed =>
       f.methods.isEmpty

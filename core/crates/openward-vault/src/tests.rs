@@ -324,7 +324,10 @@ fn what_a_newer_version_wrote_is_kept() {
     let snippet = Value::Map(vec![
         (Value::Text("created".into()), Value::Integer(1.into())),
         (Value::Text("modified".into()), Value::Integer(1.into())),
-        (Value::Text("type".into()), Value::Text("snippet".into())),
+        (
+            Value::Text("type".into()),
+            Value::Text("ai_provider".into()),
+        ),
     ]);
     let snippet_id = ItemId::new();
     for (item, body, rev) in [(id, body, 1), (snippet_id, snippet, 1)] {

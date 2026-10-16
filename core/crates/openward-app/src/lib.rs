@@ -10,9 +10,11 @@
 pub mod events;
 pub mod import;
 pub mod keys;
+pub mod known;
 pub mod local;
 pub mod plan;
 pub mod sftp;
+pub mod snippets;
 pub mod terminal;
 pub mod tunnels;
 
@@ -393,6 +395,24 @@ impl App {
 
     /// Trusts a host key the user has checked, as after a
     /// [`Failure::HostKeyChanged`]. It replaces the old key of the same type.
+    /// The trusted host keys, OpenWard's and those of `~/.ssh/known_hosts`,
+    /// that match `query` (all of them when it is empty).
+    pub fn known_hosts(&self, query: &str) -> Vec<known::KnownEntry> {
+        known::known_hosts(&self.vault(), &self.local.known_hosts_file(), query)
+    }
+
+    /// Forgets a trusted key: OpenWard's, or the line of `~/.ssh/known_hosts`
+    /// that still reads `text` (keeping a copy in `known_hosts.old`).
+    pub fn forget_known_host(&self, source: known::KnownSource, text: &str) -> anyhow::Result<()> {
+        match source {
+            known::KnownSource::OpenWard { id, .. } => self.vault().delete(id)?,
+            known::KnownSource::File { line } => {
+                known::forget_line(&self.local.known_hosts_file(), line, text)?
+            }
+        }
+        Ok(())
+    }
+
     pub fn trust_host_key(&self, host: &str, port: u16, key: &str) -> openward_vault::Result<()> {
         self.vault().trust_host_key(host, port, key).map(|_| ())
     }

@@ -114,6 +114,18 @@ impl OpenWard {
         })
     }
 
+    /// As [`OpenWard::open`], with another `~/.ssh` (tests: the tester's
+    /// own keys and `known_hosts` stay out).
+    pub fn open_with_ssh_dir(data_dir: String, ssh_dir: String) -> anyhow::Result<OpenWard> {
+        let local = openward_app::Local {
+            ssh_dir: PathBuf::from(ssh_dir),
+            ..openward_app::Local::from_env()
+        };
+        Ok(Self {
+            app: Arc::new(App::open_as(&PathBuf::from(data_dir), local)?),
+        })
+    }
+
     #[frb(sync)]
     pub fn hosts(&self) -> Vec<HostView> {
         let vault = self.app.vault();

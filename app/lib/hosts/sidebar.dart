@@ -9,6 +9,7 @@ import '../tabs/tabs.dart';
 import '../terminal/controller.dart';
 import '../terminal/keys.dart';
 import '../identities/identities.dart';
+import '../snippets/snippets.dart';
 import '../tunnels/tunnels.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
@@ -506,6 +507,10 @@ class _Library extends ConsumerWidget {
     final l = context.l10n;
     final board = ref.watch(tunnelBoardProvider);
     final identities = ref.watch(identitiesProvider);
+    final snippets = ref.watch(snippetsProvider);
+    // Read again whenever this rebuilds (a tab opens or closes): new keys
+    // are trusted as connections come up.
+    final known = ref.read(openWardProvider).knownHostRows(query: '').length;
     final current = ref.watch(tabsProvider.select((s) => s.current));
     bool here(PageKind page) => current is PageTab && current.page == page;
     Widget entry({
@@ -577,6 +582,22 @@ class _Library extends ConsumerWidget {
             trailing: [
               Text('${identities.length}', style: monoStyle(context, size: 11)),
             ],
+          ),
+          entry(
+            key: 'library.snippets',
+            page: PageKind.snippets,
+            icon: Icons.terminal,
+            label: l.snippets,
+            trailing: [
+              Text('${snippets.length}', style: monoStyle(context, size: 11)),
+            ],
+          ),
+          entry(
+            key: 'library.knownHosts',
+            page: PageKind.knownHosts,
+            icon: Icons.verified_user_outlined,
+            label: l.knownHosts,
+            trailing: [Text('$known', style: monoStyle(context, size: 11))],
           ),
         ],
       ),

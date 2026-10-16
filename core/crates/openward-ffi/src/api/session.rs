@@ -134,6 +134,8 @@ pub struct ConnectedView {
 pub enum FailureKind {
     HostKeyChanged,
     HostKeyRejected,
+    /// Marked `@revoked` in a `known_hosts`.
+    HostKeyRevoked,
     BadCertificate,
     AuthFailed,
     Cancelled,
@@ -238,6 +240,12 @@ pub(crate) fn failure_view(f: Failure) -> FailureView {
         Failure::HostKeyRejected { label } => FailureView {
             kind: Some(FailureKind::HostKeyRejected),
             label,
+            ..v
+        },
+        Failure::HostKeyRevoked { label, fingerprint } => FailureView {
+            kind: Some(FailureKind::HostKeyRevoked),
+            label,
+            fingerprint,
             ..v
         },
         Failure::BadCertificate { label, reason } => FailureView {

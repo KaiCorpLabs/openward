@@ -11,6 +11,7 @@ import '../l10n/l10n.dart';
 import '../src/rust/api/session.dart';
 import '../terminal/controller.dart';
 import '../terminal/terminal_pane.dart';
+import '../snippets/palette.dart';
 import '../tunnels/tunnels_page.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
@@ -765,6 +766,13 @@ class _StatusBar extends ConsumerWidget {
             ),
           if (k != null && s.hostId != null)
             TunnelChip(hostId: s.hostId!, hostLabel: s.label),
+          if (s.phase == Phase.connected || s.phase == Phase.running)
+            TextButton.icon(
+              key: const ValueKey('status.snippets'),
+              onPressed: () => showSnippetPalette(context),
+              icon: const Icon(Icons.terminal, size: 14),
+              label: Text('${l.snippets} ${isApple ? '⌘⇧S' : 'Ctrl+Shift+S'}'),
+            ),
           if (k != null)
             TextButton.icon(
               key: const ValueKey('status.sftp'),

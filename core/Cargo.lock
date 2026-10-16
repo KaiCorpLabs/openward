@@ -1520,6 +1520,8 @@ name = "openward-app"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "data-encoding",
+ "hmac 0.12.1",
  "openward-ghostty",
  "openward-import",
  "openward-pty",
@@ -1527,6 +1529,7 @@ dependencies = [
  "openward-ssh",
  "openward-term",
  "openward-vault",
+ "sha1 0.10.7",
  "tempfile",
  "thiserror 2.0.21",
  "tokio",

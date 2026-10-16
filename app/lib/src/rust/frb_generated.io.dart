@@ -5,8 +5,10 @@
 
 import 'api/app.dart';
 import 'api/identities.dart';
+import 'api/known_hosts.dart';
 import 'api/session.dart';
 import 'api/sftp.dart';
+import 'api/snippets.dart';
 import 'api/tunnels.dart';
 import 'api/vault.dart';
 
@@ -158,6 +160,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   KeyPolicy dco_decode_box_autoadd_key_policy(dynamic raw);
 
   @protected
+  KnownHostRow dco_decode_box_autoadd_known_host_row(dynamic raw);
+
+  @protected
+  KnownMarkerKind dco_decode_box_autoadd_known_marker_kind(dynamic raw);
+
+  @protected
   LinkView dco_decode_box_autoadd_link_view(dynamic raw);
 
   @protected
@@ -180,6 +188,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SearchView dco_decode_box_autoadd_search_view(dynamic raw);
+
+  @protected
+  SnippetSpec dco_decode_box_autoadd_snippet_spec(dynamic raw);
 
   @protected
   StageView dco_decode_box_autoadd_stage_view(dynamic raw);
@@ -317,7 +328,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   KeyView dco_decode_key_view(dynamic raw);
 
   @protected
+  KnownHostRow dco_decode_known_host_row(dynamic raw);
+
+  @protected
   KnownHostView dco_decode_known_host_view(dynamic raw);
+
+  @protected
+  KnownMarkerKind dco_decode_known_marker_kind(dynamic raw);
+
+  @protected
+  KnownSourceKind dco_decode_known_source_kind(dynamic raw);
 
   @protected
   LinkView dco_decode_link_view(dynamic raw);
@@ -362,6 +382,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<KeyView> dco_decode_list_key_view(dynamic raw);
 
   @protected
+  List<KnownHostRow> dco_decode_list_known_host_row(dynamic raw);
+
+  @protected
   List<KnownHostView> dco_decode_list_known_host_view(dynamic raw);
 
   @protected
@@ -378,6 +401,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<SelectedRange> dco_decode_list_selected_range(dynamic raw);
+
+  @protected
+  List<SnippetValue> dco_decode_list_snippet_value(dynamic raw);
+
+  @protected
+  List<SnippetView> dco_decode_list_snippet_view(dynamic raw);
 
   @protected
   List<TagCount> dco_decode_list_tag_count(dynamic raw);
@@ -426,6 +455,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   KeyPolicy? dco_decode_opt_box_autoadd_key_policy(dynamic raw);
+
+  @protected
+  KnownMarkerKind? dco_decode_opt_box_autoadd_known_marker_kind(dynamic raw);
 
   @protected
   LinkView? dco_decode_opt_box_autoadd_link_view(dynamic raw);
@@ -519,6 +551,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SettingsSpec dco_decode_settings_spec(dynamic raw);
+
+  @protected
+  SnippetSpec dco_decode_snippet_spec(dynamic raw);
+
+  @protected
+  SnippetValue dco_decode_snippet_value(dynamic raw);
+
+  @protected
+  SnippetVariables dco_decode_snippet_variables(dynamic raw);
+
+  @protected
+  SnippetView dco_decode_snippet_view(dynamic raw);
 
   @protected
   StageKind dco_decode_stage_kind(dynamic raw);
@@ -706,6 +750,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   KeyPolicy sse_decode_box_autoadd_key_policy(SseDeserializer deserializer);
 
   @protected
+  KnownHostRow sse_decode_box_autoadd_known_host_row(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  KnownMarkerKind sse_decode_box_autoadd_known_marker_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   LinkView sse_decode_box_autoadd_link_view(SseDeserializer deserializer);
 
   @protected
@@ -732,6 +786,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SearchView sse_decode_box_autoadd_search_view(SseDeserializer deserializer);
+
+  @protected
+  SnippetSpec sse_decode_box_autoadd_snippet_spec(SseDeserializer deserializer);
 
   @protected
   StageView sse_decode_box_autoadd_stage_view(SseDeserializer deserializer);
@@ -873,7 +930,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   KeyView sse_decode_key_view(SseDeserializer deserializer);
 
   @protected
+  KnownHostRow sse_decode_known_host_row(SseDeserializer deserializer);
+
+  @protected
   KnownHostView sse_decode_known_host_view(SseDeserializer deserializer);
+
+  @protected
+  KnownMarkerKind sse_decode_known_marker_kind(SseDeserializer deserializer);
+
+  @protected
+  KnownSourceKind sse_decode_known_source_kind(SseDeserializer deserializer);
 
   @protected
   LinkView sse_decode_link_view(SseDeserializer deserializer);
@@ -928,6 +994,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<KeyView> sse_decode_list_key_view(SseDeserializer deserializer);
 
   @protected
+  List<KnownHostRow> sse_decode_list_known_host_row(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<KnownHostView> sse_decode_list_known_host_view(
     SseDeserializer deserializer,
   );
@@ -954,6 +1025,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<SelectedRange> sse_decode_list_selected_range(
     SseDeserializer deserializer,
   );
+
+  @protected
+  List<SnippetValue> sse_decode_list_snippet_value(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<SnippetView> sse_decode_list_snippet_view(SseDeserializer deserializer);
 
   @protected
   List<TagCount> sse_decode_list_tag_count(SseDeserializer deserializer);
@@ -1020,6 +1099,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   KeyPolicy? sse_decode_opt_box_autoadd_key_policy(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  KnownMarkerKind? sse_decode_opt_box_autoadd_known_marker_kind(
     SseDeserializer deserializer,
   );
 
@@ -1133,6 +1217,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SettingsSpec sse_decode_settings_spec(SseDeserializer deserializer);
+
+  @protected
+  SnippetSpec sse_decode_snippet_spec(SseDeserializer deserializer);
+
+  @protected
+  SnippetValue sse_decode_snippet_value(SseDeserializer deserializer);
+
+  @protected
+  SnippetVariables sse_decode_snippet_variables(SseDeserializer deserializer);
+
+  @protected
+  SnippetView sse_decode_snippet_view(SseDeserializer deserializer);
 
   @protected
   StageKind sse_decode_stage_kind(SseDeserializer deserializer);
@@ -1369,6 +1465,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_known_host_row(
+    KnownHostRow self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_known_marker_kind(
+    KnownMarkerKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_link_view(
     LinkView self,
     SseSerializer serializer,
@@ -1413,6 +1521,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_search_view(
     SearchView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_snippet_spec(
+    SnippetSpec self,
     SseSerializer serializer,
   );
 
@@ -1576,7 +1690,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_key_view(KeyView self, SseSerializer serializer);
 
   @protected
+  void sse_encode_known_host_row(KnownHostRow self, SseSerializer serializer);
+
+  @protected
   void sse_encode_known_host_view(KnownHostView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_known_marker_kind(
+    KnownMarkerKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_known_source_kind(
+    KnownSourceKind self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_link_view(LinkView self, SseSerializer serializer);
@@ -1645,6 +1774,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_key_view(List<KeyView> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_known_host_row(
+    List<KnownHostRow> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_known_host_view(
     List<KnownHostView> self,
     SseSerializer serializer,
@@ -1677,6 +1812,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_selected_range(
     List<SelectedRange> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_snippet_value(
+    List<SnippetValue> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_snippet_view(
+    List<SnippetView> self,
     SseSerializer serializer,
   );
 
@@ -1764,6 +1911,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_key_policy(
     KeyPolicy? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_known_marker_kind(
+    KnownMarkerKind? self,
     SseSerializer serializer,
   );
 
@@ -1901,6 +2054,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_settings_spec(SettingsSpec self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_snippet_spec(SnippetSpec self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_snippet_value(SnippetValue self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_snippet_variables(
+    SnippetVariables self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_snippet_view(SnippetView self, SseSerializer serializer);
 
   @protected
   void sse_encode_stage_kind(StageKind self, SseSerializer serializer);

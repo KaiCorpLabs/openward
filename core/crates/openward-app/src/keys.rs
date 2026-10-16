@@ -121,7 +121,7 @@ fn display(path: &str, suffix: &str) -> String {
     format!("{path}{suffix}")
 }
 
-fn algorithm(key: &KeyData) -> String {
+pub(crate) fn algorithm(key: &KeyData) -> String {
     match key.algorithm() {
         Algorithm::Ed25519 => "Ed25519".into(),
         Algorithm::SkEd25519 => "Ed25519-SK".into(),

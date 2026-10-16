@@ -18,7 +18,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use openward_proto::{
     Body, Data, ForwardKind, Group, Host, IDENTITY_FIELDS, Identity, Item, ItemId, Jump, KnownHost,
-    PortForward, Route, Settings, UseIdentity,
+    PortForward, Route, Settings, Snippet, UseIdentity,
 };
 
 pub use inherit::{Effective, Origin, defaults};
@@ -176,6 +176,41 @@ impl Vault {
             .collect();
         identities.sort_by_cached_key(|(id, i)| (i.label.to_lowercase(), *id));
         identities
+    }
+
+    pub fn snippet(&self, id: ItemId) -> Result<&Snippet> {
+        match &self.item(id)?.body.data {
+            Data::Snippet(s) => Ok(s),
+            other => Err(wrong_type(id, "snippet", other)),
+        }
+    }
+
+    /// Snippets sorted by label.
+    pub fn snippets(&self) -> Vec<(ItemId, &Snippet)> {
+        let mut snippets: Vec<_> = self
+            .items
+            .values()
+            .filter_map(|i| match &i.body.data {
+                Data::Snippet(s) => Some((i.id, s)),
+                _ => None,
+            })
+            .collect();
+        snippets.sort_by_cached_key(|(id, s)| (s.label.to_lowercase(), *id));
+        snippets
+    }
+
+    /// Trusted keys with when they were trusted (ms since the epoch).
+    pub fn known_hosts_with_dates(&self) -> Vec<(ItemId, &KnownHost, i64)> {
+        let mut known: Vec<_> = self
+            .items
+            .values()
+            .filter_map(|i| match &i.body.data {
+                Data::KnownHost(k) => Some((i.id, k, i.body.created)),
+                _ => None,
+            })
+            .collect();
+        known.sort_by_key(|(id, _, _)| *id);
+        known
     }
 
     /// Saved tunnels sorted by label.
@@ -722,6 +757,12 @@ impl Vault {
                     return Err(Error::Invalid(
                         "an identity sets only a user, keys, certificates and an agent",
                     ));
+                }
+                Ok(())
+            }
+            Data::Snippet(s) => {
+                if s.label.trim().is_empty() || s.script.trim().is_empty() {
+                    return Err(Error::Invalid("a snippet needs a name and a command"));
                 }
                 Ok(())
             }

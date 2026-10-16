@@ -189,6 +189,11 @@ pub enum Failure {
     HostKeyRejected {
         label: String,
     },
+    /// The key is marked `@revoked` in a `known_hosts`.
+    HostKeyRevoked {
+        label: String,
+        fingerprint: String,
+    },
     BadCertificate {
         label: String,
         reason: String,
@@ -219,6 +224,9 @@ impl std::fmt::Display for Failure {
                 write!(f, "{}: host key changed (now {})", c.label, c.fingerprint)
             }
             Self::HostKeyRejected { label } => write!(f, "{label}: host key not trusted"),
+            Self::HostKeyRevoked { label, fingerprint } => {
+                write!(f, "{label}: host key {fingerprint} is revoked")
+            }
             Self::BadCertificate { label, reason } => {
                 write!(f, "{label}: bad host certificate ({reason})")
             }

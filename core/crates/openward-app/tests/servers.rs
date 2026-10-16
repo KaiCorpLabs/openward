@@ -1146,3 +1146,42 @@ fn an_identity_of_the_group_logs_in_with_its_certificate() {
     term.text("echo who-$(whoami)-end\n");
     wait_for(&term, "who-demo-end");
 }
+
+/// A host key marked `@revoked` in `~/.ssh/known_hosts` is refused, even
+/// after OpenWard trusted it.
+#[test]
+fn a_revoked_host_key_is_refused() {
+    let f = Fixture::new(servers!());
+    let host = f.host(
+        "bastion",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: f.key("id_ed25519"),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    let (term, rx) = f.connect(host, |_| Answer::Cancel);
+    outcome(&rx).0.unwrap();
+    term.close();
+    let trusted = f.app.vault().known_hosts_text();
+    let key = trusted
+        .split_whitespace()
+        .skip(1)
+        .take(2)
+        .collect::<Vec<_>>()
+        .join(" ");
+    let ssh = f.app.local().ssh_dir.clone();
+    std::fs::create_dir_all(&ssh).unwrap();
+    std::fs::write(ssh.join("known_hosts"), format!("@revoked * {key}\n")).unwrap();
+
+    let (_term, rx) = f.connect(host, |_| Answer::Cancel);
+    match outcome(&rx).0 {
+        Err(Some(Failure::HostKeyRevoked { fingerprint, .. })) => {
+            assert!(fingerprint.starts_with("SHA256:"), "{fingerprint}");
+        }
+        other => panic!("not refused as revoked: {other:?}"),
+    }
+}

@@ -195,7 +195,7 @@ fn host_key_hook(hop: &Hop, ctx: &Ctx, refused: Arc<Mutex<Option<HostKeyQuery>>>
                     };
                     matches!(ctx.ask(prompt).await, Answer::Accept)
                 }
-                // Strict, a changed key, a bad certificate.
+                // Strict, a changed key, a bad certificate, a revoked key.
                 _ => false,
             };
             if accept {
@@ -259,6 +259,12 @@ fn open_failure(
         (Verdict::BadCertificate(reason), _) => Failure::BadCertificate {
             label,
             reason: reason.clone(),
+        },
+        (Verdict::Revoked, q) => Failure::HostKeyRevoked {
+            label,
+            fingerprint: q
+                .map(|q| q.key.fingerprint(HashAlg::Sha256).to_string())
+                .unwrap_or_default(),
         },
         _ => Failure::HostKeyRejected { label },
     }

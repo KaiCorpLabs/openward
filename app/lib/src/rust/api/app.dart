@@ -5,11 +5,13 @@
 
 import '../frb_generated.dart';
 import 'identities.dart';
+import 'known_hosts.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'session.dart';
 import 'sftp.dart';
+import 'snippets.dart';
 import 'tunnels.dart';
 import 'vault.dart';
 
@@ -67,11 +69,17 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   Future<String> createIdentity({required IdentitySpec spec});
 
+  Future<String> createSnippet({required SnippetSpec spec});
+
   Future<String> createTunnel({required TunnelSpec spec});
 
   /// A host, group or known host. A group's contents move up to its
   /// parent; a host other hosts jump through cannot go.
   Future<void> delete({required String id});
+
+  /// Forgets a key: OpenWard's, or the line of the file if it still reads
+  /// `text` (a copy of the file goes to `known_hosts.old` first).
+  Future<void> forgetKnownHost({required KnownHostRow row});
 
   /// A free port here after `port`, to offer when that one is taken.
   int? freePortNear({required int port});
@@ -118,7 +126,14 @@ abstract class OpenWard implements RustOpaqueInterface {
     required List<String> certificateFiles,
   });
 
+  /// OpenWard's trusted keys and then `~/.ssh/known_hosts`', those that
+  /// match `query` (all of them when empty).
+  List<KnownHostRow> knownHostRows({required String query});
+
   List<KnownHostView> knownHosts();
+
+  /// The `known_hosts` file OpenWard reads, as the UI names it.
+  String knownHostsFile();
 
   /// Opens or creates the app's data in `data_dir` (the platform's
   /// application support directory).
@@ -132,6 +147,16 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// Opens a tunnel, connecting to its host if needed. The stream is that
   /// connection's events (questions, and `connected` once it listens).
   Stream<SessionEvent> openTunnel({required String id});
+
+  /// As [`OpenWard::open`], with another `~/.ssh` (tests: the tester's
+  /// own keys and `known_hosts` stay out).
+  static Future<OpenWard> openWithSshDir({
+    required String dataDir,
+    required String sshDir,
+  }) => RustLib.instance.api.crateApiAppOpenWardOpenWithSshDir(
+    dataDir: dataDir,
+    sshDir: sshDir,
+  );
 
   void pauseTransfer({required BigInt id});
 
@@ -154,6 +179,9 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   /// A new SFTP browser, not connected yet.
   SftpBrowser sftp();
+
+  /// Every snippet, by name.
+  List<SnippetView> snippets();
 
   List<TagCount> tags();
 
@@ -208,6 +236,13 @@ abstract class OpenWard implements RustOpaqueInterface {
     required String id,
     required BigInt rev,
     required IdentitySpec spec,
+  });
+
+  /// Returns the new revision. Fails if it changed since `rev`.
+  Future<BigInt> updateSnippet({
+    required String id,
+    required BigInt rev,
+    required SnippetSpec spec,
   });
 
   /// Returns the new revision. An open tunnel whose forward changed

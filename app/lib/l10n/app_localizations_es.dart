@@ -57,6 +57,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get agentSystem => 'El del sistema';
 
   @override
+  String allCount(int count) {
+    return 'Todas · $count';
+  }
+
+  @override
   String get alreadyImported => 'ya importado';
 
   @override
@@ -79,6 +84,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get asSystem => 'Como el sistema';
 
   @override
+  String get askedWhenRun => 'Se pregunta al ejecutarlo';
+
+  @override
+  String get askedWhenRunHint => 'Sale de lo que escribes entre llaves.';
+
+  @override
+  String get asks => 'Pregunta';
+
+  @override
+  String asksNothing(String example) {
+    return 'No pregunta nada. Escribe $example donde quieras que pregunte.';
+  }
+
+  @override
   String get back => 'Atrás';
 
   @override
@@ -99,6 +118,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get bellRang => 'Ha sonado la campana';
+
+  @override
+  String get bracesWord => 'llaves';
 
   @override
   String bringsTunnels(int count) {
@@ -279,6 +301,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get colSize => 'Tamaño';
 
   @override
+  String get command => 'Comando';
+
+  @override
+  String commandHint(String open, String escaped) {
+    return 'Cada línea se envía como si la escribieras. Para escribir $open tal cual, pon $escaped.';
+  }
+
+  @override
   String get conflictChoose => '. Elige qué hacer con cada uno:';
 
   @override
@@ -436,6 +466,9 @@ class AppLocalizationsEs extends AppLocalizations {
       '~/.ssh/id_ed25519, id_ecdsa, id_rsa (las habituales)';
 
   @override
+  String get defaultValueOptional => 'Valor por defecto (opcional)';
+
+  @override
   String get delete => 'Eliminar';
 
   @override
@@ -560,6 +593,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get editIdentity => 'Editar identidad';
 
   @override
+  String get editSnippet => 'Editar snippet';
+
+  @override
   String get editTheIdentity => 'Editar la identidad';
 
   @override
@@ -567,6 +603,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get emptyFolder => 'Esta carpeta está vacía';
+
+  @override
+  String get exampleVariable => 'nombre';
 
   @override
   String failureAuth(String user, String label) {
@@ -591,6 +630,11 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String failureHostKeyRejected(String label) {
     return 'No se ha confiado en la clave de $label.';
+  }
+
+  @override
+  String failureHostKeyRevoked(String label, String fingerprint) {
+    return '$label usa una clave revocada ($fingerprint): se rechaza siempre. Si es un error, quítala de la lista de hosts conocidos.';
   }
 
   @override
@@ -622,6 +666,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get filledInEachPane => 'También se rellenan solas, en cada panel:';
+
+  @override
   String get filterFolder => 'Filtrar en esta carpeta';
 
   @override
@@ -631,7 +678,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get filterIdentities => 'Filtrar por nombre, usuario o clave';
 
   @override
+  String get filterSnippets => 'Filtrar por nombre o comando';
+
+  @override
   String get filterTunnels => 'Filtrar por nombre, host o puerto';
+
+  @override
+  String get findASnippet => 'Buscar un snippet';
 
   @override
   String get findClose => 'Cerrar la búsqueda (Esc)';
@@ -692,6 +745,30 @@ class AppLocalizationsEs extends AppLocalizations {
   String get forAll => 'A todos:';
 
   @override
+  String get forgetAction => 'Olvidar';
+
+  @override
+  String get forgetFileKeyBody =>
+      'Se borra esa línea del fichero, que también usa el ssh de tu sistema, y antes se guarda una copia en known_hosts.old, como hace ssh-keygen -R.';
+
+  @override
+  String forgetFileKeyTitle(String name, String file) {
+    return '¿Quitar la clave de $name de $file?';
+  }
+
+  @override
+  String get forgetKeyBody => 'OpenWard deja de confiar en esta clave.';
+
+  @override
+  String get forgetKeyThen =>
+      'La próxima vez que conectes se preguntará otra vez por su clave, salvo que haya otra en la que confíes.';
+
+  @override
+  String forgetKeyTitle(String name) {
+    return '¿Olvidar la clave de $name?';
+  }
+
+  @override
   String get forward => 'Reenvío';
 
   @override
@@ -738,6 +815,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get groups => 'Grupos';
+
+  @override
+  String get hashedName => 'Nombre cifrado';
 
   @override
   String get hideHiddenFiles => 'No mostrar los ocultos';
@@ -930,6 +1010,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get inLight => 'En claro';
 
   @override
+  String inWhere(String where) {
+    return 'en $where';
+  }
+
+  @override
   String inheritsFrom(String group) {
     return 'La hereda de $group';
   }
@@ -1044,6 +1129,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get keyColumn => 'Clave';
+
+  @override
   String get keyExchange => 'Intercambio';
 
   @override
@@ -1121,6 +1209,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get kindRemoteShort => 'Remoto';
 
   @override
+  String get knownHosts => 'Hosts conocidos';
+
+  @override
+  String get knownHostsFileChanged =>
+      'El fichero ha cambiado desde que se mostró. Vuelve a mirarlo antes de quitar nada.';
+
+  @override
+  String knownHostsIntro(String file) {
+    return 'Las claves de servidor en las que confías. Al conectar se miran las de OpenWard y las de $file; las nuevas se guardan en OpenWard.';
+  }
+
+  @override
   String get lanLocalNote =>
       'Cualquiera de tu red podrá usarlo mientras esté abierto.';
 
@@ -1147,6 +1247,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get lineHeight => 'Interlineado del terminal';
 
   @override
+  String lineNumber(int line) {
+    return 'línea $line';
+  }
+
+  @override
+  String linesCount(int count) {
+    return '$count líneas';
+  }
+
+  @override
   String linkNotOpened(String scheme) {
     return 'Los enlaces «$scheme:» no se abren desde el terminal.';
   }
@@ -1161,6 +1271,33 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get localUser => 'tu usuario local';
+
+  @override
+  String get manageSnippets => 'Gestionar snippets…';
+
+  @override
+  String get markerCertAuthority =>
+      'Autoridad de certificados: confía en los hosts que firma';
+
+  @override
+  String get markerRevoked => 'Revocada: se rechaza siempre';
+
+  @override
+  String matchCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count coinciden',
+      one: '1 coincide',
+      zero: 'ninguna coincide',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String matchesHost(String host) {
+    return 'Coincide con $host';
+  }
 
   @override
   String get maximizePane => 'Maximizar el panel';
@@ -1263,6 +1400,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get newPane => 'Panel nuevo';
 
   @override
+  String get newSnippet => 'Nuevo snippet';
+
+  @override
   String get newSubgroup => 'Nuevo subgrupo';
 
   @override
@@ -1304,6 +1444,16 @@ class AppLocalizationsEs extends AppLocalizations {
       'Sin claves: se prueban las habituales de ~/.ssh y las del agente.';
 
   @override
+  String get noKnownHostMatches => 'Ninguna clave coincide';
+
+  @override
+  String get noKnownHosts => 'Aún no confías en ninguna clave';
+
+  @override
+  String get noKnownHostsBody =>
+      'Las claves de los servidores aparecen aquí cuando conectas y confías en ellas.';
+
+  @override
   String noMatches(String filter) {
     return 'Nada coincide con «$filter»';
   }
@@ -1317,6 +1467,21 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get noResults => 'Ningún host coincide.';
+
+  @override
+  String get noSnippetMatches => 'Ningún snippet coincide';
+
+  @override
+  String get noSnippets => 'Aún no hay snippets';
+
+  @override
+  String noSnippetsBody(String braces) {
+    return 'Un snippet es un comando guardado que envías a un terminal con un atajo. Lo que escribas entre $braces se pregunta al ejecutarlo.';
+  }
+
+  @override
+  String get noSnippetsYet =>
+      'Aún no hay snippets. Crea uno en Biblioteca › Snippets.';
 
   @override
   String get noTunnels => 'Aún no hay túneles';
@@ -1358,10 +1523,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get onConnect => 'Al conectar';
 
   @override
+  String get onSend => 'Al enviar';
+
+  @override
   String get onlyTheServer => 'Solo el servidor';
 
   @override
   String get onlyThisComputer => 'Solo este equipo (127.0.0.1)';
+
+  @override
+  String get openATerminalFirst => 'Abre un terminal para ejecutarlo';
 
   @override
   String get openAction => 'Abrir';
@@ -1414,6 +1585,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String ownUserWins(String user) {
     return 'Pone su propio usuario ($user), que seguirá mandando.';
   }
+
+  @override
+  String get paletteChoose => 'elegir';
+
+  @override
+  String get paletteRun => 'ejecutar';
+
+  @override
+  String get paletteTypeOnly => 'solo escribir';
 
   @override
   String get paneOptions => 'Opciones del panel';
@@ -1567,6 +1747,13 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get pressEnterAtTheEnd => 'Pulsar Intro al final';
+
+  @override
+  String get pressEnterAtTheEndNote =>
+      'Apágalo para dejar el comando escrito y revisarlo antes de ejecutarlo.';
+
+  @override
   String get preview => 'Vista previa';
 
   @override
@@ -1682,6 +1869,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get removeTheLine => 'Quitar la línea';
+
+  @override
   String get rename => 'Renombrar';
 
   @override
@@ -1773,6 +1963,30 @@ class AppLocalizationsEs extends AppLocalizations {
   String get routeStart => 'este equipo';
 
   @override
+  String get runEllipsis => 'Ejecutar…';
+
+  @override
+  String get runIn => 'Ejecutar en…';
+
+  @override
+  String runSnippetBroadcast(int count) {
+    return 'Va a los $count paneles que reciben el broadcast';
+  }
+
+  @override
+  String get runSnippetHint => 'Rellena lo que pregunta. No se guarda.';
+
+  @override
+  String runSnippetIn(String where) {
+    return 'En $where';
+  }
+
+  @override
+  String runSnippetTitle(String name) {
+    return 'Ejecutar «$name»';
+  }
+
+  @override
   String get sameHost => 'el mismo host';
 
   @override
@@ -1813,6 +2027,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get saveNewHost => 'Guardar un host nuevo';
 
   @override
+  String get savedHost => 'Host guardado';
+
+  @override
   String get scrollback => 'Historial';
 
   @override
@@ -1825,6 +2042,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get searchHosts => 'Buscar hosts';
+
+  @override
+  String get searchKnownHosts => 'Buscar un host, una huella…';
 
   @override
   String get sectionConnection => 'Conexión';
@@ -1871,6 +2091,14 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String selectedOf(int selected, int total) {
     return '$selected de $total';
+  }
+
+  @override
+  String get sendAction => 'Enviar';
+
+  @override
+  String sendToPanes(int count) {
+    return 'Enviar a $count paneles';
   }
 
   @override
@@ -1955,6 +2183,50 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get skipGuide => 'Saltar la guía';
+
+  @override
+  String get snippetEditorHint =>
+      'Comandos que envías a un terminal; lo que va entre llaves se pregunta.';
+
+  @override
+  String get snippetNeedsCommand => 'Escribe el comando.';
+
+  @override
+  String get snippetNeedsName => 'Ponle un nombre.';
+
+  @override
+  String get snippetNoSecrets =>
+      'Se guarda sin secretos, como el resto del vault. Lo que escribas al ejecutarlo no se guarda.';
+
+  @override
+  String get snippetTypeOnlyNote => 'Se deja escrito, sin pulsar Intro.';
+
+  @override
+  String get snippetWithEnter => 'Con Intro al final.';
+
+  @override
+  String get snippets => 'Snippets';
+
+  @override
+  String snippetsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count snippets',
+      one: '1 snippet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String snippetsHowToRun(String shortcut) {
+    return 'En un terminal: $shortcut o el botón «Snippets» de la barra de estado. Con broadcast, van a todos los paneles que reciben.';
+  }
+
+  @override
+  String snippetsIntro(String braces) {
+    return 'Comandos guardados que envías a un terminal con un atajo. Lo que va entre $braces se pregunta al ejecutarlo.';
+  }
 
   @override
   String get splitDown => 'Dividir abajo';
@@ -2134,6 +2406,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get trustNewKeyEllipsis => 'Confiar en la clave nueva…';
 
   @override
+  String trustedOn(String date) {
+    return 'confiada el $date';
+  }
+
+  @override
   String get tryAgain => 'Reintentar';
 
   @override
@@ -2253,6 +2530,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String twoNames(String a, String b) {
     return '$a y $b';
   }
+
+  @override
+  String get typeOnly => 'Solo escribe';
 
   @override
   String get uiColors => 'Colores de la interfaz';
@@ -2393,7 +2673,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get welcomeTitle => 'Te damos la bienvenida a OpenWard';
 
   @override
+  String get whereItIs => 'Dónde está';
+
+  @override
   String get whoCanUse => 'Quién puede usarlo';
+
+  @override
+  String get withEnter => 'Intro al final';
 
   @override
   String get wrongAnswer => 'Respuesta incorrecta.';
