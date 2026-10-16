@@ -122,6 +122,7 @@ void main() {
     );
     final tabs = container.read(tabsProvider.notifier);
     final out = Directory('$_shotsPath/gallery')..createSync(recursive: true);
+    debugPrint('gallery: ${out.absolute.path}');
 
     Future<void> shot(String name) async {
       await tester.pump(const Duration(milliseconds: 400));
