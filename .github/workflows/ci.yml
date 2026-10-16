@@ -171,7 +171,7 @@ jobs:
     env:
       # Where the window tests leave their screenshots (passed to them as a
       # --dart-define).
-      OPENWARD_SHOTS: ${{ github.workspace }}/app/build/shots
+      OPENWARD_SHOTS: ${{ runner.temp }}/openward-shots
     defaults:
       run:
         shell: bash
@@ -262,7 +262,7 @@ jobs:
           itest integration_test/gallery_test.dart
           # Where the screenshots ended up (they did not reach the artifact).
           echo "screenshots in $OPENWARD_SHOTS: $(find "$OPENWARD_SHOTS" -name '*.png' 2>/dev/null | wc -l)"
-          find / -name 'grafito-oscuro-1-terminal.png' -not -path '/proc/*' 2>/dev/null | head -3 || true
+          find / -name '*-1-terminal.png' -not -path '/proc/*' 2>/dev/null | head -3 || true
       - name: Stop SSH test servers
         if: always() && runner.os == 'Linux'
         env:
@@ -280,12 +280,12 @@ jobs:
             --dart-define=OPENWARD_SHOTS="$OPENWARD_SHOTS"
       - name: List screenshots
         if: always()
-        run: ls -R app/build/shots 2>/dev/null | head -50 || echo "no screenshots"
+        run: ls -R "$OPENWARD_SHOTS" 2>/dev/null | head -50 || echo "no screenshots"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: OpenWard-screenshots-${{ runner.os }}
-          path: app/build/shots
+          path: ${{ env.OPENWARD_SHOTS }}
           retention-days: 14
           if-no-files-found: ignore
       - name: Package
