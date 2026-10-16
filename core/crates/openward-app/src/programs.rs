@@ -387,7 +387,10 @@ pub fn preview(vault: &Vault, read: &Read) -> Preview {
     }
     Preview {
         program: read.program,
-        group: have.top.and_then(|id| vault.group(id).ok()).map(|g| g.name.clone()),
+        group: have
+            .top
+            .and_then(|id| vault.group(id).ok())
+            .map(|g| g.name.clone()),
         items,
         identities: b.identities.len(),
         new_identities: b
