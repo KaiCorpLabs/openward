@@ -21,7 +21,9 @@ use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-pub use settings::{Agent, HostKeyPolicy, Jump, Proxy, ProxyServer, Route, Settings};
+pub use settings::{
+    Agent, HostKeyPolicy, IDENTITY_FIELDS, Jump, Proxy, ProxyServer, Route, Settings, UseIdentity,
+};
 
 /// Fields a newer version wrote that this one does not know.
 pub type Extra = BTreeMap<String, ciborium::Value>;
@@ -86,6 +88,7 @@ pub struct Body {
 pub enum Data {
     Group(Group),
     Host(Host),
+    Identity(Identity),
     KnownHost(KnownHost),
     PortForward(PortForward),
     /// A type from a newer version. Never encoded: the stored bytes stay.
@@ -98,6 +101,7 @@ impl Data {
         match self {
             Self::Group(_) => "group",
             Self::Host(_) => "host",
+            Self::Identity(_) => "identity",
             Self::KnownHost(_) => "known_host",
             Self::PortForward(_) => "port_forward",
             Self::Unsupported => "unsupported",
@@ -135,6 +139,20 @@ pub struct Host {
     /// Where the host came from; `None` when created by hand.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source: Option<Source>,
+    #[serde(flatten)]
+    pub extra: Extra,
+}
+
+/// A login with a name ("deploy in production"): a user, keys and an
+/// agent that hosts and groups use by id. In inheritance it comes right
+/// below what a host sets itself: defaults ← groups ← identity ← host.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct Identity {
+    pub label: String,
+    /// Only the fields in [`IDENTITY_FIELDS`]. Like everything in the
+    /// vault in phase 1, no secrets: keys go by path.
+    #[serde(default, skip_serializing_if = "Settings::is_empty")]
+    pub settings: Settings,
     #[serde(flatten)]
     pub extra: Extra,
 }
@@ -369,6 +387,32 @@ mod tests {
             }));
         }
         assert_eq!(Body::from_cbor(&group.to_cbor()).unwrap(), group);
+    }
+
+    #[test]
+    fn identities_and_their_use_round_trip() {
+        let identity = Body {
+            created: 1,
+            modified: 2,
+            data: Data::Identity(Identity {
+                label: "deploy en producción".into(),
+                settings: Settings {
+                    user: Some("deploy".into()),
+                    identity_files: Some(vec!["~/.ssh/deploy_ed25519".into()]),
+                    agent: Some(Agent::System),
+                    ..Settings::default()
+                },
+                extra: Extra::new(),
+            }),
+        };
+        assert_eq!(Body::from_cbor(&identity.to_cbor()).unwrap(), identity);
+        for choice in [UseIdentity::None, UseIdentity::Id(ItemId::new())] {
+            let mut body = host();
+            if let Data::Host(h) = &mut body.data {
+                h.settings.identity = Some(choice);
+            }
+            assert_eq!(Body::from_cbor(&body.to_cbor()).unwrap(), body);
+        }
     }
 
     /// What a newer version wrote survives a read and a write by this one.

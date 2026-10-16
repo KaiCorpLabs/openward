@@ -10,21 +10,29 @@
   },
   "accessibility": "Accesibilidad",
   "add": "Añadir",
+  "addCertificate": "+ Añadir certificado",
+  "addKeyEllipsis": "Añadir clave…",
   "addSavedHost": "Añadir un host guardado",
   "addTag": "Añadir",
   "address": "Dirección",
   "addressHint": "servidor.example.com o 10.0.0.5",
   "agent": "Agente SSH",
   "agentNone": "Ninguno",
+  "agentOtherSocket": "Otro socket",
+  "agentShort": "Agente",
   "agentSocket": "Otro socket…",
   "agentSystem": "El del sistema",
   "alreadyImported": "ya importado",
+  "alreadyUses": "Ya la usa",
   "anyDestination": "Cualquier destino",
   "appearanceStepBody": "Puedes cambiarlo cuando quieras en Ajustes.",
   "appearanceStepTitle": "¿Cómo la quieres ver?",
   "apply": "Aplicar",
   "asSystem": "Como el sistema",
   "back": "Atrás",
+  "badgeChanges": "cambia",
+  "badgeLeaves": "la deja",
+  "badgeNew": "nueva",
   "bellFlash": "Destello con la campana",
   "bellFlashHelp": "Cuando un programa hace sonar la campana. Si la pestaña no está delante, se marca igualmente.",
   "bellRang": "Ha sonado la campana",
@@ -107,6 +115,27 @@
       }
     }
   },
+  "certExpiredOn": "caducó el {date}",
+  "@certExpiredOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "certForever": "sin caducidad",
+  "certNextToKey": "Junto a la clave (-cert.pub): se usa sin añadirlo.",
+  "certUntil": "hasta el {date}",
+  "@certUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "certificate": "certificado",
+  "certificateExpired": "certificado caducado",
+  "certificateTitle": "Certificado",
   "change": "Cambiar",
   "changedMeanwhile": "Otro cambio ha llegado antes: cierra y vuelve a abrir el editor.",
   "checkedFingerprint": "He comprobado la huella nueva",
@@ -193,7 +222,7 @@
     }
   },
   "connectionDetails": "Detalles de la conexión",
-  "connectionHint": "Lo que no cambies aquí se hereda. Debajo de cada valor ves de dónde viene; los heredados llevan el borde discontinuo.",
+  "connectionHint": "Lo que no cambies aquí se hereda; los valores heredados llevan el borde discontinuo y debajo dicen de dónde vienen. Manda lo del host, luego su identidad, luego sus grupos y, al final, los valores por defecto.",
   "connectionLost": "Se perdió la conexión con {label}{why}.",
   "@connectionLost": {
     "placeholders": {
@@ -282,6 +311,23 @@
       }
     }
   },
+  "deleteIdentityBody": "{count, plural, =1{El host que la usa volverá a heredar el usuario y las claves de su grupo.} other{Los {count} hosts que la usan volverán a heredar el usuario y las claves de sus grupos.}}",
+  "@deleteIdentityBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteIdentityTitle": "¿Eliminar «{name}»?",
+  "@deleteIdentityTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteIdentityUnused": "Nadie la usa. Las claves siguen en su sitio: solo se borra la identidad.",
   "deleteLocalBody": "Se eliminan de este equipo sin pasar por la papelera: no se puede deshacer.",
   "deleteMany": "¿Eliminar {count} elementos?",
   "@deleteMany": {
@@ -308,6 +354,7 @@
     }
   },
   "deletedHost": "(host eliminado)",
+  "deletedIdentity": "(identidad eliminada)",
   "destination": "Destino",
   "dontTrust": "No confiar",
   "download": "Descarga",
@@ -338,6 +385,8 @@
   "editGroup": "Editar grupo…",
   "editGroupTitle": "Editar grupo",
   "editHostTitle": "Editar host",
+  "editIdentity": "Editar identidad",
+  "editTheIdentity": "Editar la identidad",
   "editTunnel": "Editar túnel",
   "emptyFolder": "Esta carpeta está vacía",
   "failureAuth": "{user}@{label} no ha podido autenticarse.",
@@ -437,6 +486,8 @@
     }
   },
   "filterFolder": "Filtrar en esta carpeta",
+  "filterHostsAndGroups": "Filtrar hosts y grupos",
+  "filterIdentities": "Filtrar por nombre, usuario o clave",
   "filterTunnels": "Filtrar por nombre, host o puerto",
   "findClose": "Cerrar la búsqueda (Esc)",
   "findCount": "{selected} de {total}",
@@ -488,16 +539,41 @@
     }
   },
   "fromHere": "desde aquí",
+  "fromIdentity": "De la identidad {name}",
+  "@fromIdentity": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "fromNowhere": "Sin valor: lo decide la conexión",
   "fromSshConfig": "de ~/.ssh/config",
   "fromThere": "desde allí",
   "group": "Grupo",
   "groupInsideItself": "Un grupo no puede estar dentro de sí mismo.",
+  "groupNamed": "Grupo {name}",
+  "@groupNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "groupNeedsName": "El grupo necesita un nombre.",
   "groupSettingsSection": "Ajustes para todo lo que contiene",
+  "groups": "Grupos",
   "hideHiddenFiles": "No mostrar los ocultos",
   "hideQueue": "Ocultar",
   "host": "Host",
+  "hostCountText": "{count, plural, =0{ningún host} =1{1 host} other{{count} hosts}}",
+  "@hostCountText": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "hostInUse": "Otros hosts saltan por «{name}»: cámbialos antes de eliminarlo.",
   "@hostInUse": {
     "placeholders": {
@@ -517,6 +593,51 @@
   },
   "hostKeys": "Claves de host nuevas",
   "hostNeedsName": "El host necesita un nombre.",
+  "hostsSection": "Hosts",
+  "identities": "Identidades",
+  "identitiesCount": "{total, plural, =1{1 identidad} other{{total} identidades}} · {used} en uso",
+  "@identitiesCount": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "used": {
+        "type": "int"
+      }
+    }
+  },
+  "identitiesIntro": "Usuario, claves y agente con un nombre, para usarlos en varios hosts y grupos. Cambiar una identidad cambia todos los que la usan.",
+  "identitiesNoSecrets": "No se guardan contraseñas ni frases de paso: se piden al conectar, como hasta ahora. De cada clave solo se lee su parte pública (.pub).",
+  "identity": "Identidad",
+  "identityEditorHint": "Usuario, claves y agente con un nombre, para usarlos en varios hosts.",
+  "identityKeyMissingHere": "{user} · falta su clave en este equipo",
+  "@identityKeyMissingHere": {
+    "placeholders": {
+      "user": {
+        "type": "String"
+      }
+    }
+  },
+  "identityNeedsName": "Ponle un nombre.",
+  "identityNewNote": "Úsala desde el editor de un host o de un grupo, o con «Usar en…» en la lista de identidades.",
+  "identityNone": "Ninguna",
+  "identityNoneNote": "Aunque se herede una de más arriba",
+  "identitySaveChanges": "{count, plural, =1{Al guardar cambia el host que la usa.} other{Al guardar cambian los {count} hosts que la usan.}} Un host que pone su propio usuario o sus claves mantiene los suyos.",
+  "@identitySaveChanges": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "identityUsedBy": "La usan: {who}",
+  "@identityUsedBy": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
   "ignore": "Ignorar",
   "importEllipsis": "Importar…",
   "importFailed": "No se ha podido importar: {error}",
@@ -571,6 +692,14 @@
     }
   },
   "inLight": "En claro",
+  "inheritsFrom": "La hereda de {group}",
+  "@inheritsFrom": {
+    "placeholders": {
+      "group": {
+        "type": "String"
+      }
+    }
+  },
   "inputNotSent": "Lo que escribas ahora no se envía.",
   "inside": "Dentro de",
   "itemCount": "{count, plural, =1{1 elemento} other{{count} elementos}}",
@@ -689,6 +818,19 @@
   "keyExchange": "Intercambio",
   "keyInKnownHosts": "en ~/.ssh/known_hosts",
   "keyInOpenWard": "guardada en OpenWard",
+  "keyMissing": "No está en este equipo",
+  "keyMissingWarning": "{path} no está en este equipo. {count, plural, =0{Cópiala o cambia la ruta antes de usarla.} =1{El host que la usa no podrá usar esa clave hasta que la copies o cambies la ruta.} other{Los {count} hosts que la usan no podrán usar esa clave hasta que la copies o cambies la ruta.}}",
+  "@keyMissingWarning": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "keyNoPublicHalf": "Sin .pub al lado: su tipo se sabrá al conectar",
   "keyNow": "Ahora ({algorithm})",
   "@keyNow": {
     "placeholders": {
@@ -697,6 +839,7 @@
       }
     }
   },
+  "keyPerHost": "Una por host (lleva %h, %r…)",
   "keyProtected": "La clave {key} está protegida.",
   "@keyProtected": {
     "placeholders": {
@@ -709,6 +852,7 @@
   "keySaved": "Guardada",
   "keys": "Claves",
   "keysHelp": "Una ruta por línea. OpenWard guarda la ruta, nunca la clave.",
+  "keysInOrder": "Se prueban en este orden; arrastra para cambiarlo.",
   "kindDynamic": "Dinámico (-D)",
   "kindDynamicShort": "Dinámico",
   "kindLocal": "Local (-L)",
@@ -763,10 +907,33 @@
   "missingProxy": "Falta el servidor o el puerto del proxy.",
   "missingProxyCommand": "Falta el ProxyCommand.",
   "missingSocket": "Falta la ruta del socket del agente.",
+  "monthsShort": "ene,feb,mar,abr,may,jun,jul,ago,sept,oct,nov,dic",
   "moreActions": "Más acciones",
   "moreOptions": "Más opciones",
   "name": "Nombre",
+  "nameAndMore": "{name} y {count} más",
+  "@nameAndMore": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "nameNoSlash": "Un nombre no puede llevar «/».",
+  "namesAndMore": "{names} y {count} más",
+  "@namesAndMore": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "netLost": "se ha perdido la conexión.",
   "netNotFound": "no se encuentra el host.",
   "netRefused": "conexión rechazada.",
@@ -778,6 +945,8 @@
   "newHost": "Nuevo host",
   "newHostHere": "Nuevo host aquí",
   "newHostTitle": "Nuevo host",
+  "newIdentity": "Nueva identidad",
+  "newIdentityEllipsis": "Nueva identidad…",
   "newLocalTerminal": "Terminal local nuevo",
   "newPane": "Panel nuevo",
   "newSubgroup": "Nuevo subgrupo",
@@ -787,7 +956,12 @@
   "noGroup": "Sin grupo",
   "noHostsBody": "Añade uno o tráelos de tu ~/\u2060.ssh/\u2060config.",
   "noHostsTitle": "Aún no tienes hosts",
+  "noIdentities": "Aún no hay identidades",
+  "noIdentitiesBody": "Una identidad junta un usuario, sus claves y el agente con un nombre («deploy en producción»). Ponla en un grupo y todos sus hosts entran igual; cámbiala una vez y cambian todos.",
+  "noIdentityInherited": "Ningún grupo pone una",
+  "noIdentityNow": "Sin identidad",
   "noJumpsYet": "Ninguno todavía.",
+  "noKeysYet": "Sin claves: se prueban las habituales de ~/.ssh y las del agente.",
   "noMatches": "Nada coincide con «{filter}»",
   "@noMatches": {
     "placeholders": {
@@ -803,6 +977,28 @@
   "noTunnelsBody": "Un túnel lleva un puerto de este equipo a un servicio que solo ve el servidor (una base de datos, un panel), o al revés. Crea uno o tráelos de tu ~/.ssh/config.",
   "notNow": "Ahora no",
   "notes": "Notas",
+  "nowIdentity": "Ahora: {identity}",
+  "@nowIdentity": {
+    "placeholders": {
+      "identity": {
+        "type": "String"
+      }
+    }
+  },
+  "nowIdentityFromGroup": "Ahora: {identity}, del grupo {group}",
+  "@nowIdentityFromGroup": {
+    "placeholders": {
+      "identity": {
+        "type": "String"
+      },
+      "group": {
+        "type": "String"
+      }
+    }
+  },
+  "nowNoIdentity": "ahora: ninguna",
+  "offerOnlyTheseKeys": "Ofrecer solo estas claves",
+  "offerOnlyTheseKeysNote": "No probar las demás claves del agente (IdentitiesOnly). Útil si el servidor corta tras varios intentos.",
   "ok": "Aceptar",
   "onConnect": "Al conectar",
   "onlyTheServer": "Solo el servidor",
@@ -838,6 +1034,15 @@
   "optionAsAlt": "Opción como Alt",
   "optionAsAltHelp": "Opción envía Esc + tecla, como esperan emacs y readline, en vez de escribir símbolos como @ o €.",
   "orAnAddress": "o una dirección: usuario@host:puerto",
+  "orTypeAPath": "o escribe una ruta: admite ~, %h, %r y %u",
+  "ownUserWins": "Pone su propio usuario ({user}), que seguirá mandando.",
+  "@ownUserWins": {
+    "placeholders": {
+      "user": {
+        "type": "String"
+      }
+    }
+  },
   "paneOptions": "Opciones del panel",
   "paneWhat": "¿Qué abres en este panel?",
   "partNote": "Se copia con un nombre temporal (.part) y se renombra al terminar: si se corta, el fichero bueno no queda a medias y la copia se puede reanudar.",
@@ -909,6 +1114,7 @@
       }
     }
   },
+  "pickIdentity": "Elige una identidad o «Ninguna».",
   "pixels": "{size} px",
   "@pixels": {
     "placeholders": {
@@ -1025,6 +1231,8 @@
     }
   },
   "remove": "Quitar",
+  "removeCertificate": "Quitar el certificado",
+  "removeKey": "Quitar la clave",
   "removeTag": "Quitar {tag}",
   "@removeTag": {
     "placeholders": {
@@ -1181,6 +1389,14 @@
     "placeholders": {
       "code": {
         "type": "int"
+      }
+    }
+  },
+  "setHereIdentitySays": "Cambiado aquí; la identidad dice {value}",
+  "@setHereIdentitySays": {
+    "placeholders": {
+      "value": {
+        "type": "String"
       }
     }
   },
@@ -1450,6 +1666,17 @@
     }
   },
   "tunnelsStayOpen": "Siguen abiertos si cierras esta pestaña. Todos en Biblioteca › Túneles.",
+  "twoNames": "{a} y {b}",
+  "@twoNames": {
+    "placeholders": {
+      "a": {
+        "type": "String"
+      },
+      "b": {
+        "type": "String"
+      }
+    }
+  },
   "uiColors": "Colores de la interfaz",
   "uiFont": "Fuente de la interfaz",
   "upOneLevel": "Subir un nivel",
@@ -1470,6 +1697,27 @@
       }
     }
   },
+  "useIdentityHint": "Marca grupos o hosts. Un grupo la pasa a todos sus hosts, también a los que añadas después.",
+  "useIdentityOn": "Usar «{name}» en…",
+  "@useIdentityOn": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "useIdentitySummary": "{changed, plural, =0{No cambia ningún host} =1{Cambia 1 host} other{Cambian {changed} hosts}} · {using, plural, =0{no la usará ninguno} =1{la usará 1} other{la usarán {using}}}",
+  "@useIdentitySummary": {
+    "placeholders": {
+      "changed": {
+        "type": "int"
+      },
+      "using": {
+        "type": "int"
+      }
+    }
+  },
+  "useOn": "Usar en…",
   "usePort": "Usar el {port}",
   "@usePort": {
     "placeholders": {
@@ -1478,7 +1726,10 @@
       }
     }
   },
+  "usedBy": "La usan",
+  "usedByNobody": "Nadie la usa todavía",
   "user": "Usuario",
+  "usualKeys": "las habituales",
   "variantDark": "oscuro",
   "variantDarkOnly": "Oscuro",
   "variantLight": "claro",

@@ -9,6 +9,7 @@
 
 pub mod events;
 pub mod import;
+pub mod keys;
 pub mod local;
 pub mod plan;
 pub mod sftp;

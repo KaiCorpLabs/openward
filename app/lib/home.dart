@@ -14,6 +14,7 @@ import 'tabs/tab_strip.dart';
 import 'tabs/tabs.dart';
 import 'terminal/controller.dart';
 import 'terminal/keys.dart';
+import 'identities/identities_page.dart';
 import 'tunnels/tunnels_page.dart';
 import 'ui/tokens.dart';
 import 'welcome/first_run.dart';
@@ -239,6 +240,8 @@ class _HomeState extends ConsumerState<Home> {
                       ),
                       PageTab(page: PageKind.settings) => const SettingsPage(),
                       PageTab(page: PageKind.tunnels) => const TunnelsPage(),
+                      PageTab(page: PageKind.identities) =>
+                        const IdentitiesPage(),
                       null => StartPage(searchFocus: _search),
                     },
                   ),

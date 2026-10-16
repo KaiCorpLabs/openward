@@ -1,6 +1,7 @@
 use ciborium::Value;
 use openward_proto::{
-    Agent, ForwardKind, Group, Host, HostKeyPolicy, Jump, KnownHost, PortForward, Route, Settings,
+    Agent, ForwardKind, Group, Host, HostKeyPolicy, Identity, Jump, KnownHost, PortForward, Route,
+    Settings, UseIdentity,
 };
 use rusqlite::params;
 
@@ -131,11 +132,11 @@ fn settings_inherit_from_groups_with_their_origin() {
     assert_eq!(e.origin("port"), Some(Origin::Group(root)));
 
     // What a new host in the subgroup would get, before its own settings.
-    let i = v.inherited(Some(eu)).unwrap();
+    let i = v.inherited(Some(eu), None).unwrap();
     assert_eq!(i.settings.user.as_deref(), Some("deploy"));
     assert_eq!(i.origin("user"), Some(Origin::Group(root)));
     assert_eq!(i.origin("agent"), Some(Origin::Group(eu)));
-    let top = v.inherited(None).unwrap();
+    let top = v.inherited(None, None).unwrap();
     assert_eq!(top.settings.port, Some(22));
     assert_eq!(top.origin("port"), Some(Origin::Default));
     assert_eq!(top.origin("user"), None);
@@ -429,4 +430,213 @@ fn tunnels_belong_to_a_host_and_go_with_it() {
     v.delete(db).unwrap();
     assert!(v.get(pg).is_none() && v.get(socks).is_none());
     assert!(v.get(kept).is_some());
+}
+
+fn identity(label: &str, user: &str, key: &str) -> Data {
+    Data::Identity(Identity {
+        label: label.into(),
+        settings: Settings {
+            user: Some(user.into()),
+            identity_files: Some(vec![key.into()]),
+            agent: Some(Agent::Off),
+            ..Settings::default()
+        },
+        ..Identity::default()
+    })
+}
+
+fn uses(identity: ItemId) -> Settings {
+    Settings {
+        identity: Some(UseIdentity::Id(identity)),
+        ..Settings::default()
+    }
+}
+
+#[test]
+fn an_identity_comes_between_the_groups_and_the_host() {
+    let mut v = Vault::open_in_memory().unwrap();
+    let deploy = v
+        .create(identity("deploy", "deploy", "~/.ssh/deploy"))
+        .unwrap();
+    let prod = v
+        .create(group(
+            "prod",
+            None,
+            Settings {
+                user: Some("ops".into()),
+                port: Some(2222),
+                ..uses(deploy)
+            },
+        ))
+        .unwrap();
+    let web = v
+        .create(host("web", Some(prod), Settings::default()))
+        .unwrap();
+    let db = v
+        .create(host(
+            "db",
+            Some(prod),
+            Settings {
+                user: Some("root".into()),
+                ..Settings::default()
+            },
+        ))
+        .unwrap();
+
+    // The identity beats the group's user; what it does not set (the
+    // port) still comes from the group.
+    let e = v.effective(web).unwrap();
+    assert_eq!(e.identity, Some(deploy));
+    assert_eq!(e.settings.user.as_deref(), Some("deploy"));
+    assert_eq!(e.origin("user"), Some(Origin::Identity(deploy)));
+    assert_eq!(e.origin("identity_files"), Some(Origin::Identity(deploy)));
+    assert_eq!(e.origin("agent"), Some(Origin::Identity(deploy)));
+    assert_eq!(e.origin("identity"), Some(Origin::Group(prod)));
+    assert_eq!(e.origin("port"), Some(Origin::Group(prod)));
+    // The host's own user beats the identity.
+    let e = v.effective(db).unwrap();
+    assert_eq!(e.settings.user.as_deref(), Some("root"));
+    assert_eq!(e.origin("user"), Some(Origin::Host));
+    assert_eq!(
+        e.settings.identity_files,
+        Some(vec!["~/.ssh/deploy".into()])
+    );
+
+    // "None" in a subgroup turns the group's identity off.
+    let lab = v
+        .create(group(
+            "lab",
+            Some(prod),
+            Settings {
+                identity: Some(UseIdentity::None),
+                ..Settings::default()
+            },
+        ))
+        .unwrap();
+    let box1 = v
+        .create(host("box", Some(lab), Settings::default()))
+        .unwrap();
+    let e = v.effective(box1).unwrap();
+    assert_eq!(e.identity, None);
+    assert_eq!(e.settings.user.as_deref(), Some("ops"));
+    assert_eq!(e.origin("identity"), Some(Origin::Group(lab)));
+
+    // What an editor shows for a host in lab that chooses deploy itself.
+    let i = v
+        .inherited(Some(lab), Some(UseIdentity::Id(deploy)))
+        .unwrap();
+    assert_eq!(i.settings.user.as_deref(), Some("deploy"));
+    assert_eq!(i.origin("user"), Some(Origin::Identity(deploy)));
+    let i = v.inherited(Some(lab), None).unwrap();
+    assert_eq!(i.origin("user"), Some(Origin::Group(prod)));
+}
+
+#[test]
+fn an_identity_sets_only_its_fields_and_is_referenced_by_kind() {
+    let mut v = Vault::open_in_memory().unwrap();
+    let wide = Data::Identity(Identity {
+        label: "wide".into(),
+        settings: Settings {
+            port: Some(2222),
+            ..Settings::default()
+        },
+        ..Identity::default()
+    });
+    assert!(matches!(v.create(wide), Err(Error::Invalid(_))));
+    let unnamed = identity(" ", "deploy", "~/.ssh/k");
+    assert!(matches!(v.create(unnamed), Err(Error::Invalid(_))));
+
+    let g = v.create(group("prod", None, Settings::default())).unwrap();
+    assert!(matches!(
+        v.create(host("web", None, uses(g))),
+        Err(Error::WrongType {
+            expected: "identity",
+            ..
+        })
+    ));
+    assert!(matches!(
+        v.create(host("web", None, uses(ItemId::new()))),
+        Err(Error::NotFound(_))
+    ));
+}
+
+#[test]
+fn deleting_an_identity_sends_its_users_back_to_inheriting() {
+    let mut v = Vault::open_in_memory().unwrap();
+    let deploy = v.create(identity("deploy", "deploy", "~/.ssh/d")).unwrap();
+    let ops = v.create(identity("ops", "ops", "~/.ssh/o")).unwrap();
+    let prod = v.create(group("prod", None, uses(ops))).unwrap();
+    let web = v.create(host("web", Some(prod), uses(deploy))).unwrap();
+    let db = v
+        .create(host("db", Some(prod), Settings::default()))
+        .unwrap();
+    assert_eq!(v.identity_choosers(deploy), vec![web]);
+    assert_eq!(v.identity_hosts(ops), vec![db]);
+    assert_eq!(
+        v.identities()
+            .iter()
+            .map(|(_, i)| i.label.as_str())
+            .collect::<Vec<_>>(),
+        ["deploy", "ops"]
+    );
+
+    v.delete(deploy).unwrap();
+    assert!(v.get(deploy).is_none());
+    assert_eq!(v.host(web).unwrap().settings.identity, None);
+    assert_eq!(v.get(web).unwrap().rev, 2);
+    // Back to the group's.
+    assert_eq!(v.effective(web).unwrap().identity, Some(ops));
+}
+
+#[test]
+fn using_an_identity_on_groups_and_hosts_at_once() {
+    let mut v = Vault::open_in_memory().unwrap();
+    let deploy = v.create(identity("deploy", "deploy", "~/.ssh/d")).unwrap();
+    let ci = v.create(identity("ci", "ci", "~/.ssh/ci")).unwrap();
+    let prod = v.create(group("prod", None, Settings::default())).unwrap();
+    let staging = v.create(group("staging", None, uses(ci))).unwrap();
+    let web = v
+        .create(host("web", Some(prod), Settings::default()))
+        .unwrap();
+    let db = v.create(host("db", Some(prod), uses(ci))).unwrap();
+    let replica = v
+        .create(host("replica", Some(staging), Settings::default()))
+        .unwrap();
+    let bastion = v.create(host("bastion", None, uses(deploy))).unwrap();
+
+    // Prod and the replica choose it; the bastion no longer does.
+    let choosers: HashSet<ItemId> = [prod, replica].into();
+    let preview = v.identity_use_preview(deploy, &choosers);
+    let of = |h: ItemId| preview.iter().find(|u| u.host == h).unwrap().clone();
+    assert_eq!(
+        of(web),
+        IdentityUse {
+            host: web,
+            before: None,
+            after: Some(deploy),
+            by: Some(Origin::Group(prod)),
+        }
+    );
+    // db keeps its own.
+    assert_eq!((of(db).before, of(db).after), (Some(ci), Some(ci)));
+    assert_eq!(
+        (of(replica).before, of(replica).after, of(replica).by),
+        (Some(ci), Some(deploy), Some(Origin::Host))
+    );
+    assert_eq!(
+        (of(bastion).before, of(bastion).after),
+        (Some(deploy), None)
+    );
+    // Nothing is written by a preview.
+    assert_eq!(v.effective(web).unwrap().identity, None);
+
+    assert_eq!(v.use_identity(deploy, &choosers).unwrap(), 3);
+    assert_eq!(v.identity_hosts(deploy), vec![replica, web]);
+    assert_eq!(v.effective(bastion).unwrap().identity, None);
+    // Again: nothing to change.
+    assert_eq!(v.use_identity(deploy, &choosers).unwrap(), 0);
+    assert!(matches!(
+        v.use_identity(prod, &choosers),
+        Err(Error::WrongType { .. })
+    ));
 }

@@ -7,8 +7,8 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `apply`, `from_settings`, `id`, `opt_id`, `origin`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These functions are ignored because they are not marked as `pub`: `apply`, `from_settings`, `id`, `identity_choice`, `opt_id`, `origin`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 enum AgentKind { off, system, socket }
 
@@ -33,15 +33,23 @@ class EnvVar {
 /// Where an effective setting comes from.
 class FieldOrigin {
   /// A field of [`SettingsSpec`] (`agent` covers `agent_socket`, `route`
-  /// covers `jumps` and `proxy_command`).
+  /// covers `jumps` and `proxy_command`, `identity` covers
+  /// `identity_id`).
   final String field;
   final OriginKind origin;
   final String? groupId;
+  final String? identityId;
 
-  const FieldOrigin({required this.field, required this.origin, this.groupId});
+  const FieldOrigin({
+    required this.field,
+    required this.origin,
+    this.groupId,
+    this.identityId,
+  });
 
   @override
-  int get hashCode => field.hashCode ^ origin.hashCode ^ groupId.hashCode;
+  int get hashCode =>
+      field.hashCode ^ origin.hashCode ^ groupId.hashCode ^ identityId.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -50,7 +58,8 @@ class FieldOrigin {
           runtimeType == other.runtimeType &&
           field == other.field &&
           origin == other.origin &&
-          groupId == other.groupId;
+          groupId == other.groupId &&
+          identityId == other.identityId;
 }
 
 class GroupDetail {
@@ -250,6 +259,14 @@ class HostView {
           user == other.user &&
           port == other.port &&
           importedAlias == other.importedAlias;
+}
+
+/// Which identity applies; `None` overrides one inherited.
+enum IdentityChoice {
+  none,
+
+  /// The one in `identity_id`.
+  use,
 }
 
 /// One alias as an import would bring it.
@@ -476,6 +493,9 @@ enum OriginKind {
   unset,
   default_,
   group,
+
+  /// The identity in `identity_id`.
+  identity,
   host,
 }
 
@@ -515,6 +535,10 @@ class SettingsSpec {
   final String? term;
   final List<EnvVar>? env;
   final KeyPolicy? hostKeyPolicy;
+  final IdentityChoice? identity;
+
+  /// With [`IdentityChoice::Use`].
+  final String identityId;
 
   const SettingsSpec({
     this.user,
@@ -536,6 +560,8 @@ class SettingsSpec {
     this.term,
     this.env,
     this.hostKeyPolicy,
+    this.identity,
+    this.identityId = r"",
   });
 
   static Future<SettingsSpec> default_() =>
@@ -561,7 +587,9 @@ class SettingsSpec {
       agentForward.hashCode ^
       term.hashCode ^
       env.hashCode ^
-      hostKeyPolicy.hashCode;
+      hostKeyPolicy.hashCode ^
+      identity.hashCode ^
+      identityId.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -586,7 +614,9 @@ class SettingsSpec {
           agentForward == other.agentForward &&
           term == other.term &&
           env == other.env &&
-          hostKeyPolicy == other.hostKeyPolicy;
+          hostKeyPolicy == other.hostKeyPolicy &&
+          identity == other.identity &&
+          identityId == other.identityId;
 }
 
 class TagCount {

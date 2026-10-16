@@ -7,6 +7,7 @@
 // ignore_for_file: argument_type_not_assignable
 
 import 'api/app.dart';
+import 'api/identities.dart';
 import 'api/session.dart';
 import 'api/sftp.dart';
 import 'api/tunnels.dart';
@@ -120,6 +121,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_box_autoadd_bool(dynamic raw);
 
   @protected
+  CertView dco_decode_box_autoadd_cert_view(dynamic raw);
+
+  @protected
   ClosedView dco_decode_box_autoadd_closed_view(dynamic raw);
 
   @protected
@@ -145,6 +149,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw);
+
+  @protected
+  IdentityChoice dco_decode_box_autoadd_identity_choice(dynamic raw);
+
+  @protected
+  IdentitySpec dco_decode_box_autoadd_identity_spec(dynamic raw);
 
   @protected
   KeyPolicy dco_decode_box_autoadd_key_policy(dynamic raw);
@@ -190,6 +200,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int dco_decode_box_autoadd_u_32(dynamic raw);
+
+  @protected
+  CertView dco_decode_cert_view(dynamic raw);
 
   @protected
   ClosedView dco_decode_closed_view(dynamic raw);
@@ -261,6 +274,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PlatformInt64 dco_decode_i_64(dynamic raw);
 
   @protected
+  IdentityChoice dco_decode_identity_choice(dynamic raw);
+
+  @protected
+  IdentitySpec dco_decode_identity_spec(dynamic raw);
+
+  @protected
+  IdentityUseRow dco_decode_identity_use_row(dynamic raw);
+
+  @protected
+  IdentityView dco_decode_identity_view(dynamic raw);
+
+  @protected
   ImportPreview dco_decode_import_preview(dynamic raw);
 
   @protected
@@ -286,6 +311,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   KeySourceKind dco_decode_key_source_kind(dynamic raw);
+
+  @protected
+  KeyStateKind dco_decode_key_state_kind(dynamic raw);
+
+  @protected
+  KeyView dco_decode_key_view(dynamic raw);
 
   @protected
   KnownHostView dco_decode_known_host_view(dynamic raw);
@@ -315,6 +346,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<HostView> dco_decode_list_host_view(dynamic raw);
 
   @protected
+  List<IdentityUseRow> dco_decode_list_identity_use_row(dynamic raw);
+
+  @protected
+  List<IdentityView> dco_decode_list_identity_view(dynamic raw);
+
+  @protected
   List<ImportPreview> dco_decode_list_import_preview(dynamic raw);
 
   @protected
@@ -322,6 +359,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<JumpSpec> dco_decode_list_jump_spec(dynamic raw);
+
+  @protected
+  List<KeyView> dco_decode_list_key_view(dynamic raw);
 
   @protected
   List<KnownHostView> dco_decode_list_known_host_view(dynamic raw);
@@ -360,6 +400,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool? dco_decode_opt_box_autoadd_bool(dynamic raw);
 
   @protected
+  CertView? dco_decode_opt_box_autoadd_cert_view(dynamic raw);
+
+  @protected
   ClosedView? dco_decode_opt_box_autoadd_closed_view(dynamic raw);
 
   @protected
@@ -379,6 +422,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw);
+
+  @protected
+  IdentityChoice? dco_decode_opt_box_autoadd_identity_choice(dynamic raw);
 
   @protected
   KeyPolicy? dco_decode_opt_box_autoadd_key_policy(dynamic raw);
@@ -617,6 +663,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
+  CertView sse_decode_box_autoadd_cert_view(SseDeserializer deserializer);
+
+  @protected
   ClosedView sse_decode_box_autoadd_closed_view(SseDeserializer deserializer);
 
   @protected
@@ -644,6 +693,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer);
+
+  @protected
+  IdentityChoice sse_decode_box_autoadd_identity_choice(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  IdentitySpec sse_decode_box_autoadd_identity_spec(
+    SseDeserializer deserializer,
+  );
 
   @protected
   KeyPolicy sse_decode_box_autoadd_key_policy(SseDeserializer deserializer);
@@ -695,6 +754,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
+
+  @protected
+  CertView sse_decode_cert_view(SseDeserializer deserializer);
 
   @protected
   ClosedView sse_decode_closed_view(SseDeserializer deserializer);
@@ -766,6 +828,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
 
   @protected
+  IdentityChoice sse_decode_identity_choice(SseDeserializer deserializer);
+
+  @protected
+  IdentitySpec sse_decode_identity_spec(SseDeserializer deserializer);
+
+  @protected
+  IdentityUseRow sse_decode_identity_use_row(SseDeserializer deserializer);
+
+  @protected
+  IdentityView sse_decode_identity_view(SseDeserializer deserializer);
+
+  @protected
   ImportPreview sse_decode_import_preview(SseDeserializer deserializer);
 
   @protected
@@ -793,6 +867,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   KeySourceKind sse_decode_key_source_kind(SseDeserializer deserializer);
+
+  @protected
+  KeyStateKind sse_decode_key_state_kind(SseDeserializer deserializer);
+
+  @protected
+  KeyView sse_decode_key_view(SseDeserializer deserializer);
 
   @protected
   KnownHostView sse_decode_known_host_view(SseDeserializer deserializer);
@@ -824,6 +904,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<HostView> sse_decode_list_host_view(SseDeserializer deserializer);
 
   @protected
+  List<IdentityUseRow> sse_decode_list_identity_use_row(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<IdentityView> sse_decode_list_identity_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<ImportPreview> sse_decode_list_import_preview(
     SseDeserializer deserializer,
   );
@@ -835,6 +925,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<JumpSpec> sse_decode_list_jump_spec(SseDeserializer deserializer);
+
+  @protected
+  List<KeyView> sse_decode_list_key_view(SseDeserializer deserializer);
 
   @protected
   List<KnownHostView> sse_decode_list_known_host_view(
@@ -887,6 +980,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool? sse_decode_opt_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
+  CertView? sse_decode_opt_box_autoadd_cert_view(SseDeserializer deserializer);
+
+  @protected
   ClosedView? sse_decode_opt_box_autoadd_closed_view(
     SseDeserializer deserializer,
   );
@@ -918,6 +1014,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer);
+
+  @protected
+  IdentityChoice? sse_decode_opt_box_autoadd_identity_choice(
+    SseDeserializer deserializer,
+  );
 
   @protected
   KeyPolicy? sse_decode_opt_box_autoadd_key_policy(
@@ -1192,6 +1293,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_cert_view(
+    CertView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_closed_view(
     ClosedView self,
     SseSerializer serializer,
@@ -1242,6 +1349,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_i_64(
     PlatformInt64 self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_identity_choice(
+    IdentityChoice self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_identity_spec(
+    IdentitySpec self,
     SseSerializer serializer,
   );
 
@@ -1330,6 +1449,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
 
   @protected
+  void sse_encode_cert_view(CertView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_closed_view(ClosedView self, SseSerializer serializer);
 
   @protected
@@ -1402,6 +1524,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
 
   @protected
+  void sse_encode_identity_choice(
+    IdentityChoice self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_identity_spec(IdentitySpec self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_identity_use_row(
+    IdentityUseRow self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_identity_view(IdentityView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_import_preview(ImportPreview self, SseSerializer serializer);
 
   @protected
@@ -1430,6 +1570,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_key_source_kind(KeySourceKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_key_state_kind(KeyStateKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_key_view(KeyView self, SseSerializer serializer);
 
   @protected
   void sse_encode_known_host_view(KnownHostView self, SseSerializer serializer);
@@ -1471,6 +1617,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_host_view(List<HostView> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_identity_use_row(
+    List<IdentityUseRow> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_identity_view(
+    List<IdentityView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_import_preview(
     List<ImportPreview> self,
     SseSerializer serializer,
@@ -1484,6 +1642,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_jump_spec(List<JumpSpec> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_key_view(List<KeyView> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_known_host_view(
@@ -1549,6 +1710,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_opt_box_autoadd_bool(bool? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_opt_box_autoadd_cert_view(
+    CertView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_closed_view(
     ClosedView? self,
     SseSerializer serializer,
@@ -1587,6 +1754,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_i_64(
     PlatformInt64? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_identity_choice(
+    IdentityChoice? self,
     SseSerializer serializer,
   );
 

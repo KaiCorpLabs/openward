@@ -13,6 +13,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:openward/src/rust/api/app.dart';
+import 'package:openward/src/rust/api/identities.dart';
 import 'package:openward/src/rust/api/session.dart';
 import 'package:openward/src/rust/api/tunnels.dart';
 import 'package:openward/src/rust/api/vault.dart';
@@ -150,6 +151,63 @@ Host db
     ]);
   });
 
+  test('an identity on a group, where values come from, and its use', () async {
+    final id = await app.createIdentity(
+      spec: const IdentitySpec(
+        label: 'deploy',
+        user: 'deploy',
+        identityFiles: ['~/.ssh/openward-test-missing'],
+      ),
+    );
+    final group = await app.createGroup(
+      spec: GroupSpec(
+        name: 'prod',
+        settings: SettingsSpec(
+          user: 'ops',
+          identity: IdentityChoice.use,
+          identityId: id,
+        ),
+      ),
+    );
+    final web = await app.createHost(
+      spec: HostSpec(label: 'web', address: 'web.example.com', groupId: group),
+    );
+    final db = await app.createHost(
+      spec: const HostSpec(label: 'db', address: 'db.example.com'),
+    );
+    final detail = app.host(id: web);
+    expect(detail.effective.user, 'deploy');
+    final user = detail.origins.firstWhere((o) => o.field == 'user');
+    expect((user.origin, user.identityId), (OriginKind.identity, id));
+    final choice = detail.origins.firstWhere((o) => o.field == 'identity');
+    expect((choice.origin, choice.groupId), (OriginKind.group, group));
+    // What an editor shows for a host that would choose none.
+    final none = app.inherited(
+      groupId: group,
+      identity: IdentityChoice.none,
+      identityId: '',
+    );
+    expect(none.effective.user, 'ops');
+
+    final view = app.identities().single;
+    expect(view.hostCount, 1);
+    expect(view.groups, ['prod']);
+    expect(view.keys.single.state, KeyStateKind.missing);
+    expect(view.chooserIds, [group]);
+
+    // The db too, in one go; the preview first.
+    final rows = app.identityUse(identityId: id, choosers: [group, db]);
+    final dbRow = rows.firstWhere((r) => r.label == 'db');
+    expect((dbRow.after, dbRow.nowIsThis, dbRow.now), (true, false, null));
+    expect(await app.useIdentity(identityId: id, choosers: [group, db]), 1);
+    expect(app.identity(id: id).hostCount, 2);
+    expect(app.hosts().firstWhere((h) => h.id == db).user, 'deploy');
+
+    await app.delete(id: id);
+    expect(app.identities(), isEmpty);
+    expect(app.host(id: web).effective.user, 'ops');
+  });
+
   test('what a group passes down, for editors', () async {
     final group = await app.createGroup(
       spec: const GroupSpec(
@@ -157,11 +215,15 @@ Host db
         settings: SettingsSpec(user: 'deploy'),
       ),
     );
-    final inGroup = app.inherited(groupId: group);
+    final inGroup = app.inherited(
+      groupId: group,
+      identity: null,
+      identityId: '',
+    );
     expect(inGroup.effective.user, 'deploy');
     final user = inGroup.origins.firstWhere((o) => o.field == 'user');
     expect((user.origin, user.groupId), (OriginKind.group, group));
-    final top = app.inherited();
+    final top = app.inherited(identityId: '');
     expect(top.effective.port, 22);
     expect(
       top.origins.firstWhere((o) => o.field == 'port').origin,

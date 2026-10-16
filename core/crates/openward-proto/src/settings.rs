@@ -6,6 +6,15 @@ use serde::{Deserialize, Serialize};
 
 use crate::{Extra, ItemId};
 
+/// The fields an identity sets; the rest are a host's or a group's.
+pub const IDENTITY_FIELDS: &[&str] = &[
+    "user",
+    "identity_files",
+    "certificate_files",
+    "identities_only",
+    "agent",
+];
+
 /// Declares the settings once: the struct, its field names and the overlay
 /// that inheritance is built on.
 macro_rules! settings {
@@ -69,6 +78,9 @@ settings! {
     /// Variables sent with the session (`SetEnv`).
     env: BTreeMap<String, String>,
     host_key_policy: HostKeyPolicy,
+    /// The identity whose user, keys and agent apply (below the host's
+    /// own settings).
+    identity: UseIdentity,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -128,6 +140,15 @@ pub struct ProxyServer {
     pub port: u16,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub user: Option<String>,
+}
+
+/// Which identity a group or host uses.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UseIdentity {
+    /// None, even if a group sets one.
+    None,
+    Id(ItemId),
 }
 
 /// What to do with a host key that is not known yet. A key that changed is

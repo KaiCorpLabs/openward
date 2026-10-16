@@ -7,7 +7,9 @@ use std::sync::{Arc, Mutex, OnceLock, Weak};
 use std::time::{Duration, Instant};
 
 use openward_app::events::{ChangedKey, Connected, KeySource, PreviousKey, Trust};
-use openward_app::vault::proto::{Agent, Data, Host, HostKeyPolicy, ItemId, Jump, Route, Settings};
+use openward_app::vault::proto::{
+    Agent, Data, Group, Host, HostKeyPolicy, Identity, ItemId, Jump, Route, Settings, UseIdentity,
+};
 use openward_app::{Answer, App, Event, EventSink, Failure, Local, Prompt, Terminal};
 use zeroize::Zeroizing;
 
@@ -1092,4 +1094,55 @@ fn through_a_proxy_that_asks_for_a_password() {
     // Cancelling gives up.
     let (_term, rx) = f.connect(host, |_| Answer::Cancel);
     assert_eq!(outcome(&rx).0.unwrap_err(), Some(Failure::Cancelled));
+}
+
+/// The user, key and certificate come from the identity of the host's
+/// group: the key is only accepted through its certificate.
+#[test]
+fn an_identity_of_the_group_logs_in_with_its_certificate() {
+    let f = Fixture::new(servers!());
+    let identity = f
+        .app
+        .vault()
+        .create(Data::Identity(Identity {
+            label: "demo con certificado".into(),
+            settings: Settings {
+                user: Some("demo".into()),
+                identity_files: f.key("id_cert"),
+                certificate_files: f.key("id_cert-cert.pub"),
+                identities_only: Some(true),
+                ..Settings::default()
+            },
+            ..Identity::default()
+        }))
+        .unwrap();
+    let group = f
+        .app
+        .vault()
+        .create(Data::Group(Group {
+            name: "s2".into(),
+            settings: Settings {
+                user: Some("nobody-else".into()),
+                identity: Some(UseIdentity::Id(identity)),
+                host_key_policy: Some(HostKeyPolicy::AcceptNew),
+                ..Settings::default()
+            },
+            ..Group::default()
+        }))
+        .unwrap();
+    let host = f.host("bastion", "127.0.0.1", BASTION, Settings::default());
+    {
+        let mut vault = f.app.vault();
+        let Data::Host(mut h) = vault.get(host).unwrap().body.data.clone() else {
+            unreachable!()
+        };
+        h.group = Some(group);
+        vault.update(host, 1, Data::Host(h)).unwrap();
+    }
+    let (term, rx) = f.connect(host, |_| Answer::Cancel);
+    let (connected, prompts) = outcome(&rx);
+    connected.unwrap();
+    assert!(prompts.is_empty(), "{prompts:?}");
+    term.text("echo who-$(whoami)-end\n");
+    wait_for(&term, "who-demo-end");
 }

@@ -4,6 +4,7 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'identities.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
@@ -64,6 +65,8 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   Future<String> createHost({required HostSpec spec});
 
+  Future<String> createIdentity({required IdentitySpec spec});
+
   Future<String> createTunnel({required TunnelSpec spec});
 
   /// A host, group or known host. A group's contents move up to its
@@ -81,6 +84,18 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   List<HostView> hosts();
 
+  /// Every identity, by name.
+  List<IdentityView> identities();
+
+  IdentityView identity({required String id});
+
+  /// Groups (by name) and hosts (by label) for the "use on…" dialog, as
+  /// they would be if exactly `choosers` chose `identity_id`.
+  List<IdentityUseRow> identityUse({
+    required String identityId,
+    required List<String> choosers,
+  });
+
   /// Imports `~/.ssh/config` (or `file`); with `only`, just those aliases
   /// and the hosts they jump through. Aliases imported before stay as
   /// they are.
@@ -88,8 +103,20 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   /// What a host in `group_id` (none: the top level) gets before its own
   /// settings, and where each value comes from. For editors, so a new
-  /// host or a host moved to another group shows what it will inherit.
-  InheritedView inherited({String? groupId});
+  /// host or a host moved to another group shows what it will inherit;
+  /// `identity` is the editor's choice of identity, if it makes one.
+  InheritedView inherited({
+    String? groupId,
+    IdentityChoice? identity,
+    required String identityId,
+  });
+
+  /// What the key at `path` is on this machine, and which of
+  /// `certificate_files` (or `<key>-cert.pub`) goes with it.
+  KeyView keyInfo({
+    required String path,
+    required List<String> certificateFiles,
+  });
 
   List<KnownHostView> knownHosts();
 
@@ -176,11 +203,27 @@ abstract class OpenWard implements RustOpaqueInterface {
     required HostSpec spec,
   });
 
-  /// Returns the new revision. An open tunnel closes: it opens again with
-  /// what it is now.
+  /// Returns the new revision. Fails if it changed since `rev`.
+  Future<BigInt> updateIdentity({
+    required String id,
+    required BigInt rev,
+    required IdentitySpec spec,
+  });
+
+  /// Returns the new revision. An open tunnel whose forward changed
+  /// closes, to open again as it is now; a new name or "open on connect"
+  /// leaves it open.
   Future<BigInt> updateTunnel({
     required String id,
     required BigInt rev,
     required TunnelSpec spec,
+  });
+
+  /// Makes exactly `choosers` (hosts and groups) choose `identity_id`;
+  /// those that chose it and are left out go back to inheriting one.
+  /// Returns how many changed.
+  Future<int> useIdentity({
+    required String identityId,
+    required List<String> choosers,
   });
 }

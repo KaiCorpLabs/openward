@@ -21,6 +21,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get add => 'Add';
 
   @override
+  String get addCertificate => '+ Add a certificate';
+
+  @override
+  String get addKeyEllipsis => 'Add a key…';
+
+  @override
   String get addSavedHost => 'Add a saved host';
 
   @override
@@ -39,6 +45,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get agentNone => 'None';
 
   @override
+  String get agentOtherSocket => 'Another socket';
+
+  @override
+  String get agentShort => 'Agent';
+
+  @override
   String get agentSocket => 'Another socket…';
 
   @override
@@ -46,6 +58,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get alreadyImported => 'already imported';
+
+  @override
+  String get alreadyUses => 'Already uses it';
 
   @override
   String get anyDestination => 'Any destination';
@@ -64,6 +79,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get back => 'Back';
+
+  @override
+  String get badgeChanges => 'changes';
+
+  @override
+  String get badgeLeaves => 'leaves it';
+
+  @override
+  String get badgeNew => 'new';
 
   @override
   String get bellFlash => 'Flash on bell';
@@ -165,6 +189,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String cannotConnect(String label) {
     return 'Could not connect to $label';
   }
+
+  @override
+  String certExpiredOn(String date) {
+    return 'expired on $date';
+  }
+
+  @override
+  String get certForever => 'never expires';
+
+  @override
+  String get certNextToKey =>
+      'Next to the key (-cert.pub): used without adding it.';
+
+  @override
+  String certUntil(String date) {
+    return 'until $date';
+  }
+
+  @override
+  String get certificate => 'certificate';
+
+  @override
+  String get certificateExpired => 'expired certificate';
+
+  @override
+  String get certificateTitle => 'Certificate';
 
   @override
   String get change => 'Change';
@@ -307,7 +357,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get connectionHint =>
-      'What you don\'t change here is inherited. Under each value you can see where it comes from; inherited values have a dashed border.';
+      'What you don\'t change here is inherited; inherited values have a dashed border and say below where they come from. What the host sets wins, then its identity, then its groups and, last, the defaults.';
 
   @override
   String connectionLost(String label, String why) {
@@ -416,6 +466,27 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String deleteIdentityBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'The $count hosts that use it go back to their groups\' user and keys.',
+      one: 'The host that uses it goes back to its group\'s user and keys.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String deleteIdentityTitle(String name) {
+    return 'Delete «$name»?';
+  }
+
+  @override
+  String get deleteIdentityUnused =>
+      'Nobody uses it. The keys stay where they are: only the identity goes.';
+
+  @override
   String get deleteLocalBody =>
       'They are deleted from this computer without going to the trash: this cannot be undone.';
 
@@ -436,6 +507,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deletedHost => '(deleted host)';
+
+  @override
+  String get deletedIdentity => '(deleted identity)';
 
   @override
   String get destination => 'Destination';
@@ -480,6 +554,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editHostTitle => 'Edit host';
+
+  @override
+  String get editIdentity => 'Edit identity';
+
+  @override
+  String get editTheIdentity => 'Edit the identity';
 
   @override
   String get editTunnel => 'Edit tunnel';
@@ -542,6 +622,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get filterFolder => 'Filter this folder';
+
+  @override
+  String get filterHostsAndGroups => 'Filter hosts and groups';
+
+  @override
+  String get filterIdentities => 'Filter by name, user or key';
 
   @override
   String get filterTunnels => 'Filter by name, host or port';
@@ -619,6 +705,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fromHere => 'from here';
 
   @override
+  String fromIdentity(String name) {
+    return 'From the identity $name';
+  }
+
+  @override
   String get fromNowhere => 'Not set: the connection decides';
 
   @override
@@ -634,10 +725,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupInsideItself => 'A group cannot be inside itself.';
 
   @override
+  String groupNamed(String name) {
+    return 'Group $name';
+  }
+
+  @override
   String get groupNeedsName => 'The group needs a name.';
 
   @override
   String get groupSettingsSection => 'Settings for everything inside';
+
+  @override
+  String get groups => 'Groups';
 
   @override
   String get hideHiddenFiles => 'Hide hidden files';
@@ -647,6 +746,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get host => 'Host';
+
+  @override
+  String hostCountText(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hosts',
+      one: '1 host',
+      zero: 'no hosts',
+    );
+    return '$_temp0';
+  }
 
   @override
   String hostInUse(String name) {
@@ -666,6 +777,72 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hostNeedsName => 'The host needs a name.';
+
+  @override
+  String get hostsSection => 'Hosts';
+
+  @override
+  String get identities => 'Identities';
+
+  @override
+  String identitiesCount(int total, int used) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total identities',
+      one: '1 identity',
+    );
+    return '$_temp0 · $used in use';
+  }
+
+  @override
+  String get identitiesIntro =>
+      'A user, keys and an agent with a name, to use on several hosts and groups. Changing an identity changes everything that uses it.';
+
+  @override
+  String get identitiesNoSecrets =>
+      'No passwords or passphrases are kept: they are asked for when connecting, as before. Only the public half of each key (.pub) is read.';
+
+  @override
+  String get identity => 'Identity';
+
+  @override
+  String get identityEditorHint =>
+      'A user, keys and an agent with a name, to use on several hosts.';
+
+  @override
+  String identityKeyMissingHere(String user) {
+    return '$user · its key is not on this computer';
+  }
+
+  @override
+  String get identityNeedsName => 'Give it a name.';
+
+  @override
+  String get identityNewNote =>
+      'Use it from the editor of a host or a group, or with «Use on…» in the list of identities.';
+
+  @override
+  String get identityNone => 'None';
+
+  @override
+  String get identityNoneNote => 'Even if one is inherited from above';
+
+  @override
+  String identitySaveChanges(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Saving changes the $count hosts that use it.',
+      one: 'Saving changes the host that uses it.',
+    );
+    return '$_temp0 A host that sets its own user or keys keeps them.';
+  }
+
+  @override
+  String identityUsedBy(String who) {
+    return 'Used by: $who';
+  }
 
   @override
   String get ignore => 'Ignore';
@@ -750,6 +927,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get inLight => 'In light';
+
+  @override
+  String inheritsFrom(String group) {
+    return 'Inherits it from $group';
+  }
 
   @override
   String get inputNotSent => 'What you type now is not sent.';
@@ -870,9 +1052,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get keyInOpenWard => 'saved in OpenWard';
 
   @override
+  String get keyMissing => 'Not on this computer';
+
+  @override
+  String keyMissingWarning(String path, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'The $count hosts that use it cannot use that key until you copy it or change the path.',
+      one: 'The host that uses it cannot use that key until you copy it or change the path.',
+      zero: 'Copy it or change the path before using it.',
+    );
+    return '$path is not on this computer. $_temp0';
+  }
+
+  @override
+  String get keyNoPublicHalf =>
+      'No .pub next to it: its type shows when connecting';
+
+  @override
   String keyNow(String algorithm) {
     return 'Now ($algorithm)';
   }
+
+  @override
+  String get keyPerHost => 'One per host (it has %h, %r…)';
 
   @override
   String keyProtected(String key) {
@@ -891,6 +1096,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get keysHelp =>
       'One path per line. OpenWard keeps the path, never the key.';
+
+  @override
+  String get keysInOrder => 'Tried in this order; drag to change it.';
 
   @override
   String get kindDynamic => 'Dynamic (-D)';
@@ -983,6 +1191,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get missingSocket => 'The agent socket path is missing.';
 
   @override
+  String get monthsShort => 'Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec';
+
+  @override
   String get moreActions => 'More actions';
 
   @override
@@ -992,7 +1203,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get name => 'Name';
 
   @override
+  String nameAndMore(String name, int count) {
+    return '$name and $count more';
+  }
+
+  @override
   String get nameNoSlash => 'A name cannot contain “/”.';
+
+  @override
+  String namesAndMore(String names, int count) {
+    return '$names and $count more';
+  }
 
   @override
   String get netLost => 'the connection was lost.';
@@ -1028,6 +1249,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newHostTitle => 'New host';
 
   @override
+  String get newIdentity => 'New identity';
+
+  @override
+  String get newIdentityEllipsis => 'New identity…';
+
+  @override
   String get newLocalTerminal => 'New local terminal';
 
   @override
@@ -1055,7 +1282,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noHostsTitle => 'No hosts yet';
 
   @override
+  String get noIdentities => 'No identities yet';
+
+  @override
+  String get noIdentitiesBody =>
+      'An identity puts a user, their keys and the agent under a name («deploy in production»). Put it on a group and all its hosts log in the same way; change it once and they all change.';
+
+  @override
+  String get noIdentityInherited => 'No group sets one';
+
+  @override
+  String get noIdentityNow => 'No identity';
+
+  @override
   String get noJumpsYet => 'None yet.';
+
+  @override
+  String get noKeysYet =>
+      'No keys: the usual ones in ~/.ssh and the agent\'s are tried.';
 
   @override
   String noMatches(String filter) {
@@ -1084,6 +1328,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notes => 'Notes';
+
+  @override
+  String nowIdentity(String identity) {
+    return 'Now: $identity';
+  }
+
+  @override
+  String nowIdentityFromGroup(String identity, String group) {
+    return 'Now: $identity, from the group $group';
+  }
+
+  @override
+  String get nowNoIdentity => 'now: none';
+
+  @override
+  String get offerOnlyTheseKeys => 'Offer only these keys';
+
+  @override
+  String get offerOnlyTheseKeysNote =>
+      'Do not try the agent\'s other keys (IdentitiesOnly). Useful when the server gives up after a few tries.';
 
   @override
   String get ok => 'OK';
@@ -1134,6 +1398,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get orAnAddress => 'or an address: user@host:port';
+
+  @override
+  String get orTypeAPath => 'or type a path: ~, %h, %r and %u work';
+
+  @override
+  String ownUserWins(String user) {
+    return 'It sets its own user ($user), which still wins.';
+  }
 
   @override
   String get paneOptions => 'Pane options';
@@ -1242,6 +1514,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String permissionsOf(String name) {
     return 'Permissions of $name';
   }
+
+  @override
+  String get pickIdentity => 'Pick an identity or «None».';
 
   @override
   String pixels(int size) {
@@ -1385,6 +1660,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get remove => 'Remove';
+
+  @override
+  String get removeCertificate => 'Remove the certificate';
+
+  @override
+  String get removeKey => 'Remove the key';
 
   @override
   String removeTag(String tag) {
@@ -1589,6 +1870,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String sessionClosedCode(int code) {
     return 'Session closed (code $code).';
+  }
+
+  @override
+  String setHereIdentitySays(String value) {
+    return 'Set here; the identity says $value';
   }
 
   @override
@@ -1950,6 +2236,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'They stay open if you close this tab. All of them in Library › Tunnels.';
 
   @override
+  String twoNames(String a, String b) {
+    return '$a and $b';
+  }
+
+  @override
   String get uiColors => 'Interface colors';
 
   @override
@@ -1972,12 +2263,52 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get useIdentityHint =>
+      'Tick groups or hosts. A group passes it on to all its hosts, also those you add later.';
+
+  @override
+  String useIdentityOn(String name) {
+    return 'Use «$name» on…';
+  }
+
+  @override
+  String useIdentitySummary(int changed, int using) {
+    String _temp0 = intl.Intl.pluralLogic(
+      changed,
+      locale: localeName,
+      other: '$changed hosts change',
+      one: '1 host changes',
+      zero: 'No host changes',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      using,
+      locale: localeName,
+      other: '$using will use it',
+      one: '1 will use it',
+      zero: 'none will use it',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String get useOn => 'Use on…';
+
+  @override
   String usePort(int port) {
     return 'Use $port';
   }
 
   @override
+  String get usedBy => 'Used by';
+
+  @override
+  String get usedByNobody => 'Nobody uses it yet';
+
+  @override
   String get user => 'User';
+
+  @override
+  String get usualKeys => 'the usual ones';
 
   @override
   String get variantDark => 'dark';

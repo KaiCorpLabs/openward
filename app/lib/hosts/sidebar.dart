@@ -8,6 +8,7 @@ import '../src/rust/api/vault.dart';
 import '../tabs/tabs.dart';
 import '../terminal/controller.dart';
 import '../terminal/keys.dart';
+import '../identities/identities.dart';
 import '../tunnels/tunnels.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
@@ -493,8 +494,8 @@ class _Empty extends StatelessWidget {
   }
 }
 
-/// What is kept besides hosts: tunnels for now; identities and snippets
-/// come later.
+/// What is kept besides hosts: tunnels and identities; snippets come
+/// later.
 class _Library extends ConsumerWidget {
   const _Library();
 
@@ -504,8 +505,35 @@ class _Library extends ConsumerWidget {
     final c = ow.colors;
     final l = context.l10n;
     final board = ref.watch(tunnelBoardProvider);
+    final identities = ref.watch(identitiesProvider);
     final current = ref.watch(tabsProvider.select((s) => s.current));
-    final here = current is PageTab && current.page == PageKind.tunnels;
+    bool here(PageKind page) => current is PageTab && current.page == page;
+    Widget entry({
+      required String key,
+      required PageKind page,
+      required IconData icon,
+      required String label,
+      required List<Widget> trailing,
+    }) => Material(
+      color: here(page) ? c.selected : Colors.transparent,
+      borderRadius: BorderRadius.circular(ow.shape.radius + 2),
+      child: InkWell(
+        key: ValueKey(key),
+        borderRadius: BorderRadius.circular(ow.shape.radius + 2),
+        onTap: () => ref.read(tabsProvider.notifier).openPage(page),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+          child: Row(
+            children: [
+              Icon(icon, size: 16, color: c.textMuted),
+              const SizedBox(width: 10),
+              Expanded(child: Text(label)),
+              ...trailing,
+            ],
+          ),
+        ),
+      ),
+    );
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
       decoration: BoxDecoration(
@@ -520,41 +548,35 @@ class _Library extends ConsumerWidget {
           ),
           ListenableBuilder(
             listenable: board,
-            builder: (context, _) => Material(
-              color: here ? c.selected : Colors.transparent,
-              borderRadius: BorderRadius.circular(ow.shape.radius + 2),
-              child: InkWell(
-                key: const ValueKey('library.tunnels'),
-                borderRadius: BorderRadius.circular(ow.shape.radius + 2),
-                onTap: () =>
-                    ref.read(tabsProvider.notifier).openPage(PageKind.tunnels),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 7,
+            builder: (context, _) => entry(
+              key: 'library.tunnels',
+              page: PageKind.tunnels,
+              icon: Icons.swap_horiz,
+              label: l.tunnels,
+              trailing: [
+                if (board.open > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Text(
+                      l.openCount(board.open),
+                      style: TextStyle(fontSize: 11, color: c.accentText),
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.swap_horiz, size: 16, color: c.textMuted),
-                      const SizedBox(width: 10),
-                      Expanded(child: Text(l.tunnels)),
-                      if (board.open > 0)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: Text(
-                            l.openCount(board.open),
-                            style: TextStyle(fontSize: 11, color: c.accentText),
-                          ),
-                        ),
-                      Text(
-                        '${board.tunnels.length}',
-                        style: monoStyle(context, size: 11),
-                      ),
-                    ],
-                  ),
+                Text(
+                  '${board.tunnels.length}',
+                  style: monoStyle(context, size: 11),
                 ),
-              ),
+              ],
             ),
+          ),
+          entry(
+            key: 'library.identities',
+            page: PageKind.identities,
+            icon: Icons.badge_outlined,
+            label: l.identities,
+            trailing: [
+              Text('${identities.length}', style: monoStyle(context, size: 11)),
+            ],
           ),
         ],
       ),

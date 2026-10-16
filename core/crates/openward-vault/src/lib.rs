@@ -17,8 +17,8 @@ use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use openward_proto::{
-    Body, Data, ForwardKind, Group, Host, Item, ItemId, Jump, KnownHost, PortForward, Route,
-    Settings,
+    Body, Data, ForwardKind, Group, Host, IDENTITY_FIELDS, Identity, Item, ItemId, Jump, KnownHost,
+    PortForward, Route, Settings, UseIdentity,
 };
 
 pub use inherit::{Effective, Origin, defaults};
@@ -157,6 +157,27 @@ impl Vault {
         groups
     }
 
+    pub fn identity(&self, id: ItemId) -> Result<&Identity> {
+        match &self.item(id)?.body.data {
+            Data::Identity(i) => Ok(i),
+            other => Err(wrong_type(id, "identity", other)),
+        }
+    }
+
+    /// Identities sorted by label.
+    pub fn identities(&self) -> Vec<(ItemId, &Identity)> {
+        let mut identities: Vec<_> = self
+            .items
+            .values()
+            .filter_map(|i| match &i.body.data {
+                Data::Identity(identity) => Some((i.id, identity)),
+                _ => None,
+            })
+            .collect();
+        identities.sort_by_cached_key(|(id, i)| (i.label.to_lowercase(), *id));
+        identities
+    }
+
     /// Saved tunnels sorted by label.
     pub fn port_forward(&self, id: ItemId) -> Result<&PortForward> {
         match &self.item(id)?.body.data {
@@ -256,7 +277,8 @@ impl Vault {
 
     /// Deletes an item. What was inside a deleted group moves up to that
     /// group's parent. A host that other hosts jump through cannot be
-    /// deleted until they stop using it; its tunnels go with it.
+    /// deleted until they stop using it; its tunnels go with it. The hosts
+    /// and groups that used a deleted identity go back to inheriting one.
     pub fn delete(&mut self, id: ItemId) -> Result<()> {
         let mut moved = Vec::new();
         let mut gone = vec![id];
@@ -273,6 +295,23 @@ impl Vault {
                     };
                     if *slot == Some(id) {
                         *slot = parent;
+                        item.rev += 1;
+                        item.body.modified = now;
+                        moved.push(item);
+                    }
+                }
+            }
+            Data::Identity(_) => {
+                let now = now_ms();
+                for item in self.items.values() {
+                    let mut item = item.clone();
+                    let settings = match &mut item.body.data {
+                        Data::Group(g) => &mut g.settings,
+                        Data::Host(h) => &mut h.settings,
+                        _ => continue,
+                    };
+                    if settings.identity == Some(UseIdentity::Id(id)) {
+                        settings.identity = None;
                         item.rev += 1;
                         item.body.modified = now;
                         moved.push(item);
@@ -330,9 +369,18 @@ impl Vault {
     }
 
     /// What a host in `group` (or at the top level) gets before its own
-    /// settings, as an editor shows it: the defaults and the groups'.
-    pub fn inherited(&self, group: Option<ItemId>) -> Result<Effective> {
-        self.resolve(group, &Settings::default())
+    /// settings, as an editor shows it: the defaults, the groups' and the
+    /// identity's. `identity` is the editor's choice, if it makes one.
+    pub fn inherited(
+        &self,
+        group: Option<ItemId>,
+        identity: Option<UseIdentity>,
+    ) -> Result<Effective> {
+        let own = Settings {
+            identity,
+            ..Settings::default()
+        };
+        self.resolve(group, &own)
     }
 
     fn resolve(&self, group: Option<ItemId>, own: &Settings) -> Result<Effective> {
@@ -346,7 +394,160 @@ impl Vault {
             chain.push((gid, &g.settings));
             next = g.parent;
         }
-        Ok(Effective::resolve(chain.into_iter().rev(), own))
+        // The nearest choice wins: the host's own, then the groups' from
+        // the inside out. One deleted meanwhile (another device) is none.
+        let chosen = own
+            .identity
+            .or_else(|| chain.iter().find_map(|(_, s)| s.identity));
+        let identity = match chosen {
+            Some(UseIdentity::Id(iid)) => self.identity(iid).ok().map(|i| (iid, &i.settings)),
+            _ => None,
+        };
+        Ok(Effective::resolve(chain.into_iter().rev(), identity, own))
+    }
+
+    /// The identity `host` ends up with and who chose it (the host, or a
+    /// group), with `changes` applied over what each item sets itself.
+    fn identity_choice(
+        &self,
+        host: ItemId,
+        changes: &HashMap<ItemId, Option<UseIdentity>>,
+    ) -> (Option<ItemId>, Option<Origin>) {
+        let own = |id: ItemId, settings: &Settings| match changes.get(&id) {
+            Some(change) => *change,
+            None => settings.identity,
+        };
+        let Ok(h) = self.host(host) else {
+            return (None, None);
+        };
+        let mut found = own(host, &h.settings).map(|c| (c, Origin::Host));
+        let mut next = h.group;
+        let mut seen = HashSet::new();
+        while found.is_none()
+            && let Some(gid) = next.filter(|g| seen.insert(*g))
+        {
+            let Ok(g) = self.group(gid) else { break };
+            found = own(gid, &g.settings).map(|c| (c, Origin::Group(gid)));
+            next = g.parent;
+        }
+        match found {
+            Some((UseIdentity::Id(iid), origin)) if self.identity(iid).is_ok() => {
+                (Some(iid), Some(origin))
+            }
+            Some((_, origin)) => (None, Some(origin)),
+            None => (None, None),
+        }
+    }
+
+    /// Hosts and groups that choose `identity` themselves.
+    pub fn identity_choosers(&self, identity: ItemId) -> Vec<ItemId> {
+        let mut users: Vec<ItemId> = self
+            .items
+            .values()
+            .filter(|i| {
+                let settings = match &i.body.data {
+                    Data::Host(h) => &h.settings,
+                    Data::Group(g) => &g.settings,
+                    _ => return false,
+                };
+                settings.identity == Some(UseIdentity::Id(identity))
+            })
+            .map(|i| i.id)
+            .collect();
+        users.sort();
+        users
+    }
+
+    /// Hosts that end up with `identity`, sorted by label.
+    pub fn identity_hosts(&self, identity: ItemId) -> Vec<ItemId> {
+        self.hosts()
+            .into_iter()
+            .map(|(id, _)| id)
+            .filter(|&id| self.identity_choice(id, &HashMap::new()).0 == Some(identity))
+            .collect()
+    }
+
+    /// What making exactly `choosers` (hosts and groups) choose `identity`
+    /// would do to each host: the identity it has now and the one it would
+    /// have, and who would choose that one. Hosts sorted by label.
+    pub fn identity_use_preview(
+        &self,
+        identity: ItemId,
+        choosers: &HashSet<ItemId>,
+    ) -> Vec<IdentityUse> {
+        let changes = self.identity_changes(identity, choosers);
+        self.hosts()
+            .into_iter()
+            .map(|(id, _)| {
+                let (before, _) = self.identity_choice(id, &HashMap::new());
+                let (after, by) = self.identity_choice(id, &changes);
+                IdentityUse {
+                    host: id,
+                    before,
+                    after,
+                    by,
+                }
+            })
+            .collect()
+    }
+
+    /// Makes exactly `choosers` (hosts and groups) choose `identity`: they
+    /// choose it, and those that chose it and are not in `choosers` go
+    /// back to inheriting one. One write; returns how many items changed.
+    pub fn use_identity(&mut self, identity: ItemId, choosers: &HashSet<ItemId>) -> Result<usize> {
+        self.identity(identity)?;
+        for id in choosers {
+            match self.item(*id)?.body.data {
+                Data::Host(_) | Data::Group(_) => {}
+                ref other => return Err(wrong_type(*id, "host", other)),
+            }
+        }
+        let now = now_ms();
+        let mut changed = Vec::new();
+        for (id, choice) in self.identity_changes(identity, choosers) {
+            let mut item = self.item(id)?.clone();
+            match &mut item.body.data {
+                Data::Host(h) => h.settings.identity = choice,
+                Data::Group(g) => g.settings.identity = choice,
+                _ => continue,
+            }
+            item.rev += 1;
+            item.body.modified = now;
+            changed.push(item);
+        }
+        self.store.write(&changed, &[])?;
+        let count = changed.len();
+        for item in changed {
+            self.items.insert(item.id, item);
+        }
+        Ok(count)
+    }
+
+    /// The `identity` setting each item would get from [`Self::use_identity`].
+    fn identity_changes(
+        &self,
+        identity: ItemId,
+        choosers: &HashSet<ItemId>,
+    ) -> HashMap<ItemId, Option<UseIdentity>> {
+        let mut changes = HashMap::new();
+        for item in self.items.values() {
+            let current = match &item.body.data {
+                Data::Host(h) => h.settings.identity,
+                Data::Group(g) => g.settings.identity,
+                _ => continue,
+            };
+            let chooses = current == Some(UseIdentity::Id(identity));
+            match (choosers.contains(&item.id), chooses) {
+                (true, false) => {
+                    changes.insert(item.id, Some(UseIdentity::Id(identity)));
+                }
+                (false, true) => {
+                    changes.insert(item.id, None);
+                }
+                _ => {}
+            }
+        }
+        changes
     }
 
     /// Hosts matching every word of `query` (case-insensitive) in their
@@ -457,6 +658,12 @@ impl Vault {
             }),
             Some(_) => Ok(()),
         };
+        let check_identity = |settings: &Settings| -> Result<()> {
+            match settings.identity {
+                Some(UseIdentity::Id(identity)) => expect(identity, "identity"),
+                _ => Ok(()),
+            }
+        };
         let check_route = |settings: &Settings| -> Result<()> {
             if let Some(Route::Jump(jumps)) = &settings.route {
                 for jump in jumps {
@@ -478,6 +685,7 @@ impl Vault {
                 if let Some(g) = h.group {
                     expect(g, "group")?;
                 }
+                check_identity(&h.settings)?;
                 check_route(&h.settings)
             }
             Data::Group(g) => {
@@ -501,7 +709,21 @@ impl Vault {
                     };
                     steps += 1;
                 }
+                check_identity(&g.settings)?;
                 check_route(&g.settings)
+            }
+            Data::Identity(i) => {
+                if i.label.trim().is_empty() {
+                    return Err(Error::Invalid("an identity needs a name"));
+                }
+                let mut set = Vec::new();
+                Settings::default().overlay(&i.settings, |f| set.push(f));
+                if set.iter().any(|f| !IDENTITY_FIELDS.contains(f)) {
+                    return Err(Error::Invalid(
+                        "an identity sets only a user, keys, certificates and an agent",
+                    ));
+                }
+                Ok(())
             }
             Data::KnownHost(k) => {
                 if k.hosts.trim().is_empty() || k.key.split_whitespace().count() < 2 {
@@ -528,6 +750,17 @@ impl Vault {
             Data::Unsupported => Err(Error::Invalid("unsupported items cannot be written")),
         }
     }
+}
+
+/// What [`Vault::identity_use_preview`] says of a host.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct IdentityUse {
+    pub host: ItemId,
+    pub before: Option<ItemId>,
+    pub after: Option<ItemId>,
+    /// Who would choose `after`: the host, or one of its groups. `None`
+    /// when nothing chooses.
+    pub by: Option<Origin>,
 }
 
 fn wrong_type(id: ItemId, expected: &'static str, found: &Data) -> Error {

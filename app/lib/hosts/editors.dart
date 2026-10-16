@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/address.dart';
 import '../core/providers.dart';
+import '../identities/identities.dart';
+import '../identities/identity_editor.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/vault.dart';
 import '../tabs/tabs.dart';
@@ -109,8 +111,11 @@ class _SettingsForm {
       agent = original.agent,
       route = original.route,
       policy = original.hostKeyPolicy,
+      identity = original.identity,
+      identityId = original.identityId,
       jumps = [...original.jumps],
       setHere = {
+        if (original.identity != null) 'identity',
         if (original.user != null) 'user',
         if (original.port != null) 'port',
         if (original.identityFiles != null) 'identity_files',
@@ -127,6 +132,10 @@ class _SettingsForm {
   RouteKind? route;
   ProxyKind? proxy;
   KeyPolicy? policy;
+  IdentityChoice? identity;
+
+  /// With [IdentityChoice.use].
+  String identityId;
 
   /// The jump chain, first hop first.
   final List<JumpSpec> jumps;
@@ -179,6 +188,9 @@ class _SettingsForm {
         proxyUser.text = inherited.proxyUser;
       case 'host_key_policy':
         policy = inherited.hostKeyPolicy ?? KeyPolicy.ask;
+      case 'identity':
+        identity = inherited.identity ?? IdentityChoice.none;
+        identityId = inherited.identityId;
     }
   }
 
@@ -206,8 +218,15 @@ class _SettingsForm {
         proxyUser.clear();
       case 'host_key_policy':
         policy = null;
+      case 'identity':
+        identity = null;
+        identityId = '';
     }
   }
+
+  /// The identity choice as the vault would take it, or null to inherit.
+  IdentityChoice? get identityChoice =>
+      setHere.contains('identity') ? identity : null;
 
   /// A proxy server is in use (not "none", not inherited).
   bool get proxyServer =>
@@ -222,6 +241,9 @@ class _SettingsForm {
     }
     if (agent == AgentKind.socket && socket.text.trim().isEmpty) {
       return l.missingSocket;
+    }
+    if (identityChoice == IdentityChoice.use && identityId.isEmpty) {
+      return l.pickIdentity;
     }
     if (route == RouteKind.jump && jumps.isEmpty) return l.missingJump;
     if (route == RouteKind.command && command.text.trim().isEmpty) {
@@ -268,6 +290,8 @@ class _SettingsForm {
       term: original.term,
       env: original.env,
       hostKeyPolicy: setHere.contains('host_key_policy') ? policy : null,
+      identity: identityChoice,
+      identityId: identityChoice == IdentityChoice.use ? identityId : '',
     );
   }
 }
@@ -278,14 +302,16 @@ class _SettingsFields extends ConsumerStatefulWidget {
   const _SettingsFields({
     required this.form,
     required this.hosts,
-    required this.inherited,
+    required this.groupId,
   });
 
   final _SettingsForm form;
 
   /// Hosts that can be jumped through: (id, label).
   final List<(String, String)> hosts;
-  final InheritedView inherited;
+
+  /// Where the item inherits from: its group, or a group's parent.
+  final String? groupId;
 
   @override
   ConsumerState<_SettingsFields> createState() => _SettingsFieldsState();
@@ -295,7 +321,65 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
   bool _more = false;
 
   _SettingsForm get f => widget.form;
-  SettingsSpec get _from => widget.inherited.effective;
+
+  /// What the item inherits before its own identity choice (for the
+  /// identity row), and with it (for the rest).
+  late InheritedView _base;
+  late InheritedView _inherited;
+  SettingsSpec get _from => _inherited.effective;
+
+  void _resolve() {
+    final app = ref.read(openWardProvider);
+    _base = app.inherited(
+      groupId: widget.groupId,
+      identity: null,
+      identityId: '',
+    );
+    final choice = f.identityChoice;
+    _inherited = choice == null
+        ? _base
+        : app.inherited(
+            groupId: widget.groupId,
+            identity: choice,
+            identityId: choice == IdentityChoice.use ? f.identityId : '',
+          );
+  }
+
+  String _identityLabel(String id) =>
+      identityById(ref.read(identitiesProvider), id)?.spec.label ??
+      context.l10n.deletedIdentity;
+
+  /// The identity in force with what the form says now.
+  String? get _identityInForce {
+    final choice = f.identityChoice;
+    if (choice != null) {
+      return choice == IdentityChoice.use && f.identityId.isNotEmpty
+          ? f.identityId
+          : null;
+    }
+    final e = _base.effective;
+    return e.identity == IdentityChoice.use ? e.identityId : null;
+  }
+
+  FieldOrigin? _originOf(String field) =>
+      (field == 'identity' ? _base : _inherited).origins
+          .where((o) => o.field == field)
+          .firstOrNull;
+
+  Future<void> _newIdentity() async {
+    final id = await showIdentityEditor(context, ref);
+    if (id == null || !mounted) return setState(() {});
+    setState(() {
+      f.setHere.add('identity');
+      f.identity = IdentityChoice.use;
+      f.identityId = id;
+    });
+  }
+
+  Future<void> _editIdentity(String id) async {
+    await showIdentityEditor(context, ref, id: id);
+    if (mounted) setState(() {});
+  }
 
   String _hostLabel(String id) {
     for (final (hid, label) in widget.hosts) {
@@ -318,14 +402,16 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
   /// Where an inherited value comes from, in words.
   String _origin(String field) {
     final l = context.l10n;
-    final o = widget.inherited.origins
-        .where((o) => o.field == field)
-        .firstOrNull;
+    final o = _originOf(field);
     return switch (o?.origin) {
       OriginKind.group => l.fromGroup(
         ref.read(libraryProvider).group(o!.groupId ?? '')?.name ?? '',
       ),
+      OriginKind.identity => l.fromIdentity(
+        _identityLabel(o!.identityId ?? ''),
+      ),
       OriginKind.default_ => l.fromDefault,
+      _ when field == 'identity' => l.noIdentityInherited,
       _ => l.fromNowhere,
     };
   }
@@ -354,6 +440,10 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
         _ => l.proxyNone,
       },
       'host_key_policy' => _policy(l, e.hostKeyPolicy ?? KeyPolicy.ask),
+      'identity' =>
+        _base.effective.identity == IdentityChoice.use
+            ? _identityLabel(_base.effective.identityId)
+            : l.identityNone,
       _ => '',
     };
   }
@@ -382,19 +472,100 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
     required String label,
     required Widget editor,
     bool mono = false,
+    (String, VoidCallback)? noteAction,
   }) {
+    final l = context.l10n;
     final set = f.setHere.contains(field);
+    final fromIdentity = _originOf(field)?.origin == OriginKind.identity;
     return _SettingRow(
       label: label,
       isSet: set,
       editor: editor,
       inherited: _inheritedValue(field),
       mono: mono,
-      note: set
-          ? context.l10n.setHereWouldInherit(_inheritedValue(field))
-          : _origin(field),
-      onChange: () => setState(() => f.take(field, _from)),
+      note: !set
+          ? _origin(field)
+          : fromIdentity
+          ? l.setHereIdentitySays(_inheritedValue(field))
+          : l.setHereWouldInherit(_inheritedValue(field)),
+      noteAction: noteAction,
+      onChange: () => setState(
+        () => f.take(field, field == 'identity' ? _base.effective : _from),
+      ),
       onClear: () => setState(() => f.drop(field)),
+    );
+  }
+
+  Widget _identityPicker(BuildContext context) {
+    final l = context.l10n;
+    final c = context.ow.colors;
+    const none = '';
+    const create = '+';
+    final identities = ref.watch(identitiesProvider);
+    final value = f.identity == IdentityChoice.use ? f.identityId : none;
+    Widget title(String text) => Row(
+      children: [
+        Icon(Icons.badge_outlined, size: 16, color: c.textMuted),
+        const SizedBox(width: 8),
+        Expanded(child: Text(text, overflow: TextOverflow.ellipsis)),
+      ],
+    );
+    Widget item(String text, String? sub, {bool warn = false}) => Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(text, overflow: TextOverflow.ellipsis),
+        if (sub != null)
+          Text(
+            sub,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 11, color: warn ? c.warn : c.textSubtle),
+          ),
+      ],
+    );
+    final choices = [
+      for (final i in identities)
+        (
+          i.id,
+          i.spec.label,
+          missingKeys(i).isEmpty
+              ? identitySummary(l, i)
+              : l.identityKeyMissingHere(i.spec.user ?? ''),
+          missingKeys(i).isNotEmpty,
+        ),
+      if (value.isNotEmpty && identityById(identities, value) == null)
+        (value, l.deletedIdentity, null, true),
+      (none, l.identityNone, l.identityNoneNote, false),
+      (create, l.newIdentityEllipsis, null, false),
+    ];
+    return DropdownButtonFormField<String>(
+      key: ValueKey('settings.identity.$value'),
+      style: fieldTextStyle(context),
+      isExpanded: true,
+      itemHeight: null,
+      initialValue: value,
+      selectedItemBuilder: (context) => [
+        for (final (_, text, _, _) in choices) title(text),
+      ],
+      items: [
+        for (final (id, text, sub, warn) in choices)
+          DropdownMenuItem(
+            value: id,
+            child: id == create
+                ? Text(text, style: TextStyle(color: c.accentText))
+                : item(text, sub, warn: warn),
+          ),
+      ],
+      onChanged: (v) {
+        if (v == create) {
+          _newIdentity();
+        } else {
+          setState(() {
+            f.identity = v == none ? IdentityChoice.none : IdentityChoice.use;
+            f.identityId = v ?? '';
+          });
+        }
+      },
     );
   }
 
@@ -402,9 +573,19 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
   Widget build(BuildContext context) {
     final l = context.l10n;
     final ow = context.ow;
+    _resolve();
+    final inForce = _identityInForce;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _row(
+          field: 'identity',
+          label: l.identity,
+          editor: _identityPicker(context),
+          noteAction: inForce == null
+              ? null
+              : (l.editTheIdentity, () => _editIdentity(inForce)),
+        ),
         _row(
           field: 'user',
           label: l.user,
@@ -675,6 +856,7 @@ class _SettingRow extends StatelessWidget {
     required this.onChange,
     required this.onClear,
     this.mono = false,
+    this.noteAction,
   });
 
   final String label;
@@ -685,6 +867,9 @@ class _SettingRow extends StatelessWidget {
   final VoidCallback onChange;
   final VoidCallback onClear;
   final bool mono;
+
+  /// A link after the note: «Editar la identidad».
+  final (String, VoidCallback)? noteAction;
 
   @override
   Widget build(BuildContext context) {
@@ -744,7 +929,7 @@ class _SettingRow extends StatelessWidget {
                         color: isSet ? c.textMuted : c.textSubtle,
                       ),
                       const SizedBox(width: 6),
-                      Expanded(
+                      Flexible(
                         child: Text(
                           note,
                           style: TextStyle(
@@ -753,6 +938,19 @@ class _SettingRow extends StatelessWidget {
                           ),
                         ),
                       ),
+                      if (noteAction case (final text, final onTap)) ...[
+                        Text(
+                          ' · ',
+                          style: TextStyle(fontSize: 11, color: c.textSubtle),
+                        ),
+                        InkWell(
+                          onTap: onTap,
+                          child: Text(
+                            text,
+                            style: TextStyle(fontSize: 11, color: c.accentText),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -1256,7 +1454,6 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
     final l = context.l10n;
     final library = ref.watch(libraryProvider);
     final groups = _groupChoices(library);
-    final inherited = ref.read(openWardProvider).inherited(groupId: _group);
     final groupName = _group == null ? null : library.group(_group!)?.name;
     final mono = monoStyle(context, size: 13, color: context.ow.colors.text);
     return EditorFrame(
@@ -1334,7 +1531,7 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
             for (final h in library.hosts)
               if (h.id != widget.id) (h.id, h.label),
           ],
-          inherited: inherited,
+          groupId: _group,
         ),
         const SizedBox(height: 8),
         _labelled(
@@ -1407,7 +1604,6 @@ class _GroupEditorState extends ConsumerState<_GroupEditor> {
   Widget build(BuildContext context) {
     final l = context.l10n;
     final library = ref.watch(libraryProvider);
-    final inherited = ref.read(openWardProvider).inherited(groupId: _parent);
     return EditorFrame(
       title: _detail == null ? l.newGroupTitle : l.editGroupTitle,
       subtitle: _spec.name.isEmpty ? null : _spec.name,
@@ -1456,7 +1652,7 @@ class _GroupEditorState extends ConsumerState<_GroupEditor> {
         _SettingsFields(
           form: _settings,
           hosts: [for (final h in library.hosts) (h.id, h.label)],
-          inherited: inherited,
+          groupId: _parent,
         ),
       ],
     );

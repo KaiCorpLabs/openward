@@ -1,4 +1,5 @@
-//! Settings inheritance: defaults ← root group ← … ← group ← host.
+//! Settings inheritance: defaults ← root group ← … ← group ← identity ←
+//! host. The identity is the one the host or its nearest group chooses.
 
 use std::collections::BTreeMap;
 
@@ -9,6 +10,7 @@ use openward_proto::{Agent, HostKeyPolicy, ItemId, Route, Settings};
 pub enum Origin {
     Default,
     Group(ItemId),
+    Identity(ItemId),
     Host,
 }
 
@@ -16,6 +18,8 @@ pub enum Origin {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Effective {
     pub settings: Settings,
+    /// The identity in use, if any (and it exists).
+    pub identity: Option<ItemId>,
     origins: BTreeMap<&'static str, Origin>,
 }
 
@@ -37,9 +41,11 @@ pub fn defaults() -> Settings {
 }
 
 impl Effective {
-    /// Overlays `groups` (root first) and then the host on the defaults.
+    /// Overlays `groups` (root first), the identity and then the host on
+    /// the defaults.
     pub(crate) fn resolve<'a>(
         groups: impl Iterator<Item = (ItemId, &'a Settings)>,
+        identity: Option<(ItemId, &Settings)>,
         host: &Settings,
     ) -> Self {
         let mut settings = Settings::default();
@@ -52,10 +58,19 @@ impl Effective {
                 origins.insert(f, Origin::Group(id));
             });
         }
+        if let Some((id, layer)) = identity {
+            settings.overlay(layer, |f| {
+                origins.insert(f, Origin::Identity(id));
+            });
+        }
         settings.overlay(host, |f| {
             origins.insert(f, Origin::Host);
         });
-        Self { settings, origins }
+        Self {
+            settings,
+            identity: identity.map(|(id, _)| id),
+            origins,
+        }
     }
 
     /// Where `field` (one of [`Settings::FIELDS`]) came from; `None` if

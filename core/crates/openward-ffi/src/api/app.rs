@@ -199,11 +199,18 @@ impl OpenWard {
 
     /// What a host in `group_id` (none: the top level) gets before its own
     /// settings, and where each value comes from. For editors, so a new
-    /// host or a host moved to another group shows what it will inherit.
+    /// host or a host moved to another group shows what it will inherit;
+    /// `identity` is the editor's choice of identity, if it makes one.
     #[frb(sync)]
-    pub fn inherited(&self, group_id: Option<String>) -> anyhow::Result<InheritedView> {
+    pub fn inherited(
+        &self,
+        group_id: Option<String>,
+        identity: Option<IdentityChoice>,
+        identity_id: String,
+    ) -> anyhow::Result<InheritedView> {
         let vault = self.app.vault();
-        let inherited = vault.inherited(opt_id(&group_id)?)?;
+        let inherited =
+            vault.inherited(opt_id(&group_id)?, identity_choice(identity, &identity_id)?)?;
         Ok(InheritedView {
             effective: SettingsSpec::from_settings(&inherited.settings),
             origins: Settings::FIELDS

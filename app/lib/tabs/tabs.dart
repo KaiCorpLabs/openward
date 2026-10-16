@@ -36,7 +36,7 @@ final class SftpTab extends OpenTab {
   final SftpController controller;
 }
 
-enum PageKind { settings, tunnels }
+enum PageKind { settings, tunnels, identities }
 
 final class PageTab extends OpenTab {
   const PageTab(this.page);

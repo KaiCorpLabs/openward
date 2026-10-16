@@ -26,7 +26,9 @@ import 'package:integration_test/integration_test.dart';
 import 'package:openward/app.dart';
 import 'package:openward/core/providers.dart';
 import 'package:openward/core/settings.dart';
+import 'package:openward/identities/identities.dart';
 import 'package:openward/src/rust/api/app.dart';
+import 'package:openward/src/rust/api/identities.dart';
 import 'package:openward/src/rust/api/session.dart';
 import 'package:openward/src/rust/api/vault.dart';
 import 'package:openward/src/rust/frb_generated.dart';
@@ -412,8 +414,8 @@ Host web-1 web-2
     await tester.tap(find.text('Nuevo grupo'));
     await _settle(tester);
     await tester.enterText(field('group.name'), 'prod');
-    // Inherited until changed here: the user is the first setting.
-    await tester.tap(find.text('Cambiar').first);
+    // Inherited until changed here: the user comes after the identity.
+    await tester.tap(find.text('Cambiar').at(1));
     await _settle(tester);
     await tester.enterText(field('settings.user'), 'deploy');
     await tester.tap(find.text('Guardar'));
@@ -424,7 +426,7 @@ Host web-1 web-2
     await _settle(tester);
     await tester.enterText(field('host.label'), 'web');
     await tester.enterText(field('host.address'), 'web.example.com');
-    await tester.tap(find.text('Cambiar').at(1));
+    await tester.tap(find.text('Cambiar').at(2));
     await _settle(tester);
     await tester.enterText(field('settings.port'), '2222');
     await tester.tap(field('host.group'));
@@ -1331,4 +1333,141 @@ Host db
       ..close(0);
     await _settle(tester);
   });
+
+  testWidgets(
+    'identities: made, used on a group, shown in the editor, and in',
+    (tester) async {
+      final fixtures = await _servers();
+      if (fixtures == null) return markTestSkipped('S2 servers not running');
+      final group = await app.createGroup(
+        spec: const GroupSpec(
+          name: 'Producción',
+          settings: SettingsSpec(
+            agent: AgentKind.off,
+            hostKeyPolicy: KeyPolicy.acceptNew,
+          ),
+        ),
+      );
+      // No user or key of its own: they come from the identity.
+      await app.createHost(
+        spec: HostSpec(
+          label: 'bastion',
+          address: '127.0.0.1',
+          groupId: group,
+          settings: const SettingsSpec(port: 22100),
+        ),
+      );
+      await app.createHost(
+        spec: HostSpec(
+          label: 'web-1',
+          address: 'web-1.example.com',
+          groupId: group,
+          settings: const SettingsSpec(user: 'root'),
+        ),
+      );
+      final container = await launch(tester);
+      Finder field(String key) => find.byKey(ValueKey(key));
+      IdentityView? named(String label) => container
+          .read(identitiesProvider)
+          .where((i) => i.spec.label == label)
+          .firstOrNull;
+
+      await tester.tap(field('library.identities'));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Aún no hay identidades'), findsOneWidget);
+
+      // The key only gets in through its certificate, found next to it.
+      await tester.tap(field('identities.new'));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.enterText(field('identity.label'), 'demo en S2');
+      await tester.enterText(field('identity.user'), 'demo');
+      await tester.enterText(field('identity.keyPath'), '$fixtures/id_cert');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text(tildePath('$fixtures/id_cert')), findsOneWidget);
+      expect(find.textContaining('Ed25519 · SHA256:'), findsOneWidget);
+      expect(find.text('id_cert-cert.pub'), findsOneWidget);
+      await tester.tap(field('identity.only'));
+      await tester.pump(const Duration(milliseconds: 200));
+      await _shot(tester, '26-identity-editor');
+      await tester.tap(find.text('Guardar'));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(named('demo en S2')?.spec.identitiesOnly, isTrue);
+      expect(find.text('Nadie la usa todavía'), findsOneWidget);
+
+      // On the group: both hosts get it; web-1 keeps its own user.
+      await tester.tap(field('identity.use.demo en S2'));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Usar «demo en S2» en…'), findsOneWidget);
+      await tester.tap(field('use.Producción'));
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text('Cambian 2 hosts · la usarán 2'), findsOneWidget);
+      expect(find.text('La hereda de Producción'), findsNWidgets(2));
+      expect(
+        find.text('Pone su propio usuario (root), que seguirá mandando.'),
+        findsOneWidget,
+      );
+      await _shot(tester, '27-identity-use');
+      await tester.tap(field('identity.use.apply'));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(named('demo en S2')!.hostCount, 2);
+      expect(find.text('Grupo Producción · 2 hosts'), findsOneWidget);
+      await _shot(tester, '28-identities');
+      // The sidebar shows the identity's user.
+      expect(find.text('demo@127.0.0.1:22100'), findsOneWidget);
+
+      // The host editor says where each value comes from.
+      await tester.tap(find.text('bastion'), buttons: kSecondaryButton);
+      await _settle(tester);
+      await tester.tap(find.text('Editar…'));
+      await _settle(tester);
+      expect(find.text('Del grupo Producción'), findsWidgets);
+      expect(find.text('Editar la identidad'), findsOneWidget);
+      expect(find.text('De la identidad demo en S2'), findsWidgets);
+      await _shot(tester, '29-identity-host');
+      await tester.tap(find.text('Cancelar'));
+      await _settle(tester);
+
+      // The group's editor, with the choice open.
+      await tester.tap(find.text('PRODUCCIÓN'), buttons: kSecondaryButton);
+      await _settle(tester);
+      await tester.tap(find.text('Editar grupo…'));
+      await _settle(tester);
+      await tester.tap(find.text('demo en S2').last);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Nueva identidad…'), findsOneWidget);
+      await _shot(tester, '30-identity-group');
+      await tester.tap(find.text('demo en S2').last);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Cancelar'));
+      await _settle(tester);
+
+      // In with the identity's user, key and certificate, nothing asked.
+      await _doubleTap(tester, 'bastion');
+      final term = container.read(tabsProvider).currentSession!;
+      await _until(tester, () => term.phase == Phase.connected, 'the shell');
+      expect(term.prompts, isEmpty);
+      term.session.text(text: 'echo who-\$(whoami)-end\n');
+      await _until(
+        tester,
+        () => term.session.screenText().contains('who-demo-end'),
+        'whoami',
+      );
+
+      // Gone: its hosts go back to inheriting.
+      container.read(tabsProvider.notifier).close(1);
+      await _settle(tester);
+      await tester.tap(field('identity.demo en S2'));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.text('Eliminar'));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('¿Eliminar «demo en S2»?'), findsOneWidget);
+      await tester.tap(field('identity.delete.confirm'));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Aún no hay identidades'), findsOneWidget);
+      expect(app.host(id: app.hosts().first.id).spec.settings.identity, isNull);
+      container.read(tabsProvider.notifier).close(0);
+      await _settle(tester);
+    },
+  );
 }

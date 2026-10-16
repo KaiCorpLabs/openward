@@ -116,6 +116,18 @@ abstract class AppLocalizations {
   /// **'Añadir'**
   String get add;
 
+  /// No description provided for @addCertificate.
+  ///
+  /// In es, this message translates to:
+  /// **'+ Añadir certificado'**
+  String get addCertificate;
+
+  /// No description provided for @addKeyEllipsis.
+  ///
+  /// In es, this message translates to:
+  /// **'Añadir clave…'**
+  String get addKeyEllipsis;
+
   /// No description provided for @addSavedHost.
   ///
   /// In es, this message translates to:
@@ -152,6 +164,18 @@ abstract class AppLocalizations {
   /// **'Ninguno'**
   String get agentNone;
 
+  /// No description provided for @agentOtherSocket.
+  ///
+  /// In es, this message translates to:
+  /// **'Otro socket'**
+  String get agentOtherSocket;
+
+  /// No description provided for @agentShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Agente'**
+  String get agentShort;
+
   /// No description provided for @agentSocket.
   ///
   /// In es, this message translates to:
@@ -169,6 +193,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'ya importado'**
   String get alreadyImported;
+
+  /// No description provided for @alreadyUses.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya la usa'**
+  String get alreadyUses;
 
   /// No description provided for @anyDestination.
   ///
@@ -205,6 +235,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Atrás'**
   String get back;
+
+  /// No description provided for @badgeChanges.
+  ///
+  /// In es, this message translates to:
+  /// **'cambia'**
+  String get badgeChanges;
+
+  /// No description provided for @badgeLeaves.
+  ///
+  /// In es, this message translates to:
+  /// **'la deja'**
+  String get badgeLeaves;
+
+  /// No description provided for @badgeNew.
+  ///
+  /// In es, this message translates to:
+  /// **'nueva'**
+  String get badgeNew;
 
   /// No description provided for @bellFlash.
   ///
@@ -307,6 +355,48 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No se ha podido conectar con {label}'**
   String cannotConnect(String label);
+
+  /// No description provided for @certExpiredOn.
+  ///
+  /// In es, this message translates to:
+  /// **'caducó el {date}'**
+  String certExpiredOn(String date);
+
+  /// No description provided for @certForever.
+  ///
+  /// In es, this message translates to:
+  /// **'sin caducidad'**
+  String get certForever;
+
+  /// No description provided for @certNextToKey.
+  ///
+  /// In es, this message translates to:
+  /// **'Junto a la clave (-cert.pub): se usa sin añadirlo.'**
+  String get certNextToKey;
+
+  /// No description provided for @certUntil.
+  ///
+  /// In es, this message translates to:
+  /// **'hasta el {date}'**
+  String certUntil(String date);
+
+  /// No description provided for @certificate.
+  ///
+  /// In es, this message translates to:
+  /// **'certificado'**
+  String get certificate;
+
+  /// No description provided for @certificateExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'certificado caducado'**
+  String get certificateExpired;
+
+  /// No description provided for @certificateTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Certificado'**
+  String get certificateTitle;
 
   /// No description provided for @change.
   ///
@@ -539,7 +629,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectionHint.
   ///
   /// In es, this message translates to:
-  /// **'Lo que no cambies aquí se hereda. Debajo de cada valor ves de dónde viene; los heredados llevan el borde discontinuo.'**
+  /// **'Lo que no cambies aquí se hereda; los valores heredados llevan el borde discontinuo y debajo dicen de dónde vienen. Manda lo del host, luego su identidad, luego sus grupos y, al final, los valores por defecto.'**
   String get connectionHint;
 
   /// No description provided for @connectionLost.
@@ -716,6 +806,24 @@ abstract class AppLocalizations {
   /// **'¿Eliminar el host «{name}»?'**
   String deleteHostTitle(String name);
 
+  /// No description provided for @deleteIdentityBody.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{El host que la usa volverá a heredar el usuario y las claves de su grupo.} other{Los {count} hosts que la usan volverán a heredar el usuario y las claves de sus grupos.}}'**
+  String deleteIdentityBody(int count);
+
+  /// No description provided for @deleteIdentityTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar «{name}»?'**
+  String deleteIdentityTitle(String name);
+
+  /// No description provided for @deleteIdentityUnused.
+  ///
+  /// In es, this message translates to:
+  /// **'Nadie la usa. Las claves siguen en su sitio: solo se borra la identidad.'**
+  String get deleteIdentityUnused;
+
   /// No description provided for @deleteLocalBody.
   ///
   /// In es, this message translates to:
@@ -745,6 +853,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'(host eliminado)'**
   String get deletedHost;
+
+  /// No description provided for @deletedIdentity.
+  ///
+  /// In es, this message translates to:
+  /// **'(identidad eliminada)'**
+  String get deletedIdentity;
 
   /// No description provided for @destination.
   ///
@@ -823,6 +937,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Editar host'**
   String get editHostTitle;
+
+  /// No description provided for @editIdentity.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar identidad'**
+  String get editIdentity;
+
+  /// No description provided for @editTheIdentity.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar la identidad'**
+  String get editTheIdentity;
 
   /// No description provided for @editTunnel.
   ///
@@ -907,6 +1033,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Filtrar en esta carpeta'**
   String get filterFolder;
+
+  /// No description provided for @filterHostsAndGroups.
+  ///
+  /// In es, this message translates to:
+  /// **'Filtrar hosts y grupos'**
+  String get filterHostsAndGroups;
+
+  /// No description provided for @filterIdentities.
+  ///
+  /// In es, this message translates to:
+  /// **'Filtrar por nombre, usuario o clave'**
+  String get filterIdentities;
 
   /// No description provided for @filterTunnels.
   ///
@@ -1028,6 +1166,12 @@ abstract class AppLocalizations {
   /// **'desde aquí'**
   String get fromHere;
 
+  /// No description provided for @fromIdentity.
+  ///
+  /// In es, this message translates to:
+  /// **'De la identidad {name}'**
+  String fromIdentity(String name);
+
   /// No description provided for @fromNowhere.
   ///
   /// In es, this message translates to:
@@ -1058,6 +1202,12 @@ abstract class AppLocalizations {
   /// **'Un grupo no puede estar dentro de sí mismo.'**
   String get groupInsideItself;
 
+  /// No description provided for @groupNamed.
+  ///
+  /// In es, this message translates to:
+  /// **'Grupo {name}'**
+  String groupNamed(String name);
+
   /// No description provided for @groupNeedsName.
   ///
   /// In es, this message translates to:
@@ -1069,6 +1219,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ajustes para todo lo que contiene'**
   String get groupSettingsSection;
+
+  /// No description provided for @groups.
+  ///
+  /// In es, this message translates to:
+  /// **'Grupos'**
+  String get groups;
 
   /// No description provided for @hideHiddenFiles.
   ///
@@ -1087,6 +1243,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Host'**
   String get host;
+
+  /// No description provided for @hostCountText.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{ningún host} =1{1 host} other{{count} hosts}}'**
+  String hostCountText(int count);
 
   /// No description provided for @hostInUse.
   ///
@@ -1117,6 +1279,90 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'El host necesita un nombre.'**
   String get hostNeedsName;
+
+  /// No description provided for @hostsSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Hosts'**
+  String get hostsSection;
+
+  /// No description provided for @identities.
+  ///
+  /// In es, this message translates to:
+  /// **'Identidades'**
+  String get identities;
+
+  /// No description provided for @identitiesCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{total, plural, =1{1 identidad} other{{total} identidades}} · {used} en uso'**
+  String identitiesCount(int total, int used);
+
+  /// No description provided for @identitiesIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Usuario, claves y agente con un nombre, para usarlos en varios hosts y grupos. Cambiar una identidad cambia todos los que la usan.'**
+  String get identitiesIntro;
+
+  /// No description provided for @identitiesNoSecrets.
+  ///
+  /// In es, this message translates to:
+  /// **'No se guardan contraseñas ni frases de paso: se piden al conectar, como hasta ahora. De cada clave solo se lee su parte pública (.pub).'**
+  String get identitiesNoSecrets;
+
+  /// No description provided for @identity.
+  ///
+  /// In es, this message translates to:
+  /// **'Identidad'**
+  String get identity;
+
+  /// No description provided for @identityEditorHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Usuario, claves y agente con un nombre, para usarlos en varios hosts.'**
+  String get identityEditorHint;
+
+  /// No description provided for @identityKeyMissingHere.
+  ///
+  /// In es, this message translates to:
+  /// **'{user} · falta su clave en este equipo'**
+  String identityKeyMissingHere(String user);
+
+  /// No description provided for @identityNeedsName.
+  ///
+  /// In es, this message translates to:
+  /// **'Ponle un nombre.'**
+  String get identityNeedsName;
+
+  /// No description provided for @identityNewNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Úsala desde el editor de un host o de un grupo, o con «Usar en…» en la lista de identidades.'**
+  String get identityNewNote;
+
+  /// No description provided for @identityNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguna'**
+  String get identityNone;
+
+  /// No description provided for @identityNoneNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Aunque se herede una de más arriba'**
+  String get identityNoneNote;
+
+  /// No description provided for @identitySaveChanges.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Al guardar cambia el host que la usa.} other{Al guardar cambian los {count} hosts que la usan.}} Un host que pone su propio usuario o sus claves mantiene los suyos.'**
+  String identitySaveChanges(int count);
+
+  /// No description provided for @identityUsedBy.
+  ///
+  /// In es, this message translates to:
+  /// **'La usan: {who}'**
+  String identityUsedBy(String who);
 
   /// No description provided for @ignore.
   ///
@@ -1231,6 +1477,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'En claro'**
   String get inLight;
+
+  /// No description provided for @inheritsFrom.
+  ///
+  /// In es, this message translates to:
+  /// **'La hereda de {group}'**
+  String inheritsFrom(String group);
 
   /// No description provided for @inputNotSent.
   ///
@@ -1382,11 +1634,35 @@ abstract class AppLocalizations {
   /// **'guardada en OpenWard'**
   String get keyInOpenWard;
 
+  /// No description provided for @keyMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'No está en este equipo'**
+  String get keyMissing;
+
+  /// No description provided for @keyMissingWarning.
+  ///
+  /// In es, this message translates to:
+  /// **'{path} no está en este equipo. {count, plural, =0{Cópiala o cambia la ruta antes de usarla.} =1{El host que la usa no podrá usar esa clave hasta que la copies o cambies la ruta.} other{Los {count} hosts que la usan no podrán usar esa clave hasta que la copies o cambies la ruta.}}'**
+  String keyMissingWarning(String path, int count);
+
+  /// No description provided for @keyNoPublicHalf.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin .pub al lado: su tipo se sabrá al conectar'**
+  String get keyNoPublicHalf;
+
   /// No description provided for @keyNow.
   ///
   /// In es, this message translates to:
   /// **'Ahora ({algorithm})'**
   String keyNow(String algorithm);
+
+  /// No description provided for @keyPerHost.
+  ///
+  /// In es, this message translates to:
+  /// **'Una por host (lleva %h, %r…)'**
+  String get keyPerHost;
 
   /// No description provided for @keyProtected.
   ///
@@ -1417,6 +1693,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Una ruta por línea. OpenWard guarda la ruta, nunca la clave.'**
   String get keysHelp;
+
+  /// No description provided for @keysInOrder.
+  ///
+  /// In es, this message translates to:
+  /// **'Se prueban en este orden; arrastra para cambiarlo.'**
+  String get keysInOrder;
 
   /// No description provided for @kindDynamic.
   ///
@@ -1580,6 +1862,12 @@ abstract class AppLocalizations {
   /// **'Falta la ruta del socket del agente.'**
   String get missingSocket;
 
+  /// No description provided for @monthsShort.
+  ///
+  /// In es, this message translates to:
+  /// **'ene,feb,mar,abr,may,jun,jul,ago,sept,oct,nov,dic'**
+  String get monthsShort;
+
   /// No description provided for @moreActions.
   ///
   /// In es, this message translates to:
@@ -1598,11 +1886,23 @@ abstract class AppLocalizations {
   /// **'Nombre'**
   String get name;
 
+  /// No description provided for @nameAndMore.
+  ///
+  /// In es, this message translates to:
+  /// **'{name} y {count} más'**
+  String nameAndMore(String name, int count);
+
   /// No description provided for @nameNoSlash.
   ///
   /// In es, this message translates to:
   /// **'Un nombre no puede llevar «/».'**
   String get nameNoSlash;
+
+  /// No description provided for @namesAndMore.
+  ///
+  /// In es, this message translates to:
+  /// **'{names} y {count} más'**
+  String namesAndMore(String names, int count);
 
   /// No description provided for @netLost.
   ///
@@ -1670,6 +1970,18 @@ abstract class AppLocalizations {
   /// **'Nuevo host'**
   String get newHostTitle;
 
+  /// No description provided for @newIdentity.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva identidad'**
+  String get newIdentity;
+
+  /// No description provided for @newIdentityEllipsis.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva identidad…'**
+  String get newIdentityEllipsis;
+
   /// No description provided for @newLocalTerminal.
   ///
   /// In es, this message translates to:
@@ -1724,11 +2036,41 @@ abstract class AppLocalizations {
   /// **'Aún no tienes hosts'**
   String get noHostsTitle;
 
+  /// No description provided for @noIdentities.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay identidades'**
+  String get noIdentities;
+
+  /// No description provided for @noIdentitiesBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Una identidad junta un usuario, sus claves y el agente con un nombre («deploy en producción»). Ponla en un grupo y todos sus hosts entran igual; cámbiala una vez y cambian todos.'**
+  String get noIdentitiesBody;
+
+  /// No description provided for @noIdentityInherited.
+  ///
+  /// In es, this message translates to:
+  /// **'Ningún grupo pone una'**
+  String get noIdentityInherited;
+
+  /// No description provided for @noIdentityNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin identidad'**
+  String get noIdentityNow;
+
   /// No description provided for @noJumpsYet.
   ///
   /// In es, this message translates to:
   /// **'Ninguno todavía.'**
   String get noJumpsYet;
+
+  /// No description provided for @noKeysYet.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin claves: se prueban las habituales de ~/.ssh y las del agente.'**
+  String get noKeysYet;
 
   /// No description provided for @noMatches.
   ///
@@ -1777,6 +2119,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Notas'**
   String get notes;
+
+  /// No description provided for @nowIdentity.
+  ///
+  /// In es, this message translates to:
+  /// **'Ahora: {identity}'**
+  String nowIdentity(String identity);
+
+  /// No description provided for @nowIdentityFromGroup.
+  ///
+  /// In es, this message translates to:
+  /// **'Ahora: {identity}, del grupo {group}'**
+  String nowIdentityFromGroup(String identity, String group);
+
+  /// No description provided for @nowNoIdentity.
+  ///
+  /// In es, this message translates to:
+  /// **'ahora: ninguna'**
+  String get nowNoIdentity;
+
+  /// No description provided for @offerOnlyTheseKeys.
+  ///
+  /// In es, this message translates to:
+  /// **'Ofrecer solo estas claves'**
+  String get offerOnlyTheseKeys;
+
+  /// No description provided for @offerOnlyTheseKeysNote.
+  ///
+  /// In es, this message translates to:
+  /// **'No probar las demás claves del agente (IdentitiesOnly). Útil si el servidor corta tras varios intentos.'**
+  String get offerOnlyTheseKeysNote;
 
   /// No description provided for @ok.
   ///
@@ -1861,6 +2233,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'o una dirección: usuario@host:puerto'**
   String get orAnAddress;
+
+  /// No description provided for @orTypeAPath.
+  ///
+  /// In es, this message translates to:
+  /// **'o escribe una ruta: admite ~, %h, %r y %u'**
+  String get orTypeAPath;
+
+  /// No description provided for @ownUserWins.
+  ///
+  /// In es, this message translates to:
+  /// **'Pone su propio usuario ({user}), que seguirá mandando.'**
+  String ownUserWins(String user);
 
   /// No description provided for @paneOptions.
   ///
@@ -2035,6 +2419,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Permisos de {name}'**
   String permissionsOf(String name);
+
+  /// No description provided for @pickIdentity.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige una identidad o «Ninguna».'**
+  String get pickIdentity;
 
   /// No description provided for @pixels.
   ///
@@ -2275,6 +2665,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Quitar'**
   String get remove;
+
+  /// No description provided for @removeCertificate.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar el certificado'**
+  String get removeCertificate;
+
+  /// No description provided for @removeKey.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar la clave'**
+  String get removeKey;
 
   /// No description provided for @removeTag.
   ///
@@ -2569,6 +2971,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Sesión cerrada (código {code}).'**
   String sessionClosedCode(int code);
+
+  /// No description provided for @setHereIdentitySays.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiado aquí; la identidad dice {value}'**
+  String setHereIdentitySays(String value);
 
   /// No description provided for @setHereWouldInherit.
   ///
@@ -3134,6 +3542,12 @@ abstract class AppLocalizations {
   /// **'Siguen abiertos si cierras esta pestaña. Todos en Biblioteca › Túneles.'**
   String get tunnelsStayOpen;
 
+  /// No description provided for @twoNames.
+  ///
+  /// In es, this message translates to:
+  /// **'{a} y {b}'**
+  String twoNames(String a, String b);
+
   /// No description provided for @uiColors.
   ///
   /// In es, this message translates to:
@@ -3170,17 +3584,59 @@ abstract class AppLocalizations {
   /// **'Subir a {host}'**
   String uploadToHost(String host);
 
+  /// No description provided for @useIdentityHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Marca grupos o hosts. Un grupo la pasa a todos sus hosts, también a los que añadas después.'**
+  String get useIdentityHint;
+
+  /// No description provided for @useIdentityOn.
+  ///
+  /// In es, this message translates to:
+  /// **'Usar «{name}» en…'**
+  String useIdentityOn(String name);
+
+  /// No description provided for @useIdentitySummary.
+  ///
+  /// In es, this message translates to:
+  /// **'{changed, plural, =0{No cambia ningún host} =1{Cambia 1 host} other{Cambian {changed} hosts}} · {using, plural, =0{no la usará ninguno} =1{la usará 1} other{la usarán {using}}}'**
+  String useIdentitySummary(int changed, int using);
+
+  /// No description provided for @useOn.
+  ///
+  /// In es, this message translates to:
+  /// **'Usar en…'**
+  String get useOn;
+
   /// No description provided for @usePort.
   ///
   /// In es, this message translates to:
   /// **'Usar el {port}'**
   String usePort(int port);
 
+  /// No description provided for @usedBy.
+  ///
+  /// In es, this message translates to:
+  /// **'La usan'**
+  String get usedBy;
+
+  /// No description provided for @usedByNobody.
+  ///
+  /// In es, this message translates to:
+  /// **'Nadie la usa todavía'**
+  String get usedByNobody;
+
   /// No description provided for @user.
   ///
   /// In es, this message translates to:
   /// **'Usuario'**
   String get user;
+
+  /// No description provided for @usualKeys.
+  ///
+  /// In es, this message translates to:
+  /// **'las habituales'**
+  String get usualKeys;
 
   /// No description provided for @variantDark.
   ///

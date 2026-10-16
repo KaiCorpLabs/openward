@@ -9,7 +9,7 @@ use std::str::FromStr;
 use flutter_rust_bridge::frb;
 use openward_app::vault::Origin;
 use openward_app::vault::proto::{
-    Agent, HostKeyPolicy, ItemId, Jump, Proxy, ProxyServer, Route, Settings,
+    Agent, HostKeyPolicy, ItemId, Jump, Proxy, ProxyServer, Route, Settings, UseIdentity,
 };
 
 pub(crate) fn id(text: &str) -> anyhow::Result<ItemId> {
@@ -40,6 +40,14 @@ pub enum ProxyKind {
     Off,
     Http,
     Socks5,
+}
+
+/// Which identity applies; `None` overrides one inherited.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum IdentityChoice {
+    None,
+    /// The one in `identity_id`.
+    Use,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -99,6 +107,22 @@ pub struct SettingsSpec {
     pub term: Option<String>,
     pub env: Option<Vec<EnvVar>>,
     pub host_key_policy: Option<KeyPolicy>,
+    pub identity: Option<IdentityChoice>,
+    /// With [`IdentityChoice::Use`].
+    #[frb(default = "")]
+    pub identity_id: String,
+}
+
+/// The `identity` setting of a spec.
+pub(crate) fn identity_choice(
+    choice: Option<IdentityChoice>,
+    identity_id: &str,
+) -> anyhow::Result<Option<UseIdentity>> {
+    Ok(match choice {
+        None => None,
+        Some(IdentityChoice::None) => Some(UseIdentity::None),
+        Some(IdentityChoice::Use) => Some(UseIdentity::Id(id(identity_id)?)),
+    })
 }
 
 impl SettingsSpec {
@@ -139,7 +163,14 @@ impl SettingsSpec {
             Some(Proxy::Http(server)) => (Some(ProxyKind::Http), Some(server)),
             Some(Proxy::Socks5(server)) => (Some(ProxyKind::Socks5), Some(server)),
         };
+        let (identity, identity_id) = match s.identity {
+            None => (None, String::new()),
+            Some(UseIdentity::None) => (Some(IdentityChoice::None), String::new()),
+            Some(UseIdentity::Id(i)) => (Some(IdentityChoice::Use), i.to_string()),
+        };
         Self {
+            identity,
+            identity_id,
             proxy,
             proxy_host: server.map(|s| s.host.clone()).unwrap_or_default(),
             proxy_port: server.map_or(0, |s| s.port),
@@ -234,6 +265,7 @@ impl SettingsSpec {
             KeyPolicy::AcceptNew => HostKeyPolicy::AcceptNew,
             KeyPolicy::Strict => HostKeyPolicy::Strict,
         });
+        s.identity = identity_choice(self.identity, &self.identity_id)?;
         Ok(())
     }
 }
@@ -294,6 +326,8 @@ pub enum OriginKind {
     Unset,
     Default,
     Group,
+    /// The identity in `identity_id`.
+    Identity,
     Host,
 }
 
@@ -301,23 +335,27 @@ pub enum OriginKind {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FieldOrigin {
     /// A field of [`SettingsSpec`] (`agent` covers `agent_socket`, `route`
-    /// covers `jumps` and `proxy_command`).
+    /// covers `jumps` and `proxy_command`, `identity` covers
+    /// `identity_id`).
     pub field: String,
     pub origin: OriginKind,
     pub group_id: Option<String>,
+    pub identity_id: Option<String>,
 }
 
 pub(crate) fn origin(field: &str, o: Option<Origin>) -> FieldOrigin {
-    let (origin, group_id) = match o {
-        None => (OriginKind::Unset, None),
-        Some(Origin::Default) => (OriginKind::Default, None),
-        Some(Origin::Host) => (OriginKind::Host, None),
-        Some(Origin::Group(g)) => (OriginKind::Group, Some(g.to_string())),
+    let (origin, group_id, identity_id) = match o {
+        None => (OriginKind::Unset, None, None),
+        Some(Origin::Default) => (OriginKind::Default, None, None),
+        Some(Origin::Host) => (OriginKind::Host, None, None),
+        Some(Origin::Group(g)) => (OriginKind::Group, Some(g.to_string()), None),
+        Some(Origin::Identity(i)) => (OriginKind::Identity, None, Some(i.to_string())),
     };
     FieldOrigin {
         field: field.to_owned(),
         origin,
         group_id,
+        identity_id,
     }
 }
 
@@ -422,6 +460,7 @@ mod tests {
             ])),
             env: Some([("LANG".to_owned(), "C".to_owned())].into()),
             host_key_policy: Some(HostKeyPolicy::Strict),
+            identity: Some(UseIdentity::Id(ItemId::new())),
             ..Settings::default()
         };
         let spec = SettingsSpec::from_settings(&settings);
