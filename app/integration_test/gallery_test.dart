@@ -53,6 +53,15 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() => RustLib.init());
 
+  // Temporary: where a test app writes, as the CI log shows a skip reason.
+  testWidgets('where the screenshots go', (tester) async {
+    markTestSkipped(
+      'shots: $_shotsPath · temp: ${Directory.systemTemp.path} · '
+      'cwd: ${Directory.current.path} · '
+      'env: ${Platform.environment['OPENWARD_SHOTS']}',
+    );
+  });
+
   testWidgets('the main screens with every theme, light and dark', (
     tester,
   ) async {
