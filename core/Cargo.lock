@@ -1665,7 +1665,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "openward-app"
-version = "0.2.0-beta.2"
+version = "0.2.0-beta.3"
 dependencies = [
  "anyhow",
  "data-encoding",
@@ -1686,7 +1686,7 @@ dependencies = [
 
 [[package]]
 name = "openward-ffi"
-version = "0.2.0-beta.2"
+version = "0.2.0-beta.3"
 dependencies = [
  "anyhow",
  "flutter_rust_bridge",
@@ -1697,14 +1697,14 @@ dependencies = [
 
 [[package]]
 name = "openward-ghostty"
-version = "0.2.0-beta.2"
+version = "0.2.0-beta.3"
 dependencies = [
  "openward-term",
 ]
 
 [[package]]
 name = "openward-import"
-version = "0.2.0-beta.2"
+version = "0.2.0-beta.3"
 dependencies = [
  "base64",
  "crypto_secretbox",
@@ -1722,7 +1722,7 @@ dependencies = [
 
 [[package]]
 name = "openward-proto"
-version = "0.2.0-beta.2"
+version = "0.2.0-beta.3"
 dependencies = [
  "ciborium",
  "serde",
@@ -1732,7 +1732,7 @@ dependencies = [
 
 [[package]]
 name = "openward-pty"
-version = "0.2.0-beta.2"
+version = "0.2.0-beta.3"
 dependencies = [
  "anyhow",
  "portable-pty",
@@ -1740,7 +1740,7 @@ dependencies = [
 
 [[package]]
 name = "openward-sftp"
-version = "0.2.0-beta.2"
+version = "0.2.0-beta.3"
 dependencies = [
  "openward-ssh",
  "russh-sftp",
@@ -1751,7 +1751,7 @@ dependencies = [
 
 [[package]]
 name = "openward-ssh"
-version = "0.2.0-beta.2"
+version = "0.2.0-beta.3"
 dependencies = [
  "anyhow",
  "data-encoding",
@@ -1764,14 +1764,14 @@ dependencies = [
 
 [[package]]
 name = "openward-term"
-version = "0.2.0-beta.2"
+version = "0.2.0-beta.3"
 dependencies = [
  "alacritty_terminal",
 ]
 
 [[package]]
 name = "openward-vault"
-version = "0.2.0-beta.2"
+version = "0.2.0-beta.3"
 dependencies = [
  "ciborium",
  "openward-proto",
