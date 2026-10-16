@@ -168,17 +168,16 @@ jobs:
         os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
-    env:
-      # Where the window tests leave their screenshots (passed to them as a
-      # --dart-define).
-      OPENWARD_SHOTS: ${{ runner.temp }}/openward-shots
     defaults:
       run:
         shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Cache location
-        run: echo "OPENWARD_CACHE=$RUNNER_TEMP/openward" >> "$GITHUB_ENV"
+        run: |
+          echo "OPENWARD_CACHE=$RUNNER_TEMP/openward" >> "$GITHUB_ENV"
+          # Where the window tests leave their screenshots (a --dart-define).
+          echo "OPENWARD_SHOTS=$RUNNER_TEMP/openward-shots" >> "$GITHUB_ENV"
       # Its own key: on macOS it also holds the Intel build of the library.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
