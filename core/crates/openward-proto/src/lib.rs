@@ -92,6 +92,7 @@ pub enum Data {
     KnownHost(KnownHost),
     PortForward(PortForward),
     Snippet(Snippet),
+    Workspace(Workspace),
     /// A type from a newer version. Never encoded: the stored bytes stay.
     #[serde(other)]
     Unsupported,
@@ -106,6 +107,7 @@ impl Data {
             Self::KnownHost(_) => "known_host",
             Self::PortForward(_) => "port_forward",
             Self::Snippet(_) => "snippet",
+            Self::Workspace(_) => "workspace",
             Self::Unsupported => "unsupported",
         }
     }
@@ -233,6 +235,83 @@ pub struct Snippet {
     /// Set when it came from another program's import.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub imported: Option<Imported>,
+    #[serde(flatten)]
+    pub extra: Extra,
+}
+
+/// Tabs and panes saved to open again together. What they connect to is
+/// named, never what they showed.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct Workspace {
+    pub name: String,
+    pub tabs: Vec<WorkspaceTab>,
+    /// The tab in front, by index.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub active: u32,
+    #[serde(flatten)]
+    pub extra: Extra,
+}
+
+fn is_zero(n: &u32) -> bool {
+    *n == 0
+}
+
+/// A tab of a workspace: terminals laid out in panes, or a file browser.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct WorkspaceTab {
+    /// The name the user gave the tab.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// Terminals: one pane, or splits of them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub panes: Option<PaneLayout>,
+    /// Files: an SFTP browser on this target.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sftp: Option<Target>,
+    #[serde(flatten)]
+    pub extra: Extra,
+}
+
+/// A pane (`target`), a split in two (`split`), or a pane that asks what
+/// to open (neither).
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct PaneLayout {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<Target>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub split: Option<Box<PaneSplit>>,
+    /// Had the keyboard.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub active: bool,
+    #[serde(flatten)]
+    pub extra: Extra,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct PaneSplit {
+    /// One above the other; otherwise side by side.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub vertical: bool,
+    /// The first part's share of the space.
+    pub ratio: f64,
+    pub first: PaneLayout,
+    pub second: PaneLayout,
+    #[serde(flatten)]
+    pub extra: Extra,
+}
+
+/// What a pane or tab connects to: a saved host, an address, or (neither)
+/// a shell on this computer.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct Target {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub host: Option<ItemId>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub address: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub user: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub port: Option<u16>,
     #[serde(flatten)]
     pub extra: Extra,
 }
@@ -455,6 +534,59 @@ mod tests {
             }),
         };
         assert_eq!(Body::from_cbor(&snippet.to_cbor()).unwrap(), snippet);
+    }
+
+    #[test]
+    fn workspaces_round_trip() {
+        let pane = |target: Target| PaneLayout {
+            target: Some(target),
+            ..PaneLayout::default()
+        };
+        let host = ItemId::new();
+        let mut extra = Extra::new();
+        extra.insert("zoom".into(), Value::Integer(2.into()));
+        let workspace = Body {
+            created: 1,
+            modified: 2,
+            data: Data::Workspace(Workspace {
+                name: "Producción".into(),
+                tabs: vec![
+                    WorkspaceTab {
+                        title: Some("web".into()),
+                        panes: Some(PaneLayout {
+                            split: Some(Box::new(PaneSplit {
+                                vertical: true,
+                                ratio: 0.25,
+                                first: pane(Target {
+                                    host: Some(host),
+                                    ..Target::default()
+                                }),
+                                second: PaneLayout {
+                                    active: true,
+                                    extra,
+                                    ..pane(Target::default())
+                                },
+                                extra: Extra::new(),
+                            })),
+                            ..PaneLayout::default()
+                        }),
+                        ..WorkspaceTab::default()
+                    },
+                    WorkspaceTab {
+                        sftp: Some(Target {
+                            address: Some("10.0.0.5".into()),
+                            user: Some("deploy".into()),
+                            port: Some(2222),
+                            ..Target::default()
+                        }),
+                        ..WorkspaceTab::default()
+                    },
+                ],
+                active: 1,
+                extra: Extra::new(),
+            }),
+        };
+        assert_eq!(Body::from_cbor(&workspace.to_cbor()).unwrap(), workspace);
     }
 
     #[test]

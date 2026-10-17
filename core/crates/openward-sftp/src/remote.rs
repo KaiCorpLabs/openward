@@ -364,6 +364,59 @@ impl Remote {
         Ok(out)
     }
 
+    /// A small file, all of it; `None` when it is not there. One larger
+    /// than `limit` bytes is an error, not read.
+    pub async fn read_small(&self, path: &str, limit: u64) -> Result<Option<Vec<u8>>> {
+        let handle = match self.open_read(path).await {
+            Ok(h) => h,
+            Err(Error::NotFound(_)) => return Ok(None),
+            Err(e) => return Err(e),
+        };
+        let mut out = Vec::new();
+        let result = loop {
+            match self
+                .raw
+                .read(handle.clone(), out.len() as u64, self.read_len)
+                .await
+            {
+                Ok(d) if d.data.is_empty() => break Ok(()),
+                Ok(d) => {
+                    out.extend_from_slice(&d.data);
+                    if out.len() as u64 > limit {
+                        break Err(Error::Other(format!("{path}: larger than {limit} bytes")));
+                    }
+                }
+                Err(russh_sftp::client::error::Error::Status(s))
+                    if s.status_code == StatusCode::Eof =>
+                {
+                    break Ok(());
+                }
+                Err(e) => break Err(Error::sftp(path, e)),
+            }
+        };
+        let closed = self.close(path, handle).await;
+        result?;
+        closed?;
+        Ok(Some(out))
+    }
+
+    /// Writes `data` as the whole of `path`, created with `mode` if new.
+    pub async fn write_all(&self, path: &str, data: &[u8], mode: u32) -> Result<()> {
+        let handle = self.open_write(path, true, Some(mode)).await?;
+        let mut at = 0u64;
+        let mut result = Ok(());
+        for chunk in data.chunks(self.write_len as usize) {
+            if let Err(e) = self.raw.write(handle.clone(), at, chunk.to_vec()).await {
+                result = Err(Error::sftp(path, e));
+                break;
+            }
+            at += chunk.len() as u64;
+        }
+        let closed = self.close(path, handle).await;
+        result?;
+        closed
+    }
+
     pub(crate) async fn open_read(&self, path: &str) -> Result<String> {
         self.raw
             .open(path, OpenFlags::READ, FileAttributes::empty())

@@ -127,7 +127,7 @@ flowchart TB
 | `openward-pty` | Terminal local en escritorio | `portable-pty` 0.9.0 fijado (probado en S1.5; sin versión desde febrero de 2025, fork si hace falta) |
 | `openward-serial` | Puertos serie en escritorio (Android con USB en una fase posterior; iOS no tiene) | `serialport` (MPL-2.0; busca mantenedores) |
 | `openward-mosh` | Cliente Mosh clean-room (fase 4) | — |
-| `openward-import` | Importar ssh_config, Termius (sus datos del equipo: IndexedDB de Chromium sobre LevelDB, campos cifrados con secretbox y la clave del llavero), PuTTY y KiTTY (.reg y carpetas de sesiones), MobaXterm (.mxtsessions), Tabby (config.yaml) y SecureCRT (XML y .ini). CSV, más adelante | — |
+| `openward-import` | Importar ssh_config, Termius (sus datos del equipo: IndexedDB de Chromium sobre LevelDB, campos cifrados con secretbox y la clave del llavero), PuTTY y KiTTY (.reg y carpetas de sesiones), MobaXterm (.mxtsessions), Tabby (config.yaml), SecureCRT (XML y .ini) y CSV (la plantilla de Termius o columnas reconocidas por la cabecera) | — |
 | `openward-integrations` | Tailscale, Vault/OpenBao, step-ca, Teleport, Cloudflare, inventario cloud | `reqwest` |
 | `openward-ai` | Proveedores BYOK y locales, redacción de secretos, servidor MCP | `rmcp` |
 | `openward-agent` | Agente SSH (socket Unix o named pipe) respaldado por el vault | `ssh-agent-lib` |
@@ -222,6 +222,8 @@ Vault ─┬─ Group (parent_id, settings parciales)
        ├─ Snippet (label, script, package, variables[], targets[])
        ├─ PortForward (type L|R|D, bind, local_port, host_ref, dest_host, dest_port, autostart)
        ├─ KnownHost (host pattern, key type, key, marker cert-authority|revoked)
+       ├─ Workspace (name, tabs[]: árbol de paneles con host_ref | dirección | local,
+       │             división y proporción, o un SFTP; panel activo, pestaña delante)
        ├─ Proxy (type http|socks5|command, …)
        ├─ AiProvider (kind, endpoint, api_key)          ← BYOK, sincronizado E2EE
        └─ VaultSettings (temas por defecto, políticas de equipo)
@@ -229,7 +231,8 @@ Vault ─┬─ Group (parent_id, settings parciales)
 
 - **Herencia:** `defaults ← Group raíz ← … ← Group ← Host ← override de conexión`. Se resuelve en el núcleo en `effective_config(host)`, que devuelve qué campo viene de dónde (para la UI).
 - **Identificadores:** UUIDv7 por ítem. Las referencias entre ítems usan el ID y solo pueden apuntar dentro del mismo vault; las referencias a otro vault se copian.
-- **Datos que no son del vault** (preferencias de UI, historial de comandos, grabaciones locales y scrollback guardado): cifrados con una clave del dispositivo; no se sincronizan salvo que se pida.
+- **Datos que no son del vault** (preferencias de UI, historial de comandos, grabaciones locales y scrollback guardado): cifrados con una clave del dispositivo; no se sincronizan salvo que se pida. En la fase 1 van en claro, como el vault: `settings.json` y `history.json` en la carpeta de datos.
+- **Claves en la fase 1:** archivos de `~/.ssh` que el vault nombra por ruta. El keychain de la app las lista, las crea, las importa y sube la pública a un servidor; el material privado entra en el vault (`Key`) cuando este vaya cifrado.
 
 ### 4.2 Almacenamiento local
 

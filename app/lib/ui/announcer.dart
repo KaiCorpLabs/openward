@@ -10,6 +10,16 @@ import '../terminal/controller.dart';
 import '../tunnels/tunnels.dart';
 import '../tunnels/tunnels_page.dart';
 
+/// Says `message` to screen readers, leaving the focus where it is.
+void announce(BuildContext context, String message) {
+  if (message.isEmpty) return;
+  SemanticsService.sendAnnouncement(
+    View.of(context),
+    message,
+    Directionality.of(context),
+  );
+}
+
 /// Tells screen readers what changes away from the focus: a session that
 /// connects, drops or asks something, and a tunnel that opens or fails.
 /// The focus stays where it is.
@@ -46,12 +56,7 @@ class _AnnouncerState extends ConsumerState<Announcer> {
   }
 
   void _say(String message) {
-    if (!mounted || message.isEmpty) return;
-    SemanticsService.sendAnnouncement(
-      View.of(context),
-      message,
-      Directionality.of(context),
-    );
+    if (mounted) announce(context, message);
   }
 
   /// Follows the sessions that are open now.

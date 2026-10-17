@@ -6,6 +6,7 @@ import '../core/providers.dart';
 import '../hosts/editors.dart';
 import '../hosts/import_ssh_config.dart';
 import '../l10n/l10n.dart';
+import '../palette/command_palette.dart';
 import '../tabs/tabs.dart';
 import '../terminal/keys.dart';
 import '../ui/tokens.dart';
@@ -90,6 +91,16 @@ class _StartPageState extends ConsumerState<StartPage> {
         l.searchHosts,
         '${key}K',
         widget.searchFocus.requestFocus,
+      ),
+      action(
+        Icons.keyboard_command_key,
+        l.commandPalette,
+        '${key}P',
+        () => showCommandPalette(
+          context,
+          ref,
+          focusSearch: widget.searchFocus.requestFocus,
+        ),
       ),
     ];
     return ColoredBox(

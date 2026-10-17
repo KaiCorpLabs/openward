@@ -5,6 +5,7 @@
 
 import '../frb_generated.dart';
 import 'identities.dart';
+import 'keychain.dart';
 import 'known_hosts.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
@@ -15,6 +16,7 @@ import 'sftp.dart';
 import 'snippets.dart';
 import 'tunnels.dart';
 import 'vault.dart';
+import 'workspaces.dart';
 
 // These functions are ignored because they are not marked as `pub`: `apply_group`, `apply_host`, `host_spec`, `warning`
 
@@ -77,6 +79,8 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   Future<String> createTunnel({required TunnelSpec spec});
 
+  Future<String> createWorkspace({required WorkspaceSpec spec});
+
   /// A host, group or known host. A group's contents move up to its
   /// parent; a host other hosts jump through cannot go.
   Future<void> delete({required String id});
@@ -87,6 +91,14 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   /// A free port here after `port`, to offer when that one is taken.
   int? freePortNear({required int port});
+
+  /// Makes `~/.ssh/<name>` and its `.pub`. RSA takes a few seconds.
+  Future<SshKeyResult> generateKey({
+    required String name,
+    required SshKeyType kind,
+    required String comment,
+    String? passphrase,
+  });
 
   GroupDetail group({required String id});
 
@@ -107,6 +119,9 @@ abstract class OpenWard implements RustOpaqueInterface {
     required String identityId,
     required List<String> choosers,
   });
+
+  /// Saves a private key given as text as `~/.ssh/<name>`.
+  Future<SshKeyResult> importKey({required String name, required String text});
 
   Future<ProgramReport> importProgram({
     required ProgramData data,
@@ -132,12 +147,18 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// sessions, SecureCRT's, MobaXterm's.
   List<FoundProgram> installedPrograms();
 
+  /// The local user and computer, as a new key's comment usually says.
+  String keyComment();
+
   /// What the key at `path` is on this machine, and which of
   /// `certificate_files` (or `<key>-cert.pub`) goes with it.
   KeyView keyInfo({
     required String path,
     required List<String> certificateFiles,
   });
+
+  /// The private keys in `~/.ssh`, by name.
+  List<SshKey> keys();
 
   /// OpenWard's trusted keys and then `~/.ssh/known_hosts`', those that
   /// match `query` (all of them when empty).
@@ -192,6 +213,9 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// file's order. An empty list: no file, or no hosts in it.
   Future<List<ImportPreview>> previewSshConfig({String? file});
 
+  /// A key's public half, as an `authorized_keys` line.
+  String? publicKeyLine({required String path});
+
   /// Reads a file or folder of another program, recognizing whose it
   /// is. For Termius's data the system asks the user first, to let
   /// OpenWard use Termius's key from the keychain.
@@ -208,6 +232,13 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   /// Takes it off the list (cancelling it if it was not finished).
   void removeTransfer({required BigInt id});
+
+  /// Renames it, leaving its tabs as they are.
+  Future<BigInt> renameWorkspace({
+    required String id,
+    required BigInt rev,
+    required String name,
+  });
 
   void resumeTransfer({required BigInt id});
 
@@ -291,6 +322,13 @@ abstract class OpenWard implements RustOpaqueInterface {
     required TunnelSpec spec,
   });
 
+  /// Returns the new revision. Fails if it changed since `rev`.
+  Future<BigInt> updateWorkspace({
+    required String id,
+    required BigInt rev,
+    required WorkspaceSpec spec,
+  });
+
   /// Makes exactly `choosers` (hosts and groups) choose `identity_id`;
   /// those that chose it and are left out go back to inheriting one.
   /// Returns how many changed.
@@ -298,4 +336,7 @@ abstract class OpenWard implements RustOpaqueInterface {
     required String identityId,
     required List<String> choosers,
   });
+
+  /// Every workspace, by name.
+  List<WorkspaceView> workspaces();
 }

@@ -141,6 +141,30 @@ impl Sftp {
         .await
     }
 
+    /// Puts a public key in the server's `~/.ssh/authorized_keys`, as
+    /// `ssh-copy-id` does: `~/.ssh` made (700) if missing, the line added
+    /// once, the file written whole and then put in place (600). False
+    /// when the key was there already.
+    pub async fn install_public_key(&self, line: String) -> Result<bool, SftpError> {
+        self.on_remote(|r| async move {
+            let dir = openward_sftp::join(r.home(), ".ssh");
+            if r.stat(&dir).await?.is_none() {
+                r.mkdir(&dir).await?;
+                r.chmod(&dir, 0o700, false).await?;
+            }
+            let path = openward_sftp::join(&dir, "authorized_keys");
+            let existing = r.read_small(&path, 1 << 20).await?;
+            let Some(bytes) = crate::keychain::with_authorized(existing.as_deref(), &line) else {
+                return Ok(false);
+            };
+            let next = format!("{path}.openward");
+            r.write_all(&next, &bytes, 0o600).await?;
+            r.rename(&next, &path, true).await?;
+            Ok(true)
+        })
+        .await
+    }
+
     pub(crate) fn set_task(&self, task: JoinHandle<()>) {
         if let Some(old) = lock(&self.task).replace(task) {
             old.abort();

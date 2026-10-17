@@ -140,6 +140,7 @@ class Settings {
     this.cursorBlink = false,
     this.bellFlash = true,
     this.onExit = OnExit.clean,
+    this.commandHistory = true,
   });
 
   /// Terminal font size, in logical pixels.
@@ -189,6 +190,10 @@ class Settings {
   /// that drops never does: it reconnects.
   final OnExit onExit;
 
+  /// Commands typed in terminals are kept on this device, to find and
+  /// send again (never in the vault).
+  final bool commandHistory;
+
   static const fontSizes = [
     10.0,
     11.0,
@@ -224,6 +229,7 @@ class Settings {
     bool? cursorBlink,
     bool? bellFlash,
     OnExit? onExit,
+    bool? commandHistory,
   }) => Settings(
     fontSize: fontSize ?? this.fontSize,
     theme: theme ?? this.theme,
@@ -244,6 +250,7 @@ class Settings {
     cursorBlink: cursorBlink ?? this.cursorBlink,
     bellFlash: bellFlash ?? this.bellFlash,
     onExit: onExit ?? this.onExit,
+    commandHistory: commandHistory ?? this.commandHistory,
   );
 
   /// The same settings with one theme's layers changed (or reset).
@@ -286,6 +293,7 @@ class Settings {
     'cursor_blink': cursorBlink,
     'bell_flash': bellFlash,
     'on_exit': onExit.name,
+    'command_history': commandHistory,
   };
 
   /// Unknown or broken values fall back to the defaults, one by one.
@@ -334,6 +342,7 @@ class Settings {
       cursorBlink: flag('cursor_blink', d.cursorBlink),
       bellFlash: flag('bell_flash', d.bellFlash),
       onExit: pick(OnExit.values, 'on_exit', d.onExit),
+      commandHistory: flag('command_history', d.commandHistory),
     );
   }
 

@@ -1,5 +1,5 @@
 //! Importing from other programs (Termius, PuTTY, KiTTY, MobaXterm,
-//! Tabby, SecureCRT), as Dart sees it: what is on this computer, what a
+//! Tabby, SecureCRT) and CSV files of hosts, as Dart sees it: what is on this computer, what a
 //! file or folder holds, and the import itself.
 //!
 //! Reading keeps what was read in a [`ProgramData`], so Termius's key is
@@ -23,6 +23,7 @@ pub enum ProgramKind {
     MobaXterm,
     Tabby,
     SecureCrt,
+    Csv,
 }
 
 impl From<Program> for ProgramKind {
@@ -34,6 +35,7 @@ impl From<Program> for ProgramKind {
             Program::MobaXterm => Self::MobaXterm,
             Program::Tabby => Self::Tabby,
             Program::SecureCrt => Self::SecureCrt,
+            Program::Csv => Self::Csv,
         }
     }
 }

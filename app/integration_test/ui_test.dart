@@ -28,7 +28,9 @@ import 'package:integration_test/integration_test.dart';
 import 'package:openward/app.dart';
 import 'package:openward/core/providers.dart';
 import 'package:openward/core/settings.dart';
+import 'package:openward/history/history.dart';
 import 'package:openward/identities/identities.dart';
+import 'package:openward/keys/keys.dart';
 import 'package:openward/src/rust/api/app.dart';
 import 'package:openward/src/rust/api/identities.dart';
 import 'package:openward/src/rust/api/session.dart';
@@ -49,6 +51,8 @@ import 'package:openward/sftp/transfers.dart';
 import 'package:openward/src/rust/api/tunnels.dart';
 import 'package:openward/tunnels/tunnels.dart';
 import 'package:openward/ui/tokens.dart';
+import 'package:openward/welcome/whats_new.dart';
+import 'package:openward/workspaces/workspaces.dart';
 
 /// Where screenshots go: `--dart-define=OPENWARD_SHOTS=…` (the CI), or the
 /// temporary folder. A define, because the test app does not see the
@@ -230,7 +234,7 @@ void main() {
     if (!settings.existsSync()) {
       // Past this release's news too, unless the first run is under test.
       settings.writeAsStringSync(
-        '{"language": "es", "welcomed": $welcomed, "seen_news": "0.2.0-beta.3"}',
+        '{"language": "es", "welcomed": $welcomed, "seen_news": "$newsVersion"}',
       );
     }
     await tester.pumpWidget(
@@ -1950,6 +1954,336 @@ Host db
     ProviderScope.containerOf(tester.element(find.byType(OpenWardApp)))
         .read(tabsProvider.notifier)
         .close(0);
+    await _settle(tester);
+  });
+
+  /// ⌘⇧ and a key (Ctrl+Shift off Apple platforms), with time to react.
+  Future<void> cmdShift(WidgetTester tester, LogicalKeyboardKey key) async {
+    final mods = isApple
+        ? [LogicalKeyboardKey.metaLeft, LogicalKeyboardKey.shiftLeft]
+        : [LogicalKeyboardKey.controlLeft, LogicalKeyboardKey.shiftLeft];
+    for (final k in mods) {
+      await tester.sendKeyDownEvent(k);
+    }
+    await tester.sendKeyEvent(key);
+    for (final k in mods.reversed) {
+      await tester.sendKeyUpEvent(k);
+    }
+    await tester.pump(const Duration(milliseconds: 200));
+  }
+
+  Finder field(String key) => find.byKey(ValueKey(key));
+
+  testWidgets('keys: make one, bring one in, and put it on a server', (
+    tester,
+  ) async {
+    // A home of its own: the tester's ~/.ssh stays out.
+    final home = Directory('${dir.path}/home')..createSync();
+    app = await OpenWard.openWithHome(
+      dataDir: '${dir.path}/data',
+      home: home.path,
+    );
+    final container = await launch(tester);
+    await tester.tap(field('library.keys'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('No hay claves en ~/.ssh'), findsOneWidget);
+
+    await tester.tap(field('keys.new'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Nueva clave'), findsOneWidget);
+    expect(find.text('~/.ssh/'), findsWidgets);
+    await _shot(tester, '70-new-key');
+    await tester.tap(field('newKey.make'));
+    await _until(
+      tester,
+      () => container.read(keysProvider).isNotEmpty,
+      'the new key',
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(field('key.id_ed25519'), findsOneWidget);
+    expect(find.text('Sin frase de paso'), findsOneWidget);
+    final private = File('${home.path}/.ssh/id_ed25519');
+    expect(private.statSync().modeString(), 'rw-------');
+    expect(File('${private.path}.pub').existsSync(), isTrue);
+
+    // The same key brought in under another name.
+    await tester.tap(field('keys.import'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.enterText(field('importKey.text'), private.readAsStringSync());
+    await tester.enterText(field('importKey.name'), 'copia');
+    await tester.pump();
+    await tester.tap(field('importKey.save'));
+    await _until(
+      tester,
+      () => container.read(keysProvider).length == 2,
+      'the key brought in',
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Guardada en ~/.ssh/copia.'), findsOneWidget);
+    await _shot(tester, '71-keys');
+
+    final fixtures = await _servers();
+    if (fixtures == null) {
+      container.read(tabsProvider.notifier).closeCurrent();
+      await _settle(tester);
+      return;
+    }
+    // Onto the server, signing in with the key it takes now.
+    await app.createHost(
+      spec: HostSpec(
+        label: 'bastion',
+        address: '127.0.0.1',
+        settings: SettingsSpec(
+          user: 'demo',
+          port: 22100,
+          identityFiles: ['$fixtures/id_ed25519'],
+          agent: AgentKind.off,
+        ),
+      ),
+    );
+    container.read(libraryProvider.notifier).refresh();
+    await tester.pump();
+    await tester.tap(field('key.upload.id_ed25519'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Subir id_ed25519 a un servidor'), findsOneWidget);
+    await _shot(tester, '73-install-key');
+    await tester.tap(field('installKey.host.bastion'));
+    await _until(
+      tester,
+      () => find.text('Confiar y conectar').evaluate().isNotEmpty,
+      'the host key question',
+    );
+    await tester.tap(find.text('Confiar y conectar'));
+    await _until(
+      tester,
+      () => field('installKey.done').evaluate().isNotEmpty,
+      'the key on the server',
+    );
+    expect(find.text('Clave añadida en bastion'), findsOneWidget);
+    await _shot(tester, '74-key-installed');
+    await tester.tap(field('installKey.close'));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Now the new key alone signs in.
+    await app.createHost(
+      spec: const HostSpec(
+        label: 'con-la-nueva',
+        address: '127.0.0.1',
+        settings: SettingsSpec(
+          user: 'demo',
+          port: 22100,
+          identityFiles: ['~/.ssh/id_ed25519'],
+          agent: AgentKind.off,
+        ),
+      ),
+    );
+    container.read(libraryProvider.notifier).refresh();
+    container
+        .read(tabsProvider.notifier)
+        .openHost(app.hosts().firstWhere((h) => h.label == 'con-la-nueva'));
+    final c = container.read(tabsProvider).currentSession!;
+    await _until(
+      tester,
+      () => c.phase == Phase.connected || c.phase == Phase.closed,
+      'signing in with the new key',
+    );
+    expect(c.closed?.failure?.message, isNull);
+    expect(c.connected, isNotNull);
+    final tabs = container.read(tabsProvider.notifier);
+    while (container.read(tabsProvider).tabs.isNotEmpty) {
+      tabs.close(0);
+    }
+    await _settle(tester);
+  });
+
+  testWidgets('workspaces: save the panes from the palette, open them again', (
+    tester,
+  ) async {
+    final container = await launch(tester);
+    final tabs = container.read(tabsProvider.notifier);
+    await tester.tap(find.text('Abrir un terminal local'));
+    await tester.pump();
+    final tab = container.read(tabsProvider).current! as SessionTab;
+    final a = tab.panes.active.controller!;
+    await _until(tester, () => a.phase == Phase.running, 'the shell');
+    tabs.split(Axis.vertical);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump(const Duration(milliseconds: 100));
+    final b = tab.panes.active.controller!;
+    await _until(tester, () => b.phase == Phase.running, 'the second shell');
+
+    // ⌘⇧P, a few letters, Enter.
+    await cmdShift(tester, LogicalKeyboardKey.keyP);
+    expect(field('palette.query'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 300));
+    await _shot(tester, '72-palette');
+    await tester.enterText(field('palette.query'), 'guardar las');
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(
+      field('palette.action.Guardar las pestañas abiertas…'),
+      findsOneWidget,
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Guardar como espacio de trabajo'), findsOneWidget);
+    expect(find.text('1 pestaña · 2 sesiones'), findsOneWidget);
+    await tester.enterText(field('workspace.name'), 'Dos locales');
+    await _shot(tester, '75-save-workspace');
+    await tester.tap(field('workspace.save'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(container.read(workspacesProvider).single.spec.name, 'Dos locales');
+
+    tabs.close(0);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(field('library.workspaces'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(field('workspace.Dos locales'), findsOneWidget);
+    await _shot(tester, '76-workspaces');
+    await tester.tap(field('workspace.open.Dos locales'));
+    await tester.pump(const Duration(milliseconds: 300));
+    final state = container.read(tabsProvider);
+    final again = state.current! as SessionTab;
+    final split = again.panes.root as PaneSplit;
+    expect(split.axis, Axis.vertical);
+    expect(identical(again.panes.active, again.panes.leaves.last), isTrue);
+    for (final c in again.panes.controllers) {
+      await _until(tester, () => c.phase == Phase.running, 'a shell again');
+    }
+    await _shot(tester, '77-workspace-open');
+
+    // Renamed and deleted from its page.
+    tabs.select(state.tabs.indexWhere((t) => t is PageTab));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(field('workspace.menu.Dos locales'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Renombrar'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.enterText(field('workspace.rename'), 'Locales');
+    await tester.tap(find.text('Guardar'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(field('workspace.Locales'), findsOneWidget);
+    await tester.tap(field('workspace.menu.Locales'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Eliminar'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(field('workspace.delete.confirm'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(container.read(workspacesProvider), isEmpty);
+    expect(find.text('Aún no hay espacios de trabajo'), findsOneWidget);
+    while (container.read(tabsProvider).tabs.isNotEmpty) {
+      tabs.close(0);
+    }
+    await _settle(tester);
+  });
+
+  testWidgets('history: what ran is kept, a password never, and runs again', (
+    tester,
+  ) async {
+    final container = await launch(tester);
+    await tester.tap(find.text('Abrir un terminal local'));
+    await tester.pump();
+    final a = container.read(tabsProvider).currentSession!;
+    await _until(tester, () => a.phase == Phase.running, 'the shell');
+    await tester.pump(const Duration(milliseconds: 500));
+    var pane = tester.state<TerminalPaneState>(find.byType(TerminalPane));
+    List<String> kept() => [
+      for (final e in container.read(historyProvider)) e.command,
+    ];
+
+    /// Typed as the input method types, then Enter once it shows.
+    Future<void> run(String command, {String? shows}) async {
+      pane.updateEditingValue(
+        TextEditingValue(
+          text: '  $command',
+          selection: TextSelection.collapsed(offset: command.length + 2),
+        ),
+      );
+      if (shows != null) {
+        await _until(
+          tester,
+          () => a.session.screenText().contains(shows),
+          'the echo of $shows',
+        );
+      } else {
+        await tester.pump(const Duration(milliseconds: 400));
+      }
+      pane.performAction(TextInputAction.newline);
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+
+    await run(r'echo kept-$((40+2))', shows: r'echo kept-$((40+2))');
+    await _until(
+      tester,
+      () => a.session.screenText().contains('kept-42\n'),
+      'the command run',
+    );
+    expect(kept(), [r'echo kept-$((40+2))']);
+
+    // A space in front: not kept.
+    await run(' echo unkept', shows: 'echo unkept');
+    expect(kept(), [r'echo kept-$((40+2))']);
+
+    // What the terminal does not show is never kept.
+    // (stty and read: the same in bash and zsh.)
+    await run(
+      "stty -echo; printf 'Password: '; read pw; stty echo; echo got-\${#pw}",
+      shows: 'echo got-',
+    );
+    await _until(
+      tester,
+      () => a.session.screenText().contains('Password:'),
+      'the password prompt',
+    );
+    await run('hunter2');
+    await _until(
+      tester,
+      () => a.session.screenText().contains('got-7'),
+      'the password read',
+    );
+    expect(kept().any((c) => c.contains('hunter2')), isFalse);
+    expect(kept().first, startsWith('stty -echo'));
+
+    // From the palette, again: it runs, and counts twice.
+    await cmdShift(tester, LogicalKeyboardKey.keyP);
+    await tester.enterText(field('palette.query'), 'kept');
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(field(r'palette.history.echo kept-$((40+2))'), findsOneWidget);
+    await _shot(tester, '78-palette-history');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump(const Duration(milliseconds: 300));
+    await _until(
+      tester,
+      () => 'kept-42\n'.allMatches(a.session.screenText()).length >= 2,
+      'the command run again',
+    );
+    expect(container.read(historyProvider).first.count, 2);
+
+    // Its row in Ajustes › Terminal.
+    final tabs = container.read(tabsProvider.notifier);
+    tabs.openPage(PageKind.settings);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Terminal').last);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.ensureVisible(field('settings.commandHistory'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Borrar 2 comandos'), findsOneWidget);
+    await _shot(tester, '79-settings-history');
+    tabs.close(1);
+    await tester.pump(const Duration(milliseconds: 300));
+    // Shown again: a pane of its own.
+    pane = tester.state<TerminalPaneState>(find.byType(TerminalPane));
+
+    // Off in the settings: nothing more is kept.
+    container
+        .read(settingsProvider.notifier)
+        .update((s) => s.copyWith(commandHistory: false));
+    await run('echo off-1', shows: 'echo off-1');
+    expect(kept().contains('echo off-1'), isFalse);
+    container.read(historyProvider.notifier).clear();
+    expect(container.read(historyProvider), isEmpty);
+
+    container.read(tabsProvider.notifier).close(0);
     await _settle(tester);
   });
 }

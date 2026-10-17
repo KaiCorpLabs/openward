@@ -64,6 +64,10 @@ abstract class SftpBrowser implements RustOpaqueInterface {
   /// The folder the server starts in.
   Future<String> home();
 
+  /// Puts a public key in the server's `~/.ssh/authorized_keys`, as
+  /// `ssh-copy-id` does. False when it was there already.
+  Future<bool> installPublicKey({required String line});
+
   /// What is in a folder, in no order.
   Future<List<FileEntry>> list({required String path});
 

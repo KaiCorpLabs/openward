@@ -26,9 +26,11 @@ import 'package:openward/import/program_preview.dart';
 import 'package:openward/import/termius_consent.dart';
 import 'package:openward/src/rust/api/app.dart';
 import 'package:openward/src/rust/api/identities.dart';
+import 'package:openward/src/rust/api/keychain.dart';
 import 'package:openward/src/rust/api/snippets.dart';
 import 'package:openward/src/rust/api/tunnels.dart';
 import 'package:openward/src/rust/api/vault.dart';
+import 'package:openward/src/rust/api/workspaces.dart';
 import 'package:openward/src/rust/frb_generated.dart';
 import 'package:openward/tabs/tabs.dart';
 import 'package:openward/terminal/controller.dart';
@@ -96,6 +98,29 @@ void main() {
     );
     await app.createHost(
       spec: const HostSpec(label: 'db', address: '10.0.4.21'),
+    );
+    await app.generateKey(
+      name: 'id_ed25519',
+      kind: SshKeyType.ed25519,
+      comment: 'ana@portatil',
+    );
+    await app.createWorkspace(
+      spec: WorkspaceSpec(
+        name: 'Producción',
+        tabs: [
+          WorkspaceTabSpec(
+            panes: [
+              const WorkspacePane(
+                split: WorkspaceSplit(vertical: false, ratio: 0.5),
+                active: false,
+              ),
+              WorkspacePane(target: WorkspaceTarget(hostId: web), active: true),
+              const WorkspacePane(target: WorkspaceTarget(), active: false),
+            ],
+          ),
+        ],
+        active: 0,
+      ),
     );
     await app.createTunnel(
       spec: TunnelSpec(
@@ -247,6 +272,20 @@ void main() {
     await audit('forget a key');
     await close();
 
+    tabs.openPage(PageKind.keys);
+    await audit('keys');
+    await tester.tap(find.byKey(const ValueKey('keys.new')));
+    await tester.pump(const Duration(milliseconds: 400));
+    await audit('new key');
+    await close();
+    await tester.tap(find.byKey(const ValueKey('keys.import')));
+    await tester.pump(const Duration(milliseconds: 400));
+    await audit('import a key');
+    await close();
+
+    tabs.openPage(PageKind.workspaces);
+    await audit('workspaces');
+
     tabs.openLocal();
     final term = container.read(tabsProvider).currentSession!;
     final deadline = DateTime.now().add(const Duration(seconds: 15));
@@ -266,6 +305,25 @@ void main() {
       isApple ? LogicalKeyboardKey.metaLeft : LogicalKeyboardKey.controlLeft,
     );
     await audit('snippet palette');
+    await close();
+    for (final k in [
+      isApple ? LogicalKeyboardKey.metaLeft : LogicalKeyboardKey.controlLeft,
+      LogicalKeyboardKey.shiftLeft,
+    ]) {
+      await tester.sendKeyDownEvent(k);
+    }
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyP);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyUpEvent(
+      isApple ? LogicalKeyboardKey.metaLeft : LogicalKeyboardKey.controlLeft,
+    );
+    await audit('command palette');
+    await close();
+    tabs.openPage(PageKind.workspaces);
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.byKey(const ValueKey('workspaces.save')));
+    await tester.pump(const Duration(milliseconds: 400));
+    await audit('save a workspace');
     await close();
 
     final report = problems.join('\n');

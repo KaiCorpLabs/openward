@@ -18,8 +18,8 @@ import 'messages.dart';
 import 'tabs.dart';
 
 /// A card over the terminal, in the theme's raised color.
-class _Panel extends StatelessWidget {
-  const _Panel({required this.child, this.width = 440});
+class OverlayPanel extends StatelessWidget {
+  const OverlayPanel({super.key, required this.child, this.width = 440});
 
   final Widget child;
   final double width;
@@ -134,7 +134,7 @@ class ConnectingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
-    return _Panel(
+    return OverlayPanel(
       width: 420,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -344,7 +344,7 @@ class FailureCard extends ConsumerWidget {
         ),
       );
     }
-    return _Panel(
+    return OverlayPanel(
       width: 480,
       child: Column(
         mainAxisSize: MainAxisSize.min,

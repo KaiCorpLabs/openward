@@ -173,7 +173,7 @@ class ProgramKey {
           usedBy == other.usedBy;
 }
 
-enum ProgramKind { termius, putty, kitty, mobaXterm, tabby, secureCrt }
+enum ProgramKind { termius, putty, kitty, mobaXterm, tabby, secureCrt, csv }
 
 class ProgramPreview {
   final ProgramKind program;

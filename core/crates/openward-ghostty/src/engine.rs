@@ -544,7 +544,7 @@ impl GhosttyEngine {
         bar.total.saturating_sub(bar.offset + bar.len) as u32
     }
 
-    fn cursor_state(&self) -> CursorState {
+    fn raw_cursor(&self) -> sys::GhosttyRenderStateCursor {
         let mut c = sized(|c: &mut sys::GhosttyRenderStateCursor, n| c.size = n);
         // SAFETY: valid render state, correctly sized out-struct.
         unsafe {
@@ -557,6 +557,11 @@ impl GhosttyEngine {
                 "cursor",
             );
         }
+        c
+    }
+
+    fn cursor_state(&self) -> CursorState {
+        let c = self.raw_cursor();
         CursorState {
             row: c.viewport_y.min(self.size.rows.saturating_sub(1)),
             col: c.viewport_x.min(self.size.cols.saturating_sub(1)),
@@ -753,6 +758,134 @@ impl GhosttyEngine {
     }
 
     /// Visits the rows to encode: every row, or only the dirty ones.
+    /// The screen cell by cell: each row has one string per column, the
+    /// cell's text, `" "` when empty and `""` for the second half of a wide
+    /// character.
+    fn screen_cells(&self) -> Vec<Vec<String>> {
+        // From the engine's own render state: updating any render state
+        // clears the terminal's dirty rows, so a separate one would hide
+        // them from the next frame. Only `encode_damage` cleans this one.
+        self.update_render_state();
+        let mut out = Vec::with_capacity(usize::from(self.size.rows));
+        // SAFETY: valid render state; the iterator and cells handles are
+        // created and freed here; out-pointers are locals.
+        unsafe {
+            let mut rows: sys::GhosttyRenderStateRowIterator = ptr::null_mut();
+            let mut cells: sys::GhosttyRenderStateRowCells = ptr::null_mut();
+            ok(
+                sys::ghostty_render_state_row_iterator_new(ptr::null(), &mut rows),
+                "row_iterator_new",
+            );
+            ok(
+                sys::ghostty_render_state_row_cells_new(ptr::null(), &mut cells),
+                "row_cells_new",
+            );
+            ok(
+                sys::ghostty_render_state_get(
+                    self.render,
+                    sys::GHOSTTY_RENDER_STATE_DATA_ROW_ITERATOR,
+                    (&mut rows as *mut sys::GhosttyRenderStateRowIterator).cast::<c_void>(),
+                ),
+                "row iterator",
+            );
+            let mut buf = Vec::<u32>::new();
+            while sys::ghostty_render_state_row_iterator_next(rows) {
+                ok(
+                    sys::ghostty_render_state_row_get(
+                        rows,
+                        sys::GHOSTTY_RENDER_STATE_ROW_DATA_CELLS,
+                        (&mut cells as *mut sys::GhosttyRenderStateRowCells).cast::<c_void>(),
+                    ),
+                    "row cells",
+                );
+                let mut line = Vec::with_capacity(usize::from(self.size.cols));
+                while sys::ghostty_render_state_row_cells_next(cells) {
+                    let mut len: u32 = 0;
+                    sys::ghostty_render_state_row_cells_get(
+                        cells,
+                        sys::GHOSTTY_RENDER_STATE_ROW_CELLS_DATA_GRAPHEMES_LEN,
+                        (&mut len as *mut u32).cast::<c_void>(),
+                    );
+                    let mut raw: sys::GhosttyCell = 0;
+                    sys::ghostty_render_state_row_cells_get(
+                        cells,
+                        sys::GHOSTTY_RENDER_STATE_ROW_CELLS_DATA_RAW,
+                        (&mut raw as *mut sys::GhosttyCell).cast::<c_void>(),
+                    );
+                    let mut wide: sys::GhosttyCellWide = 0;
+                    sys::ghostty_cell_get(
+                        raw,
+                        sys::GHOSTTY_CELL_DATA_WIDE,
+                        (&mut wide as *mut sys::GhosttyCellWide).cast(),
+                    );
+                    if wide == sys::GHOSTTY_CELL_WIDE_SPACER_TAIL
+                        || wide == sys::GHOSTTY_CELL_WIDE_SPACER_HEAD
+                    {
+                        line.push(String::new());
+                        continue;
+                    }
+                    if len == 0 {
+                        line.push(" ".to_owned());
+                        continue;
+                    }
+                    buf.resize(len as usize, 0);
+                    sys::ghostty_render_state_row_cells_get(
+                        cells,
+                        sys::GHOSTTY_RENDER_STATE_ROW_CELLS_DATA_GRAPHEMES_BUF,
+                        buf.as_mut_ptr().cast::<c_void>(),
+                    );
+                    line.push(buf.iter().filter_map(|&cp| char::from_u32(cp)).collect());
+                }
+                out.push(line);
+            }
+            sys::ghostty_render_state_row_cells_free(cells);
+            sys::ghostty_render_state_row_iterator_free(rows);
+        }
+        out
+    }
+
+    /// The cursor's cell (row, column) while the live screen is on view.
+    pub fn cursor_cell(&self) -> Option<(u16, u16)> {
+        self.update_render_state();
+        let c = self.raw_cursor();
+        (c.viewport_has_value && self.display_offset() == 0).then_some((c.viewport_y, c.viewport_x))
+    }
+
+    /// What was typed at a prompt that began at `start` (row, column): the
+    /// screen from there to the cursor, rows run together, and what follows
+    /// the cursor on its row. None when the cursor is not on the live
+    /// screen, or is before `start`.
+    pub fn typed_since(&self, start: (u16, u16)) -> Option<(String, String)> {
+        let (row, col) = self.cursor_cell()?;
+        if (row, col) < start {
+            return None;
+        }
+        let cells = self.screen_cells();
+        let mut text = String::new();
+        for r in start.0..=row {
+            let line = cells.get(usize::from(r))?;
+            let from = if r == start.0 {
+                usize::from(start.1)
+            } else {
+                0
+            };
+            let to = if r == row {
+                usize::from(col)
+            } else {
+                line.len()
+            };
+            for cell in line.iter().take(to).skip(from) {
+                text.push_str(cell);
+            }
+        }
+        let after: String = cells[usize::from(row)]
+            .iter()
+            .skip(usize::from(col))
+            .map(String::as_str)
+            .collect();
+        Some((text.trim_end().to_owned(), after.trim().to_owned()))
+    }
+
     fn for_each_row(&mut self, all: bool, mut visit: impl FnMut(&mut Self, u16)) {
         self.reset_rows();
         let mut index: u16 = 0;
@@ -959,85 +1092,11 @@ impl TermEngine for GhosttyEngine {
     }
 
     fn screen_text(&self) -> String {
-        // From the engine's own render state: updating any render state
-        // clears the terminal's dirty rows, so a separate one would hide
-        // them from the next frame. Only `encode_damage` cleans this one.
-        self.update_render_state();
-        let mut out = Vec::with_capacity(usize::from(self.size.rows));
-        // SAFETY: valid render state; the iterator and cells handles are
-        // created and freed here; out-pointers are locals.
-        unsafe {
-            let mut rows: sys::GhosttyRenderStateRowIterator = ptr::null_mut();
-            let mut cells: sys::GhosttyRenderStateRowCells = ptr::null_mut();
-            ok(
-                sys::ghostty_render_state_row_iterator_new(ptr::null(), &mut rows),
-                "row_iterator_new",
-            );
-            ok(
-                sys::ghostty_render_state_row_cells_new(ptr::null(), &mut cells),
-                "row_cells_new",
-            );
-            ok(
-                sys::ghostty_render_state_get(
-                    self.render,
-                    sys::GHOSTTY_RENDER_STATE_DATA_ROW_ITERATOR,
-                    (&mut rows as *mut sys::GhosttyRenderStateRowIterator).cast::<c_void>(),
-                ),
-                "row iterator",
-            );
-            let mut buf = Vec::<u32>::new();
-            while sys::ghostty_render_state_row_iterator_next(rows) {
-                ok(
-                    sys::ghostty_render_state_row_get(
-                        rows,
-                        sys::GHOSTTY_RENDER_STATE_ROW_DATA_CELLS,
-                        (&mut cells as *mut sys::GhosttyRenderStateRowCells).cast::<c_void>(),
-                    ),
-                    "row cells",
-                );
-                let mut line = String::new();
-                while sys::ghostty_render_state_row_cells_next(cells) {
-                    let mut len: u32 = 0;
-                    sys::ghostty_render_state_row_cells_get(
-                        cells,
-                        sys::GHOSTTY_RENDER_STATE_ROW_CELLS_DATA_GRAPHEMES_LEN,
-                        (&mut len as *mut u32).cast::<c_void>(),
-                    );
-                    let mut raw: sys::GhosttyCell = 0;
-                    sys::ghostty_render_state_row_cells_get(
-                        cells,
-                        sys::GHOSTTY_RENDER_STATE_ROW_CELLS_DATA_RAW,
-                        (&mut raw as *mut sys::GhosttyCell).cast::<c_void>(),
-                    );
-                    let mut wide: sys::GhosttyCellWide = 0;
-                    sys::ghostty_cell_get(
-                        raw,
-                        sys::GHOSTTY_CELL_DATA_WIDE,
-                        (&mut wide as *mut sys::GhosttyCellWide).cast(),
-                    );
-                    if wide == sys::GHOSTTY_CELL_WIDE_SPACER_TAIL
-                        || wide == sys::GHOSTTY_CELL_WIDE_SPACER_HEAD
-                    {
-                        continue;
-                    }
-                    if len == 0 {
-                        line.push(' ');
-                        continue;
-                    }
-                    buf.resize(len as usize, 0);
-                    sys::ghostty_render_state_row_cells_get(
-                        cells,
-                        sys::GHOSTTY_RENDER_STATE_ROW_CELLS_DATA_GRAPHEMES_BUF,
-                        buf.as_mut_ptr().cast::<c_void>(),
-                    );
-                    line.extend(buf.iter().filter_map(|&cp| char::from_u32(cp)));
-                }
-                out.push(line.trim_end().to_owned());
-            }
-            sys::ghostty_render_state_row_cells_free(cells);
-            sys::ghostty_render_state_row_iterator_free(rows);
-        }
-        out.join("\n")
+        self.screen_cells()
+            .iter()
+            .map(|row| row.concat().trim_end().to_owned())
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 }
 
@@ -1128,6 +1187,29 @@ mod tests {
         assert!(e.screen_text().contains("two"));
         let f = frame(&mut e);
         assert_eq!(spans_of(&f, 1), vec![(0, 3, "two".into(), Color::Default)]);
+    }
+
+    #[test]
+    fn what_was_typed_at_a_prompt() {
+        let mut e = engine(20, 4);
+        e.feed("界 $ ".as_bytes());
+        let start = e.cursor_cell().unwrap();
+        assert_eq!(start, (0, 5), "the wide character takes two columns");
+        e.feed(b"git status --short | wc");
+        assert_eq!(e.cursor_cell(), Some((1, 8)), "the line wrapped");
+        assert_eq!(
+            e.typed_since(start),
+            Some(("git status --short | wc".to_owned(), String::new()))
+        );
+        // Two columns back: what follows the cursor is apart.
+        e.feed(b"\x1b[2D");
+        assert_eq!(
+            e.typed_since(start),
+            Some(("git status --short |".to_owned(), "wc".to_owned()))
+        );
+        assert_eq!(e.typed_since((3, 0)), None, "before where it began");
+        // The text read does not take the damage from the next frame.
+        assert!(!frame(&mut e).lines.is_empty());
     }
 
     #[test]

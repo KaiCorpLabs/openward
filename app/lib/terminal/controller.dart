@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/scheduler.dart';
 
 import '../core/connection.dart';
+import '../history/line_tracker.dart';
 import '../src/rust/api/session.dart';
 import 'frame.dart';
 import 'palette.dart';
@@ -31,6 +32,12 @@ class TerminalController extends ConnectionController {
   bool mouseTracking = false;
   bool bracketedPaste = false;
   bool reportAllKeys = false;
+
+  /// A full-screen program (an editor, a pager) is on view.
+  bool altScreen = false;
+
+  /// What is being typed at the prompt, for the command history.
+  final LineTracker line = LineTracker();
 
   /// The find bar is open, and what it shows.
   bool findOpen = false;
@@ -203,6 +210,7 @@ class TerminalController extends ConnectionController {
       if (!_shown) bellUnseen = true;
       changed = true;
     }
+    altScreen = f.altScreen;
     if (f.cursorBlinks != cursorBlinks) {
       cursorBlinks = f.cursorBlinks;
       changed = true;

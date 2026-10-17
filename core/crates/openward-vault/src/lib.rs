@@ -18,7 +18,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use openward_proto::{
     Body, Data, ForwardKind, Group, Host, IDENTITY_FIELDS, Identity, Item, ItemId, Jump, KnownHost,
-    PortForward, Route, Settings, Snippet, UseIdentity,
+    PortForward, Route, Settings, Snippet, UseIdentity, Workspace,
 };
 
 pub use inherit::{Effective, Origin, defaults};
@@ -197,6 +197,27 @@ impl Vault {
             .collect();
         snippets.sort_by_cached_key(|(id, s)| (s.label.to_lowercase(), *id));
         snippets
+    }
+
+    pub fn workspace(&self, id: ItemId) -> Result<&Workspace> {
+        match &self.item(id)?.body.data {
+            Data::Workspace(w) => Ok(w),
+            other => Err(wrong_type(id, "workspace", other)),
+        }
+    }
+
+    /// Workspaces sorted by name.
+    pub fn workspaces(&self) -> Vec<(ItemId, &Workspace)> {
+        let mut workspaces: Vec<_> = self
+            .items
+            .values()
+            .filter_map(|i| match &i.body.data {
+                Data::Workspace(w) => Some((i.id, w)),
+                _ => None,
+            })
+            .collect();
+        workspaces.sort_by_cached_key(|(id, w)| (w.name.to_lowercase(), *id));
+        workspaces
     }
 
     /// Trusted keys with when they were trusted (ms since the epoch).
@@ -763,6 +784,14 @@ impl Vault {
             Data::Snippet(s) => {
                 if s.label.trim().is_empty() || s.script.trim().is_empty() {
                     return Err(Error::Invalid("a snippet needs a name and a command"));
+                }
+                Ok(())
+            }
+            // Its hosts are not checked: a host deleted later leaves a pane
+            // that asks what to open.
+            Data::Workspace(w) => {
+                if w.name.trim().is_empty() || w.tabs.is_empty() {
+                    return Err(Error::Invalid("a workspace needs a name and a tab"));
                 }
                 Ok(())
             }

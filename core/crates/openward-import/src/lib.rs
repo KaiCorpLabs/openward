@@ -4,11 +4,13 @@
 //!
 //! OpenSSH's client configuration ([`ssh_config`]) goes straight to vault
 //! items. The other programs' importers ([`termius`], [`putty`] for PuTTY
-//! and KiTTY, [`mobaxterm`], [`tabby`], [`securecrt`]) return a
+//! and KiTTY, [`mobaxterm`], [`tabby`], [`securecrt`], and [`csv`] files of
+//! hosts) return a
 //! [`bundle::Bundle`] that the app turns into items; [`detect`] says whose
 //! a file is, and what is on this computer.
 
 pub mod bundle;
+pub mod csv;
 pub mod detect;
 pub mod mobaxterm;
 pub mod putty;

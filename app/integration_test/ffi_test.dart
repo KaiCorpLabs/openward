@@ -14,11 +14,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:openward/src/rust/api/app.dart';
 import 'package:openward/src/rust/api/identities.dart';
+import 'package:openward/src/rust/api/keychain.dart';
 import 'package:openward/src/rust/api/known_hosts.dart';
+import 'package:openward/src/rust/api/programs.dart';
 import 'package:openward/src/rust/api/snippets.dart';
 import 'package:openward/src/rust/api/session.dart';
 import 'package:openward/src/rust/api/tunnels.dart';
 import 'package:openward/src/rust/api/vault.dart';
+import 'package:openward/src/rust/api/workspaces.dart';
 import 'package:openward/src/rust/frb_generated.dart';
 
 void main() {
@@ -402,5 +405,139 @@ Host db
     await expectLater(own.forgetKnownHost(row: rows[2]), throwsA(anything));
     await own.forgetKnownHost(row: rows[0]);
     expect(own.knownHosts(), isEmpty);
+  });
+
+  test('hosts from a CSV file, and again without repeating them', () async {
+    final csv = File('${dir.path}/hosts.csv')
+      ..writeAsStringSync(
+        'Groups,Label,Tags,Hostname/IP,Protocol,Port,Username,Password\n'
+        'Prod/Web,web-1,"prod,nginx",10.0.0.1,ssh,22,deploy,secret\n'
+        'Prod,db,,db.example.com,ssh,2222,postgres,\n',
+      );
+    final read = await app.readProgram(path: csv.path);
+    final data = read.data!;
+    expect(data.program, ProgramKind.csv);
+    final preview = app.previewProgram(data: data);
+    final hosts = [
+      for (final i in preview.items)
+        if (!i.isGroup) i,
+    ];
+    expect(hosts.map((h) => h.label), ['web-1', 'db']);
+    final report = await app.importProgram(
+      data: data,
+      choice: ProgramChoice(
+        hosts: [for (final h in hosts) h.id],
+        groupName: 'CSV',
+        saveKeys: const [],
+      ),
+    );
+    expect(report.hosts, 2);
+    final db = app.hosts().firstWhere((h) => h.label == 'db');
+    expect((db.user, db.port), ('postgres', 2222));
+    // Read again: what is in already is marked, and skipped.
+    final again = await app.readProgram(path: csv.path);
+    expect(
+      app
+          .previewProgram(data: again.data!)
+          .items
+          .where((i) => !i.isGroup)
+          .every((i) => i.existing),
+      isTrue,
+    );
+  });
+
+  test('workspaces: saved, read back, changed and deleted', () async {
+    final host = await app.createHost(
+      spec: const HostSpec(
+        label: 'web',
+        address: '10.0.0.1',
+        settings: SettingsSpec(),
+      ),
+    );
+    const local = WorkspaceTarget();
+    final spec = WorkspaceSpec(
+      name: 'Prod',
+      tabs: [
+        WorkspaceTabSpec(
+          title: 'web y local',
+          panes: [
+            const WorkspacePane(
+              split: WorkspaceSplit(vertical: false, ratio: 0.4),
+              active: false,
+            ),
+            WorkspacePane(target: WorkspaceTarget(hostId: host), active: true),
+            const WorkspacePane(target: local, active: false),
+          ],
+        ),
+        const WorkspaceTabSpec(
+          panes: [],
+          sftp: WorkspaceTarget(address: '10.0.0.9', user: 'ana', port: 2200),
+        ),
+      ],
+      active: 1,
+    );
+    final id = await app.createWorkspace(spec: spec);
+    var w = app.workspaces().single;
+    expect(w.id, id);
+    // Lists compare by identity in the generated classes: field by field.
+    String shape(List<WorkspaceTabSpec> tabs) => [
+      for (final t in tabs)
+        '${t.title}|${t.sftp?.address}:${t.sftp?.port}|'
+            '${t.panes.map((p) => '${p.split?.vertical}/${p.split?.ratio}/${p.target?.hostId}/${p.active}').join(',')}',
+    ].join(';');
+    expect((w.spec.name, w.spec.active), ('Prod', 1));
+    expect(shape(w.spec.tabs), shape(spec.tabs));
+    expect(w.sessions, 3);
+    await app.renameWorkspace(id: id, rev: w.rev, name: 'Producción');
+    w = app.workspaces().single;
+    expect(w.spec.name, 'Producción');
+    expect(shape(w.spec.tabs), shape(spec.tabs));
+    // A host deleted later stays named in the workspace.
+    await app.delete(id: host);
+    expect(
+      app.workspaces().single.spec.tabs.first.panes[1].target?.hostId,
+      host,
+    );
+    await app.delete(id: id);
+    expect(app.workspaces(), isEmpty);
+  });
+
+  test('keys: made, brought in, and their public half', () async {
+    final home = Directory('${dir.path}/home')..createSync();
+    final mine = await OpenWard.openWithHome(
+      dataDir: '${dir.path}/keys-data',
+      home: home.path,
+    );
+    expect(mine.keys(), isEmpty);
+    final made = await mine.generateKey(
+      name: 'id_ed25519',
+      kind: SshKeyType.ed25519,
+      comment: 'ana@portatil',
+      passphrase: 'frase larga',
+    );
+    expect(made.failure, isNull);
+    expect(made.key!.encrypted, isTrue);
+    expect(made.key!.fingerprint, startsWith('SHA256:'));
+    final private = File('${home.path}/.ssh/id_ed25519');
+    expect(private.statSync().modeString(), 'rw-------');
+    final line = mine.publicKeyLine(path: '~/.ssh/id_ed25519')!;
+    expect(line, startsWith('ssh-ed25519 '));
+    expect(line, endsWith(' ana@portatil'));
+
+    // The same name again is refused; a copy under another name is not.
+    final taken = await mine.generateKey(
+      name: 'id_ed25519',
+      kind: SshKeyType.rsa,
+      comment: '',
+    );
+    expect(taken.failure!.kind, SshKeyFailureKind.exists);
+    final copy = await mine.importKey(
+      name: 'copia',
+      text: private.readAsStringSync(),
+    );
+    expect(copy.key!.fingerprint, made.key!.fingerprint);
+    final junk = await mine.importKey(name: 'otra', text: 'hola');
+    expect(junk.failure!.kind, SshKeyFailureKind.notAKey);
+    expect(mine.keys().map((k) => k.name), ['copia', 'id_ed25519']);
   });
 }

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/settings.dart';
 import '../core/version.dart';
+import '../history/history.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/app.dart';
 import '../terminal/keys.dart';
@@ -287,6 +288,7 @@ class _Terminal extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final history = ref.watch(historyProvider);
     final s = ref.watch(settingsProvider);
     final notifier = ref.read(settingsProvider.notifier);
     final l = context.l10n;
@@ -333,6 +335,29 @@ class _Terminal extends ConsumerWidget {
             selected: {s.onExit},
             onSelectionChanged: (v) =>
                 notifier.update((s) => s.copyWith(onExit: v.single)),
+          ),
+        ),
+        _Row(
+          label: l.commandHistory,
+          help: l.commandHistoryHelp(isApple ? '⌘⇧P' : 'Ctrl+Shift+P'),
+          control: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton(
+                key: const ValueKey('settings.clearHistory'),
+                onPressed: history.isEmpty
+                    ? null
+                    : () => ref.read(historyProvider.notifier).clear(),
+                child: Text(l.clearHistory(history.length)),
+              ),
+              const SizedBox(width: 8),
+              Switch(
+                key: const ValueKey('settings.commandHistory'),
+                value: s.commandHistory,
+                onChanged: (v) =>
+                    notifier.update((s) => s.copyWith(commandHistory: v)),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 12),

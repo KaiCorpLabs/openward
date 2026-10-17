@@ -10,8 +10,9 @@ import '../ui/widgets.dart';
 
 /// The edition of the news [showWhatsNew] tells, seen once per person. A
 /// new one shows them again to who saw an earlier one: 0.2.0-beta.2 added
-/// the importers, 0.2.0-beta.3 dragging tabs and panes.
-const newsVersion = '0.2.0-beta.3';
+/// the importers, 0.2.0-beta.3 dragging tabs and panes, 0.3.0-beta.1 the
+/// palette and history, workspaces, keys and CSV files.
+const newsVersion = '0.3.0-beta.1';
 
 /// Who updated and has not seen this release's news yet.
 bool shouldShowNews(Settings s) => s.welcomed && s.seenNews != newsVersion;
@@ -35,6 +36,19 @@ class _WhatsNew extends StatelessWidget {
     String keys(String apple, String other) => isApple ? apple : other;
     // Marked new: what came after who saw the news before.
     final items = [
+      (
+        Icons.keyboard_command_key,
+        l.newsPaletteTitle,
+        l.newsPaletteBody(keys('⌘⇧P', 'Ctrl+Shift+P')),
+        true,
+      ),
+      (
+        Icons.dashboard_outlined,
+        l.newsWorkspacesTitle,
+        l.newsWorkspacesBody,
+        true,
+      ),
+      (Icons.key_outlined, l.newsKeysTitle, l.newsKeysBody, true),
       (Icons.file_download_outlined, l.newsImportTitle, l.newsImportBody, true),
       (Icons.visibility_outlined, l.newsThemesTitle, l.newsThemesBody, false),
       (
@@ -44,7 +58,7 @@ class _WhatsNew extends StatelessWidget {
           keys('⌘D', 'Ctrl+Shift+D'),
           keys('⌘⇧B', 'Ctrl+Shift+B'),
         ),
-        true,
+        false,
       ),
       (
         Icons.folder_outlined,

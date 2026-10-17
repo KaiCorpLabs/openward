@@ -17,6 +17,7 @@ String programName(ProgramKind p) => switch (p) {
   ProgramKind.mobaXterm => 'MobaXterm',
   ProgramKind.tabby => 'Tabby',
   ProgramKind.secureCrt => 'SecureCRT',
+  ProgramKind.csv => 'CSV',
 };
 
 /// Reads another program's file or folder (Termius after saying what will

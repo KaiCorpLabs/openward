@@ -30,6 +30,7 @@ import 'package:openward/src/rust/api/vault.dart';
 import 'package:openward/src/rust/frb_generated.dart';
 import 'package:openward/tabs/tabs.dart';
 import 'package:openward/terminal/controller.dart';
+import 'package:openward/welcome/whats_new.dart';
 
 final _frame = GlobalKey();
 
@@ -118,7 +119,7 @@ void main() {
     final importPreview = app.previewProgram(data: termius.data!);
     final settings = File('${dir.path}/data/settings.json')
       ..writeAsStringSync(
-        '{"language": "es", "welcomed": true, "seen_news": "0.2.0-beta.3"}',
+        '{"language": "es", "welcomed": true, "seen_news": "$newsVersion"}',
       );
 
     tester.view.physicalSize = const Size(1280, 800) * 2;

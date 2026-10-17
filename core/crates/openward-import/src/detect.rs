@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::bundle::{Bundle, Program};
-use crate::{mobaxterm, putty, securecrt, tabby, termius};
+use crate::{csv, mobaxterm, putty, securecrt, tabby, termius};
 
 /// Something found on this computer that can be imported without
 /// exporting anything first.
@@ -164,6 +164,11 @@ pub fn read(path: &Path, termius_keys: Option<Vec<[u8; 32]>>) -> Result<(Program
             .map(|b| (Program::Tabby, b))
             .map_err(format(Program::Tabby));
     }
+    if csv::sniff(&text) {
+        return csv::parse(&bytes)
+            .map(|b| (Program::Csv, b))
+            .map_err(format(Program::Csv));
+    }
     Err(Error::NotRecognized)
 }
 
@@ -248,6 +253,8 @@ mod tests {
             "<?xml version=\"1.0\"?><VanDyke version=\"3.0\"><key name=\"Sessions\"></key></VanDyke>",
         );
         assert_eq!(read(&xml, None).unwrap().0, Program::SecureCrt);
+        let csv = write("hosts.csv", "Label,Hostname/IP\nweb,10.0.0.1\n");
+        assert_eq!(read(&csv, None).unwrap().0, Program::Csv);
         let other = write("notes.txt", "hello");
         assert!(matches!(read(&other, None), Err(Error::NotRecognized)));
 

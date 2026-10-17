@@ -666,6 +666,70 @@ fn sftp_goes_over_the_terminal_connection() {
     assert!(names.contains(&".profile".to_owned()), "{names:?}");
 }
 
+/// A new key's public half put on the server over SFTP (as ssh-copy-id
+/// does), once; then that key logs in. The server's file is put back.
+#[test]
+fn a_public_key_put_on_the_server_then_used() {
+    use openward_ssh::russh::keys::ssh_key::{Algorithm, LineEnding, PrivateKey};
+    let f = Fixture::new(servers!());
+    let password = f.password("demo");
+    let host = f.host(
+        "with-password",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: Some(vec![]),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    let (sftp, events) = f.sftp(host, move |p| match p {
+        Prompt::Password { .. } | Prompt::KeyboardInteractive { .. } => text(&password),
+        _ => Answer::Cancel,
+    });
+    outcome(&events).0.unwrap();
+    let remote = sftp.link().get().unwrap();
+    let file = "/home/demo/.ssh/authorized_keys";
+    let original = block_on(remote.read_small(file, 1 << 20)).unwrap();
+
+    let keys = tempfile::tempdir().unwrap();
+    let key = PrivateKey::random(&mut rand::rng(), Algorithm::Ed25519).unwrap();
+    let path = keys.path().join("id_new");
+    std::fs::write(&path, key.to_openssh(LineEnding::LF).unwrap().as_bytes()).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    }
+    let line = key.public_key().to_openssh().unwrap();
+    let added = block_on(sftp.install_public_key(line.clone()));
+    let again = block_on(sftp.install_public_key(line));
+
+    let with_key = f.host(
+        "with-new-key",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: Some(vec![path.display().to_string()]),
+            identities_only: Some(true),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    let (_term, rx) = f.connect(with_key, |p| panic!("asked: {p:?}"));
+    let logged_in = outcome(&rx).0;
+
+    // Put the server's file back before checking anything.
+    if let Some(bytes) = &original {
+        block_on(remote.write_all(file, bytes, 0o600)).unwrap();
+    }
+    assert!(added.unwrap(), "the key went in");
+    assert!(!again.unwrap(), "a key already there is not added again");
+    logged_in.unwrap();
+}
+
 /// Without a terminal, a browser connects on its own; transfers go through
 /// the app and outlive the browser.
 #[test]

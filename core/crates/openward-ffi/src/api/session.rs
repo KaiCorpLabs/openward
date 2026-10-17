@@ -513,6 +513,22 @@ pub struct LinkView {
     pub end: u16,
 }
 
+/// A cell of the screen.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CellPos {
+    pub row: u16,
+    pub col: u16,
+}
+
+/// The screen from where typing began up to the cursor, and what follows
+/// the cursor on its row (a suggestion the shell shows, or the rest of a
+/// line being edited).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TypedLine {
+    pub text: String,
+    pub after: String,
+}
+
 /// The cursor's shape, when the program does not choose one.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CursorStyle {
@@ -747,6 +763,24 @@ impl TerminalSession {
     #[frb(sync)]
     pub fn screen_text(&self) -> String {
         self.term.screen_text()
+    }
+
+    /// The cursor's cell while the live screen is on view: where a prompt
+    /// begins, read when typing starts.
+    #[frb(sync)]
+    pub fn cursor_cell(&self) -> Option<CellPos> {
+        self.term
+            .cursor_cell()
+            .map(|(row, col)| CellPos { row, col })
+    }
+
+    /// What was typed since `start` (see [`Self::cursor_cell`]): for the
+    /// command history.
+    #[frb(sync)]
+    pub fn typed_since(&self, start: CellPos) -> Option<TypedLine> {
+        self.term
+            .typed_since((start.row, start.col))
+            .map(|(text, after)| TypedLine { text, after })
     }
 
     /// The next poll returns the whole screen: after the UI dropped its

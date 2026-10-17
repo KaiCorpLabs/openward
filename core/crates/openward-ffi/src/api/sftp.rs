@@ -221,6 +221,12 @@ pub struct SftpBrowser {
 }
 
 impl SftpBrowser {
+    /// Puts a public key in the server's `~/.ssh/authorized_keys`, as
+    /// `ssh-copy-id` does. False when it was there already.
+    pub async fn install_public_key(&self, line: String) -> Result<bool> {
+        Ok(self.sftp.install_public_key(line).await?)
+    }
+
     /// The folder the server starts in.
     pub async fn home(&self) -> Result<String> {
         Ok(self.sftp.home().await?)

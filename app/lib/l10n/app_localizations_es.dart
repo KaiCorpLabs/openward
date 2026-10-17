@@ -344,6 +344,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get clearFinished => 'Quitar las terminadas';
 
   @override
+  String clearHistory(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Borrar $count comandos',
+      one: 'Borrar 1 comando',
+      zero: 'Borrar el historial',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get clearSelection => 'Quitar la selección';
 
   @override
@@ -389,6 +401,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String commandHint(String open, String escaped) {
     return 'Cada línea se envía como si la escribieras. Para escribir $open tal cual, pon $escaped.';
   }
+
+  @override
+  String get commandHistory => 'Historial de comandos';
+
+  @override
+  String commandHistoryHelp(String keys) {
+    return 'Lo que ejecutas en los terminales se guarda en este equipo (nunca en el vault) para buscarlo y repetirlo con $keys. Nunca se guarda lo que la pantalla no muestra, como una contraseña, ni lo que empieza por un espacio.';
+  }
+
+  @override
+  String get commandPalette => 'Paleta de comandos';
 
   @override
   String get conflictChoose => '. Elige qué hacer con cada uno:';
@@ -514,10 +537,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get copyPath => 'Copiar la ruta';
 
   @override
+  String get copyPublicKey => 'Copiar la clave pública';
+
+  @override
   String get copyReport => 'Copiar el informe';
 
   @override
   String get create => 'Crear';
+
+  @override
+  String get csvSpreadsheet => 'CSV (hoja de cálculo)';
 
   @override
   String get ctrlShiftPrefix => 'Ctrl+Mayús+';
@@ -628,6 +657,15 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get deleteWorkspaceBody =>
+      'Solo se elimina la distribución guardada: los hosts, y lo que esté abierto, se quedan.';
+
+  @override
+  String deleteWorkspaceTitle(String name) {
+    return '¿Eliminar «$name»?';
+  }
+
+  @override
   String get deletedHost => '(host eliminado)';
 
   @override
@@ -720,6 +758,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get emptyFolder => 'Esta carpeta está vacía';
+
+  @override
+  String get emptyPane => 'panel vacío';
 
   @override
   String get exampleVariable => 'nombre';
@@ -820,6 +861,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get fileLost => 'Se perdió la conexión.';
 
   @override
+  String get fileName => 'Archivo';
+
+  @override
   String fileNotFound(String path) {
     return 'No existe: $path';
   }
@@ -857,6 +901,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get findHint => 'Buscar en el terminal';
 
   @override
+  String get findInTerminal => 'Buscar en el terminal';
+
+  @override
   String get findNewer => 'Siguiente, más abajo (Mayús+Intro)';
 
   @override
@@ -876,6 +923,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get fingerprint => 'Huella';
+
+  @override
+  String get fingerprintNeedsPublic => 'Sin .pub: huella desconocida';
 
   @override
   String firstConnectionTo(String label) {
@@ -995,6 +1045,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get fromThere => 'desde allí';
 
   @override
+  String goToPage(String page) {
+    return 'Ir a $page';
+  }
+
+  @override
   String get group => 'Grupo';
 
   @override
@@ -1059,6 +1114,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get hostsSection => 'Hosts';
+
+  @override
+  String get howCsv =>
+      'Un host por fila, con cabecera: la plantilla de Termius o columnas como nombre, host, puerto, usuario y grupo.';
 
   @override
   String get howMobaXterm =>
@@ -1141,6 +1200,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get ignore => 'Ignorar';
 
   @override
+  String get importAction => 'Importar';
+
+  @override
   String get importEllipsis => 'Importar…';
 
   @override
@@ -1179,6 +1241,16 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get importKeepsFile =>
       'El fichero no se toca, y las claves se quedan donde están: OpenWard guarda la ruta, nunca la clave.';
+
+  @override
+  String get importKey => 'Importar una clave';
+
+  @override
+  String get importKeyAction => 'Importar…';
+
+  @override
+  String get importKeyIntro =>
+      'Pega una clave privada o elige su archivo. Se guarda como un archivo nuevo en ~/.ssh; el original no cambia.';
 
   @override
   String get importLater => 'Puedes importar más tarde desde la barra lateral.';
@@ -1243,6 +1315,59 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get inside => 'Dentro de';
+
+  @override
+  String get installKeyAction => 'Subir a un servidor…';
+
+  @override
+  String installKeyAdded(String host) {
+    return 'Clave añadida en $host';
+  }
+
+  @override
+  String installKeyFailed(String host) {
+    return 'No se ha podido subir a $host';
+  }
+
+  @override
+  String get installKeyIntro =>
+      'Su parte pública se añade al ~/.ssh/authorized_keys del servidor, como hace ssh-copy-id. Entras una vez con lo que uses ahora.';
+
+  @override
+  String get installKeyNext =>
+      'Para entrar con ella, elígela en el host o en su identidad.';
+
+  @override
+  String get installKeyNoHosts =>
+      'Ningún host coincide. Escribe una dirección para usarla sin guardarla.';
+
+  @override
+  String get installKeySearch => 'Busca un host o escribe usuario@dirección';
+
+  @override
+  String installKeyTitle(String name) {
+    return 'Subir $name a un servidor';
+  }
+
+  @override
+  String installKeyToAddress(String address) {
+    return 'Subir a $address';
+  }
+
+  @override
+  String installKeyWasThere(String host) {
+    return '$host ya tenía esta clave';
+  }
+
+  @override
+  String installKeyWriteFailed(String error) {
+    return 'El servidor no dejó escribir ~/.ssh/authorized_keys: $error';
+  }
+
+  @override
+  String installingKey(String host) {
+    return 'Añadiendo la clave en $host…';
+  }
 
   @override
   String itemCount(int count) {
@@ -1331,6 +1456,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String keyAdded(String path) {
+    return 'Guardada en $path.';
+  }
+
+  @override
   String get keyBefore => 'Antes';
 
   @override
@@ -1351,7 +1481,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get keyColumn => 'Clave';
 
   @override
+  String get keyCommentLabel => 'Comentario';
+
+  @override
   String get keyExchange => 'Intercambio';
+
+  @override
+  String keyFailed(String error) {
+    return 'No se ha podido: $error';
+  }
 
   @override
   String get keyInKnownHosts => 'en ~/.ssh/known_hosts';
@@ -1376,8 +1514,21 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get keyNameInvalid =>
+      'Ese nombre no vale para un archivo de clave: usa letras, números, «-», «_», «.» o «@».';
+
+  @override
+  String keyNameTaken(String name) {
+    return 'Ya hay un archivo $name en ~/.ssh. Elige otro nombre.';
+  }
+
+  @override
   String get keyNoPublicHalf =>
       'Sin .pub al lado: su tipo se sabrá al conectar';
+
+  @override
+  String get keyNotReadable =>
+      'Eso no es una clave privada que OpenWard pueda leer (OpenSSH, PEM o PuTTY).';
 
   @override
   String keyNow(String algorithm) {
@@ -1399,6 +1550,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get keySaved => 'Guardada';
 
   @override
+  String get keyType => 'Tipo';
+
+  @override
+  String get keyTypeEcdsa => 'Para servidores o normas que piden curvas NIST.';
+
+  @override
+  String get keyTypeEd25519 =>
+      'La recomendada: corta, rápida, y la aceptan los servidores de los últimos diez años.';
+
+  @override
+  String get keyTypeRsa =>
+      'Para servidores antiguos que no aceptan nada más nuevo. Tarda unos segundos en crearse.';
+
+  @override
   String get keys => 'Claves';
 
   @override
@@ -1408,6 +1573,10 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get keysInOrder =>
       'Se prueban en este orden; arrastra para cambiarlo.';
+
+  @override
+  String get keysIntro =>
+      'Las claves privadas de ~/.ssh. Se quedan ahí: el vault solo guarda qué clave usa cada host. Aquí puedes crear claves, traer las que tengas y subir la parte pública a un servidor.';
 
   @override
   String get kindDynamic => 'Dinámico (-D)';
@@ -1486,6 +1655,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get localShell => 'Local';
+
+  @override
   String get localTerminal => 'Terminal local';
 
   @override
@@ -1562,6 +1734,12 @@ class AppLocalizationsEs extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get makeKey => 'Crear la clave';
+
+  @override
+  String get makingKey => 'Creando…';
 
   @override
   String get manageSnippets => 'Gestionar snippets…';
@@ -1685,6 +1863,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get newIdentityEllipsis => 'Nueva identidad…';
 
   @override
+  String get newKey => 'Nueva clave';
+
+  @override
+  String get newKeyAction => 'Nueva clave…';
+
+  @override
+  String newKeyWhere(String private, String public) {
+    return 'Se guarda en $private (solo tú puedes leerla) y su parte pública en $public.';
+  }
+
+  @override
   String get newLocalTerminal => 'Terminal local nuevo';
 
   @override
@@ -1711,10 +1900,25 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get newsImportBody =>
-      'Hosts, grupos, identidades y túneles de Termius, PuTTY, KiTTY, MobaXterm, Tabby o SecureCRT, desde «…» › Importar… en la barra lateral. Las contraseñas no se traen.';
+      'Hosts, grupos, identidades y túneles de Termius, PuTTY, KiTTY, MobaXterm, Tabby o SecureCRT, y hosts de un CSV, desde «…» › Importar… en la barra lateral. Las contraseñas no se traen.';
 
   @override
   String get newsImportTitle => 'Importar desde tu cliente anterior';
+
+  @override
+  String get newsKeysBody =>
+      'Crea claves Ed25519, ECDSA o RSA, importa las tuyas, mira sus huellas y súbelas a un servidor sin salir de OpenWard, como ssh-copy-id.';
+
+  @override
+  String get newsKeysTitle => 'Claves';
+
+  @override
+  String newsPaletteBody(String shortcut) {
+    return 'Todo lo que hace la ventana, tus hosts, snippets y los comandos que ya ejecutaste, a unas letras ($shortcut). El historial se queda en este equipo y nunca guarda contraseñas.';
+  }
+
+  @override
+  String get newsPaletteTitle => 'Paleta de comandos e historial';
 
   @override
   String newsPanesBody(String split, String broadcast) {
@@ -1755,6 +1959,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get newsTunnelsTitle => 'Túneles guardados y proxy';
 
   @override
+  String get newsWorkspacesBody =>
+      'Guarda tus pestañas y paneles con un nombre y ábrelos otra vez, ya conectados, desde la biblioteca o la paleta.';
+
+  @override
+  String get newsWorkspacesTitle => 'Espacios de trabajo';
+
+  @override
   String get next => 'Siguiente';
 
   @override
@@ -1786,6 +1997,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get noJumpsYet => 'Ninguno todavía.';
 
   @override
+  String get noKeyMatches => 'Ninguna clave coincide.';
+
+  @override
+  String get noKeys => 'No hay claves en ~/.ssh';
+
+  @override
+  String get noKeysBody =>
+      'Crea una con «Nueva clave…» o trae la que ya tengas con «Importar…».';
+
+  @override
   String get noKeysYet =>
       'Sin claves: se prueban las habituales de ~/.ssh y las del agente.';
 
@@ -1812,6 +2033,11 @@ class AppLocalizationsEs extends AppLocalizations {
       'El servidor no ofrece un intercambio poscuántico (mlkem768x25519; OpenSSH lo trae desde la 10.0).';
 
   @override
+  String noPublicKey(String name) {
+    return '$name no tiene .pub y está cifrada: sin su frase de paso no se puede leer la parte pública.';
+  }
+
+  @override
   String get noResults => 'Ningún host coincide.';
 
   @override
@@ -1835,6 +2061,13 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get noTunnelsBody =>
       'Un túnel lleva un puerto de este equipo a un servicio que solo ve el servidor (una base de datos, un panel), o al revés. Crea uno o tráelos de tu ~/.ssh/config.';
+
+  @override
+  String get noWorkspaces => 'Aún no hay espacios de trabajo';
+
+  @override
+  String get noWorkspacesBody =>
+      'Abre las pestañas y divide los paneles como los quieras, y guárdalos con «Guardar las pestañas abiertas…» (también en el menú de una pestaña y en la paleta de comandos).';
 
   @override
   String get notNow => 'Ahora no';
@@ -1897,6 +2130,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get onlyThisComputer => 'Solo este equipo (127.0.0.1)';
 
   @override
+  String get open => 'Abrir';
+
+  @override
   String get openATerminalFirst => 'Abre un terminal para ejecutarlo';
 
   @override
@@ -1952,7 +2188,33 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get paletteActions => 'Acciones';
+
+  @override
+  String get paletteBroadcast =>
+      'Broadcast en esta pestaña (encender o apagar)';
+
+  @override
   String get paletteChoose => 'elegir';
+
+  @override
+  String get paletteDo => 'hacer';
+
+  @override
+  String get paletteForget => 'quitar del historial';
+
+  @override
+  String get paletteHint =>
+      'Escribe una acción, un host, un comando que ya usaste…';
+
+  @override
+  String get paletteHistory => 'Historial';
+
+  @override
+  String get paletteHosts => 'Hosts';
+
+  @override
+  String get paletteNothing => 'Nada coincide.';
 
   @override
   String get paletteRun => 'ejecutar';
@@ -1974,7 +2236,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get passphraseField => 'Frase';
 
   @override
+  String get passphraseOptional => 'Frase de paso (opcional)';
+
+  @override
   String get passphraseTitle => 'Frase de la clave';
+
+  @override
+  String get passphrasesDiffer => 'Las dos frases de paso no coinciden.';
 
   @override
   String get passwordTitle => 'Contraseña';
@@ -2252,6 +2520,12 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get privateKey => 'Clave privada';
+
+  @override
+  String get protection => 'Protección';
+
+  @override
   String get proxy => 'Proxy';
 
   @override
@@ -2284,6 +2558,11 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get proxyUserHelp =>
       'Opcional. La contraseña se pide al conectar y no se guarda.';
+
+  @override
+  String publicKeyCopied(String name) {
+    return 'Clave pública de $name copiada.';
+  }
 
   @override
   String get queueAllDone => 'Todo terminado';
@@ -2426,6 +2705,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String renameTitle(String name) {
     return 'Renombrar $name';
   }
+
+  @override
+  String get renameWorkspace => 'Renombrar el espacio de trabajo';
+
+  @override
+  String get repeatPassphrase => 'Repítela';
 
   @override
   String get reportCopied => 'Copiado. Pégalo en tu informe.';
@@ -2617,6 +2902,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get saveAndOpen => 'Guardar y abrir';
 
   @override
+  String get saveAs => 'Guardar como';
+
+  @override
   String saveFailed(String error) {
     return 'No se ha podido guardar: $error';
   }
@@ -2628,6 +2916,16 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get saveNewHost => 'Guardar un host nuevo';
+
+  @override
+  String get saveOpenTabs => 'Guardar las pestañas abiertas…';
+
+  @override
+  String get saveWorkspaceIntro =>
+      'Las pestañas de terminal y de archivos abiertas, con sus paneles. Al abrirlo, cada panel se conecta de nuevo.';
+
+  @override
+  String get saveWorkspaceTitle => 'Guardar como espacio de trabajo';
 
   @override
   String get savedHost => 'Host guardado';
@@ -2645,6 +2943,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get searchHosts => 'Buscar hosts';
+
+  @override
+  String get searchKeys => 'Buscar por nombre, huella o host';
 
   @override
   String get searchKnownHosts => 'Buscar un host, una huella…';
@@ -3079,6 +3380,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get tryAgain => 'Reintentar';
 
   @override
+  String get tryAnother => 'Probar otro';
+
+  @override
   String get tunnelBadAddress => 'Esa dirección no existe en este equipo.';
 
   @override
@@ -3197,6 +3501,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get typeAndFingerprint => 'Tipo y huella';
+
+  @override
   String get typeOnly => 'Solo escribe';
 
   @override
@@ -3206,7 +3513,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get uiFont => 'Fuente de la interfaz';
 
   @override
+  String get unknownKeyType => 'Tipo desconocido';
+
+  @override
   String get upOneLevel => 'Subir un nivel';
+
+  @override
+  String get updateWithOpenTabs => 'Cambiar por las pestañas abiertas';
 
   @override
   String get upload => 'Subida';
@@ -3401,7 +3714,60 @@ class AppLocalizationsEs extends AppLocalizations {
   String get whoCanUse => 'Quién puede usarlo';
 
   @override
+  String get withCertificate => 'con certificado';
+
+  @override
   String get withEnter => 'Intro al final';
+
+  @override
+  String get withPassphrase => 'Con frase de paso';
+
+  @override
+  String get withoutPassphrase => 'Sin frase de paso';
+
+  @override
+  String workspaceNumbered(int number) {
+    return 'Espacio $number';
+  }
+
+  @override
+  String workspaceSaved(String name) {
+    return '«$name» guardado.';
+  }
+
+  @override
+  String workspaceSessions(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sesiones',
+      one: '1 sesión',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String workspaceTabs(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pestañas',
+      one: '1 pestaña',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String workspaceUpdated(String name) {
+    return '«$name» tiene ahora las pestañas abiertas.';
+  }
+
+  @override
+  String get workspaces => 'Espacios de trabajo';
+
+  @override
+  String get workspacesIntro =>
+      'Pestañas y paneles guardados con un nombre, para abrirlos otra vez juntos. Se guarda a qué se conecta cada panel, nunca lo que mostraba.';
 
   @override
   String get wrongAnswer => 'Respuesta incorrecta.';

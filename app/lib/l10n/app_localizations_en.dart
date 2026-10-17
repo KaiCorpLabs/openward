@@ -343,6 +343,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clearFinished => 'Clear finished';
 
   @override
+  String clearHistory(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Clear $count commands',
+      one: 'Clear 1 command',
+      zero: 'Clear the history',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get clearSelection => 'Clear the selection';
 
   @override
@@ -388,6 +400,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String commandHint(String open, String escaped) {
     return 'Each line is sent as if typed. To write $open as it is, put $escaped.';
   }
+
+  @override
+  String get commandHistory => 'Command history';
+
+  @override
+  String commandHistoryHelp(String keys) {
+    return 'What you run in terminals is kept on this computer (never in the vault), to find and run again with $keys. What the screen does not show, like a password, is never kept, nor what starts with a space.';
+  }
+
+  @override
+  String get commandPalette => 'Command palette';
 
   @override
   String get conflictChoose => '. Choose what to do with each:';
@@ -513,10 +536,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get copyPath => 'Copy path';
 
   @override
+  String get copyPublicKey => 'Copy the public key';
+
+  @override
   String get copyReport => 'Copy the report';
 
   @override
   String get create => 'Create';
+
+  @override
+  String get csvSpreadsheet => 'CSV (spreadsheet)';
 
   @override
   String get ctrlShiftPrefix => 'Ctrl+Shift+';
@@ -627,6 +656,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get deleteWorkspaceBody =>
+      'Only the saved layout goes: the hosts, and what is open, stay.';
+
+  @override
+  String deleteWorkspaceTitle(String name) {
+    return 'Delete “$name”?';
+  }
+
+  @override
   String get deletedHost => '(deleted host)';
 
   @override
@@ -719,6 +757,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get emptyFolder => 'This folder is empty';
+
+  @override
+  String get emptyPane => 'empty pane';
 
   @override
   String get exampleVariable => 'name';
@@ -819,6 +860,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fileLost => 'The connection was lost.';
 
   @override
+  String get fileName => 'File';
+
+  @override
   String fileNotFound(String path) {
     return 'Not found: $path';
   }
@@ -856,6 +900,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get findHint => 'Search the terminal';
 
   @override
+  String get findInTerminal => 'Find in the terminal';
+
+  @override
   String get findNewer => 'Next, further down (Shift+Enter)';
 
   @override
@@ -875,6 +922,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fingerprint => 'Fingerprint';
+
+  @override
+  String get fingerprintNeedsPublic => 'No .pub: fingerprint unknown';
 
   @override
   String firstConnectionTo(String label) {
@@ -994,6 +1044,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fromThere => 'from there';
 
   @override
+  String goToPage(String page) {
+    return 'Go to $page';
+  }
+
+  @override
   String get group => 'Group';
 
   @override
@@ -1058,6 +1113,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hostsSection => 'Hosts';
+
+  @override
+  String get howCsv =>
+      'One host a row, with a header: Termius\'s template, or columns such as name, host, port, user and group.';
 
   @override
   String get howMobaXterm =>
@@ -1140,6 +1199,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ignore => 'Ignore';
 
   @override
+  String get importAction => 'Import';
+
+  @override
   String get importEllipsis => 'Import…';
 
   @override
@@ -1178,6 +1240,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get importKeepsFile =>
       'The file is left as it is, and keys stay where they are: OpenWard keeps the path, never the key.';
+
+  @override
+  String get importKey => 'Import a key';
+
+  @override
+  String get importKeyAction => 'Import…';
+
+  @override
+  String get importKeyIntro =>
+      'Paste a private key or choose its file. It is saved as a new file in ~/.ssh; the original stays as it is.';
 
   @override
   String get importLater => 'You can import later from the sidebar.';
@@ -1242,6 +1314,59 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get inside => 'Inside';
+
+  @override
+  String get installKeyAction => 'Put on a server…';
+
+  @override
+  String installKeyAdded(String host) {
+    return 'Key added on $host';
+  }
+
+  @override
+  String installKeyFailed(String host) {
+    return 'It could not be put on $host';
+  }
+
+  @override
+  String get installKeyIntro =>
+      'Its public half is added to the server\'s ~/.ssh/authorized_keys, as ssh-copy-id does. You sign in once with what you use now.';
+
+  @override
+  String get installKeyNext =>
+      'To sign in with it, choose it on the host or on its identity.';
+
+  @override
+  String get installKeyNoHosts =>
+      'No host matches. Type an address to use it without saving it.';
+
+  @override
+  String get installKeySearch => 'Find a host, or type user@address';
+
+  @override
+  String installKeyTitle(String name) {
+    return 'Put $name on a server';
+  }
+
+  @override
+  String installKeyToAddress(String address) {
+    return 'Put it on $address';
+  }
+
+  @override
+  String installKeyWasThere(String host) {
+    return '$host had this key already';
+  }
+
+  @override
+  String installKeyWriteFailed(String error) {
+    return 'The server did not let ~/.ssh/authorized_keys be written: $error';
+  }
+
+  @override
+  String installingKey(String host) {
+    return 'Adding the key on $host…';
+  }
 
   @override
   String itemCount(int count) {
@@ -1330,6 +1455,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String keyAdded(String path) {
+    return 'Saved as $path.';
+  }
+
+  @override
   String get keyBefore => 'Before';
 
   @override
@@ -1350,7 +1480,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get keyColumn => 'Key';
 
   @override
+  String get keyCommentLabel => 'Comment';
+
+  @override
   String get keyExchange => 'Key exchange';
+
+  @override
+  String keyFailed(String error) {
+    return 'It could not be done: $error';
+  }
 
   @override
   String get keyInKnownHosts => 'in ~/.ssh/known_hosts';
@@ -1375,8 +1513,21 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get keyNameInvalid =>
+      'That name cannot be a key file: use letters, digits, “-”, “_”, “.” or “@”.';
+
+  @override
+  String keyNameTaken(String name) {
+    return 'There is a file named $name in ~/.ssh already. Choose another name.';
+  }
+
+  @override
   String get keyNoPublicHalf =>
       'No .pub next to it: its type shows when connecting';
+
+  @override
+  String get keyNotReadable =>
+      'That is not a private key OpenWard can read (OpenSSH, PEM or PuTTY).';
 
   @override
   String keyNow(String algorithm) {
@@ -1398,6 +1549,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get keySaved => 'Saved';
 
   @override
+  String get keyType => 'Type';
+
+  @override
+  String get keyTypeEcdsa => 'For servers or rules that ask for NIST curves.';
+
+  @override
+  String get keyTypeEd25519 =>
+      'The one to choose: short, fast, and taken by servers of the last ten years.';
+
+  @override
+  String get keyTypeRsa =>
+      'For old servers that take nothing newer. It takes a few seconds to make.';
+
+  @override
   String get keys => 'Keys';
 
   @override
@@ -1406,6 +1571,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get keysInOrder => 'Tried in this order; drag to change it.';
+
+  @override
+  String get keysIntro =>
+      'The private keys in ~/.ssh. They stay there: the vault only keeps which key each host uses. Here you can make keys, bring in the ones you have and put the public half on a server.';
 
   @override
   String get kindDynamic => 'Dynamic (-D)';
@@ -1484,6 +1653,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get localShell => 'Local';
+
+  @override
   String get localTerminal => 'Local terminal';
 
   @override
@@ -1559,6 +1731,12 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get makeKey => 'Make the key';
+
+  @override
+  String get makingKey => 'Making…';
 
   @override
   String get manageSnippets => 'Manage snippets…';
@@ -1682,6 +1860,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newIdentityEllipsis => 'New identity…';
 
   @override
+  String get newKey => 'New key';
+
+  @override
+  String get newKeyAction => 'New key…';
+
+  @override
+  String newKeyWhere(String private, String public) {
+    return 'It is saved as $private (only you can read it), and its public half as $public.';
+  }
+
+  @override
   String get newLocalTerminal => 'New local terminal';
 
   @override
@@ -1708,10 +1897,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get newsImportBody =>
-      'Hosts, groups, identities and tunnels from Termius, PuTTY, KiTTY, MobaXterm, Tabby or SecureCRT, from «…» › Import… in the sidebar. Passwords do not come along.';
+      'Hosts, groups, identities and tunnels from Termius, PuTTY, KiTTY, MobaXterm, Tabby or SecureCRT, and hosts from a CSV, from «…» › Import… in the sidebar. Passwords do not come along.';
 
   @override
   String get newsImportTitle => 'Import from your previous client';
+
+  @override
+  String get newsKeysBody =>
+      'Make Ed25519, ECDSA or RSA keys, import yours, see their fingerprints and put them on a server without leaving OpenWard, as ssh-copy-id does.';
+
+  @override
+  String get newsKeysTitle => 'Keys';
+
+  @override
+  String newsPaletteBody(String shortcut) {
+    return 'Everything the window does, your hosts, snippets and the commands you ran, a few letters away ($shortcut). The history stays on this computer and never keeps passwords.';
+  }
+
+  @override
+  String get newsPaletteTitle => 'Command palette and history';
 
   @override
   String newsPanesBody(String split, String broadcast) {
@@ -1752,6 +1956,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newsTunnelsTitle => 'Saved tunnels and proxy';
 
   @override
+  String get newsWorkspacesBody =>
+      'Save your tabs and panes by name and open them again, connected, from the library or the palette.';
+
+  @override
+  String get newsWorkspacesTitle => 'Workspaces';
+
+  @override
   String get next => 'Next';
 
   @override
@@ -1783,6 +1994,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noJumpsYet => 'None yet.';
 
   @override
+  String get noKeyMatches => 'No key matches.';
+
+  @override
+  String get noKeys => 'No keys in ~/.ssh';
+
+  @override
+  String get noKeysBody =>
+      'Make one with “New key…”, or bring in one you have with “Import…”.';
+
+  @override
   String get noKeysYet =>
       'No keys: the usual ones in ~/.ssh and the agent\'s are tried.';
 
@@ -1809,6 +2030,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'The server offers no post-quantum key exchange (mlkem768x25519; OpenSSH has it since 10.0).';
 
   @override
+  String noPublicKey(String name) {
+    return '$name has no .pub and is encrypted: its public half cannot be read without the passphrase.';
+  }
+
+  @override
   String get noResults => 'No host matches.';
 
   @override
@@ -1832,6 +2058,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get noTunnelsBody =>
       'A tunnel takes a port of this computer to a service only the server sees (a database, a dashboard), or the other way round. Create one, or bring them from your ~/.ssh/config.';
+
+  @override
+  String get noWorkspaces => 'No workspaces yet';
+
+  @override
+  String get noWorkspacesBody =>
+      'Open the tabs and split the panes as you like them, then keep them with “Save the open tabs…” (also in a tab\'s menu and in the command palette).';
 
   @override
   String get notNow => 'Not now';
@@ -1894,6 +2127,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onlyThisComputer => 'Only this computer (127.0.0.1)';
 
   @override
+  String get open => 'Open';
+
+  @override
   String get openATerminalFirst => 'Open a terminal to run it';
 
   @override
@@ -1943,7 +2179,31 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get paletteActions => 'Actions';
+
+  @override
+  String get paletteBroadcast => 'Broadcast in this tab (on or off)';
+
+  @override
   String get paletteChoose => 'choose';
+
+  @override
+  String get paletteDo => 'do it';
+
+  @override
+  String get paletteForget => 'remove from history';
+
+  @override
+  String get paletteHint => 'Type an action, a host, a command you ran before…';
+
+  @override
+  String get paletteHistory => 'History';
+
+  @override
+  String get paletteHosts => 'Hosts';
+
+  @override
+  String get paletteNothing => 'Nothing matches.';
 
   @override
   String get paletteRun => 'run';
@@ -1965,7 +2225,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get passphraseField => 'Passphrase';
 
   @override
+  String get passphraseOptional => 'Passphrase (optional)';
+
+  @override
   String get passphraseTitle => 'Key passphrase';
+
+  @override
+  String get passphrasesDiffer => 'The two passphrases differ.';
 
   @override
   String get passwordTitle => 'Password';
@@ -2242,6 +2508,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get privateKey => 'Private key';
+
+  @override
+  String get protection => 'Protection';
+
+  @override
   String get proxy => 'Proxy';
 
   @override
@@ -2275,6 +2547,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get proxyUserHelp =>
       'Optional. The password is asked for when connecting and not saved.';
+
+  @override
+  String publicKeyCopied(String name) {
+    return 'Public key of $name copied.';
+  }
 
   @override
   String get queueAllDone => 'All finished';
@@ -2417,6 +2694,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String renameTitle(String name) {
     return 'Rename $name';
   }
+
+  @override
+  String get renameWorkspace => 'Rename the workspace';
+
+  @override
+  String get repeatPassphrase => 'Again';
 
   @override
   String get reportCopied => 'Copied. Paste it in your report.';
@@ -2608,6 +2891,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saveAndOpen => 'Save and open';
 
   @override
+  String get saveAs => 'Save as';
+
+  @override
   String saveFailed(String error) {
     return 'Could not save: $error';
   }
@@ -2619,6 +2905,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get saveNewHost => 'Save a new host';
+
+  @override
+  String get saveOpenTabs => 'Save the open tabs…';
+
+  @override
+  String get saveWorkspaceIntro =>
+      'The open terminal and file tabs, with their panes. When it opens, each pane connects again.';
+
+  @override
+  String get saveWorkspaceTitle => 'Save as a workspace';
 
   @override
   String get savedHost => 'Saved host';
@@ -2636,6 +2932,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchHosts => 'Search hosts';
+
+  @override
+  String get searchKeys => 'Search by name, fingerprint or host';
 
   @override
   String get searchKnownHosts => 'Search a host, a fingerprint…';
@@ -3070,6 +3369,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tryAgain => 'Try again';
 
   @override
+  String get tryAnother => 'Try another';
+
+  @override
   String get tunnelBadAddress =>
       'That address does not exist on this computer.';
 
@@ -3183,6 +3485,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get typeAndFingerprint => 'Type and fingerprint';
+
+  @override
   String get typeOnly => 'Types only';
 
   @override
@@ -3192,7 +3497,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uiFont => 'Interface font';
 
   @override
+  String get unknownKeyType => 'Unknown type';
+
+  @override
   String get upOneLevel => 'Up one level';
+
+  @override
+  String get updateWithOpenTabs => 'Replace with the open tabs';
 
   @override
   String get upload => 'Upload';
@@ -3386,7 +3697,60 @@ class AppLocalizationsEn extends AppLocalizations {
   String get whoCanUse => 'Who can use it';
 
   @override
+  String get withCertificate => 'with certificate';
+
+  @override
   String get withEnter => 'Enter at the end';
+
+  @override
+  String get withPassphrase => 'Passphrase';
+
+  @override
+  String get withoutPassphrase => 'No passphrase';
+
+  @override
+  String workspaceNumbered(int number) {
+    return 'Workspace $number';
+  }
+
+  @override
+  String workspaceSaved(String name) {
+    return '“$name” saved.';
+  }
+
+  @override
+  String workspaceSessions(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sessions',
+      one: '1 session',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String workspaceTabs(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tabs',
+      one: '1 tab',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String workspaceUpdated(String name) {
+    return '“$name” now has the open tabs.';
+  }
+
+  @override
+  String get workspaces => 'Workspaces';
+
+  @override
+  String get workspacesIntro =>
+      'Tabs and panes saved by name, to open again together. What each pane connects to is kept, never what it showed.';
 
   @override
   String get wrongAnswer => 'Wrong answer.';

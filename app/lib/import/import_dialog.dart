@@ -118,6 +118,7 @@ String foundText(AppLocalizations l, FoundProgram f) => switch (f.program) {
   ProgramKind.putty || ProgramKind.kitty => l.foundSessions(tildePath(f.path)),
   ProgramKind.secureCrt => l.foundSessions(tildePath(f.path)),
   ProgramKind.mobaXterm => l.foundMobaXterm(tildePath(f.path)),
+  ProgramKind.csv => tildePath(f.path),
 };
 
 class _Origin extends StatefulWidget {
@@ -250,6 +251,16 @@ class _OriginState extends State<_Origin> {
           l.howTabby,
           OutlinedButton(
             onPressed: () => _choose('Tabby', ['yaml', 'yml']),
+            child: Text(l.chooseFile),
+          ),
+        ),
+        row(
+          const ProgramTile('CSV'),
+          l.csvSpreadsheet,
+          l.howCsv,
+          OutlinedButton(
+            key: const ValueKey('import.csv'),
+            onPressed: () => _choose('CSV', ['csv', 'tsv', 'txt']),
             child: Text(l.chooseFile),
           ),
         ),

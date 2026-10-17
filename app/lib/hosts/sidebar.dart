@@ -10,11 +10,13 @@ import '../tabs/tabs.dart';
 import '../terminal/controller.dart';
 import '../terminal/keys.dart';
 import '../identities/identities.dart';
+import '../keys/keys.dart';
 import '../snippets/snippets.dart';
 import '../tunnels/tunnels.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../window/chrome.dart';
+import '../workspaces/workspaces.dart';
 import 'editors.dart';
 import '../import/import_dialog.dart';
 import '../tabs/drag.dart';
@@ -568,8 +570,8 @@ class _Empty extends StatelessWidget {
   }
 }
 
-/// What is kept besides hosts: tunnels and identities; snippets come
-/// later.
+/// What is kept besides hosts: tunnels, identities, keys, snippets,
+/// workspaces and trusted host keys.
 class _Library extends ConsumerWidget {
   const _Library();
 
@@ -581,6 +583,8 @@ class _Library extends ConsumerWidget {
     final board = ref.watch(tunnelBoardProvider);
     final identities = ref.watch(identitiesProvider);
     final snippets = ref.watch(snippetsProvider);
+    final keys = ref.watch(keysProvider);
+    final workspaces = ref.watch(workspacesProvider);
     // Read again whenever this rebuilds (a tab opens or closes): new keys
     // are trusted as connections come up.
     final known = ref.read(openWardProvider).knownHostRows(query: '').length;
@@ -659,12 +663,30 @@ class _Library extends ConsumerWidget {
             ],
           ),
           entry(
+            key: 'library.keys',
+            page: PageKind.keys,
+            icon: Icons.key_outlined,
+            label: l.keys,
+            trailing: [
+              Text('${keys.length}', style: monoStyle(context, size: 11)),
+            ],
+          ),
+          entry(
             key: 'library.snippets',
             page: PageKind.snippets,
             icon: Icons.terminal,
             label: l.snippets,
             trailing: [
               Text('${snippets.length}', style: monoStyle(context, size: 11)),
+            ],
+          ),
+          entry(
+            key: 'library.workspaces',
+            page: PageKind.workspaces,
+            icon: Icons.dashboard_outlined,
+            label: l.workspaces,
+            trailing: [
+              Text('${workspaces.length}', style: monoStyle(context, size: 11)),
             ],
           ),
           entry(

@@ -5,6 +5,7 @@
 
 import 'api/app.dart';
 import 'api/identities.dart';
+import 'api/keychain.dart';
 import 'api/known_hosts.dart';
 import 'api/programs.dart';
 import 'api/session.dart';
@@ -12,6 +13,7 @@ import 'api/sftp.dart';
 import 'api/snippets.dart';
 import 'api/tunnels.dart';
 import 'api/vault.dart';
+import 'api/workspaces.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -150,6 +152,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_box_autoadd_bool(dynamic raw);
 
   @protected
+  CellPos dco_decode_box_autoadd_cell_pos(dynamic raw);
+
+  @protected
   CertView dco_decode_box_autoadd_cert_view(dynamic raw);
 
   @protected
@@ -231,6 +236,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SnippetSpec dco_decode_box_autoadd_snippet_spec(dynamic raw);
 
   @protected
+  SshKey dco_decode_box_autoadd_ssh_key(dynamic raw);
+
+  @protected
+  SshKeyFailure dco_decode_box_autoadd_ssh_key_failure(dynamic raw);
+
+  @protected
   StageView dco_decode_box_autoadd_stage_view(dynamic raw);
 
   @protected
@@ -243,10 +254,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TunnelSpec dco_decode_box_autoadd_tunnel_spec(dynamic raw);
 
   @protected
+  TypedLine dco_decode_box_autoadd_typed_line(dynamic raw);
+
+  @protected
   int dco_decode_box_autoadd_u_16(dynamic raw);
 
   @protected
   int dco_decode_box_autoadd_u_32(dynamic raw);
+
+  @protected
+  WorkspaceSpec dco_decode_box_autoadd_workspace_spec(dynamic raw);
+
+  @protected
+  WorkspaceSplit dco_decode_box_autoadd_workspace_split(dynamic raw);
+
+  @protected
+  WorkspaceTarget dco_decode_box_autoadd_workspace_target(dynamic raw);
+
+  @protected
+  CellPos dco_decode_cell_pos(dynamic raw);
 
   @protected
   CertView dco_decode_cert_view(dynamic raw);
@@ -465,6 +491,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<SnippetView> dco_decode_list_snippet_view(dynamic raw);
 
   @protected
+  List<SshKey> dco_decode_list_ssh_key(dynamic raw);
+
+  @protected
   List<TagCount> dco_decode_list_tag_count(dynamic raw);
 
   @protected
@@ -472,6 +501,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<TunnelView> dco_decode_list_tunnel_view(dynamic raw);
+
+  @protected
+  List<WorkspacePane> dco_decode_list_workspace_pane(dynamic raw);
+
+  @protected
+  List<WorkspaceTabSpec> dco_decode_list_workspace_tab_spec(dynamic raw);
+
+  @protected
+  List<WorkspaceView> dco_decode_list_workspace_view(dynamic raw);
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
@@ -487,6 +525,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   bool? dco_decode_opt_box_autoadd_bool(dynamic raw);
+
+  @protected
+  CellPos? dco_decode_opt_box_autoadd_cell_pos(dynamic raw);
 
   @protected
   CertView? dco_decode_opt_box_autoadd_cert_view(dynamic raw);
@@ -549,6 +590,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SearchView? dco_decode_opt_box_autoadd_search_view(dynamic raw);
 
   @protected
+  SshKey? dco_decode_opt_box_autoadd_ssh_key(dynamic raw);
+
+  @protected
+  SshKeyFailure? dco_decode_opt_box_autoadd_ssh_key_failure(dynamic raw);
+
+  @protected
   StageView? dco_decode_opt_box_autoadd_stage_view(dynamic raw);
 
   @protected
@@ -558,10 +605,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TunnelErrorView? dco_decode_opt_box_autoadd_tunnel_error_view(dynamic raw);
 
   @protected
+  TypedLine? dco_decode_opt_box_autoadd_typed_line(dynamic raw);
+
+  @protected
   int? dco_decode_opt_box_autoadd_u_16(dynamic raw);
 
   @protected
   int? dco_decode_opt_box_autoadd_u_32(dynamic raw);
+
+  @protected
+  WorkspaceSplit? dco_decode_opt_box_autoadd_workspace_split(dynamic raw);
+
+  @protected
+  WorkspaceTarget? dco_decode_opt_box_autoadd_workspace_target(dynamic raw);
 
   @protected
   List<String>? dco_decode_opt_list_String(dynamic raw);
@@ -666,6 +722,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SnippetView dco_decode_snippet_view(dynamic raw);
 
   @protected
+  SshKey dco_decode_ssh_key(dynamic raw);
+
+  @protected
+  SshKeyFailure dco_decode_ssh_key_failure(dynamic raw);
+
+  @protected
+  SshKeyFailureKind dco_decode_ssh_key_failure_kind(dynamic raw);
+
+  @protected
+  SshKeyResult dco_decode_ssh_key_result(dynamic raw);
+
+  @protected
+  SshKeyType dco_decode_ssh_key_type(dynamic raw);
+
+  @protected
   StageKind dco_decode_stage_kind(dynamic raw);
 
   @protected
@@ -708,6 +779,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TunnelView dco_decode_tunnel_view(dynamic raw);
 
   @protected
+  TypedLine dco_decode_typed_line(dynamic raw);
+
+  @protected
   int dco_decode_u_16(dynamic raw);
 
   @protected
@@ -724,6 +798,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   BigInt dco_decode_usize(dynamic raw);
+
+  @protected
+  WorkspacePane dco_decode_workspace_pane(dynamic raw);
+
+  @protected
+  WorkspaceSpec dco_decode_workspace_spec(dynamic raw);
+
+  @protected
+  WorkspaceSplit dco_decode_workspace_split(dynamic raw);
+
+  @protected
+  WorkspaceTabSpec dco_decode_workspace_tab_spec(dynamic raw);
+
+  @protected
+  WorkspaceTarget dco_decode_workspace_target(dynamic raw);
+
+  @protected
+  WorkspaceView dco_decode_workspace_view(dynamic raw);
 
   @protected
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
@@ -830,6 +922,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
+  CellPos sse_decode_box_autoadd_cell_pos(SseDeserializer deserializer);
+
+  @protected
   CertView sse_decode_box_autoadd_cert_view(SseDeserializer deserializer);
 
   @protected
@@ -927,6 +1022,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SnippetSpec sse_decode_box_autoadd_snippet_spec(SseDeserializer deserializer);
 
   @protected
+  SshKey sse_decode_box_autoadd_ssh_key(SseDeserializer deserializer);
+
+  @protected
+  SshKeyFailure sse_decode_box_autoadd_ssh_key_failure(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   StageView sse_decode_box_autoadd_stage_view(SseDeserializer deserializer);
 
   @protected
@@ -941,10 +1044,31 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TunnelSpec sse_decode_box_autoadd_tunnel_spec(SseDeserializer deserializer);
 
   @protected
+  TypedLine sse_decode_box_autoadd_typed_line(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_box_autoadd_u_16(SseDeserializer deserializer);
 
   @protected
   int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
+
+  @protected
+  WorkspaceSpec sse_decode_box_autoadd_workspace_spec(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  WorkspaceSplit sse_decode_box_autoadd_workspace_split(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  WorkspaceTarget sse_decode_box_autoadd_workspace_target(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CellPos sse_decode_cell_pos(SseDeserializer deserializer);
 
   @protected
   CertView sse_decode_cert_view(SseDeserializer deserializer);
@@ -1193,6 +1317,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<SnippetView> sse_decode_list_snippet_view(SseDeserializer deserializer);
 
   @protected
+  List<SshKey> sse_decode_list_ssh_key(SseDeserializer deserializer);
+
+  @protected
   List<TagCount> sse_decode_list_tag_count(SseDeserializer deserializer);
 
   @protected
@@ -1202,6 +1329,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<TunnelView> sse_decode_list_tunnel_view(SseDeserializer deserializer);
+
+  @protected
+  List<WorkspacePane> sse_decode_list_workspace_pane(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<WorkspaceTabSpec> sse_decode_list_workspace_tab_spec(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<WorkspaceView> sse_decode_list_workspace_view(
+    SseDeserializer deserializer,
+  );
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
@@ -1219,6 +1361,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   bool? sse_decode_opt_box_autoadd_bool(SseDeserializer deserializer);
+
+  @protected
+  CellPos? sse_decode_opt_box_autoadd_cell_pos(SseDeserializer deserializer);
 
   @protected
   CertView? sse_decode_opt_box_autoadd_cert_view(SseDeserializer deserializer);
@@ -1315,6 +1460,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  SshKey? sse_decode_opt_box_autoadd_ssh_key(SseDeserializer deserializer);
+
+  @protected
+  SshKeyFailure? sse_decode_opt_box_autoadd_ssh_key_failure(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   StageView? sse_decode_opt_box_autoadd_stage_view(
     SseDeserializer deserializer,
   );
@@ -1330,10 +1483,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  TypedLine? sse_decode_opt_box_autoadd_typed_line(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   int? sse_decode_opt_box_autoadd_u_16(SseDeserializer deserializer);
 
   @protected
   int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer);
+
+  @protected
+  WorkspaceSplit? sse_decode_opt_box_autoadd_workspace_split(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  WorkspaceTarget? sse_decode_opt_box_autoadd_workspace_target(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<String>? sse_decode_opt_list_String(SseDeserializer deserializer);
@@ -1440,6 +1608,23 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SnippetView sse_decode_snippet_view(SseDeserializer deserializer);
 
   @protected
+  SshKey sse_decode_ssh_key(SseDeserializer deserializer);
+
+  @protected
+  SshKeyFailure sse_decode_ssh_key_failure(SseDeserializer deserializer);
+
+  @protected
+  SshKeyFailureKind sse_decode_ssh_key_failure_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  SshKeyResult sse_decode_ssh_key_result(SseDeserializer deserializer);
+
+  @protected
+  SshKeyType sse_decode_ssh_key_type(SseDeserializer deserializer);
+
+  @protected
   StageKind sse_decode_stage_kind(SseDeserializer deserializer);
 
   @protected
@@ -1482,6 +1667,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TunnelView sse_decode_tunnel_view(SseDeserializer deserializer);
 
   @protected
+  TypedLine sse_decode_typed_line(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_u_16(SseDeserializer deserializer);
 
   @protected
@@ -1498,6 +1686,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   BigInt sse_decode_usize(SseDeserializer deserializer);
+
+  @protected
+  WorkspacePane sse_decode_workspace_pane(SseDeserializer deserializer);
+
+  @protected
+  WorkspaceSpec sse_decode_workspace_spec(SseDeserializer deserializer);
+
+  @protected
+  WorkspaceSplit sse_decode_workspace_split(SseDeserializer deserializer);
+
+  @protected
+  WorkspaceTabSpec sse_decode_workspace_tab_spec(SseDeserializer deserializer);
+
+  @protected
+  WorkspaceTarget sse_decode_workspace_target(SseDeserializer deserializer);
+
+  @protected
+  WorkspaceView sse_decode_workspace_view(SseDeserializer deserializer);
 
   @protected
   void sse_encode_AnyhowException(
@@ -1622,6 +1828,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_box_autoadd_bool(bool self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_cell_pos(CellPos self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_cert_view(
@@ -1786,6 +1995,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_ssh_key(SshKey self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_ssh_key_failure(
+    SshKeyFailure self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_stage_view(
     StageView self,
     SseSerializer serializer,
@@ -1810,10 +2028,37 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_typed_line(
+    TypedLine self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_u_16(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_workspace_spec(
+    WorkspaceSpec self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_workspace_split(
+    WorkspaceSplit self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_workspace_target(
+    WorkspaceTarget self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_cell_pos(CellPos self, SseSerializer serializer);
 
   @protected
   void sse_encode_cert_view(CertView self, SseSerializer serializer);
@@ -2113,6 +2358,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_ssh_key(List<SshKey> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_tag_count(List<TagCount> self, SseSerializer serializer);
 
   @protected
@@ -2124,6 +2372,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_tunnel_view(
     List<TunnelView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_workspace_pane(
+    List<WorkspacePane> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_workspace_tab_spec(
+    List<WorkspaceTabSpec> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_workspace_view(
+    List<WorkspaceView> self,
     SseSerializer serializer,
   );
 
@@ -2145,6 +2411,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_box_autoadd_bool(bool? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_cell_pos(
+    CellPos? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_box_autoadd_cert_view(
@@ -2267,6 +2539,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_ssh_key(
+    SshKey? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_ssh_key_failure(
+    SshKeyFailure? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_stage_view(
     StageView? self,
     SseSerializer serializer,
@@ -2285,10 +2569,28 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_typed_line(
+    TypedLine? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_u_16(int? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_workspace_split(
+    WorkspaceSplit? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_workspace_target(
+    WorkspaceTarget? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_list_String(List<String>? self, SseSerializer serializer);
@@ -2420,6 +2722,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_snippet_view(SnippetView self, SseSerializer serializer);
 
   @protected
+  void sse_encode_ssh_key(SshKey self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_ssh_key_failure(SshKeyFailure self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_ssh_key_failure_kind(
+    SshKeyFailureKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_ssh_key_result(SshKeyResult self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_ssh_key_type(SshKeyType self, SseSerializer serializer);
+
+  @protected
   void sse_encode_stage_kind(StageKind self, SseSerializer serializer);
 
   @protected
@@ -2474,6 +2794,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_tunnel_view(TunnelView self, SseSerializer serializer);
 
   @protected
+  void sse_encode_typed_line(TypedLine self, SseSerializer serializer);
+
+  @protected
   void sse_encode_u_16(int self, SseSerializer serializer);
 
   @protected
@@ -2490,6 +2813,33 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_usize(BigInt self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_workspace_pane(WorkspacePane self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_workspace_spec(WorkspaceSpec self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_workspace_split(
+    WorkspaceSplit self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_workspace_tab_spec(
+    WorkspaceTabSpec self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_workspace_target(
+    WorkspaceTarget self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_workspace_view(WorkspaceView self, SseSerializer serializer);
 }
 
 // Section: wire_class

@@ -81,6 +81,14 @@
   "cipher": "Cipher",
   "clear": "Reset",
   "clearFinished": "Clear finished",
+  "clearHistory": "{count, plural, =0{Clear the history} =1{Clear 1 command} other{Clear {count} commands}}",
+  "@clearHistory": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "clearSelection": "Clear the selection",
   "close": "Close",
   "closeAction": "Close",
@@ -96,6 +104,16 @@
   "comingFromOther": "Coming from PuTTY, MobaXterm or SecureCRT?",
   "command": "Command",
   "commandHint": "Each line is sent as if typed. To write {open} as it is, put {escaped}.",
+  "commandHistory": "Command history",
+  "commandHistoryHelp": "What you run in terminals is kept on this computer (never in the vault), to find and run again with {keys}. What the screen does not show, like a password, is never kept, nor what starts with a space.",
+  "@commandHistoryHelp": {
+    "placeholders": {
+      "keys": {
+        "type": "String"
+      }
+    }
+  },
+  "commandPalette": "Command palette",
   "conflictChoose": ". Choose what to do with each:",
   "conflictFile": "File",
   "conflictFolder": "folder",
@@ -126,8 +144,10 @@
   "copyAddress": "Copy address",
   "copyFingerprint": "Copy the fingerprint",
   "copyPath": "Copy path",
+  "copyPublicKey": "Copy the public key",
   "copyReport": "Copy the report",
   "create": "Create",
+  "csvSpreadsheet": "CSV (spreadsheet)",
   "ctrlShiftPrefix": "Ctrl+Shift+",
   "cursor": "Cursor",
   "cursorBar": "Bar",
@@ -154,6 +174,15 @@
   "deleteMany": "Delete {count} items?",
   "deleteOne": "Delete {name}?",
   "deleteRemoteBody": "They are deleted on {host}. Servers have no trash: this cannot be undone.",
+  "deleteWorkspaceBody": "Only the saved layout goes: the hosts, and what is open, stay.",
+  "deleteWorkspaceTitle": "Delete “{name}”?",
+  "@deleteWorkspaceTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "deletedHost": "(deleted host)",
   "deletedIdentity": "(deleted identity)",
   "destination": "Destination",
@@ -182,6 +211,7 @@
   "editTheIdentity": "Edit the identity",
   "editTunnel": "Edit tunnel",
   "emptyFolder": "This folder is empty",
+  "emptyPane": "empty pane",
   "exampleVariable": "name",
   "expand": "Expand",
   "failureAuth": "{user}@{label} could not sign in.",
@@ -206,6 +236,7 @@
   "fileDenied": "Permission denied: {path}",
   "fileExists": "Already exists: {path}",
   "fileLost": "The connection was lost.",
+  "fileName": "File",
   "fileNotFound": "Not found: {path}",
   "filledInEachPane": "Also filled in on their own, in each pane:",
   "filterFolder": "Filter this folder",
@@ -217,10 +248,12 @@
   "findClose": "Close the search (Esc)",
   "findCount": "{selected} of {total}",
   "findHint": "Search the terminal",
+  "findInTerminal": "Find in the terminal",
   "findNewer": "Next, further down (Shift+Enter)",
   "findOlder": "Previous, further up (Enter)",
   "findTotal": "{count, plural, =0{No results} =1{1 result} other{{count} results}}",
   "fingerprint": "Fingerprint",
+  "fingerprintNeedsPublic": "No .pub: fingerprint unknown",
   "firstConnectionTo": "First connection to {label}",
   "fontFromTheme": "The theme's",
   "fontOther": "Another installed font…",
@@ -249,6 +282,14 @@
   "fromNowhere": "Not set: the connection decides",
   "fromSshConfig": "from ~/.ssh/config",
   "fromThere": "from there",
+  "goToPage": "Go to {page}",
+  "@goToPage": {
+    "placeholders": {
+      "page": {
+        "type": "String"
+      }
+    }
+  },
   "group": "Group",
   "groupInsideItself": "A group cannot be inside itself.",
   "groupNamed": "Group {name}",
@@ -266,6 +307,7 @@
   "hostKeys": "New host keys",
   "hostNeedsName": "The host needs a name.",
   "hostsSection": "Hosts",
+  "howCsv": "One host a row, with a header: Termius's template, or columns such as name, host, port, user and group.",
   "howMobaXterm": "Sessions › Export all sessions to file: a .mxtsessions file",
   "howPutty": "A .reg exported from the registry (reg export HKCU\\Software\\SimonTatham\\PuTTY\\Sessions putty.reg)",
   "howSecureCrt": "Tools › Export Settings…: an .xml file",
@@ -284,6 +326,7 @@
   "identitySaveChanges": "{count, plural, =1{Saving changes the host that uses it.} other{Saving changes the {count} hosts that use it.}} A host that sets its own user or keys keeps them.",
   "identityUsedBy": "Used by: {who}",
   "ignore": "Ignore",
+  "importAction": "Import",
   "importEllipsis": "Import…",
   "importFailed": "Could not import: {error}",
   "importFound": "{count, plural, =1{We found 1 host in your ~/.ssh/config.} other{We found {count} hosts in your ~/.ssh/config.}}",
@@ -293,6 +336,9 @@
   "importIntoGroup": "They go into the group “~/.ssh/config”. A host brings along the hosts it jumps through.",
   "importIntro": "Bring your hosts from another program. They are only read: the original does not change.",
   "importKeepsFile": "The file is left as it is, and keys stay where they are: OpenWard keeps the path, never the key.",
+  "importKey": "Import a key",
+  "importKeyAction": "Import…",
+  "importKeyIntro": "Paste a private key or choose its file. It is saved as a new file in ~/.ssh; the original stays as it is.",
   "importLater": "You can import later from the sidebar.",
   "importN": "{count, plural, =0{Import} =1{Import 1 host} other{Import {count} hosts}}",
   "importNothing": "There are no new hosts in ~/.ssh/config (or it does not exist).",
@@ -308,6 +354,67 @@
   "inheritsFrom": "Inherits it from {group}",
   "inputNotSent": "What you type now is not sent.",
   "inside": "Inside",
+  "installKeyAction": "Put on a server…",
+  "installKeyAdded": "Key added on {host}",
+  "@installKeyAdded": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "installKeyFailed": "It could not be put on {host}",
+  "@installKeyFailed": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "installKeyIntro": "Its public half is added to the server's ~/.ssh/authorized_keys, as ssh-copy-id does. You sign in once with what you use now.",
+  "installKeyNext": "To sign in with it, choose it on the host or on its identity.",
+  "installKeyNoHosts": "No host matches. Type an address to use it without saving it.",
+  "installKeySearch": "Find a host, or type user@address",
+  "installKeyTitle": "Put {name} on a server",
+  "@installKeyTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "installKeyToAddress": "Put it on {address}",
+  "@installKeyToAddress": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "installKeyWasThere": "{host} had this key already",
+  "@installKeyWasThere": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "installKeyWriteFailed": "The server did not let ~/.ssh/authorized_keys be written: {error}",
+  "@installKeyWriteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "installingKey": "Adding the key on {host}…",
+  "@installingKey": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "itemCount": "{count, plural, =1{1 item} other{{count} items}}",
   "itsPort": "Its port",
   "jobCancelled": "Cancelled",
@@ -324,25 +431,57 @@
   "jumpThrough": "Jump through, in order",
   "jumpVia": "Jumping through {hosts}",
   "jumpsVia": "jumps through {hosts}",
+  "keyAdded": "Saved as {path}.",
+  "@keyAdded": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
   "keyBefore": "Before",
   "keyChangedBody": "It may be a reinstalled server or someone intercepting the connection. No password or key has been sent.",
   "keyChangedDialogBody": "{where} shows a key different from the one you had as good. The server may have been reinstalled or changed its key, but someone may also be intercepting the connection. Do not go on without checking the new fingerprint with the server's administrator.",
   "keyChangedTitle": "The key of {label} has changed",
   "keyColumn": "Key",
+  "keyCommentLabel": "Comment",
   "keyExchange": "Key exchange",
+  "keyFailed": "It could not be done: {error}",
+  "@keyFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "keyInKnownHosts": "in ~/.ssh/known_hosts",
   "keyInOpenWard": "saved in OpenWard",
   "keyMissing": "Not on this computer",
   "keyMissingWarning": "{path} is not on this computer. {count, plural, =0{Copy it or change the path before using it.} =1{The host that uses it cannot use that key until you copy it or change the path.} other{The {count} hosts that use it cannot use that key until you copy it or change the path.}}",
+  "keyNameInvalid": "That name cannot be a key file: use letters, digits, “-”, “_”, “.” or “@”.",
+  "keyNameTaken": "There is a file named {name} in ~/.ssh already. Choose another name.",
+  "@keyNameTaken": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "keyNoPublicHalf": "No .pub next to it: its type shows when connecting",
+  "keyNotReadable": "That is not a private key OpenWard can read (OpenSSH, PEM or PuTTY).",
   "keyNow": "Now ({algorithm})",
   "keyPerHost": "One per host (it has %h, %r…)",
   "keyProtected": "The key {key} is protected.",
   "keyReceived": "Received",
   "keySaved": "Saved",
+  "keyType": "Type",
+  "keyTypeEcdsa": "For servers or rules that ask for NIST curves.",
+  "keyTypeEd25519": "The one to choose: short, fast, and taken by servers of the last ten years.",
+  "keyTypeRsa": "For old servers that take nothing newer. It takes a few seconds to make.",
   "keys": "Keys",
   "keysHelp": "One path per line. OpenWard keeps the path, never the key.",
   "keysInOrder": "Tried in this order; drag to change it.",
+  "keysIntro": "The private keys in ~/.ssh. They stay there: the vault only keeps which key each host uses. Here you can make keys, bring in the ones you have and put the public half on a server.",
   "kindDynamic": "Dynamic (-D)",
   "kindDynamicShort": "Dynamic",
   "kindLocal": "Local (-L)",
@@ -364,6 +503,7 @@
   "linesCount": "{count} lines",
   "linkNotOpened": "“{scheme}:” links are not opened from the terminal.",
   "localSentence": "What connects to {here} reaches {dest} as if it came from {host}.",
+  "localShell": "Local",
   "localTerminal": "Local terminal",
   "localUser": "your local user",
   "madeGroups": "{count, plural, =1{1 group, with its settings} other{{count} groups, with their settings}}",
@@ -373,6 +513,8 @@
   "madeSkipped": "{count, plural, =1{1 host was there from before and was left as it was} other{{count} hosts were there from before and were left as they were}}",
   "madeSnippets": "{count, plural, =1{1 snippet, in Library › Snippets} other{{count} snippets, in Library › Snippets}}",
   "madeTunnels": "{count, plural, =1{1 tunnel, in Library › Tunnels} other{{count} tunnels, in Library › Tunnels}}",
+  "makeKey": "Make the key",
+  "makingKey": "Making…",
   "manageSnippets": "Manage snippets…",
   "markerCertAuthority": "Certificate authority: trusts the hosts it signs",
   "markerRevoked": "Revoked: always refused",
@@ -407,6 +549,19 @@
   "newHostTitle": "New host",
   "newIdentity": "New identity",
   "newIdentityEllipsis": "New identity…",
+  "newKey": "New key",
+  "newKeyAction": "New key…",
+  "newKeyWhere": "It is saved as {private} (only you can read it), and its public half as {public}.",
+  "@newKeyWhere": {
+    "placeholders": {
+      "private": {
+        "type": "String"
+      },
+      "public": {
+        "type": "String"
+      }
+    }
+  },
   "newLocalTerminal": "New local terminal",
   "newPane": "New pane",
   "newSnippet": "New snippet",
@@ -415,8 +570,19 @@
   "newsFresh": "new",
   "newsIdentitiesBody": "A user, keys and an agent with a name, for a whole group or several hosts at once.",
   "newsIdentitiesTitle": "Identities",
-  "newsImportBody": "Hosts, groups, identities and tunnels from Termius, PuTTY, KiTTY, MobaXterm, Tabby or SecureCRT, from «…» › Import… in the sidebar. Passwords do not come along.",
+  "newsImportBody": "Hosts, groups, identities and tunnels from Termius, PuTTY, KiTTY, MobaXterm, Tabby or SecureCRT, and hosts from a CSV, from «…» › Import… in the sidebar. Passwords do not come along.",
   "newsImportTitle": "Import from your previous client",
+  "newsKeysBody": "Make Ed25519, ECDSA or RSA keys, import yours, see their fingerprints and put them on a server without leaving OpenWard, as ssh-copy-id does.",
+  "newsKeysTitle": "Keys",
+  "newsPaletteBody": "Everything the window does, your hosts, snippets and the commands you ran, a few letters away ({shortcut}). The history stays on this computer and never keeps passwords.",
+  "@newsPaletteBody": {
+    "placeholders": {
+      "shortcut": {
+        "type": "String"
+      }
+    }
+  },
+  "newsPaletteTitle": "Command palette and history",
   "newsPanesBody": "Split a tab ({split}) or drag another one, or a host, onto a terminal; type into several panes at once ({broadcast}). With exit, the tab closes by itself.",
   "newsPanesTitle": "Panes and broadcast",
   "newsSftpBody": "Drag between this computer and the server, with a queue, resuming, and what already exists settled your way ({shortcut}).",
@@ -427,6 +593,8 @@
   "newsThemesTitle": "Themes and visual accessibility",
   "newsTunnelsBody": "Local, remote and SOCKS5, opened on connect; and HTTP and SOCKS5 proxies to reach the server.",
   "newsTunnelsTitle": "Saved tunnels and proxy",
+  "newsWorkspacesBody": "Save your tabs and panes by name and open them again, connected, from the library or the palette.",
+  "newsWorkspacesTitle": "Workspaces",
   "next": "Next",
   "no": "No",
   "noGroup": "No group",
@@ -437,6 +605,9 @@
   "noIdentityInherited": "No group sets one",
   "noIdentityNow": "No identity",
   "noJumpsYet": "None yet.",
+  "noKeyMatches": "No key matches.",
+  "noKeys": "No keys in ~/.ssh",
+  "noKeysBody": "Make one with “New key…”, or bring in one you have with “Import…”.",
   "noKeysYet": "No keys: the usual ones in ~/.ssh and the agent's are tried.",
   "noKnownHostMatches": "No key matches",
   "noKnownHosts": "You trust no keys yet",
@@ -444,6 +615,14 @@
   "noMatches": "Nothing matches “{filter}”",
   "noParent": "No group",
   "noPostQuantumNote": "The server offers no post-quantum key exchange (mlkem768x25519; OpenSSH has it since 10.0).",
+  "noPublicKey": "{name} has no .pub and is encrypted: its public half cannot be read without the passphrase.",
+  "@noPublicKey": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "noResults": "No host matches.",
   "noSnippetMatches": "No snippet matches",
   "noSnippets": "No snippets yet",
@@ -451,6 +630,8 @@
   "noSnippetsYet": "No snippets yet. Make one in Library › Snippets.",
   "noTunnels": "No tunnels yet",
   "noTunnelsBody": "A tunnel takes a port of this computer to a service only the server sees (a database, a dashboard), or the other way round. Create one, or bring them from your ~/.ssh/config.",
+  "noWorkspaces": "No workspaces yet",
+  "noWorkspacesBody": "Open the tabs and split the panes as you like them, then keep them with “Save the open tabs…” (also in a tab's menu and in the command palette).",
   "notNow": "Not now",
   "notes": "Notes",
   "nowIdentity": "Now: {identity}",
@@ -469,6 +650,7 @@
   "onThisComputer": "On this computer",
   "onlyTheServer": "Only the server",
   "onlyThisComputer": "Only this computer (127.0.0.1)",
+  "open": "Open",
   "openATerminalFirst": "Open a terminal to run it",
   "openAction": "Open",
   "openCount": "{count} open",
@@ -482,14 +664,24 @@
   "orAnAddress": "or an address: user@host:port",
   "orTypeAPath": "or type a path: ~, %h, %r and %u work",
   "ownUserWins": "It sets its own user ({user}), which still wins.",
+  "paletteActions": "Actions",
+  "paletteBroadcast": "Broadcast in this tab (on or off)",
   "paletteChoose": "choose",
+  "paletteDo": "do it",
+  "paletteForget": "remove from history",
+  "paletteHint": "Type an action, a host, a command you ran before…",
+  "paletteHistory": "History",
+  "paletteHosts": "Hosts",
+  "paletteNothing": "Nothing matches.",
   "paletteRun": "run",
   "paletteTypeOnly": "type only",
   "paneOptions": "Pane options",
   "paneWhat": "What do you open in this pane?",
   "partNote": "Files are copied under a temporary name (.part) and renamed at the end: if it is cut short, the real file is never left half written and the copy can be resumed.",
   "passphraseField": "Passphrase",
+  "passphraseOptional": "Passphrase (optional)",
   "passphraseTitle": "Key passphrase",
+  "passphrasesDiffer": "The two passphrases differ.",
   "passwordTitle": "Password",
   "passwordsNever": "Passwords never come along: OpenWard asks for them when connecting.",
   "paste": "Paste",
@@ -546,6 +738,8 @@
   "previewSubtitle": "{hosts, plural, =1{1 host} other{{hosts} hosts}}{groups, plural, =0{} =1{ in 1 group} other{ in {groups} groups}}",
   "previewTitle": "Import from {program}",
   "previewTunnels": "{count, plural, =1{1 tunnel} other{{count} tunnels}}",
+  "privateKey": "Private key",
+  "protection": "Protection",
   "proxy": "Proxy",
   "proxyHttpNote": "With an HTTP proxy the CONNECT request is not encrypted: the proxy sees which host and port you connect to, not what goes over SSH.",
   "proxyLoginBody": "{proxy} asks for a user and password to let you through. They are not saved.",
@@ -556,6 +750,14 @@
   "proxyServer": "Proxy server",
   "proxyUser": "Proxy user",
   "proxyUserHelp": "Optional. The password is asked for when connecting and not saved.",
+  "publicKeyCopied": "Public key of {name} copied.",
+  "@publicKeyCopied": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "queueAllDone": "All finished",
   "queueFailed": "{count} failed",
   "queuePaused": "{count} paused",
@@ -594,6 +796,8 @@
   "renameTabHelp": "Empty to go back to the host's name",
   "renameTabTitle": "Rename tab",
   "renameTitle": "Rename {name}",
+  "renameWorkspace": "Rename the workspace",
+  "repeatPassphrase": "Again",
   "reportCopied": "Copied. Paste it in your report.",
   "reportCore": "core",
   "reportCounts": "Hosts: {hosts} · groups: {groups} · tunnels: {tunnels} · identities: {identities} · snippets: {snippets}",
@@ -639,14 +843,19 @@
   "save": "Save",
   "saveAndConnect": "Save and connect",
   "saveAndOpen": "Save and open",
+  "saveAs": "Save as",
   "saveFailed": "Could not save: {error}",
   "saveKeyFailed": "Could not save the key: {error}",
   "saveNewHost": "Save a new host",
+  "saveOpenTabs": "Save the open tabs…",
+  "saveWorkspaceIntro": "The open terminal and file tabs, with their panes. When it opens, each pane connects again.",
+  "saveWorkspaceTitle": "Save as a workspace",
   "savedHost": "Saved host",
   "scrollback": "Scrollback",
   "scrollbackHelp": "For new tabs.",
   "scrollbackLines": "{lines} lines",
   "searchHosts": "Search hosts",
+  "searchKeys": "Search by name, fingerprint or host",
   "searchKnownHosts": "Search a host, a fingerprint…",
   "sectionConnection": "Connection",
   "sectionGeneral": "General",
@@ -762,6 +971,7 @@
   "trustNewKeyEllipsis": "Trust the new key…",
   "trustedOn": "trusted on {date}",
   "tryAgain": "Try again",
+  "tryAnother": "Try another",
   "tunnelBadAddress": "That address does not exist on this computer.",
   "tunnelClosed": "Closed",
   "tunnelDidNotOpen": "«{name}» did not open on connect: {why}",
@@ -786,10 +996,13 @@
   "tunnelsOpenCount": "{count, plural, =1{1 tunnel open} other{{count} tunnels open}}",
   "tunnelsStayOpen": "They stay open if you close this tab. All of them in Library › Tunnels.",
   "twoNames": "{a} and {b}",
+  "typeAndFingerprint": "Type and fingerprint",
   "typeOnly": "Types only",
   "uiColors": "Interface colors",
   "uiFont": "Interface font",
+  "unknownKeyType": "Unknown type",
   "upOneLevel": "Up one level",
+  "updateWithOpenTabs": "Replace with the open tabs",
   "upload": "Upload",
   "uploadToArrow": "Upload to {where} →",
   "uploadToHost": "Upload to {host}",
@@ -832,7 +1045,52 @@
   "whatsNewReport": "Something wrong? Settings › General › Report a problem copies what it takes to tell.",
   "whereItIs": "Where it is",
   "whoCanUse": "Who can use it",
+  "withCertificate": "with certificate",
   "withEnter": "Enter at the end",
+  "withPassphrase": "Passphrase",
+  "withoutPassphrase": "No passphrase",
+  "workspaceNumbered": "Workspace {number}",
+  "@workspaceNumbered": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "workspaceSaved": "“{name}” saved.",
+  "@workspaceSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "workspaceSessions": "{count, plural, =1{1 session} other{{count} sessions}}",
+  "@workspaceSessions": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "workspaceTabs": "{count, plural, =1{1 tab} other{{count} tabs}}",
+  "@workspaceTabs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "workspaceUpdated": "“{name}” now has the open tabs.",
+  "@workspaceUpdated": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "workspaces": "Workspaces",
+  "workspacesIntro": "Tabs and panes saved by name, to open again together. What each pane connects to is kept, never what it showed.",
   "wrongAnswer": "Wrong answer.",
   "wrongPassphrase": "Wrong passphrase.",
   "wrongPassword": "Wrong password.",

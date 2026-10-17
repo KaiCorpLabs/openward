@@ -359,6 +359,17 @@ impl Terminal {
         lock(&self.state).engine.screen_text()
     }
 
+    /// The cursor's cell (row, column) while the live screen is on view.
+    pub fn cursor_cell(&self) -> Option<(u16, u16)> {
+        lock(&self.state).engine.cursor_cell()
+    }
+
+    /// What was typed at a prompt that began at `start`, and what follows
+    /// the cursor on its row.
+    pub fn typed_since(&self, start: (u16, u16)) -> Option<(String, String)> {
+        lock(&self.state).engine.typed_since(start)
+    }
+
     fn select(&self, change: impl FnOnce(&mut GhosttyEngine)) {
         let mut s = lock(&self.state);
         change(&mut s.engine);

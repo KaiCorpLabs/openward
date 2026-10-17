@@ -11,6 +11,7 @@ import '../terminal/keys.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../window/chrome.dart';
+import '../workspaces/workspaces_page.dart';
 import 'drag.dart';
 import 'tabs.dart';
 
@@ -311,6 +312,13 @@ class _TabRowState extends ConsumerState<_TabRow> {
             '',
             () => tabs.closeOthers(index),
           ),
+        const PopupMenuDivider(),
+        menuItem(
+          context,
+          l.saveOpenTabs,
+          '',
+          () => saveWorkspaceDialog(context, ref),
+        ),
         menuHint(context, l.tabMenuHint),
       ],
     );
@@ -331,7 +339,9 @@ String tabTitle(BuildContext context, OpenTab tab) {
       PageKind.settings => l.settings,
       PageKind.tunnels => l.tunnels,
       PageKind.identities => l.identities,
+      PageKind.keys => l.keys,
       PageKind.snippets => l.snippets,
+      PageKind.workspaces => l.workspaces,
       PageKind.knownHosts => l.knownHosts,
     },
   };
@@ -460,16 +470,12 @@ class _Tab extends StatelessWidget {
           PageKind.settings => Icons.settings_outlined,
           PageKind.tunnels => Icons.swap_horiz,
           PageKind.identities => Icons.badge_outlined,
+          PageKind.keys => Icons.key_outlined,
           PageKind.snippets => Icons.terminal,
+          PageKind.workspaces => Icons.dashboard_outlined,
           PageKind.knownHosts => Icons.verified_user_outlined,
         }, size: 14),
-        title: switch (page) {
-          PageKind.settings => context.l10n.settings,
-          PageKind.tunnels => context.l10n.tunnels,
-          PageKind.identities => context.l10n.identities,
-          PageKind.snippets => context.l10n.snippets,
-          PageKind.knownHosts => context.l10n.knownHosts,
-        },
+        title: tabTitle(context, tab),
       ),
     };
   }

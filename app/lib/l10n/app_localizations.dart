@@ -584,6 +584,12 @@ abstract class AppLocalizations {
   /// **'Quitar las terminadas'**
   String get clearFinished;
 
+  /// No description provided for @clearHistory.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{Borrar el historial} =1{Borrar 1 comando} other{Borrar {count} comandos}}'**
+  String clearHistory(int count);
+
   /// No description provided for @clearSelection.
   ///
   /// In es, this message translates to:
@@ -673,6 +679,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cada línea se envía como si la escribieras. Para escribir {open} tal cual, pon {escaped}.'**
   String commandHint(String open, String escaped);
+
+  /// No description provided for @commandHistory.
+  ///
+  /// In es, this message translates to:
+  /// **'Historial de comandos'**
+  String get commandHistory;
+
+  /// No description provided for @commandHistoryHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que ejecutas en los terminales se guarda en este equipo (nunca en el vault) para buscarlo y repetirlo con {keys}. Nunca se guarda lo que la pantalla no muestra, como una contraseña, ni lo que empieza por un espacio.'**
+  String commandHistoryHelp(String keys);
+
+  /// No description provided for @commandPalette.
+  ///
+  /// In es, this message translates to:
+  /// **'Paleta de comandos'**
+  String get commandPalette;
 
   /// No description provided for @conflictChoose.
   ///
@@ -854,6 +878,12 @@ abstract class AppLocalizations {
   /// **'Copiar la ruta'**
   String get copyPath;
 
+  /// No description provided for @copyPublicKey.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar la clave pública'**
+  String get copyPublicKey;
+
   /// No description provided for @copyReport.
   ///
   /// In es, this message translates to:
@@ -865,6 +895,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Crear'**
   String get create;
+
+  /// No description provided for @csvSpreadsheet.
+  ///
+  /// In es, this message translates to:
+  /// **'CSV (hoja de cálculo)'**
+  String get csvSpreadsheet;
 
   /// No description provided for @ctrlShiftPrefix.
   ///
@@ -1021,6 +1057,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Se eliminan en {host}. En el servidor no hay papelera: no se puede deshacer.'**
   String deleteRemoteBody(String host);
+
+  /// No description provided for @deleteWorkspaceBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo se elimina la distribución guardada: los hosts, y lo que esté abierto, se quedan.'**
+  String get deleteWorkspaceBody;
+
+  /// No description provided for @deleteWorkspaceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar «{name}»?'**
+  String deleteWorkspaceTitle(String name);
 
   /// No description provided for @deletedHost.
   ///
@@ -1190,6 +1238,12 @@ abstract class AppLocalizations {
   /// **'Esta carpeta está vacía'**
   String get emptyFolder;
 
+  /// No description provided for @emptyPane.
+  ///
+  /// In es, this message translates to:
+  /// **'panel vacío'**
+  String get emptyPane;
+
   /// No description provided for @exampleVariable.
   ///
   /// In es, this message translates to:
@@ -1334,6 +1388,12 @@ abstract class AppLocalizations {
   /// **'Se perdió la conexión.'**
   String get fileLost;
 
+  /// No description provided for @fileName.
+  ///
+  /// In es, this message translates to:
+  /// **'Archivo'**
+  String get fileName;
+
   /// No description provided for @fileNotFound.
   ///
   /// In es, this message translates to:
@@ -1400,6 +1460,12 @@ abstract class AppLocalizations {
   /// **'Buscar en el terminal'**
   String get findHint;
 
+  /// No description provided for @findInTerminal.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar en el terminal'**
+  String get findInTerminal;
+
   /// No description provided for @findNewer.
   ///
   /// In es, this message translates to:
@@ -1423,6 +1489,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Huella'**
   String get fingerprint;
+
+  /// No description provided for @fingerprintNeedsPublic.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin .pub: huella desconocida'**
+  String get fingerprintNeedsPublic;
 
   /// No description provided for @firstConnectionTo.
   ///
@@ -1592,6 +1664,12 @@ abstract class AppLocalizations {
   /// **'desde allí'**
   String get fromThere;
 
+  /// No description provided for @goToPage.
+  ///
+  /// In es, this message translates to:
+  /// **'Ir a {page}'**
+  String goToPage(String page);
+
   /// No description provided for @group.
   ///
   /// In es, this message translates to:
@@ -1693,6 +1771,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Hosts'**
   String get hostsSection;
+
+  /// No description provided for @howCsv.
+  ///
+  /// In es, this message translates to:
+  /// **'Un host por fila, con cabecera: la plantilla de Termius o columnas como nombre, host, puerto, usuario y grupo.'**
+  String get howCsv;
 
   /// No description provided for @howMobaXterm.
   ///
@@ -1802,6 +1886,12 @@ abstract class AppLocalizations {
   /// **'Ignorar'**
   String get ignore;
 
+  /// No description provided for @importAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar'**
+  String get importAction;
+
   /// No description provided for @importEllipsis.
   ///
   /// In es, this message translates to:
@@ -1855,6 +1945,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'El fichero no se toca, y las claves se quedan donde están: OpenWard guarda la ruta, nunca la clave.'**
   String get importKeepsFile;
+
+  /// No description provided for @importKey.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar una clave'**
+  String get importKey;
+
+  /// No description provided for @importKeyAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar…'**
+  String get importKeyAction;
+
+  /// No description provided for @importKeyIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Pega una clave privada o elige su archivo. Se guarda como un archivo nuevo en ~/.ssh; el original no cambia.'**
+  String get importKeyIntro;
 
   /// No description provided for @importLater.
   ///
@@ -1945,6 +2053,78 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Dentro de'**
   String get inside;
+
+  /// No description provided for @installKeyAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Subir a un servidor…'**
+  String get installKeyAction;
+
+  /// No description provided for @installKeyAdded.
+  ///
+  /// In es, this message translates to:
+  /// **'Clave añadida en {host}'**
+  String installKeyAdded(String host);
+
+  /// No description provided for @installKeyFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se ha podido subir a {host}'**
+  String installKeyFailed(String host);
+
+  /// No description provided for @installKeyIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Su parte pública se añade al ~/.ssh/authorized_keys del servidor, como hace ssh-copy-id. Entras una vez con lo que uses ahora.'**
+  String get installKeyIntro;
+
+  /// No description provided for @installKeyNext.
+  ///
+  /// In es, this message translates to:
+  /// **'Para entrar con ella, elígela en el host o en su identidad.'**
+  String get installKeyNext;
+
+  /// No description provided for @installKeyNoHosts.
+  ///
+  /// In es, this message translates to:
+  /// **'Ningún host coincide. Escribe una dirección para usarla sin guardarla.'**
+  String get installKeyNoHosts;
+
+  /// No description provided for @installKeySearch.
+  ///
+  /// In es, this message translates to:
+  /// **'Busca un host o escribe usuario@dirección'**
+  String get installKeySearch;
+
+  /// No description provided for @installKeyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Subir {name} a un servidor'**
+  String installKeyTitle(String name);
+
+  /// No description provided for @installKeyToAddress.
+  ///
+  /// In es, this message translates to:
+  /// **'Subir a {address}'**
+  String installKeyToAddress(String address);
+
+  /// No description provided for @installKeyWasThere.
+  ///
+  /// In es, this message translates to:
+  /// **'{host} ya tenía esta clave'**
+  String installKeyWasThere(String host);
+
+  /// No description provided for @installKeyWriteFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'El servidor no dejó escribir ~/.ssh/authorized_keys: {error}'**
+  String installKeyWriteFailed(String error);
+
+  /// No description provided for @installingKey.
+  ///
+  /// In es, this message translates to:
+  /// **'Añadiendo la clave en {host}…'**
+  String installingKey(String host);
 
   /// No description provided for @itemCount.
   ///
@@ -2042,6 +2222,12 @@ abstract class AppLocalizations {
   /// **'salta por {hosts}'**
   String jumpsVia(String hosts);
 
+  /// No description provided for @keyAdded.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardada en {path}.'**
+  String keyAdded(String path);
+
   /// No description provided for @keyBefore.
   ///
   /// In es, this message translates to:
@@ -2072,11 +2258,23 @@ abstract class AppLocalizations {
   /// **'Clave'**
   String get keyColumn;
 
+  /// No description provided for @keyCommentLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Comentario'**
+  String get keyCommentLabel;
+
   /// No description provided for @keyExchange.
   ///
   /// In es, this message translates to:
   /// **'Intercambio'**
   String get keyExchange;
+
+  /// No description provided for @keyFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se ha podido: {error}'**
+  String keyFailed(String error);
 
   /// No description provided for @keyInKnownHosts.
   ///
@@ -2102,11 +2300,29 @@ abstract class AppLocalizations {
   /// **'{path} no está en este equipo. {count, plural, =0{Cópiala o cambia la ruta antes de usarla.} =1{El host que la usa no podrá usar esa clave hasta que la copies o cambies la ruta.} other{Los {count} hosts que la usan no podrán usar esa clave hasta que la copies o cambies la ruta.}}'**
   String keyMissingWarning(String path, int count);
 
+  /// No description provided for @keyNameInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese nombre no vale para un archivo de clave: usa letras, números, «-», «_», «.» o «@».'**
+  String get keyNameInvalid;
+
+  /// No description provided for @keyNameTaken.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya hay un archivo {name} en ~/.ssh. Elige otro nombre.'**
+  String keyNameTaken(String name);
+
   /// No description provided for @keyNoPublicHalf.
   ///
   /// In es, this message translates to:
   /// **'Sin .pub al lado: su tipo se sabrá al conectar'**
   String get keyNoPublicHalf;
+
+  /// No description provided for @keyNotReadable.
+  ///
+  /// In es, this message translates to:
+  /// **'Eso no es una clave privada que OpenWard pueda leer (OpenSSH, PEM o PuTTY).'**
+  String get keyNotReadable;
 
   /// No description provided for @keyNow.
   ///
@@ -2138,6 +2354,30 @@ abstract class AppLocalizations {
   /// **'Guardada'**
   String get keySaved;
 
+  /// No description provided for @keyType.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo'**
+  String get keyType;
+
+  /// No description provided for @keyTypeEcdsa.
+  ///
+  /// In es, this message translates to:
+  /// **'Para servidores o normas que piden curvas NIST.'**
+  String get keyTypeEcdsa;
+
+  /// No description provided for @keyTypeEd25519.
+  ///
+  /// In es, this message translates to:
+  /// **'La recomendada: corta, rápida, y la aceptan los servidores de los últimos diez años.'**
+  String get keyTypeEd25519;
+
+  /// No description provided for @keyTypeRsa.
+  ///
+  /// In es, this message translates to:
+  /// **'Para servidores antiguos que no aceptan nada más nuevo. Tarda unos segundos en crearse.'**
+  String get keyTypeRsa;
+
   /// No description provided for @keys.
   ///
   /// In es, this message translates to:
@@ -2155,6 +2395,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Se prueban en este orden; arrastra para cambiarlo.'**
   String get keysInOrder;
+
+  /// No description provided for @keysIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Las claves privadas de ~/.ssh. Se quedan ahí: el vault solo guarda qué clave usa cada host. Aquí puedes crear claves, traer las que tengas y subir la parte pública a un servidor.'**
+  String get keysIntro;
 
   /// No description provided for @kindDynamic.
   ///
@@ -2282,6 +2528,12 @@ abstract class AppLocalizations {
   /// **'Lo que conecte a {here} llega a {dest} como si saliera de {host}.'**
   String localSentence(String here, String dest, String host);
 
+  /// No description provided for @localShell.
+  ///
+  /// In es, this message translates to:
+  /// **'Local'**
+  String get localShell;
+
   /// No description provided for @localTerminal.
   ///
   /// In es, this message translates to:
@@ -2335,6 +2587,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{count, plural, =1{1 túnel, en Biblioteca › Túneles} other{{count} túneles, en Biblioteca › Túneles}}'**
   String madeTunnels(int count);
+
+  /// No description provided for @makeKey.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear la clave'**
+  String get makeKey;
+
+  /// No description provided for @makingKey.
+  ///
+  /// In es, this message translates to:
+  /// **'Creando…'**
+  String get makingKey;
 
   /// No description provided for @manageSnippets.
   ///
@@ -2540,6 +2804,24 @@ abstract class AppLocalizations {
   /// **'Nueva identidad…'**
   String get newIdentityEllipsis;
 
+  /// No description provided for @newKey.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva clave'**
+  String get newKey;
+
+  /// No description provided for @newKeyAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva clave…'**
+  String get newKeyAction;
+
+  /// No description provided for @newKeyWhere.
+  ///
+  /// In es, this message translates to:
+  /// **'Se guarda en {private} (solo tú puedes leerla) y su parte pública en {public}.'**
+  String newKeyWhere(String private, String public);
+
   /// No description provided for @newLocalTerminal.
   ///
   /// In es, this message translates to:
@@ -2591,7 +2873,7 @@ abstract class AppLocalizations {
   /// No description provided for @newsImportBody.
   ///
   /// In es, this message translates to:
-  /// **'Hosts, grupos, identidades y túneles de Termius, PuTTY, KiTTY, MobaXterm, Tabby o SecureCRT, desde «…» › Importar… en la barra lateral. Las contraseñas no se traen.'**
+  /// **'Hosts, grupos, identidades y túneles de Termius, PuTTY, KiTTY, MobaXterm, Tabby o SecureCRT, y hosts de un CSV, desde «…» › Importar… en la barra lateral. Las contraseñas no se traen.'**
   String get newsImportBody;
 
   /// No description provided for @newsImportTitle.
@@ -2599,6 +2881,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Importar desde tu cliente anterior'**
   String get newsImportTitle;
+
+  /// No description provided for @newsKeysBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Crea claves Ed25519, ECDSA o RSA, importa las tuyas, mira sus huellas y súbelas a un servidor sin salir de OpenWard, como ssh-copy-id.'**
+  String get newsKeysBody;
+
+  /// No description provided for @newsKeysTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Claves'**
+  String get newsKeysTitle;
+
+  /// No description provided for @newsPaletteBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Todo lo que hace la ventana, tus hosts, snippets y los comandos que ya ejecutaste, a unas letras ({shortcut}). El historial se queda en este equipo y nunca guarda contraseñas.'**
+  String newsPaletteBody(String shortcut);
+
+  /// No description provided for @newsPaletteTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Paleta de comandos e historial'**
+  String get newsPaletteTitle;
 
   /// No description provided for @newsPanesBody.
   ///
@@ -2660,6 +2966,18 @@ abstract class AppLocalizations {
   /// **'Túneles guardados y proxy'**
   String get newsTunnelsTitle;
 
+  /// No description provided for @newsWorkspacesBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Guarda tus pestañas y paneles con un nombre y ábrelos otra vez, ya conectados, desde la biblioteca o la paleta.'**
+  String get newsWorkspacesBody;
+
+  /// No description provided for @newsWorkspacesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Espacios de trabajo'**
+  String get newsWorkspacesTitle;
+
   /// No description provided for @next.
   ///
   /// In es, this message translates to:
@@ -2720,6 +3038,24 @@ abstract class AppLocalizations {
   /// **'Ninguno todavía.'**
   String get noJumpsYet;
 
+  /// No description provided for @noKeyMatches.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguna clave coincide.'**
+  String get noKeyMatches;
+
+  /// No description provided for @noKeys.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay claves en ~/.ssh'**
+  String get noKeys;
+
+  /// No description provided for @noKeysBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Crea una con «Nueva clave…» o trae la que ya tengas con «Importar…».'**
+  String get noKeysBody;
+
   /// No description provided for @noKeysYet.
   ///
   /// In es, this message translates to:
@@ -2762,6 +3098,12 @@ abstract class AppLocalizations {
   /// **'El servidor no ofrece un intercambio poscuántico (mlkem768x25519; OpenSSH lo trae desde la 10.0).'**
   String get noPostQuantumNote;
 
+  /// No description provided for @noPublicKey.
+  ///
+  /// In es, this message translates to:
+  /// **'{name} no tiene .pub y está cifrada: sin su frase de paso no se puede leer la parte pública.'**
+  String noPublicKey(String name);
+
   /// No description provided for @noResults.
   ///
   /// In es, this message translates to:
@@ -2803,6 +3145,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Un túnel lleva un puerto de este equipo a un servicio que solo ve el servidor (una base de datos, un panel), o al revés. Crea uno o tráelos de tu ~/.ssh/config.'**
   String get noTunnelsBody;
+
+  /// No description provided for @noWorkspaces.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay espacios de trabajo'**
+  String get noWorkspaces;
+
+  /// No description provided for @noWorkspacesBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Abre las pestañas y divide los paneles como los quieras, y guárdalos con «Guardar las pestañas abiertas…» (también en el menú de una pestaña y en la paleta de comandos).'**
+  String get noWorkspacesBody;
 
   /// No description provided for @notNow.
   ///
@@ -2912,6 +3266,12 @@ abstract class AppLocalizations {
   /// **'Solo este equipo (127.0.0.1)'**
   String get onlyThisComputer;
 
+  /// No description provided for @open.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir'**
+  String get open;
+
   /// No description provided for @openATerminalFirst.
   ///
   /// In es, this message translates to:
@@ -2990,11 +3350,59 @@ abstract class AppLocalizations {
   /// **'Pone su propio usuario ({user}), que seguirá mandando.'**
   String ownUserWins(String user);
 
+  /// No description provided for @paletteActions.
+  ///
+  /// In es, this message translates to:
+  /// **'Acciones'**
+  String get paletteActions;
+
+  /// No description provided for @paletteBroadcast.
+  ///
+  /// In es, this message translates to:
+  /// **'Broadcast en esta pestaña (encender o apagar)'**
+  String get paletteBroadcast;
+
   /// No description provided for @paletteChoose.
   ///
   /// In es, this message translates to:
   /// **'elegir'**
   String get paletteChoose;
+
+  /// No description provided for @paletteDo.
+  ///
+  /// In es, this message translates to:
+  /// **'hacer'**
+  String get paletteDo;
+
+  /// No description provided for @paletteForget.
+  ///
+  /// In es, this message translates to:
+  /// **'quitar del historial'**
+  String get paletteForget;
+
+  /// No description provided for @paletteHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe una acción, un host, un comando que ya usaste…'**
+  String get paletteHint;
+
+  /// No description provided for @paletteHistory.
+  ///
+  /// In es, this message translates to:
+  /// **'Historial'**
+  String get paletteHistory;
+
+  /// No description provided for @paletteHosts.
+  ///
+  /// In es, this message translates to:
+  /// **'Hosts'**
+  String get paletteHosts;
+
+  /// No description provided for @paletteNothing.
+  ///
+  /// In es, this message translates to:
+  /// **'Nada coincide.'**
+  String get paletteNothing;
 
   /// No description provided for @paletteRun.
   ///
@@ -3032,11 +3440,23 @@ abstract class AppLocalizations {
   /// **'Frase'**
   String get passphraseField;
 
+  /// No description provided for @passphraseOptional.
+  ///
+  /// In es, this message translates to:
+  /// **'Frase de paso (opcional)'**
+  String get passphraseOptional;
+
   /// No description provided for @passphraseTitle.
   ///
   /// In es, this message translates to:
   /// **'Frase de la clave'**
   String get passphraseTitle;
+
+  /// No description provided for @passphrasesDiffer.
+  ///
+  /// In es, this message translates to:
+  /// **'Las dos frases de paso no coinciden.'**
+  String get passphrasesDiffer;
 
   /// No description provided for @passwordTitle.
   ///
@@ -3374,6 +3794,18 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 túnel} other{{count} túneles}}'**
   String previewTunnels(int count);
 
+  /// No description provided for @privateKey.
+  ///
+  /// In es, this message translates to:
+  /// **'Clave privada'**
+  String get privateKey;
+
+  /// No description provided for @protection.
+  ///
+  /// In es, this message translates to:
+  /// **'Protección'**
+  String get protection;
+
   /// No description provided for @proxy.
   ///
   /// In es, this message translates to:
@@ -3433,6 +3865,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Opcional. La contraseña se pide al conectar y no se guarda.'**
   String get proxyUserHelp;
+
+  /// No description provided for @publicKeyCopied.
+  ///
+  /// In es, this message translates to:
+  /// **'Clave pública de {name} copiada.'**
+  String publicKeyCopied(String name);
 
   /// No description provided for @queueAllDone.
   ///
@@ -3661,6 +4099,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Renombrar {name}'**
   String renameTitle(String name);
+
+  /// No description provided for @renameWorkspace.
+  ///
+  /// In es, this message translates to:
+  /// **'Renombrar el espacio de trabajo'**
+  String get renameWorkspace;
+
+  /// No description provided for @repeatPassphrase.
+  ///
+  /// In es, this message translates to:
+  /// **'Repítela'**
+  String get repeatPassphrase;
 
   /// No description provided for @reportCopied.
   ///
@@ -3938,6 +4388,12 @@ abstract class AppLocalizations {
   /// **'Guardar y abrir'**
   String get saveAndOpen;
 
+  /// No description provided for @saveAs.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar como'**
+  String get saveAs;
+
   /// No description provided for @saveFailed.
   ///
   /// In es, this message translates to:
@@ -3955,6 +4411,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Guardar un host nuevo'**
   String get saveNewHost;
+
+  /// No description provided for @saveOpenTabs.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar las pestañas abiertas…'**
+  String get saveOpenTabs;
+
+  /// No description provided for @saveWorkspaceIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Las pestañas de terminal y de archivos abiertas, con sus paneles. Al abrirlo, cada panel se conecta de nuevo.'**
+  String get saveWorkspaceIntro;
+
+  /// No description provided for @saveWorkspaceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar como espacio de trabajo'**
+  String get saveWorkspaceTitle;
 
   /// No description provided for @savedHost.
   ///
@@ -3985,6 +4459,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Buscar hosts'**
   String get searchHosts;
+
+  /// No description provided for @searchKeys.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar por nombre, huella o host'**
+  String get searchKeys;
 
   /// No description provided for @searchKnownHosts.
   ///
@@ -4676,6 +5156,12 @@ abstract class AppLocalizations {
   /// **'Reintentar'**
   String get tryAgain;
 
+  /// No description provided for @tryAnother.
+  ///
+  /// In es, this message translates to:
+  /// **'Probar otro'**
+  String get tryAnother;
+
   /// No description provided for @tunnelBadAddress.
   ///
   /// In es, this message translates to:
@@ -4820,6 +5306,12 @@ abstract class AppLocalizations {
   /// **'{a} y {b}'**
   String twoNames(String a, String b);
 
+  /// No description provided for @typeAndFingerprint.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo y huella'**
+  String get typeAndFingerprint;
+
   /// No description provided for @typeOnly.
   ///
   /// In es, this message translates to:
@@ -4838,11 +5330,23 @@ abstract class AppLocalizations {
   /// **'Fuente de la interfaz'**
   String get uiFont;
 
+  /// No description provided for @unknownKeyType.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo desconocido'**
+  String get unknownKeyType;
+
   /// No description provided for @upOneLevel.
   ///
   /// In es, this message translates to:
   /// **'Subir un nivel'**
   String get upOneLevel;
+
+  /// No description provided for @updateWithOpenTabs.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar por las pestañas abiertas'**
+  String get updateWithOpenTabs;
 
   /// No description provided for @upload.
   ///
@@ -5096,11 +5600,71 @@ abstract class AppLocalizations {
   /// **'Quién puede usarlo'**
   String get whoCanUse;
 
+  /// No description provided for @withCertificate.
+  ///
+  /// In es, this message translates to:
+  /// **'con certificado'**
+  String get withCertificate;
+
   /// No description provided for @withEnter.
   ///
   /// In es, this message translates to:
   /// **'Intro al final'**
   String get withEnter;
+
+  /// No description provided for @withPassphrase.
+  ///
+  /// In es, this message translates to:
+  /// **'Con frase de paso'**
+  String get withPassphrase;
+
+  /// No description provided for @withoutPassphrase.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin frase de paso'**
+  String get withoutPassphrase;
+
+  /// No description provided for @workspaceNumbered.
+  ///
+  /// In es, this message translates to:
+  /// **'Espacio {number}'**
+  String workspaceNumbered(int number);
+
+  /// No description provided for @workspaceSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'«{name}» guardado.'**
+  String workspaceSaved(String name);
+
+  /// No description provided for @workspaceSessions.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 sesión} other{{count} sesiones}}'**
+  String workspaceSessions(int count);
+
+  /// No description provided for @workspaceTabs.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 pestaña} other{{count} pestañas}}'**
+  String workspaceTabs(int count);
+
+  /// No description provided for @workspaceUpdated.
+  ///
+  /// In es, this message translates to:
+  /// **'«{name}» tiene ahora las pestañas abiertas.'**
+  String workspaceUpdated(String name);
+
+  /// No description provided for @workspaces.
+  ///
+  /// In es, this message translates to:
+  /// **'Espacios de trabajo'**
+  String get workspaces;
+
+  /// No description provided for @workspacesIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Pestañas y paneles guardados con un nombre, para abrirlos otra vez juntos. Se guarda a qué se conecta cada panel, nunca lo que mostraba.'**
+  String get workspacesIntro;
 
   /// No description provided for @wrongAnswer.
   ///

@@ -14,6 +14,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/settings.dart';
+import '../history/history.dart';
+import '../history/line_tracker.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/session.dart';
 import '../ui/tokens.dart';
@@ -215,6 +217,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     required String text,
     required int unshifted,
   }) {
+    if (kind != KeyKind.up) _track(hidUsage, mods, text);
     for (final s in _targets) {
       s.key(
         hidUsage: hidUsage,
@@ -223,6 +226,23 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
         text: text,
         unshifted: unshifted,
       );
+    }
+  }
+
+  /// The screen as the command line tracker reads it.
+  late final LineScreen _screen = _SessionScreen(_session);
+
+  /// Follows the command line, and at Enter keeps what ran in the history.
+  void _track(int hid, int mods, String text) {
+    final line = _c.line;
+    final held = mods & (Mods.shift | Mods.ctrl | Mods.alt | Mods.superKey);
+    if (hid != Hid.enter || held != 0) {
+      line.key(hid, mods, text, _screen);
+      return;
+    }
+    final command = line.enter(_screen, altScreen: _c.altScreen);
+    if (command != null && ref.read(settingsProvider).commandHistory) {
+      ref.read(historyProvider.notifier).add(command, _c);
     }
   }
 
@@ -370,6 +390,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final text = data?.text;
     if (text == null || text.isEmpty || !mounted) return;
+    _c.line.text(text, _screen);
     final also = widget.mirrors?.call() ?? const <TerminalController>[];
     if (also.isNotEmpty) return _pasteBroadcast(text, also);
     if (_session.paste(text: text, allowUnsafe: false)) return;
@@ -579,6 +600,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     }
     final typed = text.substring(common);
     if (typed.isNotEmpty) {
+      _c.line.text(typed, _screen);
       for (final s in _targets) {
         s.text(text: typed);
       }
@@ -979,5 +1001,21 @@ class _MenuRow extends StatelessWidget {
           ),
       ],
     );
+  }
+}
+
+/// What the command line tracker reads from a session's screen.
+class _SessionScreen implements LineScreen {
+  _SessionScreen(this.session);
+
+  final TerminalSession session;
+
+  @override
+  int? get cursorRow => session.cursorCell()?.row;
+
+  @override
+  ({String text, String after})? typedFrom(int row) {
+    final t = session.typedSince(start: CellPos(row: row, col: 0));
+    return t == null ? null : (text: t.text, after: t.after);
   }
 }

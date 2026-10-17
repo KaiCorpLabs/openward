@@ -270,6 +270,14 @@
   "cipher": "Cifrado",
   "clear": "Quitar",
   "clearFinished": "Quitar las terminadas",
+  "clearHistory": "{count, plural, =0{Borrar el historial} =1{Borrar 1 comando} other{Borrar {count} comandos}}",
+  "@clearHistory": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "clearSelection": "Quitar la selección",
   "close": "Cerrar",
   "closeAction": "Cerrar",
@@ -295,6 +303,16 @@
       }
     }
   },
+  "commandHistory": "Historial de comandos",
+  "commandHistoryHelp": "Lo que ejecutas en los terminales se guarda en este equipo (nunca en el vault) para buscarlo y repetirlo con {keys}. Nunca se guarda lo que la pantalla no muestra, como una contraseña, ni lo que empieza por un espacio.",
+  "@commandHistoryHelp": {
+    "placeholders": {
+      "keys": {
+        "type": "String"
+      }
+    }
+  },
+  "commandPalette": "Paleta de comandos",
   "conflictChoose": ". Elige qué hacer con cada uno:",
   "conflictFile": "Fichero",
   "conflictFolder": "carpeta",
@@ -404,8 +422,10 @@
   "copyAddress": "Copiar dirección",
   "copyFingerprint": "Copiar la huella",
   "copyPath": "Copiar la ruta",
+  "copyPublicKey": "Copiar la clave pública",
   "copyReport": "Copiar el informe",
   "create": "Crear",
+  "csvSpreadsheet": "CSV (hoja de cálculo)",
   "ctrlShiftPrefix": "Ctrl+Mayús+",
   "cursor": "Cursor",
   "cursorBar": "Barra",
@@ -495,6 +515,15 @@
       }
     }
   },
+  "deleteWorkspaceBody": "Solo se elimina la distribución guardada: los hosts, y lo que esté abierto, se quedan.",
+  "deleteWorkspaceTitle": "¿Eliminar «{name}»?",
+  "@deleteWorkspaceTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "deletedHost": "(host eliminado)",
   "deletedIdentity": "(identidad eliminada)",
   "destination": "Destino",
@@ -560,6 +589,7 @@
   "editTheIdentity": "Editar la identidad",
   "editTunnel": "Editar túnel",
   "emptyFolder": "Esta carpeta está vacía",
+  "emptyPane": "panel vacío",
   "exampleVariable": "nombre",
   "expand": "Desplegar",
   "failureAuth": "{user}@{label} no ha podido autenticarse.",
@@ -693,6 +723,7 @@
     }
   },
   "fileLost": "Se perdió la conexión.",
+  "fileName": "Archivo",
   "fileNotFound": "No existe: {path}",
   "@fileNotFound": {
     "placeholders": {
@@ -721,6 +752,7 @@
     }
   },
   "findHint": "Buscar en el terminal",
+  "findInTerminal": "Buscar en el terminal",
   "findNewer": "Siguiente, más abajo (Mayús+Intro)",
   "findOlder": "Anterior, más arriba (Intro)",
   "findTotal": "{count, plural, =0{Sin resultados} =1{1 resultado} other{{count} resultados}}",
@@ -732,6 +764,7 @@
     }
   },
   "fingerprint": "Huella",
+  "fingerprintNeedsPublic": "Sin .pub: huella desconocida",
   "firstConnectionTo": "Primera conexión con {label}",
   "@firstConnectionTo": {
     "placeholders": {
@@ -829,6 +862,14 @@
   "fromNowhere": "Sin valor: lo decide la conexión",
   "fromSshConfig": "de ~/.ssh/config",
   "fromThere": "desde allí",
+  "goToPage": "Ir a {page}",
+  "@goToPage": {
+    "placeholders": {
+      "page": {
+        "type": "String"
+      }
+    }
+  },
   "group": "Grupo",
   "groupInsideItself": "Un grupo no puede estar dentro de sí mismo.",
   "groupNamed": "Grupo {name}",
@@ -874,6 +915,7 @@
   "hostKeys": "Claves de host nuevas",
   "hostNeedsName": "El host necesita un nombre.",
   "hostsSection": "Hosts",
+  "howCsv": "Un host por fila, con cabecera: la plantilla de Termius o columnas como nombre, host, puerto, usuario y grupo.",
   "howMobaXterm": "Sessions › Export all sessions to file: un archivo .mxtsessions",
   "howPutty": "Un .reg exportado del registro (reg export HKCU\\Software\\SimonTatham\\PuTTY\\Sessions putty.reg)",
   "howSecureCrt": "Tools › Export Settings…: un archivo .xml",
@@ -923,6 +965,7 @@
     }
   },
   "ignore": "Ignorar",
+  "importAction": "Importar",
   "importEllipsis": "Importar…",
   "importFailed": "No se ha podido importar: {error}",
   "@importFailed": {
@@ -946,6 +989,9 @@
   "importIntoGroup": "Se guardan en el grupo «~/.ssh/config». Un host trae consigo los hosts por los que salta.",
   "importIntro": "Trae tus hosts de otro programa. Solo se leen: el original no cambia.",
   "importKeepsFile": "El fichero no se toca, y las claves se quedan donde están: OpenWard guarda la ruta, nunca la clave.",
+  "importKey": "Importar una clave",
+  "importKeyAction": "Importar…",
+  "importKeyIntro": "Pega una clave privada o elige su archivo. Se guarda como un archivo nuevo en ~/.ssh; el original no cambia.",
   "importLater": "Puedes importar más tarde desde la barra lateral.",
   "importN": "{count, plural, =0{Importar} =1{Importar 1 host} other{Importar {count} hosts}}",
   "@importN": {
@@ -996,6 +1042,67 @@
   },
   "inputNotSent": "Lo que escribas ahora no se envía.",
   "inside": "Dentro de",
+  "installKeyAction": "Subir a un servidor…",
+  "installKeyAdded": "Clave añadida en {host}",
+  "@installKeyAdded": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "installKeyFailed": "No se ha podido subir a {host}",
+  "@installKeyFailed": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "installKeyIntro": "Su parte pública se añade al ~/.ssh/authorized_keys del servidor, como hace ssh-copy-id. Entras una vez con lo que uses ahora.",
+  "installKeyNext": "Para entrar con ella, elígela en el host o en su identidad.",
+  "installKeyNoHosts": "Ningún host coincide. Escribe una dirección para usarla sin guardarla.",
+  "installKeySearch": "Busca un host o escribe usuario@dirección",
+  "installKeyTitle": "Subir {name} a un servidor",
+  "@installKeyTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "installKeyToAddress": "Subir a {address}",
+  "@installKeyToAddress": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "installKeyWasThere": "{host} ya tenía esta clave",
+  "@installKeyWasThere": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "installKeyWriteFailed": "El servidor no dejó escribir ~/.ssh/authorized_keys: {error}",
+  "@installKeyWriteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "installingKey": "Añadiendo la clave en {host}…",
+  "@installingKey": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "itemCount": "{count, plural, =1{1 elemento} other{{count} elementos}}",
   "@itemCount": {
     "placeholders": {
@@ -1091,6 +1198,14 @@
       }
     }
   },
+  "keyAdded": "Guardada en {path}.",
+  "@keyAdded": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
   "keyBefore": "Antes",
   "keyChangedBody": "Puede ser una reinstalación del servidor o alguien interceptando la conexión. No se ha enviado ninguna contraseña ni clave.",
   "keyChangedDialogBody": "{where} se presenta con una clave distinta de la que tenías como buena. Puede que el servidor se haya reinstalado o haya cambiado de clave, pero también que alguien esté interceptando la conexión. No sigas sin comprobar la huella nueva con quien administra el servidor.",
@@ -1110,7 +1225,16 @@
     }
   },
   "keyColumn": "Clave",
+  "keyCommentLabel": "Comentario",
   "keyExchange": "Intercambio",
+  "keyFailed": "No se ha podido: {error}",
+  "@keyFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "keyInKnownHosts": "en ~/.ssh/known_hosts",
   "keyInOpenWard": "guardada en OpenWard",
   "keyMissing": "No está en este equipo",
@@ -1125,7 +1249,17 @@
       }
     }
   },
+  "keyNameInvalid": "Ese nombre no vale para un archivo de clave: usa letras, números, «-», «_», «.» o «@».",
+  "keyNameTaken": "Ya hay un archivo {name} en ~/.ssh. Elige otro nombre.",
+  "@keyNameTaken": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "keyNoPublicHalf": "Sin .pub al lado: su tipo se sabrá al conectar",
+  "keyNotReadable": "Eso no es una clave privada que OpenWard pueda leer (OpenSSH, PEM o PuTTY).",
   "keyNow": "Ahora ({algorithm})",
   "@keyNow": {
     "placeholders": {
@@ -1145,9 +1279,14 @@
   },
   "keyReceived": "Recibida",
   "keySaved": "Guardada",
+  "keyType": "Tipo",
+  "keyTypeEcdsa": "Para servidores o normas que piden curvas NIST.",
+  "keyTypeEd25519": "La recomendada: corta, rápida, y la aceptan los servidores de los últimos diez años.",
+  "keyTypeRsa": "Para servidores antiguos que no aceptan nada más nuevo. Tarda unos segundos en crearse.",
   "keys": "Claves",
   "keysHelp": "Una ruta por línea. OpenWard guarda la ruta, nunca la clave.",
   "keysInOrder": "Se prueban en este orden; arrastra para cambiarlo.",
+  "keysIntro": "Las claves privadas de ~/.ssh. Se quedan ahí: el vault solo guarda qué clave usa cada host. Aquí puedes crear claves, traer las que tengas y subir la parte pública a un servidor.",
   "kindDynamic": "Dinámico (-D)",
   "kindDynamicShort": "Dinámico",
   "kindLocal": "Local (-L)",
@@ -1210,6 +1349,7 @@
       }
     }
   },
+  "localShell": "Local",
   "localTerminal": "Terminal local",
   "localUser": "tu usuario local",
   "madeGroups": "{count, plural, =1{1 grupo, con sus ajustes} other{{count} grupos, con sus ajustes}}",
@@ -1268,6 +1408,8 @@
       }
     }
   },
+  "makeKey": "Crear la clave",
+  "makingKey": "Creando…",
   "manageSnippets": "Gestionar snippets…",
   "markerCertAuthority": "Autoridad de certificados: confía en los hosts que firma",
   "markerRevoked": "Revocada: se rechaza siempre",
@@ -1343,6 +1485,19 @@
   "newHostTitle": "Nuevo host",
   "newIdentity": "Nueva identidad",
   "newIdentityEllipsis": "Nueva identidad…",
+  "newKey": "Nueva clave",
+  "newKeyAction": "Nueva clave…",
+  "newKeyWhere": "Se guarda en {private} (solo tú puedes leerla) y su parte pública en {public}.",
+  "@newKeyWhere": {
+    "placeholders": {
+      "private": {
+        "type": "String"
+      },
+      "public": {
+        "type": "String"
+      }
+    }
+  },
   "newLocalTerminal": "Terminal local nuevo",
   "newPane": "Panel nuevo",
   "newSnippet": "Nuevo snippet",
@@ -1351,8 +1506,19 @@
   "newsFresh": "nuevo",
   "newsIdentitiesBody": "Usuario, claves y agente con un nombre, para un grupo entero o varios hosts a la vez.",
   "newsIdentitiesTitle": "Identidades",
-  "newsImportBody": "Hosts, grupos, identidades y túneles de Termius, PuTTY, KiTTY, MobaXterm, Tabby o SecureCRT, desde «…» › Importar… en la barra lateral. Las contraseñas no se traen.",
+  "newsImportBody": "Hosts, grupos, identidades y túneles de Termius, PuTTY, KiTTY, MobaXterm, Tabby o SecureCRT, y hosts de un CSV, desde «…» › Importar… en la barra lateral. Las contraseñas no se traen.",
   "newsImportTitle": "Importar desde tu cliente anterior",
+  "newsKeysBody": "Crea claves Ed25519, ECDSA o RSA, importa las tuyas, mira sus huellas y súbelas a un servidor sin salir de OpenWard, como ssh-copy-id.",
+  "newsKeysTitle": "Claves",
+  "newsPaletteBody": "Todo lo que hace la ventana, tus hosts, snippets y los comandos que ya ejecutaste, a unas letras ({shortcut}). El historial se queda en este equipo y nunca guarda contraseñas.",
+  "@newsPaletteBody": {
+    "placeholders": {
+      "shortcut": {
+        "type": "String"
+      }
+    }
+  },
+  "newsPaletteTitle": "Paleta de comandos e historial",
   "newsPanesBody": "Divide una pestaña ({split}) o arrastra otra, o un host, sobre un terminal; escribe en varios paneles a la vez ({broadcast}). Con exit, la pestaña se cierra sola.",
   "@newsPanesBody": {
     "placeholders": {
@@ -1387,6 +1553,8 @@
   "newsThemesTitle": "Temas y accesibilidad visual",
   "newsTunnelsBody": "Local, remoto y SOCKS5, que se abren al conectar; también proxy HTTP y SOCKS5 para llegar al servidor.",
   "newsTunnelsTitle": "Túneles guardados y proxy",
+  "newsWorkspacesBody": "Guarda tus pestañas y paneles con un nombre y ábrelos otra vez, ya conectados, desde la biblioteca o la paleta.",
+  "newsWorkspacesTitle": "Espacios de trabajo",
   "next": "Siguiente",
   "no": "No",
   "noGroup": "Sin grupo",
@@ -1397,6 +1565,9 @@
   "noIdentityInherited": "Ningún grupo pone una",
   "noIdentityNow": "Sin identidad",
   "noJumpsYet": "Ninguno todavía.",
+  "noKeyMatches": "Ninguna clave coincide.",
+  "noKeys": "No hay claves en ~/.ssh",
+  "noKeysBody": "Crea una con «Nueva clave…» o trae la que ya tengas con «Importar…».",
   "noKeysYet": "Sin claves: se prueban las habituales de ~/.ssh y las del agente.",
   "noKnownHostMatches": "Ninguna clave coincide",
   "noKnownHosts": "Aún no confías en ninguna clave",
@@ -1411,6 +1582,14 @@
   },
   "noParent": "Ningún grupo",
   "noPostQuantumNote": "El servidor no ofrece un intercambio poscuántico (mlkem768x25519; OpenSSH lo trae desde la 10.0).",
+  "noPublicKey": "{name} no tiene .pub y está cifrada: sin su frase de paso no se puede leer la parte pública.",
+  "@noPublicKey": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "noResults": "Ningún host coincide.",
   "noSnippetMatches": "Ningún snippet coincide",
   "noSnippets": "Aún no hay snippets",
@@ -1425,6 +1604,8 @@
   "noSnippetsYet": "Aún no hay snippets. Crea uno en Biblioteca › Snippets.",
   "noTunnels": "Aún no hay túneles",
   "noTunnelsBody": "Un túnel lleva un puerto de este equipo a un servicio que solo ve el servidor (una base de datos, un panel), o al revés. Crea uno o tráelos de tu ~/.ssh/config.",
+  "noWorkspaces": "Aún no hay espacios de trabajo",
+  "noWorkspacesBody": "Abre las pestañas y divide los paneles como los quieras, y guárdalos con «Guardar las pestañas abiertas…» (también en el menú de una pestaña y en la paleta de comandos).",
   "notNow": "Ahora no",
   "notes": "Notas",
   "nowIdentity": "Ahora: {identity}",
@@ -1460,6 +1641,7 @@
   "onThisComputer": "En este equipo",
   "onlyTheServer": "Solo el servidor",
   "onlyThisComputer": "Solo este equipo (127.0.0.1)",
+  "open": "Abrir",
   "openATerminalFirst": "Abre un terminal para ejecutarlo",
   "openAction": "Abrir",
   "openCount": "{count, plural, =1{1 abierto} other{{count} abiertos}}",
@@ -1501,14 +1683,24 @@
       }
     }
   },
+  "paletteActions": "Acciones",
+  "paletteBroadcast": "Broadcast en esta pestaña (encender o apagar)",
   "paletteChoose": "elegir",
+  "paletteDo": "hacer",
+  "paletteForget": "quitar del historial",
+  "paletteHint": "Escribe una acción, un host, un comando que ya usaste…",
+  "paletteHistory": "Historial",
+  "paletteHosts": "Hosts",
+  "paletteNothing": "Nada coincide.",
   "paletteRun": "ejecutar",
   "paletteTypeOnly": "solo escribir",
   "paneOptions": "Opciones del panel",
   "paneWhat": "¿Qué abres en este panel?",
   "partNote": "Se copia con un nombre temporal (.part) y se renombra al terminar: si se corta, el fichero bueno no queda a medias y la copia se puede reanudar.",
   "passphraseField": "Frase",
+  "passphraseOptional": "Frase de paso (opcional)",
   "passphraseTitle": "Frase de la clave",
+  "passphrasesDiffer": "Las dos frases de paso no coinciden.",
   "passwordTitle": "Contraseña",
   "passwordsNever": "Las contraseñas no se traen nunca: OpenWard las pide al conectar.",
   "paste": "Pegar",
@@ -1725,6 +1917,8 @@
       }
     }
   },
+  "privateKey": "Clave privada",
+  "protection": "Protección",
   "proxy": "Proxy",
   "proxyHttpNote": "Con un proxy HTTP, la petición CONNECT va sin cifrar: el proxy ve a qué host y puerto te conectas, pero no lo que pasa por SSH.",
   "proxyLoginBody": "{proxy} pide usuario y contraseña para dejarte pasar. No se guardan.",
@@ -1742,6 +1936,14 @@
   "proxyServer": "Servidor proxy",
   "proxyUser": "Usuario del proxy",
   "proxyUserHelp": "Opcional. La contraseña se pide al conectar y no se guarda.",
+  "publicKeyCopied": "Clave pública de {name} copiada.",
+  "@publicKeyCopied": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "queueAllDone": "Todo terminado",
   "queueFailed": "{count} con error",
   "@queueFailed": {
@@ -1866,6 +2068,8 @@
       }
     }
   },
+  "renameWorkspace": "Renombrar el espacio de trabajo",
+  "repeatPassphrase": "Repítela",
   "reportCopied": "Copiado. Pégalo en tu informe.",
   "reportCore": "núcleo",
   "reportCounts": "Hosts: {hosts} · grupos: {groups} · túneles: {tunnels} · identidades: {identities} · snippets: {snippets}",
@@ -2002,6 +2206,7 @@
   "save": "Guardar",
   "saveAndConnect": "Guardar y conectar",
   "saveAndOpen": "Guardar y abrir",
+  "saveAs": "Guardar como",
   "saveFailed": "No se ha podido guardar: {error}",
   "@saveFailed": {
     "placeholders": {
@@ -2019,6 +2224,9 @@
     }
   },
   "saveNewHost": "Guardar un host nuevo",
+  "saveOpenTabs": "Guardar las pestañas abiertas…",
+  "saveWorkspaceIntro": "Las pestañas de terminal y de archivos abiertas, con sus paneles. Al abrirlo, cada panel se conecta de nuevo.",
+  "saveWorkspaceTitle": "Guardar como espacio de trabajo",
   "savedHost": "Host guardado",
   "scrollback": "Historial",
   "scrollbackHelp": "Para las pestañas nuevas.",
@@ -2031,6 +2239,7 @@
     }
   },
   "searchHosts": "Buscar hosts",
+  "searchKeys": "Buscar por nombre, huella o host",
   "searchKnownHosts": "Buscar un host, una huella…",
   "sectionConnection": "Conexión",
   "sectionGeneral": "General",
@@ -2336,6 +2545,7 @@
     }
   },
   "tryAgain": "Reintentar",
+  "tryAnother": "Probar otro",
   "tunnelBadAddress": "Esa dirección no existe en este equipo.",
   "tunnelClosed": "Cerrado",
   "tunnelDidNotOpen": "No se abrió «{name}» al conectar: {why}",
@@ -2435,10 +2645,13 @@
       }
     }
   },
+  "typeAndFingerprint": "Tipo y huella",
   "typeOnly": "Solo escribe",
   "uiColors": "Colores de la interfaz",
   "uiFont": "Fuente de la interfaz",
+  "unknownKeyType": "Tipo desconocido",
   "upOneLevel": "Subir un nivel",
+  "updateWithOpenTabs": "Cambiar por las pestañas abiertas",
   "upload": "Subida",
   "uploadToArrow": "Subir a {where} →",
   "@uploadToArrow": {
@@ -2648,7 +2861,52 @@
   "whatsNewReport": "¿Algo no va? Ajustes › General › Informar de un problema copia lo que hace falta para contarlo.",
   "whereItIs": "Dónde está",
   "whoCanUse": "Quién puede usarlo",
+  "withCertificate": "con certificado",
   "withEnter": "Intro al final",
+  "withPassphrase": "Con frase de paso",
+  "withoutPassphrase": "Sin frase de paso",
+  "workspaceNumbered": "Espacio {number}",
+  "@workspaceNumbered": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "workspaceSaved": "«{name}» guardado.",
+  "@workspaceSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "workspaceSessions": "{count, plural, =1{1 sesión} other{{count} sesiones}}",
+  "@workspaceSessions": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "workspaceTabs": "{count, plural, =1{1 pestaña} other{{count} pestañas}}",
+  "@workspaceTabs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "workspaceUpdated": "«{name}» tiene ahora las pestañas abiertas.",
+  "@workspaceUpdated": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "workspaces": "Espacios de trabajo",
+  "workspacesIntro": "Pestañas y paneles guardados con un nombre, para abrirlos otra vez juntos. Se guarda a qué se conecta cada panel, nunca lo que mostraba.",
   "wrongAnswer": "Respuesta incorrecta.",
   "wrongPassphrase": "Frase incorrecta.",
   "wrongPassword": "Contraseña incorrecta.",

@@ -19,6 +19,8 @@ pub enum Program {
     MobaXterm,
     Tabby,
     SecureCrt,
+    /// A spreadsheet of hosts (Termius's import template among them).
+    Csv,
 }
 
 impl Program {
@@ -31,6 +33,7 @@ impl Program {
             Self::MobaXterm => "mobaxterm",
             Self::Tabby => "tabby",
             Self::SecureCrt => "securecrt",
+            Self::Csv => "csv",
         }
     }
 
@@ -42,6 +45,7 @@ impl Program {
             Self::MobaXterm,
             Self::Tabby,
             Self::SecureCrt,
+            Self::Csv,
         ]
         .into_iter()
         .find(|p| p.id() == id)
@@ -56,6 +60,7 @@ impl Program {
             Self::MobaXterm => "MobaXterm",
             Self::Tabby => "Tabby",
             Self::SecureCrt => "SecureCRT",
+            Self::Csv => "CSV",
         }
     }
 }

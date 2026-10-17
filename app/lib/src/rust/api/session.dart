@@ -9,7 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `event_view`, `failure_view`, `into_answer`, `prompt_view`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DartSink`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<TerminalSession>>
 abstract class TerminalSession implements RustOpaqueInterface {
@@ -17,6 +17,10 @@ abstract class TerminalSession implements RustOpaqueInterface {
 
   /// Ends the connection or program; the screen stays until dropped.
   void close();
+
+  /// The cursor's cell while the live screen is on view: where a prompt
+  /// begins, read when typing starts.
+  CellPos? cursorCell();
 
   void endSearch();
 
@@ -102,6 +106,10 @@ abstract class TerminalSession implements RustOpaqueInterface {
   /// Text from an input method or soft keyboard.
   void text({required String text});
 
+  /// What was typed since `start` (see [`Self::cursor_cell`]): for the
+  /// command history.
+  TypedLine? typedSince({required CellPos start});
+
   /// `lines` notches, positive up.
   void wheel({
     required int lines,
@@ -112,6 +120,25 @@ abstract class TerminalSession implements RustOpaqueInterface {
 }
 
 enum AnswerKind { accept, text, cancel }
+
+/// A cell of the screen.
+class CellPos {
+  final int row;
+  final int col;
+
+  const CellPos({required this.row, required this.col});
+
+  @override
+  int get hashCode => row.hashCode ^ col.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CellPos &&
+          runtimeType == other.runtimeType &&
+          row == other.row &&
+          col == other.col;
+}
 
 class ClosedView {
   final int? exitCode;
@@ -741,3 +768,24 @@ class TermFrame {
 }
 
 enum TrustKind { known, certified, new_ }
+
+/// The screen from where typing began up to the cursor, and what follows
+/// the cursor on its row (a suggestion the shell shows, or the rest of a
+/// line being edited).
+class TypedLine {
+  final String text;
+  final String after;
+
+  const TypedLine({required this.text, required this.after});
+
+  @override
+  int get hashCode => text.hashCode ^ after.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TypedLine &&
+          runtimeType == other.runtimeType &&
+          text == other.text &&
+          after == other.after;
+}

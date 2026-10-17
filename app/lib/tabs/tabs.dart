@@ -39,7 +39,15 @@ final class SftpTab extends OpenTab {
   final SftpController controller;
 }
 
-enum PageKind { settings, tunnels, identities, snippets, knownHosts }
+enum PageKind {
+  settings,
+  tunnels,
+  identities,
+  keys,
+  snippets,
+  workspaces,
+  knownHosts,
+}
 
 final class PageTab extends OpenTab {
   const PageTab(this.page);
@@ -228,6 +236,19 @@ class TabsNotifier extends Notifier<TabsState> {
           t.controller.target?.label == target?.label,
     );
     if (at >= 0) return select(at);
+    final tabs = [
+      ...state.tabs,
+      SftpTab(startSftp(hostId: hostId, target: target, label: label)),
+    ];
+    state = TabsState(tabs, tabs.length - 1);
+  }
+
+  /// A browser started for a tab put together elsewhere (a workspace).
+  SftpController startSftp({
+    String? hostId,
+    QuickTarget? target,
+    required String label,
+  }) {
     final c = SftpController(
       app: ref.read(openWardProvider),
       label: label,
@@ -237,8 +258,28 @@ class TabsNotifier extends Notifier<TabsState> {
     );
     _live.add(c);
     c.start();
-    final tabs = [...state.tabs, SftpTab(c)];
-    state = TabsState(tabs, tabs.length - 1);
+    return c;
+  }
+
+  /// A session started for a pane put together elsewhere (a workspace): a
+  /// saved host, an address, or (neither) a local shell.
+  TerminalController startSession({HostView? host, QuickTarget? target}) =>
+      _start(
+        host != null
+            ? _controller(label: host.label, hostId: host.id)
+            : target != null
+            ? _controller(label: target.label, target: target)
+            : _controller(label: 'Local'),
+      );
+
+  /// Adds tabs put together elsewhere, after the open ones, with `front`
+  /// in front.
+  void addTabs(List<OpenTab> added, {OpenTab? front}) {
+    if (added.isEmpty) return;
+    final tabs = [...state.tabs, ...added];
+    final shown = front ?? added.first;
+    state = TabsState(tabs, tabs.indexOf(shown));
+    if (shown is SessionTab) focusActive(shown);
   }
 
   /// The SFTP tab for the host of the front tab's session.
@@ -274,13 +315,7 @@ class TabsNotifier extends Notifier<TabsState> {
     HostView? host,
     QuickTarget? target,
   }) {
-    final c = _start(
-      host != null
-          ? _controller(label: host.label, hostId: host.id)
-          : target != null
-          ? _controller(label: target.label, target: target)
-          : _controller(label: 'Local'),
-    );
+    final c = startSession(host: host, target: target);
     tab.panes.fill(pane, c);
     _refresh();
     focusActive(tab);
