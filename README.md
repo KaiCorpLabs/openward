@@ -3,7 +3,7 @@
 **Cliente SSH open source, local-first y con sincronización cifrada de extremo a extremo, para Windows, macOS, Linux, iOS y Android.**
 
 > [!WARNING]
-> OpenWard está en **fase 1**: hay una beta de escritorio (0.2) que el equipo prueba a diario ([notas](docs/notas/v0.2.md), [guía de prueba](docs/plan/prueba-v0.2.md)). Aún no está firmada y el vault no va cifrado.
+> OpenWard está en **fase 1**: hay una beta de escritorio (0.3) que el equipo prueba a diario ([notas](docs/notas/v0.3.md), [guía de prueba](docs/plan/prueba-v0.3.md)). Aún no está firmada y el vault no va cifrado.
 
 ## Principios
 
