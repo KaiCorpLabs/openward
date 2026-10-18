@@ -69,6 +69,7 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - marca tus hosts de cada día como favoritos y ordénalos en el inicio arrastrando sus tarjetas.
 9. **Paneles** (0.3.1-beta.2):
    - arrastra una pestaña sobre un terminal y suéltala en una mitad: la ventana ya no debe moverse;
+   - con un solo terminal, arrastra su pestaña a una de sus mitades: queda ahí y la otra mitad pregunta qué abrir (0.3.1-beta.3);
    - con dos paneles, prueba el menú «…» de uno: moverlo a una pestaña nueva, intercambiarlo, abrir otra cosa e igualar tamaños; y arrastra su cabecera al hueco vacío de la barra;
    - divide un terminal y elige en el panel nuevo una pestaña ya abierta; prueba también «Dividir con …» en la paleta;
    - agarra el borde entre paneles y dinos si se encuentra a la primera.

@@ -261,6 +261,7 @@
   "dropOpenHost": "Drop: open {name} {where}",
   "dropRight": "on the right",
   "dropRightOf": "right of {pane}",
+  "dropSplitAround": "Drop: {name} {where}; {other}, a new pane",
   "dropTabLast": "Drop here: {name} at the end",
   "dropToDownload": "Drop to download here",
   "dropToImport": "Or drop the file or folder here: it is recognized on its own.",

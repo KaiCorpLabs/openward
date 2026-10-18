@@ -713,6 +713,20 @@
       }
     }
   },
+  "dropSplitAround": "Soltar: {name} {where}; {other}, un panel nuevo",
+  "@dropSplitAround": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "where": {
+        "type": "String"
+      },
+      "other": {
+        "type": "String"
+      }
+    }
+  },
   "dropTabLast": "Soltar aquí: {name} al final",
   "@dropTabLast": {
     "placeholders": {

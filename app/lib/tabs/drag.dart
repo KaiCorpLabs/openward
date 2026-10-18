@@ -184,13 +184,23 @@ class PaneDropTarget extends ConsumerStatefulWidget {
 class _PaneDropTargetState extends ConsumerState<PaneDropTarget> {
   DropSide? _side;
 
-  bool _accepts(WindowDrag d) => switch (d) {
-    TabDrag(:final tab) => tab is SessionTab && !identical(tab, widget.tab),
-    PaneDrag(:final tab, :final pane) =>
-      !identical(pane, widget.pane) &&
-          !(identical(tab, widget.tab) && !tab.panes.isSplit),
-    HostDrag() => true,
+  /// Dropped on itself, a terminal splits around it: a tab of one pane,
+  /// or a pane by its header.
+  bool _onItself(WindowDrag d) => switch (d) {
+    TabDrag(:final tab) =>
+      identical(tab, widget.tab) && !widget.tab.panes.isSplit,
+    PaneDrag(:final pane) => identical(pane, widget.pane),
+    HostDrag() => false,
   };
+
+  bool _accepts(WindowDrag d) =>
+      _onItself(d) ||
+      switch (d) {
+        TabDrag(:final tab) => tab is SessionTab && !identical(tab, widget.tab),
+        PaneDrag(:final tab) =>
+          !(identical(tab, widget.tab) && !tab.panes.isSplit),
+        HostDrag() => true,
+      };
 
   void _track(Offset global) {
     final box = context.findRenderObject() as RenderBox?;
@@ -204,6 +214,7 @@ class _PaneDropTargetState extends ConsumerState<PaneDropTarget> {
     setState(() => _side = null);
     if (side == null || dragCancelled.value) return;
     final tabs = ref.read(tabsProvider.notifier);
+    if (_onItself(d)) return tabs.splitAround(widget.tab, widget.pane, side);
     switch (d) {
       case TabDrag(:final tab):
         tabs.dropTab(tab, widget.tab, widget.pane, side);
@@ -233,15 +244,17 @@ class _PaneDropTargetState extends ConsumerState<PaneDropTarget> {
                     ? const SizedBox.shrink()
                     : DropZone(
                         side: _side!,
-                        label: dropLabel(
-                          context,
-                          over,
-                          _side!,
-                          pane: paneNames(
-                            widget.tab.panes,
-                            (p) => paneTitle(context, p),
-                          )[widget.pane],
-                        ),
+                        label: _onItself(over)
+                            ? splitAroundLabel(context, over, _side!)
+                            : dropLabel(
+                                context,
+                                over,
+                                _side!,
+                                pane: paneNames(
+                                  widget.tab.panes,
+                                  (p) => paneTitle(context, p),
+                                )[widget.pane],
+                              ),
                       ),
               ),
             ),
@@ -276,6 +289,18 @@ String dropLabel(
   return d is HostDrag
       ? l.dropOpenHost(d.label, where)
       : l.dropMove(d.label, where);
+}
+
+/// What dropping a terminal on a half of itself does: «Soltar: web-1 a la
+/// derecha; a la izquierda, un panel nuevo».
+String splitAroundLabel(BuildContext context, WindowDrag d, DropSide side) {
+  final l = context.l10n;
+  return switch (side) {
+    DropSide.left => l.dropSplitAround(d.label, l.dropLeft, l.dropRight),
+    DropSide.right => l.dropSplitAround(d.label, l.dropRight, l.dropLeft),
+    DropSide.top => l.dropSplitAround(d.label, l.dropTop, l.dropBottom),
+    DropSide.bottom => l.dropSplitAround(d.label, l.dropBottom, l.dropTop),
+  };
 }
 
 /// The half a drop would take, marked over the pane.

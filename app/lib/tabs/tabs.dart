@@ -430,6 +430,22 @@ class TabsNotifier extends Notifier<TabsState> {
     focusActive(target);
   }
 
+  /// A pane (or a tab of one pane) dropped on a half of itself: it moves
+  /// to that half, and the other half is a new pane that asks what to open
+  /// (the same host first). With one terminal, the way to split by
+  /// dragging.
+  void splitAround(SessionTab tab, Pane pane, DropSide side) {
+    final fresh = Pane(null, pane.controller);
+    final other = switch (side) {
+      DropSide.left => DropSide.right,
+      DropSide.right => DropSide.left,
+      DropSide.top => DropSide.bottom,
+      DropSide.bottom => DropSide.top,
+    };
+    tab.panes.insertBeside(pane, fresh, other, focus: fresh);
+    state = TabsState(state.tabs, state.tabs.indexOf(tab));
+  }
+
   /// A pane dragged onto the tab bar: a tab of its own, in that gap.
   void detachPane(SessionTab from, Pane pane, int gap) {
     final at = state.tabs.indexOf(from);

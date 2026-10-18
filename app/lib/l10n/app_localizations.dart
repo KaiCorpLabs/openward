@@ -1352,6 +1352,12 @@ abstract class AppLocalizations {
   /// **'a la derecha de {pane}'**
   String dropRightOf(String pane);
 
+  /// No description provided for @dropSplitAround.
+  ///
+  /// In es, this message translates to:
+  /// **'Soltar: {name} {where}; {other}, un panel nuevo'**
+  String dropSplitAround(String name, String where, String other);
+
   /// No description provided for @dropTabLast.
   ///
   /// In es, this message translates to:

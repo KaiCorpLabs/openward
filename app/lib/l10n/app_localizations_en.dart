@@ -853,6 +853,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String dropSplitAround(String name, String where, String other) {
+    return 'Drop: $name $where; $other, a new pane';
+  }
+
+  @override
   String dropTabLast(String name) {
     return 'Drop here: $name at the end';
   }

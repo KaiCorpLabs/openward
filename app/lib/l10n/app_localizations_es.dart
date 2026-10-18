@@ -855,6 +855,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String dropSplitAround(String name, String where, String other) {
+    return 'Soltar: $name $where; $other, un panel nuevo';
+  }
+
+  @override
   String dropTabLast(String name) {
     return 'Soltar aquí: $name al final';
   }

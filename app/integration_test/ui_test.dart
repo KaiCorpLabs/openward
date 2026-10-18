@@ -771,6 +771,66 @@ Host web-1 web-2
     expect(again.panes.leaves.map((p) => p.controller), [dos, uno]);
   });
 
+  testWidgets('a single terminal dragged onto a half of itself splits '
+      'around it', (tester) async {
+    final container = await launch(tester);
+    final tabs = container.read(tabsProvider.notifier);
+    tabs.openLocal();
+    await tester.pump();
+    final c = container.read(tabsProvider).currentSession!;
+    await _until(tester, () => c.phase == Phase.running, 'the shell');
+    c.customTitle = 'uno';
+    await tester.pump(const Duration(milliseconds: 300));
+    final tab = container.read(tabsProvider).current! as SessionTab;
+
+    // By its tab, onto its own right half: it goes there, and the left is a
+    // new pane that asks what to open.
+    final from = tester.getCenter(_tab('uno'));
+    final to =
+        tester.getRect(find.byType(TerminalPane)).centerRight -
+        const Offset(40, 0);
+    final g = await tester.startGesture(
+      from,
+      kind: PointerDeviceKind.mouse,
+      pointer: 900,
+    );
+    for (var i = 1; i <= 12; i++) {
+      await g.moveTo(Offset.lerp(from, to, i / 12)!);
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await tester.pump(const Duration(milliseconds: 100));
+    await _shot(tester, '66-split-around');
+    expect(
+      find.textContaining('a la derecha; a la izquierda, un panel nuevo'),
+      findsOneWidget,
+    );
+    await g.up();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(tab.panes.leaves.map((p) => p.controller), [null, c]);
+    expect(tab.panes.active, same(tab.panes.leaves.first));
+    expect(find.text('¿Qué abres en este panel?'), findsOneWidget);
+    tabs.closePane(tab, tab.panes.leaves.first);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(tab.panes.isSplit, isFalse);
+
+    // By its header (in a split pane too), onto its own bottom half.
+    tabs.split(Axis.horizontal);
+    await tester.pump(const Duration(milliseconds: 300));
+    tabs.fillSame(tab, tab.panes.leaves.last);
+    await tester.pump(const Duration(milliseconds: 300));
+    final header = tester.getCenter(
+      find.descendant(of: find.byType(TabView), matching: find.text('uno')),
+    );
+    final first = tester.getRect(find.byType(TerminalPane).first);
+    await _drag(tester, header, first.bottomCenter - const Offset(0, 30));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(tab.panes.leaves, hasLength(3));
+    expect(tab.panes.leaves[1].controller, same(c));
+    expect(tab.panes.leaves.first.controller, isNull);
+    final root = tab.panes.root as PaneSplit;
+    expect((root.first as PaneSplit).axis, Axis.vertical);
+  });
+
   testWidgets('import from Termius: read it, pick, save a key, and again', (
     tester,
   ) async {
