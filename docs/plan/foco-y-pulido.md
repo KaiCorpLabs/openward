@@ -1,6 +1,6 @@
 # Foco y pulido: 0.3.0-beta.3, 0.3.0-beta.4 y v0.3.1
 
-- **Estado:** primera y segunda fase hechas y publicadas (0.3.0-beta.3 y 0.3.0-beta.4); la tercera (v0.3.1), hecha y en revisión, sin publicar. Maquetas aprobadas el 2026-10-18 (filas «F1» a «F5» del lienzo); el reparto en fases, aceptado el mismo día y ajustado después de la beta.3.
+- **Estado:** las tres fases hechas y publicadas (0.3.0-beta.3, 0.3.0-beta.4 y 0.3.1-beta.1). Maquetas aprobadas el 2026-10-18 (filas «F1» a «F5» del lienzo); el reparto en fases, aceptado el mismo día y ajustado después de la beta.3.
 - **Fecha:** 2026-10-18.
 - **Base:** fase 1 de la hoja de ruta ([ARCHITECTURE §15](../ARCHITECTURE.md#15-hoja-de-ruta-con-puertas)), sobre la [v0.3](v0.3.md) y antes de la v0.4 (el vault cifrado).
 - **Duración estimada:** unas 5 semanas de trabajo: 1,5 la primera fase, 2 la segunda y 1,5 la tercera.
