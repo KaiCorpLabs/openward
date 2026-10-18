@@ -80,7 +80,18 @@ void main() {
       dataDir: '${dir.path}/data',
       sshDir: ssh.path,
     );
-    final prod = await app.createGroup(spec: const GroupSpec(name: 'prod'));
+    // Marked as production: its hosts' tabs and terminals say so.
+    final prod = await app.createGroup(
+      spec: const GroupSpec(
+        name: 'prod',
+        settings: SettingsSpec(
+          environment: EnvironmentKind.mark,
+          environmentName: 'Producción',
+          environmentShort: 'prod',
+          environmentColor: 'red',
+        ),
+      ),
+    );
     final web = await app.createHost(
       spec: HostSpec(
         label: 'web-1',
@@ -96,10 +107,16 @@ void main() {
         address: '10.0.4.21',
         groupId: prod,
         settings: const SettingsSpec(user: 'admin'),
+        favorite: true,
+        systemCode: 'deb',
       ),
     );
     await app.createHost(
-      spec: const HostSpec(label: 'bastion', address: 'bastion.example.com'),
+      spec: const HostSpec(
+        label: 'bastion',
+        address: 'bastion.example.com',
+        systemCode: 'alp',
+      ),
     );
     await app.createTunnel(
       spec: TunnelSpec(

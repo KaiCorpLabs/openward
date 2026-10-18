@@ -18,7 +18,7 @@ import 'tunnels.dart';
 import 'vault.dart';
 import 'workspaces.dart';
 
-// These functions are ignored because they are not marked as `pub`: `apply_group`, `apply_host`, `host_spec`, `warning`
+// These functions are ignored because they are not marked as `pub`: `apply_group`, `apply_host`, `host_spec`, `next_favorite`, `warning`
 
 /// The core's version, for «Acerca de» and problem reports.
 String coreVersion() => RustLib.instance.api.crateApiAppCoreVersion();
@@ -202,6 +202,10 @@ abstract class OpenWard implements RustOpaqueInterface {
     sshDir: sshDir,
   );
 
+  /// Puts the favorites in this order; the ones left out keep theirs,
+  /// after these.
+  Future<void> orderFavorites({required List<String> ids});
+
   void pauseTransfer({required BigInt id});
 
   void pauseTransfers();
@@ -244,6 +248,9 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   /// Ids of the hosts matching every word, sorted by label.
   List<String> search({required String query});
+
+  /// Makes a host a favorite (the last one) or not.
+  Future<void> setFavorite({required String id, required bool favorite});
 
   /// A new SFTP browser, not connected yet.
   SftpBrowser sftp();

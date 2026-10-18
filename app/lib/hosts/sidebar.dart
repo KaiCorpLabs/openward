@@ -12,6 +12,7 @@ import '../identities/identities.dart';
 import '../keys/keys.dart';
 import '../snippets/snippets.dart';
 import '../tunnels/tunnels.dart';
+import '../ui/environment.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../window/chrome.dart';
@@ -48,6 +49,10 @@ class _SidebarState extends ConsumerState<Sidebar> {
   final Set<String> _collapsed = {};
   String? _selected;
 
+  /// Opened or folded by hand; until then, folded while the start page
+  /// shows (it has the favorites in the middle) and open otherwise.
+  bool? _favoritesOpen;
+
   @override
   void dispose() {
     _search.dispose();
@@ -59,6 +64,11 @@ class _SidebarState extends ConsumerState<Sidebar> {
   }
 
   void _refresh() => ref.read(libraryProvider.notifier).refresh();
+
+  Future<void> _favorite(HostView h, bool on) async {
+    await ref.read(openWardProvider).setFavorite(id: h.id, favorite: on);
+    _refresh();
+  }
 
   Future<void> _editHost({String? id, String? groupId}) async {
     if (await showHostEditor(context, ref, id: id, groupId: groupId)) {
@@ -167,7 +177,10 @@ class _SidebarState extends ConsumerState<Sidebar> {
                     padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
                     children: results != null
                         ? [for (final h in results) _hostRow(h, 0, sessions)]
-                        : _tree(library, null, 0, sessions),
+                        : [
+                            ..._favorites(library, sessions),
+                            ..._tree(library, null, 0, sessions),
+                          ],
                   ),
           ),
           const _Library(),
@@ -250,6 +263,54 @@ class _SidebarState extends ConsumerState<Sidebar> {
     ];
   }
 
+  /// The favorites first, in their order; they stay in their groups too.
+  List<Widget> _favorites(Library library, List<TerminalController> sessions) {
+    final favorites = library.favorites;
+    if (favorites.isEmpty) return const [];
+    final l = context.l10n;
+    final ow = context.ow;
+    final start = ref.watch(tabsProvider.select((s) => s.current == null));
+    final open = _favoritesOpen ?? !start;
+    return [
+      FocusOutline(
+        radius: ow.shape.radius,
+        child: Semantics(
+          expanded: open,
+          button: true,
+          child: InkWell(
+            key: const ValueKey('sidebar.favorites'),
+            borderRadius: BorderRadius.circular(ow.shape.radius),
+            onTap: () => setState(() => _favoritesOpen = !open),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 12, 8, 6),
+              child: Row(
+                children: [
+                  Icon(Icons.star_rounded, size: 14, color: ow.colors.warn),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: SectionLabel(
+                      l.favorites,
+                      trailing: '${favorites.length}',
+                      keepCase: true,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    open ? Icons.expand_more : Icons.chevron_right,
+                    size: 14,
+                    color: ow.colors.textSubtle,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+      if (open)
+        for (final h in favorites) _hostRow(h, 0, sessions),
+    ];
+  }
+
   Widget _groupRow(GroupView g, int depth, Library library) {
     final open = !_collapsed.contains(g.id);
     final l = context.l10n;
@@ -309,6 +370,11 @@ class _SidebarState extends ConsumerState<Sidebar> {
                 keepCase: true,
               ),
             ),
+            if (g.environment case final env?)
+              Padding(
+                padding: const EdgeInsets.only(left: 6),
+                child: Semantics(label: env.name, child: EnvChip(env)),
+              ),
             const SizedBox(width: 4),
             Icon(
               open ? Icons.expand_more : Icons.chevron_right,
@@ -347,6 +413,10 @@ class _SidebarState extends ConsumerState<Sidebar> {
                   .read(tabsProvider.notifier)
                   .openSftp(hostId: h.id, label: h.label),
             ),
+            _item(
+              h.favorite == null ? l.addFavorite : l.removeFavorite,
+              () => _favorite(h, h.favorite == null),
+            ),
             _item(l.editEllipsis, () => _editHost(id: h.id)),
             _item(l.delete, () => _delete(h.id, h.label, group: false)),
           ]);
@@ -380,6 +450,12 @@ class _SidebarState extends ConsumerState<Sidebar> {
                           .openSftp(hostId: h.id, label: h.label),
                       CustomSemanticsAction(label: l.editEllipsis): () =>
                           _editHost(id: h.id),
+                      CustomSemanticsAction(
+                        label: h.favorite == null
+                            ? l.addFavorite
+                            : l.removeFavorite,
+                      ): () =>
+                          _favorite(h, h.favorite == null),
                     },
                     child: _hostInk(h, selected, address, mine),
                   ),
@@ -399,49 +475,112 @@ class _SidebarState extends ConsumerState<Sidebar> {
     List<TerminalController> mine,
   ) {
     final ow = context.ow;
-    return InkWell(
-      borderRadius: BorderRadius.circular(ow.shape.radius + 2),
-      onTap: () => setState(() => _selected = h.id),
-      onDoubleTap: () {
-        setState(() => _selected = h.id);
-        _connect(h);
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-        child: Row(
-          children: [
-            _HostStatus(sessions: mine),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    h.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 1),
-                  Text(
-                    '${h.user}@$address',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: monoStyle(context, size: 12),
-                  ),
-                ],
+    final l = context.l10n;
+    final env = h.environment;
+    final system = h.system;
+    return _Hovered(
+      builder: (hovered) => InkWell(
+        borderRadius: BorderRadius.circular(ow.shape.radius + 2),
+        onTap: () => setState(() => _selected = h.id),
+        onDoubleTap: () {
+          setState(() => _selected = h.id);
+          _connect(h);
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+          child: Row(
+            children: [
+              SystemBadge(code: system?.code, env: env),
+              // Read with the row: «Debian 12, Producción».
+              Semantics(
+                label: [
+                  if (system != null)
+                    system.name.isEmpty
+                        ? systemName(l, system.code)
+                        : system.name,
+                  ?env?.name,
+                ].join(', '),
+                child: const SizedBox(width: 10),
               ),
-            ),
-            for (final t in h.tags.take(2))
-              Padding(
-                padding: const EdgeInsets.only(left: 4),
-                child: Pill.tag(t),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      h.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      '${h.user}@$address',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: monoStyle(context, size: 12),
+                    ),
+                  ],
+                ),
               ),
-          ],
+              for (final t in h.tags.take(2))
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: Pill.tag(t),
+                ),
+              // On hover, the star; otherwise how its tabs are doing.
+              if (hovered)
+                SizedBox.square(
+                  dimension: 26,
+                  child: IconButton(
+                    key: ValueKey('host.favorite.${h.label}'),
+                    tooltip: h.favorite == null
+                        ? l.addFavorite
+                        : l.removeFavorite,
+                    padding: EdgeInsets.zero,
+                    iconSize: 16,
+                    color: h.favorite == null
+                        ? ow.colors.textSubtle
+                        : ow.colors.warn,
+                    icon: Icon(
+                      h.favorite == null
+                          ? Icons.star_outline_rounded
+                          : Icons.star_rounded,
+                    ),
+                    onPressed: () => _favorite(h, h.favorite == null),
+                  ),
+                )
+              else if (mine.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: _HostStatus(sessions: mine),
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+/// Whether the mouse is over its child.
+class _Hovered extends StatefulWidget {
+  const _Hovered({required this.builder});
+
+  final Widget Function(bool hovered) builder;
+
+  @override
+  State<_Hovered> createState() => _HoveredState();
+}
+
+class _HoveredState extends State<_Hovered> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    onEnter: (_) => setState(() => _hovered = true),
+    onExit: (_) => setState(() => _hovered = false),
+    child: widget.builder(_hovered),
+  );
 }
 
 /// A host's mark: how its open tabs are doing, if it has any.

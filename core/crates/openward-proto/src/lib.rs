@@ -22,7 +22,8 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 pub use settings::{
-    Agent, HostKeyPolicy, IDENTITY_FIELDS, Jump, Proxy, ProxyServer, Route, Settings, UseIdentity,
+    Agent, Environment, EnvironmentMark, HostKeyPolicy, IDENTITY_FIELDS, Jump, Proxy, ProxyServer,
+    Route, Settings, UseIdentity,
 };
 
 /// Fields a newer version wrote that this one does not know.
@@ -149,8 +150,41 @@ pub struct Host {
     /// Set when it came from another program's import.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub imported: Option<Imported>,
+    /// What the server runs: told when connecting, or chosen by hand.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub system: Option<System>,
+    /// Among the favorites, in this place (lower first).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub favorite: Option<u32>,
     #[serde(flatten)]
     pub extra: Extra,
+}
+
+/// The system a server runs, for its monogram in the sidebar.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct System {
+    /// `deb`, `ubu`, `fed`, `rhel`, `alp`, `arch`, `bsd`, `mac`, `win`, or
+    /// `?` when it could not be told.
+    pub code: String,
+    /// What to call it ("Debian 12"); empty when unknown.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    pub source: SystemSource,
+    /// What it was told from: the server's banner, or os-release's
+    /// `PRETTY_NAME`.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub evidence: String,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SystemSource {
+    /// The banner the server sends before anything else.
+    Banner,
+    /// `/etc/os-release`, when the host asks for it to be read.
+    OsRelease,
+    /// Chosen by hand: connecting leaves it as it is.
+    Manual,
 }
 
 /// A login with a name ("deploy in production"): a user, keys and an

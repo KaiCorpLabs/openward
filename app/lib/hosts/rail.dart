@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/providers.dart';
 import '../l10n/l10n.dart';
+import '../src/rust/api/vault.dart' show HostView;
 import '../tabs/tab_strip.dart' show tabTitle;
 import '../tabs/tabs.dart';
 import '../terminal/keys.dart';
 import '../tunnels/tunnels.dart';
+import '../ui/environment.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../window/chrome.dart';
@@ -14,7 +17,8 @@ import '../window/sidebar_state.dart';
 import 'sidebar.dart' show tabStatus;
 
 /// The sidebar folded to a column of icons: search, the open tabs, the
-/// whole host list (shown over the window), the library and the settings.
+/// favorites, the whole host list (shown over the window), the library and
+/// the settings.
 class SidebarRail extends ConsumerWidget {
   const SidebarRail({super.key, required this.onSearch});
 
@@ -51,9 +55,16 @@ class SidebarRail extends ConsumerWidget {
       );
     }
 
+    final library = ref.watch(libraryProvider);
     final sessions = [
       for (final (i, t) in state.tabs.indexed)
         if (t is SessionTab || t is SftpTab) (i, t),
+    ];
+    // Favorites without a tab open, to connect in one click.
+    final open = {for (final c in state.sessions) ?c.hostId};
+    final favorites = [
+      for (final h in library.favorites)
+        if (!open.contains(h.id)) h,
     ];
     return ColoredBox(
       color: c.window,
@@ -78,6 +89,19 @@ class SidebarRail extends ConsumerWidget {
                       tab: t,
                       selected: i == state.active,
                       onPressed: () => tabs.select(i),
+                    ),
+                  ),
+                for (final h in favorites)
+                  Center(
+                    child: _RailButton(
+                      key: ValueKey('rail.favorite.${h.label}'),
+                      tooltip: _favoriteTip(context, h),
+                      onPressed: () => tabs.openHost(h),
+                      child: SystemBadge(
+                        code: h.system?.code,
+                        env: h.environment,
+                        size: 24,
+                      ),
                     ),
                   ),
                 Center(
@@ -128,6 +152,14 @@ class SidebarRail extends ConsumerWidget {
     );
   }
 }
+
+/// «db-primary · prod · admin@10.0.4.21 · favorito».
+String _favoriteTip(BuildContext context, HostView h) => [
+  h.label,
+  ?h.environment?.short,
+  '${h.user}@${h.address}${h.port == 22 ? '' : ':${h.port}'}',
+  context.l10n.favoriteLower,
+].join(' · ');
 
 class _RailButton extends StatelessWidget {
   const _RailButton({
@@ -181,7 +213,7 @@ class _RailButton extends StatelessWidget {
 
 /// An open terminal or file tab in the rail: its initials and how it is
 /// doing.
-class _TabBadge extends StatelessWidget {
+class _TabBadge extends ConsumerWidget {
   const _TabBadge({
     required this.tab,
     required this.selected,
@@ -205,9 +237,10 @@ class _TabBadge extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final ow = context.ow;
     final c = ow.colors;
+    final library = ref.watch(libraryProvider);
     final listenable = switch (tab) {
       SessionTab(:final panes) => Listenable.merge([
         panes,
@@ -229,12 +262,22 @@ class _TabBadge extends StatelessWidget {
           _ => Status.idle,
         };
         final sftp = tab is SftpTab;
+        final hostId = switch (tab) {
+          SessionTab(:final panes) =>
+            (panes.active.controller ?? panes.controllers.firstOrNull)?.hostId,
+          SftpTab(:final controller) => controller.hostId,
+          _ => null,
+        };
+        final host = hostId == null ? null : library.host(hostId);
+        // A saved host's monogram, tinted by its environment.
+        final env = host?.environment;
+        final tint = env == null ? null : envColors(c, env.color);
         return _RailButton(
           tooltip: title,
           selected: selected,
           onPressed: onPressed,
           child: SizedBox(
-            width: 28,
+            width: 32,
             height: 28,
             child: Stack(
               clipBehavior: Clip.none,
@@ -242,23 +285,28 @@ class _TabBadge extends StatelessWidget {
                 Container(
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: c.raised,
-                    border: Border.all(color: c.control),
+                    color: tint?.soft ?? c.raised,
+                    border: Border.all(color: tint?.line ?? c.control),
                     borderRadius: BorderRadius.circular(ow.shape.radius),
                   ),
                   child: sftp
                       ? Icon(
                           Icons.folder_outlined,
                           size: 14,
-                          color: c.textMuted,
+                          color: tint?.fg ?? c.textMuted,
                         )
                       : Text(
-                          initials(title),
-                          style: monoStyle(
-                            context,
-                            size: 12,
-                            color: c.text,
-                          ).copyWith(fontWeight: FontWeight.w600),
+                          host?.system?.code ?? initials(title),
+                          maxLines: 1,
+                          style:
+                              monoStyle(
+                                context,
+                                size: 12,
+                                color: tint?.fg ?? c.text,
+                              ).copyWith(
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: -0.5,
+                              ),
                         ),
                 ),
                 if (!sftp)

@@ -164,6 +164,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ConnectedView dco_decode_box_autoadd_connected_view(dynamic raw);
 
   @protected
+  EnvironmentKind dco_decode_box_autoadd_environment_kind(dynamic raw);
+
+  @protected
+  EnvironmentView dco_decode_box_autoadd_environment_view(dynamic raw);
+
+  @protected
   FailureKind dco_decode_box_autoadd_failure_kind(dynamic raw);
 
   @protected
@@ -251,6 +257,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   StageView dco_decode_box_autoadd_stage_view(dynamic raw);
 
   @protected
+  SystemView dco_decode_box_autoadd_system_view(dynamic raw);
+
+  @protected
   TermFrame dco_decode_box_autoadd_term_frame(dynamic raw);
 
   @protected
@@ -300,6 +309,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   EnvVar dco_decode_env_var(dynamic raw);
+
+  @protected
+  EnvironmentKind dco_decode_environment_kind(dynamic raw);
+
+  @protected
+  EnvironmentView dco_decode_environment_view(dynamic raw);
 
   @protected
   double dco_decode_f_32(dynamic raw);
@@ -551,6 +566,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ConnectedView? dco_decode_opt_box_autoadd_connected_view(dynamic raw);
 
   @protected
+  EnvironmentKind? dco_decode_opt_box_autoadd_environment_kind(dynamic raw);
+
+  @protected
+  EnvironmentView? dco_decode_opt_box_autoadd_environment_view(dynamic raw);
+
+  @protected
   FailureKind? dco_decode_opt_box_autoadd_failure_kind(dynamic raw);
 
   @protected
@@ -615,6 +636,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   StageView? dco_decode_opt_box_autoadd_stage_view(dynamic raw);
+
+  @protected
+  SystemView? dco_decode_opt_box_autoadd_system_view(dynamic raw);
 
   @protected
   TermFrame? dco_decode_opt_box_autoadd_term_frame(dynamic raw);
@@ -765,6 +789,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   StageView dco_decode_stage_view(dynamic raw);
+
+  @protected
+  SystemKind dco_decode_system_kind(dynamic raw);
+
+  @protected
+  SystemView dco_decode_system_view(dynamic raw);
 
   @protected
   TagCount dco_decode_tag_count(dynamic raw);
@@ -960,6 +990,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  EnvironmentKind sse_decode_box_autoadd_environment_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  EnvironmentView sse_decode_box_autoadd_environment_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   FailureKind sse_decode_box_autoadd_failure_kind(SseDeserializer deserializer);
 
   @protected
@@ -1065,6 +1105,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   StageView sse_decode_box_autoadd_stage_view(SseDeserializer deserializer);
 
   @protected
+  SystemView sse_decode_box_autoadd_system_view(SseDeserializer deserializer);
+
+  @protected
   TermFrame sse_decode_box_autoadd_term_frame(SseDeserializer deserializer);
 
   @protected
@@ -1122,6 +1165,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   EnvVar sse_decode_env_var(SseDeserializer deserializer);
+
+  @protected
+  EnvironmentKind sse_decode_environment_kind(SseDeserializer deserializer);
+
+  @protected
+  EnvironmentView sse_decode_environment_view(SseDeserializer deserializer);
 
   @protected
   double sse_decode_f_32(SseDeserializer deserializer);
@@ -1417,6 +1466,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  EnvironmentKind? sse_decode_opt_box_autoadd_environment_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  EnvironmentView? sse_decode_opt_box_autoadd_environment_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   FailureKind? sse_decode_opt_box_autoadd_failure_kind(
     SseDeserializer deserializer,
   );
@@ -1517,6 +1576,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   StageView? sse_decode_opt_box_autoadd_stage_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  SystemView? sse_decode_opt_box_autoadd_system_view(
     SseDeserializer deserializer,
   );
 
@@ -1683,6 +1747,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   StageView sse_decode_stage_view(SseDeserializer deserializer);
+
+  @protected
+  SystemKind sse_decode_system_kind(SseDeserializer deserializer);
+
+  @protected
+  SystemView sse_decode_system_view(SseDeserializer deserializer);
 
   @protected
   TagCount sse_decode_tag_count(SseDeserializer deserializer);
@@ -1905,6 +1975,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_environment_kind(
+    EnvironmentKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_environment_view(
+    EnvironmentView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_failure_kind(
     FailureKind self,
     SseSerializer serializer,
@@ -2076,6 +2158,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_system_view(
+    SystemView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_term_frame(
     TermFrame self,
     SseSerializer serializer,
@@ -2149,6 +2237,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_env_var(EnvVar self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_environment_kind(
+    EnvironmentKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_environment_view(
+    EnvironmentView self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_f_32(double self, SseSerializer serializer);
@@ -2512,6 +2612,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_environment_kind(
+    EnvironmentKind? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_environment_view(
+    EnvironmentView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_failure_kind(
     FailureKind? self,
     SseSerializer serializer,
@@ -2640,6 +2752,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_stage_view(
     StageView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_system_view(
+    SystemView? self,
     SseSerializer serializer,
   );
 
@@ -2843,6 +2961,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_stage_view(StageView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_system_kind(SystemKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_system_view(SystemView self, SseSerializer serializer);
 
   @protected
   void sse_encode_tag_count(TagCount self, SseSerializer serializer);

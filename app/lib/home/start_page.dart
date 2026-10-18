@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/address.dart';
+import '../core/connection.dart' show Phase;
 import '../core/providers.dart';
 import '../hosts/editors.dart';
 import '../import/import_dialog.dart';
@@ -14,6 +16,7 @@ import '../tabs/tabs.dart';
 import '../terminal/keys.dart';
 import '../tunnels/tunnels.dart';
 import '../tunnels/tunnels_page.dart' show forwardText;
+import '../ui/environment.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../window/shortcuts.dart';
@@ -159,13 +162,27 @@ class _StartPageState extends ConsumerState<StartPage> {
     final recent = ref.watch(recentProvider).connections;
     final library = ref.watch(libraryProvider);
     final firstDay = recent.isEmpty;
+    // Favorites beside the recent ones, once there are hosts to choose.
+    final favorites = library.hosts.isNotEmpty;
+    final recents = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (firstDay)
+          _firstDay(context)
+        else ...[
+          _Heading(l.paletteRecent),
+          const SizedBox(height: 6),
+          for (final r in recent.take(8)) ?_recentRow(context, r, library),
+        ],
+      ],
+    );
     return ColoredBox(
       color: c.surface,
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(24, 36, 24, 24),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 760),
+            constraints: BoxConstraints(maxWidth: favorites ? 980 : 760),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -179,14 +196,28 @@ class _StartPageState extends ConsumerState<StartPage> {
                 const SizedBox(height: 16),
                 _quick(context),
                 const SizedBox(height: 28),
-                if (firstDay)
-                  _firstDay(context)
-                else ...[
-                  _Heading(l.paletteRecent),
-                  const SizedBox(height: 6),
-                  for (final r in recent.take(8))
-                    ?_recentRow(context, r, library),
-                ],
+                if (!favorites)
+                  recents
+                else
+                  LayoutBuilder(
+                    builder: (context, box) => box.maxWidth >= 720
+                        ? Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(flex: 105, child: recents),
+                              const SizedBox(width: 28),
+                              const Expanded(flex: 100, child: _Favorites()),
+                            ],
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              recents,
+                              const SizedBox(height: 24),
+                              const _Favorites(),
+                            ],
+                          ),
+                  ),
                 const _OpenTunnels(),
                 const SizedBox(height: 20),
                 Divider(height: 1, color: c.border),
@@ -295,7 +326,12 @@ class _StartPageState extends ConsumerState<StartPage> {
     final length = r.length;
     return _Row(
       key: ValueKey('recent.${r.where}'),
-      icon: host != null ? Icons.dns_outlined : Icons.history,
+      // An address not saved has no system to tell.
+      leading: SystemBadge(
+        code: host == null ? '?' : host.system?.code,
+        env: host?.environment,
+      ),
+      env: host?.environment,
       title: host?.label ?? target!.label,
       subtitle: host != null ? _hostAddress(host) : l.notSaved,
       trailing: Column(
@@ -481,6 +517,223 @@ String durationText(AppLocalizations l, Duration d) {
   return l.durationHours(d.inHours, d.inMinutes % 60);
 }
 
+/// The favorites as cards, in their order: a drag puts one before
+/// another (and so do the actions of a screen reader).
+class _Favorites extends ConsumerWidget {
+  const _Favorites();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = context.l10n;
+    final ow = context.ow;
+    final c = ow.colors;
+    final favorites = ref.watch(libraryProvider).favorites;
+    final live = {
+      for (final s in ref.watch(tabsProvider).sessions)
+        if (s.phase == Phase.connected || s.phase == Phase.running) ?s.hostId,
+    };
+    Future<void> move(String id, int to) async {
+      final ids = [for (final h in favorites) h.id];
+      final from = ids.indexOf(id);
+      if (from < 0 || to < 0 || to >= ids.length || from == to) return;
+      ids.insert(to, ids.removeAt(from));
+      await ref.read(openWardProvider).orderFavorites(ids: ids);
+      ref.read(libraryProvider.notifier).refresh();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(child: _Heading(l.favorites)),
+            if (favorites.length > 1)
+              Text(
+                l.dragToOrder,
+                style: TextStyle(fontSize: 12, color: c.textSubtle),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (favorites.isEmpty)
+          Container(
+            key: const ValueKey('start.favorites.empty'),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              border: Border.all(color: c.control),
+              borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.star_outline_rounded, size: 18, color: c.warn),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    l.favoritesEmpty,
+                    style: TextStyle(color: c.textMuted, height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          LayoutBuilder(
+            builder: (context, box) {
+              final columns = box.maxWidth >= 420 ? 3 : 2;
+              final w = (box.maxWidth - 8 * (columns - 1)) / columns;
+              return Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final (i, h) in favorites.indexed)
+                    SizedBox(
+                      width: w,
+                      child: _FavoriteCard(
+                        host: h,
+                        live: live.contains(h.id),
+                        width: w,
+                        onOpen: () =>
+                            ref.read(tabsProvider.notifier).openHost(h),
+                        onDropped: (id) => move(id, i),
+                        onEarlier: i == 0 ? null : () => move(h.id, i - 1),
+                        onLater: i == favorites.length - 1
+                            ? null
+                            : () => move(h.id, i + 1),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+      ],
+    );
+  }
+}
+
+class _FavoriteCard extends StatelessWidget {
+  const _FavoriteCard({
+    required this.host,
+    required this.live,
+    required this.width,
+    required this.onOpen,
+    required this.onDropped,
+    required this.onEarlier,
+    required this.onLater,
+  });
+
+  final HostView host;
+  final bool live;
+  final double width;
+  final VoidCallback onOpen;
+
+  /// Another favorite dropped here: it takes this one's place.
+  final ValueChanged<String> onDropped;
+  final VoidCallback? onEarlier;
+  final VoidCallback? onLater;
+
+  Widget _card(BuildContext context, {bool over = false}) {
+    final l = context.l10n;
+    final ow = context.ow;
+    final c = ow.colors;
+    final h = host;
+    final env = h.environment;
+    final address = '${h.user}@${h.address}${h.port == 22 ? '' : ':${h.port}'}';
+    return Material(
+      color: c.raised,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: over ? c.accent : c.control),
+        borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
+      ),
+      child: InkWell(
+        key: ValueKey('start.favorite.${h.label}'),
+        onTap: onOpen,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              height: 2,
+              color: env == null ? c.border : envColors(c, env.color).fg,
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      SystemBadge(code: h.system?.code, env: env, size: 28),
+                      const Spacer(),
+                      if (live)
+                        Tooltip(
+                          message: l.statusConnected,
+                          child: const StatusDot(Status.connected),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    h.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    address,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: monoStyle(context, size: 12),
+                  ),
+                  const SizedBox(height: 8),
+                  if (env != null)
+                    EnvChip(env)
+                  else
+                    Text(
+                      l.envNoneNote,
+                      style: TextStyle(fontSize: 12, color: c.textSubtle),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final ow = context.ow;
+    return Semantics(
+      customSemanticsActions: {
+        CustomSemanticsAction(label: l.moveEarlier): ?onEarlier,
+        CustomSemanticsAction(label: l.moveLater): ?onLater,
+      },
+      child: DragTarget<String>(
+        onWillAcceptWithDetails: (d) => d.data != host.id,
+        onAcceptWithDetails: (d) => onDropped(d.data),
+        builder: (context, over, _) => Draggable<String>(
+          data: host.id,
+          feedback: Material(
+            color: Colors.transparent,
+            elevation: 8,
+            borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
+            child: SizedBox(width: width, child: _card(context)),
+          ),
+          childWhenDragging: Opacity(opacity: 0.35, child: _card(context)),
+          child: FocusOutline(
+            radius: ow.shape.radiusLarge,
+            child: _card(context, over: over.isNotEmpty),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _Heading extends StatelessWidget {
   const _Heading(this.text);
 
@@ -495,14 +748,16 @@ class _Heading extends StatelessWidget {
 class _Row extends StatelessWidget {
   const _Row({
     super.key,
-    required this.icon,
+    required this.leading,
     required this.title,
     required this.subtitle,
     required this.trailing,
     required this.onTap,
+    this.env,
   });
 
-  final IconData icon;
+  final Widget leading;
+  final EnvironmentView? env;
   final String title;
   final String subtitle;
   final Widget trailing;
@@ -511,7 +766,6 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ow = context.ow;
-    final c = ow.colors;
     return FocusOutline(
       radius: ow.shape.radius + 2,
       child: Material(
@@ -524,17 +778,29 @@ class _Row extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             child: Row(
               children: [
-                Icon(icon, size: 18, color: c.textMuted),
+                leading,
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          if (env case final env?) ...[
+                            const SizedBox(width: 8),
+                            EnvChip(env),
+                          ],
+                        ],
                       ),
                       Text(
                         subtitle,
@@ -577,15 +843,17 @@ class _Suggestions extends StatelessWidget {
     final l = context.l10n;
     final highlighted = AutocompleteHighlightedOption.of(context);
     Widget row(int i, _Suggestion s) {
-      final (icon, title, subtitle, keys) = switch (s) {
+      Widget icon(IconData i) =>
+          SizedBox(width: 32, child: Icon(i, size: 16, color: c.textMuted));
+      final (lead, title, subtitle, keys) = switch (s) {
         _Host(:final host) => (
-          Icons.dns_outlined,
+          SystemBadge(code: host.system?.code, env: host.environment, size: 24),
           host.label,
           hostAddress(host),
           null,
         ),
         _Used(:final target, :final at) => (
-          Icons.history,
+          icon(Icons.history),
           target.label,
           l.usedNotSaved(
             agoText(
@@ -598,13 +866,13 @@ class _Suggestions extends StatelessWidget {
           null,
         ),
         _Typed(:final target) => (
-          Icons.terminal,
+          icon(Icons.terminal),
           l.connectToAddress(target.label),
           l.asTyped,
           isApple ? '⌥↩' : 'Alt+↩',
         ),
         _Save(:final target) => (
-          Icons.bookmark_add_outlined,
+          icon(Icons.bookmark_add_outlined),
           l.saveAsHost,
           target.label,
           null,
@@ -627,13 +895,28 @@ class _Suggestions extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             child: Row(
               children: [
-                Icon(icon, size: 16, color: c.textMuted),
+                lead,
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (s case _Host(:final host)
+                              when host.environment != null) ...[
+                            const SizedBox(width: 8),
+                            EnvChip(host.environment!),
+                          ],
+                        ],
+                      ),
                       Text(
                         subtitle,
                         maxLines: 1,
@@ -703,7 +986,10 @@ class _OpenTunnels extends ConsumerWidget {
               for (final t in open)
                 _Row(
                   key: ValueKey('start.tunnel.${t.spec.label}'),
-                  icon: Icons.swap_horiz,
+                  leading: SizedBox(
+                    width: 32,
+                    child: Icon(Icons.swap_horiz, size: 18, color: c.textMuted),
+                  ),
                   title: t.spec.label,
                   subtitle: '${forwardText(t)} · ${l.tunnelVia(t.hostLabel)}',
                   trailing: OutlinedButton(

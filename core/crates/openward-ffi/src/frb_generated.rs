@@ -43,7 +43,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 864172349;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 732789945;
 
 // Section: executor
 
@@ -2258,6 +2258,59 @@ fn wire__crate__api__app__OpenWard_open_with_ssh_dir_impl(
         },
     )
 }
+fn wire__crate__api__app__OpenWard_order_favorites_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "OpenWard_order_favorites",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<OpenWard>,
+            >>::sse_decode(&mut deserializer);
+            let api_ids = <Vec<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || {
+                        let mut api_that_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_that, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_that_guard = api_that_guard.unwrap();
+                        let output_ok =
+                            crate::api::app::OpenWard::order_favorites(&*api_that_guard, api_ids)?;
+                        std::result::Result::Ok(output_ok)
+                    })(),
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__app__OpenWard_pause_transfer_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -2876,6 +2929,63 @@ fn wire__crate__api__app__OpenWard_search_impl(
                 ))?;
                 std::result::Result::Ok(output_ok)
             })())
+        },
+    )
+}
+fn wire__crate__api__app__OpenWard_set_favorite_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "OpenWard_set_favorite",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<OpenWard>,
+            >>::sse_decode(&mut deserializer);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            let api_favorite = <bool>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || {
+                        let mut api_that_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_that, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_that_guard = api_that_guard.unwrap();
+                        let output_ok = crate::api::app::OpenWard::set_favorite(
+                            &*api_that_guard,
+                            api_id,
+                            api_favorite,
+                        )?;
+                        std::result::Result::Ok(output_ok)
+                    })(),
+                )
+            }
         },
     )
 }
@@ -6711,6 +6821,32 @@ impl SseDecode for crate::api::vault::EnvVar {
     }
 }
 
+impl SseDecode for crate::api::vault::EnvironmentKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::vault::EnvironmentKind::None,
+            1 => crate::api::vault::EnvironmentKind::Mark,
+            _ => unreachable!("Invalid variant for EnvironmentKind: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::vault::EnvironmentView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_name = <String>::sse_decode(deserializer);
+        let mut var_short = <String>::sse_decode(deserializer);
+        let mut var_color = <String>::sse_decode(deserializer);
+        return crate::api::vault::EnvironmentView {
+            name: var_name,
+            short: var_short,
+            color: var_color,
+        };
+    }
+}
+
 impl SseDecode for f32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -6909,10 +7045,13 @@ impl SseDecode for crate::api::vault::GroupView {
         let mut var_id = <String>::sse_decode(deserializer);
         let mut var_name = <String>::sse_decode(deserializer);
         let mut var_parentId = <Option<String>>::sse_decode(deserializer);
+        let mut var_environment =
+            <Option<crate::api::vault::EnvironmentView>>::sse_decode(deserializer);
         return crate::api::vault::GroupView {
             id: var_id,
             name: var_name,
             parent_id: var_parentId,
+            environment: var_environment,
         };
     }
 }
@@ -6939,12 +7078,14 @@ impl SseDecode for crate::api::vault::HostDetail {
         let mut var_spec = <crate::api::vault::HostSpec>::sse_decode(deserializer);
         let mut var_effective = <crate::api::vault::SettingsSpec>::sse_decode(deserializer);
         let mut var_origins = <Vec<crate::api::vault::FieldOrigin>>::sse_decode(deserializer);
+        let mut var_system = <Option<crate::api::vault::SystemView>>::sse_decode(deserializer);
         return crate::api::vault::HostDetail {
             id: var_id,
             rev: var_rev,
             spec: var_spec,
             effective: var_effective,
             origins: var_origins,
+            system: var_system,
         };
     }
 }
@@ -6958,6 +7099,8 @@ impl SseDecode for crate::api::vault::HostSpec {
         let mut var_tags = <Vec<String>>::sse_decode(deserializer);
         let mut var_notes = <Option<String>>::sse_decode(deserializer);
         let mut var_settings = <crate::api::vault::SettingsSpec>::sse_decode(deserializer);
+        let mut var_favorite = <bool>::sse_decode(deserializer);
+        let mut var_systemCode = <Option<String>>::sse_decode(deserializer);
         return crate::api::vault::HostSpec {
             label: var_label,
             address: var_address,
@@ -6965,6 +7108,8 @@ impl SseDecode for crate::api::vault::HostSpec {
             tags: var_tags,
             notes: var_notes,
             settings: var_settings,
+            favorite: var_favorite,
+            system_code: var_systemCode,
         };
     }
 }
@@ -6980,6 +7125,10 @@ impl SseDecode for crate::api::vault::HostView {
         let mut var_user = <String>::sse_decode(deserializer);
         let mut var_port = <u16>::sse_decode(deserializer);
         let mut var_importedAlias = <Option<String>>::sse_decode(deserializer);
+        let mut var_environment =
+            <Option<crate::api::vault::EnvironmentView>>::sse_decode(deserializer);
+        let mut var_system = <Option<crate::api::vault::SystemView>>::sse_decode(deserializer);
+        let mut var_favorite = <Option<u32>>::sse_decode(deserializer);
         return crate::api::vault::HostView {
             id: var_id,
             label: var_label,
@@ -6989,6 +7138,9 @@ impl SseDecode for crate::api::vault::HostView {
             user: var_user,
             port: var_port,
             imported_alias: var_importedAlias,
+            environment: var_environment,
+            system: var_system,
+            favorite: var_favorite,
         };
     }
 }
@@ -7894,6 +8046,32 @@ impl SseDecode for Option<crate::api::session::ConnectedView> {
     }
 }
 
+impl SseDecode for Option<crate::api::vault::EnvironmentKind> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::vault::EnvironmentKind>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::vault::EnvironmentView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::vault::EnvironmentView>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<crate::api::session::FailureKind> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -8144,6 +8322,17 @@ impl SseDecode for Option<crate::api::session::StageView> {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<crate::api::session::StageView>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::vault::SystemView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::vault::SystemView>::sse_decode(deserializer));
         } else {
             return None;
         }
@@ -8755,9 +8944,10 @@ impl SseDecode for crate::api::session::SessionEventKind {
             4 => crate::api::session::SessionEventKind::Reconnecting,
             5 => crate::api::session::SessionEventKind::Health,
             6 => crate::api::session::SessionEventKind::Hops,
-            7 => crate::api::session::SessionEventKind::Persistent,
-            8 => crate::api::session::SessionEventKind::Started,
-            9 => crate::api::session::SessionEventKind::Closed,
+            7 => crate::api::session::SessionEventKind::HostsChanged,
+            8 => crate::api::session::SessionEventKind::Persistent,
+            9 => crate::api::session::SessionEventKind::Started,
+            10 => crate::api::session::SessionEventKind::Closed,
             _ => unreachable!("Invalid variant for SessionEventKind: {}", inner),
         };
     }
@@ -8790,6 +8980,12 @@ impl SseDecode for crate::api::vault::SettingsSpec {
         let mut var_identity =
             <Option<crate::api::vault::IdentityChoice>>::sse_decode(deserializer);
         let mut var_identityId = <String>::sse_decode(deserializer);
+        let mut var_environment =
+            <Option<crate::api::vault::EnvironmentKind>>::sse_decode(deserializer);
+        let mut var_environmentName = <String>::sse_decode(deserializer);
+        let mut var_environmentShort = <String>::sse_decode(deserializer);
+        let mut var_environmentColor = <String>::sse_decode(deserializer);
+        let mut var_readOsRelease = <Option<bool>>::sse_decode(deserializer);
         return crate::api::vault::SettingsSpec {
             user: var_user,
             port: var_port,
@@ -8813,6 +9009,11 @@ impl SseDecode for crate::api::vault::SettingsSpec {
             host_key_policy: var_hostKeyPolicy,
             identity: var_identity,
             identity_id: var_identityId,
+            environment: var_environment,
+            environment_name: var_environmentName,
+            environment_short: var_environmentShort,
+            environment_color: var_environmentColor,
+            read_os_release: var_readOsRelease,
         };
     }
 }
@@ -8978,6 +9179,35 @@ impl SseDecode for crate::api::session::StageView {
             hops: var_hops,
             label: var_label,
             stage: var_stage,
+        };
+    }
+}
+
+impl SseDecode for crate::api::vault::SystemKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::vault::SystemKind::Banner,
+            1 => crate::api::vault::SystemKind::OsRelease,
+            2 => crate::api::vault::SystemKind::Manual,
+            _ => unreachable!("Invalid variant for SystemKind: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::vault::SystemView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_code = <String>::sse_decode(deserializer);
+        let mut var_name = <String>::sse_decode(deserializer);
+        let mut var_kind = <crate::api::vault::SystemKind>::sse_decode(deserializer);
+        let mut var_evidence = <String>::sse_decode(deserializer);
+        return crate::api::vault::SystemView {
+            code: var_code,
+            name: var_name,
+            kind: var_kind,
+            evidence: var_evidence,
         };
     }
 }
@@ -9420,70 +9650,74 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        45 => wire__crate__api__app__OpenWard_preview_ssh_config_impl(
+        42 => {
+            wire__crate__api__app__OpenWard_order_favorites_impl(port, ptr, rust_vec_len, data_len)
+        }
+        46 => wire__crate__api__app__OpenWard_preview_ssh_config_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        47 => wire__crate__api__app__OpenWard_read_program_impl(port, ptr, rust_vec_len, data_len),
-        48 => wire__crate__api__app__OpenWard_read_program_with_key_impl(
+        48 => wire__crate__api__app__OpenWard_read_program_impl(port, ptr, rust_vec_len, data_len),
+        49 => wire__crate__api__app__OpenWard_read_program_with_key_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        51 => {
+        52 => {
             wire__crate__api__app__OpenWard_rename_workspace_impl(port, ptr, rust_vec_len, data_len)
         }
-        60 => {
+        55 => wire__crate__api__app__OpenWard_set_favorite_impl(port, ptr, rust_vec_len, data_len),
+        62 => {
             wire__crate__api__app__OpenWard_trust_host_key_impl(port, ptr, rust_vec_len, data_len)
         }
-        62 => wire__crate__api__app__OpenWard_update_group_impl(port, ptr, rust_vec_len, data_len),
-        63 => wire__crate__api__app__OpenWard_update_host_impl(port, ptr, rust_vec_len, data_len),
-        64 => {
+        64 => wire__crate__api__app__OpenWard_update_group_impl(port, ptr, rust_vec_len, data_len),
+        65 => wire__crate__api__app__OpenWard_update_host_impl(port, ptr, rust_vec_len, data_len),
+        66 => {
             wire__crate__api__app__OpenWard_update_identity_impl(port, ptr, rust_vec_len, data_len)
         }
-        65 => {
+        67 => {
             wire__crate__api__app__OpenWard_update_snippet_impl(port, ptr, rust_vec_len, data_len)
         }
-        66 => wire__crate__api__app__OpenWard_update_tunnel_impl(port, ptr, rust_vec_len, data_len),
-        67 => {
+        68 => wire__crate__api__app__OpenWard_update_tunnel_impl(port, ptr, rust_vec_len, data_len),
+        69 => {
             wire__crate__api__app__OpenWard_update_workspace_impl(port, ptr, rust_vec_len, data_len)
         }
-        68 => wire__crate__api__app__OpenWard_use_identity_impl(port, ptr, rust_vec_len, data_len),
-        71 => wire__crate__api__sftp__SftpBrowser_chmod_impl(port, ptr, rust_vec_len, data_len),
-        73 => wire__crate__api__sftp__SftpBrowser_conflicts_impl(port, ptr, rust_vec_len, data_len),
-        74 => wire__crate__api__sftp__SftpBrowser_home_impl(port, ptr, rust_vec_len, data_len),
-        75 => wire__crate__api__sftp__SftpBrowser_install_public_key_impl(
+        70 => wire__crate__api__app__OpenWard_use_identity_impl(port, ptr, rust_vec_len, data_len),
+        73 => wire__crate__api__sftp__SftpBrowser_chmod_impl(port, ptr, rust_vec_len, data_len),
+        75 => wire__crate__api__sftp__SftpBrowser_conflicts_impl(port, ptr, rust_vec_len, data_len),
+        76 => wire__crate__api__sftp__SftpBrowser_home_impl(port, ptr, rust_vec_len, data_len),
+        77 => wire__crate__api__sftp__SftpBrowser_install_public_key_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        76 => wire__crate__api__sftp__SftpBrowser_list_impl(port, ptr, rust_vec_len, data_len),
-        77 => wire__crate__api__sftp__SftpBrowser_mkdir_impl(port, ptr, rust_vec_len, data_len),
-        78 => wire__crate__api__sftp__SftpBrowser_realpath_impl(port, ptr, rust_vec_len, data_len),
-        79 => wire__crate__api__sftp__SftpBrowser_remove_impl(port, ptr, rust_vec_len, data_len),
-        80 => wire__crate__api__sftp__SftpBrowser_rename_impl(port, ptr, rust_vec_len, data_len),
-        81 => wire__crate__api__sftp__SftpBrowser_stat_impl(port, ptr, rust_vec_len, data_len),
-        111 => {
+        78 => wire__crate__api__sftp__SftpBrowser_list_impl(port, ptr, rust_vec_len, data_len),
+        79 => wire__crate__api__sftp__SftpBrowser_mkdir_impl(port, ptr, rust_vec_len, data_len),
+        80 => wire__crate__api__sftp__SftpBrowser_realpath_impl(port, ptr, rust_vec_len, data_len),
+        81 => wire__crate__api__sftp__SftpBrowser_remove_impl(port, ptr, rust_vec_len, data_len),
+        82 => wire__crate__api__sftp__SftpBrowser_rename_impl(port, ptr, rust_vec_len, data_len),
+        83 => wire__crate__api__sftp__SftpBrowser_stat_impl(port, ptr, rust_vec_len, data_len),
+        113 => {
             wire__crate__api__session__failure_view_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        112 => wire__crate__api__vault__group_spec_default_impl(port, ptr, rust_vec_len, data_len),
-        113 => wire__crate__api__vault__host_spec_default_impl(port, ptr, rust_vec_len, data_len),
-        114 => wire__crate__api__app__init_app_impl(port, ptr, rust_vec_len, data_len),
-        115 => wire__crate__api__vault__jump_spec_default_impl(port, ptr, rust_vec_len, data_len),
-        116 => wire__crate__api__sftp__local_chmod_impl(port, ptr, rust_vec_len, data_len),
-        118 => wire__crate__api__sftp__local_list_impl(port, ptr, rust_vec_len, data_len),
-        119 => wire__crate__api__sftp__local_mkdir_impl(port, ptr, rust_vec_len, data_len),
-        120 => wire__crate__api__sftp__local_remove_impl(port, ptr, rust_vec_len, data_len),
-        121 => wire__crate__api__sftp__local_rename_impl(port, ptr, rust_vec_len, data_len),
-        122 => wire__crate__api__sftp__local_stat_impl(port, ptr, rust_vec_len, data_len),
-        123 => {
+        114 => wire__crate__api__vault__group_spec_default_impl(port, ptr, rust_vec_len, data_len),
+        115 => wire__crate__api__vault__host_spec_default_impl(port, ptr, rust_vec_len, data_len),
+        116 => wire__crate__api__app__init_app_impl(port, ptr, rust_vec_len, data_len),
+        117 => wire__crate__api__vault__jump_spec_default_impl(port, ptr, rust_vec_len, data_len),
+        118 => wire__crate__api__sftp__local_chmod_impl(port, ptr, rust_vec_len, data_len),
+        120 => wire__crate__api__sftp__local_list_impl(port, ptr, rust_vec_len, data_len),
+        121 => wire__crate__api__sftp__local_mkdir_impl(port, ptr, rust_vec_len, data_len),
+        122 => wire__crate__api__sftp__local_remove_impl(port, ptr, rust_vec_len, data_len),
+        123 => wire__crate__api__sftp__local_rename_impl(port, ptr, rust_vec_len, data_len),
+        124 => wire__crate__api__sftp__local_stat_impl(port, ptr, rust_vec_len, data_len),
+        125 => {
             wire__crate__api__session__prompt_view_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        125 => {
+        127 => {
             wire__crate__api__vault__settings_spec_default_impl(port, ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -9522,98 +9756,98 @@ fn pde_ffi_dispatcher_sync_impl(
         34 => wire__crate__api__app__OpenWard_known_host_rows_impl(ptr, rust_vec_len, data_len),
         35 => wire__crate__api__app__OpenWard_known_hosts_impl(ptr, rust_vec_len, data_len),
         36 => wire__crate__api__app__OpenWard_known_hosts_file_impl(ptr, rust_vec_len, data_len),
-        42 => wire__crate__api__app__OpenWard_pause_transfer_impl(ptr, rust_vec_len, data_len),
-        43 => wire__crate__api__app__OpenWard_pause_transfers_impl(ptr, rust_vec_len, data_len),
-        44 => wire__crate__api__app__OpenWard_preview_program_impl(ptr, rust_vec_len, data_len),
-        46 => wire__crate__api__app__OpenWard_public_key_line_impl(ptr, rust_vec_len, data_len),
-        49 => wire__crate__api__app__OpenWard_reconnect_attempts_impl(ptr, rust_vec_len, data_len),
-        50 => wire__crate__api__app__OpenWard_remove_transfer_impl(ptr, rust_vec_len, data_len),
-        52 => wire__crate__api__app__OpenWard_resume_transfer_impl(ptr, rust_vec_len, data_len),
-        53 => wire__crate__api__app__OpenWard_search_impl(ptr, rust_vec_len, data_len),
-        54 => wire__crate__api__app__OpenWard_sftp_impl(ptr, rust_vec_len, data_len),
-        55 => wire__crate__api__app__OpenWard_snippets_impl(ptr, rust_vec_len, data_len),
-        56 => wire__crate__api__app__OpenWard_tags_impl(ptr, rust_vec_len, data_len),
-        57 => wire__crate__api__app__OpenWard_terminal_impl(ptr, rust_vec_len, data_len),
-        58 => wire__crate__api__app__OpenWard_transfer_impl(ptr, rust_vec_len, data_len),
-        59 => wire__crate__api__app__OpenWard_transfers_impl(ptr, rust_vec_len, data_len),
-        61 => wire__crate__api__app__OpenWard_tunnels_impl(ptr, rust_vec_len, data_len),
-        69 => wire__crate__api__app__OpenWard_workspaces_impl(ptr, rust_vec_len, data_len),
-        70 => wire__crate__api__programs__ProgramData_program_impl(ptr, rust_vec_len, data_len),
-        72 => wire__crate__api__sftp__SftpBrowser_close_impl(ptr, rust_vec_len, data_len),
-        82 => wire__crate__api__session__TerminalSession_clear_selection_impl(
+        43 => wire__crate__api__app__OpenWard_pause_transfer_impl(ptr, rust_vec_len, data_len),
+        44 => wire__crate__api__app__OpenWard_pause_transfers_impl(ptr, rust_vec_len, data_len),
+        45 => wire__crate__api__app__OpenWard_preview_program_impl(ptr, rust_vec_len, data_len),
+        47 => wire__crate__api__app__OpenWard_public_key_line_impl(ptr, rust_vec_len, data_len),
+        50 => wire__crate__api__app__OpenWard_reconnect_attempts_impl(ptr, rust_vec_len, data_len),
+        51 => wire__crate__api__app__OpenWard_remove_transfer_impl(ptr, rust_vec_len, data_len),
+        53 => wire__crate__api__app__OpenWard_resume_transfer_impl(ptr, rust_vec_len, data_len),
+        54 => wire__crate__api__app__OpenWard_search_impl(ptr, rust_vec_len, data_len),
+        56 => wire__crate__api__app__OpenWard_sftp_impl(ptr, rust_vec_len, data_len),
+        57 => wire__crate__api__app__OpenWard_snippets_impl(ptr, rust_vec_len, data_len),
+        58 => wire__crate__api__app__OpenWard_tags_impl(ptr, rust_vec_len, data_len),
+        59 => wire__crate__api__app__OpenWard_terminal_impl(ptr, rust_vec_len, data_len),
+        60 => wire__crate__api__app__OpenWard_transfer_impl(ptr, rust_vec_len, data_len),
+        61 => wire__crate__api__app__OpenWard_transfers_impl(ptr, rust_vec_len, data_len),
+        63 => wire__crate__api__app__OpenWard_tunnels_impl(ptr, rust_vec_len, data_len),
+        71 => wire__crate__api__app__OpenWard_workspaces_impl(ptr, rust_vec_len, data_len),
+        72 => wire__crate__api__programs__ProgramData_program_impl(ptr, rust_vec_len, data_len),
+        74 => wire__crate__api__sftp__SftpBrowser_close_impl(ptr, rust_vec_len, data_len),
+        84 => wire__crate__api__session__TerminalSession_clear_selection_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        83 => wire__crate__api__session__TerminalSession_close_impl(ptr, rust_vec_len, data_len),
-        84 => {
+        85 => wire__crate__api__session__TerminalSession_close_impl(ptr, rust_vec_len, data_len),
+        86 => {
             wire__crate__api__session__TerminalSession_cursor_cell_impl(ptr, rust_vec_len, data_len)
         }
-        85 => {
+        87 => {
             wire__crate__api__session__TerminalSession_end_search_impl(ptr, rust_vec_len, data_len)
         }
-        86 => wire__crate__api__session__TerminalSession_focus_impl(ptr, rust_vec_len, data_len),
-        87 => wire__crate__api__session__TerminalSession_key_impl(ptr, rust_vec_len, data_len),
-        88 => wire__crate__api__session__TerminalSession_link_at_impl(ptr, rust_vec_len, data_len),
-        89 => wire__crate__api__session__TerminalSession_note_impl(ptr, rust_vec_len, data_len),
-        90 => wire__crate__api__session__TerminalSession_paste_impl(ptr, rust_vec_len, data_len),
-        91 => wire__crate__api__session__TerminalSession_pointer_impl(ptr, rust_vec_len, data_len),
-        92 => wire__crate__api__session__TerminalSession_poll_impl(ptr, rust_vec_len, data_len),
-        93 => wire__crate__api__session__TerminalSession_redraw_impl(ptr, rust_vec_len, data_len),
-        94 => wire__crate__api__session__TerminalSession_resize_impl(ptr, rust_vec_len, data_len),
-        95 => {
+        88 => wire__crate__api__session__TerminalSession_focus_impl(ptr, rust_vec_len, data_len),
+        89 => wire__crate__api__session__TerminalSession_key_impl(ptr, rust_vec_len, data_len),
+        90 => wire__crate__api__session__TerminalSession_link_at_impl(ptr, rust_vec_len, data_len),
+        91 => wire__crate__api__session__TerminalSession_note_impl(ptr, rust_vec_len, data_len),
+        92 => wire__crate__api__session__TerminalSession_paste_impl(ptr, rust_vec_len, data_len),
+        93 => wire__crate__api__session__TerminalSession_pointer_impl(ptr, rust_vec_len, data_len),
+        94 => wire__crate__api__session__TerminalSession_poll_impl(ptr, rust_vec_len, data_len),
+        95 => wire__crate__api__session__TerminalSession_redraw_impl(ptr, rust_vec_len, data_len),
+        96 => wire__crate__api__session__TerminalSession_resize_impl(ptr, rust_vec_len, data_len),
+        97 => {
             wire__crate__api__session__TerminalSession_screen_text_impl(ptr, rust_vec_len, data_len)
         }
-        96 => wire__crate__api__session__TerminalSession_search_impl(ptr, rust_vec_len, data_len),
-        97 => {
+        98 => wire__crate__api__session__TerminalSession_search_impl(ptr, rust_vec_len, data_len),
+        99 => {
             wire__crate__api__session__TerminalSession_search_step_impl(ptr, rust_vec_len, data_len)
         }
-        98 => {
+        100 => {
             wire__crate__api__session__TerminalSession_select_all_impl(ptr, rust_vec_len, data_len)
         }
-        99 => {
+        101 => {
             wire__crate__api__session__TerminalSession_select_drag_impl(ptr, rust_vec_len, data_len)
         }
-        100 => wire__crate__api__session__TerminalSession_select_press_impl(
+        102 => wire__crate__api__session__TerminalSession_select_press_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        101 => wire__crate__api__session__TerminalSession_select_release_impl(
+        103 => wire__crate__api__session__TerminalSession_select_release_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        102 => wire__crate__api__session__TerminalSession_selection_text_impl(
+        104 => wire__crate__api__session__TerminalSession_selection_text_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        103 => wire__crate__api__session__TerminalSession_set_cell_pixels_impl(
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        104 => {
-            wire__crate__api__session__TerminalSession_set_cursor_impl(ptr, rust_vec_len, data_len)
-        }
-        105 => wire__crate__api__session__TerminalSession_set_option_as_alt_impl(
+        105 => wire__crate__api__session__TerminalSession_set_cell_pixels_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
         106 => {
+            wire__crate__api__session__TerminalSession_set_cursor_impl(ptr, rust_vec_len, data_len)
+        }
+        107 => wire__crate__api__session__TerminalSession_set_option_as_alt_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        108 => {
             wire__crate__api__session__TerminalSession_set_theme_impl(ptr, rust_vec_len, data_len)
         }
-        107 => wire__crate__api__session__TerminalSession_text_impl(ptr, rust_vec_len, data_len),
-        108 => {
+        109 => wire__crate__api__session__TerminalSession_text_impl(ptr, rust_vec_len, data_len),
+        110 => {
             wire__crate__api__session__TerminalSession_typed_since_impl(ptr, rust_vec_len, data_len)
         }
-        109 => wire__crate__api__session__TerminalSession_wheel_impl(ptr, rust_vec_len, data_len),
-        110 => wire__crate__api__app__core_version_impl(ptr, rust_vec_len, data_len),
-        117 => wire__crate__api__sftp__local_home_impl(ptr, rust_vec_len, data_len),
-        124 => wire__crate__api__snippets__render_snippet_impl(ptr, rust_vec_len, data_len),
-        126 => wire__crate__api__snippets__snippet_variables_impl(ptr, rust_vec_len, data_len),
+        111 => wire__crate__api__session__TerminalSession_wheel_impl(ptr, rust_vec_len, data_len),
+        112 => wire__crate__api__app__core_version_impl(ptr, rust_vec_len, data_len),
+        119 => wire__crate__api__sftp__local_home_impl(ptr, rust_vec_len, data_len),
+        126 => wire__crate__api__snippets__render_snippet_impl(ptr, rust_vec_len, data_len),
+        128 => wire__crate__api__snippets__snippet_variables_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -9898,6 +10132,49 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::vault::EnvVar> for crate::api
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::vault::EnvironmentKind {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::None => 0.into_dart(),
+            Self::Mark => 1.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::vault::EnvironmentKind
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::vault::EnvironmentKind>
+    for crate::api::vault::EnvironmentKind
+{
+    fn into_into_dart(self) -> crate::api::vault::EnvironmentKind {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::vault::EnvironmentView {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.name.into_into_dart().into_dart(),
+            self.short.into_into_dart().into_dart(),
+            self.color.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::vault::EnvironmentView
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::vault::EnvironmentView>
+    for crate::api::vault::EnvironmentView
+{
+    fn into_into_dart(self) -> crate::api::vault::EnvironmentView {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::session::FailureKind {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
@@ -10135,6 +10412,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::vault::GroupView {
             self.id.into_into_dart().into_dart(),
             self.name.into_into_dart().into_dart(),
             self.parent_id.into_into_dart().into_dart(),
+            self.environment.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -10178,6 +10456,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::vault::HostDetail {
             self.spec.into_into_dart().into_dart(),
             self.effective.into_into_dart().into_dart(),
             self.origins.into_into_dart().into_dart(),
+            self.system.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -10200,6 +10479,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::vault::HostSpec {
             self.tags.into_into_dart().into_dart(),
             self.notes.into_into_dart().into_dart(),
             self.settings.into_into_dart().into_dart(),
+            self.favorite.into_into_dart().into_dart(),
+            self.system_code.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -10224,6 +10505,9 @@ impl flutter_rust_bridge::IntoDart for crate::api::vault::HostView {
             self.user.into_into_dart().into_dart(),
             self.port.into_into_dart().into_dart(),
             self.imported_alias.into_into_dart().into_dart(),
+            self.environment.into_into_dart().into_dart(),
+            self.system.into_into_dart().into_dart(),
+            self.favorite.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -11384,9 +11668,10 @@ impl flutter_rust_bridge::IntoDart for crate::api::session::SessionEventKind {
             Self::Reconnecting => 4.into_dart(),
             Self::Health => 5.into_dart(),
             Self::Hops => 6.into_dart(),
-            Self::Persistent => 7.into_dart(),
-            Self::Started => 8.into_dart(),
-            Self::Closed => 9.into_dart(),
+            Self::HostsChanged => 7.into_dart(),
+            Self::Persistent => 8.into_dart(),
+            Self::Started => 9.into_dart(),
+            Self::Closed => 10.into_dart(),
             _ => unreachable!(),
         }
     }
@@ -11428,6 +11713,11 @@ impl flutter_rust_bridge::IntoDart for crate::api::vault::SettingsSpec {
             self.host_key_policy.into_into_dart().into_dart(),
             self.identity.into_into_dart().into_dart(),
             self.identity_id.into_into_dart().into_dart(),
+            self.environment.into_into_dart().into_dart(),
+            self.environment_name.into_into_dart().into_dart(),
+            self.environment_short.into_into_dart().into_dart(),
+            self.environment_color.into_into_dart().into_dart(),
+            self.read_os_release.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -11687,6 +11977,45 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::session::StageView>
     for crate::api::session::StageView
 {
     fn into_into_dart(self) -> crate::api::session::StageView {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::vault::SystemKind {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Banner => 0.into_dart(),
+            Self::OsRelease => 1.into_dart(),
+            Self::Manual => 2.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::vault::SystemKind {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::vault::SystemKind>
+    for crate::api::vault::SystemKind
+{
+    fn into_into_dart(self) -> crate::api::vault::SystemKind {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::vault::SystemView {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.code.into_into_dart().into_dart(),
+            self.name.into_into_dart().into_dart(),
+            self.kind.into_into_dart().into_dart(),
+            self.evidence.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::vault::SystemView {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::vault::SystemView>
+    for crate::api::vault::SystemView
+{
+    fn into_into_dart(self) -> crate::api::vault::SystemView {
         self
     }
 }
@@ -12376,6 +12705,31 @@ impl SseEncode for crate::api::vault::EnvVar {
     }
 }
 
+impl SseEncode for crate::api::vault::EnvironmentKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::vault::EnvironmentKind::None => 0,
+                crate::api::vault::EnvironmentKind::Mark => 1,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::vault::EnvironmentView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.name, serializer);
+        <String>::sse_encode(self.short, serializer);
+        <String>::sse_encode(self.color, serializer);
+    }
+}
+
 impl SseEncode for f32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -12535,6 +12889,7 @@ impl SseEncode for crate::api::vault::GroupView {
         <String>::sse_encode(self.id, serializer);
         <String>::sse_encode(self.name, serializer);
         <Option<String>>::sse_encode(self.parent_id, serializer);
+        <Option<crate::api::vault::EnvironmentView>>::sse_encode(self.environment, serializer);
     }
 }
 
@@ -12555,6 +12910,7 @@ impl SseEncode for crate::api::vault::HostDetail {
         <crate::api::vault::HostSpec>::sse_encode(self.spec, serializer);
         <crate::api::vault::SettingsSpec>::sse_encode(self.effective, serializer);
         <Vec<crate::api::vault::FieldOrigin>>::sse_encode(self.origins, serializer);
+        <Option<crate::api::vault::SystemView>>::sse_encode(self.system, serializer);
     }
 }
 
@@ -12567,6 +12923,8 @@ impl SseEncode for crate::api::vault::HostSpec {
         <Vec<String>>::sse_encode(self.tags, serializer);
         <Option<String>>::sse_encode(self.notes, serializer);
         <crate::api::vault::SettingsSpec>::sse_encode(self.settings, serializer);
+        <bool>::sse_encode(self.favorite, serializer);
+        <Option<String>>::sse_encode(self.system_code, serializer);
     }
 }
 
@@ -12581,6 +12939,9 @@ impl SseEncode for crate::api::vault::HostView {
         <String>::sse_encode(self.user, serializer);
         <u16>::sse_encode(self.port, serializer);
         <Option<String>>::sse_encode(self.imported_alias, serializer);
+        <Option<crate::api::vault::EnvironmentView>>::sse_encode(self.environment, serializer);
+        <Option<crate::api::vault::SystemView>>::sse_encode(self.system, serializer);
+        <Option<u32>>::sse_encode(self.favorite, serializer);
     }
 }
 
@@ -13305,6 +13666,26 @@ impl SseEncode for Option<crate::api::session::ConnectedView> {
     }
 }
 
+impl SseEncode for Option<crate::api::vault::EnvironmentKind> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::vault::EnvironmentKind>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::vault::EnvironmentView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::vault::EnvironmentView>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<crate::api::session::FailureKind> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -13521,6 +13902,16 @@ impl SseEncode for Option<crate::api::session::StageView> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <crate::api::session::StageView>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::vault::SystemView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::vault::SystemView>::sse_encode(value, serializer);
         }
     }
 }
@@ -14018,9 +14409,10 @@ impl SseEncode for crate::api::session::SessionEventKind {
                 crate::api::session::SessionEventKind::Reconnecting => 4,
                 crate::api::session::SessionEventKind::Health => 5,
                 crate::api::session::SessionEventKind::Hops => 6,
-                crate::api::session::SessionEventKind::Persistent => 7,
-                crate::api::session::SessionEventKind::Started => 8,
-                crate::api::session::SessionEventKind::Closed => 9,
+                crate::api::session::SessionEventKind::HostsChanged => 7,
+                crate::api::session::SessionEventKind::Persistent => 8,
+                crate::api::session::SessionEventKind::Started => 9,
+                crate::api::session::SessionEventKind::Closed => 10,
                 _ => {
                     unimplemented!("");
                 }
@@ -14055,6 +14447,11 @@ impl SseEncode for crate::api::vault::SettingsSpec {
         <Option<crate::api::vault::KeyPolicy>>::sse_encode(self.host_key_policy, serializer);
         <Option<crate::api::vault::IdentityChoice>>::sse_encode(self.identity, serializer);
         <String>::sse_encode(self.identity_id, serializer);
+        <Option<crate::api::vault::EnvironmentKind>>::sse_encode(self.environment, serializer);
+        <String>::sse_encode(self.environment_name, serializer);
+        <String>::sse_encode(self.environment_short, serializer);
+        <String>::sse_encode(self.environment_color, serializer);
+        <Option<bool>>::sse_encode(self.read_os_release, serializer);
     }
 }
 
@@ -14186,6 +14583,33 @@ impl SseEncode for crate::api::session::StageView {
         <u32>::sse_encode(self.hops, serializer);
         <String>::sse_encode(self.label, serializer);
         <crate::api::session::StageKind>::sse_encode(self.stage, serializer);
+    }
+}
+
+impl SseEncode for crate::api::vault::SystemKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::vault::SystemKind::Banner => 0,
+                crate::api::vault::SystemKind::OsRelease => 1,
+                crate::api::vault::SystemKind::Manual => 2,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::vault::SystemView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.code, serializer);
+        <String>::sse_encode(self.name, serializer);
+        <crate::api::vault::SystemKind>::sse_encode(self.kind, serializer);
+        <String>::sse_encode(self.evidence, serializer);
     }
 }
 

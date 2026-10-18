@@ -442,10 +442,7 @@ mod tests {
                         identity_files: Some(vec!["~/.ssh/traida".into()]),
                         ..Settings::default()
                     },
-                    notes: None,
-                    source: None,
-                    imported: None,
-                    extra: Default::default(),
+                    ..Default::default()
                 },
             ))
             .unwrap();

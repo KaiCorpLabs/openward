@@ -744,6 +744,10 @@ enum SessionEventKind {
   /// The round trip to each jump host (`hop_rtt_ms`).
   hops,
 
+  /// Saved hosts changed (connecting told their system): read them
+  /// again.
+  hostsChanged,
+
   /// How the shell of a host with a persistent session started
   /// (`persistent`).
   persistent,

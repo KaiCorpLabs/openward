@@ -4,7 +4,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use flutter_rust_bridge::frb;
-use openward_app::vault::proto::{Data, Group, Host, Marker, Settings, Source};
+use openward_app::vault::proto::{
+    Data, Group, Host, Marker, Settings, Source, System, SystemSource,
+};
 use openward_app::{App, DEFAULT_SCROLLBACK, RECONNECT_ATTEMPTS};
 use openward_import::ssh_config::Warning;
 
@@ -37,16 +39,57 @@ fn host_spec(h: &Host) -> HostSpec {
         tags: h.tags.clone(),
         notes: h.notes.clone(),
         settings: SettingsSpec::from_settings(&h.settings),
+        favorite: h.favorite.is_some(),
+        system_code: h
+            .system
+            .as_ref()
+            .filter(|s| s.source == SystemSource::Manual)
+            .map(|s| s.code.clone()),
     }
 }
 
-fn apply_host(spec: &HostSpec, h: &mut Host) -> anyhow::Result<()> {
+/// `next_favorite`: the place a host that becomes a favorite takes.
+fn apply_host(spec: &HostSpec, h: &mut Host, next_favorite: u32) -> anyhow::Result<()> {
     h.label = spec.label.trim().to_owned();
     h.address = spec.address.trim().to_owned();
     h.group = opt_id(&spec.group_id)?;
     h.tags = spec.tags.clone();
     h.notes = spec.notes.clone().filter(|n| !n.is_empty());
+    h.favorite = match (spec.favorite, h.favorite) {
+        (false, _) => None,
+        (true, Some(at)) => Some(at),
+        (true, None) => Some(next_favorite),
+    };
+    let manual = h
+        .system
+        .as_ref()
+        .is_some_and(|s| s.source == SystemSource::Manual);
+    match &spec.system_code {
+        Some(code) => {
+            if !h.system.as_ref().is_some_and(|s| s.code == *code) || !manual {
+                h.system = Some(System {
+                    code: code.clone(),
+                    name: String::new(),
+                    source: SystemSource::Manual,
+                    evidence: String::new(),
+                });
+            }
+        }
+        // Back to what connecting tells, next time.
+        None if manual => h.system = None,
+        None => {}
+    }
     spec.settings.apply(&mut h.settings)
+}
+
+/// After the last favorite.
+fn next_favorite(vault: &openward_app::vault::Vault) -> u32 {
+    vault
+        .hosts()
+        .iter()
+        .filter_map(|(_, h)| h.favorite)
+        .max()
+        .map_or(0, |m| m + 1)
 }
 
 fn apply_group(spec: &GroupSpec, g: &mut Group) -> anyhow::Result<()> {
@@ -167,6 +210,9 @@ impl OpenWard {
                         Some(Source::SshConfig { alias }) => Some(alias.clone()),
                         None => None,
                     },
+                    environment: EnvironmentView::of(&settings.environment),
+                    system: h.system.as_ref().map(SystemView::of),
+                    favorite: h.favorite,
                 }
             })
             .collect()
@@ -174,14 +220,18 @@ impl OpenWard {
 
     #[frb(sync)]
     pub fn groups(&self) -> Vec<GroupView> {
-        self.app
-            .vault()
+        let vault = self.app.vault();
+        vault
             .groups()
             .into_iter()
             .map(|(id, g)| GroupView {
                 id: id.to_string(),
                 name: g.name.clone(),
                 parent_id: g.parent.map(|p| p.to_string()),
+                environment: vault
+                    .inherited(Some(id), None)
+                    .ok()
+                    .and_then(|e| EnvironmentView::of(&e.settings.environment)),
             })
             .collect()
     }
@@ -226,7 +276,54 @@ impl OpenWard {
                 .iter()
                 .map(|f| origin(f, effective.origin(f)))
                 .collect(),
+            system: h.system.as_ref().map(SystemView::of),
         })
+    }
+
+    /// Makes a host a favorite (the last one) or not.
+    pub fn set_favorite(&self, id: String, favorite: bool) -> anyhow::Result<()> {
+        let hid = super::vault::id(&id)?;
+        let mut vault = self.app.vault();
+        let next = next_favorite(&vault);
+        let mut h = vault.host(hid)?.clone();
+        if h.favorite.is_some() == favorite {
+            return Ok(());
+        }
+        h.favorite = favorite.then_some(next);
+        let rev = vault.get(hid).map_or(0, |i| i.rev);
+        vault.update(hid, rev, Data::Host(h))?;
+        Ok(())
+    }
+
+    /// Puts the favorites in this order; the ones left out keep theirs,
+    /// after these.
+    pub fn order_favorites(&self, ids: Vec<String>) -> anyhow::Result<()> {
+        let mut vault = self.app.vault();
+        let ids = ids
+            .iter()
+            .map(|i| super::vault::id(i))
+            .collect::<anyhow::Result<Vec<_>>>()?;
+        let mut rest: Vec<_> = vault
+            .hosts()
+            .into_iter()
+            .filter(|(id, h)| h.favorite.is_some() && !ids.contains(id))
+            .map(|(id, h)| (h.favorite, id))
+            .collect();
+        rest.sort();
+        let order = ids
+            .iter()
+            .copied()
+            .chain(rest.into_iter().map(|(_, id)| id));
+        for (at, hid) in order.enumerate() {
+            let mut h = vault.host(hid)?.clone();
+            if h.favorite == Some(at as u32) {
+                continue;
+            }
+            h.favorite = Some(at as u32);
+            let rev = vault.get(hid).map_or(0, |i| i.rev);
+            vault.update(hid, rev, Data::Host(h))?;
+        }
+        Ok(())
     }
 
     /// What a host in `group_id` (none: the top level) gets before its own
@@ -269,17 +366,19 @@ impl OpenWard {
     }
 
     pub fn create_host(&self, spec: HostSpec) -> anyhow::Result<String> {
+        let mut vault = self.app.vault();
         let mut h = Host::default();
-        apply_host(&spec, &mut h)?;
-        Ok(self.app.vault().create(Data::Host(h))?.to_string())
+        apply_host(&spec, &mut h, next_favorite(&vault))?;
+        Ok(vault.create(Data::Host(h))?.to_string())
     }
 
     /// Returns the new revision. Fails if the host changed since `rev`.
     pub fn update_host(&self, id: String, rev: u64, spec: HostSpec) -> anyhow::Result<u64> {
         let hid = super::vault::id(&id)?;
         let mut vault = self.app.vault();
+        let next = next_favorite(&vault);
         let mut h = vault.host(hid)?.clone();
-        apply_host(&spec, &mut h)?;
+        apply_host(&spec, &mut h, next)?;
         Ok(vault.update(hid, rev, Data::Host(h))?)
     }
 

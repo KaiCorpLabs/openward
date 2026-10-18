@@ -3,11 +3,14 @@ import 'package:flutter/gestures.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/providers.dart';
 import '../hosts/sidebar.dart' show tabStatus;
 import '../l10n/l10n.dart';
 import '../sftp/queue_view.dart';
 import '../terminal/controller.dart';
 import '../terminal/keys.dart';
+import '../src/rust/api/vault.dart' show EnvironmentView;
+import '../ui/environment.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../window/chrome.dart';
@@ -414,7 +417,7 @@ PopupMenuItem<VoidCallback> menuHint(BuildContext context, String text) {
   );
 }
 
-class _Tab extends StatelessWidget {
+class _Tab extends ConsumerWidget {
   const _Tab({
     required this.tab,
     required this.active,
@@ -432,7 +435,10 @@ class _Tab extends StatelessWidget {
   final ValueChanged<Offset> onMenu;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final library = ref.watch(libraryProvider);
+    EnvironmentView? env(String? hostId) =>
+        hostId == null ? null : library.host(hostId)?.environment;
     return switch (tab) {
       SessionTab(:final panes) => ListenableBuilder(
         listenable: Listenable.merge([panes, ...panes.controllers]),
@@ -458,6 +464,7 @@ class _Tab extends StatelessWidget {
                         : null,
                   ),
             title: '${shown?.displayTitle ?? ''}${more > 0 ? ' +$more' : ''}',
+            env: env(shown?.hostId),
             waiting: all.any((s) => s.prompts.isNotEmpty),
             bell: all.any((s) => s.bellUnseen),
             onRename: onRename,
@@ -482,6 +489,7 @@ class _Tab extends StatelessWidget {
                     },
             ),
             title: context.l10n.sftpTabTitle(controller.label),
+            env: env(controller.hostId),
             waiting: controller.prompts.isNotEmpty,
           );
         },
@@ -519,6 +527,7 @@ class _Tab extends StatelessWidget {
     BuildContext context, {
     required Widget leading,
     required String title,
+    EnvironmentView? env,
     String? hint,
     bool waiting = false,
     bool bell = false,
@@ -564,10 +573,10 @@ class _Tab extends StatelessWidget {
             : null,
       ),
     };
-    final tab = Semantics(
+    Widget tab = Semantics(
       selected: active,
       button: true,
-      label: title,
+      label: env == null ? title : '$title, ${env.name}',
       child: Listener(
         // At once on press, without waiting to tell a click from a double
         // click; middle click closes, as in browsers.
@@ -629,6 +638,11 @@ class _Tab extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (env != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: ExcludeSemantics(child: EnvChip(env)),
+                    ),
                   if (active)
                     IconButton(
                       tooltip: l.closeTab,
@@ -645,6 +659,28 @@ class _Tab extends StatelessWidget {
         ),
       ),
     );
+    // The mark's line across the top, but on pills, which have no top.
+    if (env != null && style != TabStyle.pill) {
+      tab = Stack(
+        children: [
+          tab,
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            height: 2,
+            child: ClipRRect(
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(
+                  style == TabStyle.folder ? ow.shape.radius + 1 : 0,
+                ),
+              ),
+              child: ColoredBox(color: envColors(c, env.color).fg),
+            ),
+          ),
+        ],
+      );
+    }
     if (hint == null) return tab;
     return Tooltip(
       message: hint,

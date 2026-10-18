@@ -12,6 +12,7 @@
   "accessibility": "Accesibilidad",
   "add": "Añadir",
   "addCertificate": "+ Añadir certificado",
+  "addFavorite": "Añadir a favoritos",
   "addKeyEllipsis": "Añadir clave…",
   "addSavedHost": "Añadir un host guardado",
   "addTag": "Añadir",
@@ -352,6 +353,14 @@
   "colPermissions": "Permisos",
   "colSize": "Tamaño",
   "collapse": "Plegar",
+  "colorBlue": "Azul",
+  "colorGray": "Gris",
+  "colorGreen": "Verde",
+  "colorOrange": "Naranja",
+  "colorPink": "Rosa",
+  "colorRed": "Rojo",
+  "colorViolet": "Violeta",
+  "colorYellow": "Amarillo",
   "comebackLine": "conectado de nuevo a las {time} · estuvo fuera {away} · terminal nuevo",
   "@comebackLine": {
     "placeholders": {
@@ -627,6 +636,7 @@
       }
     }
   },
+  "dragToOrder": "arrastra para ordenar",
   "dropAskFirst": "Si alguno ya existe, te preguntamos antes de tocarlo.",
   "dropBottom": "abajo",
   "dropLeft": "a la izquierda",
@@ -718,6 +728,43 @@
   "editTunnel": "Editar túnel",
   "emptyFolder": "Esta carpeta está vacía",
   "emptyPane": "panel vacío",
+  "envColor": "Color",
+  "envDialogTitle": "Otro entorno",
+  "envHint": "Marca las pestañas y los terminales de estos hosts con un color y un nombre corto, para no confundir un servidor con otro.",
+  "envInheritors": "{count, plural, =1{Lo hereda el host del grupo; puede cambiarlo.} other{Lo heredan los {count} hosts del grupo y sus subgrupos; cada host puede cambiarlo.}}",
+  "@envInheritors": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "envName": "Nombre",
+  "envNeedsName": "Ponle un nombre al entorno.",
+  "envNone": "Ninguno",
+  "envNoneNote": "sin marca",
+  "envOther": "Otro, con su nombre y color…",
+  "envPersonal": "Personal",
+  "envPersonalShort": "casa",
+  "envPreview": "Vista previa: una pestaña y un terminal marcados como {name}",
+  "@envPreview": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "envPreviewHost": "web-1",
+  "envProduction": "Producción",
+  "envProductionShort": "prod",
+  "envShort": "Nombre corto",
+  "envShortHelp": "En las pestañas y en la barra lateral",
+  "envStaging": "Preproducción",
+  "envStagingShort": "pre",
+  "envTesting": "Pruebas",
+  "envTestingShort": "pruebas",
+  "envUse": "Usar",
+  "environment": "Entorno",
   "exampleVariable": "nombre",
   "expand": "Desplegar",
   "failureAuth": "{user}@{label} no ha podido autenticarse.",
@@ -794,6 +841,11 @@
       }
     }
   },
+  "favorite": "Favorito",
+  "favoriteLower": "favorito",
+  "favoriteNote": "arriba en la barra, en el raíl y en el inicio",
+  "favorites": "Favoritos",
+  "favoritesEmpty": "Marca con ★ los hosts que más usas (en la barra lateral, al pasar el ratón, o en su editor) y aparecerán aquí, en el orden que les des.",
   "featureFirewall": "el firewall «{name}» de SecureCRT",
   "@featureFirewall": {
     "placeholders": {
@@ -1649,6 +1701,8 @@
   "monthsShort": "ene,feb,mar,abr,may,jun,jul,ago,sept,oct,nov,dic",
   "moreActions": "Más acciones",
   "moreOptions": "Más opciones",
+  "moveEarlier": "Mover antes",
+  "moveLater": "Mover después",
   "name": "Nombre",
   "nameAndMore": "{name} y {count} más",
   "@nameAndMore": {
@@ -1708,6 +1762,10 @@
   "newsConnectionTitle": "Conexión viva",
   "newsEditorBody": "Lo heredado se ve con borde discontinuo y de dónde viene; se cambia escribiendo encima, y ↺ vuelve a heredarlo. Lo avanzado, plegado. Igual en grupos, y la misma rejilla en identidades.",
   "newsEditorTitle": "Un editor de hosts más claro",
+  "newsEnvBody": "Marca un grupo como Producción, Pruebas o con un nombre y color propios: sus pestañas y terminales lo dicen, para no escribir en el servidor equivocado.",
+  "newsEnvTitle": "El entorno de cada servidor, a la vista",
+  "newsFavoritesBody": "La estrella al pasar el ratón por un host: arriba en la barra, en el raíl, en la paleta y en el inicio, en el orden que les des.",
+  "newsFavoritesTitle": "Favoritos",
   "newsFocusBody": "La barra lateral se pliega en iconos o se oculta ({keys}), sola al abrir una sesión si quieres, y oculta se asoma al dejar el ratón en el borde. Su ancho se cambia arrastrando el borde, y el terminal tiene más margen. Todo en Ajustes › General.",
   "@newsFocusBody": {
     "placeholders": {
@@ -1787,6 +1845,8 @@
   "newsSnippetsTitle": "Snippets y hosts conocidos",
   "newsStartBody": "La conexión rápida completa con tus hosts y las direcciones que ya usaste; debajo, las conexiones recientes con cuánto duraron y los túneles abiertos.",
   "newsStartTitle": "Un inicio para volver a lo de siempre",
+  "newsSystemBody": "Un monograma (deb, ubu, alp…) por el banner del servidor al conectar, sin ejecutar nada; «Leer /etc/os-release» lo afina donde el banner no lo dice.",
+  "newsSystemTitle": "El sistema de cada servidor",
   "newsThemesBody": "Cinco temas en claro y oscuro, capas que se combinan, tamaño del texto, contraste mínimo y reducir movimiento.",
   "newsThemesTitle": "Temas y accesibilidad visual",
   "newsTunnelsBody": "Local, remoto y SOCKS5, que se abren al conectar; también proxy HTTP y SOCKS5 para llegar al servidor.",
@@ -2260,6 +2320,10 @@
     }
   },
   "readNotRecognized": "No se reconoce de qué programa es. Elige el que exporta PuTTY (.reg), MobaXterm (.mxtsessions), SecureCRT (.xml) o el config.yaml de Tabby.",
+  "readOsRelease": "Leer /etc/os-release",
+  "readOsReleaseNote": "Para afinar el sistema; ejecuta un comando en el servidor. Apagado, no se ejecuta nada.",
+  "readOsReleaseOff": "No",
+  "readOsReleaseOn": "Sí, al conectar",
   "readTermius": "Leer Termius",
   "readTermiusKeychain": "El sistema no dejó usar la clave de Termius del llavero. Vuelve a intentarlo y elige «Permitir».",
   "readTermiusNoKey": "La clave de Termius no está en el llavero. Abre Termius una vez en este equipo y vuelve a intentarlo.",
@@ -2318,6 +2382,7 @@
   },
   "remove": "Quitar",
   "removeCertificate": "Quitar el certificado",
+  "removeFavorite": "Quitar de favoritos",
   "removeKey": "Quitar la clave",
   "removeTag": "Quitar {tag}",
   "@removeTag": {
@@ -2517,7 +2582,9 @@
   "searchKeys": "Buscar por nombre, huella o host",
   "searchKnownHosts": "Buscar un host, una huella…",
   "sectionConnection": "Conexión",
+  "sectionEnvironment": "Entorno",
   "sectionGeneral": "General",
+  "sectionSystem": "Sistema",
   "seenFrom": "visto desde {host}",
   "@seenFrom": {
     "placeholders": {
@@ -2786,6 +2853,14 @@
   "stepOpeningShell": "abriendo el shell…",
   "stepReady": "Listo",
   "stopAction": "Detener",
+  "systemByBanner": "Por el banner del servidor:",
+  "systemByOsRelease": "Por /etc/os-release:",
+  "systemDetectAgain": "Volver a deducirlo al conectar",
+  "systemIcon": "Icono del sistema",
+  "systemManual": "Elegido a mano",
+  "systemNotYet": "Se sabrá al conectar, por el banner del servidor.",
+  "systemUnknown": "Desconocido",
+  "systemUnknownYet": "Aún sin saber",
   "tabMenuHint": "También puedes arrastrar la pestaña sobre un terminal para dividirlo, o a otro sitio de la barra para ordenarla.",
   "tags": "Etiquetas",
   "terminalAlwaysDark": "Siempre oscuro",

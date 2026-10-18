@@ -1,7 +1,7 @@
 use ciborium::Value;
 use openward_proto::{
-    Agent, ForwardKind, Group, Host, HostKeyPolicy, Identity, Jump, KnownHost, PortForward, Route,
-    Settings, UseIdentity,
+    Agent, Environment, EnvironmentMark, ForwardKind, Group, Host, HostKeyPolicy, Identity, Jump,
+    KnownHost, PortForward, Route, Settings, System, SystemSource, UseIdentity,
 };
 use rusqlite::params;
 
@@ -140,6 +140,75 @@ fn settings_inherit_from_groups_with_their_origin() {
     assert_eq!(top.settings.port, Some(22));
     assert_eq!(top.origin("port"), Some(Origin::Default));
     assert_eq!(top.origin("user"), None);
+}
+
+/// The environment is a setting like the others: set on a group, the
+/// hosts below get it; a host can mark itself otherwise, or not at all.
+#[test]
+fn the_environment_is_inherited_and_can_be_turned_off() {
+    let mut v = Vault::open_in_memory().unwrap();
+    let prod = Environment::Mark(EnvironmentMark {
+        name: "Producción".into(),
+        short: "prod".into(),
+        color: "red".into(),
+    });
+    let marked = Settings {
+        environment: Some(prod.clone()),
+        ..Settings::default()
+    };
+    let g = v.create(group("prod", None, marked)).unwrap();
+    let sub = v.create(group("db", Some(g), Settings::default())).unwrap();
+    let db = v
+        .create(host("db", Some(sub), Settings::default()))
+        .unwrap();
+    let unmarked = Settings {
+        environment: Some(Environment::None),
+        ..Settings::default()
+    };
+    let lab = v.create(host("lab", Some(g), unmarked)).unwrap();
+    let loose = v.create(host("loose", None, Settings::default())).unwrap();
+
+    let e = v.effective(db).unwrap();
+    assert_eq!(e.settings.environment, Some(prod));
+    assert_eq!(e.origin("environment"), Some(Origin::Group(g)));
+    let e = v.effective(lab).unwrap();
+    assert_eq!(e.settings.environment, Some(Environment::None));
+    assert_eq!(e.origin("environment"), Some(Origin::Host));
+    let e = v.effective(loose).unwrap();
+    assert_eq!(e.settings.environment, Some(Environment::None));
+    assert_eq!(e.origin("environment"), Some(Origin::Default));
+    // Reading os-release runs a command: off unless asked for.
+    assert_eq!(e.settings.read_os_release, Some(false));
+}
+
+/// What the server runs and the place among the favorites go with the
+/// host.
+#[test]
+fn a_hosts_system_and_favorite_persist() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("vault.db");
+    let id = {
+        let mut v = Vault::open(&path).unwrap();
+        v.create(Data::Host(Host {
+            label: "db".into(),
+            address: "10.0.4.21".into(),
+            system: Some(System {
+                code: "deb".into(),
+                name: "Debian 12".into(),
+                source: SystemSource::Banner,
+                evidence: "SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3".into(),
+            }),
+            favorite: Some(2),
+            ..Host::default()
+        }))
+        .unwrap()
+    };
+    let v = Vault::open(&path).unwrap();
+    let h = v.host(id).unwrap();
+    assert_eq!(h.system.as_ref().unwrap().name, "Debian 12");
+    assert_eq!(h.system.as_ref().unwrap().source, SystemSource::Banner);
+    assert_eq!(h.favorite, Some(2));
+    assert!(h.extra.is_empty());
 }
 
 #[test]

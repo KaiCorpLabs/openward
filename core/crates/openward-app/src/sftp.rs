@@ -248,6 +248,7 @@ async fn session(plan: &Plan, ctx: &Ctx, link: &Link) -> (Option<Failure>, bool)
             Ok(sessions) => {
                 let live = Live::new(plan, sessions, ctx.runtime.clone());
                 ctx.live.add(key, &live);
+                ctx.learn_systems(plan, &live);
                 ctx.autostart(plan, &live).await;
                 live
             }

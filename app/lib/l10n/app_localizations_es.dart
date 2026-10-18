@@ -27,6 +27,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get addCertificate => '+ Añadir certificado';
 
   @override
+  String get addFavorite => 'Añadir a favoritos';
+
+  @override
   String get addKeyEllipsis => 'Añadir clave…';
 
   @override
@@ -452,6 +455,30 @@ class AppLocalizationsEs extends AppLocalizations {
   String get collapse => 'Plegar';
 
   @override
+  String get colorBlue => 'Azul';
+
+  @override
+  String get colorGray => 'Gris';
+
+  @override
+  String get colorGreen => 'Verde';
+
+  @override
+  String get colorOrange => 'Naranja';
+
+  @override
+  String get colorPink => 'Rosa';
+
+  @override
+  String get colorRed => 'Rojo';
+
+  @override
+  String get colorViolet => 'Violeta';
+
+  @override
+  String get colorYellow => 'Amarillo';
+
+  @override
   String comebackLine(String time, String away) {
     return 'conectado de nuevo a las $time · estuvo fuera $away · terminal nuevo';
   }
@@ -764,6 +791,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get dragToOrder => 'arrastra para ordenar';
+
+  @override
   String get dropAskFirst =>
       'Si alguno ya existe, te preguntamos antes de tocarlo.';
 
@@ -861,6 +891,87 @@ class AppLocalizationsEs extends AppLocalizations {
   String get emptyPane => 'panel vacío';
 
   @override
+  String get envColor => 'Color';
+
+  @override
+  String get envDialogTitle => 'Otro entorno';
+
+  @override
+  String get envHint =>
+      'Marca las pestañas y los terminales de estos hosts con un color y un nombre corto, para no confundir un servidor con otro.';
+
+  @override
+  String envInheritors(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Lo heredan los $count hosts del grupo y sus subgrupos; cada host puede cambiarlo.',
+      one: 'Lo hereda el host del grupo; puede cambiarlo.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get envName => 'Nombre';
+
+  @override
+  String get envNeedsName => 'Ponle un nombre al entorno.';
+
+  @override
+  String get envNone => 'Ninguno';
+
+  @override
+  String get envNoneNote => 'sin marca';
+
+  @override
+  String get envOther => 'Otro, con su nombre y color…';
+
+  @override
+  String get envPersonal => 'Personal';
+
+  @override
+  String get envPersonalShort => 'casa';
+
+  @override
+  String envPreview(String name) {
+    return 'Vista previa: una pestaña y un terminal marcados como $name';
+  }
+
+  @override
+  String get envPreviewHost => 'web-1';
+
+  @override
+  String get envProduction => 'Producción';
+
+  @override
+  String get envProductionShort => 'prod';
+
+  @override
+  String get envShort => 'Nombre corto';
+
+  @override
+  String get envShortHelp => 'En las pestañas y en la barra lateral';
+
+  @override
+  String get envStaging => 'Preproducción';
+
+  @override
+  String get envStagingShort => 'pre';
+
+  @override
+  String get envTesting => 'Pruebas';
+
+  @override
+  String get envTestingShort => 'pruebas';
+
+  @override
+  String get envUse => 'Usar';
+
+  @override
+  String get environment => 'Entorno';
+
+  @override
   String get exampleVariable => 'nombre';
 
   @override
@@ -900,6 +1011,22 @@ class AppLocalizationsEs extends AppLocalizations {
   String failureNoSftp(String label) {
     return '$label no tiene SFTP: al servidor le falta sftp-server.';
   }
+
+  @override
+  String get favorite => 'Favorito';
+
+  @override
+  String get favoriteLower => 'favorito';
+
+  @override
+  String get favoriteNote => 'arriba en la barra, en el raíl y en el inicio';
+
+  @override
+  String get favorites => 'Favoritos';
+
+  @override
+  String get favoritesEmpty =>
+      'Marca con ★ los hosts que más usas (en la barra lateral, al pasar el ratón, o en su editor) y aparecerán aquí, en el orden que les des.';
 
   @override
   String featureFirewall(String name) {
@@ -1981,6 +2108,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get moreOptions => 'Más opciones';
 
   @override
+  String get moveEarlier => 'Mover antes';
+
+  @override
+  String get moveLater => 'Mover después';
+
+  @override
   String get name => 'Nombre';
 
   @override
@@ -2074,6 +2207,20 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get newsEditorTitle => 'Un editor de hosts más claro';
+
+  @override
+  String get newsEnvBody =>
+      'Marca un grupo como Producción, Pruebas o con un nombre y color propios: sus pestañas y terminales lo dicen, para no escribir en el servidor equivocado.';
+
+  @override
+  String get newsEnvTitle => 'El entorno de cada servidor, a la vista';
+
+  @override
+  String get newsFavoritesBody =>
+      'La estrella al pasar el ratón por un host: arriba en la barra, en el raíl, en la paleta y en el inicio, en el orden que les des.';
+
+  @override
+  String get newsFavoritesTitle => 'Favoritos';
 
   @override
   String newsFocusBody(String keys) {
@@ -2175,6 +2322,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get newsStartTitle => 'Un inicio para volver a lo de siempre';
+
+  @override
+  String get newsSystemBody =>
+      'Un monograma (deb, ubu, alp…) por el banner del servidor al conectar, sin ejecutar nada; «Leer /etc/os-release» lo afina donde el banner no lo dice.';
+
+  @override
+  String get newsSystemTitle => 'El sistema de cada servidor';
 
   @override
   String get newsThemesBody =>
@@ -2892,6 +3046,19 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se reconoce de qué programa es. Elige el que exporta PuTTY (.reg), MobaXterm (.mxtsessions), SecureCRT (.xml) o el config.yaml de Tabby.';
 
   @override
+  String get readOsRelease => 'Leer /etc/os-release';
+
+  @override
+  String get readOsReleaseNote =>
+      'Para afinar el sistema; ejecuta un comando en el servidor. Apagado, no se ejecuta nada.';
+
+  @override
+  String get readOsReleaseOff => 'No';
+
+  @override
+  String get readOsReleaseOn => 'Sí, al conectar';
+
+  @override
   String get readTermius => 'Leer Termius';
 
   @override
@@ -2976,6 +3143,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get removeCertificate => 'Quitar el certificado';
+
+  @override
+  String get removeFavorite => 'Quitar de favoritos';
 
   @override
   String get removeKey => 'Quitar la clave';
@@ -3262,7 +3432,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sectionConnection => 'Conexión';
 
   @override
+  String get sectionEnvironment => 'Entorno';
+
+  @override
   String get sectionGeneral => 'General';
+
+  @override
+  String get sectionSystem => 'Sistema';
 
   @override
   String seenFrom(String host) {
@@ -3663,6 +3839,31 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get stopAction => 'Detener';
+
+  @override
+  String get systemByBanner => 'Por el banner del servidor:';
+
+  @override
+  String get systemByOsRelease => 'Por /etc/os-release:';
+
+  @override
+  String get systemDetectAgain => 'Volver a deducirlo al conectar';
+
+  @override
+  String get systemIcon => 'Icono del sistema';
+
+  @override
+  String get systemManual => 'Elegido a mano';
+
+  @override
+  String get systemNotYet =>
+      'Se sabrá al conectar, por el banner del servidor.';
+
+  @override
+  String get systemUnknown => 'Desconocido';
+
+  @override
+  String get systemUnknownYet => 'Aún sin saber';
 
   @override
   String get tabMenuHint =>

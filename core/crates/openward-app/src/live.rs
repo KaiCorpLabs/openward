@@ -56,6 +56,11 @@ impl Live {
         self.sessions.last().expect("a plan has hops")
     }
 
+    /// Jumps first, the target last, as in the plan.
+    pub fn sessions(&self) -> &[Session] {
+        &self.sessions
+    }
+
     /// Whether it goes through jump hosts.
     pub fn has_jumps(&self) -> bool {
         self.sessions.len() > 1

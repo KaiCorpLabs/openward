@@ -27,6 +27,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addCertificate => '+ Add a certificate';
 
   @override
+  String get addFavorite => 'Add to favorites';
+
+  @override
   String get addKeyEllipsis => 'Add a key…';
 
   @override
@@ -451,6 +454,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collapse => 'Collapse';
 
   @override
+  String get colorBlue => 'Blue';
+
+  @override
+  String get colorGray => 'Gray';
+
+  @override
+  String get colorGreen => 'Green';
+
+  @override
+  String get colorOrange => 'Orange';
+
+  @override
+  String get colorPink => 'Pink';
+
+  @override
+  String get colorRed => 'Red';
+
+  @override
+  String get colorViolet => 'Violet';
+
+  @override
+  String get colorYellow => 'Yellow';
+
+  @override
   String comebackLine(String time, String away) {
     return 'connected again at $time · away for $away · new terminal';
   }
@@ -763,6 +790,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get dragToOrder => 'drag to reorder';
+
+  @override
   String get dropAskFirst =>
       'If something already exists, you are asked before it is touched.';
 
@@ -860,6 +890,87 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emptyPane => 'empty pane';
 
   @override
+  String get envColor => 'Color';
+
+  @override
+  String get envDialogTitle => 'Another environment';
+
+  @override
+  String get envHint =>
+      'Marks these hosts\' tabs and terminals with a color and a short name, so as not to mistake one server for another.';
+
+  @override
+  String envInheritors(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'The group\'s $count hosts and its subgroups\' inherit it; each host can change it.',
+      one: 'The group\'s host inherits it; it can change it.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get envName => 'Name';
+
+  @override
+  String get envNeedsName => 'Give the environment a name.';
+
+  @override
+  String get envNone => 'None';
+
+  @override
+  String get envNoneNote => 'no mark';
+
+  @override
+  String get envOther => 'Other, with its name and color…';
+
+  @override
+  String get envPersonal => 'Personal';
+
+  @override
+  String get envPersonalShort => 'home';
+
+  @override
+  String envPreview(String name) {
+    return 'Preview: a tab and a terminal marked as $name';
+  }
+
+  @override
+  String get envPreviewHost => 'web-1';
+
+  @override
+  String get envProduction => 'Production';
+
+  @override
+  String get envProductionShort => 'prod';
+
+  @override
+  String get envShort => 'Short name';
+
+  @override
+  String get envShortHelp => 'On tabs and in the sidebar';
+
+  @override
+  String get envStaging => 'Staging';
+
+  @override
+  String get envStagingShort => 'stage';
+
+  @override
+  String get envTesting => 'Testing';
+
+  @override
+  String get envTestingShort => 'test';
+
+  @override
+  String get envUse => 'Use';
+
+  @override
+  String get environment => 'Environment';
+
+  @override
   String get exampleVariable => 'name';
 
   @override
@@ -899,6 +1010,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String failureNoSftp(String label) {
     return '$label has no SFTP: the server lacks sftp-server.';
   }
+
+  @override
+  String get favorite => 'Favorite';
+
+  @override
+  String get favoriteLower => 'favorite';
+
+  @override
+  String get favoriteNote =>
+      'at the top of the sidebar, in the rail and on the start page';
+
+  @override
+  String get favorites => 'Favorites';
+
+  @override
+  String get favoritesEmpty =>
+      'Mark the hosts you use most with ★ (in the sidebar on hover, or in their editor) and they will show here, in the order you give them.';
 
   @override
   String featureFirewall(String name) {
@@ -1978,6 +2106,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get moreOptions => 'More options';
 
   @override
+  String get moveEarlier => 'Move earlier';
+
+  @override
+  String get moveLater => 'Move later';
+
+  @override
   String get name => 'Name';
 
   @override
@@ -2071,6 +2205,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get newsEditorTitle => 'A clearer host editor';
+
+  @override
+  String get newsEnvBody =>
+      'Mark a group as Production, Testing or with a name and color of your own: its tabs and terminals say so, so as not to type into the wrong server.';
+
+  @override
+  String get newsEnvTitle => 'Each server\'s environment in sight';
+
+  @override
+  String get newsFavoritesBody =>
+      'The star on hover over a host: at the top of the sidebar, in the rail, in the palette and on the start page, in the order you give them.';
+
+  @override
+  String get newsFavoritesTitle => 'Favorites';
 
   @override
   String newsFocusBody(String keys) {
@@ -2172,6 +2320,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get newsStartTitle => 'A start page to get back to work';
+
+  @override
+  String get newsSystemBody =>
+      'A monogram (deb, ubu, alp…) from the server\'s banner when connecting, running nothing; «Read /etc/os-release» tells it where the banner does not.';
+
+  @override
+  String get newsSystemTitle => 'Each server\'s system';
 
   @override
   String get newsThemesBody =>
@@ -2880,6 +3035,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'Which program it comes from is not recognized. Choose the one PuTTY (.reg), MobaXterm (.mxtsessions) or SecureCRT (.xml) exports, or Tabby’s config.yaml.';
 
   @override
+  String get readOsRelease => 'Read /etc/os-release';
+
+  @override
+  String get readOsReleaseNote =>
+      'To tell the system better; it runs a command on the server. Off, nothing runs.';
+
+  @override
+  String get readOsReleaseOff => 'No';
+
+  @override
+  String get readOsReleaseOn => 'Yes, when connecting';
+
+  @override
   String get readTermius => 'Read Termius';
 
   @override
@@ -2965,6 +3133,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get removeCertificate => 'Remove the certificate';
+
+  @override
+  String get removeFavorite => 'Remove from favorites';
 
   @override
   String get removeKey => 'Remove the key';
@@ -3251,7 +3422,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sectionConnection => 'Connection';
 
   @override
+  String get sectionEnvironment => 'Environment';
+
+  @override
   String get sectionGeneral => 'General';
+
+  @override
+  String get sectionSystem => 'System';
 
   @override
   String seenFrom(String host) {
@@ -3653,6 +3830,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get stopAction => 'Stop';
+
+  @override
+  String get systemByBanner => 'From the server\'s banner:';
+
+  @override
+  String get systemByOsRelease => 'From /etc/os-release:';
+
+  @override
+  String get systemDetectAgain => 'Tell it again when connecting';
+
+  @override
+  String get systemIcon => 'System icon';
+
+  @override
+  String get systemManual => 'Chosen by hand';
+
+  @override
+  String get systemNotYet => 'Connecting will tell, from the server\'s banner.';
+
+  @override
+  String get systemUnknown => 'Unknown';
+
+  @override
+  String get systemUnknownYet => 'Not known yet';
 
   @override
   String get tabMenuHint =>

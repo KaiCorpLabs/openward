@@ -257,6 +257,19 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tapText('Editar grupo…');
     await audit('group editor');
+    // Its environment: the marks to choose from, and one of its own.
+    await tester.tap(find.byKey(const ValueKey('setting.environment')));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byKey(const ValueKey('env.prod')));
+    await audit('group editor: environment');
+    await tester.tap(find.byKey(const ValueKey('env.other')));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.enterText(
+      find.byKey(const ValueKey('envDialog.name')),
+      'Cliente',
+    );
+    await audit('another environment');
+    await close();
     await close();
 
     // With connections behind: the recent ones, what the quick connection
@@ -269,6 +282,9 @@ void main() {
     );
     recent.end('host:$web', tmux: true);
     recent.add('address:ops@10.0.0.9', 'ops@10.0.0.9');
+    // And a favorite, in the sidebar and on the start page.
+    await app.setFavorite(id: web, favorite: true);
+    container.read(libraryProvider.notifier).refresh();
     await audit('start: recent connections');
     await _shot(tester, '39-start-recent');
     final quick = find.byKey(const ValueKey('quick.address'));

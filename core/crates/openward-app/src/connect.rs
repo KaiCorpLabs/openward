@@ -25,7 +25,7 @@ use openward_ssh::proxy::ProxyAuthRequired;
 use openward_ssh::russh::MethodKind;
 use openward_ssh::russh::keys::{Certificate, HashAlg, PrivateKey, PublicKey};
 use openward_vault::Vault;
-use openward_vault::proto::HostKeyPolicy;
+use openward_vault::proto::{Data, HostKeyPolicy};
 use zeroize::Zeroizing;
 
 use crate::events::{
@@ -35,6 +35,7 @@ use crate::events::{
 use crate::live::Registry;
 use crate::local::Local;
 use crate::plan::{Hop, Plan};
+use crate::system;
 use crate::tunnels::Tunnels;
 
 /// Everything a connection needs from the app.
@@ -51,6 +52,55 @@ pub(crate) struct Ctx {
 }
 
 impl Ctx {
+    /// Tells the system of each saved host of a new connection (the jumps
+    /// too) and stores it where it changed, in the background: from the
+    /// banner, and from `/etc/os-release` where the host asks for it.
+    pub fn learn_systems(&self, plan: &Plan, live: &Arc<crate::live::Live>) {
+        let hops: Vec<_> = plan
+            .hops
+            .iter()
+            .zip(live.sessions())
+            .filter_map(|(hop, s)| Some((hop.host?, hop.read_os_release, s.info().server_id)))
+            .collect();
+        if hops.is_empty() {
+            return;
+        }
+        let live = Arc::clone(live);
+        let vault = Arc::clone(&self.vault);
+        let sink = Arc::clone(&self.sink);
+        self.runtime.spawn(async move {
+            let mut changed = false;
+            for (i, (host, read, banner)) in hops.into_iter().enumerate() {
+                let mut told = system::from_banner(&banner);
+                if read && told.code != "win" {
+                    let read = tokio::time::timeout(
+                        system::OS_RELEASE_WITHIN,
+                        live.sessions()[i].exec(system::OS_RELEASE),
+                    )
+                    .await;
+                    if let Some(s) = read
+                        .ok()
+                        .and_then(Result::ok)
+                        .and_then(|out| system::from_os_release(&out.text()))
+                    {
+                        told = s;
+                    }
+                }
+                let mut vault = lock(&vault);
+                let Ok(h) = vault.host(host) else { continue };
+                if let Some(system) = system::learned(h.system.as_ref(), told) {
+                    let mut h = h.clone();
+                    h.system = Some(system);
+                    let rev = vault.get(host).map_or(0, |item| item.rev);
+                    changed |= vault.update(host, rev, Data::Host(h)).is_ok();
+                }
+            }
+            if changed {
+                sink.send(Event::HostsChanged);
+            }
+        });
+    }
+
     /// Opens on a new connection the tunnels of its host that open on
     /// connect.
     pub async fn autostart(&self, plan: &Plan, live: &Arc<crate::live::Live>) {

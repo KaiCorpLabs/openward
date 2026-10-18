@@ -122,6 +122,9 @@ pub struct Info {
     pub verdict: Option<Verdict>,
     /// From opening the transport to authenticated.
     pub connect_ms: f64,
+    /// What the server said it runs, before anything else
+    /// (`SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3`).
+    pub server_id: String,
 }
 
 impl Info {
@@ -186,9 +189,12 @@ impl client::Handler for Handler {
         &mut self,
         _shared_secret: Option<&[u8]>,
         names: &russh::Names,
-        _session: &mut client::Session,
+        session: &mut client::Session,
     ) -> Result<(), Self::Error> {
         let mut shared = self.shared.lock().unwrap();
+        shared.info.server_id = String::from_utf8_lossy(session.remote_sshid())
+            .trim()
+            .to_owned();
         shared.info.kex = names.kex.as_ref().to_owned();
         shared.info.cipher = names.cipher.as_ref().to_owned();
         shared.info.mac = names.client_mac.as_ref().to_owned();

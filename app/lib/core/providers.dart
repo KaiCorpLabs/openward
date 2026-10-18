@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../src/rust/api/app.dart';
 import '../src/rust/api/vault.dart';
+import 'connection.dart' show hostsChanged;
 
 /// The core, opened in `main` (or by a test) and injected with an override.
 final openWardProvider = Provider<OpenWard>(
@@ -43,6 +44,11 @@ class Library {
   List<GroupView> groupsIn(String? parentId) =>
       groups.where((g) => g.parentId == parentId).toList();
 
+  /// The favorites, in their order.
+  List<HostView> get favorites =>
+      hosts.where((h) => h.favorite != null).toList()
+        ..sort((a, b) => a.favorite!.compareTo(b.favorite!));
+
   /// Hosts in the group and everything under it.
   int countUnder(String groupId) =>
       hostsIn(groupId).length +
@@ -51,7 +57,12 @@ class Library {
 
 class LibraryNotifier extends Notifier<Library> {
   @override
-  Library build() => _load();
+  Library build() {
+    // The core changed hosts by itself (a connection told their system).
+    hostsChanged.addListener(refresh);
+    ref.onDispose(() => hostsChanged.removeListener(refresh));
+    return _load();
+  }
 
   Library _load() {
     final app = ref.read(openWardProvider);

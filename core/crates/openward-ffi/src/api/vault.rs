@@ -9,7 +9,8 @@ use std::str::FromStr;
 use flutter_rust_bridge::frb;
 use openward_app::vault::Origin;
 use openward_app::vault::proto::{
-    Agent, HostKeyPolicy, ItemId, Jump, Proxy, ProxyServer, Route, Settings, UseIdentity,
+    Agent, Environment, EnvironmentMark, HostKeyPolicy, ItemId, Jump, Proxy, ProxyServer, Route,
+    Settings, System, SystemSource, UseIdentity,
 };
 
 pub(crate) fn id(text: &str) -> anyhow::Result<ItemId> {
@@ -40,6 +41,74 @@ pub enum ProxyKind {
     Off,
     Http,
     Socks5,
+}
+
+/// How a group or host is marked; `None` overrides a mark inherited.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EnvironmentKind {
+    None,
+    /// The one in `environment_name`, `environment_short` and
+    /// `environment_color`.
+    Mark,
+}
+
+/// A mark: «Producción», «prod» and a color of the palette by name.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct EnvironmentView {
+    pub name: String,
+    pub short: String,
+    pub color: String,
+}
+
+impl EnvironmentView {
+    pub(crate) fn of(e: &Option<Environment>) -> Option<Self> {
+        match e {
+            Some(Environment::Mark(m)) => Some(Self {
+                name: m.name.clone(),
+                short: m.short.clone(),
+                color: m.color.clone(),
+            }),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SystemKind {
+    /// Told from the server's banner.
+    Banner,
+    /// Read from `/etc/os-release`.
+    OsRelease,
+    /// Chosen by hand.
+    Manual,
+}
+
+/// What a server runs.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SystemView {
+    /// `deb`, `ubu`, `fed`, `rhel`, `alp`, `arch`, `bsd`, `mac`, `win` or
+    /// `?`.
+    pub code: String,
+    /// «Debian 12»; empty when unknown.
+    pub name: String,
+    pub kind: SystemKind,
+    /// The banner or the `PRETTY_NAME` it was told from.
+    pub evidence: String,
+}
+
+impl SystemView {
+    pub(crate) fn of(s: &System) -> Self {
+        Self {
+            code: s.code.clone(),
+            name: s.name.clone(),
+            kind: match s.source {
+                SystemSource::Banner => SystemKind::Banner,
+                SystemSource::OsRelease => SystemKind::OsRelease,
+                SystemSource::Manual => SystemKind::Manual,
+            },
+            evidence: s.evidence.clone(),
+        }
+    }
 }
 
 /// Which identity applies; `None` overrides one inherited.
@@ -114,6 +183,18 @@ pub struct SettingsSpec {
     /// With [`IdentityChoice::Use`].
     #[frb(default = "")]
     pub identity_id: String,
+    #[frb(default = "null")]
+    pub environment: Option<EnvironmentKind>,
+    /// With [`EnvironmentKind::Mark`].
+    #[frb(default = "")]
+    pub environment_name: String,
+    #[frb(default = "")]
+    pub environment_short: String,
+    #[frb(default = "")]
+    pub environment_color: String,
+    /// Read `/etc/os-release` after connecting (it runs a command).
+    #[frb(default = "null")]
+    pub read_os_release: Option<bool>,
 }
 
 /// The `identity` setting of a spec.
@@ -171,9 +252,19 @@ impl SettingsSpec {
             Some(UseIdentity::None) => (Some(IdentityChoice::None), String::new()),
             Some(UseIdentity::Id(i)) => (Some(IdentityChoice::Use), i.to_string()),
         };
+        let (environment, mark) = match &s.environment {
+            None => (None, None),
+            Some(Environment::None) => (Some(EnvironmentKind::None), None),
+            Some(Environment::Mark(m)) => (Some(EnvironmentKind::Mark), Some(m)),
+        };
         Self {
             identity,
             identity_id,
+            environment,
+            environment_name: mark.map(|m| m.name.clone()).unwrap_or_default(),
+            environment_short: mark.map(|m| m.short.clone()).unwrap_or_default(),
+            environment_color: mark.map(|m| m.color.clone()).unwrap_or_default(),
+            read_os_release: s.read_os_release,
             proxy,
             proxy_host: server.map(|s| s.host.clone()).unwrap_or_default(),
             proxy_port: server.map_or(0, |s| s.port),
@@ -271,6 +362,23 @@ impl SettingsSpec {
             KeyPolicy::Strict => HostKeyPolicy::Strict,
         });
         s.identity = identity_choice(self.identity, &self.identity_id)?;
+        s.environment = match self.environment {
+            None => None,
+            Some(EnvironmentKind::None) => Some(Environment::None),
+            Some(EnvironmentKind::Mark) => {
+                let name = self.environment_name.trim();
+                if name.is_empty() {
+                    anyhow::bail!("an environment needs a name");
+                }
+                let short = self.environment_short.trim();
+                Some(Environment::Mark(EnvironmentMark {
+                    name: name.to_owned(),
+                    short: if short.is_empty() { name } else { short }.to_owned(),
+                    color: self.environment_color.trim().to_owned(),
+                }))
+            }
+        };
+        s.read_os_release = self.read_os_release;
         Ok(())
     }
 }
@@ -288,6 +396,11 @@ pub struct HostView {
     pub port: u16,
     /// The `~/.ssh/config` alias it was imported from.
     pub imported_alias: Option<String>,
+    /// Its mark, its own or its groups'.
+    pub environment: Option<EnvironmentView>,
+    pub system: Option<SystemView>,
+    /// Its place among the favorites (lower first), if it is one.
+    pub favorite: Option<u32>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -295,6 +408,8 @@ pub struct GroupView {
     pub id: String,
     pub name: String,
     pub parent_id: Option<String>,
+    /// Its mark, its own or its parents'.
+    pub environment: Option<EnvironmentView>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -314,6 +429,13 @@ pub struct HostSpec {
     pub notes: Option<String>,
     #[frb(default = "const SettingsSpec()")]
     pub settings: SettingsSpec,
+    /// Among the favorites; a new one goes last.
+    #[frb(default = "false")]
+    pub favorite: bool,
+    /// The system's monogram, chosen by hand; null leaves it to what
+    /// connecting tells.
+    #[frb(default = "null")]
+    pub system_code: Option<String>,
 }
 
 #[frb(non_opaque)]
@@ -373,6 +495,8 @@ pub struct HostDetail {
     pub spec: HostSpec,
     pub effective: SettingsSpec,
     pub origins: Vec<FieldOrigin>,
+    /// What connecting told (or what was chosen), for the editor.
+    pub system: Option<SystemView>,
 }
 
 /// What a host or group placed in a group gets before its own settings.
@@ -466,6 +590,12 @@ mod tests {
             env: Some([("LANG".to_owned(), "C".to_owned())].into()),
             host_key_policy: Some(HostKeyPolicy::Strict),
             identity: Some(UseIdentity::Id(ItemId::new())),
+            environment: Some(Environment::Mark(EnvironmentMark {
+                name: "Producción".into(),
+                short: "prod".into(),
+                color: "red".into(),
+            })),
+            read_os_release: Some(true),
             ..Settings::default()
         };
         let spec = SettingsSpec::from_settings(&settings);

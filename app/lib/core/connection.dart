@@ -7,6 +7,10 @@ import '../src/rust/api/app.dart';
 import '../src/rust/api/session.dart';
 import 'address.dart';
 
+/// Rises when the core changed saved hosts by itself (a connection told a
+/// host's system): the library reads them again.
+final hostsChanged = ValueNotifier<int>(0);
+
 /// Where a connection stands.
 enum Phase { connecting, connected, reconnecting, running, closed }
 
@@ -182,6 +186,8 @@ abstract class ConnectionController extends ChangeNotifier {
         }
       case SessionEventKind.hops:
         hopRttMs = e.hopRttMs;
+      case SessionEventKind.hostsChanged:
+        hostsChanged.value++;
       case SessionEventKind.persistent:
         persistent = e.persistent;
       case SessionEventKind.reconnecting:

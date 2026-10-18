@@ -23,6 +23,7 @@ pub mod tunnels;
 
 mod connect;
 mod live;
+mod system;
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
@@ -245,6 +246,7 @@ impl App {
                         Ok(sessions) => {
                             let live = Live::new(&plan, sessions, ctx.runtime.clone());
                             ctx.live.add(key, &live);
+                            ctx.learn_systems(&plan, &live);
                             live
                         }
                         Err(failure) => {
@@ -570,6 +572,7 @@ async fn session(
     };
     // An SFTP browser for the same host can go over it.
     ctx.live.add(plan.key(), &live);
+    ctx.learn_systems(plan, &live);
     ctx.autostart(plan, &live).await;
     let Some(pipe) = term.upgrade().map(|t| t.pipe()) else {
         return (None, None, false);

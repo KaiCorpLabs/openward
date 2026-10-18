@@ -128,6 +128,12 @@ abstract class AppLocalizations {
   /// **'+ Añadir certificado'**
   String get addCertificate;
 
+  /// No description provided for @addFavorite.
+  ///
+  /// In es, this message translates to:
+  /// **'Añadir a favoritos'**
+  String get addFavorite;
+
   /// No description provided for @addKeyEllipsis.
   ///
   /// In es, this message translates to:
@@ -740,6 +746,54 @@ abstract class AppLocalizations {
   /// **'Plegar'**
   String get collapse;
 
+  /// No description provided for @colorBlue.
+  ///
+  /// In es, this message translates to:
+  /// **'Azul'**
+  String get colorBlue;
+
+  /// No description provided for @colorGray.
+  ///
+  /// In es, this message translates to:
+  /// **'Gris'**
+  String get colorGray;
+
+  /// No description provided for @colorGreen.
+  ///
+  /// In es, this message translates to:
+  /// **'Verde'**
+  String get colorGreen;
+
+  /// No description provided for @colorOrange.
+  ///
+  /// In es, this message translates to:
+  /// **'Naranja'**
+  String get colorOrange;
+
+  /// No description provided for @colorPink.
+  ///
+  /// In es, this message translates to:
+  /// **'Rosa'**
+  String get colorPink;
+
+  /// No description provided for @colorRed.
+  ///
+  /// In es, this message translates to:
+  /// **'Rojo'**
+  String get colorRed;
+
+  /// No description provided for @colorViolet.
+  ///
+  /// In es, this message translates to:
+  /// **'Violeta'**
+  String get colorViolet;
+
+  /// No description provided for @colorYellow.
+  ///
+  /// In es, this message translates to:
+  /// **'Amarillo'**
+  String get colorYellow;
+
   /// No description provided for @comebackLine.
   ///
   /// In es, this message translates to:
@@ -1208,6 +1262,12 @@ abstract class AppLocalizations {
   /// **'Descargar a {path}'**
   String downloadTo(String path);
 
+  /// No description provided for @dragToOrder.
+  ///
+  /// In es, this message translates to:
+  /// **'arrastra para ordenar'**
+  String get dragToOrder;
+
   /// No description provided for @dropAskFirst.
   ///
   /// In es, this message translates to:
@@ -1370,6 +1430,144 @@ abstract class AppLocalizations {
   /// **'panel vacío'**
   String get emptyPane;
 
+  /// No description provided for @envColor.
+  ///
+  /// In es, this message translates to:
+  /// **'Color'**
+  String get envColor;
+
+  /// No description provided for @envDialogTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Otro entorno'**
+  String get envDialogTitle;
+
+  /// No description provided for @envHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Marca las pestañas y los terminales de estos hosts con un color y un nombre corto, para no confundir un servidor con otro.'**
+  String get envHint;
+
+  /// No description provided for @envInheritors.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Lo hereda el host del grupo; puede cambiarlo.} other{Lo heredan los {count} hosts del grupo y sus subgrupos; cada host puede cambiarlo.}}'**
+  String envInheritors(int count);
+
+  /// No description provided for @envName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre'**
+  String get envName;
+
+  /// No description provided for @envNeedsName.
+  ///
+  /// In es, this message translates to:
+  /// **'Ponle un nombre al entorno.'**
+  String get envNeedsName;
+
+  /// No description provided for @envNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguno'**
+  String get envNone;
+
+  /// No description provided for @envNoneNote.
+  ///
+  /// In es, this message translates to:
+  /// **'sin marca'**
+  String get envNoneNote;
+
+  /// No description provided for @envOther.
+  ///
+  /// In es, this message translates to:
+  /// **'Otro, con su nombre y color…'**
+  String get envOther;
+
+  /// No description provided for @envPersonal.
+  ///
+  /// In es, this message translates to:
+  /// **'Personal'**
+  String get envPersonal;
+
+  /// No description provided for @envPersonalShort.
+  ///
+  /// In es, this message translates to:
+  /// **'casa'**
+  String get envPersonalShort;
+
+  /// No description provided for @envPreview.
+  ///
+  /// In es, this message translates to:
+  /// **'Vista previa: una pestaña y un terminal marcados como {name}'**
+  String envPreview(String name);
+
+  /// No description provided for @envPreviewHost.
+  ///
+  /// In es, this message translates to:
+  /// **'web-1'**
+  String get envPreviewHost;
+
+  /// No description provided for @envProduction.
+  ///
+  /// In es, this message translates to:
+  /// **'Producción'**
+  String get envProduction;
+
+  /// No description provided for @envProductionShort.
+  ///
+  /// In es, this message translates to:
+  /// **'prod'**
+  String get envProductionShort;
+
+  /// No description provided for @envShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre corto'**
+  String get envShort;
+
+  /// No description provided for @envShortHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'En las pestañas y en la barra lateral'**
+  String get envShortHelp;
+
+  /// No description provided for @envStaging.
+  ///
+  /// In es, this message translates to:
+  /// **'Preproducción'**
+  String get envStaging;
+
+  /// No description provided for @envStagingShort.
+  ///
+  /// In es, this message translates to:
+  /// **'pre'**
+  String get envStagingShort;
+
+  /// No description provided for @envTesting.
+  ///
+  /// In es, this message translates to:
+  /// **'Pruebas'**
+  String get envTesting;
+
+  /// No description provided for @envTestingShort.
+  ///
+  /// In es, this message translates to:
+  /// **'pruebas'**
+  String get envTestingShort;
+
+  /// No description provided for @envUse.
+  ///
+  /// In es, this message translates to:
+  /// **'Usar'**
+  String get envUse;
+
+  /// No description provided for @environment.
+  ///
+  /// In es, this message translates to:
+  /// **'Entorno'**
+  String get environment;
+
   /// No description provided for @exampleVariable.
   ///
   /// In es, this message translates to:
@@ -1423,6 +1621,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{label} no tiene SFTP: al servidor le falta sftp-server.'**
   String failureNoSftp(String label);
+
+  /// No description provided for @favorite.
+  ///
+  /// In es, this message translates to:
+  /// **'Favorito'**
+  String get favorite;
+
+  /// No description provided for @favoriteLower.
+  ///
+  /// In es, this message translates to:
+  /// **'favorito'**
+  String get favoriteLower;
+
+  /// No description provided for @favoriteNote.
+  ///
+  /// In es, this message translates to:
+  /// **'arriba en la barra, en el raíl y en el inicio'**
+  String get favoriteNote;
+
+  /// No description provided for @favorites.
+  ///
+  /// In es, this message translates to:
+  /// **'Favoritos'**
+  String get favorites;
+
+  /// No description provided for @favoritesEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Marca con ★ los hosts que más usas (en la barra lateral, al pasar el ratón, o en su editor) y aparecerán aquí, en el orden que les des.'**
+  String get favoritesEmpty;
 
   /// No description provided for @featureFirewall.
   ///
@@ -2936,6 +3164,18 @@ abstract class AppLocalizations {
   /// **'Más opciones'**
   String get moreOptions;
 
+  /// No description provided for @moveEarlier.
+  ///
+  /// In es, this message translates to:
+  /// **'Mover antes'**
+  String get moveEarlier;
+
+  /// No description provided for @moveLater.
+  ///
+  /// In es, this message translates to:
+  /// **'Mover después'**
+  String get moveLater;
+
   /// No description provided for @name.
   ///
   /// In es, this message translates to:
@@ -3110,6 +3350,30 @@ abstract class AppLocalizations {
   /// **'Un editor de hosts más claro'**
   String get newsEditorTitle;
 
+  /// No description provided for @newsEnvBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Marca un grupo como Producción, Pruebas o con un nombre y color propios: sus pestañas y terminales lo dicen, para no escribir en el servidor equivocado.'**
+  String get newsEnvBody;
+
+  /// No description provided for @newsEnvTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'El entorno de cada servidor, a la vista'**
+  String get newsEnvTitle;
+
+  /// No description provided for @newsFavoritesBody.
+  ///
+  /// In es, this message translates to:
+  /// **'La estrella al pasar el ratón por un host: arriba en la barra, en el raíl, en la paleta y en el inicio, en el orden que les des.'**
+  String get newsFavoritesBody;
+
+  /// No description provided for @newsFavoritesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Favoritos'**
+  String get newsFavoritesTitle;
+
   /// No description provided for @newsFocusBody.
   ///
   /// In es, this message translates to:
@@ -3271,6 +3535,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Un inicio para volver a lo de siempre'**
   String get newsStartTitle;
+
+  /// No description provided for @newsSystemBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Un monograma (deb, ubu, alp…) por el banner del servidor al conectar, sin ejecutar nada; «Leer /etc/os-release» lo afina donde el banner no lo dice.'**
+  String get newsSystemBody;
+
+  /// No description provided for @newsSystemTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'El sistema de cada servidor'**
+  String get newsSystemTitle;
 
   /// No description provided for @newsThemesBody.
   ///
@@ -4358,6 +4634,30 @@ abstract class AppLocalizations {
   /// **'No se reconoce de qué programa es. Elige el que exporta PuTTY (.reg), MobaXterm (.mxtsessions), SecureCRT (.xml) o el config.yaml de Tabby.'**
   String get readNotRecognized;
 
+  /// No description provided for @readOsRelease.
+  ///
+  /// In es, this message translates to:
+  /// **'Leer /etc/os-release'**
+  String get readOsRelease;
+
+  /// No description provided for @readOsReleaseNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Para afinar el sistema; ejecuta un comando en el servidor. Apagado, no se ejecuta nada.'**
+  String get readOsReleaseNote;
+
+  /// No description provided for @readOsReleaseOff.
+  ///
+  /// In es, this message translates to:
+  /// **'No'**
+  String get readOsReleaseOff;
+
+  /// No description provided for @readOsReleaseOn.
+  ///
+  /// In es, this message translates to:
+  /// **'Sí, al conectar'**
+  String get readOsReleaseOn;
+
   /// No description provided for @readTermius.
   ///
   /// In es, this message translates to:
@@ -4501,6 +4801,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Quitar el certificado'**
   String get removeCertificate;
+
+  /// No description provided for @removeFavorite.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar de favoritos'**
+  String get removeFavorite;
 
   /// No description provided for @removeKey.
   ///
@@ -4946,11 +5252,23 @@ abstract class AppLocalizations {
   /// **'Conexión'**
   String get sectionConnection;
 
+  /// No description provided for @sectionEnvironment.
+  ///
+  /// In es, this message translates to:
+  /// **'Entorno'**
+  String get sectionEnvironment;
+
   /// No description provided for @sectionGeneral.
   ///
   /// In es, this message translates to:
   /// **'General'**
   String get sectionGeneral;
+
+  /// No description provided for @sectionSystem.
+  ///
+  /// In es, this message translates to:
+  /// **'Sistema'**
+  String get sectionSystem;
 
   /// No description provided for @seenFrom.
   ///
@@ -5605,6 +5923,54 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Detener'**
   String get stopAction;
+
+  /// No description provided for @systemByBanner.
+  ///
+  /// In es, this message translates to:
+  /// **'Por el banner del servidor:'**
+  String get systemByBanner;
+
+  /// No description provided for @systemByOsRelease.
+  ///
+  /// In es, this message translates to:
+  /// **'Por /etc/os-release:'**
+  String get systemByOsRelease;
+
+  /// No description provided for @systemDetectAgain.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a deducirlo al conectar'**
+  String get systemDetectAgain;
+
+  /// No description provided for @systemIcon.
+  ///
+  /// In es, this message translates to:
+  /// **'Icono del sistema'**
+  String get systemIcon;
+
+  /// No description provided for @systemManual.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegido a mano'**
+  String get systemManual;
+
+  /// No description provided for @systemNotYet.
+  ///
+  /// In es, this message translates to:
+  /// **'Se sabrá al conectar, por el banner del servidor.'**
+  String get systemNotYet;
+
+  /// No description provided for @systemUnknown.
+  ///
+  /// In es, this message translates to:
+  /// **'Desconocido'**
+  String get systemUnknown;
+
+  /// No description provided for @systemUnknownYet.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún sin saber'**
+  String get systemUnknownYet;
 
   /// No description provided for @tabMenuHint.
   ///

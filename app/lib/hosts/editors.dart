@@ -9,6 +9,7 @@ import '../identities/identity_editor.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/vault.dart';
 import '../tabs/tabs.dart';
+import '../ui/environment.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 
@@ -124,6 +125,11 @@ class _SettingsForm {
       keepalive = original.keepaliveSecs,
       identity = original.identity,
       identityId = original.identityId,
+      envKind = original.environment,
+      envName = original.environmentName,
+      envShort = original.environmentShort,
+      envColor = original.environmentColor,
+      readOsRelease = original.readOsRelease,
       jumps = [...original.jumps],
       setHere = {
         if (original.identity != null) 'identity',
@@ -136,6 +142,8 @@ class _SettingsForm {
         if (original.hostKeyPolicy != null) 'host_key_policy',
         if (original.persistentSession != null) 'persistent_session',
         if (original.keepaliveSecs != null) 'keepalive_secs',
+        if (original.environment != null) 'environment',
+        if (original.readOsRelease != null) 'read_os_release',
       };
 
   final SettingsSpec original;
@@ -151,6 +159,11 @@ class _SettingsForm {
 
   /// With [IdentityChoice.use].
   String identityId;
+
+  /// The mark: none, or the one in [envName], [envShort] and [envColor].
+  EnvironmentKind? envKind;
+  String envName, envShort, envColor;
+  bool? readOsRelease;
 
   /// The jump chain, first hop first.
   final List<JumpSpec> jumps;
@@ -210,6 +223,13 @@ class _SettingsForm {
         persistent = inherited.persistentSession ?? false;
       case 'keepalive_secs':
         keepalive = inherited.keepaliveSecs ?? 10;
+      case 'environment':
+        envKind = inherited.environment ?? EnvironmentKind.none;
+        envName = inherited.environmentName;
+        envShort = inherited.environmentShort;
+        envColor = inherited.environmentColor;
+      case 'read_os_release':
+        readOsRelease = inherited.readOsRelease ?? false;
     }
   }
 
@@ -244,7 +264,25 @@ class _SettingsForm {
         persistent = null;
       case 'keepalive_secs':
         keepalive = null;
+      case 'environment':
+        envKind = null;
+        envName = envShort = envColor = '';
+      case 'read_os_release':
+        readOsRelease = null;
     }
+  }
+
+  /// The mark chosen here, if one is.
+  EnvironmentView? get envMark =>
+      setHere.contains('environment') && envKind == EnvironmentKind.mark
+      ? EnvironmentView(name: envName, short: envShort, color: envColor)
+      : null;
+
+  void setEnv(EnvironmentView? mark) {
+    envKind = mark == null ? EnvironmentKind.none : EnvironmentKind.mark;
+    envName = mark?.name ?? '';
+    envShort = mark?.short ?? '';
+    envColor = mark?.color ?? '';
   }
 
   /// The identity choice as the vault would take it, or null to inherit.
@@ -267,6 +305,11 @@ class _SettingsForm {
     }
     if (identityChoice == IdentityChoice.use && identityId.isEmpty) {
       return l.pickIdentity;
+    }
+    if (setHere.contains('environment') &&
+        envKind == EnvironmentKind.mark &&
+        envName.trim().isEmpty) {
+      return l.envNeedsName;
     }
     if (route == RouteKind.jump && jumps.isEmpty) return l.missingJump;
     if (route == RouteKind.command && command.text.trim().isEmpty) {
@@ -318,6 +361,11 @@ class _SettingsForm {
       hostKeyPolicy: setHere.contains('host_key_policy') ? policy : null,
       identity: identityChoice,
       identityId: identityChoice == IdentityChoice.use ? identityId : '',
+      environment: setHere.contains('environment') ? envKind : null,
+      environmentName: envMark?.name ?? '',
+      environmentShort: envMark?.short ?? '',
+      environmentColor: envMark?.color ?? '',
+      readOsRelease: setHere.contains('read_os_release') ? readOsRelease : null,
     );
   }
 }
@@ -329,9 +377,22 @@ class _SettingsFields extends ConsumerStatefulWidget {
     required this.form,
     required this.hosts,
     required this.groupId,
+    required this.connectionTitle,
+    this.system,
+    this.inheritors,
   });
 
   final _SettingsForm form;
+
+  /// The title over the connection settings.
+  final String connectionTitle;
+
+  /// A host's «Sistema» block (its monogram and what told it); reading
+  /// os-release goes under it. Groups have none: it goes in «Advanced».
+  final Widget? system;
+
+  /// How many hosts a group's settings reach, when it has any.
+  final int? inheritors;
 
   /// Hosts that can be jumped through: (id, label).
   final List<(String, String)> hosts;
@@ -345,6 +406,16 @@ class _SettingsFields extends ConsumerStatefulWidget {
 
 class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
   late bool _more = _advanced.any(widget.form.setHere.contains);
+
+  /// Fields under «Advanced», folded unless one is set here.
+  List<String> get _advanced => [
+    'proxy',
+    'host_key_policy',
+    'persistent_session',
+    'keepalive_secs',
+    'agent',
+    if (widget.system == null) 'read_os_release',
+  ];
 
   _SettingsForm get f => widget.form;
 
@@ -473,9 +544,32 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
         _base.effective.identity == IdentityChoice.use
             ? _identityLabel(_base.effective.identityId)
             : l.identityNone,
+      'environment' =>
+        e.environment == EnvironmentKind.mark
+            ? '${e.environmentShort} · ${e.environmentName}'
+            : l.envNone,
+      'read_os_release' =>
+        e.readOsRelease ?? false ? l.readOsReleaseOn : l.readOsReleaseOff,
       _ => '',
     };
   }
+
+  Widget _osReleaseRow(AppLocalizations l) => _row(
+    field: 'read_os_release',
+    label: l.readOsRelease,
+    editor: DropdownButtonFormField<bool>(
+      style: fieldTextStyle(context),
+      key: const ValueKey('settings.osRelease'),
+      autofocus: focusFor('read_os_release'),
+      initialValue: f.readOsRelease ?? false,
+      isExpanded: true,
+      items: [
+        DropdownMenuItem(value: true, child: Text(l.readOsReleaseOn)),
+        DropdownMenuItem(value: false, child: Text(l.readOsReleaseOff)),
+      ],
+      onChanged: (v) => setState(() => f.readOsRelease = v),
+    ),
+  );
 
   /// "este equipo → proxy → first hop…" with what the form says now.
   String _proxyRoute(AppLocalizations l) {
@@ -506,15 +600,6 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
   /// The field just set here by a click on its inherited value: its
   /// editor takes the focus as it appears.
   String? _justTook;
-
-  /// Fields under «Advanced», folded unless one is set here.
-  static const _advanced = [
-    'proxy',
-    'host_key_policy',
-    'persistent_session',
-    'keepalive_secs',
-    'agent',
-  ];
 
   bool focusFor(String field) => _justTook == field;
 
@@ -627,9 +712,62 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
     final ow = context.ow;
     _resolve();
     final inForce = _identityInForce;
+    final c = ow.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // How inheriting reads, before the first inherited value.
+        const _InheritLegend(),
+        if (widget.system case final system?) ...[
+          _Section(l.sectionSystem),
+          system,
+          const SizedBox(height: 10),
+          _osReleaseRow(l),
+          Padding(
+            padding: const EdgeInsets.only(
+              left: _labelWidth,
+              right: _resetWidth,
+              bottom: 6,
+            ),
+            child: Text(
+              l.readOsReleaseNote,
+              style: TextStyle(fontSize: 12, color: c.textSubtle),
+            ),
+          ),
+        ],
+        _Section(l.sectionEnvironment),
+        if (widget.system == null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12, right: _resetWidth),
+            child: Text(l.envHint, style: TextStyle(color: c.textMuted)),
+          ),
+        _row(
+          field: 'environment',
+          label: l.environment,
+          editor: _EnvPicker(
+            chosen: f.envKind == EnvironmentKind.mark
+                ? EnvironmentView(
+                    name: f.envName,
+                    short: f.envShort,
+                    color: f.envColor,
+                  )
+                : null,
+            onChanged: (mark) => setState(() => f.setEnv(mark)),
+          ),
+        ),
+        if (widget.inheritors case final n? when n > 0)
+          Padding(
+            padding: const EdgeInsets.only(
+              left: _labelWidth,
+              right: _resetWidth,
+              bottom: 10,
+            ),
+            child: Text(
+              l.envInheritors(n),
+              style: TextStyle(fontSize: 12, color: c.textMuted),
+            ),
+          ),
+        _Section(widget.connectionTitle),
         _row(
           field: 'identity',
           label: l.identity,
@@ -927,7 +1065,361 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
               ],
             ),
           ),
+          if (widget.system == null) _osReleaseRow(l),
         ],
+      ],
+    );
+  }
+}
+
+/// The marks to choose from: none, the four of every install, the one in
+/// use if it is another, and «Other…» to make one. A preview below.
+class _EnvPicker extends StatelessWidget {
+  const _EnvPicker({required this.chosen, required this.onChanged});
+
+  /// Null: no mark.
+  final EnvironmentView? chosen;
+  final ValueChanged<EnvironmentView?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final ow = context.ow;
+    final c = ow.colors;
+    final presets = envPresets(l);
+    final mark = chosen;
+    final options = <EnvironmentView?>[
+      null,
+      ...presets,
+      if (mark != null && !presets.contains(mark)) mark,
+    ];
+    Widget option(EnvironmentView? env) {
+      final on = env == mark;
+      final colors = env == null ? null : envColors(c, env.color);
+      return Semantics(
+        inMutuallyExclusiveGroup: true,
+        checked: on,
+        child: FocusOutline(
+          radius: ow.shape.radius,
+          child: InkWell(
+            key: ValueKey('env.${env?.short ?? 'none'}'),
+            borderRadius: BorderRadius.circular(ow.shape.radius),
+            onTap: () => onChanged(env),
+            child: Container(
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: on ? c.accentSoft : null,
+                border: Border.all(color: on ? c.accent : c.control),
+                borderRadius: BorderRadius.circular(ow.shape.radius),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: colors?.fg,
+                      border: colors == null
+                          ? Border.all(color: c.textSubtle)
+                          : null,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      env?.name ?? l.envNone,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                  Text(
+                    env?.short ?? l.envNoneNote,
+                    style: monoStyle(context, size: 12, color: c.textSubtle),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        LayoutBuilder(
+          builder: (context, box) {
+            final w = (box.maxWidth - 8) / 2;
+            return Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final env in options)
+                  SizedBox(width: w, child: option(env)),
+                SizedBox(
+                  width: w,
+                  child: OutlinedButton.icon(
+                    key: const ValueKey('env.other'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(38),
+                      alignment: Alignment.centerLeft,
+                    ),
+                    onPressed: () async {
+                      final made = await showEnvDialog(context, mark);
+                      if (made != null) onChanged(made);
+                    },
+                    icon: const Icon(Icons.add, size: 16),
+                    label: Text(
+                      l.envOther,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        if (mark != null) ...[
+          const SizedBox(height: 10),
+          _EnvPreview(env: mark),
+        ],
+      ],
+    );
+  }
+}
+
+/// How the mark looks: a tab and the top of its terminal.
+class _EnvPreview extends StatelessWidget {
+  const _EnvPreview({required this.env});
+
+  final EnvironmentView env;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final ow = context.ow;
+    final c = ow.colors;
+    final line = envColors(c, env.color).fg;
+    return Semantics(
+      label: l.envPreview(env.name),
+      excludeSemantics: true,
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: c.window,
+          border: Border.all(color: c.border),
+          borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              height: 34,
+              padding: const EdgeInsets.only(left: 10),
+              alignment: Alignment.bottomLeft,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+                decoration: BoxDecoration(
+                  color: ow.terminal.background,
+                  border: Border(top: BorderSide(color: line, width: 2)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    StatusDot(Status.connected, size: 7),
+                    const SizedBox(width: 8),
+                    Text(
+                      l.envPreviewHost,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    const SizedBox(width: 6),
+                    EnvChip(env),
+                  ],
+                ),
+              ),
+            ),
+            Container(
+              height: 44,
+              padding: const EdgeInsets.fromLTRB(12, 10, 10, 0),
+              decoration: BoxDecoration(
+                color: ow.terminal.background,
+                border: Border(top: BorderSide(color: line, width: 2)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      'deploy@${l.envPreviewHost}:~\$',
+                      style: monoStyle(
+                        context,
+                        size: 12,
+                        color: ow.terminal.foreground,
+                      ),
+                    ),
+                  ),
+                  EnvChip(env, big: true),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A mark of one's own: its name, short name and color.
+Future<EnvironmentView?> showEnvDialog(
+  BuildContext context,
+  EnvironmentView? from,
+) => showDialog<EnvironmentView>(
+  context: context,
+  builder: (_) => _EnvDialog(from: from),
+);
+
+class _EnvDialog extends StatefulWidget {
+  const _EnvDialog({this.from});
+
+  final EnvironmentView? from;
+
+  @override
+  State<_EnvDialog> createState() => _EnvDialogState();
+}
+
+class _EnvDialogState extends State<_EnvDialog> {
+  late final _name = TextEditingController(text: widget.from?.name ?? '');
+  late final _short = TextEditingController(text: widget.from?.short ?? '');
+  late String _color = widget.from?.color ?? 'green';
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _short.dispose();
+    super.dispose();
+  }
+
+  void _done() {
+    final name = _name.text.trim();
+    if (name.isEmpty) return;
+    final short = _short.text.trim();
+    Navigator.pop(
+      context,
+      EnvironmentView(
+        name: name,
+        short: short.isEmpty ? name.toLowerCase() : short,
+        color: _color,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final ow = context.ow;
+    final c = ow.colors;
+    return AlertDialog(
+      title: Text(l.envDialogTitle),
+      content: SizedBox(
+        width: 380,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              key: const ValueKey('envDialog.name'),
+              controller: _name,
+              autofocus: true,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(labelText: l.envName),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              key: const ValueKey('envDialog.short'),
+              controller: _short,
+              maxLength: 12,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText: l.envShort,
+                helperText: l.envShortHelp,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(l.envColor, style: TextStyle(color: c.textMuted)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final name in envColorNames)
+                  Semantics(
+                    inMutuallyExclusiveGroup: true,
+                    checked: name == _color,
+                    label: envColorName(l, name),
+                    child: Tooltip(
+                      message: envColorName(l, name),
+                      child: InkWell(
+                        key: ValueKey('envDialog.color.$name'),
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () => setState(() => _color = name),
+                        child: Container(
+                          width: 30,
+                          height: 30,
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: name == _color
+                                  ? c.text
+                                  : Colors.transparent,
+                              width: 2,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: envColors(c, name).fg,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            if (_name.text.trim().isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: EnvChip(
+                  EnvironmentView(
+                    name: _name.text.trim(),
+                    short: _short.text.trim().isEmpty
+                        ? _name.text.trim().toLowerCase()
+                        : _short.text.trim(),
+                    color: _color,
+                  ),
+                  big: true,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        OutlinedButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l.cancel),
+        ),
+        FilledButton(
+          key: const ValueKey('envDialog.ok'),
+          onPressed: _name.text.trim().isEmpty ? null : _done,
+          child: Text(l.envUse),
+        ),
       ],
     );
   }
@@ -1673,6 +2165,222 @@ class EditorFrame extends StatelessWidget {
   }
 }
 
+/// «Favorito»: up in the sidebar, in the rail and on the start page.
+class _FavoriteRow extends StatelessWidget {
+  const _FavoriteRow({required this.favorite, required this.onChanged});
+
+  final bool favorite;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final ow = context.ow;
+    final c = ow.colors;
+    return Padding(
+      padding: const EdgeInsets.only(left: _labelWidth, right: _resetWidth),
+      child: MergeSemantics(
+        child: Material(
+          color: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            side: BorderSide(color: c.border),
+            borderRadius: BorderRadius.circular(ow.shape.radius),
+          ),
+          child: InkWell(
+            key: const ValueKey('host.favorite'),
+            borderRadius: BorderRadius.circular(ow.shape.radius),
+            onTap: () => onChanged(!favorite),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              child: Row(
+                children: [
+                  Icon(
+                    favorite ? Icons.star_rounded : Icons.star_outline_rounded,
+                    size: 18,
+                    color: favorite ? c.warn : c.textSubtle,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: l.favorite,
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          TextSpan(
+                            text: ' · ${l.favoriteNote}',
+                            style: TextStyle(color: c.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Checkbox(
+                    value: favorite,
+                    onChanged: (v) => onChanged(v ?? false),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// What the server runs: its monogram, what told it, and the monograms to
+/// choose one by hand.
+class _SystemBlock extends StatelessWidget {
+  const _SystemBlock({
+    required this.told,
+    required this.chosen,
+    required this.env,
+    required this.onChanged,
+  });
+
+  /// What connecting told, or what was chosen before.
+  final SystemView? told;
+
+  /// Chosen by hand in this editor (or before); null: what connecting tells.
+  final String? chosen;
+  final EnvironmentView? env;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final ow = context.ow;
+    final c = ow.colors;
+    final t = told;
+    final detected = t != null && t.kind != SystemKind.manual ? t : null;
+    final code = chosen ?? detected?.code;
+    final name = chosen != null
+        ? systemName(l, chosen!)
+        : detected == null
+        ? null
+        : detected.name.isEmpty
+        ? systemName(l, detected.code)
+        : detected.name;
+    final how = chosen != null
+        ? Text(
+            l.systemManual,
+            style: TextStyle(fontSize: 12, color: c.textMuted),
+          )
+        : detected == null
+        ? Text(
+            l.systemNotYet,
+            style: TextStyle(fontSize: 12, color: c.textMuted),
+          )
+        : Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: detected.kind == SystemKind.osRelease
+                      ? l.systemByOsRelease
+                      : l.systemByBanner,
+                ),
+                const TextSpan(text: ' '),
+                TextSpan(
+                  text: detected.evidence,
+                  style: monoStyle(context, size: 12, color: c.text),
+                ),
+              ],
+            ),
+            style: TextStyle(fontSize: 12, color: c.textMuted),
+          );
+    return Padding(
+      padding: const EdgeInsets.only(right: _resetWidth),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              SizedBox(
+                width: _labelWidth,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: SystemBadge(code: code, env: env, size: 38),
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name ?? l.systemUnknownYet,
+                      key: const ValueKey('system.name'),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 2),
+                    how,
+                    if (chosen != null)
+                      TextButton(
+                        key: const ValueKey('system.detect'),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, 28),
+                        ),
+                        onPressed: () => onChanged(null),
+                        child: Text(l.systemDetectAgain),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.only(left: _labelWidth),
+            child: Semantics(
+              label: l.systemIcon,
+              container: true,
+              child: Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                children: [
+                  for (final s in systemCodes)
+                    Tooltip(
+                      message: systemName(l, s),
+                      child: Semantics(
+                        button: true,
+                        selected: s == code,
+                        label: systemName(l, s),
+                        excludeSemantics: true,
+                        child: InkWell(
+                          key: ValueKey('system.$s'),
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: () => onChanged(s),
+                          child: Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: s == code
+                                    ? c.accent
+                                    : Colors.transparent,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: SystemBadge(
+                              code: s,
+                              env: s == code ? env : null,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Section extends StatelessWidget {
   const _Section(this.title);
 
@@ -1710,6 +2418,10 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
   late final _notes = TextEditingController(text: _spec.notes ?? '');
   late final _settings = _SettingsForm(_spec.settings);
   late String? _group = _spec.groupId;
+  late bool _favorite = _spec.favorite;
+
+  /// Chosen by hand; null leaves it to what connecting tells.
+  late String? _systemCode = _spec.systemCode;
   String? _error;
 
   @override
@@ -1738,6 +2450,8 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
       tags: _tags,
       notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
       settings: _settings.toSpec(),
+      favorite: _favorite,
+      systemCode: _systemCode,
     );
     final app = ref.read(openWardProvider);
     try {
@@ -1815,9 +2529,11 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
           ),
         ),
         EditorFieldRow(l.tags, _TagsField(tags: _tags)),
+        _FavoriteRow(
+          favorite: _favorite,
+          onChanged: (v) => setState(() => _favorite = v),
+        ),
         const SizedBox(height: 6),
-        _Section(l.sectionConnection),
-        const _InheritLegend(),
         _SettingsFields(
           form: _settings,
           hosts: [
@@ -1825,6 +2541,19 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
               if (h.id != widget.id) (h.id, h.label),
           ],
           groupId: _group,
+          connectionTitle: l.sectionConnection,
+          system: _SystemBlock(
+            told: _detail?.system,
+            chosen: _systemCode,
+            env:
+                _settings.envMark ??
+                (_settings.setHere.contains('environment')
+                    ? null
+                    : _group == null
+                    ? null
+                    : library.group(_group!)?.environment),
+            onChanged: (code) => setState(() => _systemCode = code),
+          ),
         ),
         const SizedBox(height: 8),
         EditorFieldRow(
@@ -1928,12 +2657,12 @@ class _GroupEditorState extends ConsumerState<_GroupEditor> {
           ),
         ),
         const SizedBox(height: 6),
-        _Section(l.groupSettingsSection),
-        const _InheritLegend(),
         _SettingsFields(
           form: _settings,
           hosts: [for (final h in library.hosts) (h.id, h.label)],
           groupId: _parent,
+          connectionTitle: l.groupSettingsSection,
+          inheritors: widget.id == null ? null : library.countUnder(widget.id!),
         ),
       ],
     );

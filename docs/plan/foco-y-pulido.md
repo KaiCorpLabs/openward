@@ -1,6 +1,6 @@
 # Foco y pulido: 0.3.0-beta.3, 0.3.0-beta.4 y v0.3.1
 
-- **Estado:** primera fase hecha y publicada (F1, F4 y F5a, en la 0.3.0-beta.3); la segunda (0.3.0-beta.4), en marcha; la tercera (v0.3.1), por hacer. Maquetas aprobadas el 2026-10-18 (filas «F1» a «F5» del lienzo); el reparto en fases, aceptado el mismo día y ajustado después de la beta.3.
+- **Estado:** primera y segunda fase hechas y publicadas (0.3.0-beta.3 y 0.3.0-beta.4); la tercera (v0.3.1), hecha y en revisión, sin publicar. Maquetas aprobadas el 2026-10-18 (filas «F1» a «F5» del lienzo); el reparto en fases, aceptado el mismo día y ajustado después de la beta.3.
 - **Fecha:** 2026-10-18.
 - **Base:** fase 1 de la hoja de ruta ([ARCHITECTURE §15](../ARCHITECTURE.md#15-hoja-de-ruta-con-puertas)), sobre la [v0.3](v0.3.md) y antes de la v0.4 (el vault cifrado).
 - **Duración estimada:** unas 5 semanas de trabajo: 1,5 la primera fase, 2 la segunda y 1,5 la tercera.
@@ -140,8 +140,8 @@ Sigue siendo solo escritorio y sin cuenta.
 
 | # | Hito | Semanas | Estado |
 |---|---|---|---|
-| F2 | Identidad de host: entorno heredado, sistema detectado y favoritos | 1,5 | — |
-| F3b | Los favoritos en el inicio | — | — |
+| F2 | Identidad de host: entorno heredado, sistema detectado y favoritos | 1,5 | Hecho |
+| F3b | Los favoritos en el inicio | — | Hecho |
 | — | 0.3.1-beta.1: «Qué hay de nuevo», galería, notas, guía de prueba y prueba en el equipo | — | — |
 
 **Qué deja hecha la primera fase:**
@@ -171,6 +171,21 @@ Sigue siendo solo escritorio y sin cuenta.
 - «Avanzado» tiene lo que el editor ya tenía (proxy, política de claves del host, sesión persistente, keepalive y agente); al salir del shell, las variables y `TERM` aún no se editan desde aquí, y los túneles tienen su página.
 - El editor de identidades no hereda nada: toma la rejilla con las etiquetas a la izquierda, sin los estados de herencia.
 - ⌘Intro en los recientes, para abrirlos en un panel nuevo, queda fuera: el inicio solo se ve sin pestañas abiertas, así que no hay panel que dividir.
+
+**Qué deja hecha la tercera fase:**
+- **Vault** (`openward-proto`): dos ajustes heredados nuevos, `environment` (ninguno, o una marca con nombre, nombre corto y color) y `read_os_release` (apagado de serie); y dos campos del host, `system` (código del monograma, nombre, de dónde salió y el texto que lo dijo) y `favorite` (su puesto). Una versión anterior los guarda sin tocarlos, como cualquier campo que no conoce.
+- **Colores:** el vault guarda el color por su nombre (rojo, naranja, amarillo, verde, azul, violeta, rosa o gris) y cada tema lo dibuja con su paleta; los cuatro entornos de serie usan los tonos de peligro, aviso e información del tema. Una prueba comprueba que cada marca se lee sobre su fondo en todos los temas.
+- **Sistema** (`openward-app::system`): el banner del servidor (que guarda `openward-ssh` al negociar) dice Debian (con su versión), Raspberry Pi OS, Ubuntu (las LTS por su OpenSSH), FreeBSD, NetBSD y Windows; si el host lo pide, `/etc/os-release` (o `uname -s` donde no lo hay, como en macOS) dice el resto, por su `ID` o su `ID_LIKE`. Se aprende de cada host guardado de la conexión, también de los saltos, y solo se escribe en el vault si cambia: nunca sobre uno elegido a mano, ni sobre lo que dijo os-release si el banner no dice nada nuevo. La app vuelve a leer los hosts con el evento `HostsChanged`.
+- **Interfaz** (`ui/environment.dart`): `EnvChip` («prod», o «prod · Producción») y `SystemBadge` (el monograma teñido por el entorno; antes de la primera conexión, el contorno de un servidor). El entorno marca la pestaña (una raya arriba y su nombre corto) y el terminal (una raya arriba y su nombre en la esquina), y va en la cabecera de su grupo; el monograma, en cada host de la barra, en el raíl, en los recientes y en las sugerencias del inicio.
+- **Editores:** el de grupo elige el entorno entre ninguno, los cuatro de serie y uno propio («Otro, con su nombre y color…»), con una vista previa y cuántos hosts lo heredan; el de host lo hereda como cualquier ajuste, y añade «Favorito» y la sección «Sistema» (el monograma, qué lo dijo, los iconos para elegirlo a mano, «Volver a deducirlo al conectar» y «Leer /etc/os-release»).
+- **Favoritos:** la estrella al pasar el ratón por un host (y en su menú y en su editor); arriba en la barra, sin sacarlos de su grupo; en el raíl, los que no tienen pestaña; en la paleta, antes de escribir nada; y en el inicio, en tarjetas con su sistema, su entorno y si hay sesión, que se ordenan arrastrando (o con «Mover antes» y «Mover después» de un lector de pantalla). En el inicio, la sección de la barra empieza plegada.
+- **Pruebas:** el sistema por el banner y por os-release, y cuándo se guarda, en el núcleo; contra S2, Ubuntu 22.04 por el banner, Dropbear sobre Alpine solo con os-release y los dos Debian de un salto; la herencia del entorno y los campos nuevos en el vault; los colores en todos los temas y el orden de los favoritos en `test/environment_test.dart`; en la prueba de ventana, el entorno del grupo, uno propio, el sistema a mano, la estrella, las tarjetas y su orden, la paleta y la marca en la pestaña; la galería, con un grupo de producción, un favorito y dos sistemas en cada tema; y la de accesibilidad, el selector de entorno, el diálogo de uno propio y el inicio con favoritos.
+
+**Diferencias con el plan (tercera fase):**
+- «Leer /etc/os-release» es un ajuste heredado como los demás: en el editor de host va bajo «Sistema» (con borde discontinuo mientras se hereda) y en el de grupo, en «Avanzado».
+- El monograma es un poco más ancho que alto, para que quepan cuatro letras sin bajar de 12 px.
+- En el tema Papel, de pestañas redondeadas, la pestaña lleva solo el nombre corto del entorno, sin raya.
+- Las direcciones sin guardar de los recientes llevan «?»: no hay host donde guardar su sistema.
 
 **El orden:** primero el editor (beta.4), porque F2 le añade filas (entorno, sistema, favorito) y conviene hacerlas ya sobre el nuevo; los favoritos del inicio, con F2 (0.3.1).
 

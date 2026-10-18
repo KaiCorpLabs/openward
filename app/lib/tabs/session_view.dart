@@ -15,6 +15,7 @@ import '../terminal/controller.dart';
 import '../terminal/terminal_pane.dart';
 import '../snippets/palette.dart';
 import '../tunnels/tunnels_page.dart';
+import '../ui/environment.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../window/shortcuts.dart';
@@ -643,6 +644,14 @@ class PaneContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ow = context.ow;
+    final hostId = controller.hostId;
+    // Its group's mark (or its own): a line across the top and its name
+    // in the corner, so as not to type into the wrong server.
+    final env = hostId == null
+        ? null
+        : ref.watch(
+            libraryProvider.select((lib) => lib.host(hostId)?.environment),
+          );
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
@@ -666,6 +675,9 @@ class PaneContent extends ConsumerWidget {
             c.stalledSince != null &&
             card == null &&
             (c.phase == Phase.connected || c.phase == Phase.running);
+        final chip = env != null && card == null && !c.findOpen;
+        // What goes in the top right corner goes under the mark.
+        final corner = (c.findOpen ? 56.0 : 12.0) + (chip ? 30 : 0);
         Widget terminal = Stack(
           children: [
             Positioned.fill(
@@ -680,19 +692,34 @@ class PaneContent extends ConsumerWidget {
               ),
             ),
             Positioned.fill(child: BellFlash(controller: c)),
+            if (env != null)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 2,
+                child: ColoredBox(color: envColors(ow.colors, env.color).fg),
+              ),
+            if (chip)
+              Positioned(
+                key: const ValueKey('pane.environment'),
+                top: 8,
+                right: 12,
+                child: IgnorePointer(child: EnvChip(env, big: true)),
+              ),
             if (c.findOpen && card == null)
               Positioned(top: 8, right: 12, child: FindBar(controller: c)),
             if (stalled) ...[
               const Positioned(top: 0, left: 0, right: 0, child: StalledBar()),
               Positioned(
-                top: c.findOpen ? 56 : 12,
+                top: corner,
                 right: 14,
                 child: StalledNotice(controller: c),
               ),
             ],
             if (card == null)
               Positioned(
-                top: c.findOpen ? 56 : 12,
+                top: corner,
                 right: 14,
                 child: BackToast(controller: c),
               ),

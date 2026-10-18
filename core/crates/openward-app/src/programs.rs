@@ -721,9 +721,8 @@ pub fn apply(
                 tags: h.tags.clone(),
                 settings,
                 notes: h.notes.clone(),
-                source: None,
                 imported: imported(&h.id),
-                extra: Default::default(),
+                ..Default::default()
             }),
         ));
         report.hosts += 1;

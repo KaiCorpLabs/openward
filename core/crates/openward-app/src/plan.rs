@@ -40,6 +40,8 @@ pub struct Hop {
     pub proxy: Option<openward_ssh::proxy::Proxy>,
     pub keepalive: Option<Duration>,
     pub host_key_policy: HostKeyPolicy,
+    /// Read `/etc/os-release` once connected, to tell the system.
+    pub read_os_release: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -245,6 +247,7 @@ fn hop(
             .filter(|&k| k > 0)
             .map(|k| Duration::from_secs(u64::from(k))),
         host_key_policy: s.host_key_policy.unwrap_or(HostKeyPolicy::Ask),
+        read_os_release: s.read_os_release.unwrap_or(false),
         user,
     }
 }

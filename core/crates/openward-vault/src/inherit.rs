@@ -3,7 +3,7 @@
 
 use std::collections::BTreeMap;
 
-use openward_proto::{Agent, HostKeyPolicy, ItemId, Route, Settings};
+use openward_proto::{Agent, Environment, HostKeyPolicy, ItemId, Route, Settings};
 
 /// Where an effective setting came from, for the UI to show.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -37,6 +37,8 @@ pub fn defaults() -> Settings {
         persistent_session: Some(false),
         term: Some("xterm-256color".into()),
         host_key_policy: Some(HostKeyPolicy::Ask),
+        environment: Some(Environment::None),
+        read_os_release: Some(false),
         ..Settings::default()
     }
 }

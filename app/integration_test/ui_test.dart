@@ -150,6 +150,16 @@ Future<void> _drag(WidgetTester tester, Offset from, Offset to) async {
   await tester.pump(const Duration(milliseconds: 100));
 }
 
+/// Scrolls to `finder`, into the middle of its scrollable: clear of what
+/// floats over its edges (an editor's buttons).
+/// A field with the focus would scroll back to its caret: it lets go.
+Future<void> _reveal(WidgetTester tester, Finder finder) async {
+  FocusManager.instance.primaryFocus?.unfocus();
+  await tester.pump();
+  await Scrollable.ensureVisible(tester.element(finder), alignment: 0.4);
+  await tester.pump(const Duration(milliseconds: 100));
+}
+
 /// A tab of the tab bar, by its title.
 Finder _tab(String title) => find.descendant(
   of: find.byType(TabStrip),
@@ -860,6 +870,7 @@ Host web-1 web-2
     await tester.enterText(field('group.name'), 'prod');
     // Inherited until changed here: a click on the inherited value sets it
     // here, and its field takes the focus.
+    await _reveal(tester, field('setting.user'));
     await tester.tap(field('setting.user'));
     await _settle(tester);
     expect(
@@ -877,9 +888,11 @@ Host web-1 web-2
     await _settle(tester);
     await tester.enterText(field('host.label'), 'web');
     await tester.enterText(field('host.address'), 'web.example.com');
+    await _reveal(tester, field('setting.port'));
     await tester.tap(field('setting.port'));
     await _settle(tester);
     await tester.enterText(field('settings.port'), '2222');
+    await _reveal(tester, field('host.group'));
     await tester.tap(field('host.group'));
     await _settle(tester);
     await tester.tap(find.text('prod').last);
@@ -903,6 +916,7 @@ Host web-1 web-2
     expect(find.text('deploy'), findsOneWidget);
     expect(find.text('Del grupo prod'), findsWidgets);
     expect(find.text('Cambiado aquí; heredaría 22'), findsOneWidget);
+    await _reveal(tester, field('setting.port.reset'));
     await _shot(tester, '5-host-editor');
     // ↺ inherits again; «Advanced» opens with the rest.
     await tester.tap(field('setting.port.reset'));
@@ -910,6 +924,7 @@ Host web-1 web-2
     expect(field('settings.port'), findsNothing);
     expect(field('setting.port'), findsOneWidget);
     expect(field('setting.proxy'), findsNothing);
+    await _reveal(tester, field('settings.advanced'));
     await tester.tap(field('settings.advanced'));
     await _settle(tester);
     expect(field('setting.proxy'), findsOneWidget);
@@ -998,7 +1013,7 @@ Host web-1 web-2
         ),
       ),
     );
-    await app.createHost(
+    final target = await app.createHost(
       spec: HostSpec(
         label: 'target1',
         address: 'target1',
@@ -1017,6 +1032,22 @@ Host web-1 web-2
     final c = container.read(tabsProvider).currentSession!;
     await _until(tester, () => c.phase == Phase.connected, 'the connection');
     expect(c.route, ['bastion', 'target1']);
+    // Connecting told each saved hop's system by its banner: the sidebar
+    // shows their monograms.
+    await _until(
+      tester,
+      () => container.read(libraryProvider).host(target)?.system?.code == 'deb',
+      'the system told',
+    );
+    expect(
+      container.read(libraryProvider).host(bastion)?.system?.name,
+      'Debian 13',
+    );
+    await tester.pump();
+    expect(
+      find.descendant(of: find.byType(Sidebar), matching: find.text('deb')),
+      findsNWidgets(2),
+    );
     await tester.pump(const Duration(milliseconds: 100));
     await tester.tap(find.textContaining('Conectado'));
     await tester.pump(const Duration(milliseconds: 400));
@@ -1507,6 +1538,150 @@ Host db
     await _settle(tester);
     expect(find.byKey(const ValueKey('shortcuts')), findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await _settle(tester);
+  });
+
+  testWidgets('host identity: the environment from the group, one of its '
+      'own, the system by hand and the favorites', (tester) async {
+    final shop = await app.createGroup(spec: const GroupSpec(name: 'tienda'));
+    final web = await app.createHost(
+      spec: HostSpec(
+        label: 'web-1',
+        address: 'web-1.example.com',
+        groupId: shop,
+      ),
+    );
+    final lab = await app.createHost(
+      spec: const HostSpec(
+        label: 'lab',
+        address: '127.0.0.1',
+        settings: SettingsSpec(port: 1),
+      ),
+    );
+    final container = await launch(tester);
+    Finder key(String k) => find.byKey(ValueKey(k));
+    HostView host(String id) => app.hosts().firstWhere((h) => h.id == id);
+
+    // The group marks its hosts as production.
+    await tester.tap(find.text('tienda'), buttons: kSecondaryButton);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Editar grupo…'));
+    await _settle(tester);
+    await tester.tap(key('setting.environment'));
+    await _settle(tester);
+    await tester.tap(key('env.prod'));
+    await _settle(tester);
+    expect(find.text('prod · Producción'), findsWidgets);
+    await _shot(tester, '96-group-environment');
+    await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+    await _settle(tester);
+    expect(host(web).environment?.short, 'prod');
+    expect(host(lab).environment, isNull);
+
+    // The host inherits it, says from where, and gets a system by hand
+    // and a star.
+    await tester.tap(find.text('web-1'), buttons: kSecondaryButton);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Editar…'));
+    await _settle(tester);
+    expect(find.text('prod · Producción'), findsOneWidget);
+    expect(find.text('Del grupo tienda'), findsWidgets);
+    expect(
+      find.text('Se sabrá al conectar, por el banner del servidor.'),
+      findsOneWidget,
+    );
+    await _reveal(tester, key('system.arch'));
+    await tester.tap(key('system.arch'));
+    await tester.pump();
+    expect(tester.widget<Text>(key('system.name')).data, 'Arch');
+    await _reveal(tester, key('host.favorite'));
+    await tester.tap(key('host.favorite'));
+    await tester.pump();
+    await _reveal(tester, key('system.arch'));
+    await _shot(tester, '97-host-identity');
+    await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+    await _settle(tester);
+    expect(host(web).system?.code, 'arch');
+    expect(host(web).system?.kind, SystemKind.manual);
+    expect(host(web).favorite, isNotNull);
+
+    // A mark of its own, with its name and color.
+    await tester.tap(find.text('lab'), buttons: kSecondaryButton);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Editar…'));
+    await _settle(tester);
+    await _reveal(tester, key('setting.environment'));
+    await tester.tap(key('setting.environment'));
+    await _settle(tester);
+    await _reveal(tester, key('env.other'));
+    await tester.tap(key('env.other'));
+    await _settle(tester);
+    await tester.enterText(key('envDialog.name'), 'Cliente A');
+    await tester.enterText(key('envDialog.short'), 'cli-a');
+    await tester.tap(key('envDialog.color.green'));
+    await tester.pump();
+    await tester.tap(key('envDialog.ok'));
+    await _settle(tester);
+    await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+    await _settle(tester);
+    expect(host(lab).environment?.short, 'cli-a');
+    expect(host(lab).environment?.color, 'green');
+
+    // A star on hover makes it a favorite too.
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: tester.getCenter(find.text('lab').last));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(key('host.favorite.lab'));
+    // The vault answers on its own thread.
+    await _until(tester, () => host(lab).favorite != null, 'the star');
+    await mouse.removePointer();
+    await _settle(tester);
+
+    // The start page has them as cards, in their order; a drag reorders.
+    expect(key('start.favorite.web-1'), findsOneWidget);
+    expect(key('start.favorite.lab'), findsOneWidget);
+    expect(
+      tester.getTopLeft(key('start.favorite.web-1')).dx,
+      lessThan(tester.getTopLeft(key('start.favorite.lab')).dx),
+    );
+    await _shot(tester, '98-start-favorites');
+    await _drag(
+      tester,
+      tester.getCenter(key('start.favorite.lab')),
+      tester.getCenter(key('start.favorite.web-1')),
+    );
+    await _until(
+      tester,
+      () => host(lab).favorite! < host(web).favorite!,
+      'the new order',
+    );
+    await _settle(tester);
+    expect(
+      tester.getTopLeft(key('start.favorite.lab')).dx,
+      lessThan(tester.getTopLeft(key('start.favorite.web-1')).dx),
+    );
+
+    // The palette has them before anything is typed.
+    await _shortcut(tester, LogicalKeyboardKey.keyK, letter: true);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(key('palette.host.lab'), findsOneWidget);
+    expect(key('palette.host.web-1'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await _settle(tester);
+    expect(key('palette.query'), findsNothing);
+
+    // Its tab and its terminal carry the mark.
+    await tester.tap(key('start.favorite.lab'));
+    await tester.pump(const Duration(milliseconds: 300));
+    final c = container.read(tabsProvider).currentSession!;
+    await _until(tester, () => c.phase == Phase.closed, 'the refusal');
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(
+      find.descendant(of: find.byType(TabStrip), matching: find.text('cli-a')),
+      findsOneWidget,
+    );
+    await _shot(tester, '99-tab-environment');
+    container.read(tabsProvider.notifier).close(0);
     await _settle(tester);
   });
 

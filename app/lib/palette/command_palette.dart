@@ -46,9 +46,13 @@ class _Entry {
     this.history,
     this.id,
     this.rank = 0,
+    this.favorite = false,
   });
 
   final _Kind kind;
+
+  /// A favorite host: shown before typing, and first among hosts.
+  final bool favorite;
 
   /// An action's name for counting how often it runs.
   final String? id;
@@ -396,13 +400,20 @@ class _PaletteState extends ConsumerState<_Palette> {
     ]);
 
     for (final h in library.hosts) {
+      final favorite = h.favorite;
       out.add(
         _Entry(
           kind: _Kind.host,
           title: h.label,
           subtitle: hostAddress(h),
-          icon: Icons.dns_outlined,
-          rank: recency[h.id] ?? RecentNotifier.limit,
+          icon: favorite == null
+              ? Icons.dns_outlined
+              : Icons.star_outline_rounded,
+          pill: favorite == null ? null : l.favoriteLower,
+          favorite: favorite != null,
+          rank: favorite != null
+              ? favorite - 100000
+              : recency[h.id] ?? RecentNotifier.limit,
           run: (alt) async => alt
               ? tabs.openSftp(hostId: h.id, label: h.label)
               : tabs.openHost(h),
@@ -487,12 +498,16 @@ class _PaletteState extends ConsumerState<_Palette> {
       };
       final kept = [
         for (final e in all)
-          if ((counts[e.kind] = (counts[e.kind] ?? 0) + 1) <= most[e.kind]!) e,
+          if (e.favorite ||
+              (counts[e.kind] = (counts[e.kind] ?? 0) + 1) <= most[e.kind]!)
+            e,
       ];
       final order = {for (final (i, e) in kept.indexed) e: i};
       return kept..sort(
         (a, b) => a.kind.index != b.kind.index
             ? a.kind.index - b.kind.index
+            : a.favorite && b.favorite
+            ? a.rank - b.rank
             : order[a]! - order[b]!,
       );
     }
@@ -527,6 +542,11 @@ class _PaletteState extends ConsumerState<_Palette> {
       return KeyEventResult.ignored;
     }
     final k = e.logicalKey;
+    // Also with the cursor in the search, which would keep Esc otherwise.
+    if (k == LogicalKeyboardKey.escape) {
+      Navigator.maybePop(context);
+      return KeyEventResult.handled;
+    }
     if (k == LogicalKeyboardKey.arrowDown || k == LogicalKeyboardKey.arrowUp) {
       if (shown.isEmpty) return KeyEventResult.handled;
       final step = k == LogicalKeyboardKey.arrowDown ? 1 : -1;

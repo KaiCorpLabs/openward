@@ -10,7 +10,8 @@ use openward_app::events::{
     ChangedKey, Connected, Health, KeySource, Persistence, PreviousKey, Trust,
 };
 use openward_app::vault::proto::{
-    Agent, Data, Group, Host, HostKeyPolicy, Identity, ItemId, Jump, Route, Settings, UseIdentity,
+    Agent, Data, Group, Host, HostKeyPolicy, Identity, ItemId, Jump, Route, Settings, System,
+    SystemSource, UseIdentity,
 };
 use openward_app::{Answer, App, Event, EventSink, Failure, Local, Prompt, Terminal};
 use zeroize::Zeroizing;
@@ -158,6 +159,7 @@ fn outcome(rx: &Receiver<Event>) -> (Result<Connected, Option<Failure>>, Vec<Pro
             | Event::Reconnecting { .. }
             | Event::Health(_)
             | Event::Hops { .. }
+            | Event::HostsChanged
             | Event::Persistent { .. } => {}
         }
     }
@@ -347,6 +349,18 @@ impl Drop for Paused {
         let _ = std::process::Command::new(runtime())
             .args(["unpause", self.0])
             .status();
+    }
+}
+
+/// The system connecting stored for a host, once it has.
+fn system_of(f: &Fixture, id: ItemId) -> System {
+    let deadline = Instant::now() + Duration::from_secs(15);
+    loop {
+        if let Some(s) = f.app.vault().host(id).unwrap().system.clone() {
+            return s;
+        }
+        assert!(Instant::now() < deadline, "no system for {id}");
+        std::thread::sleep(Duration::from_millis(50));
     }
 }
 
@@ -761,6 +775,52 @@ fn a_saved_host_as_jump() {
     term.text("hostname\n");
     wait_for(&term, "target1");
     assert_eq!(f.app.vault().known_hosts().len(), 2);
+    // Each saved hop tells its system by its banner, the jump too.
+    assert_eq!(system_of(&f, target).name, "Debian 12");
+    assert_eq!(system_of(&f, bastion).name, "Debian 13");
+}
+
+/// Connecting tells the system: by the banner, which runs nothing, and
+/// from /etc/os-release where the host asks for it (Dropbear's banner says
+/// nothing).
+#[test]
+fn connecting_tells_the_system() {
+    let f = Fixture::new(servers!());
+    let ubuntu = demo_host(&f, "ubuntu", 22089, None);
+    let (_term, rx) = f.connect(ubuntu, |_| Answer::Cancel);
+    let (result, _) = outcome(&rx);
+    result.unwrap();
+    let s = system_of(&f, ubuntu);
+    assert_eq!((s.code.as_str(), s.name.as_str()), ("ubu", "Ubuntu 22.04"));
+    assert_eq!(s.source, SystemSource::Banner);
+    assert!(
+        s.evidence.starts_with("SSH-2.0-OpenSSH_8.9p1 Ubuntu"),
+        "{s:?}"
+    );
+
+    let plain = demo_host(&f, "dropbear", 22200, None);
+    let (_term, rx) = f.connect(plain, |_| Answer::Cancel);
+    outcome(&rx).0.unwrap();
+    assert_eq!(system_of(&f, plain).code, "?");
+
+    let asks = f.host(
+        "dropbear-os",
+        "127.0.0.1",
+        22200,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: f.key("id_ed25519"),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            read_os_release: Some(true),
+            ..Settings::default()
+        },
+    );
+    let (_term, rx) = f.connect(asks, |_| Answer::Cancel);
+    outcome(&rx).0.unwrap();
+    let s = system_of(&f, asks);
+    assert_eq!(s.code, "alp");
+    assert!(s.name.starts_with("Alpine Linux 3."), "{s:?}");
+    assert_eq!(s.source, SystemSource::OsRelease);
 }
 
 #[cfg(unix)]

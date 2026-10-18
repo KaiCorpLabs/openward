@@ -27,6 +27,9 @@ pub enum SessionEventKind {
     Health,
     /// The round trip to each jump host (`hop_rtt_ms`).
     Hops,
+    /// Saved hosts changed (connecting told their system): read them
+    /// again.
+    HostsChanged,
     /// How the shell of a host with a persistent session started
     /// (`persistent`).
     Persistent,
@@ -494,6 +497,7 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
             v.kind = SessionEventKind::Hops;
             v.hop_rtt_ms = rtt_ms;
         }
+        Event::HostsChanged => v.kind = SessionEventKind::HostsChanged,
         Event::Persistent { session, state } => {
             v.kind = SessionEventKind::Persistent;
             v.persistent = Some(PersistentView {

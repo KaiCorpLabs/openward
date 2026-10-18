@@ -84,6 +84,12 @@ settings! {
     /// The identity whose user, keys and agent apply (below the host's
     /// own settings).
     identity: UseIdentity,
+    /// A color and a short name ("prod") on the host's tabs and terminals,
+    /// so as not to mistake one server for another.
+    environment: Environment,
+    /// Read `/etc/os-release` after connecting, to tell the system better
+    /// than the server's banner does. It runs a command on the server.
+    read_os_release: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -152,6 +158,26 @@ pub enum UseIdentity {
     /// None, even if a group sets one.
     None,
     Id(ItemId),
+}
+
+/// How a group or host is marked.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Environment {
+    /// None, even if a group sets one.
+    None,
+    Mark(EnvironmentMark),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EnvironmentMark {
+    /// What it is called ("Producción").
+    pub name: String,
+    /// On tabs and in the sidebar ("prod").
+    pub short: String,
+    /// A color of the palette by name (`red`, `orange`, `yellow`, `green`,
+    /// `blue`, `violet`, `pink`, `gray`): each theme draws it its way.
+    pub color: String,
 }
 
 /// What to do with a host key that is not known yet. A key that changed is

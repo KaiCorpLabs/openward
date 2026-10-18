@@ -7,8 +7,8 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `apply`, `from_settings`, `id`, `identity_choice`, `opt_id`, `origin`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These functions are ignored because they are not marked as `pub`: `apply`, `from_settings`, `id`, `identity_choice`, `of`, `of`, `opt_id`, `origin`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 enum AgentKind { off, system, socket }
 
@@ -28,6 +28,40 @@ class EnvVar {
           runtimeType == other.runtimeType &&
           name == other.name &&
           value == other.value;
+}
+
+/// How a group or host is marked; `None` overrides a mark inherited.
+enum EnvironmentKind {
+  none,
+
+  /// The one in `environment_name`, `environment_short` and
+  /// `environment_color`.
+  mark,
+}
+
+/// A mark: «Producción», «prod» and a color of the palette by name.
+class EnvironmentView {
+  final String name;
+  final String short;
+  final String color;
+
+  const EnvironmentView({
+    required this.name,
+    required this.short,
+    required this.color,
+  });
+
+  @override
+  int get hashCode => name.hashCode ^ short.hashCode ^ color.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is EnvironmentView &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          short == other.short &&
+          color == other.color;
 }
 
 /// Where an effective setting comes from.
@@ -114,10 +148,19 @@ class GroupView {
   final String name;
   final String? parentId;
 
-  const GroupView({required this.id, required this.name, this.parentId});
+  /// Its mark, its own or its parents'.
+  final EnvironmentView? environment;
+
+  const GroupView({
+    required this.id,
+    required this.name,
+    this.parentId,
+    this.environment,
+  });
 
   @override
-  int get hashCode => id.hashCode ^ name.hashCode ^ parentId.hashCode;
+  int get hashCode =>
+      id.hashCode ^ name.hashCode ^ parentId.hashCode ^ environment.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -126,7 +169,8 @@ class GroupView {
           runtimeType == other.runtimeType &&
           id == other.id &&
           name == other.name &&
-          parentId == other.parentId;
+          parentId == other.parentId &&
+          environment == other.environment;
 }
 
 /// A host to edit: what it sets itself, what it ends up with, and why.
@@ -139,12 +183,16 @@ class HostDetail {
   final SettingsSpec effective;
   final List<FieldOrigin> origins;
 
+  /// What connecting told (or what was chosen), for the editor.
+  final SystemView? system;
+
   const HostDetail({
     required this.id,
     required this.rev,
     required this.spec,
     required this.effective,
     required this.origins,
+    this.system,
   });
 
   @override
@@ -153,7 +201,8 @@ class HostDetail {
       rev.hashCode ^
       spec.hashCode ^
       effective.hashCode ^
-      origins.hashCode;
+      origins.hashCode ^
+      system.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -164,7 +213,8 @@ class HostDetail {
           rev == other.rev &&
           spec == other.spec &&
           effective == other.effective &&
-          origins == other.origins;
+          origins == other.origins &&
+          system == other.system;
 }
 
 class HostSpec {
@@ -175,6 +225,13 @@ class HostSpec {
   final String? notes;
   final SettingsSpec settings;
 
+  /// Among the favorites; a new one goes last.
+  final bool favorite;
+
+  /// The system's monogram, chosen by hand; null leaves it to what
+  /// connecting tells.
+  final String? systemCode;
+
   const HostSpec({
     required this.label,
     required this.address,
@@ -182,6 +239,8 @@ class HostSpec {
     this.tags = const [],
     this.notes,
     this.settings = const SettingsSpec(),
+    this.favorite = false,
+    this.systemCode = null,
   });
 
   static Future<HostSpec> default_() =>
@@ -194,7 +253,9 @@ class HostSpec {
       groupId.hashCode ^
       tags.hashCode ^
       notes.hashCode ^
-      settings.hashCode;
+      settings.hashCode ^
+      favorite.hashCode ^
+      systemCode.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -206,7 +267,9 @@ class HostSpec {
           groupId == other.groupId &&
           tags == other.tags &&
           notes == other.notes &&
-          settings == other.settings;
+          settings == other.settings &&
+          favorite == other.favorite &&
+          systemCode == other.systemCode;
 }
 
 /// A row of the host list.
@@ -224,6 +287,13 @@ class HostView {
   /// The `~/.ssh/config` alias it was imported from.
   final String? importedAlias;
 
+  /// Its mark, its own or its groups'.
+  final EnvironmentView? environment;
+  final SystemView? system;
+
+  /// Its place among the favorites (lower first), if it is one.
+  final int? favorite;
+
   const HostView({
     required this.id,
     required this.label,
@@ -233,6 +303,9 @@ class HostView {
     required this.user,
     required this.port,
     this.importedAlias,
+    this.environment,
+    this.system,
+    this.favorite,
   });
 
   @override
@@ -244,7 +317,10 @@ class HostView {
       tags.hashCode ^
       user.hashCode ^
       port.hashCode ^
-      importedAlias.hashCode;
+      importedAlias.hashCode ^
+      environment.hashCode ^
+      system.hashCode ^
+      favorite.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -258,7 +334,10 @@ class HostView {
           tags == other.tags &&
           user == other.user &&
           port == other.port &&
-          importedAlias == other.importedAlias;
+          importedAlias == other.importedAlias &&
+          environment == other.environment &&
+          system == other.system &&
+          favorite == other.favorite;
 }
 
 /// Which identity applies; `None` overrides one inherited.
@@ -542,6 +621,15 @@ class SettingsSpec {
 
   /// With [`IdentityChoice::Use`].
   final String identityId;
+  final EnvironmentKind? environment;
+
+  /// With [`EnvironmentKind::Mark`].
+  final String environmentName;
+  final String environmentShort;
+  final String environmentColor;
+
+  /// Read `/etc/os-release` after connecting (it runs a command).
+  final bool? readOsRelease;
 
   const SettingsSpec({
     this.user,
@@ -566,6 +654,11 @@ class SettingsSpec {
     this.hostKeyPolicy,
     this.identity,
     this.identityId = r"",
+    this.environment = null,
+    this.environmentName = r"",
+    this.environmentShort = r"",
+    this.environmentColor = r"",
+    this.readOsRelease = null,
   });
 
   static Future<SettingsSpec> default_() =>
@@ -594,7 +687,12 @@ class SettingsSpec {
       env.hashCode ^
       hostKeyPolicy.hashCode ^
       identity.hashCode ^
-      identityId.hashCode;
+      identityId.hashCode ^
+      environment.hashCode ^
+      environmentName.hashCode ^
+      environmentShort.hashCode ^
+      environmentColor.hashCode ^
+      readOsRelease.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -622,7 +720,58 @@ class SettingsSpec {
           env == other.env &&
           hostKeyPolicy == other.hostKeyPolicy &&
           identity == other.identity &&
-          identityId == other.identityId;
+          identityId == other.identityId &&
+          environment == other.environment &&
+          environmentName == other.environmentName &&
+          environmentShort == other.environmentShort &&
+          environmentColor == other.environmentColor &&
+          readOsRelease == other.readOsRelease;
+}
+
+enum SystemKind {
+  /// Told from the server's banner.
+  banner,
+
+  /// Read from `/etc/os-release`.
+  osRelease,
+
+  /// Chosen by hand.
+  manual,
+}
+
+/// What a server runs.
+class SystemView {
+  /// `deb`, `ubu`, `fed`, `rhel`, `alp`, `arch`, `bsd`, `mac`, `win` or
+  /// `?`.
+  final String code;
+
+  /// «Debian 12»; empty when unknown.
+  final String name;
+  final SystemKind kind;
+
+  /// The banner or the `PRETTY_NAME` it was told from.
+  final String evidence;
+
+  const SystemView({
+    required this.code,
+    required this.name,
+    required this.kind,
+    required this.evidence,
+  });
+
+  @override
+  int get hashCode =>
+      code.hashCode ^ name.hashCode ^ kind.hashCode ^ evidence.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SystemView &&
+          runtimeType == other.runtimeType &&
+          code == other.code &&
+          name == other.name &&
+          kind == other.kind &&
+          evidence == other.evidence;
 }
 
 class TagCount {

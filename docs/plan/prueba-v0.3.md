@@ -63,7 +63,11 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - con un túnel abierto y sin pestañas, detenlo desde el inicio;
    - abre la hoja de atajos con ⌘/ (en un teclado español, ⌘⇧7) y busca alguno por su nombre y por su tecla;
    - con un host detrás de un bastion, pasa el ratón por la latencia y comprueba que dice la del bastion y la del destino.
-8. **CSV** («Importar…» › CSV):
+8. **Entorno, sistema y favoritos** (0.3.1-beta.1):
+   - marca tu grupo de producción como Producción y comprueba que sus pestañas y terminales lo dicen; dinos si la marca de la esquina del terminal molesta;
+   - conéctate a tus servidores y mira qué sistema dice la barra; en los que salga «?», activa «Leer /etc/os-release» y dinos si acierta;
+   - marca tus hosts de cada día como favoritos y ordénalos en el inicio arrastrando sus tarjetas.
+9. **CSV** («Importar…» › CSV):
    - exporta tus hosts de una hoja de cálculo o usa la plantilla de Termius;
    - comprueba los grupos, puertos, usuarios y etiquetas, y los avisos de lo que no entra;
    - impórtalo dos veces y comprueba que no se duplica.
