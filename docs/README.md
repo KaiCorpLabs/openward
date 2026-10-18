@@ -14,5 +14,6 @@
 | [plan/v0.3.md](plan/v0.3.md) | v0.3: keychain, paleta e historial, espacios de trabajo e importador de CSV |
 | [plan/prueba-v0.3.md](plan/prueba-v0.3.md) | Guía de prueba de la v0.3 |
 | [notas/v0.3.md](notas/v0.3.md) | Notas de la versión 0.3 |
+| [plan/foco-y-pulido.md](plan/foco-y-pulido.md) | Foco y pulido: barra plegable, ⌘K, latencia y pulido (0.3.0-beta.3); editor, entorno, sistema, favoritos e inicio (v0.3.1) |
 
 Pendientes: `THREAT_MODEL.md` (antes de la fase 2) y `PROTOCOL.md` (en [`spec/`](../spec/)).
