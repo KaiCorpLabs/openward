@@ -18,6 +18,7 @@ import '../tabs/prompt_card.dart';
 import '../terminal/keys.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
+import '../window/shortcuts.dart';
 import 'dialogs.dart';
 import 'format.dart';
 import 'queue_view.dart';
@@ -634,17 +635,17 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
           ),
           _iconButton(
             Icons.arrow_upward,
-            l.upOneLevel,
+            withKeys(l.upOneLevel, keysFor('⌘↑', 'Ctrl+↑')),
             pane.path.isEmpty ? null : pane.up,
           ),
           _iconButton(
             Icons.refresh,
-            l.reload,
+            withKeys(l.reload, keysFor('⌘R', 'F5')),
             pane.path.isEmpty ? null : pane.refresh,
           ),
           _iconButton(
             Icons.create_new_folder_outlined,
-            l.newFolder,
+            withKeys(l.newFolder, keysFor('⌘⇧N', '${l.ctrlShiftPrefix}N')),
             pane.path.isEmpty ? null : _newFolder,
             key: ValueKey('$side.newFolder'),
           ),

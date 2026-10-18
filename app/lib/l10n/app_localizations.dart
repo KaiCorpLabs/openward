@@ -158,6 +158,24 @@ abstract class AppLocalizations {
   /// **'servidor.example.com o 10.0.0.5'**
   String get addressHint;
 
+  /// No description provided for @advanced.
+  ///
+  /// In es, this message translates to:
+  /// **'Avanzado'**
+  String get advanced;
+
+  /// No description provided for @advancedList.
+  ///
+  /// In es, this message translates to:
+  /// **'proxy, claves del host, sesión persistente, comprobación y agente'**
+  String get advancedList;
+
+  /// No description provided for @advancedSetHere.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 cambiado aquí} other{{count} cambiados aquí}}'**
+  String advancedSetHere(int count);
+
   /// No description provided for @agent.
   ///
   /// In es, this message translates to:
@@ -325,6 +343,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Como el sistema'**
   String get asSystem;
+
+  /// No description provided for @asTyped.
+  ///
+  /// In es, this message translates to:
+  /// **'tal cual, sin guardarlo'**
+  String get asTyped;
 
   /// No description provided for @askedWhenRun.
   ///
@@ -875,7 +899,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectionHint.
   ///
   /// In es, this message translates to:
-  /// **'Lo que no cambies aquí se hereda; los valores heredados llevan el borde discontinuo y debajo dicen de dónde vienen. Manda lo del host, luego su identidad, luego sus grupos y, al final, los valores por defecto.'**
+  /// **'Lo que no cambies aquí se hereda. Manda lo del host, luego su identidad, luego sus grupos y, al final, los valores por defecto.'**
   String get connectionHint;
 
   /// No description provided for @connectionLost.
@@ -1250,17 +1274,35 @@ abstract class AppLocalizations {
   /// **'Duplicar'**
   String get duplicateTab;
 
+  /// No description provided for @durationHours.
+  ///
+  /// In es, this message translates to:
+  /// **'{hours} h {minutes} min'**
+  String durationHours(int hours, int minutes);
+
   /// No description provided for @durationMinSec.
   ///
   /// In es, this message translates to:
   /// **'{minutes} min {seconds} s'**
   String durationMinSec(int minutes, int seconds);
 
+  /// No description provided for @durationMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} min'**
+  String durationMinutes(int count);
+
   /// No description provided for @durationSec.
   ///
   /// In es, this message translates to:
   /// **'{seconds} s'**
   String durationSec(int seconds);
+
+  /// No description provided for @durationUnderMinute.
+  ///
+  /// In es, this message translates to:
+  /// **'menos de 1 min'**
+  String get durationUnderMinute;
 
   /// No description provided for @dynamicSentence.
   ///
@@ -1988,6 +2030,12 @@ abstract class AppLocalizations {
   /// **'Importar'**
   String get importAction;
 
+  /// No description provided for @importAnything.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar de otro programa o de ~/.ssh/config'**
+  String get importAnything;
+
   /// No description provided for @importEllipsis.
   ///
   /// In es, this message translates to:
@@ -2131,6 +2179,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'en {where}'**
   String inWhere(String where);
+
+  /// No description provided for @inheritAgain.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a heredar'**
+  String get inheritAgain;
 
   /// No description provided for @inheritsFrom.
   ///
@@ -2378,6 +2432,12 @@ abstract class AppLocalizations {
   /// **'Comentario'**
   String get keyCommentLabel;
 
+  /// No description provided for @keyDelete.
+  ///
+  /// In es, this message translates to:
+  /// **'Supr'**
+  String get keyDelete;
+
   /// No description provided for @keyExchange.
   ///
   /// In es, this message translates to:
@@ -2623,6 +2683,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Latencia con {host}'**
   String latencyWith(String host);
+
+  /// No description provided for @legendInheritAgain.
+  ///
+  /// In es, this message translates to:
+  /// **'vuelve a heredar'**
+  String get legendInheritAgain;
+
+  /// No description provided for @legendInherited.
+  ///
+  /// In es, this message translates to:
+  /// **'heredado'**
+  String get legendInherited;
+
+  /// No description provided for @legendSetHere.
+  ///
+  /// In es, this message translates to:
+  /// **'cambiado aquí'**
+  String get legendSetHere;
 
   /// No description provided for @library.
   ///
@@ -3020,6 +3098,18 @@ abstract class AppLocalizations {
   /// **'Conexión viva'**
   String get newsConnectionTitle;
 
+  /// No description provided for @newsEditorBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo heredado se ve con borde discontinuo y de dónde viene; se cambia escribiendo encima, y ↺ vuelve a heredarlo. Lo avanzado, plegado. Igual en grupos, y la misma rejilla en identidades.'**
+  String get newsEditorBody;
+
+  /// No description provided for @newsEditorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Un editor de hosts más claro'**
+  String get newsEditorTitle;
+
   /// No description provided for @newsFocusBody.
   ///
   /// In es, this message translates to:
@@ -3037,6 +3127,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'nuevo'**
   String get newsFresh;
+
+  /// No description provided for @newsHopsBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Con un bastion por medio, la tarjeta de la latencia dice cuánto tarda cada salto, para ver qué parte del camino va lenta.'**
+  String get newsHopsBody;
+
+  /// No description provided for @newsHopsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'La latencia de cada salto'**
+  String get newsHopsTitle;
 
   /// No description provided for @newsIdentitiesBody.
   ///
@@ -3134,6 +3236,18 @@ abstract class AppLocalizations {
   /// **'SFTP de doble panel'**
   String get newsSftpTitle;
 
+  /// No description provided for @newsShortcutsBody.
+  ///
+  /// In es, this message translates to:
+  /// **'{keys} abre la lista de atajos, con búsqueda, y los botones dicen el suyo al pasar el ratón.'**
+  String newsShortcutsBody(String keys);
+
+  /// No description provided for @newsShortcutsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Todos los atajos, a mano'**
+  String get newsShortcutsTitle;
+
   /// No description provided for @newsSnippetsBody.
   ///
   /// In es, this message translates to:
@@ -3145,6 +3259,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Snippets y hosts conocidos'**
   String get newsSnippetsTitle;
+
+  /// No description provided for @newsStartBody.
+  ///
+  /// In es, this message translates to:
+  /// **'La conexión rápida completa con tus hosts y las direcciones que ya usaste; debajo, las conexiones recientes con cuánto duraron y los túneles abiertos.'**
+  String get newsStartBody;
+
+  /// No description provided for @newsStartTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Un inicio para volver a lo de siempre'**
+  String get newsStartTitle;
 
   /// No description provided for @newsThemesBody.
   ///
@@ -3386,6 +3512,12 @@ abstract class AppLocalizations {
   /// **'{host} no responde'**
   String notResponding(String host);
 
+  /// No description provided for @notSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'sin guardar'**
+  String get notSaved;
+
   /// No description provided for @notes.
   ///
   /// In es, this message translates to:
@@ -3559,6 +3691,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'OpenWard no modifica ~/.ssh/known_hosts: ssh seguirá avisando hasta que quites la clave vieja de allí ({command}).'**
   String openSshStillWarns(String command);
+
+  /// No description provided for @openTunnels.
+  ///
+  /// In es, this message translates to:
+  /// **'Túneles abiertos'**
+  String get openTunnels;
 
   /// No description provided for @optionAsAlt.
   ///
@@ -4193,7 +4331,7 @@ abstract class AppLocalizations {
   /// No description provided for @quickConnectHint.
   ///
   /// In es, this message translates to:
-  /// **'usuario@servidor:puerto'**
+  /// **'usuario@servidor:puerto o el nombre de un host'**
   String get quickConnectHint;
 
   /// No description provided for @quickConnectInvalid.
@@ -4297,6 +4435,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Las conexiones que abres se guardan en este equipo (nunca en el vault) para volver a ellas desde la paleta. Los terminales locales no.'**
   String get recentConnectionsHelp;
+
+  /// No description provided for @recentEmptyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que abras saldrá aquí, con cuándo y cuánto duró, para volver con un clic.'**
+  String get recentEmptyBody;
+
+  /// No description provided for @recentEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no te has conectado'**
+  String get recentEmptyTitle;
 
   /// No description provided for @reconnect.
   ///
@@ -4694,6 +4844,12 @@ abstract class AppLocalizations {
   /// **'Guardar como'**
   String get saveAs;
 
+  /// No description provided for @saveAsHost.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar como host…'**
+  String get saveAsHost;
+
   /// No description provided for @saveFailed.
   ///
   /// In es, this message translates to:
@@ -4874,6 +5030,12 @@ abstract class AppLocalizations {
   /// **'sesión de tmux recuperada'**
   String get sessionResumed;
 
+  /// No description provided for @setHereHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Un clic lo cambia solo aquí'**
+  String get setHereHint;
+
   /// No description provided for @setHereIdentitySays.
   ///
   /// In es, this message translates to:
@@ -4946,6 +5108,54 @@ abstract class AppLocalizations {
   /// **'Forma'**
   String get shape;
 
+  /// No description provided for @shiftPrefix.
+  ///
+  /// In es, this message translates to:
+  /// **'Mayús+'**
+  String get shiftPrefix;
+
+  /// No description provided for @shortcutAll.
+  ///
+  /// In es, this message translates to:
+  /// **'todos los atajos'**
+  String get shortcutAll;
+
+  /// No description provided for @shortcutConnectTyped.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectar a lo escrito, en el inicio'**
+  String get shortcutConnectTyped;
+
+  /// No description provided for @shortcutFindNewer.
+  ///
+  /// In es, this message translates to:
+  /// **'Coincidencia siguiente, más abajo'**
+  String get shortcutFindNewer;
+
+  /// No description provided for @shortcutFindOlder.
+  ///
+  /// In es, this message translates to:
+  /// **'Coincidencia anterior, más arriba'**
+  String get shortcutFindOlder;
+
+  /// No description provided for @shortcutGoToPane.
+  ///
+  /// In es, this message translates to:
+  /// **'Ir al panel en esa dirección'**
+  String get shortcutGoToPane;
+
+  /// No description provided for @shortcutGoToTab.
+  ///
+  /// In es, this message translates to:
+  /// **'Ir a la pestaña 1 a 8'**
+  String get shortcutGoToTab;
+
+  /// No description provided for @shortcutLastTab.
+  ///
+  /// In es, this message translates to:
+  /// **'Ir a la última pestaña'**
+  String get shortcutLastTab;
+
   /// No description provided for @shortcutLocal.
   ///
   /// In es, this message translates to:
@@ -4958,6 +5168,30 @@ abstract class AppLocalizations {
   /// **'Guarda un host nuevo'**
   String get shortcutNewHost;
 
+  /// No description provided for @shortcutNextTab.
+  ///
+  /// In es, this message translates to:
+  /// **'Pestaña siguiente'**
+  String get shortcutNextTab;
+
+  /// No description provided for @shortcutPalette.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar en todo: hosts, pestañas y acciones'**
+  String get shortcutPalette;
+
+  /// No description provided for @shortcutPermissions.
+  ///
+  /// In es, this message translates to:
+  /// **'Permisos'**
+  String get shortcutPermissions;
+
+  /// No description provided for @shortcutPreviousTab.
+  ///
+  /// In es, this message translates to:
+  /// **'Pestaña anterior'**
+  String get shortcutPreviousTab;
+
   /// No description provided for @shortcutSearch.
   ///
   /// In es, this message translates to:
@@ -4969,6 +5203,84 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Abre los ajustes'**
   String get shortcutSettings;
+
+  /// No description provided for @shortcutSidebar.
+  ///
+  /// In es, this message translates to:
+  /// **'barra lateral'**
+  String get shortcutSidebar;
+
+  /// No description provided for @shortcutSwitchSide.
+  ///
+  /// In es, this message translates to:
+  /// **'Pasar al otro lado'**
+  String get shortcutSwitchSide;
+
+  /// No description provided for @shortcutTextBigger.
+  ///
+  /// In es, this message translates to:
+  /// **'Texto más grande en la pestaña'**
+  String get shortcutTextBigger;
+
+  /// No description provided for @shortcutTextReset.
+  ///
+  /// In es, this message translates to:
+  /// **'Tamaño del texto de siempre'**
+  String get shortcutTextReset;
+
+  /// No description provided for @shortcutTextSmaller.
+  ///
+  /// In es, this message translates to:
+  /// **'Texto más pequeño en la pestaña'**
+  String get shortcutTextSmaller;
+
+  /// No description provided for @shortcutsForms.
+  ///
+  /// In es, this message translates to:
+  /// **'Editores y diálogos'**
+  String get shortcutsForms;
+
+  /// No description provided for @shortcutsNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Ningún atajo con «{query}»'**
+  String shortcutsNone(String query);
+
+  /// No description provided for @shortcutsPanes.
+  ///
+  /// In es, this message translates to:
+  /// **'Paneles'**
+  String get shortcutsPanes;
+
+  /// No description provided for @shortcutsSearch.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar una acción o una tecla'**
+  String get shortcutsSearch;
+
+  /// No description provided for @shortcutsTabs.
+  ///
+  /// In es, this message translates to:
+  /// **'Pestañas'**
+  String get shortcutsTabs;
+
+  /// No description provided for @shortcutsTerminal.
+  ///
+  /// In es, this message translates to:
+  /// **'Terminal'**
+  String get shortcutsTerminal;
+
+  /// No description provided for @shortcutsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Atajos de teclado'**
+  String get shortcutsTitle;
+
+  /// No description provided for @shortcutsWindow.
+  ///
+  /// In es, this message translates to:
+  /// **'Ventana'**
+  String get shortcutsWindow;
 
   /// No description provided for @showHiddenFiles.
   ///
@@ -4993,12 +5305,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Abrir la barra lateral'**
   String get showSidebar;
-
-  /// No description provided for @sidebarButton.
-  ///
-  /// In es, this message translates to:
-  /// **'con el botón de la barra'**
-  String get sidebarButton;
 
   /// No description provided for @sidebarHelp.
   ///
@@ -5179,6 +5485,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Empieza aquí'**
   String get startHere;
+
+  /// No description provided for @startShortcutLocal.
+  ///
+  /// In es, this message translates to:
+  /// **'terminal local'**
+  String get startShortcutLocal;
+
+  /// No description provided for @startShortcutNewHost.
+  ///
+  /// In es, this message translates to:
+  /// **'host nuevo'**
+  String get startShortcutNewHost;
+
+  /// No description provided for @startShortcutSearch.
+  ///
+  /// In es, this message translates to:
+  /// **'buscar'**
+  String get startShortcutSearch;
+
+  /// No description provided for @startTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicio'**
+  String get startTitle;
 
   /// No description provided for @starting.
   ///
@@ -5528,6 +5858,12 @@ abstract class AppLocalizations {
   /// **'El terminal está en tmux en el servidor: sigue tras un corte. La rueda recorre su historial; Mayús y arrastrar selecciona texto.'**
   String get tmuxTip;
 
+  /// No description provided for @toStart.
+  ///
+  /// In es, this message translates to:
+  /// **'Para empezar'**
+  String get toStart;
+
   /// No description provided for @todayAt.
   ///
   /// In es, this message translates to:
@@ -5702,6 +6038,12 @@ abstract class AppLocalizations {
   /// **'Tipo'**
   String get tunnelType;
 
+  /// No description provided for @tunnelVia.
+  ///
+  /// In es, this message translates to:
+  /// **'por {host}'**
+  String tunnelVia(String host);
+
   /// No description provided for @tunnels.
   ///
   /// In es, this message translates to:
@@ -5851,6 +6193,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Nadie la usa todavía'**
   String get usedByNobody;
+
+  /// No description provided for @usedNotSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'ya te conectaste, sin guardar · {ago}'**
+  String usedNotSaved(String ago);
 
   /// No description provided for @user.
   ///

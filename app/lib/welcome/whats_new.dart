@@ -7,6 +7,7 @@ import '../l10n/l10n.dart';
 import '../terminal/keys.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
+import '../window/shortcuts.dart';
 
 /// The edition of the news [showWhatsNew] tells, seen once per person. A
 /// new one shows them again to who saw an earlier one: 0.2.0-beta.2 added
@@ -14,8 +15,9 @@ import '../ui/widgets.dart';
 /// palette and history, workspaces, keys and CSV files, 0.3.0-beta.2 the
 /// connection that notices a server gone and the persistent session,
 /// 0.3.0-beta.3 the sidebar that folds, ⌘K for everything and the latency
-/// in sight.
-const newsVersion = '0.3.0-beta.3';
+/// in sight, 0.3.0-beta.4 the lighter editor, the start page, the
+/// shortcuts sheet and each hop's latency.
+const newsVersion = '0.3.0-beta.4';
 
 /// Who updated and has not seen this release's news yet.
 bool shouldShowNews(Settings s) => s.welcomed && s.seenNews != newsVersion;
@@ -36,22 +38,32 @@ class _WhatsNew extends StatelessWidget {
     final ow = context.ow;
     final c = ow.colors;
     final l = context.l10n;
+    final cs = l.ctrlShiftPrefix;
     String keys(String apple, String other) => isApple ? apple : other;
     // Marked new: what came after who saw the news before.
     final items = [
+      (Icons.edit_note, l.newsEditorTitle, l.newsEditorBody, true),
+      (Icons.home_outlined, l.newsStartTitle, l.newsStartBody, true),
+      (
+        Icons.keyboard_outlined,
+        l.newsShortcutsTitle,
+        l.newsShortcutsBody(keys('⌘/', '$cs/')),
+        true,
+      ),
+      (Icons.route_outlined, l.newsHopsTitle, l.newsHopsBody, true),
       (
         Icons.view_sidebar_outlined,
         l.newsFocusTitle,
-        l.newsFocusBody(isApple ? '⌘B' : l.sidebarButton),
-        true,
+        l.newsFocusBody(sidebarKeys(l)),
+        false,
       ),
       (
         Icons.keyboard_command_key,
         l.newsSearchTitle,
-        l.newsSearchBody(keys('⌘K', 'Ctrl+Shift+K')),
-        true,
+        l.newsSearchBody(keys('⌘K', '${cs}K')),
+        false,
       ),
-      (Icons.network_ping, l.newsLatencyTitle, l.newsLatencyBody, true),
+      (Icons.network_ping, l.newsLatencyTitle, l.newsLatencyBody, false),
       (
         Icons.wifi_tethering,
         l.newsConnectionTitle,
@@ -61,7 +73,7 @@ class _WhatsNew extends StatelessWidget {
       (
         Icons.history,
         l.newsPaletteTitle,
-        l.newsPaletteBody(keys('⌘K', 'Ctrl+Shift+K')),
+        l.newsPaletteBody(keys('⌘K', '${cs}K')),
         false,
       ),
       (
@@ -81,16 +93,13 @@ class _WhatsNew extends StatelessWidget {
       (
         Icons.vertical_split_outlined,
         l.newsPanesTitle,
-        l.newsPanesBody(
-          keys('⌘D', 'Ctrl+Shift+D'),
-          keys('⌘⇧B', 'Ctrl+Shift+B'),
-        ),
+        l.newsPanesBody(keys('⌘D', '${cs}D'), keys('⌘⇧B', '${cs}B')),
         false,
       ),
       (
         Icons.folder_outlined,
         l.newsSftpTitle,
-        l.newsSftpBody(keys('⌘⇧O', 'Ctrl+Shift+O')),
+        l.newsSftpBody(keys('⌘⇧O', '${cs}O')),
         false,
       ),
       (Icons.swap_horiz, l.newsTunnelsTitle, l.newsTunnelsBody, false),
@@ -103,7 +112,7 @@ class _WhatsNew extends StatelessWidget {
       (
         Icons.terminal,
         l.newsSnippetsTitle,
-        l.newsSnippetsBody(keys('⌘⇧S', 'Ctrl+Shift+S')),
+        l.newsSnippetsBody(keys('⌘⇧S', '${cs}S')),
         false,
       ),
     ];

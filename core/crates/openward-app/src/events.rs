@@ -46,6 +46,12 @@ pub enum Event {
     },
     /// How a live connection is doing (see [`crate::alive`]).
     Health(Health),
+    /// The round trip from here to each jump host, in route order, when
+    /// the connection goes through any; None for one that did not answer
+    /// in time. Sent with each check, beside [`Event::Health`].
+    Hops {
+        rtt_ms: Vec<Option<u32>>,
+    },
     /// The shell of a host with a persistent session: its tmux session,
     /// found again or new, or no tmux on the server (an ordinary shell).
     Persistent {

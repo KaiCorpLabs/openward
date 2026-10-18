@@ -641,13 +641,30 @@ async fn session(
     let watching = async {
         match Timing::from_keepalive(target_hop.keepalive) {
             Some(t) => {
-                alive::watch(
+                let health = alive::watch(
                     || live.target().ping(),
                     Some(&activity),
                     t,
                     |h| sink.send(Event::Health(h)),
-                )
-                .await
+                );
+                // Each jump host is asked as often, to tell which part of
+                // the route is slow.
+                let hops = async {
+                    if !live.has_jumps() {
+                        return std::future::pending().await;
+                    }
+                    let mut every = tokio::time::interval(t.every);
+                    every.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+                    loop {
+                        every.tick().await;
+                        let rtt_ms = live.jump_rtts(t.stalled_after).await;
+                        sink.send(Event::Hops { rtt_ms });
+                    }
+                };
+                tokio::select! {
+                    silent = health => silent,
+                    never = hops => never,
+                }
             }
             None => std::future::pending().await,
         }

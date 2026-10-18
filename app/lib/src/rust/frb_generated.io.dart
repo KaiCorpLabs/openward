@@ -467,6 +467,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<KnownHostView> dco_decode_list_known_host_view(dynamic raw);
 
   @protected
+  List<int?> dco_decode_list_opt_box_autoadd_u_32(dynamic raw);
+
+  @protected
   List<PreviousKeyView> dco_decode_list_previous_key_view(dynamic raw);
 
   @protected
@@ -1302,6 +1305,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<KnownHostView> sse_decode_list_known_host_view(
     SseDeserializer deserializer,
   );
+
+  @protected
+  List<int?> sse_decode_list_opt_box_autoadd_u_32(SseDeserializer deserializer);
 
   @protected
   List<PreviousKeyView> sse_decode_list_previous_key_view(
@@ -2354,6 +2360,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_known_host_view(
     List<KnownHostView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_opt_box_autoadd_u_32(
+    List<int?> self,
     SseSerializer serializer,
   );
 

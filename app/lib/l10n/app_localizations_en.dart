@@ -42,6 +42,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addressHint => 'server.example.com or 10.0.0.5';
 
   @override
+  String get advanced => 'Advanced';
+
+  @override
+  String get advancedList =>
+      'proxy, host keys, persistent session, checks and agent';
+
+  @override
+  String advancedSetHere(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count set here',
+      one: '1 set here',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get agent => 'SSH agent';
 
   @override
@@ -148,6 +166,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get asSystem => 'As the system';
+
+  @override
+  String get asTyped => 'as typed, without saving it';
 
   @override
   String get askedWhenRun => 'Asked when it runs';
@@ -541,7 +562,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get connectionHint =>
-      'What you don\'t change here is inherited; inherited values have a dashed border and say below where they come from. What the host sets wins, then its identity, then its groups and, last, the defaults.';
+      'What you do not change here is inherited. The host\'s own comes first, then its identity, then its groups and, last, the defaults.';
 
   @override
   String connectionLost(String label, String why) {
@@ -781,14 +802,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get duplicateTab => 'Duplicate';
 
   @override
+  String durationHours(int hours, int minutes) {
+    return '$hours h $minutes min';
+  }
+
+  @override
   String durationMinSec(int minutes, int seconds) {
     return '$minutes min $seconds s';
+  }
+
+  @override
+  String durationMinutes(int count) {
+    return '$count min';
   }
 
   @override
   String durationSec(int seconds) {
     return '$seconds s';
   }
+
+  @override
+  String get durationUnderMinute => 'under 1 min';
 
   @override
   String dynamicSentence(String here, String host) {
@@ -1272,6 +1306,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importAction => 'Import';
 
   @override
+  String get importAnything => 'Import from another program or ~/.ssh/config';
+
+  @override
   String get importEllipsis => 'Import…';
 
   @override
@@ -1373,6 +1410,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String inWhere(String where) {
     return 'in $where';
   }
+
+  @override
+  String get inheritAgain => 'Inherit again';
 
   @override
   String inheritsFrom(String group) {
@@ -1564,6 +1604,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get keyCommentLabel => 'Comment';
 
   @override
+  String get keyDelete => 'Del';
+
+  @override
   String get keyExchange => 'Key exchange';
 
   @override
@@ -1730,6 +1773,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String latencyWith(String host) {
     return 'Latency to $host';
   }
+
+  @override
+  String get legendInheritAgain => 'inherits again';
+
+  @override
+  String get legendInherited => 'inherited';
+
+  @override
+  String get legendSetHere => 'set here';
 
   @override
   String get library => 'Library';
@@ -2014,6 +2066,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newsConnectionTitle => 'A connection that stays aware';
 
   @override
+  String get newsEditorBody =>
+      'Inherited values show with a dashed border and where they come from; type over one to change it, and ↺ inherits it again. Advanced settings stay folded. The same in groups, and the same grid in identities.';
+
+  @override
+  String get newsEditorTitle => 'A clearer host editor';
+
+  @override
   String newsFocusBody(String keys) {
     return 'The sidebar folds to a rail of icons or hides ($keys), by itself when a session opens if you like, and when hidden it shows as the pointer rests on the edge. Drag its edge to change its width; the terminal has more margin. All in Settings › General.';
   }
@@ -2023,6 +2082,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get newsFresh => 'new';
+
+  @override
+  String get newsHopsBody =>
+      'Through a jump host, the latency card tells how long each hop takes, to see which part of the route is slow.';
+
+  @override
+  String get newsHopsTitle => 'Each hop\'s latency';
 
   @override
   String get newsIdentitiesBody =>
@@ -2085,12 +2151,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newsSftpTitle => 'Two-pane SFTP';
 
   @override
+  String newsShortcutsBody(String keys) {
+    return '$keys opens the list of shortcuts, with search, and buttons tell theirs on hover.';
+  }
+
+  @override
+  String get newsShortcutsTitle => 'Every shortcut at hand';
+
+  @override
   String newsSnippetsBody(String shortcut) {
     return 'Commands with variables one shortcut away ($shortcut), and the keys you trust, with those of ~/.ssh/known_hosts.';
   }
 
   @override
   String get newsSnippetsTitle => 'Snippets and known hosts';
+
+  @override
+  String get newsStartBody =>
+      'Quick connect completes with your hosts and the addresses you have used; below, recent connections with how long they lasted, and the open tunnels.';
+
+  @override
+  String get newsStartTitle => 'A start page to get back to work';
 
   @override
   String get newsThemesBody =>
@@ -2234,6 +2315,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get notSaved => 'not saved';
+
+  @override
   String get notes => 'Notes';
 
   @override
@@ -2332,6 +2416,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String openSshStillWarns(String command) {
     return 'OpenWard does not change ~/.ssh/known_hosts: ssh will keep warning until you remove the old key from there ($command).';
   }
+
+  @override
+  String get openTunnels => 'Open tunnels';
 
   @override
   String get optionAsAlt => 'Option as Alt';
@@ -2775,7 +2862,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get quickConnectHint => 'user@server:port';
+  String get quickConnectHint => 'user@server:port or a host\'s name';
 
   @override
   String get quickConnectInvalid => 'Type an address like user@server:port.';
@@ -2839,6 +2926,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get recentConnectionsHelp =>
       'The connections you open are kept on this device (never in the vault) to go back to them from the palette. Local terminals are not.';
+
+  @override
+  String get recentEmptyBody =>
+      'What you open shows here, with when and for how long, to go back with a click.';
+
+  @override
+  String get recentEmptyTitle => 'No connections yet';
 
   @override
   String get reconnect => 'Reconnect';
@@ -3099,6 +3193,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saveAs => 'Save as';
 
   @override
+  String get saveAsHost => 'Save as a host…';
+
+  @override
   String saveFailed(String error) {
     return 'Could not save: $error';
   }
@@ -3220,6 +3317,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionResumed => 'tmux session found again';
 
   @override
+  String get setHereHint => 'A click sets it here only';
+
+  @override
   String setHereIdentitySays(String value) {
     return 'Set here; the identity says $value';
   }
@@ -3266,16 +3366,94 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shape => 'Shape';
 
   @override
+  String get shiftPrefix => 'Shift+';
+
+  @override
+  String get shortcutAll => 'all shortcuts';
+
+  @override
+  String get shortcutConnectTyped =>
+      'Connect to what you typed, on the start page';
+
+  @override
+  String get shortcutFindNewer => 'Next match, further down';
+
+  @override
+  String get shortcutFindOlder => 'Previous match, further up';
+
+  @override
+  String get shortcutGoToPane => 'Go to the pane in that direction';
+
+  @override
+  String get shortcutGoToTab => 'Go to tab 1 to 8';
+
+  @override
+  String get shortcutLastTab => 'Go to the last tab';
+
+  @override
   String get shortcutLocal => 'Opens a local terminal';
 
   @override
   String get shortcutNewHost => 'Saves a new host';
 
   @override
+  String get shortcutNextTab => 'Next tab';
+
+  @override
+  String get shortcutPalette => 'Search everything: hosts, tabs and actions';
+
+  @override
+  String get shortcutPermissions => 'Permissions';
+
+  @override
+  String get shortcutPreviousTab => 'Previous tab';
+
+  @override
   String get shortcutSearch => 'Searches your hosts';
 
   @override
   String get shortcutSettings => 'Opens the settings';
+
+  @override
+  String get shortcutSidebar => 'sidebar';
+
+  @override
+  String get shortcutSwitchSide => 'Switch to the other side';
+
+  @override
+  String get shortcutTextBigger => 'Larger text in the tab';
+
+  @override
+  String get shortcutTextReset => 'Usual text size';
+
+  @override
+  String get shortcutTextSmaller => 'Smaller text in the tab';
+
+  @override
+  String get shortcutsForms => 'Editors and dialogs';
+
+  @override
+  String shortcutsNone(String query) {
+    return 'No shortcut matches “$query”';
+  }
+
+  @override
+  String get shortcutsPanes => 'Panes';
+
+  @override
+  String get shortcutsSearch => 'Search an action or a key';
+
+  @override
+  String get shortcutsTabs => 'Tabs';
+
+  @override
+  String get shortcutsTerminal => 'Terminal';
+
+  @override
+  String get shortcutsTitle => 'Keyboard shortcuts';
+
+  @override
+  String get shortcutsWindow => 'Window';
 
   @override
   String get showHiddenFiles => 'Show hidden files';
@@ -3296,9 +3474,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get showSidebar => 'Show the sidebar';
-
-  @override
-  String get sidebarButton => 'with the sidebar\'s button';
 
   @override
   String get sidebarHelp =>
@@ -3416,6 +3591,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get startHere => 'Start here';
+
+  @override
+  String get startShortcutLocal => 'local terminal';
+
+  @override
+  String get startShortcutNewHost => 'new host';
+
+  @override
+  String get startShortcutSearch => 'search';
+
+  @override
+  String get startTitle => 'Start';
 
   @override
   String get starting => 'Starting…';
@@ -3611,6 +3798,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'The terminal runs in tmux on the server: it goes on after a cut. The wheel scrolls its history; Shift and drag selects text.';
 
   @override
+  String get toStart => 'To start';
+
+  @override
   String todayAt(String time) {
     return 'today $time';
   }
@@ -3720,6 +3910,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tunnelType => 'Type';
+
+  @override
+  String tunnelVia(String host) {
+    return 'through $host';
+  }
 
   @override
   String get tunnels => 'Tunnels';
@@ -3843,6 +4038,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get usedByNobody => 'Nobody uses it yet';
+
+  @override
+  String usedNotSaved(String ago) {
+    return 'connected before, not saved · $ago';
+  }
 
   @override
   String get user => 'User';

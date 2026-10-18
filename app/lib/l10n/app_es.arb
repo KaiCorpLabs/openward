@@ -17,6 +17,16 @@
   "addTag": "Añadir",
   "address": "Dirección",
   "addressHint": "servidor.example.com o 10.0.0.5",
+  "advanced": "Avanzado",
+  "advancedList": "proxy, claves del host, sesión persistente, comprobación y agente",
+  "advancedSetHere": "{count, plural, =1{1 cambiado aquí} other{{count} cambiados aquí}}",
+  "@advancedSetHere": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "agent": "Agente SSH",
   "agentNone": "Ninguno",
   "agentOtherSocket": "Otro socket",
@@ -138,6 +148,7 @@
   "appearanceStepTitle": "¿Cómo la quieres ver?",
   "apply": "Aplicar",
   "asSystem": "Como el sistema",
+  "asTyped": "tal cual, sin guardarlo",
   "askedWhenRun": "Se pregunta al ejecutarlo",
   "askedWhenRunHint": "Sale de lo que escribes entre llaves.",
   "asks": "Pregunta",
@@ -449,7 +460,7 @@
     }
   },
   "connectionDetails": "Detalles de la conexión",
-  "connectionHint": "Lo que no cambies aquí se hereda; los valores heredados llevan el borde discontinuo y debajo dicen de dónde vienen. Manda lo del host, luego su identidad, luego sus grupos y, al final, los valores por defecto.",
+  "connectionHint": "Lo que no cambies aquí se hereda. Manda lo del host, luego su identidad, luego sus grupos y, al final, los valores por defecto.",
   "connectionLost": "Se perdió la conexión con {label}{why}.",
   "@connectionLost": {
     "placeholders": {
@@ -647,6 +658,17 @@
   "dropToUpload": "Suelta para subir aquí",
   "dropTop": "arriba",
   "duplicateTab": "Duplicar",
+  "durationHours": "{hours} h {minutes} min",
+  "@durationHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "durationMinSec": "{minutes} min {seconds} s",
   "@durationMinSec": {
     "placeholders": {
@@ -654,6 +676,14 @@
         "type": "int"
       },
       "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "durationMinutes": "{count} min",
+  "@durationMinutes": {
+    "placeholders": {
+      "count": {
         "type": "int"
       }
     }
@@ -666,6 +696,7 @@
       }
     }
   },
+  "durationUnderMinute": "menos de 1 min",
   "dynamicSentence": "Usa {here} como proxy SOCKS5: las conexiones salen de {host}.",
   "@dynamicSentence": {
     "placeholders": {
@@ -1065,6 +1096,7 @@
   },
   "ignore": "Ignorar",
   "importAction": "Importar",
+  "importAnything": "Importar de otro programa o de ~/.ssh/config",
   "importEllipsis": "Importar…",
   "importFailed": "No se ha podido importar: {error}",
   "@importFailed": {
@@ -1131,6 +1163,7 @@
       }
     }
   },
+  "inheritAgain": "Volver a heredar",
   "inheritsFrom": "La hereda de {group}",
   "@inheritsFrom": {
     "placeholders": {
@@ -1338,6 +1371,7 @@
   },
   "keyColumn": "Clave",
   "keyCommentLabel": "Comentario",
+  "keyDelete": "Supr",
   "keyExchange": "Intercambio",
   "keyFailed": "No se ha podido: {error}",
   "@keyFailed": {
@@ -1455,6 +1489,9 @@
       }
     }
   },
+  "legendInheritAgain": "vuelve a heredar",
+  "legendInherited": "heredado",
+  "legendSetHere": "cambiado aquí",
   "library": "Biblioteca",
   "licenses": "Licencias",
   "lightAndDark": "Claro y oscuro",
@@ -1669,6 +1706,8 @@
   "newTunnel": "Nuevo túnel",
   "newsConnectionBody": "Si el servidor se va, se nota en segundos y la conexión vuelve sola; con la sesión persistente, vuelves al mismo terminal en tmux. Al conectar y al reconectar, el camino hasta el host, animado.",
   "newsConnectionTitle": "Conexión viva",
+  "newsEditorBody": "Lo heredado se ve con borde discontinuo y de dónde viene; se cambia escribiendo encima, y ↺ vuelve a heredarlo. Lo avanzado, plegado. Igual en grupos, y la misma rejilla en identidades.",
+  "newsEditorTitle": "Un editor de hosts más claro",
   "newsFocusBody": "La barra lateral se pliega en iconos o se oculta ({keys}), sola al abrir una sesión si quieres, y oculta se asoma al dejar el ratón en el borde. Su ancho se cambia arrastrando el borde, y el terminal tiene más margen. Todo en Ajustes › General.",
   "@newsFocusBody": {
     "placeholders": {
@@ -1679,6 +1718,8 @@
   },
   "newsFocusTitle": "Más sitio para el terminal",
   "newsFresh": "nuevo",
+  "newsHopsBody": "Con un bastion por medio, la tarjeta de la latencia dice cuánto tarda cada salto, para ver qué parte del camino va lenta.",
+  "newsHopsTitle": "La latencia de cada salto",
   "newsIdentitiesBody": "Usuario, claves y agente con un nombre, para un grupo entero o varios hosts a la vez.",
   "newsIdentitiesTitle": "Identidades",
   "newsImportBody": "Hosts, grupos, identidades y túneles de Termius, PuTTY, KiTTY, MobaXterm, Tabby o SecureCRT, y hosts de un CSV, desde «…» › Importar… en la barra lateral. Las contraseñas no se traen.",
@@ -1726,6 +1767,15 @@
     }
   },
   "newsSftpTitle": "SFTP de doble panel",
+  "newsShortcutsBody": "{keys} abre la lista de atajos, con búsqueda, y los botones dicen el suyo al pasar el ratón.",
+  "@newsShortcutsBody": {
+    "placeholders": {
+      "keys": {
+        "type": "String"
+      }
+    }
+  },
+  "newsShortcutsTitle": "Todos los atajos, a mano",
   "newsSnippetsBody": "Comandos con variables a un atajo ({shortcut}), y las claves en las que confías, con las de ~/.ssh/known_hosts.",
   "@newsSnippetsBody": {
     "placeholders": {
@@ -1735,6 +1785,8 @@
     }
   },
   "newsSnippetsTitle": "Snippets y hosts conocidos",
+  "newsStartBody": "La conexión rápida completa con tus hosts y las direcciones que ya usaste; debajo, las conexiones recientes con cuánto duraron y los túneles abiertos.",
+  "newsStartTitle": "Un inicio para volver a lo de siempre",
   "newsThemesBody": "Cinco temas en claro y oscuro, capas que se combinan, tamaño del texto, contraste mínimo y reducir movimiento.",
   "newsThemesTitle": "Temas y accesibilidad visual",
   "newsTunnelsBody": "Local, remoto y SOCKS5, que se abren al conectar; también proxy HTTP y SOCKS5 para llegar al servidor.",
@@ -1810,6 +1862,7 @@
       }
     }
   },
+  "notSaved": "sin guardar",
   "notes": "Notas",
   "nowIdentity": "Ahora: {identity}",
   "@nowIdentity": {
@@ -1877,6 +1930,7 @@
       }
     }
   },
+  "openTunnels": "Túneles abiertos",
   "optionAsAlt": "Opción como Alt",
   "optionAsAltHelp": "Opción envía Esc + tecla, como esperan emacs y readline, en vez de escribir símbolos como @ o €.",
   "orAnAddress": "o una dirección: usuario@host:puerto",
@@ -2191,7 +2245,7 @@
       }
     }
   },
-  "quickConnectHint": "usuario@servidor:puerto",
+  "quickConnectHint": "usuario@servidor:puerto o el nombre de un host",
   "quickConnectInvalid": "Escribe una dirección como usuario@servidor:puerto.",
   "readFailedTitle": "No se ha podido leer",
   "readFormat": "Es de {program}, pero no está como se esperaba: {message}",
@@ -2233,6 +2287,8 @@
   "receives": "Recibe",
   "recentConnections": "Conexiones recientes",
   "recentConnectionsHelp": "Las conexiones que abres se guardan en este equipo (nunca en el vault) para volver a ellas desde la paleta. Los terminales locales no.",
+  "recentEmptyBody": "Lo que abras saldrá aquí, con cuándo y cuánto duró, para volver con un clic.",
+  "recentEmptyTitle": "Aún no te has conectado",
   "reconnect": "Reconectar",
   "reconnectingEllipsis": "Reconectando…",
   "reconnectingStage": "Reconectando: {stage}",
@@ -2423,6 +2479,7 @@
   "saveAndConnect": "Guardar y conectar",
   "saveAndOpen": "Guardar y abrir",
   "saveAs": "Guardar como",
+  "saveAsHost": "Guardar como host…",
   "saveFailed": "No se ha podido guardar: {error}",
   "@saveFailed": {
     "placeholders": {
@@ -2522,6 +2579,7 @@
     }
   },
   "sessionResumed": "sesión de tmux recuperada",
+  "setHereHint": "Un clic lo cambia solo aquí",
   "setHereIdentitySays": "Cambiado aquí; la identidad dice {value}",
   "@setHereIdentitySays": {
     "placeholders": {
@@ -2562,10 +2620,42 @@
     }
   },
   "shape": "Forma",
+  "shiftPrefix": "Mayús+",
+  "shortcutAll": "todos los atajos",
+  "shortcutConnectTyped": "Conectar a lo escrito, en el inicio",
+  "shortcutFindNewer": "Coincidencia siguiente, más abajo",
+  "shortcutFindOlder": "Coincidencia anterior, más arriba",
+  "shortcutGoToPane": "Ir al panel en esa dirección",
+  "shortcutGoToTab": "Ir a la pestaña 1 a 8",
+  "shortcutLastTab": "Ir a la última pestaña",
   "shortcutLocal": "Abre un terminal local",
   "shortcutNewHost": "Guarda un host nuevo",
+  "shortcutNextTab": "Pestaña siguiente",
+  "shortcutPalette": "Buscar en todo: hosts, pestañas y acciones",
+  "shortcutPermissions": "Permisos",
+  "shortcutPreviousTab": "Pestaña anterior",
   "shortcutSearch": "Busca entre tus hosts",
   "shortcutSettings": "Abre los ajustes",
+  "shortcutSidebar": "barra lateral",
+  "shortcutSwitchSide": "Pasar al otro lado",
+  "shortcutTextBigger": "Texto más grande en la pestaña",
+  "shortcutTextReset": "Tamaño del texto de siempre",
+  "shortcutTextSmaller": "Texto más pequeño en la pestaña",
+  "shortcutsForms": "Editores y diálogos",
+  "shortcutsNone": "Ningún atajo con «{query}»",
+  "@shortcutsNone": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "shortcutsPanes": "Paneles",
+  "shortcutsSearch": "Buscar una acción o una tecla",
+  "shortcutsTabs": "Pestañas",
+  "shortcutsTerminal": "Terminal",
+  "shortcutsTitle": "Atajos de teclado",
+  "shortcutsWindow": "Ventana",
   "showHiddenFiles": "Mostrar los ocultos",
   "showQueue": "Ver la cola",
   "showRest": "{count, plural, =1{Ver el que falta} other{Ver los {count} restantes}}",
@@ -2577,7 +2667,6 @@
     }
   },
   "showSidebar": "Abrir la barra lateral",
-  "sidebarButton": "con el botón de la barra",
   "sidebarHelp": "Se recuerda al cerrar OpenWard. Oculta, se asoma al dejar el ratón en el borde izquierdo de la ventana.",
   "sidebarHidden": "Oculta",
   "sidebarOnSession": "Con un terminal delante",
@@ -2670,6 +2759,10 @@
   "start": "Empezar",
   "startAction": "Empezar",
   "startHere": "Empieza aquí",
+  "startShortcutLocal": "terminal local",
+  "startShortcutNewHost": "host nuevo",
+  "startShortcutSearch": "buscar",
+  "startTitle": "Inicio",
   "starting": "Arrancando…",
   "state": "Estado",
   "statusConnected": "Conectado",
@@ -2759,6 +2852,7 @@
   "tmuxMissing": "sin tmux",
   "tmuxMissingTip": "tmux no está en este servidor: el terminal no sobrevive a un corte. Instálalo para tener la sesión persistente.",
   "tmuxTip": "El terminal está en tmux en el servidor: sigue tras un corte. La rueda recorre su historial; Mayús y arrastrar selecciona texto.",
+  "toStart": "Para empezar",
   "todayAt": "hoy {time}",
   "@todayAt": {
     "placeholders": {
@@ -2850,6 +2944,14 @@
     }
   },
   "tunnelType": "Tipo",
+  "tunnelVia": "por {host}",
+  "@tunnelVia": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "tunnels": "Túneles",
   "tunnelsCount": "{total, plural, =1{1 túnel} other{{total} túneles}} · {open, plural, =1{1 abierto} other{{open} abiertos}}",
   "@tunnelsCount": {
@@ -2947,6 +3049,14 @@
   },
   "usedBy": "La usan",
   "usedByNobody": "Nadie la usa todavía",
+  "usedNotSaved": "ya te conectaste, sin guardar · {ago}",
+  "@usedNotSaved": {
+    "placeholders": {
+      "ago": {
+        "type": "String"
+      }
+    }
+  },
   "user": "Usuario",
   "usualKeys": "las habituales",
   "variantDark": "oscuro",

@@ -17,6 +17,7 @@ import '../snippets/palette.dart';
 import '../tunnels/tunnels_page.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
+import '../window/shortcuts.dart';
 import 'connection_motion.dart';
 import 'connection_panels.dart';
 import 'find_bar.dart';
@@ -876,7 +877,10 @@ class _StatusBar extends ConsumerWidget {
               style: TextButton.styleFrom(foregroundColor: c.textMuted),
               onPressed: () => showSnippetPalette(context),
               icon: const Icon(Icons.terminal, size: 14),
-              label: _Keyed(l.snippets, isApple ? '⌘⇧S' : 'Ctrl+Shift+S'),
+              label: _Keyed(
+                l.snippets,
+                keysFor('⌘⇧S', '${l.ctrlShiftPrefix}S'),
+              ),
             ),
           if (k != null)
             TextButton.icon(
@@ -886,7 +890,10 @@ class _StatusBar extends ConsumerWidget {
                   .read(tabsProvider.notifier)
                   .openSftp(hostId: s.hostId, target: s.target, label: s.label),
               icon: const Icon(Icons.folder_outlined, size: 14),
-              label: _Keyed(l.openSftp, isApple ? '⌘⇧O' : 'Ctrl+Shift+O'),
+              label: _Keyed(
+                l.openSftp,
+                keysFor('⌘⇧O', '${l.ctrlShiftPrefix}O'),
+              ),
             ),
           if (s.phase == Phase.closed)
             TextButton.icon(

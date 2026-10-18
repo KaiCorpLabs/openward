@@ -7566,6 +7566,18 @@ impl SseDecode for Vec<crate::api::vault::KnownHostView> {
     }
 }
 
+impl SseDecode for Vec<Option<u32>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<Option<u32>>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::session::PreviousKeyView> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -8710,6 +8722,7 @@ impl SseDecode for crate::api::session::SessionEvent {
         let mut var_reconnecting =
             <Option<crate::api::session::ReconnectingView>>::sse_decode(deserializer);
         let mut var_health = <Option<crate::api::session::HealthView>>::sse_decode(deserializer);
+        let mut var_hopRttMs = <Vec<Option<u32>>>::sse_decode(deserializer);
         let mut var_persistent =
             <Option<crate::api::session::PersistentView>>::sse_decode(deserializer);
         let mut var_program = <Option<String>>::sse_decode(deserializer);
@@ -8722,6 +8735,7 @@ impl SseDecode for crate::api::session::SessionEvent {
             connected: var_connected,
             reconnecting: var_reconnecting,
             health: var_health,
+            hop_rtt_ms: var_hopRttMs,
             persistent: var_persistent,
             program: var_program,
             closed: var_closed,
@@ -8740,9 +8754,10 @@ impl SseDecode for crate::api::session::SessionEventKind {
             3 => crate::api::session::SessionEventKind::Connected,
             4 => crate::api::session::SessionEventKind::Reconnecting,
             5 => crate::api::session::SessionEventKind::Health,
-            6 => crate::api::session::SessionEventKind::Persistent,
-            7 => crate::api::session::SessionEventKind::Started,
-            8 => crate::api::session::SessionEventKind::Closed,
+            6 => crate::api::session::SessionEventKind::Hops,
+            7 => crate::api::session::SessionEventKind::Persistent,
+            8 => crate::api::session::SessionEventKind::Started,
+            9 => crate::api::session::SessionEventKind::Closed,
             _ => unreachable!("Invalid variant for SessionEventKind: {}", inner),
         };
     }
@@ -11339,6 +11354,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::session::SessionEvent {
             self.connected.into_into_dart().into_dart(),
             self.reconnecting.into_into_dart().into_dart(),
             self.health.into_into_dart().into_dart(),
+            self.hop_rtt_ms.into_into_dart().into_dart(),
             self.persistent.into_into_dart().into_dart(),
             self.program.into_into_dart().into_dart(),
             self.closed.into_into_dart().into_dart(),
@@ -11367,9 +11383,10 @@ impl flutter_rust_bridge::IntoDart for crate::api::session::SessionEventKind {
             Self::Connected => 3.into_dart(),
             Self::Reconnecting => 4.into_dart(),
             Self::Health => 5.into_dart(),
-            Self::Persistent => 6.into_dart(),
-            Self::Started => 7.into_dart(),
-            Self::Closed => 8.into_dart(),
+            Self::Hops => 6.into_dart(),
+            Self::Persistent => 7.into_dart(),
+            Self::Started => 8.into_dart(),
+            Self::Closed => 9.into_dart(),
             _ => unreachable!(),
         }
     }
@@ -13028,6 +13045,16 @@ impl SseEncode for Vec<crate::api::vault::KnownHostView> {
     }
 }
 
+impl SseEncode for Vec<Option<u32>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <Option<u32>>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::session::PreviousKeyView> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -13972,6 +13999,7 @@ impl SseEncode for crate::api::session::SessionEvent {
         <Option<crate::api::session::ConnectedView>>::sse_encode(self.connected, serializer);
         <Option<crate::api::session::ReconnectingView>>::sse_encode(self.reconnecting, serializer);
         <Option<crate::api::session::HealthView>>::sse_encode(self.health, serializer);
+        <Vec<Option<u32>>>::sse_encode(self.hop_rtt_ms, serializer);
         <Option<crate::api::session::PersistentView>>::sse_encode(self.persistent, serializer);
         <Option<String>>::sse_encode(self.program, serializer);
         <Option<crate::api::session::ClosedView>>::sse_encode(self.closed, serializer);
@@ -13989,9 +14017,10 @@ impl SseEncode for crate::api::session::SessionEventKind {
                 crate::api::session::SessionEventKind::Connected => 3,
                 crate::api::session::SessionEventKind::Reconnecting => 4,
                 crate::api::session::SessionEventKind::Health => 5,
-                crate::api::session::SessionEventKind::Persistent => 6,
-                crate::api::session::SessionEventKind::Started => 7,
-                crate::api::session::SessionEventKind::Closed => 8,
+                crate::api::session::SessionEventKind::Hops => 6,
+                crate::api::session::SessionEventKind::Persistent => 7,
+                crate::api::session::SessionEventKind::Started => 8,
+                crate::api::session::SessionEventKind::Closed => 9,
                 _ => {
                     unimplemented!("");
                 }

@@ -157,6 +157,7 @@ fn outcome(rx: &Receiver<Event>) -> (Result<Connected, Option<Failure>>, Vec<Pro
             | Event::Route { .. }
             | Event::Reconnecting { .. }
             | Event::Health(_)
+            | Event::Hops { .. }
             | Event::Persistent { .. } => {}
         }
     }
@@ -750,6 +751,13 @@ fn a_saved_host_as_jump() {
     let (term, rx) = f.connect(target, |_| Answer::Cancel);
     let (result, _) = outcome(&rx);
     assert_eq!(result.unwrap().hops, 2);
+    // The bastion's round trip comes with the first check, at once.
+    let hops = loop {
+        if let Event::Hops { rtt_ms } = rx.recv_timeout(Duration::from_secs(10)).expect("no hops") {
+            break rtt_ms;
+        }
+    };
+    assert!(matches!(hops[..], [Some(_)]), "{hops:?}");
     term.text("hostname\n");
     wait_for(&term, "target1");
     assert_eq!(f.app.vault().known_hosts().len(), 2);

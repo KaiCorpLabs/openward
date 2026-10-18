@@ -6203,6 +6203,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<int?> dco_decode_list_opt_box_autoadd_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_opt_box_autoadd_u_32).toList();
+  }
+
+  @protected
   List<PreviousKeyView> dco_decode_list_previous_key_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_previous_key_view).toList();
@@ -6873,8 +6879,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   SessionEvent dco_decode_session_event(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 10)
-      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
     return SessionEvent(
       kind: dco_decode_session_event_kind(arr[0]),
       route: dco_decode_list_String(arr[1]),
@@ -6883,9 +6889,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       connected: dco_decode_opt_box_autoadd_connected_view(arr[4]),
       reconnecting: dco_decode_opt_box_autoadd_reconnecting_view(arr[5]),
       health: dco_decode_opt_box_autoadd_health_view(arr[6]),
-      persistent: dco_decode_opt_box_autoadd_persistent_view(arr[7]),
-      program: dco_decode_opt_String(arr[8]),
-      closed: dco_decode_opt_box_autoadd_closed_view(arr[9]),
+      hopRttMs: dco_decode_list_opt_box_autoadd_u_32(arr[7]),
+      persistent: dco_decode_opt_box_autoadd_persistent_view(arr[8]),
+      program: dco_decode_opt_String(arr[9]),
+      closed: dco_decode_opt_box_autoadd_closed_view(arr[10]),
     );
   }
 
@@ -8655,6 +8662,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<int?> sse_decode_list_opt_box_autoadd_u_32(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <int?>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_opt_box_autoadd_u_32(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<PreviousKeyView> sse_decode_list_previous_key_view(
     SseDeserializer deserializer,
   ) {
@@ -9721,6 +9742,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       deserializer,
     );
     var var_health = sse_decode_opt_box_autoadd_health_view(deserializer);
+    var var_hopRttMs = sse_decode_list_opt_box_autoadd_u_32(deserializer);
     var var_persistent = sse_decode_opt_box_autoadd_persistent_view(
       deserializer,
     );
@@ -9734,6 +9756,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       connected: var_connected,
       reconnecting: var_reconnecting,
       health: var_health,
+      hopRttMs: var_hopRttMs,
       persistent: var_persistent,
       program: var_program,
       closed: var_closed,
@@ -11447,6 +11470,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_opt_box_autoadd_u_32(
+    List<int?> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_opt_box_autoadd_u_32(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_previous_key_view(
     List<PreviousKeyView> self,
     SseSerializer serializer,
@@ -12426,6 +12461,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_box_autoadd_connected_view(self.connected, serializer);
     sse_encode_opt_box_autoadd_reconnecting_view(self.reconnecting, serializer);
     sse_encode_opt_box_autoadd_health_view(self.health, serializer);
+    sse_encode_list_opt_box_autoadd_u_32(self.hopRttMs, serializer);
     sse_encode_opt_box_autoadd_persistent_view(self.persistent, serializer);
     sse_encode_opt_String(self.program, serializer);
     sse_encode_opt_box_autoadd_closed_view(self.closed, serializer);

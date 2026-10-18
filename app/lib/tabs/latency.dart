@@ -353,7 +353,35 @@ class LatencyCard extends StatelessWidget {
               Divider(height: 1, color: colors.border),
               const SizedBox(height: 2),
               if (c.route.length > 1)
-                row(l.route, Text([l.routeStart, ...c.route].join(' → '))),
+                row(
+                  l.route,
+                  Text.rich(
+                    key: const ValueKey('latency.route'),
+                    TextSpan(
+                      children: [
+                        TextSpan(text: l.routeStart),
+                        // Each hop with the round trip from here to it.
+                        for (final (i, hop) in c.route.indexed) ...[
+                          TextSpan(text: ' → $hop'),
+                          if ((i == c.route.length - 1
+                                  ? rtt
+                                  : c.hopRttMs.elementAtOrNull(i))
+                              case final ms?)
+                            TextSpan(
+                              // Kept with its hop on one line.
+                              text:
+                                  '\u00a0${l.milliseconds(ms).replaceAll(' ', '\u00a0')}',
+                              style: monoStyle(
+                                context,
+                                size: 12,
+                                color: colors.textMuted,
+                              ),
+                            ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
               row(
                 l.keyExchange,
                 mono(k.postQuantum ? l.postQuantumKex(k.kex) : k.kex),

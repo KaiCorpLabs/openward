@@ -13,13 +13,18 @@ import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 
 /// Creates (no `id`) or edits a host, in a panel on the right of the
-/// window. True if something was saved.
+/// window. True if something was saved. A new host may start from a
+/// `draft` (an address typed in the quick connection, say).
 Future<bool> showHostEditor(
   BuildContext context,
   WidgetRef ref, {
   String? id,
   String? groupId,
-}) => showSidePanel(context, (_) => _HostEditor(id: id, groupId: groupId));
+  HostSpec? draft,
+}) => showSidePanel(
+  context,
+  (_) => _HostEditor(id: id, groupId: groupId, draft: draft),
+);
 
 /// Creates (no `id`) or edits a group. True if something was saved.
 Future<bool> showGroupEditor(
@@ -339,7 +344,7 @@ class _SettingsFields extends ConsumerStatefulWidget {
 }
 
 class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
-  bool _more = false;
+  late bool _more = _advanced.any(widget.form.setHere.contains);
 
   _SettingsForm get f => widget.form;
 
@@ -498,6 +503,21 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
     KeyPolicy.strict => l.policyStrict,
   };
 
+  /// The field just set here by a click on its inherited value: its
+  /// editor takes the focus as it appears.
+  String? _justTook;
+
+  /// Fields under «Advanced», folded unless one is set here.
+  static const _advanced = [
+    'proxy',
+    'host_key_policy',
+    'persistent_session',
+    'keepalive_secs',
+    'agent',
+  ];
+
+  bool focusFor(String field) => _justTook == field;
+
   Widget _row({
     required String field,
     required String label,
@@ -509,20 +529,21 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
     final set = f.setHere.contains(field);
     final fromIdentity = _originOf(field)?.origin == OriginKind.identity;
     return _SettingRow(
+      field: field,
       label: label,
       isSet: set,
       editor: editor,
       inherited: _inheritedValue(field),
+      origin: _origin(field),
       mono: mono,
-      note: !set
-          ? _origin(field)
-          : fromIdentity
+      note: fromIdentity
           ? l.setHereIdentitySays(_inheritedValue(field))
           : l.setHereWouldInherit(_inheritedValue(field)),
       noteAction: noteAction,
-      onChange: () => setState(
-        () => f.take(field, field == 'identity' ? _base.effective : _from),
-      ),
+      onChange: () => setState(() {
+        f.take(field, field == 'identity' ? _base.effective : _from);
+        _justTook = field;
+      }),
       onClear: () => setState(() => f.drop(field)),
     );
   }
@@ -624,6 +645,7 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
           editor: TextField(
             key: const ValueKey('settings.user'),
             controller: f.user,
+            autofocus: focusFor('user'),
             style: monoStyle(context, size: 13, color: ow.colors.text),
           ),
         ),
@@ -634,6 +656,7 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
           editor: TextField(
             key: const ValueKey('settings.port'),
             controller: f.port,
+            autofocus: focusFor('port'),
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             style: monoStyle(context, size: 13, color: ow.colors.text),
@@ -646,6 +669,7 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
           editor: TextField(
             key: const ValueKey('settings.keys'),
             controller: f.keys,
+            autofocus: focusFor('identity_files'),
             minLines: 1,
             maxLines: 4,
             style: monoStyle(context, size: 13, color: ow.colors.text),
@@ -661,6 +685,7 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
               DropdownButtonFormField<RouteKind>(
                 style: fieldTextStyle(context),
                 key: const ValueKey('settings.route'),
+                autofocus: focusFor('route'),
                 initialValue: f.route ?? RouteKind.direct,
                 items: [
                   DropdownMenuItem(
@@ -701,158 +726,158 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
             ],
           ),
         ),
-        _row(
-          field: 'proxy',
-          label: l.proxy,
-          editor: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              DropdownButtonFormField<ProxyKind>(
-                style: fieldTextStyle(context),
-                key: const ValueKey('settings.proxy'),
-                initialValue: f.proxy ?? ProxyKind.off,
-                items: [
-                  DropdownMenuItem(
-                    value: ProxyKind.off,
-                    child: Text(l.proxyNone),
-                  ),
-                  const DropdownMenuItem(
-                    value: ProxyKind.http,
-                    child: Text('HTTP (CONNECT)'),
-                  ),
-                  const DropdownMenuItem(
-                    value: ProxyKind.socks5,
-                    child: Text('SOCKS5'),
-                  ),
-                ],
-                onChanged: (v) => setState(() => f.proxy = v),
-              ),
-              if (f.proxyServer) ...[
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        key: const ValueKey('settings.proxyHost'),
-                        controller: f.proxyHost,
-                        onChanged: (_) => setState(() {}),
-                        style: monoStyle(
-                          context,
-                          size: 13,
-                          color: ow.colors.text,
-                        ),
-                        decoration: InputDecoration(labelText: l.proxyServer),
-                      ),
+        _AdvancedToggle(
+          open: _more,
+          setHere: _advanced.where(f.setHere.contains).length,
+          onTap: () => setState(() => _more = !_more),
+        ),
+        if (_more) ...[
+          _row(
+            field: 'proxy',
+            label: l.proxy,
+            editor: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                DropdownButtonFormField<ProxyKind>(
+                  style: fieldTextStyle(context),
+                  key: const ValueKey('settings.proxy'),
+                  autofocus: focusFor('proxy'),
+                  initialValue: f.proxy ?? ProxyKind.off,
+                  items: [
+                    DropdownMenuItem(
+                      value: ProxyKind.off,
+                      child: Text(l.proxyNone),
                     ),
-                    const SizedBox(width: 10),
-                    SizedBox(
-                      width: 96,
-                      child: TextField(
-                        key: const ValueKey('settings.proxyPort'),
-                        controller: f.proxyPort,
-                        onChanged: (_) => setState(() {}),
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                        style: monoStyle(
-                          context,
-                          size: 13,
-                          color: ow.colors.text,
+                    const DropdownMenuItem(
+                      value: ProxyKind.http,
+                      child: Text('HTTP (CONNECT)'),
+                    ),
+                    const DropdownMenuItem(
+                      value: ProxyKind.socks5,
+                      child: Text('SOCKS5'),
+                    ),
+                  ],
+                  onChanged: (v) => setState(() => f.proxy = v),
+                ),
+                if (f.proxyServer) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          key: const ValueKey('settings.proxyHost'),
+                          controller: f.proxyHost,
+                          onChanged: (_) => setState(() {}),
+                          style: monoStyle(
+                            context,
+                            size: 13,
+                            color: ow.colors.text,
+                          ),
+                          decoration: InputDecoration(labelText: l.proxyServer),
                         ),
-                        decoration: InputDecoration(labelText: l.port),
+                      ),
+                      const SizedBox(width: 10),
+                      SizedBox(
+                        width: 96,
+                        child: TextField(
+                          key: const ValueKey('settings.proxyPort'),
+                          controller: f.proxyPort,
+                          onChanged: (_) => setState(() {}),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          style: monoStyle(
+                            context,
+                            size: 13,
+                            color: ow.colors.text,
+                          ),
+                          decoration: InputDecoration(labelText: l.port),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    key: const ValueKey('settings.proxyUser'),
+                    controller: f.proxyUser,
+                    style: monoStyle(context, size: 13, color: ow.colors.text),
+                    decoration: InputDecoration(
+                      labelText: l.proxyUser,
+                      helperText: l.proxyUserHelp,
+                      helperMaxLines: 2,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    l.proxyRouteTitle,
+                    style: TextStyle(fontSize: 12, color: ow.colors.textMuted),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _proxyRoute(l),
+                    style: monoStyle(context, size: 12, color: ow.colors.text),
+                  ),
+                  if ((f.setHere.contains('route') ? f.route : _from.route) ==
+                      RouteKind.command) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      l.proxyNotWithCommand,
+                      style: TextStyle(fontSize: 12, color: ow.colors.warn),
+                    ),
+                  ],
+                  if (f.proxy == ProxyKind.http) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      l.proxyHttpNote,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: ow.colors.textMuted,
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  key: const ValueKey('settings.proxyUser'),
-                  controller: f.proxyUser,
-                  style: monoStyle(context, size: 13, color: ow.colors.text),
-                  decoration: InputDecoration(
-                    labelText: l.proxyUser,
-                    helperText: l.proxyUserHelp,
-                    helperMaxLines: 2,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  l.proxyRouteTitle,
-                  style: TextStyle(fontSize: 12, color: ow.colors.textMuted),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _proxyRoute(l),
-                  style: monoStyle(context, size: 12, color: ow.colors.text),
-                ),
-                if ((f.setHere.contains('route') ? f.route : _from.route) ==
-                    RouteKind.command) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    l.proxyNotWithCommand,
-                    style: TextStyle(fontSize: 12, color: ow.colors.warn),
-                  ),
-                ],
-                if (f.proxy == ProxyKind.http) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    l.proxyHttpNote,
-                    style: TextStyle(fontSize: 12, color: ow.colors.textMuted),
-                  ),
                 ],
               ],
-            ],
-          ),
-        ),
-        _row(
-          field: 'host_key_policy',
-          label: l.hostKeys,
-          editor: DropdownButtonFormField<KeyPolicy>(
-            style: fieldTextStyle(context),
-            key: const ValueKey('settings.policy'),
-            initialValue: f.policy ?? KeyPolicy.ask,
-            items: [
-              for (final p in KeyPolicy.values)
-                DropdownMenuItem(value: p, child: Text(_policy(l, p))),
-            ],
-            onChanged: (v) => setState(() => f.policy = v),
-          ),
-        ),
-        _row(
-          field: 'persistent_session',
-          label: l.persistentSession,
-          editor: DropdownButtonFormField<bool>(
-            style: fieldTextStyle(context),
-            key: const ValueKey('settings.persistent'),
-            initialValue: f.persistent ?? false,
-            isExpanded: true,
-            items: [
-              DropdownMenuItem(value: true, child: Text(l.persistentOn)),
-              DropdownMenuItem(value: false, child: Text(l.persistentOff)),
-            ],
-            onChanged: (v) => setState(() => f.persistent = v),
-          ),
-        ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            onPressed: () => setState(() => _more = !_more),
-            style: TextButton.styleFrom(foregroundColor: ow.colors.textMuted),
-            icon: Icon(
-              _more ? Icons.expand_more : Icons.chevron_right,
-              size: 16,
             ),
-            label: Text(l.moreOptions),
           ),
-        ),
-        if (_more)
+          _row(
+            field: 'host_key_policy',
+            label: l.hostKeys,
+            editor: DropdownButtonFormField<KeyPolicy>(
+              style: fieldTextStyle(context),
+              key: const ValueKey('settings.policy'),
+              autofocus: focusFor('host_key_policy'),
+              initialValue: f.policy ?? KeyPolicy.ask,
+              items: [
+                for (final p in KeyPolicy.values)
+                  DropdownMenuItem(value: p, child: Text(_policy(l, p))),
+              ],
+              onChanged: (v) => setState(() => f.policy = v),
+            ),
+          ),
+          _row(
+            field: 'persistent_session',
+            label: l.persistentSession,
+            editor: DropdownButtonFormField<bool>(
+              style: fieldTextStyle(context),
+              key: const ValueKey('settings.persistent'),
+              autofocus: focusFor('persistent_session'),
+              initialValue: f.persistent ?? false,
+              isExpanded: true,
+              items: [
+                DropdownMenuItem(value: true, child: Text(l.persistentOn)),
+                DropdownMenuItem(value: false, child: Text(l.persistentOff)),
+              ],
+              onChanged: (v) => setState(() => f.persistent = v),
+            ),
+          ),
           _row(
             field: 'keepalive_secs',
             label: l.keepaliveLabel,
             editor: DropdownButtonFormField<int>(
               style: fieldTextStyle(context),
               key: const ValueKey('settings.keepalive'),
+              autofocus: focusFor('keepalive_secs'),
               initialValue: f.keepalive ?? 10,
               isExpanded: true,
               items: [
@@ -862,7 +887,6 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
               onChanged: (v) => setState(() => f.keepalive = v),
             ),
           ),
-        if (_more)
           _row(
             field: 'agent',
             label: l.agent,
@@ -871,6 +895,8 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
               children: [
                 DropdownButtonFormField<AgentKind>(
                   style: fieldTextStyle(context),
+                  key: const ValueKey('settings.agent'),
+                  autofocus: focusFor('agent'),
                   initialValue: f.agent ?? AgentKind.system,
                   items: [
                     DropdownMenuItem(
@@ -901,37 +927,24 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
               ],
             ),
           ),
+        ],
       ],
     );
   }
 }
 
-/// One setting: its own editor when set here, or the inherited value in a
-/// dashed box; under it, where the value comes from.
-class _SettingRow extends StatelessWidget {
-  const _SettingRow({
-    required this.label,
-    required this.isSet,
-    required this.editor,
-    required this.inherited,
-    required this.note,
-    required this.onChange,
-    required this.onClear,
-    this.mono = false,
-    this.noteAction,
+/// «Advanced»: folds the settings that are changed less often, and says
+/// how many of them are set here.
+class _AdvancedToggle extends StatelessWidget {
+  const _AdvancedToggle({
+    required this.open,
+    required this.setHere,
+    required this.onTap,
   });
 
-  final String label;
-  final bool isSet;
-  final Widget editor;
-  final String inherited;
-  final String note;
-  final VoidCallback onChange;
-  final VoidCallback onClear;
-  final bool mono;
-
-  /// A link after the note: «Editar la identidad».
-  final (String, VoidCallback)? noteAction;
+  final bool open;
+  final int setHere;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -939,35 +952,144 @@ class _SettingRow extends StatelessWidget {
     final c = ow.colors;
     final l = context.l10n;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 132,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 9),
-              child: Text(label, style: TextStyle(color: c.textMuted)),
+      padding: const EdgeInsets.only(top: 2, bottom: 12, right: _resetWidth),
+      child: Semantics(
+        button: true,
+        expanded: open,
+        child: FocusOutline(
+          radius: ow.shape.radius,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              key: const ValueKey('settings.advanced'),
+              borderRadius: BorderRadius.circular(ow.shape.radius),
+              onTap: onTap,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(color: c.border),
+                  borderRadius: BorderRadius.circular(ow.shape.radius),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      open ? Icons.expand_more : Icons.chevron_right,
+                      size: 16,
+                      color: c.textMuted,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      l.advanced,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    Expanded(
+                      child: Text(
+                        ' · ${l.advancedList}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: c.textMuted),
+                      ),
+                    ),
+                    if (setHere > 0)
+                      Text(
+                        l.advancedSetHere(setHere),
+                        style: TextStyle(fontSize: 12, color: c.accentText),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (isSet)
-                  editor
-                else
-                  Semantics(
-                    label: label,
-                    value: inherited,
-                    readOnly: true,
-                    child: CustomPaint(
-                      painter: _DashedBorder(c.control, ow.shape.radius),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 9,
-                        ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One setting: its own editor when set here; otherwise the inherited
+/// value in a dashed box that says where it comes from, and a click on it
+/// sets it here. Set here, ↺ goes back to inheriting.
+class _SettingRow extends StatelessWidget {
+  const _SettingRow({
+    required this.field,
+    required this.label,
+    required this.isSet,
+    required this.editor,
+    required this.inherited,
+    required this.origin,
+    required this.note,
+    required this.onChange,
+    required this.onClear,
+    this.mono = false,
+    this.noteAction,
+  });
+
+  /// Its name in the vault, for its keys.
+  final String field;
+  final String label;
+  final bool isSet;
+  final Widget editor;
+  final String inherited;
+
+  /// Where the inherited value comes from: «Del grupo prod».
+  final String origin;
+
+  /// Set here: what it would inherit otherwise.
+  final String note;
+  final VoidCallback onChange;
+  final VoidCallback onClear;
+  final bool mono;
+
+  /// A link under it: «Editar la identidad».
+  final (String, VoidCallback)? noteAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final ow = context.ow;
+    final c = ow.colors;
+    final l = context.l10n;
+    Widget link((String, VoidCallback) action) => InkWell(
+      onTap: action.$2,
+      child: Text(
+        action.$1,
+        style: TextStyle(
+          fontSize: 12,
+          color: c.text,
+          decoration: TextDecoration.underline,
+          decorationColor: c.textSubtle,
+        ),
+      ),
+    );
+    final inheritedBox = Tooltip(
+      message: l.setHereHint,
+      waitDuration: const Duration(milliseconds: 600),
+      child: Semantics(
+        button: true,
+        label: '$label: $inherited',
+        hint: '$origin. ${l.setHereHint}',
+        excludeSemantics: true,
+        child: FocusOutline(
+          radius: ow.shape.radius,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              key: ValueKey('setting.$field'),
+              borderRadius: BorderRadius.circular(ow.shape.radius),
+              mouseCursor: SystemMouseCursors.text,
+              onTap: onChange,
+              child: CustomPaint(
+                painter: _DashedBorder(c.control, ow.shape.radius),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 9,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
                         child: Text(
                           inherited,
                           maxLines: 2,
@@ -977,56 +1099,196 @@ class _SettingRow extends StatelessWidget {
                               : TextStyle(color: c.textMuted),
                         ),
                       ),
-                    ),
-                  ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 4, left: 2),
-                  child: Row(
-                    children: [
-                      Icon(
-                        isSet
-                            ? Icons.edit_outlined
-                            : Icons.subdirectory_arrow_right,
-                        size: 12,
-                        color: isSet ? c.textMuted : c.textSubtle,
-                      ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 10),
                       Flexible(
                         child: Text(
-                          note,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isSet ? c.textMuted : c.textSubtle,
-                          ),
-                        ),
-                      ),
-                      if (noteAction case (final text, final onTap)) ...[
-                        Text(
-                          ' · ',
+                          origin,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.right,
                           style: TextStyle(fontSize: 12, color: c.textSubtle),
                         ),
-                        InkWell(
-                          onTap: onTap,
-                          child: Text(
-                            text,
-                            style: TextStyle(fontSize: 12, color: c.accentText),
-                          ),
-                        ),
-                      ],
+                      ),
                     ],
                   ),
                 ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: _labelWidth,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 9),
+              child: Text(label, style: TextStyle(color: c.textMuted)),
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (isSet) editor else inheritedBox,
+                if (isSet)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4, left: 2),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.edit_outlined,
+                          size: 12,
+                          color: c.accentText,
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            note,
+                            style: TextStyle(fontSize: 12, color: c.textMuted),
+                          ),
+                        ),
+                        if (noteAction case final action?) ...[
+                          Text(
+                            ' · ',
+                            style: TextStyle(fontSize: 12, color: c.textSubtle),
+                          ),
+                          link(action),
+                        ],
+                      ],
+                    ),
+                  )
+                else if (noteAction case final action?)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4, left: 2),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: link(action),
+                    ),
+                  ),
               ],
             ),
           ),
           SizedBox(
-            width: 84,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 2, left: 8),
-              child: TextButton(
-                onPressed: isSet ? onClear : onChange,
-                child: Text(isSet ? l.clear : l.change),
+            width: _resetWidth,
+            child: isSet
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 2, left: 4),
+                    child: IconButton(
+                      key: ValueKey('setting.$field.reset'),
+                      tooltip: l.inheritAgain,
+                      icon: const Icon(Icons.undo, size: 17),
+                      onPressed: onClear,
+                    ),
+                  )
+                : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The width of the labels on the left, the same in every row.
+const double _labelWidth = 132;
+
+/// The column of ↺ on the right.
+const double _resetWidth = 44;
+
+/// A field with its label on the left, aligned with the settings below.
+/// Editors without inherited settings (identities) need no room for ↺.
+class EditorFieldRow extends StatelessWidget {
+  const EditorFieldRow(this.label, this.field, {super.key, this.reset = true});
+
+  final String label;
+  final Widget field;
+  final bool reset;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: _labelWidth,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 9),
+            child: Text(
+              label,
+              style: TextStyle(color: context.ow.colors.textMuted),
+            ),
+          ),
+        ),
+        Expanded(child: field),
+        if (reset) const SizedBox(width: _resetWidth),
+      ],
+    ),
+  );
+}
+
+/// Under the fields of an [EditorFieldRow], past its label.
+const double editorLabelWidth = _labelWidth;
+
+/// One line on how inheriting reads: dashed is inherited, solid is set
+/// here, ↺ inherits again; the order of inheritance behind the (i).
+class _InheritLegend extends StatelessWidget {
+  const _InheritLegend();
+
+  @override
+  Widget build(BuildContext context) {
+    final ow = context.ow;
+    final c = ow.colors;
+    final l = context.l10n;
+    final small = TextStyle(fontSize: 12, color: c.textMuted);
+    Widget swatch({required bool dashed}) => SizedBox(
+      width: 18,
+      height: 11,
+      child: dashed
+          ? CustomPaint(painter: _DashedBorder(c.textSubtle, 3))
+          : DecoratedBox(
+              decoration: BoxDecoration(
+                color: c.raised,
+                border: Border.all(color: c.textSubtle),
+                borderRadius: BorderRadius.circular(3),
               ),
+            ),
+    );
+    Widget item(Widget mark, String text) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        mark,
+        const SizedBox(width: 6),
+        Text(text, style: small),
+      ],
+    );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Wrap(
+              spacing: 14,
+              runSpacing: 4,
+              children: [
+                item(swatch(dashed: true), l.legendInherited),
+                item(swatch(dashed: false), l.legendSetHere),
+                item(
+                  Icon(Icons.undo, size: 13, color: c.textMuted),
+                  l.legendInheritAgain,
+                ),
+              ],
+            ),
+          ),
+          Tooltip(
+            message: l.connectionHint,
+            child: Semantics(
+              label: l.connectionHint,
+              child: Icon(Icons.info_outline, size: 16, color: c.textMuted),
             ),
           ),
         ],
@@ -1412,49 +1674,23 @@ class EditorFrame extends StatelessWidget {
 }
 
 class _Section extends StatelessWidget {
-  const _Section(this.title, {this.hint});
+  const _Section(this.title);
 
   final String title;
-  final String? hint;
 
   @override
-  Widget build(BuildContext context) {
-    final c = context.ow.colors;
-    return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SectionLabel(title),
-          if (hint != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                hint!,
-                style: TextStyle(fontSize: 12, color: c.textMuted, height: 1.4),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 8, bottom: 12),
+    child: SectionLabel(title),
+  );
 }
 
-/// A field with its label above.
-Widget _labelled(BuildContext context, String label, Widget field) => Column(
-  crossAxisAlignment: CrossAxisAlignment.stretch,
-  children: [
-    Text(label, style: TextStyle(color: context.ow.colors.textMuted)),
-    const SizedBox(height: 6),
-    field,
-  ],
-);
-
 class _HostEditor extends ConsumerStatefulWidget {
-  const _HostEditor({this.id, this.groupId});
+  const _HostEditor({this.id, this.groupId, this.draft});
 
   final String? id;
   final String? groupId;
+  final HostSpec? draft;
 
   @override
   ConsumerState<_HostEditor> createState() => _HostEditorState();
@@ -1466,6 +1702,7 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
       : ref.read(openWardProvider).host(id: widget.id!);
   late final HostSpec _spec =
       _detail?.spec ??
+      widget.draft ??
       HostSpec(label: '', address: '', groupId: widget.groupId);
   late final _label = TextEditingController(text: _spec.label);
   late final _address = TextEditingController(text: _spec.address);
@@ -1544,65 +1781,43 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
       onSave: _save,
       onSaveAndConnect: () => _save(connect: true),
       children: [
+        // One grid: the label on the left, as in the settings below.
         _Section(l.sectionGeneral),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: _labelled(
-                context,
-                l.name,
-                TextField(
-                  key: const ValueKey('host.label'),
-                  controller: _label,
-                  autofocus: true,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _labelled(
-                context,
-                l.address,
-                TextField(
-                  key: const ValueKey('host.address'),
-                  controller: _address,
-                  style: mono,
-                  decoration: InputDecoration(hintText: l.addressHint),
-                ),
-              ),
-            ),
-          ],
+        EditorFieldRow(
+          l.name,
+          TextField(
+            key: const ValueKey('host.label'),
+            controller: _label,
+            autofocus: true,
+          ),
         ),
-        const SizedBox(height: 12),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: _labelled(
-                context,
-                l.group,
-                DropdownButtonFormField<String?>(
-                  style: fieldTextStyle(context),
-                  key: const ValueKey('host.group'),
-                  initialValue: _group,
-                  items: [
-                    DropdownMenuItem(value: null, child: Text(l.noGroup)),
-                    for (final (id, name) in groups)
-                      DropdownMenuItem(value: id, child: Text(name)),
-                  ],
-                  onChanged: (v) => setState(() => _group = v),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _labelled(context, l.tags, _TagsField(tags: _tags)),
-            ),
-          ],
+        EditorFieldRow(
+          l.address,
+          TextField(
+            key: const ValueKey('host.address'),
+            controller: _address,
+            style: mono,
+            decoration: InputDecoration(hintText: l.addressHint),
+          ),
         ),
-        const SizedBox(height: 16),
-        _Section(l.sectionConnection, hint: l.connectionHint),
+        EditorFieldRow(
+          l.group,
+          DropdownButtonFormField<String?>(
+            style: fieldTextStyle(context),
+            key: const ValueKey('host.group'),
+            initialValue: _group,
+            items: [
+              DropdownMenuItem(value: null, child: Text(l.noGroup)),
+              for (final (id, name) in groups)
+                DropdownMenuItem(value: id, child: Text(name)),
+            ],
+            onChanged: (v) => setState(() => _group = v),
+          ),
+        ),
+        EditorFieldRow(l.tags, _TagsField(tags: _tags)),
+        const SizedBox(height: 6),
+        _Section(l.sectionConnection),
+        const _InheritLegend(),
         _SettingsFields(
           form: _settings,
           hosts: [
@@ -1612,8 +1827,7 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
           groupId: _group,
         ),
         const SizedBox(height: 8),
-        _labelled(
-          context,
+        EditorFieldRow(
           l.notes,
           TextField(controller: _notes, minLines: 2, maxLines: 5),
         ),
@@ -1689,44 +1903,33 @@ class _GroupEditorState extends ConsumerState<_GroupEditor> {
       onSave: _save,
       children: [
         _Section(l.sectionGeneral),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: _labelled(
-                context,
-                l.name,
-                TextField(
-                  key: const ValueKey('group.name'),
-                  controller: _name,
-                  autofocus: true,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _labelled(
-                context,
-                l.inside,
-                DropdownButtonFormField<String?>(
-                  style: fieldTextStyle(context),
-                  initialValue: _parent,
-                  items: [
-                    DropdownMenuItem(value: null, child: Text(l.noParent)),
-                    for (final (id, name) in _groupChoices(
-                      library,
-                      excluding: widget.id,
-                    ))
-                      DropdownMenuItem(value: id, child: Text(name)),
-                  ],
-                  onChanged: (v) => setState(() => _parent = v),
-                ),
-              ),
-            ),
-          ],
+        EditorFieldRow(
+          l.name,
+          TextField(
+            key: const ValueKey('group.name'),
+            controller: _name,
+            autofocus: true,
+          ),
         ),
-        const SizedBox(height: 16),
-        _Section(l.groupSettingsSection, hint: l.connectionHint),
+        EditorFieldRow(
+          l.inside,
+          DropdownButtonFormField<String?>(
+            style: fieldTextStyle(context),
+            initialValue: _parent,
+            items: [
+              DropdownMenuItem(value: null, child: Text(l.noParent)),
+              for (final (id, name) in _groupChoices(
+                library,
+                excluding: widget.id,
+              ))
+                DropdownMenuItem(value: id, child: Text(name)),
+            ],
+            onChanged: (v) => setState(() => _parent = v),
+          ),
+        ),
+        const SizedBox(height: 6),
+        _Section(l.groupSettingsSection),
+        const _InheritLegend(),
         _SettingsFields(
           form: _settings,
           hosts: [for (final h in library.hosts) (h.id, h.label)],

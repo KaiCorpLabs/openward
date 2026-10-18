@@ -56,6 +56,26 @@ impl Live {
         self.sessions.last().expect("a plan has hops")
     }
 
+    /// Whether it goes through jump hosts.
+    pub fn has_jumps(&self) -> bool {
+        self.sessions.len() > 1
+    }
+
+    /// The round trip to each jump host, one after the other; None for one
+    /// that does not answer `within`.
+    pub async fn jump_rtts(&self, within: Duration) -> Vec<Option<u32>> {
+        let mut rtts = Vec::with_capacity(self.sessions.len() - 1);
+        for jump in &self.sessions[..self.sessions.len() - 1] {
+            let sent = tokio::time::Instant::now();
+            let answered = tokio::time::timeout(within, jump.ping()).await;
+            rtts.push(matches!(answered, Ok(true)).then(|| {
+                let rtt = tokio::time::Instant::now().saturating_duration_since(sent);
+                rtt.as_millis().min(u128::from(u32::MAX)) as u32
+            }));
+        }
+        rtts
+    }
+
     pub fn is_closed(&self) -> bool {
         self.lost.load(Ordering::Relaxed) || self.sessions.iter().any(Session::is_closed)
     }

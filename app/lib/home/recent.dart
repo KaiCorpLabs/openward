@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/connection.dart';
 import '../core/settings.dart';
 import '../history/history.dart' show historyPlace;
+import '../src/rust/api/session.dart' show PersistenceKind;
 
 @immutable
 class RecentConnection {
@@ -19,6 +20,7 @@ class RecentConnection {
     required this.label,
     required this.at,
     this.ended,
+    this.tmux = false,
   });
 
   /// Where it went: `host:<id>` or `address:<user@host:port>`.
@@ -33,6 +35,13 @@ class RecentConnection {
   /// When it closed; null while open (or if the app quit first).
   final int? ended;
 
+  /// The shell ran in a persistent tmux session.
+  final bool tmux;
+
+  /// How long it lasted, once closed.
+  Duration? get length =>
+      ended == null ? null : Duration(milliseconds: ended! - at);
+
   /// The saved host's id, if it is one.
   String? get hostId => where.startsWith('host:') ? where.substring(5) : null;
 
@@ -40,14 +49,20 @@ class RecentConnection {
   String? get address =>
       where.startsWith('address:') ? where.substring(8) : null;
 
-  RecentConnection endedAt(int ms) =>
-      RecentConnection(where: where, label: label, at: at, ended: ms);
+  RecentConnection endedAt(int ms, {bool tmux = false}) => RecentConnection(
+    where: where,
+    label: label,
+    at: at,
+    ended: ms,
+    tmux: tmux,
+  );
 
   Map<String, Object> toJson() => {
     'where': where,
     'label': label,
     'at': at,
     'ended': ?ended,
+    if (tmux) 'tmux': true,
   };
 
   static RecentConnection? fromJson(Object? json) {
@@ -62,6 +77,7 @@ class RecentConnection {
       label: label is String ? label : '',
       at: at,
       ended: ended is int ? ended : null,
+      tmux: json['tmux'] == true,
     );
   }
 }
@@ -138,11 +154,17 @@ class RecentNotifier extends Notifier<Recent> {
 
   /// `c` closed: its entry gets when.
   void ended(ConnectionController c, {DateTime? now}) {
-    if (!c.isLocal) end(historyPlace(c), now: now);
+    if (c.isLocal) return;
+    final p = c.persistent;
+    end(
+      historyPlace(c),
+      now: now,
+      tmux: p != null && p.state != PersistenceKind.noTmux,
+    );
   }
 
   /// The open connection to `where` closed.
-  void end(String where, {DateTime? now}) {
+  void end(String where, {DateTime? now, bool tmux = false}) {
     final at = state.connections.indexWhere(
       (e) => e.where == where && e.ended == null,
     );
@@ -150,7 +172,7 @@ class RecentNotifier extends Notifier<Recent> {
     final ms = (now ?? DateTime.now()).millisecondsSinceEpoch;
     state = Recent(
       connections: [...state.connections]
-        ..[at] = state.connections[at].endedAt(ms),
+        ..[at] = state.connections[at].endedAt(ms, tmux: tmux),
       actions: state.actions,
     );
     _save();

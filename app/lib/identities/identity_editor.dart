@@ -179,27 +179,28 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
     final app = ref.read(openWardProvider);
     final mono = monoStyle(context, size: 13, color: c.text);
     final old = _old;
-    Widget labelled(String text, Widget field, {String? hint}) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(text, style: TextStyle(color: c.textMuted)),
-            if (hint != null) ...[
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  hint,
-                  style: TextStyle(fontSize: 12, color: c.textSubtle),
+    Widget labelled(String text, Widget field, {String? hint}) =>
+        EditorFieldRow(
+          text,
+          hint == null
+              ? field
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    field,
+                    const SizedBox(height: 4),
+                    Text(
+                      hint,
+                      style: TextStyle(fontSize: 12, color: c.textSubtle),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 6),
-        field,
-      ],
+          reset: false,
+        );
+    // Past the labels, under the fields.
+    Widget under(Widget child) => Padding(
+      padding: const EdgeInsets.only(left: editorLabelWidth, bottom: 10),
+      child: child,
     );
     return EditorFrame(
       title: old == null ? l.newIdentity : l.editIdentity,
@@ -212,35 +213,23 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
       onSave: _save,
       onDelete: old == null ? null : _delete,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: labelled(
-                l.name,
-                TextField(
-                  key: const ValueKey('identity.label'),
-                  controller: _label,
-                  autofocus: old == null,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            SizedBox(
-              width: 170,
-              child: labelled(
-                l.user,
-                TextField(
-                  key: const ValueKey('identity.user'),
-                  controller: _user,
-                  style: mono,
-                  decoration: InputDecoration(hintText: l.localUser),
-                ),
-              ),
-            ),
-          ],
+        labelled(
+          l.name,
+          TextField(
+            key: const ValueKey('identity.label'),
+            controller: _label,
+            autofocus: old == null,
+          ),
         ),
-        const SizedBox(height: 16),
+        labelled(
+          l.user,
+          TextField(
+            key: const ValueKey('identity.user'),
+            controller: _user,
+            style: mono,
+            decoration: InputDecoration(hintText: l.localUser),
+          ),
+        ),
         labelled(
           l.keys,
           hint: _keys.length > 1 ? l.keysInOrder : null,
@@ -286,44 +275,44 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
                   ),
                 ),
         ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            OutlinedButton.icon(
-              key: const ValueKey('identity.addKey'),
-              onPressed: _addKey,
-              icon: const Icon(Icons.folder_open_outlined, size: 16),
-              label: Text(l.addKeyEllipsis),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: TextField(
-                key: const ValueKey('identity.keyPath'),
-                controller: _typed,
-                style: mono,
-                onSubmitted: (_) => _addTyped(),
-                decoration: InputDecoration(
-                  isDense: true,
-                  hintText: l.orTypeAPath,
-                  hintStyle: TextStyle(
-                    fontFamily: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.fontFamily,
-                    fontSize: 12,
-                    color: c.textSubtle,
-                  ),
-                  suffixIcon: IconButton(
-                    tooltip: l.add,
-                    icon: const Icon(Icons.add, size: 16),
-                    onPressed: _addTyped,
+        under(
+          Row(
+            children: [
+              OutlinedButton.icon(
+                key: const ValueKey('identity.addKey'),
+                onPressed: _addKey,
+                icon: const Icon(Icons.folder_open_outlined, size: 16),
+                label: Text(l.addKeyEllipsis),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  key: const ValueKey('identity.keyPath'),
+                  controller: _typed,
+                  style: mono,
+                  onSubmitted: (_) => _addTyped(),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: l.orTypeAPath,
+                    hintStyle: TextStyle(
+                      fontFamily: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.fontFamily,
+                      fontSize: 12,
+                      color: c.textSubtle,
+                    ),
+                    suffixIcon: IconButton(
+                      tooltip: l.add,
+                      icon: const Icon(Icons.add, size: 16),
+                      onPressed: _addTyped,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-        const SizedBox(height: 16),
         labelled(
           l.agent,
           SegmentedButton<AgentKind>(
@@ -344,17 +333,17 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
             onSelectionChanged: (s) => setState(() => _agent = s.first),
           ),
         ),
-        if (_agent == AgentKind.socket) ...[
-          const SizedBox(height: 10),
-          TextField(
-            controller: _socket,
-            style: mono,
-            decoration: const InputDecoration(
-              hintText: '~/Library/Group Containers/…/agent.sock',
+        if (_agent == AgentKind.socket)
+          under(
+            TextField(
+              controller: _socket,
+              style: mono,
+              decoration: const InputDecoration(
+                hintText: '~/Library/Group Containers/…/agent.sock',
+              ),
             ),
           ),
-        ],
-        const SizedBox(height: 16),
+        const SizedBox(height: 6),
         Material(
           color: c.surface,
           shape: RoundedRectangleBorder(

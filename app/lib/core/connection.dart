@@ -66,6 +66,10 @@ abstract class ConnectionController extends ChangeNotifier {
 
   static const rttKept = 30;
 
+  /// The last round trip to each jump host, in route order; null for one
+  /// that did not answer in time. Empty without jump hosts.
+  List<int?> hopRttMs = const [];
+
   /// The usual round trip: the median of [rttHistory], once there are a
   /// few.
   int? get usualRttMs {
@@ -176,6 +180,8 @@ abstract class ConnectionController extends ChangeNotifier {
             if (rttHistory.length > rttKept) rttHistory.removeAt(0);
           }
         }
+      case SessionEventKind.hops:
+        hopRttMs = e.hopRttMs;
       case SessionEventKind.persistent:
         persistent = e.persistent;
       case SessionEventKind.reconnecting:
@@ -183,6 +189,7 @@ abstract class ConnectionController extends ChangeNotifier {
         // From when it stopped answering, if it did before it was lost.
         _downSince ??= stalledSince ?? DateTime.now();
         stalledSince = null;
+        hopRttMs = const [];
         phase = Phase.reconnecting;
         reconnecting = r;
         stage = null;
@@ -196,6 +203,7 @@ abstract class ConnectionController extends ChangeNotifier {
         phase = Phase.closed;
         closed = e.closed;
         stalledSince = null;
+        hopRttMs = const [];
         _downSince = null;
         stage = null;
         reconnecting = null;

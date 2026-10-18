@@ -9,6 +9,7 @@ import '../tunnels/tunnels.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../window/chrome.dart';
+import '../window/shortcuts.dart';
 import '../window/sidebar_state.dart';
 import 'sidebar.dart' show tabStatus;
 
@@ -112,7 +113,7 @@ class SidebarRail extends ConsumerWidget {
           divider(),
           _RailButton(
             key: const ValueKey('rail.expand'),
-            tooltip: isApple ? '${l.showSidebar} (⌘B)' : l.showSidebar,
+            tooltip: withKeys(l.showSidebar, sidebarKeys(l)),
             onPressed: ref.read(sidebarProvider.notifier).toggle,
             child: Icon(
               Icons.view_sidebar_outlined,

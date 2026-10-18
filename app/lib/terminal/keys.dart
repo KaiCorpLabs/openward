@@ -106,6 +106,12 @@ bool isAppShortcut(KeyEvent event, int mods) {
           key == LogicalKeyboardKey.enter)) {
     return true;
   }
+  // Ctrl+Shift+/ shows the shortcuts.
+  if (mods & ctrlShift == ctrlShift &&
+      mods & Mods.alt == 0 &&
+      (key == LogicalKeyboardKey.slash || key == LogicalKeyboardKey.question)) {
+    return true;
+  }
   // Ctrl+= / Ctrl+- / Ctrl+0 size the tab's text, as in other terminals.
   if (mods & Mods.ctrl != 0 &&
       mods & Mods.alt == 0 &&

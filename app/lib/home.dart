@@ -30,6 +30,7 @@ import 'workspaces/workspaces_page.dart';
 import 'ui/tokens.dart';
 import 'l10n/l10n.dart';
 import 'window/chrome.dart';
+import 'window/shortcuts.dart';
 import 'window/sidebar_state.dart';
 import 'welcome/first_run.dart';
 
@@ -93,7 +94,7 @@ class _HomeState extends ConsumerState<Home> {
             padding: const EdgeInsets.only(right: 4),
             child: IconButton(
               key: const ValueKey('tabs.showSidebar'),
-              tooltip: isApple ? '${l.showSidebar} (⌘B)' : l.showSidebar,
+              tooltip: withKeys(l.showSidebar, sidebarKeys(l)),
               icon: const Icon(Icons.view_sidebar_outlined, size: 18),
               onPressed: ref.read(sidebarProvider.notifier).toggle,
             ),
@@ -126,6 +127,8 @@ class _HomeState extends ConsumerState<Home> {
     void actualSize() => session()?.resetZoom();
     void snippets() => showSnippetPalette(context);
     void palette() => _palette();
+    void shortcuts() => showShortcuts(context);
+    final sidebar = ref.read(sidebarProvider.notifier).toggle;
     final bindings = <ShortcutActivator, VoidCallback>{
       const SingleActivator(LogicalKeyboardKey.tab, control: true): () =>
           tabs.cycle(1),
@@ -145,9 +148,10 @@ class _HomeState extends ConsumerState<Home> {
         const SingleActivator(LogicalKeyboardKey.keyW, meta: true):
             closeCurrent,
         const SingleActivator(LogicalKeyboardKey.keyK, meta: true): palette,
-        const SingleActivator(LogicalKeyboardKey.keyB, meta: true): ref
-            .read(sidebarProvider.notifier)
-            .toggle,
+        const SingleActivator(LogicalKeyboardKey.keyB, meta: true): sidebar,
+        // ⌘/ wherever the layout has the slash (⌘⇧7 on a Spanish one).
+        const SingleActivator(LogicalKeyboardKey.slash, meta: true): shortcuts,
+        const CharacterActivator('/', meta: true): shortcuts,
         const SingleActivator(LogicalKeyboardKey.keyF, meta: true): find,
         const SingleActivator(LogicalKeyboardKey.keyG, meta: true): next,
         const SingleActivator(LogicalKeyboardKey.keyG, meta: true, shift: true):
@@ -239,6 +243,21 @@ class _HomeState extends ConsumerState<Home> {
           control: true,
           shift: true,
         ): palette,
+        const SingleActivator(
+          LogicalKeyboardKey.keyL,
+          control: true,
+          shift: true,
+        ): sidebar,
+        const SingleActivator(
+          LogicalKeyboardKey.slash,
+          control: true,
+          shift: true,
+        ): shortcuts,
+        const SingleActivator(
+          LogicalKeyboardKey.question,
+          control: true,
+          shift: true,
+        ): shortcuts,
         const SingleActivator(
           LogicalKeyboardKey.keyF,
           control: true,

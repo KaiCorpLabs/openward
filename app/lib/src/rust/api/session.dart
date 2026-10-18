@@ -674,6 +674,10 @@ class SessionEvent {
   final ConnectedView? connected;
   final ReconnectingView? reconnecting;
   final HealthView? health;
+
+  /// From here to each jump host, in route order; null for one that did
+  /// not answer in time.
+  final List<int?> hopRttMs;
   final PersistentView? persistent;
   final String? program;
   final ClosedView? closed;
@@ -686,6 +690,7 @@ class SessionEvent {
     this.connected,
     this.reconnecting,
     this.health,
+    required this.hopRttMs,
     this.persistent,
     this.program,
     this.closed,
@@ -700,6 +705,7 @@ class SessionEvent {
       connected.hashCode ^
       reconnecting.hashCode ^
       health.hashCode ^
+      hopRttMs.hashCode ^
       persistent.hashCode ^
       program.hashCode ^
       closed.hashCode;
@@ -716,6 +722,7 @@ class SessionEvent {
           connected == other.connected &&
           reconnecting == other.reconnecting &&
           health == other.health &&
+          hopRttMs == other.hopRttMs &&
           persistent == other.persistent &&
           program == other.program &&
           closed == other.closed;
@@ -733,6 +740,9 @@ enum SessionEventKind {
 
   /// How a live connection is doing (`health`).
   health,
+
+  /// The round trip to each jump host (`hop_rtt_ms`).
+  hops,
 
   /// How the shell of a host with a persistent session started
   /// (`persistent`).

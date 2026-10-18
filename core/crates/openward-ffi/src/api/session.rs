@@ -25,6 +25,8 @@ pub enum SessionEventKind {
     Reconnecting,
     /// How a live connection is doing (`health`).
     Health,
+    /// The round trip to each jump host (`hop_rtt_ms`).
+    Hops,
     /// How the shell of a host with a persistent session started
     /// (`persistent`).
     Persistent,
@@ -43,6 +45,9 @@ pub struct SessionEvent {
     pub connected: Option<ConnectedView>,
     pub reconnecting: Option<ReconnectingView>,
     pub health: Option<HealthView>,
+    /// From here to each jump host, in route order; null for one that did
+    /// not answer in time.
+    pub hop_rtt_ms: Vec<Option<u32>>,
     pub persistent: Option<PersistentView>,
     pub program: Option<String>,
     pub closed: Option<ClosedView>,
@@ -394,6 +399,7 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
         connected: None,
         reconnecting: None,
         health: None,
+        hop_rtt_ms: Vec::new(),
         persistent: None,
         program: None,
         closed: None,
@@ -483,6 +489,10 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
                     rtt_ms: None,
                 },
             });
+        }
+        Event::Hops { rtt_ms } => {
+            v.kind = SessionEventKind::Hops;
+            v.hop_rtt_ms = rtt_ms;
         }
         Event::Persistent { session, state } => {
             v.kind = SessionEventKind::Persistent;

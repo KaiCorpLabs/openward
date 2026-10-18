@@ -11,6 +11,7 @@ import '../terminal/keys.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../window/chrome.dart';
+import '../window/shortcuts.dart';
 import '../workspaces/workspaces_page.dart';
 import 'drag.dart';
 import 'messages.dart' show viaText;
@@ -77,7 +78,10 @@ class TabStrip extends ConsumerWidget {
               top: style == TabStyle.block ? 4 : 0,
             ),
             child: IconButton(
-              tooltip: l.newLocalTerminal,
+              tooltip: withKeys(
+                l.newLocalTerminal,
+                keysFor('⌘T', '${l.ctrlShiftPrefix}T'),
+              ),
               icon: const Icon(Icons.add, size: 16),
               onPressed: tabs.openLocal,
             ),

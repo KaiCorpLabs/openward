@@ -56,12 +56,19 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - cambia el ancho arrastrando el borde y el margen del terminal, y dinos qué valores te quedan bien;
    - abre varias pestañas y salta entre ellas con ⌘K escribiendo su nombre; usa `>` para las acciones;
    - mira la latencia de la barra de estado en una red buena y en una mala (el móvil, una VPN): dinos si el ámbar salta cuando debe o asusta sin motivo.
-7. **CSV** («Importar…» › CSV):
+7. **Editor e inicio** (0.3.0-beta.4):
+   - edita un host de un grupo: cambia un valor heredado escribiendo encima, vuelve a heredarlo con ↺ y comprueba que el editor dice bien de dónde viene cada uno; dinos si echas en falta algo fuera de «Avanzado»;
+   - cierra todas las pestañas y conéctate desde el inicio: escribe parte del nombre de un host, una dirección a la que ya fuiste y una nueva (⌥Intro la abre tal cual; «Guardar como host…» la guarda);
+   - después de unos días, mira si los recientes del inicio (cuándo, cuánto duró, tmux) te sirven para volver;
+   - con un túnel abierto y sin pestañas, detenlo desde el inicio;
+   - abre la hoja de atajos con ⌘/ (en un teclado español, ⌘⇧7) y busca alguno por su nombre y por su tecla;
+   - con un host detrás de un bastion, pasa el ratón por la latencia y comprueba que dice la del bastion y la del destino.
+8. **CSV** («Importar…» › CSV):
    - exporta tus hosts de una hoja de cálculo o usa la plantilla de Termius;
    - comprueba los grupos, puertos, usuarios y etiquetas, y los avisos de lo que no entra;
    - impórtalo dos veces y comprueba que no se duplica.
 
-En Windows y Linux, ⌘ es Ctrl+Mayús: Ctrl+Mayús+K abre la paleta. La barra lateral se pliega con su botón (Ctrl+B es del shell).
+En Windows y Linux, ⌘ es Ctrl+Mayús: Ctrl+Mayús+K abre la paleta y Ctrl+Mayús+/ la hoja de atajos. La barra lateral se pliega con Ctrl+Mayús+L (Ctrl+B es del shell).
 
 ## Cómo informar
 

@@ -9,6 +9,7 @@
 @Timeout(Duration(minutes: 3))
 library;
 
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -857,9 +858,16 @@ Host web-1 web-2
     await tester.tap(find.text('Nuevo grupo'));
     await _settle(tester);
     await tester.enterText(field('group.name'), 'prod');
-    // Inherited until changed here: the user comes after the identity.
-    await tester.tap(find.text('Cambiar').at(1));
+    // Inherited until changed here: a click on the inherited value sets it
+    // here, and its field takes the focus.
+    await tester.tap(field('setting.user'));
     await _settle(tester);
+    expect(
+      FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<TextField>()
+          ?.key,
+      const ValueKey('settings.user'),
+    );
     await tester.enterText(field('settings.user'), 'deploy');
     await tester.tap(find.text('Guardar'));
     await _settle(tester);
@@ -869,7 +877,7 @@ Host web-1 web-2
     await _settle(tester);
     await tester.enterText(field('host.label'), 'web');
     await tester.enterText(field('host.address'), 'web.example.com');
-    await tester.tap(find.text('Cambiar').at(2));
+    await tester.tap(field('setting.port'));
     await _settle(tester);
     await tester.enterText(field('settings.port'), '2222');
     await tester.tap(field('host.group'));
@@ -896,6 +904,18 @@ Host web-1 web-2
     expect(find.text('Del grupo prod'), findsWidgets);
     expect(find.text('Cambiado aquí; heredaría 22'), findsOneWidget);
     await _shot(tester, '5-host-editor');
+    // ↺ inherits again; «Advanced» opens with the rest.
+    await tester.tap(field('setting.port.reset'));
+    await _settle(tester);
+    expect(field('settings.port'), findsNothing);
+    expect(field('setting.port'), findsOneWidget);
+    expect(field('setting.proxy'), findsNothing);
+    await tester.tap(field('settings.advanced'));
+    await _settle(tester);
+    expect(field('setting.proxy'), findsOneWidget);
+    await tester.ensureVisible(field('setting.agent'));
+    await _settle(tester);
+    await _shot(tester, '5b-host-editor-advanced');
     await tester.tap(find.text('Cancelar'));
     await _settle(tester);
   });
@@ -1028,6 +1048,21 @@ Host web-1 web-2
     expect(
       tester.widget<Text>(find.byKey(const ValueKey('latency.now'))).data,
       '${c.rttMs} ms',
+    );
+    // Each hop with its round trip from here: the bastion's is asked as
+    // often as the target's.
+    expect(c.hopRttMs, hasLength(1));
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('latency.route')))
+          .textSpan!
+          .toPlainText(),
+      // Each latency kept with its hop, by spaces that do not break.
+      matches(
+        RegExp(
+          '^este equipo → bastion\u00a0\\d+\u00a0ms → target1\u00a0\\d+\u00a0ms\$',
+        ),
+      ),
     );
     await _shot(tester, '90-latency');
     await mouse.moveTo(Offset.zero);
@@ -1346,6 +1381,133 @@ Host db
     expect(find.text('Empieza aquí'), findsOneWidget);
     expect(find.text('web-1'), findsOneWidget);
     await _shot(tester, '13-start-light');
+  });
+
+  testWidgets('start: a quick connection that completes, the recent ones '
+      'and the shortcuts sheet', (tester) async {
+    for (final (label, address) in [
+      ('web-1', '10.0.0.11'),
+      ('web-2', '10.0.0.12'),
+      ('db', '10.0.0.5'),
+    ]) {
+      await app.createHost(
+        spec: HostSpec(label: label, address: address),
+      );
+    }
+    final web2 = app.hosts().firstWhere((h) => h.label == 'web-2').id;
+    // web-2 an hour ago, 38 minutes in tmux; an address two days ago.
+    final now = DateTime.now().millisecondsSinceEpoch;
+    const hour = 3600 * 1000;
+    File('${dir.path}/data/recent.json').writeAsStringSync(
+      jsonEncode({
+        'version': 1,
+        'connections': [
+          {
+            'where': 'host:$web2',
+            'label': 'web-2',
+            'at': now - hour,
+            'ended': now - hour + 38 * 60 * 1000,
+            'tmux': true,
+          },
+          {
+            'where': 'address:ops@10.0.0.9',
+            'label': 'ops@10.0.0.9',
+            'at': now - 48 * hour,
+            'ended': now - 48 * hour + 2 * 60 * 1000,
+          },
+        ],
+      }),
+    );
+    final container = await launch(tester);
+    expect(find.byKey(ValueKey('recent.host:$web2')), findsOneWidget);
+    expect(find.text('38 min · tmux'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('recent.address:ops@10.0.0.9')),
+      findsOneWidget,
+    );
+    await _shot(tester, '91-start');
+
+    // Saved hosts first; of two as good, the one used last.
+    final quick = find.byKey(const ValueKey('quick.address'));
+    await tester.enterText(quick, 'web');
+    await _settle(tester);
+    final w1 = find.byKey(const ValueKey('quick.host.web-1'));
+    final w2 = find.byKey(const ValueKey('quick.host.web-2'));
+    expect(w1, findsOneWidget);
+    expect(tester.getTopLeft(w2).dy, lessThan(tester.getTopLeft(w1).dy));
+    // Not an address: nothing to connect to as typed.
+    expect(find.textContaining('Conectar a '), findsNothing);
+    await _shot(tester, '92-quick-hosts');
+
+    // An address used before comes back.
+    await tester.enterText(quick, 'ops@10');
+    await _settle(tester);
+    expect(
+      find.byKey(const ValueKey('quick.used.ops@10.0.0.9')),
+      findsOneWidget,
+    );
+
+    // A new one: as typed (⌥↩), or saved as a host with what it says.
+    await tester.enterText(quick, 'admin@10.0.0.20:2222');
+    await _settle(tester);
+    expect(
+      find.byKey(const ValueKey('quick.typed.Conectar a admin@10.0.0.20:2222')),
+      findsOneWidget,
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('quick.save.Guardar como host…')),
+    );
+    await _settle(tester);
+    expect(find.widgetWithText(TextField, 'admin'), findsOneWidget);
+    expect(find.widgetWithText(TextField, '2222'), findsOneWidget);
+    await _shot(tester, '93-save-as-host');
+    await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+    await _settle(tester);
+    expect(
+      app.hosts().any(
+        (h) => h.address == '10.0.0.20' && h.port == 2222 && h.user == 'admin',
+      ),
+      isTrue,
+    );
+
+    // ⌥↩ connects to what was typed, whatever is suggested.
+    await tester.tap(quick);
+    await tester.enterText(quick, 'nadie@127.0.0.1:1');
+    await _settle(tester);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+    await tester.pump();
+    expect(container.read(tabsProvider).currentSession?.target?.port, 1);
+    container.read(tabsProvider.notifier).close(0);
+    await _settle(tester);
+
+    // Every shortcut, from the start page, with a search.
+    await tester.tap(find.byKey(const ValueKey('start.shortcuts')));
+    await _settle(tester);
+    expect(find.byKey(const ValueKey('shortcuts')), findsOneWidget);
+    await _shot(tester, '94-shortcuts');
+    final search = find.byKey(const ValueKey('shortcuts.search'));
+    await tester.enterText(search, 'dividir');
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('shortcut.Dividir a la derecha')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('shortcut.Ajustes')), findsNothing);
+    await tester.enterText(search, 'qqq');
+    await tester.pump();
+    expect(find.text('Ningún atajo con «qqq»'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await _settle(tester);
+    expect(find.byKey(const ValueKey('shortcuts')), findsNothing);
+
+    // ⌘/ (Ctrl+Shift+/ elsewhere) opens it once, whichever key heard it.
+    await _shortcut(tester, LogicalKeyboardKey.slash, letter: true);
+    await _settle(tester);
+    expect(find.byKey(const ValueKey('shortcuts')), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await _settle(tester);
   });
 
   testWidgets('ssh: a quick connection to an address that is not saved', (
@@ -1908,8 +2070,17 @@ Host db
     await tester.pump(const Duration(milliseconds: 600));
     await _shot(tester, '23-tunnels');
 
+    // With no tab open, the start page has it among the open ones, with
+    // a button to stop it.
+    container.read(tabsProvider.notifier).close(0);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(
+      find.byKey(const ValueKey('start.tunnel.SSH del bastión')),
+      findsOneWidget,
+    );
+    await _shot(tester, '95-start-tunnels');
     await tester.tap(
-      find.byKey(const ValueKey('tunnel.close.SSH del bastión')),
+      find.byKey(const ValueKey('start.tunnel.stop.SSH del bastión')),
     );
     await _until(
       tester,

@@ -21,6 +21,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:openward/app.dart';
 import 'package:openward/core/providers.dart';
 import 'package:openward/core/settings.dart';
+import 'package:openward/home/recent.dart';
 import 'package:openward/hosts/sidebar.dart';
 import 'package:openward/import/program_preview.dart';
 import 'package:openward/import/termius_consent.dart';
@@ -245,6 +246,8 @@ void main() {
     await tapText('web', secondary: true);
     await tapText('Editar…');
     await audit('host editor');
+    await tester.tap(find.byKey(const ValueKey('settings.advanced')));
+    await audit('host editor: advanced');
     await close();
     // The group's name, upper-cased or not by the theme.
     await tester.tap(
@@ -254,6 +257,26 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tapText('Editar grupo…');
     await audit('group editor');
+    await close();
+
+    // With connections behind: the recent ones, what the quick connection
+    // suggests, and every shortcut.
+    final recent = container.read(recentProvider.notifier);
+    recent.add(
+      'host:$web',
+      'web',
+      now: DateTime.now().subtract(const Duration(hours: 1)),
+    );
+    recent.end('host:$web', tmux: true);
+    recent.add('address:ops@10.0.0.9', 'ops@10.0.0.9');
+    await audit('start: recent connections');
+    await _shot(tester, '39-start-recent');
+    final quick = find.byKey(const ValueKey('quick.address'));
+    await tester.enterText(quick, 'w');
+    await audit('start: suggestions');
+    await tester.enterText(quick, '');
+    await tester.tap(find.byKey(const ValueKey('start.shortcuts')));
+    await audit('shortcuts');
     await close();
 
     tabs.openPage(PageKind.settings);

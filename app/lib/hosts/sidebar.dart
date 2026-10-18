@@ -8,7 +8,6 @@ import '../l10n/l10n.dart';
 import '../src/rust/api/vault.dart';
 import '../tabs/tabs.dart';
 import '../terminal/controller.dart';
-import '../terminal/keys.dart';
 import '../identities/identities.dart';
 import '../keys/keys.dart';
 import '../snippets/snippets.dart';
@@ -16,6 +15,7 @@ import '../tunnels/tunnels.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../window/chrome.dart';
+import '../window/shortcuts.dart';
 import '../window/sidebar_state.dart';
 import '../workspaces/workspaces.dart';
 import 'editors.dart';
@@ -215,14 +215,14 @@ class _SidebarState extends ConsumerState<Sidebar> {
                 if (widget.overWindow)
                   IconButton(
                     key: const ValueKey('sidebar.pin'),
-                    tooltip: isApple ? '${l.pinSidebar} (⌘B)' : l.pinSidebar,
+                    tooltip: withKeys(l.pinSidebar, sidebarKeys(l)),
                     icon: const Icon(Icons.push_pin_outlined, size: 18),
                     onPressed: ref.read(sidebarProvider.notifier).toggle,
                   )
                 else
                   IconButton(
                     key: const ValueKey('sidebar.fold'),
-                    tooltip: isApple ? '${l.foldSidebar} (⌘B)' : l.foldSidebar,
+                    tooltip: withKeys(l.foldSidebar, sidebarKeys(l)),
                     icon: const Icon(Icons.view_sidebar_outlined, size: 18),
                     onPressed: ref.read(sidebarProvider.notifier).toggle,
                   ),

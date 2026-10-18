@@ -15,6 +15,7 @@ import '../ui/widgets.dart';
 import '../welcome/whats_new.dart';
 import 'appearance_page.dart';
 import 'report.dart';
+import '../window/shortcuts.dart';
 import '../window/sidebar_state.dart';
 
 enum _Section { general, appearance, terminal }
@@ -247,7 +248,7 @@ class _General extends ConsumerWidget {
         SectionLabel(l.settingsWindow),
         _Row(
           label: l.sidebarSetting,
-          help: isApple ? '⌘B · ${l.sidebarHelp}' : l.sidebarHelp,
+          help: '${sidebarKeys(l)} · ${l.sidebarHelp}',
           control: SegmentedButton<SidebarMode>(
             key: const ValueKey('settings.sidebar'),
             showSelectedIcon: false,

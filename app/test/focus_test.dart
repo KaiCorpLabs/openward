@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openward/core/settings.dart';
 import 'package:openward/home/recent.dart';
+import 'package:openward/home/start_page.dart';
 import 'package:openward/palette/command_palette.dart';
 import 'package:openward/tabs/latency.dart';
 import 'package:openward/l10n/app_localizations_es.dart';
+import 'package:openward/window/shortcuts.dart';
 import 'package:openward/window/sidebar_state.dart';
 
 void main() {
@@ -150,6 +152,22 @@ void main() {
       );
     });
 
+    test('remember how long they lasted and whether tmux kept them', () {
+      final t0 = DateTime(2026, 10, 18, 10);
+      recent().add('host:a', 'web-1', now: t0);
+      expect(container.read(recentProvider).connections.single.length, null);
+      recent().end(
+        'host:a',
+        now: t0.add(const Duration(minutes: 38)),
+        tmux: true,
+      );
+      final again = open();
+      addTearDown(again.dispose);
+      final r = again.read(recentProvider).connections.single;
+      expect(r.length, const Duration(minutes: 38));
+      expect(r.tmux, isTrue);
+    });
+
     test('survive a restart, and the actions are counted', () {
       recent().add('host:a', 'web-1');
       recent().used('splitRight');
@@ -179,6 +197,61 @@ void main() {
     expect(agoText(l, const Duration(minutes: 5)), 'hace 5 min');
     expect(agoText(l, const Duration(hours: 3)), 'hace 3 h');
     expect(agoText(l, const Duration(days: 2)), 'hace 2 d');
+  });
+
+  test('how long, in a few words', () {
+    final l = AppLocalizationsEs();
+    expect(durationText(l, const Duration(seconds: 40)), 'menos de 1 min');
+    expect(durationText(l, const Duration(minutes: 38)), '38 min');
+    expect(
+      durationText(l, const Duration(hours: 2, minutes: 14)),
+      '2 h 14 min',
+    );
+  });
+
+  group('the shortcuts sheet', () {
+    final l = AppLocalizationsEs();
+    List<String> keysOf(List<ShortcutGroup> groups, String title) => [
+      for (final g in groups)
+        for (final r in g.rows)
+          if (r.title == title) ...r.keys,
+    ];
+
+    test('has the keys of each system', () {
+      final mac = shortcutGroups(l, apple: true);
+      final other = shortcutGroups(l, apple: false);
+      expect(keysOf(mac, l.toggleSidebar), ['⌘B']);
+      expect(keysOf(other, l.toggleSidebar), ['Ctrl+Mayús+L']);
+      expect(keysOf(mac, l.shortcutsTitle), ['⌘/']);
+      expect(keysOf(other, l.shortcutsTitle), ['Ctrl+Mayús+/']);
+      expect(keysOf(other, l.settings), ['Ctrl+,']);
+      // No ⌘ outside macOS.
+      for (final g in other) {
+        for (final r in g.rows) {
+          expect(r.keys.join(), isNot(contains('⌘')), reason: r.title);
+        }
+      }
+    });
+
+    test('finds by what it does, without accents, or by the keys', () {
+      final all = shortcutGroups(l, apple: true);
+      final split = filterShortcuts(all, 'dividir');
+      expect([for (final g in split) g.title], [l.shortcutsPanes]);
+      expect(split.single.rows.length, 2);
+      expect([
+        for (final g in filterShortcuts(all, 'pestana'))
+          for (final r in g.rows) r.title,
+      ], containsAll([l.shortcutNextTab, l.shortcutLastTab]));
+      expect(
+        [
+          for (final g in filterShortcuts(all, '⌘⇧o'))
+            for (final r in g.rows) r.title,
+        ],
+        [l.openSftp],
+      );
+      expect(filterShortcuts(all, 'zzz'), isEmpty);
+      expect(filterShortcuts(all, '  '), all);
+    });
   });
 
   test("the latency chart's lines fall on round values under its top", () {

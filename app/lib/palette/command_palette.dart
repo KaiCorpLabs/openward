@@ -25,6 +25,7 @@ import '../terminal/keys.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../welcome/whats_new.dart';
+import '../window/shortcuts.dart';
 import '../window/sidebar_state.dart';
 import '../workspaces/workspaces.dart';
 import '../workspaces/workspaces_page.dart';
@@ -281,7 +282,7 @@ class _PaletteState extends ConsumerState<_Palette> {
         l.toggleSidebar,
         Icons.view_sidebar_outlined,
         home.read(sidebarProvider.notifier).toggle,
-        keys: isApple ? '⌘B' : null,
+        keys: sidebarKeys(l),
       ),
       if (terminal) ...[
         action(
@@ -378,6 +379,13 @@ class _PaletteState extends ConsumerState<_Palette> {
         Icons.settings_outlined,
         () => tabs.openPage(PageKind.settings),
         keys: isApple ? '⌘,' : 'Ctrl+,',
+      ),
+      action(
+        'shortcuts',
+        l.shortcutsTitle,
+        Icons.keyboard_outlined,
+        () => showShortcuts(window),
+        keys: '$key/',
       ),
       action(
         'news',

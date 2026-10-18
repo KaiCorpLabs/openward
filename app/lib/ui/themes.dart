@@ -551,14 +551,26 @@ ThemeData materialTheme(OwTheme ow) {
         textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
       ),
     ),
+    // Links and secondary actions in the text's color, underlined on
+    // hover: the accent is for what is alive, chosen or the main action.
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(
-        foregroundColor: c.accentText,
-        minimumSize: const Size(0, 32),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        shape: control,
-        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-      ),
+      style:
+          TextButton.styleFrom(
+            foregroundColor: c.text,
+            minimumSize: const Size(0, 32),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            shape: control,
+          ).copyWith(
+            textStyle: WidgetStateProperty.resolveWith(
+              (states) => TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                decoration: states.contains(WidgetState.hovered)
+                    ? TextDecoration.underline
+                    : TextDecoration.none,
+              ),
+            ),
+          ),
     ),
     iconButtonTheme: IconButtonThemeData(
       style: IconButton.styleFrom(
