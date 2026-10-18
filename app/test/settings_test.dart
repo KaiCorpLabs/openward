@@ -72,4 +72,29 @@ void main() {
     expect(Settings.fromJson(seen.toJson()).seenNews, newsVersion);
     expect(updated.toJson().containsKey('seen_news'), isFalse);
   });
+
+  test('the sidebar, the terminal margin and recent connections come back', () {
+    const s = Settings(
+      sidebar: SidebarMode.rail,
+      sidebarOnSession: SidebarOnSession.hide,
+      sidebarWidth: 320,
+      terminalPadding: 8,
+      recentConnections: false,
+    );
+    expect(Settings.fromJson(s.toJson()), s);
+    // An older file: the defaults (open, as it is, 272 px, 12 px).
+    final old = Settings.fromJson({'font_size': 13});
+    expect(old.sidebar, SidebarMode.open);
+    expect(old.sidebarOnSession, SidebarOnSession.keep);
+    expect(old.sidebarWidth, Settings.defaultSidebarWidth);
+    expect(old.terminalPadding, 12);
+    expect(old.recentConnections, isTrue);
+    // Out of range: the default.
+    final wide = Settings.fromJson({
+      'sidebar_width': 900,
+      'terminal_padding': 40,
+    });
+    expect(wide.sidebarWidth, Settings.defaultSidebarWidth);
+    expect(wide.terminalPadding, 12);
+  });
 }

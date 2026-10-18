@@ -60,6 +60,29 @@ abstract class ConnectionController extends ChangeNotifier {
   /// The last round trip to the server, in ms.
   int? rttMs;
 
+  /// The last round trips, oldest first: one per check (every keepalive,
+  /// 10 s by default), [rttKept] at most.
+  final List<int> rttHistory = [];
+
+  static const rttKept = 30;
+
+  /// The usual round trip: the median of [rttHistory], once there are a
+  /// few.
+  int? get usualRttMs {
+    if (rttHistory.length < 5) return null;
+    final sorted = [...rttHistory]..sort();
+    return sorted[sorted.length ~/ 2];
+  }
+
+  /// The round trip is well above the usual: three times it, and over
+  /// 100 ms, so a distant but steady server or a few ms on a local network
+  /// are not marked.
+  bool get rttHigh {
+    final rtt = rttMs;
+    final usual = usualRttMs;
+    return rtt != null && usual != null && rtt >= usual * 3 && rtt > 100;
+  }
+
   /// How the shell of a host with a persistent session started.
   PersistentView? persistent;
 
@@ -147,7 +170,11 @@ abstract class ConnectionController extends ChangeNotifier {
           );
         } else {
           stalledSince = null;
-          if (h.rttMs != null) rttMs = h.rttMs;
+          if (h.rttMs case final rtt?) {
+            rttMs = rtt;
+            rttHistory.add(rtt);
+            if (rttHistory.length > rttKept) rttHistory.removeAt(0);
+          }
         }
       case SessionEventKind.persistent:
         persistent = e.persistent;

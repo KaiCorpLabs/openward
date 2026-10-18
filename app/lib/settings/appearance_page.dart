@@ -253,7 +253,7 @@ class _FamilyCard extends StatelessWidget {
                 Text(
                   badge.isEmpty ? kinds : badge,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     color: badge.isEmpty ? c.textSubtle : c.accentText,
                   ),
                 ),

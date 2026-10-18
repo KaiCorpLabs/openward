@@ -31,6 +31,14 @@ enum OnExit {
   never,
 }
 
+/// How much room the sidebar takes: all of it, a rail of icons, or none
+/// (it shows over the window when the pointer reaches the left edge).
+enum SidebarMode { open, rail, hidden }
+
+/// What the sidebar does when a terminal or file tab comes to the front;
+/// back on the start page or a library page, it is as [SidebarMode] says.
+enum SidebarOnSession { keep, rail, hide }
+
 /// Where the terminal's colors come from.
 enum TerminalColors {
   /// The theme's own, light or dark with it.
@@ -141,6 +149,11 @@ class Settings {
     this.bellFlash = true,
     this.onExit = OnExit.clean,
     this.commandHistory = true,
+    this.sidebar = SidebarMode.open,
+    this.sidebarOnSession = SidebarOnSession.keep,
+    this.sidebarWidth = defaultSidebarWidth,
+    this.terminalPadding = 12,
+    this.recentConnections = true,
   });
 
   /// Terminal font size, in logical pixels.
@@ -194,6 +207,24 @@ class Settings {
   /// send again (never in the vault).
   final bool commandHistory;
 
+  final SidebarMode sidebar;
+  final SidebarOnSession sidebarOnSession;
+
+  /// The open sidebar's width, between [minSidebarWidth] and
+  /// [maxSidebarWidth].
+  final double sidebarWidth;
+
+  /// Room around a terminal's text, in logical pixels (0 to 24).
+  final double terminalPadding;
+
+  /// Connections opened are kept on this device (`recent.json`), for the
+  /// palette and the start page.
+  final bool recentConnections;
+
+  static const defaultSidebarWidth = 272.0;
+  static const minSidebarWidth = 220.0;
+  static const maxSidebarWidth = 420.0;
+
   static const fontSizes = [
     10.0,
     11.0,
@@ -230,6 +261,11 @@ class Settings {
     bool? bellFlash,
     OnExit? onExit,
     bool? commandHistory,
+    SidebarMode? sidebar,
+    SidebarOnSession? sidebarOnSession,
+    double? sidebarWidth,
+    double? terminalPadding,
+    bool? recentConnections,
   }) => Settings(
     fontSize: fontSize ?? this.fontSize,
     theme: theme ?? this.theme,
@@ -251,6 +287,11 @@ class Settings {
     bellFlash: bellFlash ?? this.bellFlash,
     onExit: onExit ?? this.onExit,
     commandHistory: commandHistory ?? this.commandHistory,
+    sidebar: sidebar ?? this.sidebar,
+    sidebarOnSession: sidebarOnSession ?? this.sidebarOnSession,
+    sidebarWidth: sidebarWidth ?? this.sidebarWidth,
+    terminalPadding: terminalPadding ?? this.terminalPadding,
+    recentConnections: recentConnections ?? this.recentConnections,
   );
 
   /// The same settings with one theme's layers changed (or reset).
@@ -294,6 +335,11 @@ class Settings {
     'bell_flash': bellFlash,
     'on_exit': onExit.name,
     'command_history': commandHistory,
+    'sidebar': sidebar.name,
+    'sidebar_on_session': sidebarOnSession.name,
+    'sidebar_width': sidebarWidth,
+    'terminal_padding': terminalPadding,
+    'recent_connections': recentConnections,
   };
 
   /// Unknown or broken values fall back to the defaults, one by one.
@@ -343,6 +389,20 @@ class Settings {
       bellFlash: flag('bell_flash', d.bellFlash),
       onExit: pick(OnExit.values, 'on_exit', d.onExit),
       commandHistory: flag('command_history', d.commandHistory),
+      sidebar: pick(SidebarMode.values, 'sidebar', d.sidebar),
+      sidebarOnSession: pick(
+        SidebarOnSession.values,
+        'sidebar_on_session',
+        d.sidebarOnSession,
+      ),
+      sidebarWidth: number(
+        'sidebar_width',
+        minSidebarWidth,
+        maxSidebarWidth,
+        d.sidebarWidth,
+      ),
+      terminalPadding: number('terminal_padding', 0, 24, d.terminalPadding),
+      recentConnections: flag('recent_connections', d.recentConnections),
     );
   }
 

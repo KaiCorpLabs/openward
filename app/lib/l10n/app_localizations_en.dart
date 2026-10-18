@@ -60,9 +60,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get agentSystem => 'The system\'s';
 
   @override
+  String agoDays(int count) {
+    return '$count d ago';
+  }
+
+  @override
+  String agoHours(int count) {
+    return '$count h ago';
+  }
+
+  @override
+  String agoMinutes(int count) {
+    return '$count min ago';
+  }
+
+  @override
+  String get agoNow => 'now';
+
+  @override
   String allCount(int count) {
     return 'All · $count';
   }
+
+  @override
+  String get allHosts => 'All hosts';
 
   @override
   String get alreadyImported => 'already imported';
@@ -368,6 +389,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String clearRecent(int count) {
+    return 'Clear ($count)';
+  }
+
+  @override
   String get clearSelection => 'Clear the selection';
 
   @override
@@ -496,6 +522,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get connect => 'Connect';
+
+  @override
+  String connectToAddress(String address) {
+    return 'Connect to $address';
+  }
 
   @override
   String get connectingEllipsis => 'Connecting…';
@@ -907,6 +938,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get filterFolder => 'Filter this folder';
 
   @override
+  String get filterHosts => 'Filter hosts';
+
+  @override
   String get filterHostsAndGroups => 'Filter hosts and groups';
 
   @override
@@ -963,6 +997,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String firstConnectionTo(String label) {
     return 'First connection to $label';
   }
+
+  @override
+  String get foldSidebar => 'Fold the sidebar';
 
   @override
   String get fontFromTheme => 'The theme\'s';
@@ -1665,6 +1702,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get languageSystem => 'As the system';
 
   @override
+  String latencyChecks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'the last $count checks',
+      one: 'the last check',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get latencyClick =>
+      'A click opens the connection\'s details and its fingerprint.';
+
+  @override
+  String latencyHigh(int ms, int times) {
+    return '$ms ms: $times times the usual';
+  }
+
+  @override
+  String latencyUsual(int ms) {
+    return 'usual $ms ms';
+  }
+
+  @override
+  String latencyWith(String host) {
+    return 'Latency to $host';
+  }
+
+  @override
   String get library => 'Library';
 
   @override
@@ -1947,6 +2014,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newsConnectionTitle => 'A connection that stays aware';
 
   @override
+  String newsFocusBody(String keys) {
+    return 'The sidebar folds to a rail of icons or hides ($keys), by itself when a session opens if you like, and when hidden it shows as the pointer rests on the edge. Drag its edge to change its width; the terminal has more margin. All in Settings › General.';
+  }
+
+  @override
+  String get newsFocusTitle => 'More room for the terminal';
+
+  @override
   String get newsFresh => 'new';
 
   @override
@@ -1971,6 +2046,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newsKeysTitle => 'Keys';
 
   @override
+  String get newsLatencyBody =>
+      'The status bar shows how long the server takes to answer, with a chart of the last checks; amber when it rises well above the usual. Hover for the route and the cipher.';
+
+  @override
+  String get newsLatencyTitle => 'Latency in sight';
+
+  @override
   String newsPaletteBody(String shortcut) {
     return 'Everything the window does, your hosts, snippets and the commands you ran, a few letters away ($shortcut). The history stays on this computer and never keeps passwords.';
   }
@@ -1985,6 +2067,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get newsPanesTitle => 'Panes and broadcast';
+
+  @override
+  String newsSearchBody(String keys) {
+    return '$keys opens the palette with the open tabs, recent connections, hosts, actions and what you ran before. Start with > for actions only.';
+  }
+
+  @override
+  String get newsSearchTitle => 'One shortcut to find anything';
 
   @override
   String newsSftpBody(String shortcut) {
@@ -2192,6 +2282,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onSend => 'On send';
 
   @override
+  String get onSessionHide => 'Hidden';
+
+  @override
+  String get onSessionKeep => 'As it is';
+
+  @override
+  String get onSessionRail => 'Rail';
+
+  @override
   String get onThisComputer => 'On this computer';
 
   @override
@@ -2268,7 +2367,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paletteForget => 'remove from history';
 
   @override
-  String get paletteHint => 'Type an action, a host, a command you ran before…';
+  String get paletteHere => 'here';
+
+  @override
+  String get paletteHint =>
+      'Find a host, a tab, an action or a command you ran…';
 
   @override
   String get paletteHistory => 'History';
@@ -2280,7 +2383,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paletteNothing => 'Nothing matches.';
 
   @override
+  String get paletteOnlyActions => 'actions only';
+
+  @override
+  String get paletteRecent => 'Recent';
+
+  @override
   String get paletteRun => 'run';
+
+  @override
+  String get paletteTabs => 'Open tabs';
 
   @override
   String get paletteTypeOnly => 'type only';
@@ -2414,6 +2526,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pickIdentity => 'Pick an identity or «None».';
+
+  @override
+  String get pinSidebar => 'Keep the sidebar open';
 
   @override
   String pixels(int size) {
@@ -2719,6 +2834,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receives => 'Receives';
 
   @override
+  String get recentConnections => 'Recent connections';
+
+  @override
+  String get recentConnectionsHelp =>
+      'The connections you open are kept on this device (never in the vault) to go back to them from the palette. Local terminals are not.';
+
+  @override
   String get reconnect => 'Reconnect';
 
   @override
@@ -2993,6 +3115,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saveOpenTabs => 'Save the open tabs…';
 
   @override
+  String get saveTabsNeedsTabs => 'Open a tab to be able to save it.';
+
+  @override
   String get saveWorkspaceIntro =>
       'The open terminal and file tabs, with their panes. When it opens, each pane connects again.';
 
@@ -3012,6 +3137,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String scrollbackLines(String lines) {
     return '$lines lines';
   }
+
+  @override
+  String get search => 'Search';
 
   @override
   String get searchHosts => 'Search hosts';
@@ -3114,6 +3242,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTerminal => 'Terminal';
 
   @override
+  String get settingsWindow => 'Window';
+
+  @override
   String sftpConnected(String label) {
     return 'SFTP on $label';
   }
@@ -3162,6 +3293,42 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get showSidebar => 'Show the sidebar';
+
+  @override
+  String get sidebarButton => 'with the sidebar\'s button';
+
+  @override
+  String get sidebarHelp =>
+      'Remembered when OpenWard closes. Hidden, it shows when the pointer rests on the window\'s left edge.';
+
+  @override
+  String get sidebarHidden => 'Hidden';
+
+  @override
+  String get sidebarOnSession => 'With a terminal in front';
+
+  @override
+  String get sidebarOnSessionHelp =>
+      'With a terminal or file tab in front, the sidebar can fold by itself. On the start page and the library pages it is as set above.';
+
+  @override
+  String get sidebarOpen => 'Open';
+
+  @override
+  String get sidebarRail => 'Rail';
+
+  @override
+  String get sidebarSetting => 'Sidebar';
+
+  @override
+  String get sidebarWidth => 'Sidebar width';
+
+  @override
+  String get sidebarWidthHelp =>
+      'Drag the sidebar\'s edge to change it, between 220 and 420 px. A double click on the edge resets it.';
 
   @override
   String sinceSeconds(int seconds) {
@@ -3298,6 +3465,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get stepReady => 'Done';
 
   @override
+  String get stopAction => 'Stop';
+
+  @override
   String get tabMenuHint =>
       'You can also drag the tab onto a terminal to split it, or elsewhere in the bar to reorder it.';
 
@@ -3319,6 +3489,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get terminalMenuHint =>
       'Drag a tab or a host here to open it in one half of this pane.';
+
+  @override
+  String get terminalPadding => 'Terminal margin';
+
+  @override
+  String get terminalPaddingHelp => 'Room around the text, in every pane.';
 
   @override
   String get terminalScheme => 'Own scheme';
@@ -3440,6 +3616,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get toggleSidebar => 'Fold or show the sidebar';
+
+  @override
   String get transfers => 'Transfers';
 
   @override
@@ -3481,7 +3660,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'That address does not exist on this computer.';
 
   @override
-  String get tunnelClosed => 'Closed';
+  String get tunnelClosed => 'Stopped';
 
   @override
   String tunnelDidNotOpen(String name, String why) {

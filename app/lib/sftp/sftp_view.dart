@@ -386,7 +386,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
             ),
           ),
           const SizedBox(width: 20),
-          Text(keys, style: monoStyle(context, size: 11)),
+          Text(keys, style: monoStyle(context, size: 12)),
         ],
       ),
     );
@@ -682,7 +682,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
               padding: const EdgeInsets.only(right: 8),
               child: Text(
                 isApple ? '⌘F' : 'Ctrl+F',
-                style: monoStyle(context, size: 11, color: c.textSubtle),
+                style: monoStyle(context, size: 12, color: c.textSubtle),
               ),
             ),
             suffixIconConstraints: const BoxConstraints(minHeight: 0),
@@ -707,7 +707,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
     final c = context.ow.colors;
     final pane = _pane;
     final style = TextStyle(
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: FontWeight.w600,
       letterSpacing: 0.5,
       color: c.textSubtle,
@@ -865,7 +865,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
                       '→ ${e.linkTarget}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: monoStyle(context, size: 11, color: c.info),
+                      style: monoStyle(context, size: 12, color: c.info),
                     ),
                   ),
                 ],

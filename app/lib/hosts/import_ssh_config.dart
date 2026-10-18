@@ -273,7 +273,7 @@ class _ImportPickerState extends State<ImportPicker> {
                 padding: const EdgeInsets.only(left: 8),
                 child: Text(
                   note,
-                  style: TextStyle(fontSize: 11, color: c.textSubtle),
+                  style: TextStyle(fontSize: 12, color: c.textSubtle),
                 ),
               ),
           ],

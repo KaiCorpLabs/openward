@@ -90,7 +90,7 @@ class _PromptCardState extends State<PromptCard> {
               children: [
                 Text(
                   _p.algorithm,
-                  style: TextStyle(fontSize: 11, color: ow.colors.textMuted),
+                  style: TextStyle(fontSize: 12, color: ow.colors.textMuted),
                 ),
                 const SizedBox(height: 2),
                 SelectableText(

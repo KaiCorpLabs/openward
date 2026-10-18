@@ -16,6 +16,7 @@ import '../tunnels/tunnels.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../window/chrome.dart';
+import '../window/sidebar_state.dart';
 import '../workspaces/workspaces.dart';
 import 'editors.dart';
 import '../import/import_dialog.dart';
@@ -25,10 +26,18 @@ import '../tabs/drag.dart';
 /// that add to them. Double-click (or Enter in the search) connects in a
 /// new tab.
 class Sidebar extends ConsumerStatefulWidget {
-  const Sidebar({super.key, required this.searchFocus});
+  const Sidebar({
+    super.key,
+    required this.searchFocus,
+    this.overWindow = false,
+  });
 
-  /// Focused by ⌘K / Ctrl+Shift+K.
+  /// The filter over the list.
   final FocusNode searchFocus;
+
+  /// Shown over the window (the sidebar is hidden or a rail): no room for
+  /// the window buttons, and a button to keep it open instead of folding.
+  final bool overWindow;
 
   @override
   ConsumerState<Sidebar> createState() => _SidebarState();
@@ -130,7 +139,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const WindowButtonsSpace(),
+          if (!widget.overWindow) const WindowButtonsSpace(),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
             child: _SearchField(
@@ -203,6 +212,20 @@ class _SidebarState extends ConsumerState<Sidebar> {
                       .read(tabsProvider.notifier)
                       .openPage(PageKind.settings),
                 ),
+                if (widget.overWindow)
+                  IconButton(
+                    key: const ValueKey('sidebar.pin'),
+                    tooltip: isApple ? '${l.pinSidebar} (⌘B)' : l.pinSidebar,
+                    icon: const Icon(Icons.push_pin_outlined, size: 18),
+                    onPressed: ref.read(sidebarProvider.notifier).toggle,
+                  )
+                else
+                  IconButton(
+                    key: const ValueKey('sidebar.fold'),
+                    tooltip: isApple ? '${l.foldSidebar} (⌘B)' : l.foldSidebar,
+                    icon: const Icon(Icons.view_sidebar_outlined, size: 18),
+                    onPressed: ref.read(sidebarProvider.notifier).toggle,
+                  ),
               ],
             ),
           ),
@@ -283,6 +306,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
               child: SectionLabel(
                 g.name,
                 trailing: '${library.countUnder(g.id)}',
+                keepCase: true,
               ),
             ),
             const SizedBox(width: 4),
@@ -403,7 +427,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
                     '${h.user}@$address',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: monoStyle(context, size: 11),
+                    style: monoStyle(context, size: 12),
                   ),
                 ],
               ),
@@ -499,14 +523,9 @@ class _SearchField extends StatelessWidget {
           onChanged: ref.read(searchProvider.notifier).set,
           style: const TextStyle(fontSize: 13),
           decoration: InputDecoration(
-            hintText: l.searchHosts,
-            prefixIcon: const Icon(Icons.search, size: 16),
+            hintText: l.filterHosts,
+            prefixIcon: const Icon(Icons.filter_list, size: 16),
             prefixIconConstraints: const BoxConstraints(minWidth: 34),
-            suffixIcon: Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: KeyCap(isApple ? '⌘K' : '${l.ctrlShiftPrefix}K'),
-            ),
-            suffixIconConstraints: const BoxConstraints(minHeight: 0),
             contentPadding: const EdgeInsets.symmetric(vertical: 9),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(ow.shape.control),
@@ -591,12 +610,18 @@ class _Library extends ConsumerWidget {
     final known = ref.read(openWardProvider).knownHostRows(query: '').length;
     final current = ref.watch(tabsProvider.select((s) => s.current));
     bool here(PageKind page) => current is PageTab && current.page == page;
+    // A count only when there is something: zeros are noise. Empty
+    // entries are quieter.
+    Widget count(int n) => n == 0
+        ? const SizedBox.shrink()
+        : Text('$n', style: monoStyle(context, size: 12));
     Widget entry({
       required String key,
       required PageKind page,
       required IconData icon,
       required String label,
       required List<Widget> trailing,
+      bool empty = false,
     }) => FocusOutline(
       child: Material(
         color: here(page) ? c.selected : Colors.transparent,
@@ -609,9 +634,14 @@ class _Library extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
             child: Row(
               children: [
-                Icon(icon, size: 16, color: c.textMuted),
+                Icon(icon, size: 16, color: empty ? c.textSubtle : c.textMuted),
                 const SizedBox(width: 10),
-                Expanded(child: Text(label)),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: empty ? TextStyle(color: c.textMuted) : null,
+                  ),
+                ),
                 ...trailing,
               ],
             ),
@@ -644,14 +674,12 @@ class _Library extends ConsumerWidget {
                     padding: const EdgeInsets.only(right: 8),
                     child: Text(
                       l.openCount(board.open),
-                      style: TextStyle(fontSize: 11, color: c.accentText),
+                      style: TextStyle(fontSize: 12, color: c.accentText),
                     ),
                   ),
-                Text(
-                  '${board.tunnels.length}',
-                  style: monoStyle(context, size: 11),
-                ),
+                count(board.tunnels.length),
               ],
+              empty: board.tunnels.isEmpty,
             ),
           ),
           entry(
@@ -659,43 +687,40 @@ class _Library extends ConsumerWidget {
             page: PageKind.identities,
             icon: Icons.badge_outlined,
             label: l.identities,
-            trailing: [
-              Text('${identities.length}', style: monoStyle(context, size: 11)),
-            ],
+            trailing: [count(identities.length)],
+            empty: identities.isEmpty,
           ),
           entry(
             key: 'library.keys',
             page: PageKind.keys,
             icon: Icons.key_outlined,
             label: l.keys,
-            trailing: [
-              Text('${keys.length}', style: monoStyle(context, size: 11)),
-            ],
+            trailing: [count(keys.length)],
+            empty: keys.isEmpty,
           ),
           entry(
             key: 'library.snippets',
             page: PageKind.snippets,
             icon: Icons.terminal,
             label: l.snippets,
-            trailing: [
-              Text('${snippets.length}', style: monoStyle(context, size: 11)),
-            ],
+            trailing: [count(snippets.length)],
+            empty: snippets.isEmpty,
           ),
           entry(
             key: 'library.workspaces',
             page: PageKind.workspaces,
             icon: Icons.dashboard_outlined,
             label: l.workspaces,
-            trailing: [
-              Text('${workspaces.length}', style: monoStyle(context, size: 11)),
-            ],
+            trailing: [count(workspaces.length)],
+            empty: workspaces.isEmpty,
           ),
           entry(
             key: 'library.knownHosts',
             page: PageKind.knownHosts,
             icon: Icons.verified_user_outlined,
             label: l.knownHosts,
-            trailing: [Text('$known', style: monoStyle(context, size: 11))],
+            trailing: [count(known)],
+            empty: known == 0,
           ),
         ],
       ),

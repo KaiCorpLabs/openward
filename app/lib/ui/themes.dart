@@ -500,7 +500,7 @@ ThemeData materialTheme(OwTheme ow) {
         labelMedium: base.textTheme.labelMedium?.copyWith(fontSize: 12),
         // Section labels: small capitals in spirit.
         labelSmall: base.textTheme.labelSmall?.copyWith(
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.6,
         ),

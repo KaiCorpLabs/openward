@@ -105,7 +105,7 @@ class _ConflictDialogState extends State<_ConflictDialog> {
     Widget header(String text) => Text(
       text.toUpperCase(),
       style: TextStyle(
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.5,
         color: c.textSubtle,
@@ -216,7 +216,7 @@ class _ConflictDialogState extends State<_ConflictDialog> {
                               Text(
                                 verdict(v).$1,
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   color: verdict(v).$2,
                                 ),
                               ),
@@ -417,7 +417,7 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
       ],
     );
     final head = TextStyle(
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: FontWeight.w600,
       letterSpacing: 0.5,
       color: c.textSubtle,

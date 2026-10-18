@@ -15,10 +15,7 @@ import '../ui/widgets.dart';
 /// What the window shows with no tab open: connect to an address at once,
 /// or the usual ways to start.
 class StartPage extends ConsumerStatefulWidget {
-  const StartPage({super.key, required this.searchFocus});
-
-  /// The sidebar's search, for "search hosts".
-  final FocusNode searchFocus;
+  const StartPage({super.key});
 
   @override
   ConsumerState<StartPage> createState() => _StartPageState();
@@ -87,20 +84,10 @@ class _StartPageState extends ConsumerState<StartPage> {
         ref.read(libraryProvider.notifier).refresh();
       }),
       action(
-        Icons.search,
-        l.searchHosts,
-        '${key}K',
-        widget.searchFocus.requestFocus,
-      ),
-      action(
         Icons.keyboard_command_key,
         l.commandPalette,
-        '${key}P',
-        () => showCommandPalette(
-          context,
-          ref,
-          focusSearch: widget.searchFocus.requestFocus,
-        ),
+        '${key}K',
+        () => showCommandPalette(context, ref),
       ),
     ];
     return ColoredBox(

@@ -191,7 +191,7 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
               Expanded(
                 child: Text(
                   hint,
-                  style: TextStyle(fontSize: 11, color: c.textSubtle),
+                  style: TextStyle(fontSize: 12, color: c.textSubtle),
                 ),
               ),
             ],
@@ -465,7 +465,7 @@ class _KeyItem extends StatelessWidget {
                     Text(
                       keyDetail(l, info),
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         color: missing ? c.warn : c.textSubtle,
                       ),
                     ),

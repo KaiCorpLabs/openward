@@ -134,7 +134,7 @@ class DragGhost extends StatelessWidget {
                   subtitle!,
                   style: TextStyle(
                     fontFamily: ow.fonts.mono,
-                    fontSize: 11,
+                    fontSize: 12,
                     color: c.textMuted,
                   ),
                 ),

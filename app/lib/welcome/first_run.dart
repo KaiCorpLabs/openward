@@ -421,7 +421,7 @@ class _Stepper extends StatelessWidget {
                         : Text(
                             '${i + 1}',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 12,
                               color: i == current ? c.onPrimary : c.textMuted,
                             ),
                           ),

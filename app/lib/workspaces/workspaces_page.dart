@@ -286,11 +286,25 @@ class _WorkspacesPageState extends ConsumerState<WorkspacesPage> {
                 ),
               ),
               const SizedBox(width: 16),
-              FilledButton.icon(
-                key: const ValueKey('workspaces.save'),
-                onPressed: open.isEmpty ? null : _save,
-                icon: const Icon(Icons.bookmark_add_outlined, size: 16),
-                label: Text(l.saveOpenTabs),
+              // Greyed out, it says why.
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  FilledButton.icon(
+                    key: const ValueKey('workspaces.save'),
+                    onPressed: open.isEmpty ? null : _save,
+                    icon: const Icon(Icons.bookmark_add_outlined, size: 16),
+                    label: Text(l.saveOpenTabs),
+                  ),
+                  if (open.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        l.saveTabsNeedsTabs,
+                        style: TextStyle(fontSize: 12, color: c.textMuted),
+                      ),
+                    ),
+                ],
               ),
             ],
           ),

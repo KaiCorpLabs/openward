@@ -154,51 +154,59 @@ class _QueueStrip extends StatelessWidget {
         border: Border.all(color: c.border),
         borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
       ),
+      // The button at the end of the row: what is left of it takes the
+      // rest, so the button never floats in the middle.
       child: Row(
         children: [
-          Icon(Icons.swap_vert, size: 16, color: c.accentText),
-          const SizedBox(width: 10),
-          Text(
-            l.transfers,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(width: 10),
-          Flexible(
-            child: Text(
-              queueSummary(l, queue.jobs),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: c.textMuted),
-            ),
-          ),
-          if (progress != null) ...[
-            const SizedBox(width: 12),
-            SizedBox(
-              width: 200,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 6,
-                  backgroundColor: c.sunken,
-                  color: c.accent,
+          Expanded(
+            child: Row(
+              children: [
+                Icon(Icons.swap_vert, size: 16, color: c.accentText),
+                const SizedBox(width: 10),
+                Text(
+                  l.transfers,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-              ),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    queueSummary(l, queue.jobs),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: c.textMuted),
+                  ),
+                ),
+                if (progress != null) ...[
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 200,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(3),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 6,
+                        backgroundColor: c.sunken,
+                        color: c.accent,
+                      ),
+                    ),
+                  ),
+                ],
+                if (running != null) ...[
+                  const SizedBox(width: 12),
+                  Flexible(
+                    flex: 2,
+                    child: Text(
+                      '${running.name} · ${jobStatus(l, running)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: monoStyle(context, color: c.textMuted),
+                    ),
+                  ),
+                ],
+              ],
             ),
-          ],
-          if (running != null) ...[
-            const SizedBox(width: 12),
-            Flexible(
-              flex: 2,
-              child: Text(
-                '${running.name} · ${jobStatus(l, running)}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: monoStyle(context, color: c.textMuted),
-              ),
-            ),
-          ],
-          const Spacer(),
+          ),
+          const SizedBox(width: 12),
           _SmallButton(
             l.showQueue,
             key: const ValueKey('queue.open'),
@@ -336,7 +344,7 @@ class _JobRow extends StatelessWidget {
                   jobRoute(l, j),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: monoStyle(context, size: 11, color: c.textSubtle),
+                  style: monoStyle(context, size: 12, color: c.textSubtle),
                 ),
               ],
             ),

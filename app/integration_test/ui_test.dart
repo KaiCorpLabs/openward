@@ -52,6 +52,7 @@ import 'package:openward/src/rust/api/tunnels.dart';
 import 'package:openward/tunnels/tunnels.dart';
 import 'package:openward/ui/tokens.dart';
 import 'package:openward/welcome/whats_new.dart';
+import 'package:openward/window/sidebar_state.dart';
 import 'package:openward/workspaces/workspaces.dart';
 
 /// Where screenshots go: `--dart-define=OPENWARD_SHOTS=…` (the CI), or the
@@ -281,8 +282,8 @@ Host web-1 web-2
     );
     final container = await launch(tester);
 
-    // Group names are section labels, in capitals.
-    expect(find.text('~/.SSH/CONFIG'), findsOneWidget);
+    // Group names are as written: never in capitals, they are the user's.
+    expect(find.text('~/.ssh/config'), findsOneWidget);
     expect(find.text('web-1'), findsOneWidget);
     expect(find.text('admin@10.0.0.5'), findsOneWidget);
     expect(find.text('postgres'), findsOneWidget);
@@ -496,7 +497,7 @@ Host web-1 web-2
     await _settle(tester);
     expect(container.read(tabsProvider).tabs, isEmpty);
     // ⌘T opens a terminal, which takes the focus; closing its tab with the
-    // mouse leaves nothing focused, and ⌘K still goes to the search.
+    // mouse leaves nothing focused, and ⌘K still opens the palette.
     await _shortcut(tester, LogicalKeyboardKey.keyT, letter: true);
     await tester.pump();
     final c = container.read(tabsProvider).currentSession!;
@@ -504,7 +505,118 @@ Host web-1 web-2
     container.read(tabsProvider.notifier).close(0);
     await _settle(tester);
     await _shortcut(tester, LogicalKeyboardKey.keyK, letter: true);
-    expect(FocusManager.instance.primaryFocus?.debugLabel, 'host search');
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byKey(const ValueKey('palette.query')), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await _settle(tester);
+  });
+
+  testWidgets('focus: the sidebar folds, peeks and widens; ⌘K for everything', (
+    tester,
+  ) async {
+    await app.createHost(
+      spec: const HostSpec(
+        label: 'web-1',
+        address: 'web-1.example.com',
+        settings: SettingsSpec(user: 'deploy'),
+      ),
+    );
+    final container = await launch(tester);
+    final tabs = container.read(tabsProvider.notifier);
+    Finder field(String key) => find.byKey(ValueKey(key));
+    Finder keyed(String prefix) => find.byWidgetPredicate(
+      (w) =>
+          w.key is ValueKey<String> &&
+          (w.key! as ValueKey<String>).value.startsWith(prefix),
+    );
+    Future<void> wait() => tester.pump(const Duration(milliseconds: 300));
+    tabs.openLocal();
+    final c = container.read(tabsProvider).currentSession!;
+    await _until(tester, () => c.phase == Phase.running, 'the shell');
+
+    // Folded to a rail: the open tab is there, the host list is not.
+    await tester.tap(field('sidebar.fold'));
+    await wait();
+    expect(find.byType(Sidebar), findsNothing);
+    expect(field('rail.search'), findsOneWidget);
+    expect(container.read(settingsProvider).sidebar, SidebarMode.rail);
+    await _shot(tester, '85-rail');
+
+    // «All hosts» shows the list over the window; kept open with the pin.
+    await tester.tap(field('rail.allHosts'));
+    await wait();
+    expect(field('sidebar.peek'), findsOneWidget);
+    expect(find.text('web-1'), findsOneWidget);
+    await _shot(tester, '86-peek');
+    await tester.tap(field('sidebar.pin'));
+    await wait();
+    expect(field('sidebar.peek'), findsNothing);
+    expect(find.byType(Sidebar), findsOneWidget);
+    expect(container.read(settingsProvider).sidebar, SidebarMode.open);
+
+    // Hidden: the tab bar has a button for it, and ⌘B brings it back.
+    container.read(sidebarProvider.notifier).chose(SidebarMode.hidden);
+    await wait();
+    expect(find.byType(Sidebar), findsNothing);
+    expect(field('tabs.showSidebar'), findsOneWidget);
+    await _shot(tester, '87-hidden');
+    if (isApple) {
+      await _shortcut(tester, LogicalKeyboardKey.keyB);
+    } else {
+      await tester.tap(field('tabs.showSidebar'));
+    }
+    await wait();
+    expect(find.byType(Sidebar), findsOneWidget);
+
+    // Folding by itself with a terminal in front; open on a page.
+    container
+        .read(settingsProvider.notifier)
+        .update((s) => s.copyWith(sidebarOnSession: SidebarOnSession.rail));
+    tabs.openPage(PageKind.settings);
+    await wait();
+    expect(find.byType(Sidebar), findsOneWidget);
+    await tester.ensureVisible(field('settings.terminalPadding'));
+    await wait();
+    await _shot(tester, '88-settings-window');
+    tabs.select(0);
+    await wait();
+    expect(find.byType(Sidebar), findsNothing);
+    expect(field('rail.search'), findsOneWidget);
+
+    // A wider sidebar, from its edge (here, its notifier), is kept.
+    tabs.openPage(PageKind.settings);
+    await wait();
+    container.read(sidebarProvider.notifier)
+      ..drag(340)
+      ..endDrag();
+    await wait();
+    expect(container.read(settingsProvider).sidebarWidth, 340);
+    expect(tester.getSize(find.byType(Sidebar)).width, 340);
+
+    // ⌘K: the open tabs first, with nothing typed.
+    await _shortcut(tester, LogicalKeyboardKey.keyK, letter: true);
+    await wait();
+    expect(field('palette.query'), findsOneWidget);
+    expect(keyed('palette.tab.'), findsNWidgets(2));
+    await _shot(tester, '89-palette-tabs');
+    // `>`: only the actions (here on a page: no terminal actions).
+    await tester.enterText(field('palette.query'), '>ajus');
+    await wait();
+    expect(field('palette.action.Ajustes'), findsOneWidget);
+    expect(keyed('palette.tab.'), findsNothing);
+    // A tab by its name.
+    await tester.enterText(field('palette.query'), 'ajus');
+    await wait();
+    expect(field('palette.tab.Ajustes'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await wait();
+    expect(container.read(tabsProvider).current, isA<PageTab>());
+
+    while (container.read(tabsProvider).tabs.isNotEmpty) {
+      tabs.close(0);
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await _settle(tester);
   });
 
   testWidgets('import from Termius: read it, pick, save a key, and again', (
@@ -751,7 +863,7 @@ Host web-1 web-2
     await tester.enterText(field('settings.user'), 'deploy');
     await tester.tap(find.text('Guardar'));
     await _settle(tester);
-    expect(find.text('PROD'), findsOneWidget);
+    expect(find.text('prod'), findsOneWidget);
 
     await tester.tap(find.text('Nuevo host'));
     await _settle(tester);
@@ -892,6 +1004,30 @@ Host web-1 web-2
     await _shot(tester, '7-connection-info');
     await tester.tap(find.text('Cerrar'));
     await tester.pump(const Duration(milliseconds: 400));
+
+    // The latency, once the first check answers: in the status bar, and
+    // over it the chart, the route and the algorithms.
+    await _until(
+      tester,
+      () => c.rttMs != null,
+      'the first check',
+      within: const Duration(seconds: 25),
+    );
+    await tester.pump();
+    final latency = find.byKey(const ValueKey('status.latency'));
+    expect(latency, findsOneWidget);
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: tester.getCenter(latency));
+    // The wait before a tooltip, then its fade.
+    await tester.pump(const Duration(milliseconds: 400));
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(find.text('Latencia con target1'), findsOneWidget);
+    await _shot(tester, '90-latency');
+    await mouse.moveTo(Offset.zero);
+    await mouse.removePointer();
+    await tester.pump(const Duration(milliseconds: 300));
 
     // Drop the connection on the bastion: it comes back by itself.
     c.session.text(
@@ -1937,7 +2073,10 @@ Host db
       await _settle(tester);
 
       // The group's editor, with the choice open.
-      await tester.tap(find.text('PRODUCCIÓN'), buttons: kSecondaryButton);
+      await tester.tap(
+        find.text('Producción').first,
+        buttons: kSecondaryButton,
+      );
       await _settle(tester);
       await tester.tap(find.text('Editar grupo…'));
       await _settle(tester);

@@ -135,7 +135,7 @@ class _SnippetEditorState extends ConsumerState<_SnippetEditor> {
               Expanded(
                 child: Text(
                   hint,
-                  style: TextStyle(fontSize: 11, color: c.textSubtle),
+                  style: TextStyle(fontSize: 12, color: c.textSubtle),
                 ),
               ),
             ],
@@ -234,7 +234,7 @@ class _SnippetEditorState extends ConsumerState<_SnippetEditor> {
           children: [
             Text(
               l.filledInEachPane,
-              style: TextStyle(fontSize: 11, color: c.textSubtle),
+              style: TextStyle(fontSize: 12, color: c.textSubtle),
             ),
             for (final b in const ['host', 'address', 'user', 'port'])
               Pill(b, tone: PillTone.neutral),

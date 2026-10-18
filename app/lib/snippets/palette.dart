@@ -90,7 +90,7 @@ class _PaletteState extends ConsumerState<_Palette> {
     final c = ow.colors;
     final l = context.l10n;
     final shown = _shown();
-    final mono = monoStyle(context, size: 11);
+    final mono = monoStyle(context, size: 12);
     Widget hint(String keys, String text) => Padding(
       padding: const EdgeInsets.only(right: 14),
       child: Text.rich(
@@ -100,7 +100,7 @@ class _PaletteState extends ConsumerState<_Palette> {
             TextSpan(text: ' $text'),
           ],
         ),
-        style: TextStyle(fontSize: 11, color: c.textSubtle),
+        style: TextStyle(fontSize: 12, color: c.textSubtle),
       ),
     );
     final alt = isApple ? '⌥↩' : 'Alt+↩';
@@ -140,7 +140,7 @@ class _PaletteState extends ConsumerState<_Palette> {
                         color: c.accentText,
                       ),
                       suffixText: l.inWhere(widget.where),
-                      suffixStyle: TextStyle(fontSize: 11, color: c.textSubtle),
+                      suffixStyle: TextStyle(fontSize: 12, color: c.textSubtle),
                     ),
                   ),
                 ),
@@ -232,7 +232,7 @@ class _PaletteState extends ConsumerState<_Palette> {
                       first,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: monoStyle(context, size: 11, color: c.textSubtle),
+                      style: monoStyle(context, size: 12, color: c.textSubtle),
                     ),
                   ],
                 ),

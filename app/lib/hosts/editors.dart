@@ -550,7 +550,7 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
           Text(
             sub,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 11, color: warn ? c.warn : c.textSubtle),
+            style: TextStyle(fontSize: 12, color: warn ? c.warn : c.textSubtle),
           ),
       ],
     );
@@ -995,7 +995,7 @@ class _SettingRow extends StatelessWidget {
                         child: Text(
                           note,
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 12,
                             color: isSet ? c.textMuted : c.textSubtle,
                           ),
                         ),
@@ -1003,13 +1003,13 @@ class _SettingRow extends StatelessWidget {
                       if (noteAction case (final text, final onTap)) ...[
                         Text(
                           ' · ',
-                          style: TextStyle(fontSize: 11, color: c.textSubtle),
+                          style: TextStyle(fontSize: 12, color: c.textSubtle),
                         ),
                         InkWell(
                           onTap: onTap,
                           child: Text(
                             text,
-                            style: TextStyle(fontSize: 11, color: c.accentText),
+                            style: TextStyle(fontSize: 12, color: c.accentText),
                           ),
                         ),
                       ],

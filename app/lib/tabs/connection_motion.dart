@@ -159,7 +159,7 @@ class _RouteGraphicState extends State<RouteGraphic>
                 n.sub!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: monoStyle(context, size: 10, color: c.textSubtle),
+                style: monoStyle(context, size: 12, color: c.textSubtle),
               ),
           ],
         ),

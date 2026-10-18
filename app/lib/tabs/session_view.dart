@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +20,7 @@ import '../ui/widgets.dart';
 import 'connection_motion.dart';
 import 'connection_panels.dart';
 import 'find_bar.dart';
+import 'latency.dart';
 import 'messages.dart';
 import 'drag.dart';
 import 'prompt_card.dart';
@@ -290,7 +293,7 @@ class _PaneHeader extends ConsumerWidget {
         children: [
           Expanded(child: Text(text)),
           const SizedBox(width: 16),
-          Text(keys, style: monoStyle(context, size: 11)),
+          Text(keys, style: monoStyle(context, size: 12)),
         ],
       ),
     );
@@ -355,7 +358,7 @@ class _PaneHeader extends ConsumerWidget {
                 Text(
                   l.receives,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     color: receives ? c.warn : c.textMuted,
                   ),
                 ),
@@ -694,12 +697,20 @@ class PaneContent extends ConsumerWidget {
               ),
             if (card != null)
               Positioned.fill(
-                child: ColoredBox(
-                  color: ow.colors.scrim,
-                  child: Center(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: card,
+                // A quick connection (a few ms on a local network) never
+                // shows its card: only past 400 ms.
+                child: _Delayed(
+                  key: ObjectKey((c, card.runtimeType)),
+                  delay: card is ConnectingCard
+                      ? const Duration(milliseconds: 400)
+                      : Duration.zero,
+                  child: ColoredBox(
+                    color: ow.colors.scrim,
+                    child: Center(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(16),
+                        child: card,
+                      ),
                     ),
                   ),
                 ),
@@ -755,6 +766,8 @@ class _StatusBar extends ConsumerWidget {
     final small = TextStyle(fontSize: 12, color: color);
     final Widget line;
     if (k != null) {
+      // The algorithms and the route are in the latency's card and in the
+      // connection's details: here, how it is doing.
       final via = viaText(l, s);
       line = Row(
         children: [
@@ -774,20 +787,20 @@ class _StatusBar extends ConsumerWidget {
           ),
           if (pq) ...[const SizedBox(width: 8), Pill(l.postQuantum)],
           if (s.persistent case final p?) tmuxPill(context, p),
-          const SizedBox(width: 10),
-          Flexible(
-            child: Text(
-              [
-                k.kex,
-                k.cipher,
-                ?via,
-                if (s.rttMs case final rtt?) '$rtt ms',
-              ].join(' · '),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: monoStyle(context, size: 11),
+          const SizedBox(width: 6),
+          LatencyChip(controller: s),
+          if (via != null)
+            Flexible(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Text(
+                  via,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: c.textMuted),
+                ),
+              ),
             ),
-          ),
         ],
       );
     } else {
@@ -841,14 +854,12 @@ class _StatusBar extends ConsumerWidget {
                 ),
               ),
             ),
+          // Connected, the line opens the connection's details.
           Expanded(
             child: k != null
-                ? Tooltip(
-                    message: l.connectionDetails,
-                    child: InkWell(
-                      onTap: () => showConnectionInfo(context, s),
-                      child: line,
-                    ),
+                ? InkWell(
+                    onTap: () => showConnectionInfo(context, s),
+                    child: line,
                   )
                 : line,
           ),
@@ -862,18 +873,20 @@ class _StatusBar extends ConsumerWidget {
           if (s.phase == Phase.connected || s.phase == Phase.running)
             TextButton.icon(
               key: const ValueKey('status.snippets'),
+              style: TextButton.styleFrom(foregroundColor: c.textMuted),
               onPressed: () => showSnippetPalette(context),
               icon: const Icon(Icons.terminal, size: 14),
-              label: Text('${l.snippets} ${isApple ? '⌘⇧S' : 'Ctrl+Shift+S'}'),
+              label: _Keyed(l.snippets, isApple ? '⌘⇧S' : 'Ctrl+Shift+S'),
             ),
           if (k != null)
             TextButton.icon(
               key: const ValueKey('status.sftp'),
+              style: TextButton.styleFrom(foregroundColor: c.textMuted),
               onPressed: () => ref
                   .read(tabsProvider.notifier)
                   .openSftp(hostId: s.hostId, target: s.target, label: s.label),
               icon: const Icon(Icons.folder_outlined, size: 14),
-              label: Text('${l.openSftp} ${isApple ? '⌘⇧O' : 'Ctrl+Shift+O'}'),
+              label: _Keyed(l.openSftp, isApple ? '⌘⇧O' : 'Ctrl+Shift+O'),
             ),
           if (s.phase == Phase.closed)
             TextButton.icon(
@@ -885,4 +898,64 @@ class _StatusBar extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// An action's name and its shortcut, the shortcut quieter.
+class _Keyed extends StatelessWidget {
+  const _Keyed(this.text, this.keys);
+
+  final String text;
+  final String keys;
+
+  @override
+  Widget build(BuildContext context) => Text.rich(
+    TextSpan(
+      children: [
+        TextSpan(text: '$text '),
+        TextSpan(
+          text: keys,
+          style: monoStyle(
+            context,
+            size: 12,
+            color: context.ow.colors.textSubtle,
+          ),
+        ),
+      ],
+    ),
+    style: const TextStyle(fontSize: 12),
+  );
+}
+
+/// Shows [child] once [delay] has passed since it was first built.
+class _Delayed extends StatefulWidget {
+  const _Delayed({super.key, required this.delay, required this.child});
+
+  final Duration delay;
+  final Widget child;
+
+  @override
+  State<_Delayed> createState() => _DelayedState();
+}
+
+class _DelayedState extends State<_Delayed> {
+  Timer? _timer;
+  late bool _shown = widget.delay == Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_shown) {
+      _timer = Timer(widget.delay, () => setState(() => _shown = true));
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      _shown ? widget.child : const SizedBox.shrink();
 }

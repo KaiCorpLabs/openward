@@ -159,32 +159,35 @@ class _TunnelsPageState extends ConsumerState<TunnelsPage> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
             children: [
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                alignment: WrapAlignment.spaceBetween,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 620),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Semantics(
-                          header: true,
-                          child: Text(
-                            l.tunnels,
-                            style: theme.textTheme.titleLarge,
-                          ),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 620),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Semantics(
+                              header: true,
+                              child: Text(
+                                l.tunnels,
+                                style: theme.textTheme.titleLarge,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              l.tunnelsIntro,
+                              style: TextStyle(color: c.textMuted),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          l.tunnelsIntro,
-                          style: TextStyle(color: c.textMuted),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 16),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -301,7 +304,7 @@ class _TunnelsPageState extends ConsumerState<TunnelsPage> {
     final c = ow.colors;
     final l = context.l10n;
     final head = TextStyle(
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: FontWeight.w600,
       letterSpacing: 0.6,
       color: c.textSubtle,
@@ -357,7 +360,7 @@ class _TunnelsPageState extends ConsumerState<TunnelsPage> {
         key: ValueKey('tunnel.close.${t.spec.label}'),
         style: small,
         onPressed: () => _board.close(t.id),
-        child: Text(l.closeAction),
+        child: Text(l.stopAction),
       ),
       TunnelStateKind.opening => const SizedBox.square(
         dimension: 16,
@@ -397,7 +400,7 @@ class _TunnelsPageState extends ConsumerState<TunnelsPage> {
                     if (t.imported)
                       Text(
                         l.fromSshConfig,
-                        style: TextStyle(fontSize: 11, color: c.textSubtle),
+                        style: TextStyle(fontSize: 12, color: c.textSubtle),
                       ),
                   ],
                 ),
@@ -643,7 +646,7 @@ class _TunnelPopover extends ConsumerWidget {
                   ),
                   subtitle: Text(
                     forwardText(t),
-                    style: monoStyle(context, size: 11),
+                    style: monoStyle(context, size: 12),
                   ),
                   trailing:
                       t.state == TunnelStateKind.open &&

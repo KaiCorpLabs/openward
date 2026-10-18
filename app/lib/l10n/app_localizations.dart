@@ -194,11 +194,41 @@ abstract class AppLocalizations {
   /// **'El del sistema'**
   String get agentSystem;
 
+  /// No description provided for @agoDays.
+  ///
+  /// In es, this message translates to:
+  /// **'hace {count} d'**
+  String agoDays(int count);
+
+  /// No description provided for @agoHours.
+  ///
+  /// In es, this message translates to:
+  /// **'hace {count} h'**
+  String agoHours(int count);
+
+  /// No description provided for @agoMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'hace {count} min'**
+  String agoMinutes(int count);
+
+  /// No description provided for @agoNow.
+  ///
+  /// In es, this message translates to:
+  /// **'ahora'**
+  String get agoNow;
+
   /// No description provided for @allCount.
   ///
   /// In es, this message translates to:
   /// **'Todas · {count}'**
   String allCount(int count);
+
+  /// No description provided for @allHosts.
+  ///
+  /// In es, this message translates to:
+  /// **'Todos los hosts'**
+  String get allHosts;
 
   /// No description provided for @alreadyImported.
   ///
@@ -608,6 +638,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, =0{Borrar el historial} =1{Borrar 1 comando} other{Borrar {count} comandos}}'**
   String clearHistory(int count);
 
+  /// No description provided for @clearRecent.
+  ///
+  /// In es, this message translates to:
+  /// **'Borrar ({count})'**
+  String clearRecent(int count);
+
   /// No description provided for @clearSelection.
   ///
   /// In es, this message translates to:
@@ -811,6 +847,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Conectar'**
   String get connect;
+
+  /// No description provided for @connectToAddress.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectar a {address}'**
+  String connectToAddress(String address);
 
   /// No description provided for @connectingEllipsis.
   ///
@@ -1454,6 +1496,12 @@ abstract class AppLocalizations {
   /// **'Filtrar en esta carpeta'**
   String get filterFolder;
 
+  /// No description provided for @filterHosts.
+  ///
+  /// In es, this message translates to:
+  /// **'Filtrar hosts'**
+  String get filterHosts;
+
   /// No description provided for @filterHostsAndGroups.
   ///
   /// In es, this message translates to:
@@ -1543,6 +1591,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Primera conexión con {label}'**
   String firstConnectionTo(String label);
+
+  /// No description provided for @foldSidebar.
+  ///
+  /// In es, this message translates to:
+  /// **'Plegar la barra lateral'**
+  String get foldSidebar;
 
   /// No description provided for @fontFromTheme.
   ///
@@ -2540,6 +2594,36 @@ abstract class AppLocalizations {
   /// **'Como el sistema'**
   String get languageSystem;
 
+  /// No description provided for @latencyChecks.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{la última comprobación} other{las últimas {count} comprobaciones}}'**
+  String latencyChecks(int count);
+
+  /// No description provided for @latencyClick.
+  ///
+  /// In es, this message translates to:
+  /// **'Un clic abre los detalles de la conexión y su huella.'**
+  String get latencyClick;
+
+  /// No description provided for @latencyHigh.
+  ///
+  /// In es, this message translates to:
+  /// **'{ms} ms: {times} veces lo habitual'**
+  String latencyHigh(int ms, int times);
+
+  /// No description provided for @latencyUsual.
+  ///
+  /// In es, this message translates to:
+  /// **'habitual {ms} ms'**
+  String latencyUsual(int ms);
+
+  /// No description provided for @latencyWith.
+  ///
+  /// In es, this message translates to:
+  /// **'Latencia con {host}'**
+  String latencyWith(String host);
+
   /// No description provided for @library.
   ///
   /// In es, this message translates to:
@@ -2936,6 +3020,18 @@ abstract class AppLocalizations {
   /// **'Conexión viva'**
   String get newsConnectionTitle;
 
+  /// No description provided for @newsFocusBody.
+  ///
+  /// In es, this message translates to:
+  /// **'La barra lateral se pliega en iconos o se oculta ({keys}), sola al abrir una sesión si quieres, y oculta se asoma al dejar el ratón en el borde. Su ancho se cambia arrastrando el borde, y el terminal tiene más margen. Todo en Ajustes › General.'**
+  String newsFocusBody(String keys);
+
+  /// No description provided for @newsFocusTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Más sitio para el terminal'**
+  String get newsFocusTitle;
+
   /// No description provided for @newsFresh.
   ///
   /// In es, this message translates to:
@@ -2978,6 +3074,18 @@ abstract class AppLocalizations {
   /// **'Claves'**
   String get newsKeysTitle;
 
+  /// No description provided for @newsLatencyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'La barra de estado dice cuánto tarda el servidor en responder, con una gráfica de las últimas comprobaciones; en ámbar si sube mucho sobre lo habitual. Al pasar el ratón, la ruta y el cifrado.'**
+  String get newsLatencyBody;
+
+  /// No description provided for @newsLatencyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'La latencia, siempre a la vista'**
+  String get newsLatencyTitle;
+
   /// No description provided for @newsPaletteBody.
   ///
   /// In es, this message translates to:
@@ -3001,6 +3109,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Paneles y broadcast'**
   String get newsPanesTitle;
+
+  /// No description provided for @newsSearchBody.
+  ///
+  /// In es, this message translates to:
+  /// **'{keys} abre la paleta con las pestañas abiertas, las conexiones recientes, los hosts, las acciones y lo que ya ejecutaste. Empieza por > para ver solo las acciones.'**
+  String newsSearchBody(String keys);
+
+  /// No description provided for @newsSearchTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Un atajo para buscarlo todo'**
+  String get newsSearchTitle;
 
   /// No description provided for @newsSftpBody.
   ///
@@ -3350,6 +3470,24 @@ abstract class AppLocalizations {
   /// **'Al enviar'**
   String get onSend;
 
+  /// No description provided for @onSessionHide.
+  ///
+  /// In es, this message translates to:
+  /// **'Oculta'**
+  String get onSessionHide;
+
+  /// No description provided for @onSessionKeep.
+  ///
+  /// In es, this message translates to:
+  /// **'Como esté'**
+  String get onSessionKeep;
+
+  /// No description provided for @onSessionRail.
+  ///
+  /// In es, this message translates to:
+  /// **'En raíl'**
+  String get onSessionRail;
+
   /// No description provided for @onThisComputer.
   ///
   /// In es, this message translates to:
@@ -3482,10 +3620,16 @@ abstract class AppLocalizations {
   /// **'quitar del historial'**
   String get paletteForget;
 
+  /// No description provided for @paletteHere.
+  ///
+  /// In es, this message translates to:
+  /// **'aquí'**
+  String get paletteHere;
+
   /// No description provided for @paletteHint.
   ///
   /// In es, this message translates to:
-  /// **'Escribe una acción, un host, un comando que ya usaste…'**
+  /// **'Busca un host, una pestaña, una acción o un comando que ya usaste…'**
   String get paletteHint;
 
   /// No description provided for @paletteHistory.
@@ -3506,11 +3650,29 @@ abstract class AppLocalizations {
   /// **'Nada coincide.'**
   String get paletteNothing;
 
+  /// No description provided for @paletteOnlyActions.
+  ///
+  /// In es, this message translates to:
+  /// **'solo acciones'**
+  String get paletteOnlyActions;
+
+  /// No description provided for @paletteRecent.
+  ///
+  /// In es, this message translates to:
+  /// **'Recientes'**
+  String get paletteRecent;
+
   /// No description provided for @paletteRun.
   ///
   /// In es, this message translates to:
   /// **'ejecutar'**
   String get paletteRun;
+
+  /// No description provided for @paletteTabs.
+  ///
+  /// In es, this message translates to:
+  /// **'Pestañas abiertas'**
+  String get paletteTabs;
 
   /// No description provided for @paletteTypeOnly.
   ///
@@ -3733,6 +3895,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Elige una identidad o «Ninguna».'**
   String get pickIdentity;
+
+  /// No description provided for @pinSidebar.
+  ///
+  /// In es, this message translates to:
+  /// **'Dejar la barra abierta'**
+  String get pinSidebar;
 
   /// No description provided for @pixels.
   ///
@@ -4117,6 +4285,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Recibe'**
   String get receives;
+
+  /// No description provided for @recentConnections.
+  ///
+  /// In es, this message translates to:
+  /// **'Conexiones recientes'**
+  String get recentConnections;
+
+  /// No description provided for @recentConnectionsHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Las conexiones que abres se guardan en este equipo (nunca en el vault) para volver a ellas desde la paleta. Los terminales locales no.'**
+  String get recentConnectionsHelp;
 
   /// No description provided for @reconnect.
   ///
@@ -4538,6 +4718,12 @@ abstract class AppLocalizations {
   /// **'Guardar las pestañas abiertas…'**
   String get saveOpenTabs;
 
+  /// No description provided for @saveTabsNeedsTabs.
+  ///
+  /// In es, this message translates to:
+  /// **'Abre alguna pestaña para poder guardarla.'**
+  String get saveTabsNeedsTabs;
+
   /// No description provided for @saveWorkspaceIntro.
   ///
   /// In es, this message translates to:
@@ -4573,6 +4759,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{lines} líneas'**
   String scrollbackLines(String lines);
+
+  /// No description provided for @search.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar'**
+  String get search;
 
   /// No description provided for @searchHosts.
   ///
@@ -4718,6 +4910,12 @@ abstract class AppLocalizations {
   /// **'Terminal'**
   String get settingsTerminal;
 
+  /// No description provided for @settingsWindow.
+  ///
+  /// In es, this message translates to:
+  /// **'Ventana'**
+  String get settingsWindow;
+
   /// No description provided for @sftpConnected.
   ///
   /// In es, this message translates to:
@@ -4789,6 +4987,72 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{count, plural, =1{Ver el que falta} other{Ver los {count} restantes}}'**
   String showRest(int count);
+
+  /// No description provided for @showSidebar.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir la barra lateral'**
+  String get showSidebar;
+
+  /// No description provided for @sidebarButton.
+  ///
+  /// In es, this message translates to:
+  /// **'con el botón de la barra'**
+  String get sidebarButton;
+
+  /// No description provided for @sidebarHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Se recuerda al cerrar OpenWard. Oculta, se asoma al dejar el ratón en el borde izquierdo de la ventana.'**
+  String get sidebarHelp;
+
+  /// No description provided for @sidebarHidden.
+  ///
+  /// In es, this message translates to:
+  /// **'Oculta'**
+  String get sidebarHidden;
+
+  /// No description provided for @sidebarOnSession.
+  ///
+  /// In es, this message translates to:
+  /// **'Con un terminal delante'**
+  String get sidebarOnSession;
+
+  /// No description provided for @sidebarOnSessionHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Con un terminal o un SFTP delante, la barra puede plegarse sola. En el inicio y en las páginas vuelve a como esté arriba.'**
+  String get sidebarOnSessionHelp;
+
+  /// No description provided for @sidebarOpen.
+  ///
+  /// In es, this message translates to:
+  /// **'Abierta'**
+  String get sidebarOpen;
+
+  /// No description provided for @sidebarRail.
+  ///
+  /// In es, this message translates to:
+  /// **'Raíl'**
+  String get sidebarRail;
+
+  /// No description provided for @sidebarSetting.
+  ///
+  /// In es, this message translates to:
+  /// **'Barra lateral'**
+  String get sidebarSetting;
+
+  /// No description provided for @sidebarWidth.
+  ///
+  /// In es, this message translates to:
+  /// **'Ancho de la barra'**
+  String get sidebarWidth;
+
+  /// No description provided for @sidebarWidthHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Arrastra el borde de la barra para cambiarlo, entre 220 y 420 px. Un doble clic en el borde lo restablece.'**
+  String get sidebarWidthHelp;
 
   /// No description provided for @sinceSeconds.
   ///
@@ -5006,6 +5270,12 @@ abstract class AppLocalizations {
   /// **'Listo'**
   String get stepReady;
 
+  /// No description provided for @stopAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Detener'**
+  String get stopAction;
+
   /// No description provided for @tabMenuHint.
   ///
   /// In es, this message translates to:
@@ -5047,6 +5317,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Arrastra aquí una pestaña o un host para abrirlo en una mitad de este panel.'**
   String get terminalMenuHint;
+
+  /// No description provided for @terminalPadding.
+  ///
+  /// In es, this message translates to:
+  /// **'Margen del terminal'**
+  String get terminalPadding;
+
+  /// No description provided for @terminalPaddingHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Espacio alrededor del texto, en cada panel.'**
+  String get terminalPaddingHelp;
 
   /// No description provided for @terminalScheme.
   ///
@@ -5252,6 +5534,12 @@ abstract class AppLocalizations {
   /// **'hoy {time}'**
   String todayAt(String time);
 
+  /// No description provided for @toggleSidebar.
+  ///
+  /// In es, this message translates to:
+  /// **'Plegar o abrir la barra lateral'**
+  String get toggleSidebar;
+
   /// No description provided for @transfers.
   ///
   /// In es, this message translates to:
@@ -5327,7 +5615,7 @@ abstract class AppLocalizations {
   /// No description provided for @tunnelClosed.
   ///
   /// In es, this message translates to:
-  /// **'Cerrado'**
+  /// **'Detenido'**
   String get tunnelClosed;
 
   /// No description provided for @tunnelDidNotOpen.

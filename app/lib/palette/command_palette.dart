@@ -1,29 +1,36 @@
-// The command palette (⌘⇧P, Ctrl+Shift+P elsewhere): everything the window
+// The command palette (⌘K, also ⌘P and ⌘⇧P; Ctrl+Shift+K or Ctrl+Shift+P
+// elsewhere): the open tabs, recent connections, everything the window
 // does, the saved hosts and workspaces, the snippets and the commands run
-// before, found by typing a few letters.
+// before, found by typing a few letters. `>` first: only the actions.
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/address.dart';
 import '../core/providers.dart';
 import '../core/settings.dart';
 import '../history/history.dart';
+import '../home/recent.dart';
 import '../hosts/editors.dart';
 import '../import/import_dialog.dart';
 import '../keys/key_dialogs.dart';
 import '../l10n/l10n.dart';
 import '../snippets/palette.dart';
 import '../snippets/snippets.dart';
+import '../src/rust/api/vault.dart' show HostView;
+import '../tabs/tab_strip.dart' show pageIcon, tabTitle;
 import '../tabs/tabs.dart';
 import '../terminal/keys.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../welcome/whats_new.dart';
+import '../window/sidebar_state.dart';
 import '../workspaces/workspaces.dart';
 import '../workspaces/workspaces_page.dart';
 
-enum _Kind { history, workspace, action, host, snippet }
+/// In the order they are listed.
+enum _Kind { tab, recent, host, snippet, history, workspace, action }
 
 /// One thing the palette can do.
 class _Entry {
@@ -36,9 +43,17 @@ class _Entry {
     this.keys,
     this.pill,
     this.history,
+    this.id,
+    this.rank = 0,
   });
 
   final _Kind kind;
+
+  /// An action's name for counting how often it runs.
+  final String? id;
+
+  /// Within the same match, lower first: how recently a host was used.
+  final int rank;
   final String title;
   final String? subtitle;
   final IconData icon;
@@ -75,39 +90,30 @@ int? matchScore(String text, String q) {
 }
 
 /// Opens the palette over the window whose `context` and `ref` are given:
-/// what it picks runs there, once the palette is gone. `focusSearch` puts
-/// the cursor in the hosts' search.
-Future<void> showCommandPalette(
-  BuildContext context,
-  WidgetRef ref, {
-  required VoidCallback focusSearch,
-}) async {
+/// what it picks runs there, once the palette is gone.
+Future<void> showCommandPalette(BuildContext context, WidgetRef ref) async {
   ref.read(snippetsProvider.notifier).refresh();
   ref.read(workspacesProvider.notifier).refresh();
   final picked = await showDialog<(_Entry, bool)>(
     context: context,
     barrierColor: Colors.transparent,
-    builder: (_) =>
-        _Palette(window: context, home: ref, focusSearch: focusSearch),
+    builder: (_) => _Palette(window: context, home: ref),
   );
   if (picked == null) {
     ref.read(tabsProvider).currentSession?.focusTerminal?.call();
     return;
   }
-  await picked.$1.run(picked.$2);
+  final (entry, alt) = picked;
+  if (entry.id case final id?) ref.read(recentProvider.notifier).used(id);
+  await entry.run(alt);
 }
 
 class _Palette extends ConsumerStatefulWidget {
-  const _Palette({
-    required this.window,
-    required this.home,
-    required this.focusSearch,
-  });
+  const _Palette({required this.window, required this.home});
 
   /// The window's context and ref: entries run after the palette closes.
   final BuildContext window;
   final WidgetRef home;
-  final VoidCallback focusSearch;
 
   @override
   ConsumerState<_Palette> createState() => _PaletteState();
@@ -138,18 +144,89 @@ class _PaletteState extends ConsumerState<_Palette> {
     final key = isApple ? '⌘' : l.ctrlShiftPrefix;
     final container = ProviderScope.containerOf(window);
     _Entry action(
+      String id,
       String title,
       IconData icon,
       VoidCallback f, {
       String? keys,
     }) => _Entry(
       kind: _Kind.action,
+      id: id,
       title: title,
       icon: icon,
       keys: keys,
       run: (_) async => f(),
     );
     final out = <_Entry>[];
+    final library = ref.read(libraryProvider);
+    final recent = ref.read(recentProvider);
+    final hosts = {for (final h in library.hosts) h.id: h};
+    String hostAddress(HostView h) =>
+        '${h.user.isEmpty ? '' : '${h.user}@'}${h.address}'
+        '${h.port == 22 ? '' : ':${h.port}'}';
+
+    // The open tabs, to jump to by name.
+    for (final (i, t) in state.tabs.indexed) {
+      final c = switch (t) {
+        SessionTab(:final panes) =>
+          panes.active.controller ?? panes.controllers.firstOrNull,
+        SftpTab(:final controller) => controller,
+        _ => null,
+      };
+      final host = c?.hostId == null ? null : hosts[c!.hostId];
+      final last = i == state.tabs.length - 1;
+      out.add(
+        _Entry(
+          kind: _Kind.tab,
+          title: tabTitle(window, t),
+          subtitle: host != null ? hostAddress(host) : c?.target?.label,
+          icon: switch (t) {
+            SessionTab() => Icons.terminal,
+            SftpTab() => Icons.folder_outlined,
+            PageTab(:final page) => pageIcon(page),
+          },
+          pill: i == state.active ? l.paletteHere : null,
+          keys: !isApple
+              ? null
+              : i < 8
+              ? '⌘${i + 1}'
+              : last
+              ? '⌘9'
+              : null,
+          run: (_) async => tabs.select(i),
+        ),
+      );
+    }
+
+    // Where it connected lately; a host deleted since is left out.
+    final now = DateTime.now();
+    final recency = <String, int>{};
+    for (final (i, r) in recent.connections.indexed) {
+      final id = r.hostId;
+      final host = id == null ? null : hosts[id];
+      final target = r.address == null ? null : QuickTarget.parse(r.address!);
+      if (host == null && target == null) continue;
+      if (id != null) recency[id] = i;
+      out.add(
+        _Entry(
+          kind: _Kind.recent,
+          title: host?.label ?? target!.label,
+          subtitle: host != null ? hostAddress(host) : null,
+          icon: Icons.schedule,
+          pill: agoText(
+            l,
+            now.difference(DateTime.fromMillisecondsSinceEpoch(r.at)),
+          ),
+          rank: i,
+          id: null,
+          run: (alt) async => host != null
+              ? (alt
+                    ? tabs.openSftp(hostId: host.id, label: host.label)
+                    : tabs.openHost(host))
+              : tabs.openAddress(target!),
+        ),
+      );
+    }
 
     if (terminal) {
       final here = historyPlace(session);
@@ -187,45 +264,63 @@ class _PaletteState extends ConsumerState<_Palette> {
     }
 
     out.addAll([
-      action(l.openLocal, Icons.terminal, tabs.openLocal, keys: '${key}T'),
-      action(l.saveNewHost, Icons.add, () async {
+      action(
+        'local',
+        l.openLocal,
+        Icons.terminal,
+        tabs.openLocal,
+        keys: '${key}T',
+      ),
+      action('newHost', l.saveNewHost, Icons.add, () async {
         if (await showHostEditor(window, home)) {
           home.read(libraryProvider.notifier).refresh();
         }
       }, keys: '${key}N'),
-      action(l.searchHosts, Icons.search, widget.focusSearch, keys: '${key}K'),
+      action(
+        'sidebar',
+        l.toggleSidebar,
+        Icons.view_sidebar_outlined,
+        home.read(sidebarProvider.notifier).toggle,
+        keys: isApple ? '⌘B' : null,
+      ),
       if (terminal) ...[
         action(
+          'splitRight',
           l.splitRight,
           Icons.vertical_split_outlined,
           () => tabs.split(Axis.horizontal),
           keys: '${key}D',
         ),
         action(
+          'splitDown',
           l.splitDown,
           Icons.horizontal_split_outlined,
           () => tabs.split(Axis.vertical),
           keys: isApple ? '⌘⇧D' : '${key}E',
         ),
         action(
+          'maximize',
           l.maximizePane,
           Icons.fullscreen,
           tabs.toggleMaximize,
           keys: isApple ? '⌘⇧↩' : '$key↩',
         ),
         action(
+          'broadcast',
           l.paletteBroadcast,
           Icons.cell_tower,
           tabs.toggleBroadcast,
           keys: isApple ? '⌘⇧B' : '${key}B',
         ),
         action(
+          'find',
           l.findInTerminal,
           Icons.manage_search,
           () => home.read(tabsProvider).currentSession?.openFind(),
           keys: isApple ? '⌘F' : '${key}F',
         ),
         action(
+          'snippets',
           l.snippets,
           Icons.terminal,
           () => showSnippetPalette(window),
@@ -233,6 +328,7 @@ class _PaletteState extends ConsumerState<_Palette> {
         ),
         if (!session.isLocal)
           action(
+            'sftp',
             l.openSftp,
             Icons.folder_outlined,
             tabs.openSftpHere,
@@ -240,22 +336,24 @@ class _PaletteState extends ConsumerState<_Palette> {
           ),
       ],
       if (captureTabs(state).isNotEmpty)
-        action(l.saveOpenTabs, Icons.bookmark_add_outlined, () {
+        action('saveTabs', l.saveOpenTabs, Icons.bookmark_add_outlined, () {
           saveWorkspaceDialog(window, home);
         }),
       if (state.current != null)
         action(
+          'closeTab',
           l.closeTab,
           Icons.close,
           tabs.closeCurrent,
           keys: isApple ? '⌘W' : '${key}W',
         ),
-      action(l.newKeyAction, Icons.key_outlined, () async {
+      action('newKey', l.newKeyAction, Icons.key_outlined, () async {
         if (await showNewKeyDialog(window) != null) {
           tabs.openPage(PageKind.keys);
         }
       }),
       action(
+        'import',
         l.importEllipsis,
         Icons.file_download_outlined,
         () => showImport(window, home),
@@ -268,29 +366,35 @@ class _PaletteState extends ConsumerState<_Palette> {
         (PageKind.tunnels, l.tunnels, Icons.swap_horiz),
         (PageKind.knownHosts, l.knownHosts, Icons.verified_user_outlined),
       ])
-        action(l.goToPage(title), icon, () => tabs.openPage(page)),
+        action(
+          'page.${page.name}',
+          l.goToPage(title),
+          icon,
+          () => tabs.openPage(page),
+        ),
       action(
+        'settings',
         l.settings,
         Icons.settings_outlined,
         () => tabs.openPage(PageKind.settings),
         keys: isApple ? '⌘,' : 'Ctrl+,',
       ),
       action(
+        'news',
         l.whatsNew,
         Icons.auto_awesome_outlined,
         () => showWhatsNew(window, home),
       ),
     ]);
 
-    for (final h in ref.read(libraryProvider).hosts) {
+    for (final h in library.hosts) {
       out.add(
         _Entry(
           kind: _Kind.host,
           title: h.label,
-          subtitle:
-              '${h.user.isEmpty ? '' : '${h.user}@'}${h.address}'
-              '${h.port == 22 ? '' : ':${h.port}'}',
+          subtitle: hostAddress(h),
           icon: Icons.dns_outlined,
+          rank: recency[h.id] ?? RecentNotifier.limit,
           run: (alt) async => alt
               ? tabs.openSftp(hostId: h.id, label: h.label)
               : tabs.openHost(h),
@@ -312,26 +416,77 @@ class _PaletteState extends ConsumerState<_Palette> {
         );
       }
     }
-    return out;
+    // The actions that run most go first; the rest keep their order.
+    final used = recent.actions;
+    final actions = [
+      for (final e in out)
+        if (e.kind == _Kind.action) e,
+    ];
+    final order = {for (final (i, e) in actions.indexed) e: i};
+    actions.sort((a, b) {
+      final n = (used[b.id] ?? 0) - (used[a.id] ?? 0);
+      return n != 0 ? n : order[a]! - order[b]!;
+    });
+    return [
+      for (final e in out)
+        if (e.kind != _Kind.action) e,
+      ...actions,
+    ];
   }
 
   /// With nothing typed, a few of each; otherwise what matches, best
-  /// first.
+  /// first. `>` first keeps only the actions.
   List<_Entry> _shown(List<_Entry> all) {
-    final q = _query.text.trim().toLowerCase();
+    var q = _query.text.trim().toLowerCase();
+    final onlyActions = q.startsWith('>');
+    if (onlyActions) {
+      q = q.substring(1).trim();
+      all = [
+        for (final e in all)
+          if (e.kind == _Kind.action) e,
+      ];
+    } else if (q.isNotEmpty) {
+      // Saved hosts come as hosts while typing; what was typed by hand
+      // stays as a recent connection.
+      all = [
+        for (final e in all)
+          if (e.kind != _Kind.recent || e.subtitle == null) e,
+      ];
+      final target = QuickTarget.parse(_query.text.trim());
+      if (target != null && RegExp(r'[@.:]').hasMatch(_query.text)) {
+        final tabs = ref.read(tabsProvider.notifier);
+        all = [
+          ...all,
+          _Entry(
+            kind: _Kind.action,
+            title: context.l10n.connectToAddress(target.label),
+            icon: Icons.terminal,
+            run: (_) async => tabs.openAddress(target),
+          ),
+        ];
+      }
+    }
     if (q.isEmpty) {
       final counts = <_Kind, int>{};
-      const most = {
+      final most = {
+        _Kind.tab: 9,
+        _Kind.recent: 5,
         _Kind.history: 5,
         _Kind.workspace: 5,
         _Kind.action: 1000,
         _Kind.host: 0,
         _Kind.snippet: 0,
       };
-      return [
+      final kept = [
         for (final e in all)
           if ((counts[e.kind] = (counts[e.kind] ?? 0) + 1) <= most[e.kind]!) e,
       ];
+      final order = {for (final (i, e) in kept.indexed) e: i};
+      return kept..sort(
+        (a, b) => a.kind.index != b.kind.index
+            ? a.kind.index - b.kind.index
+            : order[a]! - order[b]!,
+      );
     }
     final scored = <(_Entry, int)>[];
     for (final e in all) {
@@ -348,7 +503,9 @@ class _PaletteState extends ConsumerState<_Palette> {
       final kind = a.$1.kind.index - b.$1.kind.index;
       if (kind != 0) return kind;
       final score = a.$2 - b.$2;
-      return score != 0 ? score : order[a.$1]! - order[b.$1]!;
+      if (score != 0) return score;
+      final rank = a.$1.rank - b.$1.rank;
+      return rank != 0 ? rank : order[a.$1]! - order[b.$1]!;
     });
     final counts = <_Kind, int>{};
     return [
@@ -417,6 +574,8 @@ class _PaletteState extends ConsumerState<_Palette> {
   }
 
   String _heading(AppLocalizations l, _Kind k) => switch (k) {
+    _Kind.tab => l.paletteTabs,
+    _Kind.recent => l.paletteRecent,
     _Kind.history => l.paletteHistory,
     _Kind.workspace => l.workspaces,
     _Kind.action => l.paletteActions,
@@ -431,7 +590,7 @@ class _PaletteState extends ConsumerState<_Palette> {
     final l = context.l10n;
     final shown = _shown(_all());
     final selected = shown.isEmpty ? -1 : _selected.clamp(0, shown.length - 1);
-    final mono = monoStyle(context, size: 11);
+    final mono = monoStyle(context, size: 12);
     Widget hint(String keys, String text) => Padding(
       padding: const EdgeInsets.only(right: 14),
       child: Text.rich(
@@ -441,7 +600,7 @@ class _PaletteState extends ConsumerState<_Palette> {
             TextSpan(text: ' $text'),
           ],
         ),
-        style: TextStyle(fontSize: 11, color: c.textSubtle),
+        style: TextStyle(fontSize: 12, color: c.textSubtle),
       ),
     );
     final rows = <Widget>[];
@@ -524,14 +683,21 @@ class _PaletteState extends ConsumerState<_Palette> {
                       hint('↑↓', l.paletteChoose),
                       hint('↩', switch (current?.kind) {
                         _Kind.history || _Kind.snippet => l.paletteRun,
-                        _Kind.host || _Kind.workspace => l.open.toLowerCase(),
+                        _Kind.host ||
+                        _Kind.recent ||
+                        _Kind.workspace ||
+                        _Kind.tab => l.open.toLowerCase(),
                         _ => l.paletteDo,
                       }),
                       if (current?.kind == _Kind.history ||
                           current?.kind == _Kind.snippet)
                         hint(isApple ? '⌥↩' : 'Alt+↩', l.paletteTypeOnly),
-                      if (current?.kind == _Kind.host)
+                      if (current?.kind == _Kind.host ||
+                          (current?.kind == _Kind.recent &&
+                              current?.subtitle != null))
                         hint(isApple ? '⌥↩' : 'Alt+↩', l.openSftp),
+                      if (!_query.text.trimLeft().startsWith('>'))
+                        hint('>', l.paletteOnlyActions),
                       if (current?.kind == _Kind.history)
                         hint(isApple ? '⌘⌫' : 'Ctrl+Shift+⌫', l.paletteForget),
                       hint('Esc', l.close.toLowerCase()),
@@ -587,7 +753,7 @@ class _PaletteState extends ConsumerState<_Palette> {
                             overflow: TextOverflow.ellipsis,
                             style: monoStyle(
                               context,
-                              size: 11,
+                              size: 12,
                               color: c.textSubtle,
                             ),
                           ),
@@ -641,4 +807,13 @@ extension<T extends Object> on T? {
     final v = this;
     return v == null ? null : f(v);
   }
+}
+
+/// How long ago, in a few words: «ahora», «hace 5 min», «hace 3 h»,
+/// «hace 2 d».
+String agoText(AppLocalizations l, Duration d) {
+  if (d.inMinutes < 1) return l.agoNow;
+  if (d.inHours < 1) return l.agoMinutes(d.inMinutes);
+  if (d.inDays < 1) return l.agoHours(d.inHours);
+  return l.agoDays(d.inDays);
 }

@@ -31,6 +31,7 @@ import 'package:openward/src/rust/frb_generated.dart';
 import 'package:openward/tabs/tabs.dart';
 import 'package:openward/terminal/controller.dart';
 import 'package:openward/welcome/whats_new.dart';
+import 'package:openward/window/sidebar_state.dart';
 
 final _frame = GlobalKey();
 
@@ -214,8 +215,19 @@ void main() {
         tabs.closeCurrent();
       }
       await tester.pump(const Duration(milliseconds: 200));
+
+      // The sidebar folded to a rail, with the terminal's tab in it.
+      final sidebar = container.read(sidebarProvider.notifier);
+      sidebar.chose(SidebarMode.rail);
+      await tester.pump(const Duration(milliseconds: 300));
+      await shot('$name-6-rail');
+      sidebar.chose(SidebarMode.open);
+      await tester.pump(const Duration(milliseconds: 300));
     }
-    expect(out.listSync().length, _themes.length * 5);
+    expect(
+      out.listSync().where((f) => f.path.endsWith('.png')).length,
+      greaterThanOrEqualTo(_themes.length * 6),
+    );
     binding.reportData = {'screenshots': reported};
     tabs.closeCurrent();
     await tester.pump(const Duration(milliseconds: 300));

@@ -564,7 +564,7 @@ class _InstallKeyState extends ConsumerState<_InstallKey> {
                                 '${h.address}${h.port == 22 ? '' : ':${h.port}'}',
                                 style: monoStyle(
                                   context,
-                                  size: 11,
+                                  size: 12,
                                   color: c.textSubtle,
                                 ),
                               ),

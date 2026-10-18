@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/address.dart';
 import '../core/providers.dart';
 import '../core/settings.dart';
+import '../home/recent.dart';
 import '../sftp/sftp_controller.dart';
 import '../sftp/transfers.dart';
 import '../src/rust/api/vault.dart';
@@ -100,8 +101,23 @@ class TabsNotifier extends Notifier<TabsState> {
   TerminalController _start(TerminalController c) {
     _live.add(c);
     c.addListener(() => _closeOnExit(c));
+    c.addListener(() => _keepRecent(c));
     c.start();
     return c;
+  }
+
+  /// Sessions that are up now, as the recent list knows them.
+  final Set<ConnectionController> _up = {};
+
+  /// A session that comes up goes first in the recent connections; when
+  /// it closes, its entry says when.
+  void _keepRecent(ConnectionController c) {
+    final up = c.phase == Phase.connected || c.phase == Phase.running;
+    if (up && _up.add(c)) {
+      ref.read(recentProvider.notifier).connected(c);
+    } else if (c.phase == Phase.closed && _up.remove(c)) {
+      ref.read(recentProvider.notifier).ended(c);
+    }
   }
 
   /// When a shell ends by itself, its pane (or tab) closes, as the user's
@@ -174,6 +190,7 @@ class TabsNotifier extends Notifier<TabsState> {
 
   void _dispose(ConnectionController c) {
     _live.remove(c);
+    if (_up.remove(c)) ref.read(recentProvider.notifier).ended(c);
     // After the frame that unmounts its pane, which may still poll it.
     SchedulerBinding.instance.addPostFrameCallback((_) => c.dispose());
   }

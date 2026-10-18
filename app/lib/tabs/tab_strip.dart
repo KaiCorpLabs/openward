@@ -13,6 +13,7 @@ import '../ui/widgets.dart';
 import '../window/chrome.dart';
 import '../workspaces/workspaces_page.dart';
 import 'drag.dart';
+import 'messages.dart' show viaText;
 import 'tabs.dart';
 
 /// The row of tabs at the top of the window: click to bring to front, drag
@@ -21,7 +22,11 @@ import 'tabs.dart';
 /// dropped on it get a tab of their own. Its empty part moves the window,
 /// as a title bar does.
 class TabStrip extends ConsumerWidget {
-  const TabStrip({super.key});
+  const TabStrip({super.key, this.leading});
+
+  /// Before the tabs: room for the window buttons and a button that opens
+  /// the sidebar, when the sidebar does not hold them.
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -54,6 +59,7 @@ class TabStrip extends ConsumerWidget {
       child: Row(
         crossAxisAlignment: align,
         children: [
+          ?leading,
           Flexible(
             child: SizedBox(
               height: height,
@@ -326,6 +332,17 @@ class _TabRowState extends ConsumerState<_TabRow> {
   }
 }
 
+/// A page's icon, the same in its tab, the rail and the palette.
+IconData pageIcon(PageKind page) => switch (page) {
+  PageKind.settings => Icons.settings_outlined,
+  PageKind.tunnels => Icons.swap_horiz,
+  PageKind.identities => Icons.badge_outlined,
+  PageKind.keys => Icons.key_outlined,
+  PageKind.snippets => Icons.terminal,
+  PageKind.workspaces => Icons.dashboard_outlined,
+  PageKind.knownHosts => Icons.verified_user_outlined,
+};
+
 /// A tab's name, as its label says.
 String tabTitle(BuildContext context, OpenTab tab) {
   final l = context.l10n;
@@ -360,7 +377,7 @@ PopupMenuItem<VoidCallback> menuItem(
     children: [
       Expanded(child: Text(text)),
       const SizedBox(width: 16),
-      Text(keys, style: monoStyle(context, size: 11)),
+      Text(keys, style: monoStyle(context, size: 12)),
     ],
   ),
 );
@@ -384,7 +401,7 @@ PopupMenuItem<VoidCallback> menuHint(BuildContext context, String text) {
           Expanded(
             child: Text(
               text,
-              style: TextStyle(fontSize: 11, color: c.textSubtle, height: 1.35),
+              style: TextStyle(fontSize: 12, color: c.textSubtle, height: 1.35),
             ),
           ),
         ],
@@ -423,6 +440,7 @@ class _Tab extends StatelessWidget {
           final c = context.ow.colors;
           return _frame(
             context,
+            hint: shown == null ? null : _hint(context, shown),
             leading: panes.broadcast
                 ? Icon(Icons.podcasts, size: 14, color: c.warn)
                 : shown == null
@@ -466,24 +484,38 @@ class _Tab extends StatelessWidget {
       ),
       PageTab(:final page) => _frame(
         context,
-        leading: Icon(switch (page) {
-          PageKind.settings => Icons.settings_outlined,
-          PageKind.tunnels => Icons.swap_horiz,
-          PageKind.identities => Icons.badge_outlined,
-          PageKind.keys => Icons.key_outlined,
-          PageKind.snippets => Icons.terminal,
-          PageKind.workspaces => Icons.dashboard_outlined,
-          PageKind.knownHosts => Icons.verified_user_outlined,
-        }, size: 14),
+        leading: Icon(pageIcon(page), size: 14),
         title: tabTitle(context, tab),
       ),
     };
+  }
+
+  /// What the tab's hover says about a session: where it goes and how
+  /// fast it answers.
+  static String? _hint(BuildContext context, TerminalController c) {
+    final l = context.l10n;
+    final k = c.connected;
+    if (k == null || c.phase != Phase.connected) return null;
+    final rtt = c.rttMs;
+    final usual = c.usualRttMs;
+    return [
+      c.displayTitle,
+      [
+        k.port == 22 ? k.host : '${k.host}:${k.port}',
+        ?viaText(l, c),
+      ].join(' · '),
+      if (rtt != null)
+        c.rttHigh && usual != null && usual > 0
+            ? l.latencyHigh(rtt, (rtt / usual).round())
+            : l.milliseconds(rtt),
+    ].join('\n');
   }
 
   Widget _frame(
     BuildContext context, {
     required Widget leading,
     required String title,
+    String? hint,
     bool waiting = false,
     bool bell = false,
     VoidCallback? onRename,
@@ -528,7 +560,7 @@ class _Tab extends StatelessWidget {
             : null,
       ),
     };
-    return Semantics(
+    final tab = Semantics(
       selected: active,
       button: true,
       label: title,
@@ -608,6 +640,12 @@ class _Tab extends StatelessWidget {
           ),
         ),
       ),
+    );
+    if (hint == null) return tab;
+    return Tooltip(
+      message: hint,
+      waitDuration: const Duration(milliseconds: 700),
+      child: tab,
     );
   }
 }

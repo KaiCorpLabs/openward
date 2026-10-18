@@ -58,32 +58,35 @@ class _SnippetsPageState extends ConsumerState<SnippetsPage> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
         children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            alignment: WrapAlignment.spaceBetween,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 680),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Semantics(
-                      header: true,
-                      child: Text(
-                        l.snippets,
-                        style: theme.textTheme.titleLarge,
-                      ),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 680),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            l.snippets,
+                            style: theme.textTheme.titleLarge,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l.snippetsIntro('{{${l.bracesWord}}}'),
+                          style: TextStyle(color: c.textMuted),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l.snippetsIntro('{{${l.bracesWord}}}'),
-                      style: TextStyle(color: c.textMuted),
-                    ),
-                  ],
+                  ),
                 ),
               ),
+              const SizedBox(width: 16),
               FilledButton.icon(
                 key: const ValueKey('snippets.new'),
                 onPressed: () => showSnippetEditor(context, ref),
@@ -185,7 +188,7 @@ class _SnippetsPageState extends ConsumerState<SnippetsPage> {
     final c = ow.colors;
     final l = context.l10n;
     final head = TextStyle(
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: FontWeight.w600,
       letterSpacing: 0.6,
       color: c.textSubtle,
@@ -246,7 +249,7 @@ class _SnippetsPageState extends ConsumerState<SnippetsPage> {
                 if (lines.length > 1)
                   Text(
                     l.linesCount(lines.length),
-                    style: TextStyle(fontSize: 11, color: c.textSubtle),
+                    style: TextStyle(fontSize: 12, color: c.textSubtle),
                   ),
               ],
             ),

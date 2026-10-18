@@ -12,8 +12,10 @@ import '../ui/widgets.dart';
 /// new one shows them again to who saw an earlier one: 0.2.0-beta.2 added
 /// the importers, 0.2.0-beta.3 dragging tabs and panes, 0.3.0-beta.1 the
 /// palette and history, workspaces, keys and CSV files, 0.3.0-beta.2 the
-/// connection that notices a server gone and the persistent session.
-const newsVersion = '0.3.0-beta.2';
+/// connection that notices a server gone and the persistent session,
+/// 0.3.0-beta.3 the sidebar that folds, ⌘K for everything and the latency
+/// in sight.
+const newsVersion = '0.3.0-beta.3';
 
 /// Who updated and has not seen this release's news yet.
 bool shouldShowNews(Settings s) => s.welcomed && s.seenNews != newsVersion;
@@ -37,11 +39,29 @@ class _WhatsNew extends StatelessWidget {
     String keys(String apple, String other) => isApple ? apple : other;
     // Marked new: what came after who saw the news before.
     final items = [
-      (Icons.wifi_tethering, l.newsConnectionTitle, l.newsConnectionBody, true),
+      (
+        Icons.view_sidebar_outlined,
+        l.newsFocusTitle,
+        l.newsFocusBody(isApple ? '⌘B' : l.sidebarButton),
+        true,
+      ),
       (
         Icons.keyboard_command_key,
+        l.newsSearchTitle,
+        l.newsSearchBody(keys('⌘K', 'Ctrl+Shift+K')),
+        true,
+      ),
+      (Icons.network_ping, l.newsLatencyTitle, l.newsLatencyBody, true),
+      (
+        Icons.wifi_tethering,
+        l.newsConnectionTitle,
+        l.newsConnectionBody,
+        false,
+      ),
+      (
+        Icons.history,
         l.newsPaletteTitle,
-        l.newsPaletteBody(keys('⌘⇧P', 'Ctrl+Shift+P')),
+        l.newsPaletteBody(keys('⌘K', 'Ctrl+Shift+K')),
         false,
       ),
       (

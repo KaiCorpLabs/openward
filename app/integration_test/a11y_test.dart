@@ -1,6 +1,6 @@
 // Every screen and editor against Flutter's accessibility guidelines:
 // whatever can be pressed has a name, and is at least 24×24 (WCAG 2.2,
-// target size minimum).
+// target size minimum); and no text on screen is under 12 px.
 //
 //   fvm flutter test integration_test/a11y_test.dart -d macos
 
@@ -35,6 +35,7 @@ import 'package:openward/src/rust/frb_generated.dart';
 import 'package:openward/tabs/tabs.dart';
 import 'package:openward/terminal/controller.dart';
 import 'package:openward/terminal/keys.dart';
+import 'package:openward/window/sidebar_state.dart';
 
 final _frame = GlobalKey();
 
@@ -74,6 +75,46 @@ const _targetSize = MinimumTapTargetGuideline(
   size: Size(24, 24),
   link: 'https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum',
 );
+
+/// No text on screen under 12 px (before the user's own text size).
+class _TextSize extends AccessibilityGuideline {
+  const _TextSize();
+
+  static const minimum = 12.0;
+
+  @override
+  String get description => 'Text is at least $minimum px';
+
+  @override
+  FutureOr<Evaluation> evaluate(WidgetTester tester) {
+    final small = <String>{};
+    void visit(InlineSpan span, double size) {
+      final here = span.style?.fontSize ?? size;
+      if (span is TextSpan) {
+        // Without the invisible characters some widgets lay out with, nor
+        // icons, which are glyphs of a font in Unicode's private use area.
+        final text = (span.text ?? '')
+            .replaceAll(RegExp('[\u200b-\u200f\u2060\ufeff\ue000-\uf8ff]'), '')
+            .trim();
+        if (text.isNotEmpty && here < minimum) {
+          small.add(
+            '${here.toStringAsFixed(1)} px: «${text.length > 40 ? '${text.substring(0, 40)}…' : text}»',
+          );
+        }
+        for (final child in span.children ?? const <InlineSpan>[]) {
+          visit(child, here);
+        }
+      }
+    }
+
+    for (final w in tester.widgetList<RichText>(find.byType(RichText))) {
+      visit(w.text, 14);
+    }
+    return small.isEmpty
+        ? const Evaluation.pass()
+        : Evaluation.fail(small.join('\n'));
+  }
+}
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -171,7 +212,11 @@ void main() {
     final problems = <String>[];
     Future<void> audit(String where) async {
       await tester.pump(const Duration(milliseconds: 400));
-      for (final g in [labeledTapTargetGuideline, _targetSize]) {
+      for (final g in [
+        labeledTapTargetGuideline,
+        _targetSize,
+        const _TextSize(),
+      ]) {
         final e = await g.evaluate(tester);
         if (!e.passed) problems.add('== $where\n${e.reason}');
       }
@@ -293,6 +338,14 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
     }
     await audit('terminal');
+    // The sidebar as a rail, and shown over the window.
+    final sidebarState = container.read(sidebarProvider.notifier);
+    sidebarState.chose(SidebarMode.rail);
+    await audit('rail');
+    sidebarState.setPeek(true);
+    await audit('sidebar over the window');
+    sidebarState.setPeek(false);
+    sidebarState.chose(SidebarMode.open);
     for (final k in [
       isApple ? LogicalKeyboardKey.metaLeft : LogicalKeyboardKey.controlLeft,
       LogicalKeyboardKey.shiftLeft,

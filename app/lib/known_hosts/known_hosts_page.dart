@@ -268,7 +268,7 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
     final c = ow.colors;
     final l = context.l10n;
     final head = TextStyle(
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: FontWeight.w600,
       letterSpacing: 0.6,
       color: c.textSubtle,
@@ -333,14 +333,14 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
             if (r.hosts == null && r.revealed != null)
               Text(
                 l.matchesHost(r.revealed!),
-                style: TextStyle(fontSize: 11, color: c.accentText),
+                style: TextStyle(fontSize: 12, color: c.accentText),
               ),
             if (marker != null)
-              Text(marker, style: TextStyle(fontSize: 11, color: tone)),
+              Text(marker, style: TextStyle(fontSize: 12, color: tone)),
             if (r.comment != null)
               Text(
                 r.comment!,
-                style: TextStyle(fontSize: 11, color: c.textSubtle),
+                style: TextStyle(fontSize: 12, color: c.textSubtle),
               ),
           ],
         ),
@@ -351,7 +351,7 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
             Text(
               r.fingerprint,
               overflow: TextOverflow.ellipsis,
-              style: monoStyle(context, size: 11, color: c.textSubtle),
+              style: monoStyle(context, size: 12, color: c.textSubtle),
             ),
           ],
         ),
@@ -380,7 +380,7 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
               ours
                   ? (r.addedMs == null ? '' : l.trustedOn(_date(l, r.addedMs!)))
                   : l.lineNumber(r.line),
-              style: TextStyle(fontSize: 11, color: c.textSubtle),
+              style: TextStyle(fontSize: 12, color: c.textSubtle),
             ),
           ],
         ),

@@ -1,6 +1,6 @@
 # Foco y pulido: 0.3.0-beta.3 y v0.3.1
 
-- **Estado:** propuesta. Maquetas aprobadas el 2026-10-18 (filas «F1» a «F5» del lienzo); el reparto en dos fases, aceptado el mismo día.
+- **Estado:** primera fase hecha (F1, F4 y F5a, para la 0.3.0-beta.3); la segunda, por hacer. Maquetas aprobadas el 2026-10-18 (filas «F1» a «F5» del lienzo); el reparto en dos fases, aceptado el mismo día.
 - **Fecha:** 2026-10-18.
 - **Base:** fase 1 de la hoja de ruta ([ARCHITECTURE §15](../ARCHITECTURE.md#15-hoja-de-ruta-con-puertas)), sobre la [v0.3](v0.3.md) y antes de la v0.4 (el vault cifrado).
 - **Duración estimada:** unas 5 semanas de trabajo: 1,5 la primera fase y 3,5 la segunda.
@@ -38,7 +38,7 @@ Sigue siendo solo escritorio y sin cuenta.
 **Fase 1 · 0.3.0-beta.3:**
 - **Modo foco** (F1):
   - la barra lateral con tres estados: abierta, raíl (56 px: buscar, los favoritos y los hosts con sesión abierta, «Todos los hosts», la Biblioteca en iconos y Ajustes) y oculta;
-  - ⌘B la pliega y la abre (Ctrl+B no, en Windows y Linux es del shell: allí Ctrl+Mayús+B queda para broadcast y la barra va en el menú Ver y en la paleta); el estado se recuerda;
+  - ⌘B la pliega y la abre; en Windows y Linux, sin atajo (Ctrl+B es del shell y Ctrl+Mayús+B es broadcast): su botón y la paleta. El estado se recuerda;
   - oculta, se asoma al acercar el ratón al borde izquierdo, por encima del terminal, y se esconde al apartarlo; «Fijar» la deja abierta;
   - con la barra en raíl u oculta, las pestañas suben junto a los botones de la ventana;
   - el ancho se cambia arrastrando el borde, entre 220 y 420 px;
@@ -110,9 +110,9 @@ Sigue siendo solo escritorio y sin cuenta.
 
 | # | Hito | Semanas | Estado |
 |---|---|---|---|
-| F1 | Modo foco: barra plegable con ⌘B, raíl, asomada, ancho y margen del terminal | 0,5 | — |
-| F4 | Un solo ⌘K para la paleta, y la latencia con su gráfica en la barra de estado | 0,5 | — |
-| F5a | Pulido de consistencia: iconos, verbos, nombres, botones, tamaños, estados vacíos y la tarjeta de conexión | 0,5 | — |
+| F1 | Modo foco: barra plegable con ⌘B, raíl, asomada, ancho y margen del terminal | 0,5 | Hecho |
+| F4 | Un solo ⌘K para la paleta, y la latencia con su gráfica en la barra de estado | 0,5 | Hecho |
+| F5a | Pulido de consistencia: iconos, verbos, nombres, botones, tamaños, estados vacíos y la tarjeta de conexión | 0,5 | Hecho |
 | — | 0.3.0-beta.3: «Qué hay de nuevo», galería, notas, guía de prueba y prueba en el equipo; después, 0.3.0 | — | — |
 
 **Fase 2 · v0.3.1:**
@@ -123,6 +123,21 @@ Sigue siendo solo escritorio y sin cuenta.
 | F2 | Identidad de host: entorno heredado, sistema detectado y favoritos | 1,5 | — |
 | F3 | Inicio: recientes, favoritos, túneles abiertos y conexión rápida que completa | 1 | — |
 | — | 0.3.1-beta.1: «Qué hay de nuevo», galería, notas, guía de prueba y prueba en el equipo | — | — |
+
+**Qué deja hecha la primera fase:**
+- **Ajustes** (`settings.json`): `sidebar` (abierta, raíl u oculta), `sidebar_on_session` (como esté, en raíl u oculta), `sidebar_width` (220–420, 272 de serie), `terminal_padding` (0–24, 12 de serie) y `recent_connections`. Un archivo de una versión anterior toma los valores de serie.
+- **Barra lateral** (`window/sidebar_state.dart`): la regla de qué se ve (`shownSidebar`: el ajuste, plegado más con un terminal o un SFTP delante si así se pide, salvo que ⌘B la abriera ahí), ⌘B, el ancho al arrastrar su borde (doble clic lo restablece) y la barra asomada. El raíl (`hosts/rail.dart`) enseña las pestañas de terminal y SFTP con sus iniciales y su estado; los favoritos llegan con F2.
+- **Recientes** (`home/recent.dart`, `recent.json`): cada conexión SSH que se abre (cuándo y hasta cuándo) y cuántas veces corre cada acción de la paleta, para ordenarlas. Se adelantan de F3 porque la paleta los necesita; el inicio los usará en F3.
+- **Paleta:** pestañas abiertas, recientes, `>` y «Conectar a …» para una dirección; las acciones con un id, para contarlas.
+- **Latencia** (`tabs/latency.dart`): las últimas 30 medidas en la conexión, la habitual (la mediana) y el ámbar; la minigráfica y la tarjeta al pasar el ratón; la pista de la pestaña.
+- **Pulido:** los textos de 10–11 px pasan a 12; `SectionLabel(keepCase:)` para los nombres de grupo; cabeceras de Túneles, Identidades y Snippets con la acción a la derecha, como Claves y Espacios de trabajo; la tarjeta «Conectando con…» pasados 400 ms y sin la fila «Este equipo», que ya está en el dibujo.
+- **Pruebas:** la regla de la barra, ⌘B, el ancho y los recientes en `test/focus_test.dart`; una prueba de ventana nueva (raíl, asomada, oculta, plegarse sola, el ancho y la paleta con pestañas y `>`); la latencia y su tarjeta contra S2; el raíl en la galería de temas; y la prueba de accesibilidad comprueba que ningún texto en pantalla baja de 12 px, también en el raíl y en la barra asomada.
+
+**Diferencias con el plan:**
+- En Windows y Linux la barra no tiene atajo: no hay menú de la app donde ponerla, así que va en su botón y en la paleta.
+- La latencia de cada salto queda para después: la tarjeta enseña la ruta y la latencia hasta el destino.
+- Los enlaces siguen en el color de acento salvo en la barra de estado: cambiarlos en toda la app va con el editor nuevo (F5b), que quita los «Cambiar».
+- Los recientes (y su ajuste) entran en esta fase, no en F3.
 
 **El orden de la fase 2:** primero el editor, porque F2 le añade filas (entorno, sistema, favorito) y conviene hacerlas ya sobre el nuevo; F3 al final, porque usa los favoritos, el sistema y el entorno.
 

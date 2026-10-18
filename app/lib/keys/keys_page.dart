@@ -208,7 +208,7 @@ class _KeysPageState extends ConsumerState<KeysPage> {
     final c = ow.colors;
     final l = context.l10n;
     final head = TextStyle(
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: FontWeight.w600,
       letterSpacing: 0.6,
       color: c.textSubtle,
@@ -265,7 +265,7 @@ class _KeysPageState extends ConsumerState<KeysPage> {
               Text(
                 k.comment!,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 11, color: c.textSubtle),
+                style: TextStyle(fontSize: 12, color: c.textSubtle),
               ),
             if (k.certificate)
               Padding(
@@ -281,22 +281,24 @@ class _KeysPageState extends ConsumerState<KeysPage> {
             Text(
               k.fingerprint ?? l.fingerprintNeedsPublic,
               overflow: TextOverflow.ellipsis,
-              style: monoStyle(context, size: 11, color: c.textSubtle),
+              style: monoStyle(context, size: 12, color: c.textSubtle),
             ),
           ],
         ),
         Row(
           children: [
+            // Open and in amber without a passphrase: a closed lock would
+            // say the opposite.
             Icon(
-              k.encrypted ? Icons.lock_outline : Icons.lock_open_outlined,
-              size: 13,
-              color: k.encrypted ? c.text : c.textSubtle,
+              k.encrypted ? Icons.lock_outline : Icons.lock_open,
+              size: 14,
+              color: k.encrypted ? c.accentText : c.warn,
             ),
             const SizedBox(width: 6),
             Flexible(
               child: Text(
                 k.encrypted ? l.withPassphrase : l.withoutPassphrase,
-                style: TextStyle(color: k.encrypted ? c.text : c.textMuted),
+                style: TextStyle(color: k.encrypted ? c.text : c.warn),
               ),
             ),
           ],

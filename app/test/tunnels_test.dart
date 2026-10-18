@@ -58,7 +58,7 @@ void main() {
   });
 
   test('how it stands, and why it failed', () {
-    expect(stateText(es, tunnel(TunnelKind.local)), 'Cerrado');
+    expect(stateText(es, tunnel(TunnelKind.local)), 'Detenido');
     expect(
       stateText(
         es,

@@ -23,6 +23,31 @@
   "agentShort": "Agente",
   "agentSocket": "Otro socket…",
   "agentSystem": "El del sistema",
+  "agoDays": "hace {count} d",
+  "@agoDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agoHours": "hace {count} h",
+  "@agoHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agoMinutes": "hace {count} min",
+  "@agoMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agoNow": "ahora",
   "allCount": "Todas · {count}",
   "@allCount": {
     "placeholders": {
@@ -31,6 +56,7 @@
       }
     }
   },
+  "allHosts": "Todos los hosts",
   "alreadyImported": "ya importado",
   "alreadyUses": "Ya la usa",
   "alsoOnThisComputer": "También en este equipo",
@@ -295,6 +321,14 @@
       }
     }
   },
+  "clearRecent": "Borrar ({count})",
+  "@clearRecent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "clearSelection": "Quitar la selección",
   "close": "Cerrar",
   "closeAction": "Cerrar",
@@ -397,6 +431,14 @@
   "conflictYours": "El tuyo",
   "conflictYoursNewer": "el tuyo es más nuevo",
   "connect": "Conectar",
+  "connectToAddress": "Conectar a {address}",
+  "@connectToAddress": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
   "connectingEllipsis": "Conectando…",
   "connectingTo": "Conectando con {label}",
   "@connectingTo": {
@@ -789,6 +831,7 @@
   },
   "filledInEachPane": "También se rellenan solas, en cada panel:",
   "filterFolder": "Filtrar en esta carpeta",
+  "filterHosts": "Filtrar hosts",
   "filterHostsAndGroups": "Filtrar hosts y grupos",
   "filterIdentities": "Filtrar por nombre, usuario o clave",
   "filterSnippets": "Filtrar por nombre o comando",
@@ -828,6 +871,7 @@
       }
     }
   },
+  "foldSidebar": "Plegar la barra lateral",
   "fontFromTheme": "La del tema",
   "fontOther": "Otra fuente instalada…",
   "fontOtherHint": "Su nombre exacto, como «Fira Code»",
@@ -1375,6 +1419,42 @@
   "lanRemoteNote": "El servidor tiene que permitirlo (GatewayPorts en sshd); si no, escucha solo en sí mismo.",
   "language": "Idioma",
   "languageSystem": "Como el sistema",
+  "latencyChecks": "{count, plural, =1{la última comprobación} other{las últimas {count} comprobaciones}}",
+  "@latencyChecks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "latencyClick": "Un clic abre los detalles de la conexión y su huella.",
+  "latencyHigh": "{ms} ms: {times} veces lo habitual",
+  "@latencyHigh": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      },
+      "times": {
+        "type": "int"
+      }
+    }
+  },
+  "latencyUsual": "habitual {ms} ms",
+  "@latencyUsual": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "latencyWith": "Latencia con {host}",
+  "@latencyWith": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "library": "Biblioteca",
   "licenses": "Licencias",
   "lightAndDark": "Claro y oscuro",
@@ -1589,6 +1669,15 @@
   "newTunnel": "Nuevo túnel",
   "newsConnectionBody": "Si el servidor se va, se nota en segundos y la conexión vuelve sola; con la sesión persistente, vuelves al mismo terminal en tmux. Al conectar y al reconectar, el camino hasta el host, animado.",
   "newsConnectionTitle": "Conexión viva",
+  "newsFocusBody": "La barra lateral se pliega en iconos o se oculta ({keys}), sola al abrir una sesión si quieres, y oculta se asoma al dejar el ratón en el borde. Su ancho se cambia arrastrando el borde, y el terminal tiene más margen. Todo en Ajustes › General.",
+  "@newsFocusBody": {
+    "placeholders": {
+      "keys": {
+        "type": "String"
+      }
+    }
+  },
+  "newsFocusTitle": "Más sitio para el terminal",
   "newsFresh": "nuevo",
   "newsIdentitiesBody": "Usuario, claves y agente con un nombre, para un grupo entero o varios hosts a la vez.",
   "newsIdentitiesTitle": "Identidades",
@@ -1596,6 +1685,8 @@
   "newsImportTitle": "Importar desde tu cliente anterior",
   "newsKeysBody": "Crea claves Ed25519, ECDSA o RSA, importa las tuyas, mira sus huellas y súbelas a un servidor sin salir de OpenWard, como ssh-copy-id.",
   "newsKeysTitle": "Claves",
+  "newsLatencyBody": "La barra de estado dice cuánto tarda el servidor en responder, con una gráfica de las últimas comprobaciones; en ámbar si sube mucho sobre lo habitual. Al pasar el ratón, la ruta y el cifrado.",
+  "newsLatencyTitle": "La latencia, siempre a la vista",
   "newsPaletteBody": "Todo lo que hace la ventana, tus hosts, snippets y los comandos que ya ejecutaste, a unas letras ({shortcut}). El historial se queda en este equipo y nunca guarda contraseñas.",
   "@newsPaletteBody": {
     "placeholders": {
@@ -1617,6 +1708,15 @@
     }
   },
   "newsPanesTitle": "Paneles y broadcast",
+  "newsSearchBody": "{keys} abre la paleta con las pestañas abiertas, las conexiones recientes, los hosts, las acciones y lo que ya ejecutaste. Empieza por > para ver solo las acciones.",
+  "@newsSearchBody": {
+    "placeholders": {
+      "keys": {
+        "type": "String"
+      }
+    }
+  },
+  "newsSearchTitle": "Un atajo para buscarlo todo",
   "newsSftpBody": "Arrastra entre este equipo y el servidor, con cola, reanudación y lo que ya existe resuelto a tu manera ({shortcut}).",
   "@newsSftpBody": {
     "placeholders": {
@@ -1741,6 +1841,9 @@
   "onExitHelp": "Con exit o logout, el panel (o la pestaña, si es el último) se cierra solo. Si el programa acaba con un error, se queda abierto para que leas qué pasó, salvo con «Cerrar siempre». Una conexión que se corta nunca se cierra sola: sigue reconectando.",
   "onExitNever": "Dejarla abierta",
   "onSend": "Al enviar",
+  "onSessionHide": "Oculta",
+  "onSessionKeep": "Como esté",
+  "onSessionRail": "En raíl",
   "onThisComputer": "En este equipo",
   "onlyTheServer": "Solo el servidor",
   "onlyThisComputer": "Solo este equipo (127.0.0.1)",
@@ -1791,11 +1894,15 @@
   "paletteChoose": "elegir",
   "paletteDo": "hacer",
   "paletteForget": "quitar del historial",
-  "paletteHint": "Escribe una acción, un host, un comando que ya usaste…",
+  "paletteHere": "aquí",
+  "paletteHint": "Busca un host, una pestaña, una acción o un comando que ya usaste…",
   "paletteHistory": "Historial",
   "paletteHosts": "Hosts",
   "paletteNothing": "Nada coincide.",
+  "paletteOnlyActions": "solo acciones",
+  "paletteRecent": "Recientes",
   "paletteRun": "ejecutar",
+  "paletteTabs": "Pestañas abiertas",
   "paletteTypeOnly": "solo escribir",
   "paneOptions": "Opciones del panel",
   "paneWhat": "¿Qué abres en este panel?",
@@ -1875,6 +1982,7 @@
   "persistentOn": "Sí, en tmux: sigue tras un corte",
   "persistentSession": "Sesión persistente",
   "pickIdentity": "Elige una identidad o «Ninguna».",
+  "pinSidebar": "Dejar la barra abierta",
   "pixels": "{size} px",
   "@pixels": {
     "placeholders": {
@@ -2123,6 +2231,8 @@
   "readyBody": "Estos atajos te llevan a casi todo:",
   "readyTitle": "Todo listo",
   "receives": "Recibe",
+  "recentConnections": "Conexiones recientes",
+  "recentConnectionsHelp": "Las conexiones que abres se guardan en este equipo (nunca en el vault) para volver a ellas desde la paleta. Los terminales locales no.",
   "reconnect": "Reconectar",
   "reconnectingEllipsis": "Reconectando…",
   "reconnectingStage": "Reconectando: {stage}",
@@ -2331,6 +2441,7 @@
   },
   "saveNewHost": "Guardar un host nuevo",
   "saveOpenTabs": "Guardar las pestañas abiertas…",
+  "saveTabsNeedsTabs": "Abre alguna pestaña para poder guardarla.",
   "saveWorkspaceIntro": "Las pestañas de terminal y de archivos abiertas, con sus paneles. Al abrirlo, cada panel se conecta de nuevo.",
   "saveWorkspaceTitle": "Guardar como espacio de trabajo",
   "savedHost": "Host guardado",
@@ -2344,6 +2455,7 @@
       }
     }
   },
+  "search": "Buscar",
   "searchHosts": "Buscar hosts",
   "searchKeys": "Buscar por nombre, huella o host",
   "searchKnownHosts": "Buscar un host, una huella…",
@@ -2430,6 +2542,7 @@
   "settingsAppearance": "Apariencia",
   "settingsGeneral": "General",
   "settingsTerminal": "Terminal",
+  "settingsWindow": "Ventana",
   "sftpConnected": "SFTP en {label}",
   "@sftpConnected": {
     "placeholders": {
@@ -2463,6 +2576,17 @@
       }
     }
   },
+  "showSidebar": "Abrir la barra lateral",
+  "sidebarButton": "con el botón de la barra",
+  "sidebarHelp": "Se recuerda al cerrar OpenWard. Oculta, se asoma al dejar el ratón en el borde izquierdo de la ventana.",
+  "sidebarHidden": "Oculta",
+  "sidebarOnSession": "Con un terminal delante",
+  "sidebarOnSessionHelp": "Con un terminal o un SFTP delante, la barra puede plegarse sola. En el inicio y en las páginas vuelve a como esté arriba.",
+  "sidebarOpen": "Abierta",
+  "sidebarRail": "Raíl",
+  "sidebarSetting": "Barra lateral",
+  "sidebarWidth": "Ancho de la barra",
+  "sidebarWidthHelp": "Arrastra el borde de la barra para cambiarlo, entre 220 y 420 px. Un doble clic en el borde lo restablece.",
   "sinceSeconds": "desde hace {seconds} s",
   "@sinceSeconds": {
     "placeholders": {
@@ -2568,6 +2692,7 @@
   "stepOpeningSftp": "abriendo SFTP…",
   "stepOpeningShell": "abriendo el shell…",
   "stepReady": "Listo",
+  "stopAction": "Detener",
   "tabMenuHint": "También puedes arrastrar la pestaña sobre un terminal para dividirlo, o a otro sitio de la barra para ordenarla.",
   "tags": "Etiquetas",
   "terminalAlwaysDark": "Siempre oscuro",
@@ -2575,6 +2700,8 @@
   "terminalColors": "Colores del terminal",
   "terminalFont": "Fuente del terminal",
   "terminalMenuHint": "Arrastra aquí una pestaña o un host para abrirlo en una mitad de este panel.",
+  "terminalPadding": "Margen del terminal",
+  "terminalPaddingHelp": "Espacio alrededor del texto, en cada panel.",
   "terminalScheme": "Esquema propio",
   "terminalShortcuts": "{key}F busca en el terminal y su historial. {key}+ y {key}− cambian el tamaño de la letra de la pestaña, y {key}0 lo devuelve. Con {key} pulsado, un clic abre un enlace.",
   "@terminalShortcuts": {
@@ -2640,6 +2767,7 @@
       }
     }
   },
+  "toggleSidebar": "Plegar o abrir la barra lateral",
   "transfers": "Transferencias",
   "trust": "Confianza",
   "trustAndConnect": "Confiar y conectar",
@@ -2666,7 +2794,7 @@
   "tryAgain": "Reintentar",
   "tryAnother": "Probar otro",
   "tunnelBadAddress": "Esa dirección no existe en este equipo.",
-  "tunnelClosed": "Cerrado",
+  "tunnelClosed": "Detenido",
   "tunnelDidNotOpen": "No se abrió «{name}» al conectar: {why}",
   "@tunnelDidNotOpen": {
     "placeholders": {

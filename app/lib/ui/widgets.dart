@@ -118,7 +118,7 @@ class Pill extends StatelessWidget {
       child: Text(
         text,
         maxLines: 1,
-        style: TextStyle(fontSize: 11, color: fg, height: 1.3),
+        style: TextStyle(fontSize: 12, color: fg, height: 1.3),
       ),
     );
   }
@@ -126,7 +126,15 @@ class Pill extends StatelessWidget {
 
 /// The small upper-case title of a group of things.
 class SectionLabel extends StatelessWidget {
-  const SectionLabel(this.text, {super.key, this.trailing});
+  const SectionLabel(
+    this.text, {
+    super.key,
+    this.trailing,
+    this.keepCase = false,
+  });
+
+  /// The text is the user's (a group's name): as written, not in capitals.
+  final bool keepCase;
 
   final String text;
   final String? trailing;
@@ -147,8 +155,9 @@ class SectionLabel extends StatelessWidget {
         : Theme.of(context).textTheme.labelSmall?.copyWith(
             color: ow.colors.textSubtle,
             fontFamily: fonts.label ?? fonts.ui,
-            fontSize: fonts.label != null ? 10 : 11,
-            letterSpacing: fonts.label != null ? 1.2 : 0.6,
+            fontSize: 12,
+            letterSpacing: keepCase ? 0 : (fonts.label != null ? 1 : 0.6),
+            fontWeight: keepCase ? FontWeight.w600 : null,
           );
     return Semantics(
       header: true,
@@ -156,7 +165,7 @@ class SectionLabel extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              serif ? text : text.toUpperCase(),
+              serif || keepCase ? text : text.toUpperCase(),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: style,
@@ -168,7 +177,7 @@ class SectionLabel extends StatelessWidget {
               style: style?.copyWith(
                 fontFamily: ow.fonts.mono,
                 fontStyle: FontStyle.normal,
-                fontSize: 11,
+                fontSize: 12,
                 color: ow.colors.textSubtle,
                 fontWeight: FontWeight.w400,
                 letterSpacing: 0,
@@ -200,7 +209,7 @@ class KeyCap extends StatelessWidget {
           keys,
           style: TextStyle(
             fontFamily: ow.fonts.mono,
-            fontSize: 11,
+            fontSize: 12,
             color: ow.colors.textSubtle,
           ),
         ),

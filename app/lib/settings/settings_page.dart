@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/settings.dart';
 import '../core/version.dart';
 import '../history/history.dart';
+import '../home/recent.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/app.dart';
 import '../terminal/keys.dart';
@@ -14,6 +15,7 @@ import '../ui/widgets.dart';
 import '../welcome/whats_new.dart';
 import 'appearance_page.dart';
 import 'report.dart';
+import '../window/sidebar_state.dart';
 
 enum _Section { general, appearance, terminal }
 
@@ -178,6 +180,7 @@ class _General extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(settingsProvider);
+    final recent = ref.watch(recentProvider.select((r) => r.connections));
     final notifier = ref.read(settingsProvider.notifier);
     final l = context.l10n;
     final c = context.ow.colors;
@@ -217,6 +220,131 @@ class _General extends ConsumerWidget {
                   notifier.update((s) => s.copyWith(optionAsAlt: v)),
             ),
           ),
+        _Row(
+          label: l.recentConnections,
+          help: l.recentConnectionsHelp,
+          control: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton(
+                key: const ValueKey('settings.clearRecent'),
+                onPressed: recent.isEmpty
+                    ? null
+                    : () => ref.read(recentProvider.notifier).clear(),
+                child: Text(l.clearRecent(recent.length)),
+              ),
+              const SizedBox(width: 8),
+              Switch(
+                key: const ValueKey('settings.recentConnections'),
+                value: s.recentConnections,
+                onChanged: (v) =>
+                    notifier.update((s) => s.copyWith(recentConnections: v)),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        SectionLabel(l.settingsWindow),
+        _Row(
+          label: l.sidebarSetting,
+          help: isApple ? '⌘B · ${l.sidebarHelp}' : l.sidebarHelp,
+          control: SegmentedButton<SidebarMode>(
+            key: const ValueKey('settings.sidebar'),
+            showSelectedIcon: false,
+            segments: [
+              ButtonSegment(
+                value: SidebarMode.open,
+                label: Text(l.sidebarOpen),
+              ),
+              ButtonSegment(
+                value: SidebarMode.rail,
+                label: Text(l.sidebarRail),
+              ),
+              ButtonSegment(
+                value: SidebarMode.hidden,
+                label: Text(l.sidebarHidden),
+              ),
+            ],
+            selected: {s.sidebar},
+            onSelectionChanged: (v) =>
+                ref.read(sidebarProvider.notifier).chose(v.single),
+          ),
+        ),
+        _Row(
+          label: l.sidebarOnSession,
+          help: l.sidebarOnSessionHelp,
+          control: SegmentedButton<SidebarOnSession>(
+            key: const ValueKey('settings.sidebarOnSession'),
+            showSelectedIcon: false,
+            segments: [
+              ButtonSegment(
+                value: SidebarOnSession.keep,
+                label: Text(l.onSessionKeep),
+              ),
+              ButtonSegment(
+                value: SidebarOnSession.rail,
+                label: Text(l.onSessionRail),
+              ),
+              ButtonSegment(
+                value: SidebarOnSession.hide,
+                label: Text(l.onSessionHide),
+              ),
+            ],
+            selected: {s.sidebarOnSession},
+            onSelectionChanged: (v) =>
+                notifier.update((s) => s.copyWith(sidebarOnSession: v.single)),
+          ),
+        ),
+        _Row(
+          label: l.sidebarWidth,
+          help: l.sidebarWidthHelp,
+          control: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l.pixels(s.sidebarWidth.round()),
+                style: monoStyle(context, size: 12, color: c.text),
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                key: const ValueKey('settings.sidebarWidthReset'),
+                onPressed: s.sidebarWidth == Settings.defaultSidebarWidth
+                    ? null
+                    : ref.read(sidebarProvider.notifier).resetWidth,
+                child: Text(l.resetTheme),
+              ),
+            ],
+          ),
+        ),
+        _Row(
+          label: l.terminalPadding,
+          help: l.terminalPaddingHelp,
+          control: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 180,
+                child: Slider(
+                  key: const ValueKey('settings.terminalPadding'),
+                  min: 0,
+                  max: 24,
+                  divisions: 12,
+                  value: s.terminalPadding,
+                  label: l.pixels(s.terminalPadding.round()),
+                  onChanged: (v) =>
+                      notifier.update((s) => s.copyWith(terminalPadding: v)),
+                ),
+              ),
+              SizedBox(
+                width: 44,
+                child: Text(
+                  l.pixels(s.terminalPadding.round()),
+                  style: monoStyle(context, size: 12, color: c.text),
+                ),
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: 24),
         SectionLabel(l.about),
         const SizedBox(height: 8),
@@ -339,7 +467,7 @@ class _Terminal extends ConsumerWidget {
         ),
         _Row(
           label: l.commandHistory,
-          help: l.commandHistoryHelp(isApple ? '⌘⇧P' : 'Ctrl+Shift+P'),
+          help: l.commandHistoryHelp(isApple ? '⌘K' : 'Ctrl+Shift+K'),
           control: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

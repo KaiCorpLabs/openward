@@ -398,8 +398,8 @@ class _PreviewState extends State<_Preview> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: mono
-                    ? monoStyle(context, size: 11)
-                    : TextStyle(fontSize: 11, color: c.textSubtle),
+                    ? monoStyle(context, size: 12)
+                    : TextStyle(fontSize: 12, color: c.textSubtle),
               ),
             ),
           ] else
@@ -412,7 +412,7 @@ class _PreviewState extends State<_Preview> {
           if (trailing != null)
             Padding(
               padding: const EdgeInsets.only(left: 8),
-              child: Text(trailing, style: monoStyle(context, size: 11)),
+              child: Text(trailing, style: monoStyle(context, size: 12)),
             ),
         ],
       ),
@@ -455,7 +455,7 @@ class _PreviewState extends State<_Preview> {
                       if (kind.isNotEmpty)
                         TextSpan(
                           text: '  $kind',
-                          style: monoStyle(context, size: 11),
+                          style: monoStyle(context, size: 12),
                         ),
                     ],
                   ),

@@ -898,10 +898,13 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     final r = _look();
     final m = r.metrics;
     final cursor = r.cursor;
+    // Room around the text: on the left and on top (two thirds of it); the
+    // grid fills the rest and leaves what does not make a whole cell.
+    final pad = ref.watch(settingsProvider.select((s) => s.terminalPadding));
     return ColoredBox(
       color: r.palette.background,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(6, 4, 0, 0),
+        padding: EdgeInsets.fromLTRB(pad, (pad * 2 / 3).roundToDouble(), 0, 0),
         child: LayoutBuilder(
           builder: (context, constraints) {
             _layout(constraints, r);

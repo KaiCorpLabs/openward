@@ -96,7 +96,8 @@ class _RouteSteps extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        row(Icon(Icons.laptop, size: 16, color: c.accent), l.thisComputer),
+        // This computer is already the route's first node: here, only the
+        // hops and how each is going.
         for (var i = 0; i < steps.length; i++)
           if (i < current)
             row(Icon(Icons.check, size: 16, color: c.accent), steps[i])

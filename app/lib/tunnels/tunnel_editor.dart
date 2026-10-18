@@ -372,7 +372,7 @@ class TunnelDiagram extends StatelessWidget {
             sub,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: monoStyle(context, size: 11, color: c.accentText),
+            style: monoStyle(context, size: 12, color: c.accentText),
           ),
         ],
       ),
@@ -382,7 +382,7 @@ class TunnelDiagram extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 30),
         child: Column(
           children: [
-            Text(text, style: TextStyle(fontSize: 11, color: c.textMuted)),
+            Text(text, style: TextStyle(fontSize: 12, color: c.textMuted)),
             const SizedBox(height: 4),
             Row(
               children: [

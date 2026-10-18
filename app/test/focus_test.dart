@@ -1,0 +1,182 @@
+import 'dart:io';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:openward/core/settings.dart';
+import 'package:openward/home/recent.dart';
+import 'package:openward/palette/command_palette.dart';
+import 'package:openward/l10n/app_localizations_es.dart';
+import 'package:openward/window/sidebar_state.dart';
+
+void main() {
+  group('the sidebar shown', () {
+    SidebarMode shown(
+      SidebarMode mode,
+      SidebarOnSession onSession, {
+      bool session = true,
+      bool openedHere = false,
+    }) => shownSidebar(
+      mode: mode,
+      onSession: onSession,
+      session: session,
+      openedHere: openedHere,
+    );
+
+    test('is the setting with no session in front', () {
+      for (final m in SidebarMode.values) {
+        expect(shown(m, SidebarOnSession.hide, session: false), m);
+      }
+    });
+
+    test('folds further with a session in front, never less', () {
+      expect(shown(SidebarMode.open, SidebarOnSession.rail), SidebarMode.rail);
+      expect(
+        shown(SidebarMode.open, SidebarOnSession.hide),
+        SidebarMode.hidden,
+      );
+      expect(
+        shown(SidebarMode.hidden, SidebarOnSession.rail),
+        SidebarMode.hidden,
+      );
+      expect(shown(SidebarMode.rail, SidebarOnSession.keep), SidebarMode.rail);
+    });
+
+    test('stays as set once ⌘B opened it over a session', () {
+      expect(
+        shown(SidebarMode.open, SidebarOnSession.hide, openedHere: true),
+        SidebarMode.open,
+      );
+    });
+  });
+
+  group('⌘B, the width and the setting', () {
+    late Directory dir;
+    late ProviderContainer container;
+
+    setUp(() {
+      dir = Directory.systemTemp.createTempSync('ow-focus');
+      container = ProviderContainer(
+        overrides: [
+          settingsFileProvider.overrideWithValue(
+            File('${dir.path}/settings.json'),
+          ),
+        ],
+      );
+    });
+
+    tearDown(() {
+      container.dispose();
+      dir.deleteSync(recursive: true);
+    });
+
+    SidebarMode mode() => container.read(sidebarModeProvider);
+    SidebarNotifier sidebar() => container.read(sidebarProvider.notifier);
+
+    test('folds to a rail and opens again, and it is saved', () {
+      expect(mode(), SidebarMode.open);
+      sidebar().toggle();
+      expect(mode(), SidebarMode.rail);
+      expect(container.read(settingsProvider).sidebar, SidebarMode.rail);
+      sidebar().toggle();
+      expect(mode(), SidebarMode.open);
+    });
+
+    test('folds to what was last chosen', () {
+      sidebar().chose(SidebarMode.hidden);
+      expect(mode(), SidebarMode.hidden);
+      sidebar().toggle();
+      expect(mode(), SidebarMode.open);
+      sidebar().toggle();
+      expect(mode(), SidebarMode.hidden);
+    });
+
+    test('the dragged width stays within its bounds and is saved', () {
+      sidebar().drag(900);
+      expect(container.read(sidebarWidthProvider), Settings.maxSidebarWidth);
+      sidebar().drag(100);
+      expect(container.read(sidebarWidthProvider), Settings.minSidebarWidth);
+      sidebar().drag(301.4);
+      sidebar().endDrag();
+      expect(container.read(settingsProvider).sidebarWidth, 301);
+      sidebar().resetWidth();
+      expect(
+        container.read(settingsProvider).sidebarWidth,
+        Settings.defaultSidebarWidth,
+      );
+    });
+  });
+
+  group('recent connections', () {
+    late Directory dir;
+    late ProviderContainer container;
+
+    ProviderContainer open() => ProviderContainer(
+      overrides: [
+        settingsFileProvider.overrideWithValue(
+          File('${dir.path}/settings.json'),
+        ),
+      ],
+    );
+
+    setUp(() {
+      dir = Directory.systemTemp.createTempSync('ow-recent');
+      container = open();
+    });
+
+    tearDown(() {
+      container.dispose();
+      dir.deleteSync(recursive: true);
+    });
+
+    RecentNotifier recent() => container.read(recentProvider.notifier);
+
+    test('newest first, once per place, with when it ended', () {
+      final t0 = DateTime(2026, 10, 18, 10);
+      recent().add('host:a', 'web-1', now: t0);
+      recent().add('address:ops@10.0.0.5', 'ops@10.0.0.5', now: t0);
+      recent().add('host:a', 'web-1', now: t0.add(const Duration(hours: 1)));
+      final list = container.read(recentProvider).connections;
+      expect(
+        [for (final e in list) e.where],
+        ['host:a', 'address:ops@10.0.0.5'],
+      );
+      expect(list.first.hostId, 'a');
+      expect(list.last.address, 'ops@10.0.0.5');
+      recent().end('host:a', now: t0.add(const Duration(hours: 2)));
+      expect(
+        container.read(recentProvider).connections.first.ended,
+        t0.add(const Duration(hours: 2)).millisecondsSinceEpoch,
+      );
+    });
+
+    test('survive a restart, and the actions are counted', () {
+      recent().add('host:a', 'web-1');
+      recent().used('splitRight');
+      recent().used('splitRight');
+      final again = open();
+      addTearDown(again.dispose);
+      final r = again.read(recentProvider);
+      expect(r.connections.single.label, 'web-1');
+      expect(r.actions['splitRight'], 2);
+    });
+
+    test('are not kept when turned off, and clearing forgets them', () {
+      recent().add('host:a', 'web-1');
+      recent().clear();
+      expect(container.read(recentProvider).connections, isEmpty);
+      container
+          .read(settingsProvider.notifier)
+          .update((s) => s.copyWith(recentConnections: false));
+      recent().add('host:b', 'db');
+      expect(container.read(recentProvider).connections, isEmpty);
+    });
+  });
+
+  test('how long ago, in a few words', () {
+    final l = AppLocalizationsEs();
+    expect(agoText(l, const Duration(seconds: 20)), 'ahora');
+    expect(agoText(l, const Duration(minutes: 5)), 'hace 5 min');
+    expect(agoText(l, const Duration(hours: 3)), 'hace 3 h');
+    expect(agoText(l, const Duration(days: 2)), 'hace 2 d');
+  });
+}

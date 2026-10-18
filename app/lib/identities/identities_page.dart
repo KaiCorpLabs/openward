@@ -60,32 +60,35 @@ class _IdentitiesPageState extends ConsumerState<IdentitiesPage> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
         children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            alignment: WrapAlignment.spaceBetween,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 660),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Semantics(
-                      header: true,
-                      child: Text(
-                        l.identities,
-                        style: theme.textTheme.titleLarge,
-                      ),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 660),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            l.identities,
+                            style: theme.textTheme.titleLarge,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l.identitiesIntro,
+                          style: TextStyle(color: c.textMuted),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l.identitiesIntro,
-                      style: TextStyle(color: c.textMuted),
-                    ),
-                  ],
+                  ),
                 ),
               ),
+              const SizedBox(width: 16),
               FilledButton.icon(
                 key: const ValueKey('identities.new'),
                 onPressed: () => showIdentityEditor(context, ref),
@@ -193,7 +196,7 @@ class _IdentitiesPageState extends ConsumerState<IdentitiesPage> {
     final c = ow.colors;
     final l = context.l10n;
     final head = TextStyle(
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: FontWeight.w600,
       letterSpacing: 0.6,
       color: c.textSubtle,
@@ -289,7 +292,7 @@ class _IdentitiesPageState extends ConsumerState<IdentitiesPage> {
                             Text(
                               keyDetail(l, k),
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
                                 color: c.textSubtle,
                               ),
                             ),

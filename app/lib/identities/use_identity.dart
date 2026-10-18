@@ -196,7 +196,7 @@ class _UseIdentityState extends ConsumerState<_UseIdentity> {
       child: Text(
         text.toUpperCase(),
         style: TextStyle(
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.6,
           color: c.textSubtle,
@@ -323,12 +323,12 @@ class _Pick extends StatelessWidget {
                       ),
                       Text(
                         detail,
-                        style: TextStyle(fontSize: 11, color: c.textSubtle),
+                        style: TextStyle(fontSize: 12, color: c.textSubtle),
                       ),
                       if (warning != null)
                         Text(
                           warning!,
-                          style: TextStyle(fontSize: 11, color: warnColor),
+                          style: TextStyle(fontSize: 12, color: warnColor),
                         ),
                     ],
                   ),
