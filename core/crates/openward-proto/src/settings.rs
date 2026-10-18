@@ -73,6 +73,9 @@ settings! {
     keepalive_secs: u32,
     /// Forward the agent to the server.
     agent_forward: bool,
+    /// Run the shell inside tmux on the server, to find it as it was after
+    /// a connection that came back.
+    persistent_session: bool,
     /// `TERM` for the remote shell.
     term: String,
     /// Variables sent with the session (`SetEnv`).

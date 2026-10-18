@@ -32,8 +32,9 @@ pub fn defaults() -> Settings {
         identities_only: Some(false),
         agent: Some(Agent::System),
         route: Some(Route::Direct),
-        keepalive_secs: Some(30),
+        keepalive_secs: Some(10),
         agent_forward: Some(false),
+        persistent_session: Some(false),
         term: Some("xterm-256color".into()),
         host_key_policy: Some(HostKeyPolicy::Ask),
         ..Settings::default()

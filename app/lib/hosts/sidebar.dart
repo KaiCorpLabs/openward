@@ -463,7 +463,8 @@ Status hostStatus(Iterable<TerminalController> sessions) {
 /// One session's mark.
 Status tabStatus(TerminalController c) => switch (c.phase) {
   Phase.connecting || Phase.reconnecting => Status.connecting,
-  Phase.connected || Phase.running => Status.connected,
+  Phase.connected ||
+  Phase.running => c.stalledSince != null ? Status.warning : Status.connected,
   Phase.closed =>
     c.closed?.failure != null || c.error != null ? Status.failed : Status.idle,
 };

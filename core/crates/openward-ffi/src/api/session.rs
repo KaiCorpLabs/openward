@@ -7,7 +7,7 @@
 use std::sync::Arc;
 
 use flutter_rust_bridge::frb;
-use openward_app::events::{Connected, KeySource, Question, Stage, Trust};
+use openward_app::events::{Connected, Health, KeySource, Persistence, Question, Stage, Trust};
 use openward_app::terminal::{self, Terminal};
 use openward_app::{Answer, Event, EventSink, Failure, Prompt};
 use zeroize::Zeroizing;
@@ -23,6 +23,11 @@ pub enum SessionEventKind {
     Connected,
     /// The connection was lost and is tried again (`reconnecting`).
     Reconnecting,
+    /// How a live connection is doing (`health`).
+    Health,
+    /// How the shell of a host with a persistent session started
+    /// (`persistent`).
+    Persistent,
     /// A local program is running (`program`).
     Started,
     Closed,
@@ -37,8 +42,36 @@ pub struct SessionEvent {
     pub prompt: Option<PromptView>,
     pub connected: Option<ConnectedView>,
     pub reconnecting: Option<ReconnectingView>,
+    pub health: Option<HealthView>,
+    pub persistent: Option<PersistentView>,
     pub program: Option<String>,
     pub closed: Option<ClosedView>,
+}
+
+/// An answer from the server (after `rtt_ms`, when it was a question's),
+/// or no answer for `silent_ms` so far (`stalled`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct HealthView {
+    pub stalled: bool,
+    pub silent_ms: u64,
+    pub rtt_ms: Option<u32>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PersistenceKind {
+    /// A new tmux session.
+    New,
+    /// The session from before, as it was.
+    Resumed,
+    /// No tmux on the server: an ordinary shell.
+    NoTmux,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PersistentView {
+    /// The tmux session's name (`ow-…`).
+    pub session: String,
+    pub state: PersistenceKind,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -360,6 +393,8 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
         prompt: None,
         connected: None,
         reconnecting: None,
+        health: None,
+        persistent: None,
         program: None,
         closed: None,
     };
@@ -432,6 +467,32 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
                 ca,
                 hops: hops as u32,
                 connect_ms,
+            });
+        }
+        Event::Health(h) => {
+            v.kind = SessionEventKind::Health;
+            v.health = Some(match h {
+                Health::Answered { rtt_ms } => HealthView {
+                    stalled: false,
+                    silent_ms: 0,
+                    rtt_ms,
+                },
+                Health::Stalled { silent_ms } => HealthView {
+                    stalled: true,
+                    silent_ms,
+                    rtt_ms: None,
+                },
+            });
+        }
+        Event::Persistent { session, state } => {
+            v.kind = SessionEventKind::Persistent;
+            v.persistent = Some(PersistentView {
+                session,
+                state: match state {
+                    Persistence::New => PersistenceKind::New,
+                    Persistence::Resumed => PersistenceKind::Resumed,
+                    Persistence::NoTmux => PersistenceKind::NoTmux,
+                },
             });
         }
         Event::Started { program } => {
@@ -763,6 +824,13 @@ impl TerminalSession {
     #[frb(sync)]
     pub fn screen_text(&self) -> String {
         self.term.screen_text()
+    }
+
+    /// A line of OpenWard's own on the screen (escape sequences allowed),
+    /// never sent to the program: where a new shell starts after a cut.
+    #[frb(sync)]
+    pub fn note(&self, text: String) {
+        self.term.note(&text);
     }
 
     /// The cursor's cell while the live screen is on view: where a prompt

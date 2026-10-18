@@ -9,7 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `event_view`, `failure_view`, `into_answer`, `prompt_view`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DartSink`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<TerminalSession>>
 abstract class TerminalSession implements RustOpaqueInterface {
@@ -37,6 +37,10 @@ abstract class TerminalSession implements RustOpaqueInterface {
 
   /// The link under a point, in the logical pixels of [`Self::pointer`].
   LinkView? linkAt({required double x, required double y});
+
+  /// A line of OpenWard's own on the screen (escape sequences allowed),
+  /// never sent to the program: where a new shell starts after a cut.
+  void note({required String text});
 
   /// False, sending nothing, if the text could run commands: confirm and
   /// call again with `allow_unsafe`.
@@ -314,6 +318,28 @@ class FailureView {
           previous == other.previous;
 }
 
+/// An answer from the server (after `rtt_ms`, when it was a question's),
+/// or no answer for `silent_ms` so far (`stalled`).
+class HealthView {
+  final bool stalled;
+  final BigInt silentMs;
+  final int? rttMs;
+
+  const HealthView({required this.stalled, required this.silentMs, this.rttMs});
+
+  @override
+  int get hashCode => stalled.hashCode ^ silentMs.hashCode ^ rttMs.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HealthView &&
+          runtimeType == other.runtimeType &&
+          stalled == other.stalled &&
+          silentMs == other.silentMs &&
+          rttMs == other.rttMs;
+}
+
 enum KeyKind { down, repeat, up }
 
 enum KeySourceKind {
@@ -351,6 +377,36 @@ class LinkView {
           row == other.row &&
           start == other.start &&
           end == other.end;
+}
+
+enum PersistenceKind {
+  /// A new tmux session.
+  new_,
+
+  /// The session from before, as it was.
+  resumed,
+
+  /// No tmux on the server: an ordinary shell.
+  noTmux,
+}
+
+class PersistentView {
+  /// The tmux session's name (`ow-…`).
+  final String session;
+  final PersistenceKind state;
+
+  const PersistentView({required this.session, required this.state});
+
+  @override
+  int get hashCode => session.hashCode ^ state.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PersistentView &&
+          runtimeType == other.runtimeType &&
+          session == other.session &&
+          state == other.state;
 }
 
 enum PointerAction { down, up, move }
@@ -617,6 +673,8 @@ class SessionEvent {
   final PromptView? prompt;
   final ConnectedView? connected;
   final ReconnectingView? reconnecting;
+  final HealthView? health;
+  final PersistentView? persistent;
   final String? program;
   final ClosedView? closed;
 
@@ -627,6 +685,8 @@ class SessionEvent {
     this.prompt,
     this.connected,
     this.reconnecting,
+    this.health,
+    this.persistent,
     this.program,
     this.closed,
   });
@@ -639,6 +699,8 @@ class SessionEvent {
       prompt.hashCode ^
       connected.hashCode ^
       reconnecting.hashCode ^
+      health.hashCode ^
+      persistent.hashCode ^
       program.hashCode ^
       closed.hashCode;
 
@@ -653,6 +715,8 @@ class SessionEvent {
           prompt == other.prompt &&
           connected == other.connected &&
           reconnecting == other.reconnecting &&
+          health == other.health &&
+          persistent == other.persistent &&
           program == other.program &&
           closed == other.closed;
 }
@@ -666,6 +730,13 @@ enum SessionEventKind {
 
   /// The connection was lost and is tried again (`reconnecting`).
   reconnecting,
+
+  /// How a live connection is doing (`health`).
+  health,
+
+  /// How the shell of a host with a persistent session started
+  /// (`persistent`).
+  persistent,
 
   /// A local program is running (`program`).
   started,

@@ -37,7 +37,23 @@
   "askedWhenRunHint": "Comes from what you write between braces.",
   "asks": "Asks",
   "asksNothing": "It asks nothing. Write {example} where it should ask.",
+  "awayFor": "away for {time}",
+  "@awayFor": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "back": "Back",
+  "backAgain": "Connected to {host} again",
+  "@backAgain": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "badgeChanges": "changes",
   "badgeLeaves": "leaves it",
   "badgeNew": "new",
@@ -72,6 +88,7 @@
   "checkTitle": "{count, plural, =1{Check 1 thing} other{Check {count} things}}",
   "checkWithoutKey": "“{label}” has no key now: its key is not in ~/.ssh.",
   "checkedFingerprint": "I have checked the new fingerprint",
+  "checking": "checking…",
   "choiceKeepBoth": "Keep both",
   "choiceNewer": "Only if mine is newer",
   "choiceReplace": "Replace",
@@ -101,6 +118,17 @@
   "colPermissions": "Permissions",
   "colSize": "Size",
   "collapse": "Collapse",
+  "comebackLine": "connected again at {time} · away for {away} · new terminal",
+  "@comebackLine": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "away": {
+        "type": "String"
+      }
+    }
+  },
   "comingFromOther": "Coming from PuTTY, MobaXterm or SecureCRT?",
   "command": "Command",
   "commandHint": "Each line is sent as if typed. To write {open} as it is, put {escaped}.",
@@ -134,6 +162,14 @@
   "connectionDetails": "Connection details",
   "connectionHint": "What you don't change here is inherited; inherited values have a dashed border and say below where they come from. What the host sets wins, then its identity, then its groups and, last, the defaults.",
   "connectionLost": "The connection to {label} was lost{why}.",
+  "connectionLostTitle": "The connection to {host} was lost",
+  "@connectionLostTitle": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "continueAction": "Continue",
   "continueLabel": "Continue",
   "contrastFails": "Text contrast {ratio}:1. Below AA (4.5:1).",
@@ -201,6 +237,25 @@
   "dropToUpload": "Drop to upload here",
   "dropTop": "above",
   "duplicateTab": "Duplicate",
+  "durationMinSec": "{minutes} min {seconds} s",
+  "@durationMinSec": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "durationSec": "{seconds} s",
+  "@durationSec": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "dynamicSentence": "Use {here} as a SOCKS5 proxy: connections leave from {host}.",
   "editEllipsis": "Edit…",
   "editGroup": "Edit group…",
@@ -431,6 +486,19 @@
   "jumpThrough": "Jump through, in order",
   "jumpVia": "Jumping through {hosts}",
   "jumpsVia": "jumps through {hosts}",
+  "keepaliveEvery": "Every {every} s · lost after {lost} s",
+  "@keepaliveEvery": {
+    "placeholders": {
+      "every": {
+        "type": "int"
+      },
+      "lost": {
+        "type": "int"
+      }
+    }
+  },
+  "keepaliveLabel": "Check the connection",
+  "keepaliveOff": "Never",
   "keyAdded": "Saved as {path}.",
   "@keyAdded": {
     "placeholders": {
@@ -506,6 +574,22 @@
   "localShell": "Local",
   "localTerminal": "Local terminal",
   "localUser": "your local user",
+  "lostKeptInTmux": "Your session goes on in tmux on {host}: you will find it as it was when it is back. What you type now is not sent.",
+  "@lostKeptInTmux": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "lostNewShell": "What you type now is not sent. When it is back, a new terminal opens: what was running on {host} does not go on.",
+  "@lostNewShell": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "madeGroups": "{count, plural, =1{1 group, with its settings} other{{count} groups, with their settings}}",
   "madeIdentities": "{count, plural, =1{1 identity} other{{count} identities}}",
   "madeKey": "Key saved to {path}",
@@ -567,6 +651,8 @@
   "newSnippet": "New snippet",
   "newSubgroup": "New subgroup",
   "newTunnel": "New tunnel",
+  "newsConnectionBody": "If the server goes away, it shows within seconds and the connection comes back by itself; with a persistent session, you get back to the same terminal in tmux. While connecting and reconnecting, the way to the host, animated.",
+  "newsConnectionTitle": "A connection that stays aware",
   "newsFresh": "new",
   "newsIdentitiesBody": "A user, keys and an agent with a name, for a whole group or several hosts at once.",
   "newsIdentitiesTitle": "Identities",
@@ -597,6 +683,14 @@
   "newsWorkspacesTitle": "Workspaces",
   "next": "Next",
   "no": "No",
+  "noAnswerFor": "No answer for {seconds} s.",
+  "@noAnswerFor": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "noGroup": "No group",
   "noHostsBody": "Add one or bring them from your ~/\u2060.ssh/\u2060config.",
   "noHostsTitle": "No hosts yet",
@@ -623,6 +717,7 @@
       }
     }
   },
+  "noResponse": "no answer",
   "noResults": "No host matches.",
   "noSnippetMatches": "No snippet matches",
   "noSnippets": "No snippets yet",
@@ -633,6 +728,14 @@
   "noWorkspaces": "No workspaces yet",
   "noWorkspacesBody": "Open the tabs and split the panes as you like them, then keep them with “Save the open tabs…” (also in a tab's menu and in the command palette).",
   "notNow": "Not now",
+  "notResponding": "{host} is not responding",
+  "@notResponding": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "notes": "Notes",
   "nowIdentity": "Now: {identity}",
   "nowIdentityFromGroup": "Now: {identity}, from the group {group}",
@@ -707,6 +810,9 @@
   "permWrite": "Write",
   "permissionsEllipsis": "Permissions…",
   "permissionsOf": "Permissions of {name}",
+  "persistentOff": "No",
+  "persistentOn": "Yes, in tmux: it goes on after a cut",
+  "persistentSession": "Persistent session",
   "pickIdentity": "Pick an identity or «None».",
   "pixels": "{size} px",
   "policyAcceptNew": "Accept new",
@@ -871,6 +977,7 @@
   "separatePanes": "Split the panes into tabs",
   "sessionClosed": "Session closed.",
   "sessionClosedCode": "Session closed (code {code}).",
+  "sessionResumed": "tmux session found again",
   "setHereIdentitySays": "Set here; the identity says {value}",
   "setHereWouldInherit": "Set here; it would inherit {value}",
   "settings": "Settings",
@@ -889,6 +996,14 @@
   "showHiddenFiles": "Show hidden files",
   "showQueue": "Show queue",
   "showRest": "{count, plural, =1{Show the other one} other{Show the other {count}}}",
+  "sinceSeconds": "for {seconds} s",
+  "@sinceSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "skipGuide": "Skip the guide",
   "snippetEditorHint": "Commands you send to a terminal; what goes between braces is asked.",
   "snippetNeedsCommand": "Write the command.",
@@ -916,6 +1031,7 @@
   "statusError": "Error: {error}",
   "statusFailed": "The connection failed",
   "statusIdle": "Not connected",
+  "statusStalled": "No answer · checking…",
   "stepAppearance": "Appearance",
   "stepAuthenticating": "signing in…",
   "stepConnecting": "connecting…",
@@ -960,6 +1076,9 @@
   "thisComputer": "This computer",
   "time": "Time",
   "timeLeft": "{time} left",
+  "tmuxMissing": "no tmux",
+  "tmuxMissingTip": "tmux is not on this server: the terminal does not survive a cut. Install it to keep the session.",
+  "tmuxTip": "The terminal runs in tmux on the server: it goes on after a cut. The wheel scrolls its history; Shift and drag selects text.",
   "todayAt": "today {time}",
   "transfers": "Transfers",
   "trust": "Trust",

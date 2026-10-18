@@ -95,6 +95,37 @@ class TerminalController extends ConnectionController {
   @override
   void stop() => session.close();
 
+  /// The words of the line that marks where a new shell starts after a
+  /// cut, set by the pane (it knows the language): when, and after how
+  /// long away.
+  String Function(DateTime at, Duration away)? comebackLine;
+
+  @override
+  void onEvent(SessionEvent e) {
+    final down = phase == Phase.reconnecting;
+    final since = stalledSince ?? reconnectingSince;
+    super.onEvent(e);
+    // About to open a new shell after a cut: the old one is gone. Not in
+    // tmux, which draws the session as it was (or a new one) itself.
+    final inTmux = switch (persistent?.state) {
+      PersistenceKind.new_ || PersistenceKind.resumed => true,
+      _ => false,
+    };
+    final line = comebackLine;
+    if (down &&
+        !inTmux &&
+        line != null &&
+        e.kind == SessionEventKind.stage &&
+        e.stage?.stage == StageKind.openingShell) {
+      final now = DateTime.now();
+      final text = line(
+        now,
+        since == null ? Duration.zero : now.difference(since),
+      );
+      session.note(text: '\r\n\x1b[2m── $text ──\x1b[0m\r\n');
+    }
+  }
+
   /// The renderer for this pixel density, font, palette and contrast, made
   /// anew (and the screen asked for again) when any of them changes.
   TerminalRenderer renderer(

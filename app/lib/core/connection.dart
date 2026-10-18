@@ -54,6 +54,25 @@ abstract class ConnectionController extends ChangeNotifier {
   /// An error before the session could start (a plan that cannot run).
   String? error;
 
+  /// Since when the server has not answered, while it may still come back.
+  DateTime? stalledSince;
+
+  /// The last round trip to the server, in ms.
+  int? rttMs;
+
+  /// How the shell of a host with a persistent session started.
+  PersistentView? persistent;
+
+  /// When the connection that is coming back went down.
+  DateTime? _downSince;
+
+  /// While reconnecting: since when it has been down.
+  DateTime? get reconnectingSince => _downSince;
+
+  /// The last time it came back, and after how long away.
+  DateTime? backAt;
+  Duration? lastOutage;
+
   /// Questions from the session, oldest first.
   final Queue<PromptView> prompts = Queue();
 
@@ -113,8 +132,30 @@ abstract class ConnectionController extends ChangeNotifier {
         reconnecting = null;
         reconnectAt = null;
         everConnected = true;
+        stalledSince = null;
+        final down = _downSince;
+        if (down != null) {
+          backAt = DateTime.now();
+          lastOutage = backAt!.difference(down);
+          _downSince = null;
+        }
+      case SessionEventKind.health:
+        final h = e.health!;
+        if (h.stalled) {
+          stalledSince ??= DateTime.now().subtract(
+            Duration(milliseconds: h.silentMs.toInt()),
+          );
+        } else {
+          stalledSince = null;
+          if (h.rttMs != null) rttMs = h.rttMs;
+        }
+      case SessionEventKind.persistent:
+        persistent = e.persistent;
       case SessionEventKind.reconnecting:
         final r = e.reconnecting!;
+        // From when it stopped answering, if it did before it was lost.
+        _downSince ??= stalledSince ?? DateTime.now();
+        stalledSince = null;
         phase = Phase.reconnecting;
         reconnecting = r;
         stage = null;
@@ -127,6 +168,8 @@ abstract class ConnectionController extends ChangeNotifier {
       case SessionEventKind.closed:
         phase = Phase.closed;
         closed = e.closed;
+        stalledSince = null;
+        _downSince = null;
         stage = null;
         reconnecting = null;
         reconnectAt = null;
@@ -142,6 +185,8 @@ abstract class ConnectionController extends ChangeNotifier {
     stop();
     phase = Phase.closed;
     cancelled = true;
+    stalledSince = null;
+    _downSince = null;
     stage = null;
     reconnecting = null;
     reconnectAt = null;

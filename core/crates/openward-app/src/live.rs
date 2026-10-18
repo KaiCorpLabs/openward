@@ -1,7 +1,9 @@
 //! Connections more than one thing uses: a terminal and the SFTP browser of
 //! the same host go over one, which closes when the last of them lets go.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, Weak};
+use std::time::Duration;
 
 use openward_ssh::client::Session;
 use openward_ssh::known_hosts::Verdict;
@@ -17,6 +19,8 @@ pub(crate) struct Live {
     /// What the status bar says about it.
     pub connected: Connected,
     runtime: Handle,
+    /// The server stopped answering: nothing should use it any more.
+    lost: AtomicBool,
 }
 
 impl Live {
@@ -44,6 +48,7 @@ impl Live {
             sessions,
             connected,
             runtime,
+            lost: AtomicBool::new(false),
         })
     }
 
@@ -52,7 +57,25 @@ impl Live {
     }
 
     pub fn is_closed(&self) -> bool {
-        self.sessions.iter().any(Session::is_closed)
+        self.lost.load(Ordering::Relaxed) || self.sessions.iter().any(Session::is_closed)
+    }
+
+    /// Gives up on a server that stopped answering: its channels close,
+    /// so the terminal and the SFTP browser on it reconnect, and the
+    /// registry hands it to no one.
+    pub fn mark_lost(self: &Arc<Self>) {
+        self.lost.store(true, Ordering::Relaxed);
+        let me = Arc::clone(self);
+        self.runtime.spawn(async move {
+            for s in me.sessions.iter().rev() {
+                // Its loop may be stuck writing to a peer that is gone.
+                let _ = tokio::time::timeout(Duration::from_secs(2), s.disconnect()).await;
+            }
+        });
+    }
+
+    pub fn runtime(&self) -> &Handle {
+        &self.runtime
     }
 }
 

@@ -115,6 +115,8 @@ class _SettingsForm {
       agent = original.agent,
       route = original.route,
       policy = original.hostKeyPolicy,
+      persistent = original.persistentSession,
+      keepalive = original.keepaliveSecs,
       identity = original.identity,
       identityId = original.identityId,
       jumps = [...original.jumps],
@@ -127,6 +129,8 @@ class _SettingsForm {
         if (original.route != null) 'route',
         if (original.proxy != null) 'proxy',
         if (original.hostKeyPolicy != null) 'host_key_policy',
+        if (original.persistentSession != null) 'persistent_session',
+        if (original.keepaliveSecs != null) 'keepalive_secs',
       };
 
   final SettingsSpec original;
@@ -137,6 +141,8 @@ class _SettingsForm {
   ProxyKind? proxy;
   KeyPolicy? policy;
   IdentityChoice? identity;
+  bool? persistent;
+  int? keepalive;
 
   /// With [IdentityChoice.use].
   String identityId;
@@ -195,6 +201,10 @@ class _SettingsForm {
       case 'identity':
         identity = inherited.identity ?? IdentityChoice.none;
         identityId = inherited.identityId;
+      case 'persistent_session':
+        persistent = inherited.persistentSession ?? false;
+      case 'keepalive_secs':
+        keepalive = inherited.keepaliveSecs ?? 10;
     }
   }
 
@@ -225,6 +235,10 @@ class _SettingsForm {
       case 'identity':
         identity = null;
         identityId = '';
+      case 'persistent_session':
+        persistent = null;
+      case 'keepalive_secs':
+        keepalive = null;
     }
   }
 
@@ -289,8 +303,11 @@ class _SettingsForm {
       proxyHost: proxyServer ? proxyHost.text.trim() : '',
       proxyPort: proxyServer ? int.tryParse(proxyPort.text.trim()) ?? 0 : 0,
       proxyUser: proxyServer ? proxyUser.text.trim() : '',
-      keepaliveSecs: original.keepaliveSecs,
+      keepaliveSecs: setHere.contains('keepalive_secs') ? keepalive : null,
       agentForward: original.agentForward,
+      persistentSession: setHere.contains('persistent_session')
+          ? persistent
+          : null,
       term: original.term,
       env: original.env,
       hostKeyPolicy: setHere.contains('host_key_policy') ? policy : null,
@@ -444,6 +461,9 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
         _ => l.proxyNone,
       },
       'host_key_policy' => _policy(l, e.hostKeyPolicy ?? KeyPolicy.ask),
+      'persistent_session' =>
+        e.persistentSession ?? false ? l.persistentOn : l.persistentOff,
+      'keepalive_secs' => _keepalive(l, e.keepaliveSecs ?? 10),
       'identity' =>
         _base.effective.identity == IdentityChoice.use
             ? _identityLabel(_base.effective.identityId)
@@ -464,6 +484,13 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
       l.theHost,
     ].join(' → ');
   }
+
+  /// `Cada 10 s · perdida a los 20 s`, as the watcher reads it.
+  String _keepalive(AppLocalizations l, int secs) => secs == 0
+      ? l.keepaliveOff
+      : l.keepaliveEvery(secs, secs * 2 < 15 ? 15 : secs * 2);
+
+  static const _keepalives = [5, 10, 15, 30, 60, 0];
 
   String _policy(AppLocalizations l, KeyPolicy p) => switch (p) {
     KeyPolicy.ask => l.policyAsk,
@@ -792,6 +819,21 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
             onChanged: (v) => setState(() => f.policy = v),
           ),
         ),
+        _row(
+          field: 'persistent_session',
+          label: l.persistentSession,
+          editor: DropdownButtonFormField<bool>(
+            style: fieldTextStyle(context),
+            key: const ValueKey('settings.persistent'),
+            initialValue: f.persistent ?? false,
+            isExpanded: true,
+            items: [
+              DropdownMenuItem(value: true, child: Text(l.persistentOn)),
+              DropdownMenuItem(value: false, child: Text(l.persistentOff)),
+            ],
+            onChanged: (v) => setState(() => f.persistent = v),
+          ),
+        ),
         Align(
           alignment: Alignment.centerLeft,
           child: TextButton.icon(
@@ -804,6 +846,22 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
             label: Text(l.moreOptions),
           ),
         ),
+        if (_more)
+          _row(
+            field: 'keepalive_secs',
+            label: l.keepaliveLabel,
+            editor: DropdownButtonFormField<int>(
+              style: fieldTextStyle(context),
+              key: const ValueKey('settings.keepalive'),
+              initialValue: f.keepalive ?? 10,
+              isExpanded: true,
+              items: [
+                for (final k in {..._keepalives, ?f.keepalive})
+                  DropdownMenuItem(value: k, child: Text(_keepalive(l, k))),
+              ],
+              onChanged: (v) => setState(() => f.keepalive = v),
+            ),
+          ),
         if (_more)
           _row(
             field: 'agent',

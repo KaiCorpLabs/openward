@@ -6,7 +6,9 @@ use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Mutex, OnceLock, Weak};
 use std::time::{Duration, Instant};
 
-use openward_app::events::{ChangedKey, Connected, KeySource, PreviousKey, Trust};
+use openward_app::events::{
+    ChangedKey, Connected, Health, KeySource, Persistence, PreviousKey, Trust,
+};
 use openward_app::vault::proto::{
     Agent, Data, Group, Host, HostKeyPolicy, Identity, ItemId, Jump, Route, Settings, UseIdentity,
 };
@@ -14,6 +16,8 @@ use openward_app::{Answer, App, Event, EventSink, Failure, Local, Prompt, Termin
 use zeroize::Zeroizing;
 
 const BASTION: u16 = 22100;
+/// Its own server, for the test that freezes it.
+const FREEZE: u16 = 22101;
 
 fn fixtures() -> Option<PathBuf> {
     let dir = std::env::var_os("S2_FIXTURES")
@@ -151,7 +155,9 @@ fn outcome(rx: &Receiver<Event>) -> (Result<Connected, Option<Failure>>, Vec<Pro
             Event::Stage { .. }
             | Event::Started { .. }
             | Event::Route { .. }
-            | Event::Reconnecting { .. } => {}
+            | Event::Reconnecting { .. }
+            | Event::Health(_)
+            | Event::Persistent { .. } => {}
         }
     }
 }
@@ -319,6 +325,195 @@ fn a_lost_connection_comes_back() {
     assert!(matches!(reason, Failure::Network { .. }), "{reason:?}");
     term.text("echo back-$((6*7))\n");
     wait_for(&term, "back-42");
+}
+
+/// Unpauses a container when dropped, even if the test fails.
+struct Paused(&'static str);
+
+impl Paused {
+    fn new(name: &'static str) -> Self {
+        let ok = std::process::Command::new(runtime())
+            .args(["pause", name])
+            .status()
+            .unwrap();
+        assert!(ok.success(), "could not pause {name}");
+        Self(name)
+    }
+}
+
+impl Drop for Paused {
+    fn drop(&mut self) {
+        let _ = std::process::Command::new(runtime())
+            .args(["unpause", self.0])
+            .status();
+    }
+}
+
+fn bastion_host(f: &Fixture, persistent: Option<bool>) -> ItemId {
+    demo_host(f, "bastion", BASTION, persistent)
+}
+
+fn demo_host(f: &Fixture, label: &str, port: u16, persistent: Option<bool>) -> ItemId {
+    f.host(
+        label,
+        "127.0.0.1",
+        port,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: f.key("id_ed25519"),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            persistent_session: persistent,
+            ..Settings::default()
+        },
+    )
+}
+
+/// A server that stops answering without closing (frozen, as when it
+/// reboots or its network goes) is said not to respond within seconds, and
+/// given up and reconnected to in under half a minute, not two.
+#[test]
+fn a_server_that_stops_answering_is_noticed_in_seconds() {
+    let f = Fixture::new(servers!());
+    let host = demo_host(&f, "s2-freeze", FREEZE, None);
+    let (term, rx) = f.connect(host, |_| Answer::Cancel);
+    outcome(&rx).0.unwrap();
+    term.text("echo ready-$((6*7))\n");
+    wait_for(&term, "ready-42");
+    let paused = Paused::new("s2-freeze");
+    let start = Instant::now();
+    let mut stalled = None;
+    let lost = loop {
+        let left = Duration::from_secs(40).saturating_sub(start.elapsed());
+        match rx.recv_timeout(left).expect("not given up in 40 s") {
+            Event::Health(Health::Stalled { .. }) => stalled = Some(start.elapsed()),
+            Event::Reconnecting { reason, .. } => break (start.elapsed(), reason),
+            Event::Closed { failure, .. } => panic!("gave up: {failure:?}"),
+            _ => {}
+        }
+    };
+    let stalled = stalled.expect("never said it did not respond");
+    // A question every 10 s; no answer for 5 s: stalled; for 20 s: lost.
+    assert!(
+        stalled <= Duration::from_secs(16),
+        "stalled after {stalled:?}"
+    );
+    assert!(lost.0 <= Duration::from_secs(31), "lost after {:?}", lost.0);
+    assert!(
+        matches!(&lost.1, Failure::Network { message, .. } if message == "no answer for 20 s"),
+        "{:?}",
+        lost.1
+    );
+    drop(paused);
+    let deadline = Instant::now() + Duration::from_secs(60);
+    loop {
+        let left = deadline.saturating_duration_since(Instant::now());
+        match rx.recv_timeout(left).expect("not back in a minute") {
+            Event::Connected(_) => break,
+            Event::Closed { failure, .. } => panic!("gave up: {failure:?}"),
+            _ => {}
+        }
+    }
+    term.text("echo back-$((6*7))\n");
+    wait_for(&term, "back-42");
+}
+
+/// Without tmux on the server (Dropbear's has none), a persistent session
+/// is an ordinary shell, and says so.
+#[test]
+fn a_persistent_session_without_tmux_is_an_ordinary_shell() {
+    let f = Fixture::new(servers!());
+    let host = demo_host(&f, "dropbear", 22200, Some(true));
+    let (term, rx) = f.connect(host, |_| Answer::Cancel);
+    let mut state = None;
+    loop {
+        match rx
+            .recv_timeout(Duration::from_secs(30))
+            .expect("no outcome")
+        {
+            Event::Persistent { session, state: s } => {
+                assert!(session.starts_with("ow-"), "{session}");
+                state = Some(s);
+            }
+            Event::Connected(_) => break,
+            Event::Closed { failure, .. } => panic!("{failure:?}"),
+            _ => {}
+        }
+    }
+    assert_eq!(state, Some(Persistence::NoTmux));
+    term.text("echo plain-$((6*7))\n");
+    wait_for(&term, "plain-42");
+}
+
+/// With tmux, a persistent session is found as it was after a cut, and
+/// ends with the terminal.
+#[test]
+fn a_persistent_session_comes_back_as_it_was() {
+    let f = Fixture::new(servers!());
+    let has_tmux = std::process::Command::new(runtime())
+        .args(["exec", "bastion", "sh", "-c", "command -v tmux"])
+        .output()
+        .unwrap()
+        .status
+        .success();
+    if !has_tmux {
+        return eprintln!("skipped: no tmux in bastion");
+    }
+    let persistence = |rx: &Receiver<Event>| {
+        let mut state = None;
+        loop {
+            match rx
+                .recv_timeout(Duration::from_secs(60))
+                .expect("no outcome")
+            {
+                Event::Persistent { state: s, .. } => state = Some(s),
+                Event::Connected(_) => return state,
+                Event::Closed { failure, .. } => panic!("{failure:?}"),
+                _ => {}
+            }
+        }
+    };
+    let (term, rx) = f.connect(bastion_host(&f, Some(true)), |_| Answer::Cancel);
+    assert_eq!(persistence(&rx), Some(Persistence::New));
+    term.text("MARK=kept-$((6*7)); echo set-$MARK\n");
+    wait_for(&term, "set-kept-42");
+    // Cut this connection only (other tests use the bastion too): the
+    // sshd above the tmux client goes, tmux stays.
+    term.text("echo sshd-$(ps -o ppid= -p $(tmux display -p '#{client_pid}') | tr -d ' ')-end\n");
+    let deadline = Instant::now() + Duration::from_secs(10);
+    let pid = loop {
+        let screen = term.screen_text();
+        if let Some(pid) = screen.lines().find_map(|l| {
+            let pid = l.strip_prefix("sshd-")?.strip_suffix("-end")?;
+            pid.chars().all(|c| c.is_ascii_digit()).then_some(pid)
+        }) {
+            break pid.to_owned();
+        }
+        assert!(Instant::now() < deadline, "the sshd pid:\n{screen}");
+        std::thread::sleep(Duration::from_millis(20));
+    };
+    let killed = std::process::Command::new(runtime())
+        .args(["exec", "bastion", "kill", "-9", &pid])
+        .status()
+        .unwrap();
+    assert!(killed.success());
+    assert_eq!(persistence(&rx), Some(Persistence::Resumed));
+    term.text("echo again-$MARK\n");
+    wait_for(&term, "again-kept-42");
+    let sessions = || {
+        let out = std::process::Command::new(runtime())
+            .args(["exec", "-u", "demo", "bastion", "tmux", "ls"])
+            .output()
+            .unwrap();
+        String::from_utf8_lossy(&out.stdout).into_owned()
+    };
+    assert!(sessions().contains("ow-"), "{}", sessions());
+    // Closing the terminal ends it on the server.
+    term.close();
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while sessions().contains("ow-") {
+        assert!(Instant::now() < deadline, "still there: {}", sessions());
+        std::thread::sleep(Duration::from_millis(200));
+    }
 }
 
 #[test]

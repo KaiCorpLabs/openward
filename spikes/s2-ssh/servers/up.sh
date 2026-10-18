@@ -6,6 +6,7 @@
 #   127.0.0.1:22089  OpenSSH 8.9  (Ubuntu 22.04)
 #   127.0.0.1:22092  OpenSSH 9.2  (Debian 12)
 #   127.0.0.1:22100  OpenSSH 10.0 (Debian 13), also the jump bastion
+#   127.0.0.1:22101  OpenSSH 10.0 again, for tests that freeze it (pause)
 #   127.0.0.1:22200  Dropbear     (Alpine)
 #   jump chain: bastion (22100) → target1 → target2, internal networks only
 #
@@ -44,6 +45,7 @@ run() { # name image [extra args…]
 run s2-openssh-8.9 s2-openssh-8.9 -p 127.0.0.1:22089:22
 run s2-openssh-9.2 s2-openssh-9.2 -p 127.0.0.1:22092:22
 run bastion s2-openssh-10.0 -p 127.0.0.1:22100:22
+run s2-freeze s2-openssh-10.0 -p 127.0.0.1:22101:22
 run s2-dropbear s2-dropbear -p 127.0.0.1:22200:22
 "$runtime" network connect s2-jump-a bastion
 run target1 s2-openssh-9.2 --network s2-jump-a
@@ -51,7 +53,7 @@ run target1 s2-openssh-9.2 --network s2-jump-a
 run target2 s2-openssh-8.9 --network s2-jump-b
 
 # Wait until every published server answers with its SSH banner.
-for port in 22089 22092 22100 22200; do
+for port in 22089 22092 22100 22101 22200; do
   for _ in $(seq 1 50); do
     if banner="$(nc -w 1 127.0.0.1 "$port" </dev/null 2>/dev/null | head -1)" && [[ "$banner" == SSH-* ]]; then
       printf '%-6s %s\n' "$port" "$banner"

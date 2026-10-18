@@ -16,11 +16,12 @@ use openward_ssh::client::NoSftp;
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 
+use crate::alive::{self, Timing};
 use crate::connect::{self, Ctx, lock};
 use crate::events::{Event, Failure, Stage};
 use crate::live::Live;
 use crate::plan::Plan;
-use crate::{RECONNECT_ATTEMPTS, reconnect_delay};
+use crate::{RECONNECT_ATTEMPTS, no_answer, reconnect_delay};
 
 pub use openward_sftp::Error as SftpError;
 
@@ -276,13 +277,33 @@ async fn session(plan: &Plan, ctx: &Ctx, link: &Link) -> (Option<Failure>, bool)
         Arc::clone(&live) as Arc<dyn std::any::Any + Send + Sync>,
     );
     sink.send(Event::Connected(live.connected.clone()));
-    while !live.is_closed() {
-        tokio::time::sleep(WATCH).await;
-    }
-    link.set(None);
-    let failure = Failure::Network {
-        label,
-        message: "connection lost".into(),
+    // Closed under it (by the terminal's watcher, say), or not answering.
+    let closed = async {
+        while !live.is_closed() {
+            tokio::time::sleep(WATCH).await;
+        }
     };
-    (Some(failure), true)
+    let watching = async {
+        match Timing::from_keepalive(plan.hops[last].keepalive) {
+            Some(t) => {
+                alive::watch(
+                    || live.target().ping(),
+                    None,
+                    t,
+                    |h| sink.send(Event::Health(h)),
+                )
+                .await
+            }
+            None => std::future::pending().await,
+        }
+    };
+    let message = tokio::select! {
+        () = closed => "connection lost".to_owned(),
+        silent = watching => {
+            live.mark_lost();
+            no_answer(silent)
+        }
+    };
+    link.set(None);
+    (Some(Failure::Network { label, message }), true)
 }

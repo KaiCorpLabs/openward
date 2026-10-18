@@ -320,11 +320,23 @@ abstract class AppLocalizations {
   /// **'No pregunta nada. Escribe {example} donde quieras que pregunte.'**
   String asksNothing(String example);
 
+  /// No description provided for @awayFor.
+  ///
+  /// In es, this message translates to:
+  /// **'{time} fuera'**
+  String awayFor(String time);
+
   /// No description provided for @back.
   ///
   /// In es, this message translates to:
   /// **'Atrás'**
   String get back;
+
+  /// No description provided for @backAgain.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectado de nuevo a {host}'**
+  String backAgain(String host);
 
   /// No description provided for @badgeChanges.
   ///
@@ -530,6 +542,12 @@ abstract class AppLocalizations {
   /// **'He comprobado la huella nueva'**
   String get checkedFingerprint;
 
+  /// No description provided for @checking.
+  ///
+  /// In es, this message translates to:
+  /// **'comprobando…'**
+  String get checking;
+
   /// No description provided for @choiceKeepBoth.
   ///
   /// In es, this message translates to:
@@ -661,6 +679,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Plegar'**
   String get collapse;
+
+  /// No description provided for @comebackLine.
+  ///
+  /// In es, this message translates to:
+  /// **'conectado de nuevo a las {time} · estuvo fuera {away} · terminal nuevo'**
+  String comebackLine(String time, String away);
 
   /// No description provided for @comingFromOther.
   ///
@@ -817,6 +841,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Se perdió la conexión con {label}{why}.'**
   String connectionLost(String label, String why);
+
+  /// No description provided for @connectionLostTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Se perdió la conexión con {host}'**
+  String connectionLostTitle(String host);
 
   /// No description provided for @continueAction.
   ///
@@ -1177,6 +1207,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Duplicar'**
   String get duplicateTab;
+
+  /// No description provided for @durationMinSec.
+  ///
+  /// In es, this message translates to:
+  /// **'{minutes} min {seconds} s'**
+  String durationMinSec(int minutes, int seconds);
+
+  /// No description provided for @durationSec.
+  ///
+  /// In es, this message translates to:
+  /// **'{seconds} s'**
+  String durationSec(int seconds);
 
   /// No description provided for @dynamicSentence.
   ///
@@ -2222,6 +2264,24 @@ abstract class AppLocalizations {
   /// **'salta por {hosts}'**
   String jumpsVia(String hosts);
 
+  /// No description provided for @keepaliveEvery.
+  ///
+  /// In es, this message translates to:
+  /// **'Cada {every} s · perdida a los {lost} s'**
+  String keepaliveEvery(int every, int lost);
+
+  /// No description provided for @keepaliveLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Comprobar la conexión'**
+  String get keepaliveLabel;
+
+  /// No description provided for @keepaliveOff.
+  ///
+  /// In es, this message translates to:
+  /// **'Nunca'**
+  String get keepaliveOff;
+
   /// No description provided for @keyAdded.
   ///
   /// In es, this message translates to:
@@ -2546,6 +2606,18 @@ abstract class AppLocalizations {
   /// **'tu usuario local'**
   String get localUser;
 
+  /// No description provided for @lostKeptInTmux.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu sesión sigue en tmux en {host}: al volver la encontrarás como estaba. Lo que escribas ahora no se envía.'**
+  String lostKeptInTmux(String host);
+
+  /// No description provided for @lostNewShell.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que escribas ahora no se envía. Al volver se abre un terminal nuevo: lo que corría en {host} no sigue.'**
+  String lostNewShell(String host);
+
   /// No description provided for @madeGroups.
   ///
   /// In es, this message translates to:
@@ -2852,6 +2924,18 @@ abstract class AppLocalizations {
   /// **'Nuevo túnel'**
   String get newTunnel;
 
+  /// No description provided for @newsConnectionBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Si el servidor se va, se nota en segundos y la conexión vuelve sola; con la sesión persistente, vuelves al mismo terminal en tmux. Al conectar y al reconectar, el camino hasta el host, animado.'**
+  String get newsConnectionBody;
+
+  /// No description provided for @newsConnectionTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Conexión viva'**
+  String get newsConnectionTitle;
+
   /// No description provided for @newsFresh.
   ///
   /// In es, this message translates to:
@@ -2990,6 +3074,12 @@ abstract class AppLocalizations {
   /// **'No'**
   String get no;
 
+  /// No description provided for @noAnswerFor.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin respuesta desde hace {seconds} s.'**
+  String noAnswerFor(int seconds);
+
   /// No description provided for @noGroup.
   ///
   /// In es, this message translates to:
@@ -3104,6 +3194,12 @@ abstract class AppLocalizations {
   /// **'{name} no tiene .pub y está cifrada: sin su frase de paso no se puede leer la parte pública.'**
   String noPublicKey(String name);
 
+  /// No description provided for @noResponse.
+  ///
+  /// In es, this message translates to:
+  /// **'sin respuesta'**
+  String get noResponse;
+
   /// No description provided for @noResults.
   ///
   /// In es, this message translates to:
@@ -3163,6 +3259,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ahora no'**
   String get notNow;
+
+  /// No description provided for @notResponding.
+  ///
+  /// In es, this message translates to:
+  /// **'{host} no responde'**
+  String notResponding(String host);
 
   /// No description provided for @notes.
   ///
@@ -3607,6 +3709,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Permisos de {name}'**
   String permissionsOf(String name);
+
+  /// No description provided for @persistentOff.
+  ///
+  /// In es, this message translates to:
+  /// **'No'**
+  String get persistentOff;
+
+  /// No description provided for @persistentOn.
+  ///
+  /// In es, this message translates to:
+  /// **'Sí, en tmux: sigue tras un corte'**
+  String get persistentOn;
+
+  /// No description provided for @persistentSession.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesión persistente'**
+  String get persistentSession;
 
   /// No description provided for @pickIdentity.
   ///
@@ -4556,6 +4676,12 @@ abstract class AppLocalizations {
   /// **'Sesión cerrada (código {code}).'**
   String sessionClosedCode(int code);
 
+  /// No description provided for @sessionResumed.
+  ///
+  /// In es, this message translates to:
+  /// **'sesión de tmux recuperada'**
+  String get sessionResumed;
+
   /// No description provided for @setHereIdentitySays.
   ///
   /// In es, this message translates to:
@@ -4663,6 +4789,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{count, plural, =1{Ver el que falta} other{Ver los {count} restantes}}'**
   String showRest(int count);
+
+  /// No description provided for @sinceSeconds.
+  ///
+  /// In es, this message translates to:
+  /// **'desde hace {seconds} s'**
+  String sinceSeconds(int seconds);
 
   /// No description provided for @skipGuide.
   ///
@@ -4825,6 +4957,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Sin conectar'**
   String get statusIdle;
+
+  /// No description provided for @statusStalled.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin respuesta · comprobando…'**
+  String get statusStalled;
 
   /// No description provided for @stepAppearance.
   ///
@@ -5089,6 +5227,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'quedan {time}'**
   String timeLeft(String time);
+
+  /// No description provided for @tmuxMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'sin tmux'**
+  String get tmuxMissing;
+
+  /// No description provided for @tmuxMissingTip.
+  ///
+  /// In es, this message translates to:
+  /// **'tmux no está en este servidor: el terminal no sobrevive a un corte. Instálalo para tener la sesión persistente.'**
+  String get tmuxMissingTip;
+
+  /// No description provided for @tmuxTip.
+  ///
+  /// In es, this message translates to:
+  /// **'El terminal está en tmux en el servidor: sigue tras un corte. La rueda recorre su historial; Mayús y arrastrar selecciona texto.'**
+  String get tmuxTip;
 
   /// No description provided for @todayAt.
   ///

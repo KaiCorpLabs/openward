@@ -45,7 +45,11 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - cierra todo y ábrelo otra vez desde la biblioteca y desde la paleta;
    - cambia la distribución y usa «Cambiar por las pestañas abiertas»;
    - borra un host que esté en un espacio de trabajo y ábrelo: ese panel debe preguntar qué abrir.
-5. **CSV** («Importar…» › CSV):
+5. **Conexión:**
+   - con un terminal abierto, reinicia el servidor (o quítale la red) y comprueba que en unos segundos dice «no responde», luego que se perdió, y que vuelve solo cuando el servidor arranca;
+   - pon «Sesión persistente» en un host que tenga tmux, deja algo corriendo (`top`, un `tail -f`), corta la red y comprueba que al volver sigue ahí; cierra la pestaña y comprueba con `tmux ls` en el servidor que ya no está;
+   - en un servidor sin tmux, comprueba que la barra de estado dice «sin tmux».
+6. **CSV** («Importar…» › CSV):
    - exporta tus hosts de una hoja de cálculo o usa la plantilla de Termius;
    - comprueba los grupos, puertos, usuarios y etiquetas, y los avisos de lo que no entra;
    - impórtalo dos veces y comprueba que no se duplica.

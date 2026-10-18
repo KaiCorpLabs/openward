@@ -90,9 +90,10 @@ Future<void> _settle(WidgetTester tester) => tester.pumpAndSettle(
 Future<void> _until(
   WidgetTester tester,
   bool Function() done,
-  String what,
-) async {
-  final deadline = DateTime.now().add(const Duration(seconds: 15));
+  String what, {
+  Duration within = const Duration(seconds: 15),
+}) async {
+  final deadline = DateTime.now().add(within);
   while (!done()) {
     if (DateTime.now().isAfter(deadline)) fail('timed out waiting for $what');
     await tester.pump(const Duration(milliseconds: 50));
@@ -927,6 +928,184 @@ Host web-1 web-2
     expect(find.textContaining('Se perdió la conexión'), findsOneWidget);
     await _shot(tester, '8-reconnecting');
     await _until(tester, () => c.phase == Phase.connected, 'the reconnection');
+    container.read(tabsProvider.notifier).close(0);
+    await _settle(tester);
+  });
+
+  testWidgets('ssh: connecting, a server that stops answering, and back', (
+    tester,
+  ) async {
+    final fixtures = await _servers();
+    if (fixtures == null) return markTestSkipped('S2 servers not running');
+    await app.createHost(
+      spec: HostSpec(
+        label: 'minipc',
+        address: '127.0.0.1',
+        settings: SettingsSpec(
+          user: 'demo',
+          port: 22101,
+          identityFiles: ['$fixtures/id_ed25519'],
+          agent: AgentKind.off,
+          hostKeyPolicy: KeyPolicy.acceptNew,
+        ),
+      ),
+    );
+    final container = await launch(tester);
+    final runtime = Platform.environment['S2_RUNTIME'] ?? 'podman';
+    Future<void> freeze(bool on) async {
+      final r = await Process.run(runtime, [
+        on ? 'pause' : 'unpause',
+        's2-freeze',
+      ]);
+      expect(r.exitCode, 0, reason: '${r.stderr}');
+    }
+
+    // Frozen while it connects: the way there, animated.
+    await freeze(true);
+    late final TerminalController c;
+    try {
+      await _doubleTap(tester, 'minipc');
+      c = container.read(tabsProvider).currentSession!;
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Conectando con minipc'), findsOneWidget);
+      expect(find.text('Este equipo'), findsWidgets);
+      await _shot(tester, '80-connecting');
+    } finally {
+      await freeze(false);
+    }
+    await _until(tester, () => c.phase == Phase.connected, 'the connection');
+    c.session.text(text: 'echo ready-\$((6*7))\n');
+    await _until(
+      tester,
+      () => c.session.screenText().contains('ready-42'),
+      'the shell',
+    );
+
+    // Frozen while connected: it does not respond, then it is lost.
+    await freeze(true);
+    try {
+      await _until(
+        tester,
+        () => c.stalledSince != null,
+        'no answer',
+        within: const Duration(seconds: 20),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byKey(const ValueKey('pane.stalled')), findsOneWidget);
+      expect(find.textContaining('minipc no responde'), findsOneWidget);
+      await _shot(tester, '81-not-responding');
+      await _until(
+        tester,
+        () => c.phase == Phase.reconnecting && c.reconnectAt != null,
+        'giving it up',
+        within: const Duration(seconds: 30),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byKey(const ValueKey('pane.reconnect')), findsOneWidget);
+      expect(find.text('Se perdió la conexión con minipc'), findsOneWidget);
+      expect(find.text('Sin respuesta desde hace 20 s.'), findsOneWidget);
+      await _shot(tester, '82-lost');
+    } finally {
+      await freeze(false);
+    }
+    await _until(
+      tester,
+      () => c.phase == Phase.connected,
+      'back',
+      within: const Duration(seconds: 60),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byKey(const ValueKey('pane.back')), findsOneWidget);
+    expect(find.textContaining('Conectado de nuevo a minipc'), findsOneWidget);
+    await _until(
+      tester,
+      () => c.session.screenText().contains('conectado de nuevo a las'),
+      'the line where the new terminal starts',
+    );
+    await _shot(tester, '83-back');
+    container.read(tabsProvider.notifier).close(0);
+    await _settle(tester);
+  });
+
+  testWidgets('ssh: a persistent session in tmux, found again after a cut', (
+    tester,
+  ) async {
+    final fixtures = await _servers();
+    if (fixtures == null) return markTestSkipped('S2 servers not running');
+    await app.createHost(
+      spec: HostSpec(
+        label: 'bastion',
+        address: '127.0.0.1',
+        settings: SettingsSpec(
+          user: 'demo',
+          port: 22100,
+          identityFiles: ['$fixtures/id_ed25519'],
+          agent: AgentKind.off,
+          hostKeyPolicy: KeyPolicy.acceptNew,
+          persistentSession: true,
+        ),
+      ),
+    );
+    final container = await launch(tester);
+    await _doubleTap(tester, 'bastion');
+    final c = container.read(tabsProvider).currentSession!;
+    await _until(tester, () => c.phase == Phase.connected, 'the connection');
+    expect(c.persistent?.state, PersistenceKind.new_);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('tmux'), findsOneWidget);
+    c.session.text(text: 'MARK=kept-\$((6*7)); echo set-\$MARK\n');
+    await _until(
+      tester,
+      () => c.session.screenText().contains('set-kept-42'),
+      'the variable',
+    );
+    // Cut it: the sshd above the tmux client goes, tmux stays.
+    c.session.text(
+      text:
+          "echo sshd-\$(ps -o ppid= -p \$(tmux display -p '#{client_pid}') "
+          "| tr -d ' ')-end\n",
+    );
+    String? pid;
+    await _until(tester, () {
+      pid = RegExp(
+        r'^sshd-(\d+)-end$',
+        multiLine: true,
+      ).firstMatch(c.session.screenText())?.group(1);
+      return pid != null;
+    }, 'the sshd pid');
+    final runtime = Platform.environment['S2_RUNTIME'] ?? 'podman';
+    final killed = await Process.run(runtime, [
+      'exec',
+      'bastion',
+      'kill',
+      '-9',
+      pid!,
+    ]);
+    expect(killed.exitCode, 0, reason: '${killed.stderr}');
+    await _until(
+      tester,
+      () => c.phase == Phase.reconnecting,
+      'the cut',
+      within: const Duration(seconds: 20),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.textContaining('Tu sesión sigue en tmux'), findsOneWidget);
+    await _until(
+      tester,
+      () => c.phase == Phase.connected,
+      'back',
+      within: const Duration(seconds: 30),
+    );
+    expect(c.persistent?.state, PersistenceKind.resumed);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.textContaining('sesión de tmux recuperada'), findsOneWidget);
+    c.session.text(text: 'echo again-\$MARK\n');
+    await _until(
+      tester,
+      () => c.session.screenText().contains('again-kept-42'),
+      'the same shell',
+    );
+    await _shot(tester, '84-tmux-back');
     container.read(tabsProvider.notifier).close(0);
     await _settle(tester);
   });

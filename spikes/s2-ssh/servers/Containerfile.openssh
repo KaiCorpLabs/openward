@@ -6,7 +6,7 @@ FROM docker.io/library/${BASE}
 ENV DEBIAN_FRONTEND=noninteractive LANG=C.UTF-8
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      openssh-server libpam-google-authenticator python3 netcat-openbsd procps \
+      openssh-server libpam-google-authenticator python3 netcat-openbsd procps tmux \
  && rm -rf /var/lib/apt/lists/* \
  && mkdir -p /run/sshd \
  && useradd -m -s /bin/bash demo \

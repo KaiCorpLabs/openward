@@ -804,6 +804,37 @@ impl Session {
         Ok(channel)
     }
 
+    /// As [`Session::shell_with`], running `command` on the PTY instead of
+    /// the login shell (tmux, for a session that survives a cut).
+    pub async fn command_with(
+        &self,
+        command: &str,
+        term: &str,
+        cols: u32,
+        rows: u32,
+        env: &[(String, String)],
+        agent_forward: bool,
+    ) -> anyhow::Result<Channel<client::Msg>> {
+        let channel = self.handle.channel_open_session().await?;
+        if agent_forward {
+            channel.agent_forward(false).await?;
+        }
+        for (k, v) in env {
+            channel.set_env(false, k.as_str(), v.as_str()).await?;
+        }
+        channel
+            .request_pty(true, term, cols, rows, 0, 0, &[(Pty::ECHO, 1)])
+            .await?;
+        channel.exec(true, command).await?;
+        Ok(channel)
+    }
+
+    /// Asks the server for an answer (`keepalive@openssh.com`) and waits
+    /// for it. Returns false when the connection is gone.
+    pub async fn ping(&self) -> bool {
+        self.handle.send_ping().await.is_ok() && !self.handle.is_closed()
+    }
+
     /// A channel running the server's SFTP subsystem, as a byte stream for
     /// an SFTP client. Fails with [`NoSftp`] when the server has none (a
     /// Dropbear without `sftp-server`, a router).

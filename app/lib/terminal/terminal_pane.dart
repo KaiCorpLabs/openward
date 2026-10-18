@@ -18,6 +18,7 @@ import '../history/history.dart';
 import '../history/line_tracker.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/session.dart';
+import '../tabs/connection_motion.dart' show comebackWords;
 import '../ui/tokens.dart';
 import 'controller.dart';
 import 'keys.dart';
@@ -101,6 +102,12 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     _c.visible = true;
     _c.focusTerminal = _focusSoon;
     _ticker.start();
+    // Its language for the line that marks a new shell after a cut.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final l = context.l10n;
+      _c.comebackLine = (at, away) => comebackWords(l, at, away);
+    });
     final settings = ref.read(settingsProvider);
     _optionAsAlt = settings.optionAsAlt;
     _session.setOptionAsAlt(enabled: _optionAsAlt);

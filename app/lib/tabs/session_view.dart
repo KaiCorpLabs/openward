@@ -15,6 +15,7 @@ import '../snippets/palette.dart';
 import '../tunnels/tunnels_page.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
+import 'connection_motion.dart';
 import 'connection_panels.dart';
 import 'find_bar.dart';
 import 'messages.dart';
@@ -644,9 +645,12 @@ class PaneContent extends ConsumerWidget {
         final c = controller;
         final prompt = c.prompts.isEmpty ? null : c.prompts.first;
         final failed = c.phase == Phase.closed && c.closed?.failure != null;
-        // Over a terminal that has nothing to show yet.
+        // Over a terminal that has nothing to show yet, or whose connection
+        // is coming back.
         final Widget? card = prompt != null
             ? PromptCard(key: ObjectKey(prompt), controller: c, prompt: prompt)
+            : c.phase == Phase.reconnecting
+            ? ReconnectCard(controller: c)
             : c.everConnected
             ? null
             : c.phase == Phase.connecting && !c.isLocal
@@ -654,6 +658,10 @@ class PaneContent extends ConsumerWidget {
             : failed
             ? FailureCard(controller: c)
             : null;
+        final stalled =
+            c.stalledSince != null &&
+            card == null &&
+            (c.phase == Phase.connected || c.phase == Phase.running);
         Widget terminal = Stack(
           children: [
             Positioned.fill(
@@ -670,6 +678,20 @@ class PaneContent extends ConsumerWidget {
             Positioned.fill(child: BellFlash(controller: c)),
             if (c.findOpen && card == null)
               Positioned(top: 8, right: 12, child: FindBar(controller: c)),
+            if (stalled) ...[
+              const Positioned(top: 0, left: 0, right: 0, child: StalledBar()),
+              Positioned(
+                top: c.findOpen ? 56 : 12,
+                right: 14,
+                child: StalledNotice(controller: c),
+              ),
+            ],
+            if (card == null)
+              Positioned(
+                top: c.findOpen ? 56 : 12,
+                right: 14,
+                child: BackToast(controller: c),
+              ),
             if (card != null)
               Positioned.fill(
                 child: ColoredBox(
@@ -705,14 +727,7 @@ class PaneContent extends ConsumerWidget {
             child: terminal,
           );
         }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (c.phase == Phase.reconnecting && prompt == null)
-              ReconnectBanner(controller: c),
-            Expanded(child: terminal),
-          ],
-        );
+        return terminal;
       },
     );
   }
@@ -733,7 +748,8 @@ class _StatusBar extends ConsumerWidget {
     final failure = s.closed?.failure;
     final failed =
         s.phase == Phase.closed && (failure != null || s.error != null);
-    final k = s.phase == Phase.connected ? s.connected : null;
+    final stalled = s.stalledSince != null && s.phase == Phase.connected;
+    final k = s.phase == Phase.connected && !stalled ? s.connected : null;
     final pq = k?.postQuantum ?? false;
     final color = failed ? c.danger : c.textMuted;
     final small = TextStyle(fontSize: 12, color: color);
@@ -757,10 +773,16 @@ class _StatusBar extends ConsumerWidget {
             ),
           ),
           if (pq) ...[const SizedBox(width: 8), Pill(l.postQuantum)],
+          if (s.persistent case final p?) tmuxPill(context, p),
           const SizedBox(width: 10),
           Flexible(
             child: Text(
-              [k.kex, k.cipher, ?via].join(' · '),
+              [
+                k.kex,
+                k.cipher,
+                ?via,
+                if (s.rttMs case final rtt?) '$rtt ms',
+              ].join(' · '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: monoStyle(context, size: 11),
@@ -772,23 +794,26 @@ class _StatusBar extends ConsumerWidget {
       line = Row(
         children: [
           Icon(
-            switch (s.phase) {
-              Phase.connecting => Icons.hourglass_empty,
-              Phase.reconnecting => Icons.sync,
-              Phase.connected => Icons.lock_outline,
-              Phase.running => Icons.computer,
-              Phase.closed => failed ? Icons.error_outline : Icons.link_off,
-            },
+            stalled
+                ? Icons.wifi_tethering_error
+                : switch (s.phase) {
+                    Phase.connecting => Icons.hourglass_empty,
+                    Phase.reconnecting => Icons.sync,
+                    Phase.connected => Icons.lock_outline,
+                    Phase.running => Icons.computer,
+                    Phase.closed =>
+                      failed ? Icons.error_outline : Icons.link_off,
+                  },
             size: 14,
-            color: color,
+            color: stalled ? c.warn : color,
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              statusText(l, s),
+              stalled ? l.statusStalled : statusText(l, s),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: small,
+              style: stalled ? small.copyWith(color: c.warn) : small,
             ),
           ),
         ],

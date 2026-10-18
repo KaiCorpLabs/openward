@@ -50,6 +50,8 @@ pub struct Plan {
     pub env: Vec<(String, String)>,
     /// Forward the target's agent requests to the last hop's agent.
     pub agent_forward: bool,
+    /// The shell goes inside tmux, to come back to it.
+    pub persistent: bool,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -101,6 +103,7 @@ impl Plan {
             term: settings.term.unwrap_or_else(|| "xterm-256color".into()),
             env: settings.env.unwrap_or_default().into_iter().collect(),
             agent_forward: settings.agent_forward.unwrap_or(false) && target.agent.is_some(),
+            persistent: settings.persistent_session.unwrap_or(false),
             hops: vec![target],
         }
     }
@@ -126,6 +129,7 @@ impl Plan {
             term: settings.term.unwrap_or_else(|| "xterm-256color".into()),
             env: settings.env.unwrap_or_default().into_iter().collect(),
             agent_forward: settings.agent_forward.unwrap_or(false) && target.agent.is_some(),
+            persistent: settings.persistent_session.unwrap_or(false),
             hops,
         })
     }
@@ -322,7 +326,7 @@ mod tests {
             [PathBuf::from("/home/ana/.ssh/prod_web")]
         );
         assert_eq!(hop.agent, Some(PathBuf::from("/tmp/agent.sock")));
-        assert_eq!(hop.keepalive, Some(Duration::from_secs(30)));
+        assert_eq!(hop.keepalive, Some(Duration::from_secs(10)));
         assert_eq!(hop.host_key_policy, HostKeyPolicy::Ask);
         assert_eq!(plan.env, [("LANG".to_owned(), "C.UTF-8".to_owned())]);
         assert!(plan.agent_forward);

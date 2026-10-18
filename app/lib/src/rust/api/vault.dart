@@ -532,6 +532,9 @@ class SettingsSpec {
   final String proxyUser;
   final int? keepaliveSecs;
   final bool? agentForward;
+
+  /// The shell inside tmux on the server, to come back to it.
+  final bool? persistentSession;
   final String? term;
   final List<EnvVar>? env;
   final KeyPolicy? hostKeyPolicy;
@@ -557,6 +560,7 @@ class SettingsSpec {
     this.proxyUser = r"",
     this.keepaliveSecs,
     this.agentForward,
+    this.persistentSession = null,
     this.term,
     this.env,
     this.hostKeyPolicy,
@@ -585,6 +589,7 @@ class SettingsSpec {
       proxyUser.hashCode ^
       keepaliveSecs.hashCode ^
       agentForward.hashCode ^
+      persistentSession.hashCode ^
       term.hashCode ^
       env.hashCode ^
       hostKeyPolicy.hashCode ^
@@ -612,6 +617,7 @@ class SettingsSpec {
           proxyUser == other.proxyUser &&
           keepaliveSecs == other.keepaliveSecs &&
           agentForward == other.agentForward &&
+          persistentSession == other.persistentSession &&
           term == other.term &&
           env == other.env &&
           hostKeyPolicy == other.hostKeyPolicy &&

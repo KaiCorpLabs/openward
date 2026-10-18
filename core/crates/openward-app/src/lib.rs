@@ -7,6 +7,7 @@
 //! and type into. No secret is kept: passphrases and passwords live as long
 //! as the attempt that uses them.
 
+pub mod alive;
 pub mod events;
 pub mod import;
 pub mod keychain;
@@ -41,8 +42,9 @@ pub use sftp::Sftp;
 pub use terminal::Terminal;
 pub use tunnels::{TunnelError, TunnelState};
 
+use alive::Timing;
 use connect::{Ctx, lock};
-use events::{Prompts, Stage};
+use events::{Persistence, Prompts, Stage};
 use live::{Live, Registry};
 use openward_sftp::{Request, Transfers};
 use tunnels::Tunnels;
@@ -150,6 +152,8 @@ impl App {
         terminal.close();
         let ctx = self.ctx(&sink);
         let term = Arc::downgrade(terminal);
+        // The same on every reconnection, to find the session again.
+        let tmux = tmux_session_name();
         let task = self.runtime.spawn(async move {
             let mut attempt = 0;
             loop {
@@ -163,7 +167,7 @@ impl App {
                         });
                     }
                 };
-                let (exit_code, failure, connected) = session(&plan, &ctx, &term).await;
+                let (exit_code, failure, connected) = session(&plan, &ctx, &term, &tmux).await;
                 if connected {
                     attempt = 0;
                 }
@@ -511,6 +515,37 @@ impl Target {
 /// Tries after losing a connection, before giving up.
 pub const RECONNECT_ATTEMPTS: u32 = 8;
 
+/// Why a connection was given up when the server stopped answering.
+pub(crate) fn no_answer(silent: Duration) -> String {
+    format!("no answer for {} s", silent.as_secs())
+}
+
+/// A terminal's tmux session: `ow-` and eight hex digits.
+fn tmux_session_name() -> String {
+    format!("ow-{:08x}", rand::random::<u32>())
+}
+
+/// Whether `session` can be found again: no tmux, found or new. Through
+/// `sh`, whatever the login shell is.
+async fn tmux_state(target: &openward_ssh::client::Session, session: &str) -> Persistence {
+    let check = format!(
+        "sh -c 'command -v tmux >/dev/null 2>&1 || exit 3; tmux has-session -t {session} 2>/dev/null'"
+    );
+    match target.exec(&check).await.map(|o| o.status) {
+        Ok(Some(0)) => Persistence::Resumed,
+        Ok(Some(1)) => Persistence::New,
+        _ => Persistence::NoTmux,
+    }
+}
+
+/// tmux attaching to `session` or making it, without its status bar and
+/// with the wheel scrolling its history (those of this session only).
+fn tmux_command(session: &str) -> String {
+    format!(
+        "sh -c 'exec tmux new-session -A -s {session} \\; set-option -q status off \\; set-option -q mouse on'"
+    )
+}
+
 /// 1, 2, 4, 8, 16 and then 30 seconds.
 pub(crate) fn reconnect_delay(attempt: u32) -> Duration {
     Duration::from_secs((1u64 << attempt.saturating_sub(1).min(5)).min(30))
@@ -523,6 +558,7 @@ async fn session(
     plan: &Plan,
     ctx: &Ctx,
     term: &Weak<Terminal>,
+    tmux: &str,
 ) -> (Option<u32>, Option<Failure>, bool) {
     let sink = &ctx.sink;
     sink.send(Event::Route {
@@ -547,28 +583,86 @@ async fn session(
         stage: Stage::OpeningShell,
     });
     let size = pipe.size();
-    let channel = match live
-        .target()
-        .shell_with(
-            &plan.term,
-            u32::from(size.cols),
-            u32::from(size.rows),
-            &plan.env,
-            plan.agent_forward,
-        )
-        .await
-    {
+    let (cols, rows) = (u32::from(size.cols), u32::from(size.rows));
+    let target = live.target();
+    let persistence = if plan.persistent {
+        let state = tmux_state(target, tmux).await;
+        sink.send(Event::Persistent {
+            session: tmux.to_owned(),
+            state,
+        });
+        Some(state)
+    } else {
+        None
+    };
+    let in_tmux = matches!(persistence, Some(Persistence::New | Persistence::Resumed));
+    let opened = if in_tmux {
+        target
+            .command_with(
+                &tmux_command(tmux),
+                &plan.term,
+                cols,
+                rows,
+                &plan.env,
+                plan.agent_forward,
+            )
+            .await
+    } else {
+        target
+            .shell_with(&plan.term, cols, rows, &plan.env, plan.agent_forward)
+            .await
+    };
+    let channel = match opened {
         Ok(channel) => channel,
         Err(e) => {
             let failure = Failure::Other(format!("opening the shell: {e:#}"));
             return (None, Some(failure), false);
         }
     };
+    // Closing the tab ends the tmux session too; a cut does not.
+    if in_tmux && let Some(t) = term.upgrade() {
+        let weak = Arc::downgrade(&live);
+        let name = tmux.to_owned();
+        t.set_closer(move || {
+            if let Some(live) = weak.upgrade() {
+                live.runtime().clone().spawn(async move {
+                    let kill = format!("tmux kill-session -t {name}");
+                    let _ = tokio::time::timeout(Duration::from_secs(3), live.target().exec(&kill))
+                        .await;
+                });
+            }
+        });
+    }
     // Input goes to the shell before anyone hears it is connected.
     let pump = pipe.pump_ssh(channel, &target_hop.label);
+    let activity = pipe.activity();
     drop(pipe);
     sink.send(Event::Connected(live.connected.clone()));
-    let (exit_code, failure) = pump.await;
+    let watching = async {
+        match Timing::from_keepalive(target_hop.keepalive) {
+            Some(t) => {
+                alive::watch(
+                    || live.target().ping(),
+                    Some(&activity),
+                    t,
+                    |h| sink.send(Event::Health(h)),
+                )
+                .await
+            }
+            None => std::future::pending().await,
+        }
+    };
+    let (exit_code, failure) = tokio::select! {
+        ended = pump => ended,
+        silent = watching => {
+            live.mark_lost();
+            let failure = Failure::Network {
+                label: target_hop.label.clone(),
+                message: no_answer(silent),
+            };
+            (None, Some(failure))
+        }
+    };
     // The connection closes now, unless a browser still uses it.
     drop(live);
     (exit_code, failure, true)

@@ -14,6 +14,7 @@ import '../src/rust/api/session.dart';
 import '../terminal/controller.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
+import 'connection_motion.dart';
 import 'messages.dart';
 import 'tabs.dart';
 
@@ -134,8 +135,9 @@ class ConnectingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
+    final via = viaText(l, controller);
     return OverlayPanel(
-      width: 420,
+      width: 500,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,7 +146,11 @@ class ConnectingCard extends StatelessWidget {
             l.connectingTo(controller.label),
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 12),
+          if (via != null)
+            Text(via, style: TextStyle(color: context.ow.colors.textMuted)),
+          const SizedBox(height: 16),
+          connectingRoute(l, controller),
+          const SizedBox(height: 4),
           _RouteSteps(controller: controller),
           const SizedBox(height: 12),
           Align(

@@ -104,6 +104,9 @@ pub struct SettingsSpec {
     pub proxy_user: String,
     pub keepalive_secs: Option<u32>,
     pub agent_forward: Option<bool>,
+    /// The shell inside tmux on the server, to come back to it.
+    #[frb(default = "null")]
+    pub persistent_session: Option<bool>,
     pub term: Option<String>,
     pub env: Option<Vec<EnvVar>>,
     pub host_key_policy: Option<KeyPolicy>,
@@ -187,6 +190,7 @@ impl SettingsSpec {
             proxy_command,
             keepalive_secs: s.keepalive_secs,
             agent_forward: s.agent_forward,
+            persistent_session: s.persistent_session,
             term: s.term.clone(),
             env: s.env.as_ref().map(|env| {
                 env.iter()
@@ -254,6 +258,7 @@ impl SettingsSpec {
         };
         s.keepalive_secs = self.keepalive_secs;
         s.agent_forward = self.agent_forward;
+        s.persistent_session = self.persistent_session;
         s.term = self.term.clone().filter(|t| !t.is_empty());
         s.env = self.env.as_ref().map(|env| {
             env.iter()

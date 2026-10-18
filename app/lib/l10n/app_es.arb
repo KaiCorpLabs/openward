@@ -123,7 +123,23 @@
       }
     }
   },
+  "awayFor": "{time} fuera",
+  "@awayFor": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "back": "Atrás",
+  "backAgain": "Conectado de nuevo a {host}",
+  "@backAgain": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "badgeChanges": "cambia",
   "badgeLeaves": "la deja",
   "badgeNew": "nueva",
@@ -261,6 +277,7 @@
     }
   },
   "checkedFingerprint": "He comprobado la huella nueva",
+  "checking": "comprobando…",
   "choiceKeepBoth": "Mantener los dos",
   "choiceNewer": "Solo si el mío es más nuevo",
   "choiceReplace": "Reemplazar",
@@ -290,6 +307,17 @@
   "colPermissions": "Permisos",
   "colSize": "Tamaño",
   "collapse": "Plegar",
+  "comebackLine": "conectado de nuevo a las {time} · estuvo fuera {away} · terminal nuevo",
+  "@comebackLine": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "away": {
+        "type": "String"
+      }
+    }
+  },
   "comingFromOther": "¿Vienes de PuTTY, MobaXterm o SecureCRT?",
   "command": "Comando",
   "commandHint": "Cada línea se envía como si la escribieras. Para escribir {open} tal cual, pon {escaped}.",
@@ -387,6 +415,14 @@
         "type": "String"
       },
       "why": {
+        "type": "String"
+      }
+    }
+  },
+  "connectionLostTitle": "Se perdió la conexión con {host}",
+  "@connectionLostTitle": {
+    "placeholders": {
+      "host": {
         "type": "String"
       }
     }
@@ -569,6 +605,25 @@
   "dropToUpload": "Suelta para subir aquí",
   "dropTop": "arriba",
   "duplicateTab": "Duplicar",
+  "durationMinSec": "{minutes} min {seconds} s",
+  "@durationMinSec": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "durationSec": "{seconds} s",
+  "@durationSec": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "dynamicSentence": "Usa {here} como proxy SOCKS5: las conexiones salen de {host}.",
   "@dynamicSentence": {
     "placeholders": {
@@ -1198,6 +1253,19 @@
       }
     }
   },
+  "keepaliveEvery": "Cada {every} s · perdida a los {lost} s",
+  "@keepaliveEvery": {
+    "placeholders": {
+      "every": {
+        "type": "int"
+      },
+      "lost": {
+        "type": "int"
+      }
+    }
+  },
+  "keepaliveLabel": "Comprobar la conexión",
+  "keepaliveOff": "Nunca",
   "keyAdded": "Guardada en {path}.",
   "@keyAdded": {
     "placeholders": {
@@ -1352,6 +1420,22 @@
   "localShell": "Local",
   "localTerminal": "Terminal local",
   "localUser": "tu usuario local",
+  "lostKeptInTmux": "Tu sesión sigue en tmux en {host}: al volver la encontrarás como estaba. Lo que escribas ahora no se envía.",
+  "@lostKeptInTmux": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "lostNewShell": "Lo que escribas ahora no se envía. Al volver se abre un terminal nuevo: lo que corría en {host} no sigue.",
+  "@lostNewShell": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "madeGroups": "{count, plural, =1{1 grupo, con sus ajustes} other{{count} grupos, con sus ajustes}}",
   "@madeGroups": {
     "placeholders": {
@@ -1503,6 +1587,8 @@
   "newSnippet": "Nuevo snippet",
   "newSubgroup": "Nuevo subgrupo",
   "newTunnel": "Nuevo túnel",
+  "newsConnectionBody": "Si el servidor se va, se nota en segundos y la conexión vuelve sola; con la sesión persistente, vuelves al mismo terminal en tmux. Al conectar y al reconectar, el camino hasta el host, animado.",
+  "newsConnectionTitle": "Conexión viva",
   "newsFresh": "nuevo",
   "newsIdentitiesBody": "Usuario, claves y agente con un nombre, para un grupo entero o varios hosts a la vez.",
   "newsIdentitiesTitle": "Identidades",
@@ -1557,6 +1643,14 @@
   "newsWorkspacesTitle": "Espacios de trabajo",
   "next": "Siguiente",
   "no": "No",
+  "noAnswerFor": "Sin respuesta desde hace {seconds} s.",
+  "@noAnswerFor": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "noGroup": "Sin grupo",
   "noHostsBody": "Añade uno o tráelos de tu ~/\u2060.ssh/\u2060config.",
   "noHostsTitle": "Aún no tienes hosts",
@@ -1590,6 +1684,7 @@
       }
     }
   },
+  "noResponse": "sin respuesta",
   "noResults": "Ningún host coincide.",
   "noSnippetMatches": "Ningún snippet coincide",
   "noSnippets": "Aún no hay snippets",
@@ -1607,6 +1702,14 @@
   "noWorkspaces": "Aún no hay espacios de trabajo",
   "noWorkspacesBody": "Abre las pestañas y divide los paneles como los quieras, y guárdalos con «Guardar las pestañas abiertas…» (también en el menú de una pestaña y en la paleta de comandos).",
   "notNow": "Ahora no",
+  "notResponding": "{host} no responde",
+  "@notResponding": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "notes": "Notas",
   "nowIdentity": "Ahora: {identity}",
   "@nowIdentity": {
@@ -1768,6 +1871,9 @@
       }
     }
   },
+  "persistentOff": "No",
+  "persistentOn": "Sí, en tmux: sigue tras un corte",
+  "persistentSession": "Sesión persistente",
   "pickIdentity": "Elige una identidad o «Ninguna».",
   "pixels": "{size} px",
   "@pixels": {
@@ -2303,6 +2409,7 @@
       }
     }
   },
+  "sessionResumed": "sesión de tmux recuperada",
   "setHereIdentitySays": "Cambiado aquí; la identidad dice {value}",
   "@setHereIdentitySays": {
     "placeholders": {
@@ -2352,6 +2459,14 @@
   "@showRest": {
     "placeholders": {
       "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sinceSeconds": "desde hace {seconds} s",
+  "@sinceSeconds": {
+    "placeholders": {
+      "seconds": {
         "type": "int"
       }
     }
@@ -2445,6 +2560,7 @@
   },
   "statusFailed": "Ha fallado la conexión",
   "statusIdle": "Sin conectar",
+  "statusStalled": "Sin respuesta · comprobando…",
   "stepAppearance": "Apariencia",
   "stepAuthenticating": "autenticando…",
   "stepConnecting": "conectando…",
@@ -2513,6 +2629,9 @@
       }
     }
   },
+  "tmuxMissing": "sin tmux",
+  "tmuxMissingTip": "tmux no está en este servidor: el terminal no sobrevive a un corte. Instálalo para tener la sesión persistente.",
+  "tmuxTip": "El terminal está en tmux en el servidor: sigue tras un corte. La rueda recorre su historial; Mayús y arrastrar selecciona texto.",
   "todayAt": "hoy {time}",
   "@todayAt": {
     "placeholders": {

@@ -44,6 +44,14 @@ pub enum Event {
         delay_ms: u64,
         reason: Failure,
     },
+    /// How a live connection is doing (see [`crate::alive`]).
+    Health(Health),
+    /// The shell of a host with a persistent session: its tmux session,
+    /// found again or new, or no tmux on the server (an ordinary shell).
+    Persistent {
+        session: String,
+        state: Persistence,
+    },
     /// A local program is running: input goes to it from now on.
     Started {
         program: String,
@@ -53,6 +61,24 @@ pub enum Event {
         exit_code: Option<u32>,
         failure: Option<Failure>,
     },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Health {
+    /// The server answered; after `rtt_ms` when it was a question's answer.
+    Answered { rtt_ms: Option<u32> },
+    /// No answer for `silent_ms` so far: it may come back, or be lost.
+    Stalled { silent_ms: u64 },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Persistence {
+    /// A new tmux session.
+    New,
+    /// The session from before the cut, as it was.
+    Resumed,
+    /// No tmux on the server: an ordinary shell, that a cut ends.
+    NoTmux,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

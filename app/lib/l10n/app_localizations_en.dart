@@ -143,7 +143,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String awayFor(String time) {
+    return 'away for $time';
+  }
+
+  @override
   String get back => 'Back';
+
+  @override
+  String backAgain(String host) {
+    return 'Connected to $host again';
+  }
 
   @override
   String get badgeChanges => 'changes';
@@ -316,6 +326,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get checkedFingerprint => 'I have checked the new fingerprint';
 
   @override
+  String get checking => 'checking…';
+
+  @override
   String get choiceKeepBoth => 'Keep both';
 
   @override
@@ -389,6 +402,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get collapse => 'Collapse';
+
+  @override
+  String comebackLine(String time, String away) {
+    return 'connected again at $time · away for $away · new terminal';
+  }
 
   @override
   String get comingFromOther => 'Coming from PuTTY, MobaXterm or SecureCRT?';
@@ -497,6 +515,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String connectionLost(String label, String why) {
     return 'The connection to $label was lost$why.';
+  }
+
+  @override
+  String connectionLostTitle(String host) {
+    return 'The connection to $host was lost';
   }
 
   @override
@@ -725,6 +748,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get duplicateTab => 'Duplicate';
+
+  @override
+  String durationMinSec(int minutes, int seconds) {
+    return '$minutes min $seconds s';
+  }
+
+  @override
+  String durationSec(int seconds) {
+    return '$seconds s';
+  }
 
   @override
   String dynamicSentence(String here, String host) {
@@ -1455,6 +1488,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String keepaliveEvery(int every, int lost) {
+    return 'Every $every s · lost after $lost s';
+  }
+
+  @override
+  String get keepaliveLabel => 'Check the connection';
+
+  @override
+  String get keepaliveOff => 'Never';
+
+  @override
   String keyAdded(String path) {
     return 'Saved as $path.';
   }
@@ -1660,6 +1704,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get localUser => 'your local user';
+
+  @override
+  String lostKeptInTmux(String host) {
+    return 'Your session goes on in tmux on $host: you will find it as it was when it is back. What you type now is not sent.';
+  }
+
+  @override
+  String lostNewShell(String host) {
+    return 'What you type now is not sent. When it is back, a new terminal opens: what was running on $host does not go on.';
+  }
 
   @override
   String madeGroups(int count) {
@@ -1886,6 +1940,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newTunnel => 'New tunnel';
 
   @override
+  String get newsConnectionBody =>
+      'If the server goes away, it shows within seconds and the connection comes back by itself; with a persistent session, you get back to the same terminal in tmux. While connecting and reconnecting, the way to the host, animated.';
+
+  @override
+  String get newsConnectionTitle => 'A connection that stays aware';
+
+  @override
   String get newsFresh => 'new';
 
   @override
@@ -1969,6 +2030,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get no => 'No';
 
   @override
+  String noAnswerFor(int seconds) {
+    return 'No answer for $seconds s.';
+  }
+
+  @override
   String get noGroup => 'No group';
 
   @override
@@ -2035,6 +2101,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get noResponse => 'no answer';
+
+  @override
   String get noResults => 'No host matches.';
 
   @override
@@ -2068,6 +2137,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notNow => 'Not now';
+
+  @override
+  String notResponding(String host) {
+    return '$host is not responding';
+  }
 
   @override
   String get notes => 'Notes';
@@ -2328,6 +2402,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String permissionsOf(String name) {
     return 'Permissions of $name';
   }
+
+  @override
+  String get persistentOff => 'No';
+
+  @override
+  String get persistentOn => 'Yes, in tmux: it goes on after a cut';
+
+  @override
+  String get persistentSession => 'Persistent session';
 
   @override
   String get pickIdentity => 'Pick an identity or «None».';
@@ -3006,6 +3089,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get sessionResumed => 'tmux session found again';
+
+  @override
   String setHereIdentitySays(String value) {
     return 'Set here; the identity says $value';
   }
@@ -3075,6 +3161,11 @@ class AppLocalizationsEn extends AppLocalizations {
       one: 'Show the other one',
     );
     return '$_temp0';
+  }
+
+  @override
+  String sinceSeconds(int seconds) {
+    return 'for $seconds s';
   }
 
   @override
@@ -3181,6 +3272,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get statusIdle => 'Not connected';
+
+  @override
+  String get statusStalled => 'No answer · checking…';
 
   @override
   String get stepAppearance => 'Appearance';
@@ -3328,6 +3422,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String timeLeft(String time) {
     return '$time left';
   }
+
+  @override
+  String get tmuxMissing => 'no tmux';
+
+  @override
+  String get tmuxMissingTip =>
+      'tmux is not on this server: the terminal does not survive a cut. Install it to keep the session.';
+
+  @override
+  String get tmuxTip =>
+      'The terminal runs in tmux on the server: it goes on after a cut. The wheel scrolls its history; Shift and drag selects text.';
 
   @override
   String todayAt(String time) {

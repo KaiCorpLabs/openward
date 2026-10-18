@@ -23,6 +23,7 @@ use tokio::io::AsyncWriteExt;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
+use crate::alive::Activity;
 use crate::events::{Event, EventSink, Failure};
 
 #[derive(Clone, Copy, Debug)]
@@ -91,6 +92,12 @@ pub struct Terminal {
     io: Arc<Mutex<Io>>,
     /// The connection task; aborting it drops the SSH sessions.
     task: Mutex<Option<JoinHandle<()>>>,
+    /// When input went out and output came in, for the connection's
+    /// watcher.
+    activity: Arc<Activity>,
+    /// Run when the terminal is closed on purpose: ending a persistent
+    /// session on the server.
+    closer: Mutex<Option<Box<dyn FnOnce() + Send>>>,
 }
 
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -107,6 +114,8 @@ impl Terminal {
             })),
             io: Arc::new(Mutex::new(Io::None)),
             task: Mutex::new(None),
+            activity: Arc::default(),
+            closer: Mutex::new(None),
         })
     }
 
@@ -176,7 +185,19 @@ impl Terminal {
         Pipe {
             state: Arc::clone(&self.state),
             io: Arc::clone(&self.io),
+            activity: Arc::clone(&self.activity),
         }
+    }
+
+    /// What closing the terminal on purpose also does (replacing the last).
+    pub(crate) fn set_closer(&self, closer: impl FnOnce() + Send + 'static) {
+        *lock(&self.closer) = Some(Box::new(closer));
+    }
+
+    /// A line of OpenWard's own on the screen, as if output (`\r\n` and
+    /// escape sequences included): never sent to the program.
+    pub fn note(&self, text: &str) {
+        Self::output(&self.state, text.as_bytes());
     }
 
     pub(crate) fn set_task(&self, task: JoinHandle<()>) {
@@ -187,6 +208,9 @@ impl Terminal {
 
     /// Ends the connection or the local program. The screen stays.
     pub fn close(&self) {
+        if let Some(closer) = lock(&self.closer).take() {
+            closer();
+        }
         if let Some(task) = lock(&self.task).take() {
             task.abort();
         }
@@ -458,11 +482,16 @@ impl Terminal {
 pub(crate) struct Pipe {
     state: Arc<Mutex<State>>,
     io: Arc<Mutex<Io>>,
+    activity: Arc<Activity>,
 }
 
 impl Pipe {
     pub(crate) fn size(&self) -> Size {
         lock(&self.state).engine.size()
+    }
+
+    pub(crate) fn activity(&self) -> Arc<Activity> {
+        Arc::clone(&self.activity)
     }
 
     /// Pumps an open shell channel until it closes; returns its exit code,
@@ -477,12 +506,13 @@ impl Pipe {
     ) -> impl Future<Output = (Option<u32>, Option<Failure>)> + Send + 'static {
         let (tx, rx) = mpsc::unbounded_channel::<SshCmd>();
         *lock(&self.io) = Io::Ssh(tx.clone());
-        let (state, io, label) = (
+        let (state, io, activity, label) = (
             Arc::clone(&self.state),
             Arc::clone(&self.io),
+            Arc::clone(&self.activity),
             label.to_owned(),
         );
-        async move { Self::pump(channel, tx, rx, state, io, label).await }
+        async move { Self::pump(channel, tx, rx, state, io, activity, label).await }
     }
 
     async fn pump(
@@ -491,14 +521,17 @@ impl Pipe {
         mut rx: mpsc::UnboundedReceiver<SshCmd>,
         state: Arc<Mutex<State>>,
         io: Arc<Mutex<Io>>,
+        activity: Arc<Activity>,
         label: String,
     ) -> (Option<u32>, Option<Failure>) {
         let (mut read, write) = channel.split();
+        let typed = Arc::clone(&activity);
         let writer = async move {
             let mut w = write.make_writer();
             while let Some(cmd) = rx.recv().await {
                 match cmd {
                     SshCmd::Data(bytes) => {
+                        typed.sent();
                         if w.write_all(&bytes).await.is_err() || w.flush().await.is_err() {
                             break;
                         }
@@ -516,6 +549,7 @@ impl Pipe {
             while let Some(msg) = read.wait().await {
                 match msg {
                     ChannelMsg::Data { data } | ChannelMsg::ExtendedData { data, .. } => {
+                        activity.received();
                         let replies = Terminal::output(&reader_state, &data);
                         if !replies.is_empty() {
                             let _ = tx.send(SshCmd::Data(replies));

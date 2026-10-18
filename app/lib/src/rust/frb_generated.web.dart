@@ -181,6 +181,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   GroupSpec dco_decode_box_autoadd_group_spec(dynamic raw);
 
   @protected
+  HealthView dco_decode_box_autoadd_health_view(dynamic raw);
+
+  @protected
   HostSpec dco_decode_box_autoadd_host_spec(dynamic raw);
 
   @protected
@@ -203,6 +206,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LinkView dco_decode_box_autoadd_link_view(dynamic raw);
+
+  @protected
+  PersistentView dco_decode_box_autoadd_persistent_view(dynamic raw);
 
   @protected
   ProgramChoice dco_decode_box_autoadd_program_choice(dynamic raw);
@@ -335,6 +341,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   GroupView dco_decode_group_view(dynamic raw);
+
+  @protected
+  HealthView dco_decode_health_view(dynamic raw);
 
   @protected
   HostDetail dco_decode_host_detail(dynamic raw);
@@ -553,6 +562,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   FileError? dco_decode_opt_box_autoadd_file_error(dynamic raw);
 
   @protected
+  HealthView? dco_decode_opt_box_autoadd_health_view(dynamic raw);
+
+  @protected
   PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw);
 
   @protected
@@ -566,6 +578,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LinkView? dco_decode_opt_box_autoadd_link_view(dynamic raw);
+
+  @protected
+  PersistentView? dco_decode_opt_box_autoadd_persistent_view(dynamic raw);
 
   @protected
   ProgramKind? dco_decode_opt_box_autoadd_program_kind(dynamic raw);
@@ -629,6 +644,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   OriginKind dco_decode_origin_kind(dynamic raw);
+
+  @protected
+  PersistenceKind dco_decode_persistence_kind(dynamic raw);
+
+  @protected
+  PersistentView dco_decode_persistent_view(dynamic raw);
 
   @protected
   PointerAction dco_decode_pointer_action(dynamic raw);
@@ -953,6 +974,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   GroupSpec sse_decode_box_autoadd_group_spec(SseDeserializer deserializer);
 
   @protected
+  HealthView sse_decode_box_autoadd_health_view(SseDeserializer deserializer);
+
+  @protected
   HostSpec sse_decode_box_autoadd_host_spec(SseDeserializer deserializer);
 
   @protected
@@ -983,6 +1007,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LinkView sse_decode_box_autoadd_link_view(SseDeserializer deserializer);
+
+  @protected
+  PersistentView sse_decode_box_autoadd_persistent_view(
+    SseDeserializer deserializer,
+  );
 
   @protected
   ProgramChoice sse_decode_box_autoadd_program_choice(
@@ -1131,6 +1160,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   GroupView sse_decode_group_view(SseDeserializer deserializer);
+
+  @protected
+  HealthView sse_decode_health_view(SseDeserializer deserializer);
 
   @protected
   HostDetail sse_decode_host_detail(SseDeserializer deserializer);
@@ -1401,6 +1433,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  HealthView? sse_decode_opt_box_autoadd_health_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
@@ -1420,6 +1457,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LinkView? sse_decode_opt_box_autoadd_link_view(SseDeserializer deserializer);
+
+  @protected
+  PersistentView? sse_decode_opt_box_autoadd_persistent_view(
+    SseDeserializer deserializer,
+  );
 
   @protected
   ProgramKind? sse_decode_opt_box_autoadd_program_kind(
@@ -1513,6 +1555,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   OriginKind sse_decode_origin_kind(SseDeserializer deserializer);
+
+  @protected
+  PersistenceKind sse_decode_persistence_kind(SseDeserializer deserializer);
+
+  @protected
+  PersistentView sse_decode_persistent_view(SseDeserializer deserializer);
 
   @protected
   PointerAction sse_decode_pointer_action(SseDeserializer deserializer);
@@ -1883,6 +1931,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_health_view(
+    HealthView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_host_spec(
     HostSpec self,
     SseSerializer serializer,
@@ -1927,6 +1981,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_link_view(
     LinkView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_persistent_view(
+    PersistentView self,
     SseSerializer serializer,
   );
 
@@ -2124,6 +2184,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_group_view(GroupView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_health_view(HealthView self, SseSerializer serializer);
 
   @protected
   void sse_encode_host_detail(HostDetail self, SseSerializer serializer);
@@ -2463,6 +2526,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_health_view(
+    HealthView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_i_64(
     PlatformInt64? self,
     SseSerializer serializer,
@@ -2489,6 +2558,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_link_view(
     LinkView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_persistent_view(
+    PersistentView? self,
     SseSerializer serializer,
   );
 
@@ -2605,6 +2680,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_origin_kind(OriginKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_persistence_kind(
+    PersistenceKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_persistent_view(
+    PersistentView self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_pointer_action(PointerAction self, SseSerializer serializer);
