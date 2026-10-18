@@ -1024,6 +1024,11 @@ Host web-1 web-2
       await tester.pump(const Duration(milliseconds: 50));
     }
     expect(find.text('Latencia con target1'), findsOneWidget);
+    // The latency now, in the card as in the bar.
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('latency.now'))).data,
+      '${c.rttMs} ms',
+    );
     await _shot(tester, '90-latency');
     await mouse.moveTo(Offset.zero);
     await mouse.removePointer();

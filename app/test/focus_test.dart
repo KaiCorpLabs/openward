@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openward/core/settings.dart';
 import 'package:openward/home/recent.dart';
 import 'package:openward/palette/command_palette.dart';
+import 'package:openward/tabs/latency.dart';
 import 'package:openward/l10n/app_localizations_es.dart';
 import 'package:openward/window/sidebar_state.dart';
 
@@ -178,5 +179,12 @@ void main() {
     expect(agoText(l, const Duration(minutes: 5)), 'hace 5 min');
     expect(agoText(l, const Duration(hours: 3)), 'hace 3 h');
     expect(agoText(l, const Duration(days: 2)), 'hace 2 d');
+  });
+
+  test("the latency chart's lines fall on round values under its top", () {
+    expect(latencyTicks(115), [50, 100]);
+    expect(latencyTicks(250), [100, 200]);
+    expect(latencyTicks(60), [25, 50]);
+    expect(latencyTicks(1200), [500, 1000]);
   });
 }

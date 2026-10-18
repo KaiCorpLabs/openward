@@ -196,7 +196,16 @@ class _SparkPainter extends CustomPainter {
       old.top != top;
 }
 
-/// The hover card: the chart, and what the connection is made of.
+/// Round values for the chart's lines, one to three of them: a step of
+/// 25, 50, 100, 200, 500… ms that fits under the top of the scale.
+List<int> latencyTicks(double top) {
+  const steps = [25, 50, 100, 200, 500, 1000, 2000, 5000, 10000];
+  final step = steps.firstWhere((s) => top / s <= 3, orElse: () => steps.last);
+  return [for (var v = step; v <= top; v += step) v];
+}
+
+/// The hover card: the latency now, its chart, and what the connection is
+/// made of.
 class LatencyCard extends StatelessWidget {
   const LatencyCard({super.key, required this.controller});
 
@@ -214,8 +223,11 @@ class LatencyCard extends StatelessWidget {
     final high = c.rttHigh;
     final color = high ? colors.warn : colors.accent;
     final top = Sparkline.top(c.rttHistory);
-    final half = (top / 2 / 10).round() * 10;
+    final ticks = latencyTicks(top);
     final small = TextStyle(fontSize: 12, color: colors.textMuted);
+    const chartHeight = 64.0;
+    // Where a value falls on the chart, as Sparkline draws it.
+    double y(int v) => chartHeight - 2 - v / top * (chartHeight - 4);
     Widget row(String name, Widget value) => Padding(
       padding: const EdgeInsets.only(top: 6),
       child: Row(
@@ -236,18 +248,35 @@ class LatencyCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // The latency now, large: the chart's scale is at its side.
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Text(
-                    l.latencyWith(c.label),
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l.latencyWith(c.label),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      if (usual != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(l.latencyUsual(usual), style: small),
+                        ),
+                    ],
                   ),
                 ),
-                if (usual != null)
+                if (rtt != null)
                   Text(
-                    l.latencyUsual(usual),
-                    style: monoStyle(context, size: 12),
+                    l.milliseconds(rtt),
+                    key: const ValueKey('latency.now'),
+                    style: monoStyle(
+                      context,
+                      size: 18,
+                      color: high ? colors.warn : colors.text,
+                    ).copyWith(fontWeight: FontWeight.w600),
                   ),
               ],
             ),
@@ -270,23 +299,39 @@ class LatencyCard extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 10),
-            Stack(
+            Row(
               children: [
                 Sparkline(
                   values: c.rttHistory,
                   color: color,
-                  width: 360,
-                  height: 64,
-                  grid: [half, (top / 10).floor() * 10],
+                  width: 308,
+                  height: chartHeight,
+                  grid: ticks,
                   threshold: high && usual != null ? usual * 3 : null,
                   fill: true,
                 ),
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  child: Text(
-                    l.milliseconds((top / 10).floor() * 10),
-                    style: monoStyle(context, size: 12),
+                const SizedBox(width: 8),
+                // The scale: each line's value, beside it.
+                SizedBox(
+                  width: 44,
+                  height: chartHeight,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      for (final t in ticks)
+                        Positioned(
+                          left: 0,
+                          top: y(t) - 8,
+                          child: Text(
+                            t == ticks.last ? l.milliseconds(t) : '$t',
+                            style: monoStyle(
+                              context,
+                              size: 12,
+                              color: colors.textSubtle,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ],
