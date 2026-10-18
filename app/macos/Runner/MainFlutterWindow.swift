@@ -23,6 +23,10 @@ class MainFlutterWindow: NSWindow {
     self.titleVisibility = .hidden
     self.titlebarAppearsTransparent = true
     self.styleMask.insert(.fullSizeContentView)
+    // AppKit would move the window from any press under the title bar,
+    // tabs included, so a tab dragged to a pane dragged the window too.
+    // The app decides: its empty bar asks for a drag through the channel.
+    self.isMovable = false
 
     let channel = FlutterMethodChannel(
       name: "openward/window",
