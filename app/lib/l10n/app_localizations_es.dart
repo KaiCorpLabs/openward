@@ -777,6 +777,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get destination => 'Destino';
 
   @override
+  String get dividerHint =>
+      'Arrastra para cambiar el tamaño · doble clic: mitad y mitad';
+
+  @override
   String get dontTrust => 'No confiar';
 
   @override
@@ -791,21 +795,50 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get dragPaneHint =>
+      'Arrastra para mover el panel: a otro panel o a la barra de pestañas';
+
+  @override
   String get dragToOrder => 'arrastra para ordenar';
+
+  @override
+  String dropAbove(String pane) {
+    return 'encima de $pane';
+  }
 
   @override
   String get dropAskFirst =>
       'Si alguno ya existe, te preguntamos antes de tocarlo.';
 
   @override
+  String dropBelow(String pane) {
+    return 'debajo de $pane';
+  }
+
+  @override
   String get dropBottom => 'abajo';
+
+  @override
+  String dropHostNewTab(String name) {
+    return 'Soltar aquí: abrir $name en una pestaña nueva';
+  }
 
   @override
   String get dropLeft => 'a la izquierda';
 
   @override
+  String dropLeftOf(String pane) {
+    return 'a la izquierda de $pane';
+  }
+
+  @override
   String dropMove(String name, String where) {
     return 'Soltar: $name $where';
+  }
+
+  @override
+  String dropNewTab(String name) {
+    return 'Soltar aquí: $name en una pestaña nueva';
   }
 
   @override
@@ -815,6 +848,16 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get dropRight => 'a la derecha';
+
+  @override
+  String dropRightOf(String pane) {
+    return 'a la derecha de $pane';
+  }
+
+  @override
+  String dropTabLast(String name) {
+    return 'Soltar aquí: $name al final';
+  }
 
   @override
   String get dropToDownload => 'Suelta para descargar aquí';
@@ -970,6 +1013,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get environment => 'Entorno';
+
+  @override
+  String get equalizePanes => 'Igualar tamaños';
 
   @override
   String get exampleVariable => 'nombre';
@@ -2114,6 +2160,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get moveLater => 'Mover después';
 
   @override
+  String get moveToNewTab => 'Mover a una pestaña nueva';
+
+  @override
   String get name => 'Nombre';
 
   @override
@@ -2282,7 +2331,15 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String newsPanesBody2(String keys) {
+    return 'Arrastrar una pestaña sobre un terminal ya no mueve la ventana. El menú de cada panel lo mueve a su pestaña, lo intercambia o iguala tamaños ($keys); el panel nuevo ofrece las pestañas abiertas, cada panel tiene su nombre y el borde entre ellos se ve y se agarra.';
+  }
+
+  @override
   String get newsPanesTitle => 'Paneles y broadcast';
+
+  @override
+  String get newsPanesTitle2 => 'Paneles sin adivinar';
 
   @override
   String newsSearchBody(String keys) {
@@ -2573,6 +2630,9 @@ class AppLocalizationsEs extends AppLocalizations {
       'Desde un terminal o un SFTP. Si el puerto está ocupado, la conexión sigue y el túnel avisa.';
 
   @override
+  String get openOtherHere => 'Abrir otra cosa aquí…';
+
+  @override
   String get openSftp => 'Abrir SFTP';
 
   @override
@@ -2649,7 +2709,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get paletteTypeOnly => 'solo escribir';
 
   @override
+  String get paneOpenTabs => 'Pestañas abiertas';
+
+  @override
+  String get paneOpenTabsNote => 'pasan a este panel';
+
+  @override
   String get paneOptions => 'Opciones del panel';
+
+  @override
+  String get paneSearch => 'Busca una pestaña o un host';
 
   @override
   String get paneWhat => '¿Qué abres en este panel?';
@@ -3750,6 +3819,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get splitRight => 'Dividir a la derecha';
 
   @override
+  String splitWith(String name) {
+    return 'Dividir con $name';
+  }
+
+  @override
+  String get splitWithNote => 'a la derecha del panel activo';
+
+  @override
   String stageAuthenticating(String label, String hop) {
     return 'Autenticando en $label$hop…';
   }
@@ -3839,6 +3916,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get stopAction => 'Detener';
+
+  @override
+  String swapWith(String name) {
+    return 'Intercambiar con $name';
+  }
 
   @override
   String get systemByBanner => 'Por el banner del servidor:';

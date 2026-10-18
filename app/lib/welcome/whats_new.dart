@@ -17,8 +17,9 @@ import '../window/shortcuts.dart';
 /// 0.3.0-beta.3 the sidebar that folds, ⌘K for everything and the latency
 /// in sight, 0.3.0-beta.4 the lighter editor, the start page, the
 /// shortcuts sheet and each hop's latency, 0.3.1-beta.1 the environment,
-/// the system and the favorites.
-const newsVersion = '0.3.1-beta.1';
+/// the system and the favorites, 0.3.1-beta.2 panes that are handled
+/// without guessing.
+const newsVersion = '0.3.1-beta.2';
 
 /// Who updated and has not seen this release's news yet.
 bool shouldShowNews(Settings s) => s.welcomed && s.seenNews != newsVersion;
@@ -43,13 +44,19 @@ class _WhatsNew extends StatelessWidget {
     String keys(String apple, String other) => isApple ? apple : other;
     // Marked new: what came after who saw the news before.
     final items = [
-      (Icons.label_important_outline, l.newsEnvTitle, l.newsEnvBody, true),
-      (Icons.dns_outlined, l.newsSystemTitle, l.newsSystemBody, true),
+      (
+        Icons.vertical_split_outlined,
+        l.newsPanesTitle2,
+        l.newsPanesBody2(keys('⌘⌥=', l.paneOptions)),
+        true,
+      ),
+      (Icons.label_important_outline, l.newsEnvTitle, l.newsEnvBody, false),
+      (Icons.dns_outlined, l.newsSystemTitle, l.newsSystemBody, false),
       (
         Icons.star_outline_rounded,
         l.newsFavoritesTitle,
         l.newsFavoritesBody,
-        true,
+        false,
       ),
       (Icons.edit_note, l.newsEditorTitle, l.newsEditorBody, false),
       (Icons.home_outlined, l.newsStartTitle, l.newsStartBody, false),

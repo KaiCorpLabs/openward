@@ -67,7 +67,12 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - marca tu grupo de producción como Producción y comprueba que sus pestañas y terminales lo dicen; dinos si la marca de la esquina del terminal molesta;
    - conéctate a tus servidores y mira qué sistema dice la barra; en los que salga «?», activa «Leer /etc/os-release» y dinos si acierta;
    - marca tus hosts de cada día como favoritos y ordénalos en el inicio arrastrando sus tarjetas.
-9. **CSV** («Importar…» › CSV):
+9. **Paneles** (0.3.1-beta.2):
+   - arrastra una pestaña sobre un terminal y suéltala en una mitad: la ventana ya no debe moverse;
+   - con dos paneles, prueba el menú «…» de uno: moverlo a una pestaña nueva, intercambiarlo, abrir otra cosa e igualar tamaños; y arrastra su cabecera al hueco vacío de la barra;
+   - divide un terminal y elige en el panel nuevo una pestaña ya abierta; prueba también «Dividir con …» en la paleta;
+   - agarra el borde entre paneles y dinos si se encuentra a la primera.
+10. **CSV** («Importar…» › CSV):
    - exporta tus hosts de una hoja de cálculo o usa la plantilla de Termius;
    - comprueba los grupos, puertos, usuarios y etiquetas, y los avisos de lo que no entra;
    - impórtalo dos veces y comprueba que no se duplica.

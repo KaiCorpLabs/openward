@@ -12,7 +12,7 @@ import '../src/rust/api/vault.dart';
 import '../terminal/controller.dart';
 import 'panes.dart';
 
-export 'panes.dart' show DropSide, Pane, PaneNode, PaneSplit, Panes;
+export 'panes.dart' show DropSide, Pane, PaneNode, PaneSplit, Panes, paneNames;
 
 /// What a tab holds: terminal sessions in panes, or one of the app's
 /// pages. Pages open once; asking for one again brings its tab to the
@@ -440,6 +440,62 @@ class TabsNotifier extends Notifier<TabsState> {
     final tabs = [...state.tabs]..insert(gap.clamp(0, state.tabs.length), tab);
     state = TabsState(tabs, tabs.indexOf(tab));
     focusActive(tab);
+  }
+
+  /// A pane in a tab of its own, right after its tab.
+  void moveToNewTab(SessionTab from, Pane pane) {
+    final at = state.tabs.indexOf(from);
+    if (at >= 0) detachPane(from, pane, at + 1);
+  }
+
+  /// Swaps a pane with its neighbour in the split.
+  void swapPane(SessionTab tab, Pane pane) {
+    final other = tab.panes.swapPartner(pane);
+    if (other == null) return;
+    tab.panes.swap(pane, other);
+    _refresh();
+    focusActive(tab);
+  }
+
+  /// The pane asks again what to open; its session goes on in a tab of its
+  /// own, right after this one, so nothing is closed by surprise.
+  void openOtherHere(SessionTab tab, Pane pane) {
+    final c = pane.controller;
+    final at = state.tabs.indexOf(tab);
+    if (c == null || at < 0) return;
+    pane.controller = null;
+    tab.panes.focus(pane);
+    final moved = SessionTab.withPanes(Panes.of(Pane(c)));
+    final tabs = [...state.tabs]..insert(at + 1, moved);
+    state = TabsState(tabs, tabs.indexOf(tab));
+  }
+
+  /// A tab already open, brought into a pane that asked what to open: its
+  /// panes take that place, and it closes.
+  void bringTab(OpenTab other, SessionTab target, Pane pane) {
+    if (other is! SessionTab || identical(other, target)) return;
+    if (!state.tabs.contains(other)) return;
+    final tabs = [...state.tabs]..remove(other);
+    target.panes.replace(pane, other.panes.root, focus: other.panes.active);
+    state = TabsState(tabs, tabs.indexOf(target));
+    focusActive(target);
+  }
+
+  /// A host, or a tab already open, beside the front tab's active pane (on
+  /// its right).
+  void splitWith({HostView? host, OpenTab? other}) {
+    final target = state.current;
+    if (target is! SessionTab) return;
+    final at = target.panes.active;
+    if (other != null) return dropTab(other, target, at, DropSide.right);
+    if (host != null) dropHost(host, target, at, DropSide.right);
+  }
+
+  /// ⌘⌥=: the same room for every pane of the front tab.
+  void equalize() {
+    final tab = state.current;
+    if (tab is! SessionTab || !tab.panes.isSplit) return;
+    tab.panes.equalize();
   }
 
   /// A host dropped on the `side` half of `at`: connected in a new pane.

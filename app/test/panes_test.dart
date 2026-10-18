@@ -32,6 +32,68 @@ void main() {
     expect(panes.remove(a), isFalse, reason: 'the last pane closes the tab');
   });
 
+  test('a pane swaps with its neighbour, each keeping its place', () {
+    final panes = Panes(null);
+    final a = panes.active;
+    // a | (b over c)
+    final b = panes.split(Axis.horizontal);
+    final c = panes.split(Axis.vertical);
+    // a's neighbour is the nearest pane of the other half; c's, b.
+    expect(panes.swapPartner(a), same(b));
+    expect(panes.swapPartner(c), same(b));
+    expect(panes.swapPartner(b), same(c));
+    panes.swap(a, b);
+    expect(panes.leaves, [b, a, c]);
+    panes.swap(a, c);
+    expect(panes.leaves, [b, c, a]);
+    expect(Panes(null).swapPartner(Panes(null).active), isNull);
+  });
+
+  test('equal sizes share the room by the panes on each side', () {
+    final panes = Panes(null);
+    final a = panes.active;
+    // a | b | c in a row, the last two split from b.
+    panes.split(Axis.horizontal);
+    panes.split(Axis.horizontal);
+    final root = panes.root as PaneSplit;
+    final inner = root.second as PaneSplit;
+    panes.resize(root, 0.8);
+    panes.equalize();
+    expect(root.ratio, closeTo(1 / 3, 1e-9));
+    expect(inner.ratio, 0.5);
+    final rects = panes.layout();
+    expect(rects[a]!.width, closeTo(1 / 3, 1e-9));
+    // One split alone, from its divider.
+    panes.resize(inner, 0.2);
+    panes.equalizeSplit(inner);
+    expect(inner.ratio, 0.5);
+  });
+
+  test('a pane that asks takes the panes of another tab', () {
+    final panes = Panes(null);
+    final a = panes.active;
+    final fresh = panes.split(Axis.horizontal);
+    final other = Panes(null);
+    final x = other.active;
+    final y = other.split(Axis.vertical);
+    panes.replace(fresh, other.root, focus: y);
+    expect(panes.leaves, [a, x, y]);
+    expect(panes.active, same(y));
+  });
+
+  test('panes alike are numbered in their tab', () {
+    final panes = Panes(null);
+    final a = panes.active;
+    final b = panes.split(Axis.horizontal);
+    final c = panes.split(Axis.vertical);
+    final titles = {a: 'Local', b: 'web-1', c: 'Local'};
+    expect(paneNames(panes, (p) => titles[p]!).values, [
+      'Local 1',
+      'web-1',
+      'Local 2',
+    ]);
+  });
+
   test('closing the active pane gives the keyboard to its neighbour', () {
     final panes = Panes(null);
     final a = panes.active;

@@ -157,6 +157,8 @@ class _HomeState extends ConsumerState<Home> {
         const SingleActivator(LogicalKeyboardKey.keyG, meta: true, shift: true):
             previous,
         const SingleActivator(LogicalKeyboardKey.equal, meta: true): bigger,
+        const SingleActivator(LogicalKeyboardKey.equal, meta: true, alt: true):
+            tabs.equalize,
         const SingleActivator(
           LogicalKeyboardKey.equal,
           meta: true,

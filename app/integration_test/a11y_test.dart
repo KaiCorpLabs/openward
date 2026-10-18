@@ -411,6 +411,14 @@ void main() {
     );
     await audit('command palette');
     await close();
+    // Panes: what a new one opens, and a pane's menu.
+    tabs.split(Axis.horizontal);
+    await audit('new pane');
+    await tester.tap(find.byKey(const ValueKey('pane.choice.Terminal local')));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.byTooltip('Opciones del panel').first);
+    await audit('pane menu');
+    await close();
     tabs.openPage(PageKind.workspaces);
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.byKey(const ValueKey('workspaces.save')));

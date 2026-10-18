@@ -66,6 +66,9 @@ class Panes extends ChangeNotifier {
   bool broadcast = false;
   final Set<Pane> _left = {};
 
+  /// A divider is being dragged: the panes show their size.
+  bool resizing = false;
+
   /// Every pane, left to right and top to bottom.
   List<Pane> get leaves => [..._leaves(root)];
 
@@ -143,6 +146,83 @@ class Panes extends ChangeNotifier {
     if (broadcast) _left.addAll(_leaves(node));
     active = focus ?? _leaves(node).first;
     maximized = null;
+    notifyListeners();
+  }
+
+  /// Puts `node` (another tab's panes) where `pane` was: a new pane that
+  /// asked what to open takes a tab already open.
+  void replace(Pane pane, PaneNode node, {Pane? focus}) {
+    _replace(pane, node);
+    _left.remove(pane);
+    if (broadcast) _left.addAll(_leaves(node));
+    active = focus ?? _leaves(node).first;
+    maximized = null;
+    notifyListeners();
+  }
+
+  /// The pane `pane` swaps places with: the other half of its split, or
+  /// the nearest pane of that half.
+  Pane? swapPartner(Pane pane) {
+    final parent = _parent(pane);
+    if (parent == null) return null;
+    final first = identical(parent.first, pane);
+    final other = [..._leaves(first ? parent.second : parent.first)];
+    return first ? other.first : other.last;
+  }
+
+  /// Swaps the places of two panes; each keeps its session.
+  void swap(Pane a, Pane b) {
+    if (identical(a, b)) return;
+    final pa = _parent(a), pb = _parent(b);
+    if (pa == null || pb == null) return;
+    final aFirst = identical(pa.first, a), bFirst = identical(pb.first, b);
+    if (identical(pa, pb)) {
+      pa.first = b;
+      pa.second = a;
+    } else {
+      aFirst ? pa.first = b : pa.second = b;
+      bFirst ? pb.first = a : pb.second = a;
+    }
+    notifyListeners();
+  }
+
+  /// How many panes sit side by side in `node` along `axis`.
+  static int _across(PaneNode node, Axis axis) => switch (node) {
+    Pane() => 1,
+    PaneSplit(axis: final a, :final first, :final second) =>
+      a == axis
+          ? _across(first, axis) + _across(second, axis)
+          : [
+              _across(first, axis),
+              _across(second, axis),
+            ].reduce((x, y) => x > y ? x : y),
+  };
+
+  /// The same room for each pane of `split` along its axis.
+  void equalizeSplit(PaneSplit split, {bool notify = true}) {
+    final a = _across(split.first, split.axis);
+    final b = _across(split.second, split.axis);
+    split.ratio = a / (a + b);
+    if (notify) notifyListeners();
+  }
+
+  /// The same room for every pane: in each split, by the panes on each
+  /// side.
+  void equalize() {
+    void walk(PaneNode n) {
+      if (n is! PaneSplit) return;
+      equalizeSplit(n, notify: false);
+      walk(n.first);
+      walk(n.second);
+    }
+
+    walk(root);
+    notifyListeners();
+  }
+
+  void setResizing(bool on) {
+    if (resizing == on) return;
+    resizing = on;
     notifyListeners();
   }
 
@@ -259,4 +339,22 @@ class Panes extends ChangeNotifier {
 
   static double _overlap(double a0, double a1, double b0, double b1) =>
       (a1 < b1 ? a1 : b1) - (a0 > b0 ? a0 : b0);
+}
+
+/// What each pane is called in its tab: its `title`, numbered where two
+/// are alike («Local 1», «Local 2»), left to right and top to bottom.
+Map<Pane, String> paneNames(Panes panes, String Function(Pane) title) {
+  final leaves = panes.leaves;
+  final base = {for (final p in leaves) p: title(p)};
+  final counts = <String, int>{};
+  for (final b in base.values) {
+    counts[b] = (counts[b] ?? 0) + 1;
+  }
+  final seen = <String, int>{};
+  return {
+    for (final p in leaves)
+      p: counts[base[p]]! > 1
+          ? '${base[p]} ${seen[base[p]!] = (seen[base[p]] ?? 0) + 1}'
+          : base[p]!,
+  };
 }

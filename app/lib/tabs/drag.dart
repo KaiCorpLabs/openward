@@ -41,6 +41,11 @@ final class HostDrag extends WindowDrag {
   String get label => host.label;
 }
 
+/// What a pane is called before numbering: its session's title, or «new
+/// pane» while it asks what to open.
+String paneTitle(BuildContext context, Pane pane) =>
+    pane.controller?.displayTitle ?? context.l10n.newPane;
+
 /// Esc while dragging: nothing is dropped. It does not reach the terminal
 /// either.
 final dragCancelled = ValueNotifier<bool>(false);
@@ -228,7 +233,15 @@ class _PaneDropTargetState extends ConsumerState<PaneDropTarget> {
                     ? const SizedBox.shrink()
                     : DropZone(
                         side: _side!,
-                        label: dropLabel(context, over, _side!),
+                        label: dropLabel(
+                          context,
+                          over,
+                          _side!,
+                          pane: paneNames(
+                            widget.tab.panes,
+                            (p) => paneTitle(context, p),
+                          )[widget.pane],
+                        ),
                       ),
               ),
             ),
@@ -238,15 +251,28 @@ class _PaneDropTargetState extends ConsumerState<PaneDropTarget> {
   );
 }
 
-/// What dropping `d` on `side` would do, in words.
-String dropLabel(BuildContext context, WindowDrag d, DropSide side) {
+/// What dropping `d` on `side` of `pane` would do, in words: «Soltar:
+/// lab-1 a la derecha de Local 2».
+String dropLabel(
+  BuildContext context,
+  WindowDrag d,
+  DropSide side, {
+  String? pane,
+}) {
   final l = context.l10n;
-  final where = switch (side) {
-    DropSide.left => l.dropLeft,
-    DropSide.right => l.dropRight,
-    DropSide.top => l.dropTop,
-    DropSide.bottom => l.dropBottom,
-  };
+  final where = pane == null
+      ? switch (side) {
+          DropSide.left => l.dropLeft,
+          DropSide.right => l.dropRight,
+          DropSide.top => l.dropTop,
+          DropSide.bottom => l.dropBottom,
+        }
+      : switch (side) {
+          DropSide.left => l.dropLeftOf(pane),
+          DropSide.right => l.dropRightOf(pane),
+          DropSide.top => l.dropAbove(pane),
+          DropSide.bottom => l.dropBelow(pane),
+        };
   return d is HostDrag
       ? l.dropOpenHost(d.label, where)
       : l.dropMove(d.label, where);

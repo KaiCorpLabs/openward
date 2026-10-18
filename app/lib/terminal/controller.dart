@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../core/connection.dart';
@@ -60,6 +61,9 @@ class TerminalController extends ConnectionController {
   /// Set by the visible pane: gives it the keyboard back (after the find
   /// bar, say).
   VoidCallback? focusTerminal;
+
+  /// Its size in columns and rows, as the visible pane lays it out.
+  final grid = ValueNotifier<(int, int)>((80, 24));
 
   bool _shown = false;
 
@@ -280,6 +284,7 @@ class TerminalController extends ConnectionController {
   @override
   void dispose() {
     _background?.cancel();
+    grid.dispose();
     session.close();
     session.dispose();
     _renderer?.dispose();

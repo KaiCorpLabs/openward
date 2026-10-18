@@ -630,6 +630,147 @@ Host web-1 web-2
     await _settle(tester);
   });
 
+  testWidgets('panes: an open tab into a new pane, its menu, names, equal '
+      'sizes and out to a tab again', (tester) async {
+    final container = await launch(tester);
+    final tabs = container.read(tabsProvider.notifier);
+    Finder key(String k) => find.byKey(ValueKey(k));
+    Future<TerminalController> local(String name) async {
+      tabs.openLocal();
+      await tester.pump();
+      final c = container.read(tabsProvider).currentSession!;
+      await _until(tester, () => c.phase == Phase.running, 'the shell');
+      c.customTitle = name;
+      return c;
+    }
+
+    final uno = await local('uno');
+    final dos = await local('dos');
+    tabs.select(0);
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // A new pane offers the tabs already open: dos moves into it.
+    tabs.split(Axis.horizontal);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(key('pane.choice.dos'), findsOneWidget);
+    await _shot(tester, '63-pane-picker');
+    await tester.tap(key('pane.choice.dos'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(container.read(tabsProvider).tabs, hasLength(1));
+    final tab = container.read(tabsProvider).current! as SessionTab;
+    expect(tab.panes.leaves.map((p) => p.controller), [uno, dos]);
+    // The tab says which panes it has.
+    expect(_tab('uno · dos'), findsOneWidget);
+
+    // The pane's menu: swap with the neighbour.
+    await tester.tap(find.byTooltip('Opciones del panel').first);
+    await tester.pump(const Duration(milliseconds: 300));
+    await _shot(tester, '64-pane-menu');
+    await tester.tap(find.text('Intercambiar con dos'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(tab.panes.leaves.map((p) => p.controller), [dos, uno]);
+
+    // Equal sizes: from the menu, with ⌘⌥=, and a double click on the
+    // border between them.
+    final root = tab.panes.root as PaneSplit;
+    tab.panes.resize(root, 0.7);
+    await tester.pump();
+    await tester.tap(find.byTooltip('Opciones del panel').first);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Igualar tamaños'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(root.ratio, 0.5);
+    if (isApple) {
+      tab.panes.resize(root, 0.3);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.equal);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+      await tester.pump();
+      expect(root.ratio, 0.5);
+    }
+    tab.panes.resize(root, 0.3);
+    await tester.pump();
+    final divider = find.byWidgetPredicate(
+      (w) =>
+          w.key is ValueKey<String> &&
+          (w.key! as ValueKey<String>).value.startsWith('pane.divider.'),
+    );
+    await tester.tap(divider);
+    await tester.pump(kDoubleTapMinTime);
+    await tester.tap(divider);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(root.ratio, 0.5);
+
+    // Two panes alike are numbered.
+    uno.customTitle = 'web';
+    dos.customTitle = 'web';
+    tab.panes.focus(tab.panes.leaves.last);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(
+      find.descendant(of: find.byType(TabView), matching: find.text('web 1')),
+      findsOneWidget,
+    );
+    expect(_tab('web 1 · web 2'), findsOneWidget);
+    uno.customTitle = 'uno';
+    dos.customTitle = 'dos';
+    tab.panes.focus(tab.panes.leaves.first);
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Something else here: the session goes on in a tab of its own, and
+    // the pane asks again.
+    await tester.tap(find.byTooltip('Opciones del panel').last);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Abrir otra cosa aquí…'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(container.read(tabsProvider).tabs, hasLength(2));
+    expect(tab.panes.leaves.last.controller, isNull);
+    expect(find.text('¿Qué abres en este panel?'), findsOneWidget);
+    // It takes uno back, from the tab it went to.
+    await tester.tap(key('pane.choice.uno'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(container.read(tabsProvider).tabs, hasLength(1));
+    expect(tab.panes.leaves.map((p) => p.controller), [dos, uno]);
+
+    // A pane's header dragged to the empty bar: it says so, and makes a
+    // tab of its own.
+    final header = tester.getCenter(
+      find.descendant(of: find.byType(TabView), matching: find.text('uno')),
+    );
+    final bar =
+        tester.getTopRight(find.byType(TabStrip)) + const Offset(-200, 20);
+    final g = await tester.startGesture(
+      header,
+      kind: PointerDeviceKind.mouse,
+      pointer: 900,
+    );
+    for (var i = 1; i <= 12; i++) {
+      await g.moveTo(Offset.lerp(header, bar, i / 12)!);
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await tester.pump(const Duration(milliseconds: 100));
+    await _shot(tester, '65-pane-to-tab');
+    expect(find.text('Soltar aquí: uno en una pestaña nueva'), findsOneWidget);
+    await g.up();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(container.read(tabsProvider).tabs, hasLength(2));
+    expect(tab.panes.isSplit, isFalse);
+
+    // «Dividir con …» from the palette.
+    tabs.select(0);
+    await tester.pump(const Duration(milliseconds: 300));
+    await _shortcut(tester, LogicalKeyboardKey.keyK, letter: true);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.enterText(key('palette.query'), 'dividir con uno');
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(key('palette.action.Dividir con uno'));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(container.read(tabsProvider).tabs, hasLength(1));
+    final again = container.read(tabsProvider).current! as SessionTab;
+    expect(again.panes.leaves.map((p) => p.controller), [dos, uno]);
+  });
+
   testWidgets('import from Termius: read it, pick, save a key, and again', (
     tester,
   ) async {

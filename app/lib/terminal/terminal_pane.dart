@@ -204,6 +204,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     SchedulerBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _session.resize(cols: cols, rows: rows);
+      widget.controller.grid.value = (cols, rows);
       _updateImeRects();
     });
   }

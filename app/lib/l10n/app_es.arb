@@ -625,6 +625,7 @@
   "deletedHost": "(host eliminado)",
   "deletedIdentity": "(identidad eliminada)",
   "destination": "Destino",
+  "dividerHint": "Arrastra para cambiar el tamaño · doble clic: mitad y mitad",
   "dontTrust": "No confiar",
   "download": "Descarga",
   "downloadArrow": "← Descargar",
@@ -636,10 +637,43 @@
       }
     }
   },
+  "dragPaneHint": "Arrastra para mover el panel: a otro panel o a la barra de pestañas",
   "dragToOrder": "arrastra para ordenar",
+  "dropAbove": "encima de {pane}",
+  "@dropAbove": {
+    "placeholders": {
+      "pane": {
+        "type": "String"
+      }
+    }
+  },
   "dropAskFirst": "Si alguno ya existe, te preguntamos antes de tocarlo.",
+  "dropBelow": "debajo de {pane}",
+  "@dropBelow": {
+    "placeholders": {
+      "pane": {
+        "type": "String"
+      }
+    }
+  },
   "dropBottom": "abajo",
+  "dropHostNewTab": "Soltar aquí: abrir {name} en una pestaña nueva",
+  "@dropHostNewTab": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "dropLeft": "a la izquierda",
+  "dropLeftOf": "a la izquierda de {pane}",
+  "@dropLeftOf": {
+    "placeholders": {
+      "pane": {
+        "type": "String"
+      }
+    }
+  },
   "dropMove": "Soltar: {name} {where}",
   "@dropMove": {
     "placeholders": {
@@ -647,6 +681,14 @@
         "type": "String"
       },
       "where": {
+        "type": "String"
+      }
+    }
+  },
+  "dropNewTab": "Soltar aquí: {name} en una pestaña nueva",
+  "@dropNewTab": {
+    "placeholders": {
+      "name": {
         "type": "String"
       }
     }
@@ -663,6 +705,22 @@
     }
   },
   "dropRight": "a la derecha",
+  "dropRightOf": "a la derecha de {pane}",
+  "@dropRightOf": {
+    "placeholders": {
+      "pane": {
+        "type": "String"
+      }
+    }
+  },
+  "dropTabLast": "Soltar aquí: {name} al final",
+  "@dropTabLast": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "dropToDownload": "Suelta para descargar aquí",
   "dropToImport": "O arrastra aquí el archivo o la carpeta: se reconoce solo.",
   "dropToUpload": "Suelta para subir aquí",
@@ -765,6 +823,7 @@
   "envTestingShort": "pruebas",
   "envUse": "Usar",
   "environment": "Entorno",
+  "equalizePanes": "Igualar tamaños",
   "exampleVariable": "nombre",
   "expand": "Desplegar",
   "failureAuth": "{user}@{label} no ha podido autenticarse.",
@@ -1703,6 +1762,7 @@
   "moreOptions": "Más opciones",
   "moveEarlier": "Mover antes",
   "moveLater": "Mover después",
+  "moveToNewTab": "Mover a una pestaña nueva",
   "name": "Nombre",
   "nameAndMore": "{name} y {count} más",
   "@nameAndMore": {
@@ -1806,7 +1866,16 @@
       }
     }
   },
+  "newsPanesBody2": "Arrastrar una pestaña sobre un terminal ya no mueve la ventana. El menú de cada panel lo mueve a su pestaña, lo intercambia o iguala tamaños ({keys}); el panel nuevo ofrece las pestañas abiertas, cada panel tiene su nombre y el borde entre ellos se ve y se agarra.",
+  "@newsPanesBody2": {
+    "placeholders": {
+      "keys": {
+        "type": "String"
+      }
+    }
+  },
   "newsPanesTitle": "Paneles y broadcast",
+  "newsPanesTitle2": "Paneles sin adivinar",
   "newsSearchBody": "{keys} abre la paleta con las pestañas abiertas, las conexiones recientes, los hosts, las acciones y lo que ya ejecutaste. Empieza por > para ver solo las acciones.",
   "@newsSearchBody": {
     "placeholders": {
@@ -1981,6 +2050,7 @@
     }
   },
   "openOnConnectNote": "Desde un terminal o un SFTP. Si el puerto está ocupado, la conexión sigue y el túnel avisa.",
+  "openOtherHere": "Abrir otra cosa aquí…",
   "openSftp": "Abrir SFTP",
   "openSshStillWarns": "OpenWard no modifica ~/.ssh/known_hosts: ssh seguirá avisando hasta que quites la clave vieja de allí ({command}).",
   "@openSshStillWarns": {
@@ -2018,7 +2088,10 @@
   "paletteRun": "ejecutar",
   "paletteTabs": "Pestañas abiertas",
   "paletteTypeOnly": "solo escribir",
+  "paneOpenTabs": "Pestañas abiertas",
+  "paneOpenTabsNote": "pasan a este panel",
   "paneOptions": "Opciones del panel",
+  "paneSearch": "Busca una pestaña o un host",
   "paneWhat": "¿Qué abres en este panel?",
   "partNote": "Se copia con un nombre temporal (.part) y se renombra al terminar: si se corta, el fichero bueno no queda a medias y la copia se puede reanudar.",
   "passphraseField": "Frase",
@@ -2785,6 +2858,15 @@
   },
   "splitDown": "Dividir abajo",
   "splitRight": "Dividir a la derecha",
+  "splitWith": "Dividir con {name}",
+  "@splitWith": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "splitWithNote": "a la derecha del panel activo",
   "stageAuthenticating": "Autenticando en {label}{hop}…",
   "@stageAuthenticating": {
     "placeholders": {
@@ -2853,6 +2935,14 @@
   "stepOpeningShell": "abriendo el shell…",
   "stepReady": "Listo",
   "stopAction": "Detener",
+  "swapWith": "Intercambiar con {name}",
+  "@swapWith": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "systemByBanner": "Por el banner del servidor:",
   "systemByOsRelease": "Por /etc/os-release:",
   "systemDetectAgain": "Volver a deducirlo al conectar",

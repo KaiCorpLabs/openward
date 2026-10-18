@@ -1238,6 +1238,12 @@ abstract class AppLocalizations {
   /// **'Destino'**
   String get destination;
 
+  /// No description provided for @dividerHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Arrastra para cambiar el tamaño · doble clic: mitad y mitad'**
+  String get dividerHint;
+
   /// No description provided for @dontTrust.
   ///
   /// In es, this message translates to:
@@ -1262,11 +1268,23 @@ abstract class AppLocalizations {
   /// **'Descargar a {path}'**
   String downloadTo(String path);
 
+  /// No description provided for @dragPaneHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Arrastra para mover el panel: a otro panel o a la barra de pestañas'**
+  String get dragPaneHint;
+
   /// No description provided for @dragToOrder.
   ///
   /// In es, this message translates to:
   /// **'arrastra para ordenar'**
   String get dragToOrder;
+
+  /// No description provided for @dropAbove.
+  ///
+  /// In es, this message translates to:
+  /// **'encima de {pane}'**
+  String dropAbove(String pane);
 
   /// No description provided for @dropAskFirst.
   ///
@@ -1274,11 +1292,23 @@ abstract class AppLocalizations {
   /// **'Si alguno ya existe, te preguntamos antes de tocarlo.'**
   String get dropAskFirst;
 
+  /// No description provided for @dropBelow.
+  ///
+  /// In es, this message translates to:
+  /// **'debajo de {pane}'**
+  String dropBelow(String pane);
+
   /// No description provided for @dropBottom.
   ///
   /// In es, this message translates to:
   /// **'abajo'**
   String get dropBottom;
+
+  /// No description provided for @dropHostNewTab.
+  ///
+  /// In es, this message translates to:
+  /// **'Soltar aquí: abrir {name} en una pestaña nueva'**
+  String dropHostNewTab(String name);
 
   /// No description provided for @dropLeft.
   ///
@@ -1286,11 +1316,23 @@ abstract class AppLocalizations {
   /// **'a la izquierda'**
   String get dropLeft;
 
+  /// No description provided for @dropLeftOf.
+  ///
+  /// In es, this message translates to:
+  /// **'a la izquierda de {pane}'**
+  String dropLeftOf(String pane);
+
   /// No description provided for @dropMove.
   ///
   /// In es, this message translates to:
   /// **'Soltar: {name} {where}'**
   String dropMove(String name, String where);
+
+  /// No description provided for @dropNewTab.
+  ///
+  /// In es, this message translates to:
+  /// **'Soltar aquí: {name} en una pestaña nueva'**
+  String dropNewTab(String name);
 
   /// No description provided for @dropOpenHost.
   ///
@@ -1303,6 +1345,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'a la derecha'**
   String get dropRight;
+
+  /// No description provided for @dropRightOf.
+  ///
+  /// In es, this message translates to:
+  /// **'a la derecha de {pane}'**
+  String dropRightOf(String pane);
+
+  /// No description provided for @dropTabLast.
+  ///
+  /// In es, this message translates to:
+  /// **'Soltar aquí: {name} al final'**
+  String dropTabLast(String name);
 
   /// No description provided for @dropToDownload.
   ///
@@ -1567,6 +1621,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Entorno'**
   String get environment;
+
+  /// No description provided for @equalizePanes.
+  ///
+  /// In es, this message translates to:
+  /// **'Igualar tamaños'**
+  String get equalizePanes;
 
   /// No description provided for @exampleVariable.
   ///
@@ -3176,6 +3236,12 @@ abstract class AppLocalizations {
   /// **'Mover después'**
   String get moveLater;
 
+  /// No description provided for @moveToNewTab.
+  ///
+  /// In es, this message translates to:
+  /// **'Mover a una pestaña nueva'**
+  String get moveToNewTab;
+
   /// No description provided for @name.
   ///
   /// In es, this message translates to:
@@ -3470,11 +3536,23 @@ abstract class AppLocalizations {
   /// **'Divide una pestaña ({split}) o arrastra otra, o un host, sobre un terminal; escribe en varios paneles a la vez ({broadcast}). Con exit, la pestaña se cierra sola.'**
   String newsPanesBody(String split, String broadcast);
 
+  /// No description provided for @newsPanesBody2.
+  ///
+  /// In es, this message translates to:
+  /// **'Arrastrar una pestaña sobre un terminal ya no mueve la ventana. El menú de cada panel lo mueve a su pestaña, lo intercambia o iguala tamaños ({keys}); el panel nuevo ofrece las pestañas abiertas, cada panel tiene su nombre y el borde entre ellos se ve y se agarra.'**
+  String newsPanesBody2(String keys);
+
   /// No description provided for @newsPanesTitle.
   ///
   /// In es, this message translates to:
   /// **'Paneles y broadcast'**
   String get newsPanesTitle;
+
+  /// No description provided for @newsPanesTitle2.
+  ///
+  /// In es, this message translates to:
+  /// **'Paneles sin adivinar'**
+  String get newsPanesTitle2;
 
   /// No description provided for @newsSearchBody.
   ///
@@ -3956,6 +4034,12 @@ abstract class AppLocalizations {
   /// **'Desde un terminal o un SFTP. Si el puerto está ocupado, la conexión sigue y el túnel avisa.'**
   String get openOnConnectNote;
 
+  /// No description provided for @openOtherHere.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir otra cosa aquí…'**
+  String get openOtherHere;
+
   /// No description provided for @openSftp.
   ///
   /// In es, this message translates to:
@@ -4094,11 +4178,29 @@ abstract class AppLocalizations {
   /// **'solo escribir'**
   String get paletteTypeOnly;
 
+  /// No description provided for @paneOpenTabs.
+  ///
+  /// In es, this message translates to:
+  /// **'Pestañas abiertas'**
+  String get paneOpenTabs;
+
+  /// No description provided for @paneOpenTabsNote.
+  ///
+  /// In es, this message translates to:
+  /// **'pasan a este panel'**
+  String get paneOpenTabsNote;
+
   /// No description provided for @paneOptions.
   ///
   /// In es, this message translates to:
   /// **'Opciones del panel'**
   String get paneOptions;
+
+  /// No description provided for @paneSearch.
+  ///
+  /// In es, this message translates to:
+  /// **'Busca una pestaña o un host'**
+  String get paneSearch;
 
   /// No description provided for @paneWhat.
   ///
@@ -5762,6 +5864,18 @@ abstract class AppLocalizations {
   /// **'Dividir a la derecha'**
   String get splitRight;
 
+  /// No description provided for @splitWith.
+  ///
+  /// In es, this message translates to:
+  /// **'Dividir con {name}'**
+  String splitWith(String name);
+
+  /// No description provided for @splitWithNote.
+  ///
+  /// In es, this message translates to:
+  /// **'a la derecha del panel activo'**
+  String get splitWithNote;
+
   /// No description provided for @stageAuthenticating.
   ///
   /// In es, this message translates to:
@@ -5923,6 +6037,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Detener'**
   String get stopAction;
+
+  /// No description provided for @swapWith.
+  ///
+  /// In es, this message translates to:
+  /// **'Intercambiar con {name}'**
+  String swapWith(String name);
 
   /// No description provided for @systemByBanner.
   ///

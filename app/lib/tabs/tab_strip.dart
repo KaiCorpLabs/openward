@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/gestures.dart'
     show kMiddleMouseButton, kPrimaryMouseButton, kSecondaryMouseButton;
 import 'package:flutter/material.dart';
@@ -64,33 +66,59 @@ class TabStrip extends ConsumerWidget {
         crossAxisAlignment: align,
         children: [
           ?leading,
-          Flexible(
-            child: SizedBox(
-              height: height,
-              child: _TabRow(
-                state: state,
-                gap: gap,
-                onRename: (i) => _rename(context, ref, i),
+          // The tabs take what they need (scrolling past that); all the
+          // rest of the bar is empty, after the + button.
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, box) => Row(
+                crossAxisAlignment: align,
+                children: [
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: math.max(0, box.maxWidth - _emptyAtLeast),
+                    ),
+                    child: SizedBox(
+                      height: height,
+                      child: _TabRow(
+                        state: state,
+                        gap: gap,
+                        onRename: (i) => _rename(context, ref, i),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(
+                      left: 2,
+                      bottom: style == TabStyle.folder ? 3 : 0,
+                      top: style == TabStyle.block ? 4 : 0,
+                    ),
+                    child: IconButton(
+                      tooltip: withKeys(
+                        l.newLocalTerminal,
+                        keysFor('⌘T', '${l.ctrlShiftPrefix}T'),
+                      ),
+                      icon: const Icon(Icons.add, size: 16),
+                      onPressed: tabs.openLocal,
+                    ),
+                  ),
+                  // Empty, it moves the window; while something is
+                  // dragged, it takes it as a tab of its own.
+                  const Expanded(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        _NewTabDrop(child: WindowDragArea()),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TransferIndicator(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          Padding(
-            padding: EdgeInsets.only(
-              left: 2,
-              bottom: style == TabStyle.folder ? 3 : 0,
-              top: style == TabStyle.block ? 4 : 0,
-            ),
-            child: IconButton(
-              tooltip: withKeys(
-                l.newLocalTerminal,
-                keysFor('⌘T', '${l.ctrlShiftPrefix}T'),
-              ),
-              icon: const Icon(Icons.add, size: 16),
-              onPressed: tabs.openLocal,
-            ),
-          ),
-          const Expanded(child: WindowDragArea()),
-          const TransferIndicator(),
         ],
       ),
     );
@@ -339,6 +367,92 @@ class _TabRowState extends ConsumerState<_TabRow> {
   }
 }
 
+/// Room the bar keeps after the tabs: the + button and somewhere empty to
+/// move the window from, or to drop on.
+const double _emptyAtLeast = 140;
+
+/// The bar's empty part, while something is dragged: dropped there, it
+/// becomes a tab of its own, at the end.
+class _NewTabDrop extends ConsumerWidget {
+  const _NewTabDrop({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ow = context.ow;
+    final c = ow.colors;
+    final l = context.l10n;
+    final tabs = ref.read(tabsProvider.notifier);
+    return DragTarget<WindowDrag>(
+      onWillAcceptWithDetails: (d) => switch (d.data) {
+        PaneDrag() || HostDrag() => true,
+        TabDrag(:final tab) => !identical(
+          ref.read(tabsProvider).tabs.lastOrNull,
+          tab,
+        ),
+      },
+      onAcceptWithDetails: (d) {
+        if (dragCancelled.value) return;
+        final end = ref.read(tabsProvider).tabs.length;
+        switch (d.data) {
+          case PaneDrag(:final tab, :final pane):
+            tabs.detachPane(tab, pane, end);
+          case HostDrag(:final host):
+            tabs.openHost(host);
+          case TabDrag(:final tab):
+            final from = ref.read(tabsProvider).tabs.indexOf(tab);
+            if (from >= 0) tabs.moveToGap(from, end);
+        }
+      },
+      builder: (context, candidates, _) {
+        final over = candidates.whereType<WindowDrag>().firstOrNull;
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            child,
+            if (over != null)
+              ValueListenableBuilder(
+                valueListenable: dragCancelled,
+                builder: (context, cancelled, _) => cancelled
+                    ? const SizedBox.shrink()
+                    : IgnorePointer(
+                        child: Container(
+                          key: const ValueKey('tabs.newTabDrop'),
+                          margin: const EdgeInsets.fromLTRB(6, 5, 6, 5),
+                          alignment: Alignment.center,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: c.accentSoft.withValues(alpha: 0.6),
+                            border: Border.all(color: c.accent, width: 1.5),
+                            borderRadius: BorderRadius.circular(
+                              ow.shape.radius,
+                            ),
+                          ),
+                          child: Text(
+                            switch (over) {
+                              PaneDrag() => l.dropNewTab(over.label),
+                              HostDrag() => l.dropHostNewTab(over.label),
+                              TabDrag() => l.dropTabLast(over.label),
+                            },
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: c.accentText,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 /// A page's icon, the same in its tab, the rail and the palette.
 IconData pageIcon(PageKind page) => switch (page) {
   PageKind.settings => Icons.settings_outlined,
@@ -354,6 +468,15 @@ IconData pageIcon(PageKind page) => switch (page) {
 String tabTitle(BuildContext context, OpenTab tab) {
   final l = context.l10n;
   return switch (tab) {
+    // Split: its panes' names, «web-1 · db-primary».
+    SessionTab(:final panes) when panes.isSplit => () {
+      final names = paneNames(
+        panes,
+        (p) => paneTitle(context, p),
+      ).values.toList();
+      final shown = names.take(3).join(' · ');
+      return names.length > 3 ? '$shown +${names.length - 3}' : shown;
+    }(),
     SessionTab(:final panes) =>
       (panes.active.controller ?? panes.controllers.firstOrNull)
               ?.displayTitle ??
@@ -446,8 +569,10 @@ class _Tab extends ConsumerWidget {
           final all = panes.controllers.toList();
           // The active pane's session; the first while it asks what to open.
           final shown = panes.active.controller ?? all.firstOrNull;
-          final more = panes.leaves.length - 1;
           final c = context.ow.colors;
+          final onAccent = active && context.ow.shape.tabs == TabStyle.block
+              ? c.onPrimary
+              : null;
           return _frame(
             context,
             hint: shown == null ? null : _hint(context, shown),
@@ -455,15 +580,27 @@ class _Tab extends ConsumerWidget {
                 ? Icon(Icons.podcasts, size: 14, color: c.warn)
                 : shown == null
                 ? const SizedBox(width: 7)
+                // Split: the panes' glyph, in the colour of how it is doing.
+                : panes.isSplit
+                ? Icon(
+                    Icons.vertical_split_outlined,
+                    size: 14,
+                    color:
+                        onAccent ??
+                        switch (tabStatus(shown)) {
+                          Status.connected => c.accent,
+                          Status.connecting || Status.warning => c.warn,
+                          Status.failed => c.danger,
+                          Status.idle => c.textMuted,
+                        },
+                  )
                 : StatusDot(
                     tabStatus(shown),
                     size: 7,
                     // On an accent block the accent would not show.
-                    onAccent: active && context.ow.shape.tabs == TabStyle.block
-                        ? c.onPrimary
-                        : null,
+                    onAccent: onAccent,
                   ),
-            title: '${shown?.displayTitle ?? ''}${more > 0 ? ' +$more' : ''}',
+            title: tabTitle(context, tab),
             env: env(shown?.hostId),
             waiting: all.any((s) => s.prompts.isNotEmpty),
             bell: all.any((s) => s.bellUnseen),

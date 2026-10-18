@@ -47,7 +47,12 @@ class _Entry {
     this.id,
     this.rank = 0,
     this.favorite = false,
+    this.typed = false,
   });
+
+  /// Only once something is typed: one per host or tab, too many to list
+  /// before.
+  final bool typed;
 
   final _Kind kind;
 
@@ -421,6 +426,38 @@ class _PaletteState extends ConsumerState<_Palette> {
       );
     }
 
+    // In a terminal: «Dividir con …» another tab or a host, on the right
+    // of the active pane.
+    if (state.current is SessionTab) {
+      for (final t in state.tabs) {
+        if (t is! SessionTab || identical(t, state.current)) continue;
+        out.add(
+          _Entry(
+            kind: _Kind.action,
+            id: 'splitWith',
+            title: l.splitWith(tabTitle(window, t)),
+            subtitle: l.splitWithNote,
+            icon: Icons.vertical_split_outlined,
+            typed: true,
+            run: (_) async => tabs.splitWith(other: t),
+          ),
+        );
+      }
+      for (final h in library.hosts) {
+        out.add(
+          _Entry(
+            kind: _Kind.action,
+            id: 'splitWith',
+            title: l.splitWith(h.label),
+            subtitle: l.splitWithNote,
+            icon: Icons.vertical_split_outlined,
+            typed: true,
+            run: (_) async => tabs.splitWith(host: h),
+          ),
+        );
+      }
+    }
+
     if (terminal) {
       for (final s in ref.read(snippetsProvider)) {
         out.add(
@@ -496,10 +533,12 @@ class _PaletteState extends ConsumerState<_Palette> {
         _Kind.host: 0,
         _Kind.snippet: 0,
       };
-      final kept = [
+      final kept = <_Entry>[
         for (final e in all)
-          if (e.favorite ||
-              (counts[e.kind] = (counts[e.kind] ?? 0) + 1) <= most[e.kind]!)
+          if (!e.typed &&
+              (e.favorite ||
+                  (counts[e.kind] = (counts[e.kind] ?? 0) + 1) <=
+                      most[e.kind]!))
             e,
       ];
       final order = {for (final (i, e) in kept.indexed) e: i};

@@ -776,6 +776,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get destination => 'Destination';
 
   @override
+  String get dividerHint => 'Drag to resize · double-click: half and half';
+
+  @override
   String get dontTrust => 'Don\'t trust';
 
   @override
@@ -790,21 +793,50 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get dragPaneHint =>
+      'Drag to move the pane: onto another pane or the tab bar';
+
+  @override
   String get dragToOrder => 'drag to reorder';
+
+  @override
+  String dropAbove(String pane) {
+    return 'above $pane';
+  }
 
   @override
   String get dropAskFirst =>
       'If something already exists, you are asked before it is touched.';
 
   @override
+  String dropBelow(String pane) {
+    return 'below $pane';
+  }
+
+  @override
   String get dropBottom => 'below';
+
+  @override
+  String dropHostNewTab(String name) {
+    return 'Drop here: open $name in a new tab';
+  }
 
   @override
   String get dropLeft => 'on the left';
 
   @override
+  String dropLeftOf(String pane) {
+    return 'left of $pane';
+  }
+
+  @override
   String dropMove(String name, String where) {
     return 'Drop: $name $where';
+  }
+
+  @override
+  String dropNewTab(String name) {
+    return 'Drop here: $name in a new tab';
   }
 
   @override
@@ -814,6 +846,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dropRight => 'on the right';
+
+  @override
+  String dropRightOf(String pane) {
+    return 'right of $pane';
+  }
+
+  @override
+  String dropTabLast(String name) {
+    return 'Drop here: $name at the end';
+  }
 
   @override
   String get dropToDownload => 'Drop to download here';
@@ -969,6 +1011,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get environment => 'Environment';
+
+  @override
+  String get equalizePanes => 'Equal sizes';
 
   @override
   String get exampleVariable => 'name';
@@ -2112,6 +2157,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get moveLater => 'Move later';
 
   @override
+  String get moveToNewTab => 'Move to a new tab';
+
+  @override
   String get name => 'Name';
 
   @override
@@ -2280,7 +2328,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String newsPanesBody2(String keys) {
+    return 'Dragging a tab onto a terminal no longer moves the window. Each pane\'s menu moves it to its own tab, swaps it or evens the sizes ($keys); a new pane offers the open tabs, each pane has its name and the border between them shows and can be grabbed.';
+  }
+
+  @override
   String get newsPanesTitle => 'Panes and broadcast';
+
+  @override
+  String get newsPanesTitle2 => 'Panes without guessing';
 
   @override
   String newsSearchBody(String keys) {
@@ -2565,6 +2621,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'From a terminal or SFTP. If the port is taken, the connection goes on and the tunnel says so.';
 
   @override
+  String get openOtherHere => 'Open something else here…';
+
+  @override
   String get openSftp => 'Open SFTP';
 
   @override
@@ -2640,7 +2699,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paletteTypeOnly => 'type only';
 
   @override
+  String get paneOpenTabs => 'Open tabs';
+
+  @override
+  String get paneOpenTabsNote => 'move into this pane';
+
+  @override
   String get paneOptions => 'Pane options';
+
+  @override
+  String get paneSearch => 'Search a tab or a host';
 
   @override
   String get paneWhat => 'What do you open in this pane?';
@@ -3741,6 +3809,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get splitRight => 'Split right';
 
   @override
+  String splitWith(String name) {
+    return 'Split with $name';
+  }
+
+  @override
+  String get splitWithNote => 'right of the active pane';
+
+  @override
   String stageAuthenticating(String label, String hop) {
     return 'Signing in to $label$hop…';
   }
@@ -3830,6 +3906,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get stopAction => 'Stop';
+
+  @override
+  String swapWith(String name) {
+    return 'Swap with $name';
+  }
 
   @override
   String get systemByBanner => 'From the server\'s banner:';

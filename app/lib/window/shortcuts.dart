@@ -72,6 +72,7 @@ List<ShortcutGroup> shortcutGroups(AppLocalizations l, {bool? apple}) {
       ShortcutRow(l.splitRight, [w('D')]),
       ShortcutRow(l.splitDown, [k('⌘⇧D', '${cs}E')]),
       ShortcutRow(l.maximizePane, [k('⌘⇧↩', '$cs↩')]),
+      if (mac) ShortcutRow(l.equalizePanes, ['⌘⌥=']),
       ShortcutRow(l.shortcutGoToPane, [k('⌘⌥ ←↑↓→', '$cs←↑↓→')]),
       ShortcutRow(l.paletteBroadcast, [k('⌘⇧B', '${cs}B')]),
     ]),
