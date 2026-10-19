@@ -18,8 +18,9 @@ import '../window/shortcuts.dart';
 /// in sight, 0.3.0-beta.4 the lighter editor, the start page, the
 /// shortcuts sheet and each hop's latency, 0.3.1-beta.1 the environment,
 /// the system and the favorites, 0.3.1-beta.2 panes that are handled
-/// without guessing.
-const newsVersion = '0.3.1-beta.2';
+/// without guessing, 0.3.1-beta.4 the hosts on their page and the sidebar
+/// for every day.
+const newsVersion = '0.3.1-beta.4';
 
 /// Who updated and has not seen this release's news yet.
 bool shouldShowNews(Settings s) => s.welcomed && s.seenNews != newsVersion;
@@ -45,10 +46,16 @@ class _WhatsNew extends StatelessWidget {
     // Marked new: what came after who saw the news before.
     final items = [
       (
+        Icons.dns_outlined,
+        l.newsSidebarTitle,
+        l.newsSidebarBody(hostsKeys(l)),
+        true,
+      ),
+      (
         Icons.vertical_split_outlined,
         l.newsPanesTitle2,
         l.newsPanesBody2(keys('⌘⌥=', l.paneOptions)),
-        true,
+        false,
       ),
       (Icons.label_important_outline, l.newsEnvTitle, l.newsEnvBody, false),
       (Icons.dns_outlined, l.newsSystemTitle, l.newsSystemBody, false),

@@ -494,6 +494,7 @@ class _StartPageState extends ConsumerState<StartPage> {
         item('${key}T', l.startShortcutLocal),
         item('${key}N', l.startShortcutNewHost),
         item('${key}K', l.startShortcutSearch),
+        item(hostsKeys(l), l.startShortcutHosts),
         item(sidebarKeys(l), l.shortcutSidebar),
         // The rest, on the sheet.
         InkWell(

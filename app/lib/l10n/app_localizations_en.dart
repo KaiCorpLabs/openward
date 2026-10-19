@@ -104,9 +104,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get allHosts => 'All hosts';
-
-  @override
   String get alreadyImported => 'already imported';
 
   @override
@@ -434,6 +431,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get closeTab => 'Close tab';
+
+  @override
+  String closeTabs(int count) {
+    return 'Close all $count';
+  }
 
   @override
   String get closeTheTab => 'Close the tab';
@@ -1076,7 +1078,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get favoritesEmpty =>
-      'Mark the hosts you use most with ★ (in the sidebar on hover, or in their editor) and they will show here, in the order you give them.';
+      'Mark the hosts you use most with ★ (on their page on hover, or in their editor) and they will show here, in the order you give them.';
+
+  @override
+  String get favoritesEmptyShort => 'Star the ones you use most in Hosts.';
 
   @override
   String featureFirewall(String name) {
@@ -1148,9 +1153,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get filterFolder => 'Filter this folder';
-
-  @override
-  String get filterHosts => 'Filter hosts';
 
   @override
   String get filterHostsAndGroups => 'Filter hosts and groups';
@@ -1394,7 +1396,73 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hostNeedsName => 'The host needs a name.';
 
   @override
+  String get hosts => 'Hosts';
+
+  @override
+  String get hostsAll => 'All';
+
+  @override
+  String get hostsClearFilters => 'Clear the filters';
+
+  @override
+  String get hostsColAddress => 'Address';
+
+  @override
+  String get hostsColEnvironment => 'Environment';
+
+  @override
+  String get hostsColLast => 'Last connection';
+
+  @override
+  String get hostsColName => 'Name';
+
+  @override
+  String get hostsColSystem => 'System';
+
+  @override
+  String get hostsFilters => 'Filters';
+
+  @override
+  String get hostsHintConnect => 'connect';
+
+  @override
+  String get hostsHintDrag => 'drag one to the tab bar to open it there';
+
+  @override
+  String get hostsHintEdit => 'edit';
+
+  @override
+  String get hostsHintFavorite => 'favorite';
+
+  @override
+  String get hostsNoGroup => 'No group';
+
+  @override
+  String get hostsOpenNow => 'open now';
+
+  @override
+  String get hostsSearchHint => 'Search by name, address, tag or system';
+
+  @override
   String get hostsSection => 'Hosts';
+
+  @override
+  String hostsSummary(int hosts, int groups) {
+    String _temp0 = intl.Intl.pluralLogic(
+      groups,
+      locale: localeName,
+      other: '$groups groups',
+      one: '1 group',
+      zero: 'no groups',
+    );
+    return '$hosts · $_temp0';
+  }
+
+  @override
+  String get hostsViewCards => 'Cards';
+
+  @override
+  String get hostsViewList => 'List';
 
   @override
   String get howCsv =>
@@ -2368,6 +2436,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newsShortcutsTitle => 'Every shortcut at hand';
 
   @override
+  String newsSidebarBody(String keys) {
+    return 'Every host is in Hosts ($keys), with filters by environment, tag and system. The sidebar keeps what you use every day: what is open, the favorites and the recent ones, with the Library in one row; folded to a rail, what is open fits in a counter.';
+  }
+
+  @override
+  String get newsSidebarTitle => 'Hosts on their own page';
+
+  @override
   String newsSnippetsBody(String shortcut) {
     return 'Commands with variables one shortcut away ($shortcut), and the keys you trust, with those of ~/.ssh/known_hosts.';
   }
@@ -2629,11 +2705,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openOtherHere => 'Open something else here…';
 
   @override
+  String get openSection => 'Open';
+
+  @override
   String get openSftp => 'Open SFTP';
 
   @override
   String openSshStillWarns(String command) {
     return 'OpenWard does not change ~/.ssh/known_hosts: ssh will keep warning until you remove the old key from there ($command).';
+  }
+
+  @override
+  String openTabsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count open tabs',
+      one: '1 open tab',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -3638,6 +3728,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shortcutGoToTab => 'Go to tab 1 to 8';
 
   @override
+  String get shortcutHosts => 'All hosts, on their page';
+
+  @override
   String get shortcutLastTab => 'Go to the last tab';
 
   @override
@@ -3746,6 +3839,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sidebarRail => 'Rail';
 
   @override
+  String get sidebarSearchHint => 'Search or connect…';
+
+  @override
   String get sidebarSetting => 'Sidebar';
 
   @override
@@ -3849,6 +3945,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get startHere => 'Start here';
+
+  @override
+  String get startShortcutHosts => 'all hosts';
 
   @override
   String get startShortcutLocal => 'local terminal';

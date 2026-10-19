@@ -368,6 +368,13 @@ class _PaletteState extends ConsumerState<_Palette> {
         Icons.file_download_outlined,
         () => showImport(window, home),
       ),
+      action(
+        'page.hosts',
+        l.goToPage(l.hosts),
+        Icons.dns_outlined,
+        () => tabs.openPage(PageKind.hosts),
+        keys: isApple ? '⌘⇧H' : '${key}H',
+      ),
       for (final (page, title, icon) in [
         (PageKind.keys, l.keys, Icons.key_outlined),
         (PageKind.workspaces, l.workspaces, Icons.dashboard_outlined),

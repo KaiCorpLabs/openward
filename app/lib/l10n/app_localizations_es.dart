@@ -104,9 +104,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get allHosts => 'Todos los hosts';
-
-  @override
   String get alreadyImported => 'ya importado';
 
   @override
@@ -435,6 +432,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get closeTab => 'Cerrar la pestaña';
+
+  @override
+  String closeTabs(int count) {
+    return 'Cerrar las $count';
+  }
 
   @override
   String get closeTheTab => 'Cerrar la pestaña';
@@ -1077,7 +1079,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get favoritesEmpty =>
-      'Marca con ★ los hosts que más usas (en la barra lateral, al pasar el ratón, o en su editor) y aparecerán aquí, en el orden que les des.';
+      'Marca con ★ los hosts que más usas (en su página, al pasar el ratón, o en su editor) y aparecerán aquí, en el orden que les des.';
+
+  @override
+  String get favoritesEmptyShort => 'Marca con ★ en Hosts los que más uses.';
 
   @override
   String featureFirewall(String name) {
@@ -1149,9 +1154,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get filterFolder => 'Filtrar en esta carpeta';
-
-  @override
-  String get filterHosts => 'Filtrar hosts';
 
   @override
   String get filterHostsAndGroups => 'Filtrar hosts y grupos';
@@ -1395,7 +1397,75 @@ class AppLocalizationsEs extends AppLocalizations {
   String get hostNeedsName => 'El host necesita un nombre.';
 
   @override
+  String get hosts => 'Hosts';
+
+  @override
+  String get hostsAll => 'Todos';
+
+  @override
+  String get hostsClearFilters => 'Quitar los filtros';
+
+  @override
+  String get hostsColAddress => 'Dirección';
+
+  @override
+  String get hostsColEnvironment => 'Entorno';
+
+  @override
+  String get hostsColLast => 'Última conexión';
+
+  @override
+  String get hostsColName => 'Nombre';
+
+  @override
+  String get hostsColSystem => 'Sistema';
+
+  @override
+  String get hostsFilters => 'Filtros';
+
+  @override
+  String get hostsHintConnect => 'conectar';
+
+  @override
+  String get hostsHintDrag =>
+      'arrastra uno a la barra de pestañas para abrirlo ahí';
+
+  @override
+  String get hostsHintEdit => 'editar';
+
+  @override
+  String get hostsHintFavorite => 'favorito';
+
+  @override
+  String get hostsNoGroup => 'Sin grupo';
+
+  @override
+  String get hostsOpenNow => 'abierto ahora';
+
+  @override
+  String get hostsSearchHint =>
+      'Busca por nombre, dirección, etiqueta o sistema';
+
+  @override
   String get hostsSection => 'Hosts';
+
+  @override
+  String hostsSummary(int hosts, int groups) {
+    String _temp0 = intl.Intl.pluralLogic(
+      groups,
+      locale: localeName,
+      other: '$groups grupos',
+      one: '1 grupo',
+      zero: 'sin grupos',
+    );
+    return '$hosts · $_temp0';
+  }
+
+  @override
+  String get hostsViewCards => 'Tarjetas';
+
+  @override
+  String get hostsViewList => 'Lista';
 
   @override
   String get howCsv =>
@@ -2371,6 +2441,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get newsShortcutsTitle => 'Todos los atajos, a mano';
 
   @override
+  String newsSidebarBody(String keys) {
+    return 'Todos los hosts están en Hosts ($keys), con filtros por entorno, etiqueta y sistema. La barra lateral se queda con lo de cada día: lo abierto, los favoritos y los recientes, con la Biblioteca en una fila; plegada en raíl, lo abierto cabe en un contador.';
+  }
+
+  @override
+  String get newsSidebarTitle => 'Los hosts, en su página';
+
+  @override
   String newsSnippetsBody(String shortcut) {
     return 'Comandos con variables a un atajo ($shortcut), y las claves en las que confías, con las de ~/.ssh/known_hosts.';
   }
@@ -2638,11 +2716,25 @@ class AppLocalizationsEs extends AppLocalizations {
   String get openOtherHere => 'Abrir otra cosa aquí…';
 
   @override
+  String get openSection => 'Abiertas';
+
+  @override
   String get openSftp => 'Abrir SFTP';
 
   @override
   String openSshStillWarns(String command) {
     return 'OpenWard no modifica ~/.ssh/known_hosts: ssh seguirá avisando hasta que quites la clave vieja de allí ($command).';
+  }
+
+  @override
+  String openTabsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pestañas abiertas',
+      one: '1 pestaña abierta',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -3648,6 +3740,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shortcutGoToTab => 'Ir a la pestaña 1 a 8';
 
   @override
+  String get shortcutHosts => 'Todos los hosts, en su página';
+
+  @override
   String get shortcutLastTab => 'Ir a la última pestaña';
 
   @override
@@ -3756,6 +3851,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sidebarRail => 'Raíl';
 
   @override
+  String get sidebarSearchHint => 'Buscar o conectar…';
+
+  @override
   String get sidebarSetting => 'Barra lateral';
 
   @override
@@ -3859,6 +3957,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get startHere => 'Empieza aquí';
+
+  @override
+  String get startShortcutHosts => 'todos los hosts';
 
   @override
   String get startShortcutLocal => 'terminal local';

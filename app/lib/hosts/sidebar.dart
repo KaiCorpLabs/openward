@@ -3,9 +3,13 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/address.dart';
 import '../core/providers.dart';
+import '../home/recent.dart';
 import '../l10n/l10n.dart';
+import '../palette/command_palette.dart' show agoText;
 import '../src/rust/api/vault.dart';
+import '../tabs/tab_strip.dart' show pageIcon, tabTitle;
 import '../tabs/tabs.dart';
 import '../terminal/controller.dart';
 import '../identities/identities.dart';
@@ -20,12 +24,13 @@ import '../window/shortcuts.dart';
 import '../window/sidebar_state.dart';
 import '../workspaces/workspaces.dart';
 import 'editors.dart';
-import '../import/import_dialog.dart';
+import 'host_actions.dart';
 import '../tabs/drag.dart';
 
-/// Saved hosts in their groups, a search box over them, and the actions
-/// that add to them. Double-click (or Enter in the search) connects in a
-/// new tab.
+/// What is used every day: the open tabs, the favorites and the recent
+/// connections, with a search over every host (Enter connects, to an
+/// address too). Every host is on the Hosts page, one click below; the
+/// library is a row of icons under it.
 class Sidebar extends ConsumerStatefulWidget {
   const Sidebar({
     super.key,
@@ -33,7 +38,7 @@ class Sidebar extends ConsumerStatefulWidget {
     this.overWindow = false,
   });
 
-  /// The filter over the list.
+  /// The search over the hosts.
   final FocusNode searchFocus;
 
   /// Shown over the window (the sidebar is hidden or a rail): no room for
@@ -46,12 +51,14 @@ class Sidebar extends ConsumerStatefulWidget {
 
 class _SidebarState extends ConsumerState<Sidebar> {
   final _search = TextEditingController();
-  final Set<String> _collapsed = {};
   String? _selected;
 
-  /// Opened or folded by hand; until then, folded while the start page
-  /// shows (it has the favorites in the middle) and open otherwise.
-  bool? _favoritesOpen;
+  /// Each section opened or folded by hand; until then the open tabs show,
+  /// and the favorites and recent ones fold while the start page shows
+  /// them in the middle.
+  bool? _openShown;
+  bool? _favoritesShown;
+  bool? _recentShown;
 
   @override
   void dispose() {
@@ -59,91 +66,96 @@ class _SidebarState extends ConsumerState<Sidebar> {
     super.dispose();
   }
 
-  void _connect(HostView host) {
-    ref.read(tabsProvider.notifier).openHost(host);
+  HostActions get _actions => HostActions(context, ref);
+
+  /// What was typed, as an address, if it looks like one.
+  QuickTarget? _typed(String text) =>
+      RegExp(r'[@.:]').hasMatch(text) ? QuickTarget.parse(text.trim()) : null;
+
+  void _clearSearch() {
+    _search.clear();
+    ref.read(searchProvider.notifier).set('');
   }
 
-  void _refresh() => ref.read(libraryProvider.notifier).refresh();
-
-  Future<void> _favorite(HostView h, bool on) async {
-    await ref.read(openWardProvider).setFavorite(id: h.id, favorite: on);
-    _refresh();
+  /// Enter in the search: the first host found, or the address typed.
+  void _submit(List<HostView>? results) {
+    final first = results?.firstOrNull;
+    if (first != null) return _actions.connect(first);
+    final target = _typed(_search.text);
+    if (target == null) return;
+    ref.read(tabsProvider.notifier).openAddress(target);
+    _clearSearch();
   }
 
-  Future<void> _editHost({String? id, String? groupId}) async {
-    if (await showHostEditor(context, ref, id: id, groupId: groupId)) {
-      _refresh();
-    }
-  }
-
-  Future<void> _editGroup({String? id, String? parentId}) async {
-    if (await showGroupEditor(context, ref, id: id, parentId: parentId)) {
-      _refresh();
-    }
-  }
-
-  Future<void> _import() async {
-    await showImport(context, ref);
-    _refresh();
-  }
-
-  Future<void> _delete(String id, String name, {required bool group}) async {
-    final l = context.l10n;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(group ? l.deleteGroupTitle(name) : l.deleteHostTitle(name)),
-        content: Text(group ? l.deleteGroupBody : l.deleteHostBody),
-        actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l.delete),
-          ),
-        ],
+  Future<void> _saveAddress(QuickTarget t) async {
+    final saved = await showHostEditor(
+      context,
+      ref,
+      draft: HostSpec(
+        label: t.address,
+        address: t.address,
+        settings: SettingsSpec(user: t.user, port: t.port),
       ),
     );
-    if (ok != true || !mounted) return;
-    try {
-      await ref.read(openWardProvider).delete(id: id);
-    } catch (e) {
-      if (!mounted) return;
-      final inUse = '$e'.contains('jump host');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(inUse ? l.hostInUse(name) : l.deleteFailed('$e')),
-        ),
-      );
-    }
-    _refresh();
+    if (saved) _actions.refresh();
   }
-
-  Future<void> _menu(
-    Offset at,
-    List<PopupMenuEntry<VoidCallback>> items,
-  ) async {
-    final action = await showMenu<VoidCallback>(
-      context: context,
-      position: RelativeRect.fromLTRB(at.dx, at.dy, at.dx, at.dy),
-      items: items,
-    );
-    action?.call();
-  }
-
-  PopupMenuItem<VoidCallback> _item(String text, VoidCallback action) =>
-      PopupMenuItem(value: action, height: 36, child: Text(text));
 
   @override
   Widget build(BuildContext context) {
     final library = ref.watch(libraryProvider);
     final results = ref.watch(searchResultsProvider);
     final sessions = ref.watch(tabsProvider).sessions.toList();
+    final start = ref.watch(tabsProvider.select((s) => s.current == null));
     final ow = context.ow;
     final l = context.l10n;
+    final actions = _actions;
     final empty = library.hosts.isEmpty && library.groups.isEmpty;
+    final Widget body;
+    if (empty) {
+      body = _Empty(onNew: () => actions.editHost(), onImport: actions.import);
+    } else if (results != null && results.isEmpty) {
+      final target = _typed(_search.text);
+      body = Padding(
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (target != null)
+              _addressRow(
+                target,
+                key: 'sidebar.connectTyped',
+                title: l.connectToAddress(target.label),
+                subtitle: l.notSaved,
+                trailing: const KeyCap('↩'),
+                clearAfter: true,
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  l.noResults,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: ow.colors.textSubtle),
+                ),
+              ),
+          ],
+        ),
+      );
+    } else {
+      body = ListView(
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+        children: results != null
+            ? [for (final h in results) _hostRow(h, sessions)]
+            : [
+                _OpenTabs(
+                  shown: _openShown ?? true,
+                  onToggle: (shown) => setState(() => _openShown = !shown),
+                ),
+                ..._favorites(library, sessions, start),
+                ..._recent(library, sessions, start),
+              ],
+      );
+    }
     return ColoredBox(
       color: ow.colors.window,
       child: Column(
@@ -151,38 +163,15 @@ class _SidebarState extends ConsumerState<Sidebar> {
         children: [
           if (!widget.overWindow) const WindowButtonsSpace(),
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
             child: _SearchField(
               controller: _search,
               focusNode: widget.searchFocus,
-              onSubmitted: () {
-                final first = results?.firstOrNull;
-                if (first != null) _connect(first);
-              },
+              onSubmitted: () => _submit(results),
             ),
           ),
-          Expanded(
-            child: empty
-                ? _Empty(onNew: () => _editHost(), onImport: _import)
-                : results != null && results.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Text(
-                      l.noResults,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: ow.colors.textSubtle),
-                    ),
-                  )
-                : ListView(
-                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                    children: results != null
-                        ? [for (final h in results) _hostRow(h, 0, sessions)]
-                        : [
-                            ..._favorites(library, sessions),
-                            ..._tree(library, null, 0, sessions),
-                          ],
-                  ),
-          ),
+          Expanded(child: body),
+          if (!empty) const _HostsEntry(),
           const _Library(),
           Container(
             padding: const EdgeInsets.all(12),
@@ -196,7 +185,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
                   child: empty
                       ? const SizedBox.shrink()
                       : OutlinedButton.icon(
-                          onPressed: () => _editHost(),
+                          onPressed: () => actions.editHost(),
                           icon: const Icon(Icons.add, size: 16),
                           label: Text(l.newHost),
                         ),
@@ -211,9 +200,9 @@ class _SidebarState extends ConsumerState<Sidebar> {
                       final at = box.localToGlobal(
                         Offset(0, box.size.height + 4),
                       );
-                      _menu(at, [
-                        _item(l.newGroup, () => _editGroup()),
-                        _item(l.importEllipsis, _import),
+                      actions.menu(at, [
+                        actions.item(l.newGroup, () => actions.editGroup()),
+                        actions.item(l.importEllipsis, actions.import),
                       ]);
                     },
                   ),
@@ -247,217 +236,176 @@ class _SidebarState extends ConsumerState<Sidebar> {
     );
   }
 
-  List<Widget> _tree(
+  /// The favorites, in their order; with none yet, how to have them.
+  List<Widget> _favorites(
     Library library,
-    String? parent,
-    int depth,
     List<TerminalController> sessions,
+    bool start,
   ) {
-    return [
-      for (final g in library.groupsIn(parent)) ...[
-        _groupRow(g, depth, library),
-        if (!_collapsed.contains(g.id))
-          ..._tree(library, g.id, depth + 1, sessions),
-      ],
-      for (final h in library.hostsIn(parent)) _hostRow(h, depth, sessions),
-    ];
-  }
-
-  /// The favorites first, in their order; they stay in their groups too.
-  List<Widget> _favorites(Library library, List<TerminalController> sessions) {
     final favorites = library.favorites;
-    if (favorites.isEmpty) return const [];
     final l = context.l10n;
     final ow = context.ow;
-    final start = ref.watch(tabsProvider.select((s) => s.current == null));
-    final open = _favoritesOpen ?? !start;
+    final shown = _favoritesShown ?? (favorites.isEmpty || !start);
     return [
-      FocusOutline(
-        radius: ow.shape.radius,
-        child: Semantics(
-          expanded: open,
-          button: true,
-          child: InkWell(
-            key: const ValueKey('sidebar.favorites'),
-            borderRadius: BorderRadius.circular(ow.shape.radius),
-            onTap: () => setState(() => _favoritesOpen = !open),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 12, 8, 6),
-              child: Row(
-                children: [
-                  Icon(Icons.star_rounded, size: 14, color: ow.colors.warn),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: SectionLabel(
-                      l.favorites,
-                      trailing: '${favorites.length}',
-                      keepCase: true,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    open ? Icons.expand_more : Icons.chevron_right,
-                    size: 14,
-                    color: ow.colors.textSubtle,
-                  ),
-                ],
-              ),
-            ),
+      _SectionHeader(
+        key: const ValueKey('sidebar.favorites'),
+        label: l.favorites,
+        count: favorites.length,
+        shown: shown,
+        lead: Icon(Icons.star_rounded, size: 14, color: ow.colors.warn),
+        onToggle: () => setState(() => _favoritesShown = !shown),
+      ),
+      if (shown && favorites.isEmpty)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 2, 8, 6),
+          child: Text(
+            l.favoritesEmptyShort,
+            style: TextStyle(fontSize: 12, color: ow.colors.textSubtle),
           ),
         ),
-      ),
-      if (open)
-        for (final h in favorites) _hostRow(h, 0, sessions),
+      if (shown)
+        for (final h in favorites) _hostRow(h, sessions),
     ];
   }
 
-  Widget _groupRow(GroupView g, int depth, Library library) {
-    final open = !_collapsed.contains(g.id);
+  /// The last places connected to that are not already at hand (open, or
+  /// a favorite), newest first.
+  List<Widget> _recent(
+    Library library,
+    List<TerminalController> sessions,
+    bool start,
+  ) {
     final l = context.l10n;
+    final recent = ref.watch(recentProvider).connections;
+    final open = {for (final s in sessions) ?s.hostId};
+    final openAddresses = {for (final s in sessions) ?s.target?.label};
+    final rows = <Widget>[];
+    for (final r in recent) {
+      if (rows.length == 5) break;
+      if (r.hostId case final id?) {
+        final h = library.host(id);
+        if (h == null || h.favorite != null || open.contains(id)) continue;
+        rows.add(_hostRow(h, sessions, at: r.at));
+      } else if (r.address case final a?) {
+        final t = QuickTarget.parse(a);
+        if (t == null || openAddresses.contains(t.label)) continue;
+        rows.add(
+          _addressRow(
+            t,
+            key: 'sidebar.recent.${t.label}',
+            title: t.label,
+            subtitle: l.notSaved,
+            trailing: _ago(r.at),
+          ),
+        );
+      }
+    }
+    if (rows.isEmpty) return const [];
+    final shown = _recentShown ?? !start;
+    return [
+      _SectionHeader(
+        key: const ValueKey('sidebar.recent'),
+        label: l.paletteRecent,
+        count: rows.length,
+        shown: shown,
+        onToggle: () => setState(() => _recentShown = !shown),
+      ),
+      if (shown) ...rows,
+    ];
+  }
+
+  Widget _ago(int at) => Text(
+    agoText(
+      context.l10n,
+      DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(at)),
+    ),
+    style: TextStyle(fontSize: 12, color: context.ow.colors.textMuted),
+  );
+
+  /// An address connected to without saving it: a double click or Enter
+  /// connects again; its menu saves it.
+  Widget _addressRow(
+    QuickTarget t, {
+    required String key,
+    required String title,
+    required String subtitle,
+    required Widget trailing,
+    bool clearAfter = false,
+  }) {
     final ow = context.ow;
+    final l = context.l10n;
+    void connect() {
+      ref.read(tabsProvider.notifier).openAddress(t);
+      if (clearAfter) _clearSearch();
+    }
+
+    final actions = _actions;
     return GestureDetector(
-      // The menu's actions are on the row itself for screen readers.
       excludeFromSemantics: true,
-      onSecondaryTapDown: (d) => _menu(d.globalPosition, [
-        _item(l.newHostHere, () => _editHost(groupId: g.id)),
-        _item(l.newSubgroup, () => _editGroup(parentId: g.id)),
-        _item(l.editGroup, () => _editGroup(id: g.id)),
-        _item(l.deleteGroup, () => _delete(g.id, g.name, group: true)),
+      onSecondaryTapDown: (d) => actions.menu(d.globalPosition, [
+        actions.item(l.connect, connect),
+        actions.item(l.saveAsHost, () => _saveAddress(t)),
       ]),
-      child: CallbackShortcuts(
-        bindings: {
-          const SingleActivator(LogicalKeyboardKey.arrowLeft): () =>
-              setState(() => _collapsed.add(g.id)),
-          const SingleActivator(LogicalKeyboardKey.arrowRight): () =>
-              setState(() => _collapsed.remove(g.id)),
-        },
-        child: FocusOutline(
-          radius: ow.shape.radius,
-          child: MergeSemantics(
-            child: Semantics(
-              expanded: open,
-              button: true,
-              customSemanticsActions: {
-                CustomSemanticsAction(label: l.newHostHere): () =>
-                    _editHost(groupId: g.id),
-                CustomSemanticsAction(label: l.editGroup): () =>
-                    _editGroup(id: g.id),
-              },
-              child: _groupInk(g, depth, library, open),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _groupInk(GroupView g, int depth, Library library, bool open) {
-    final ow = context.ow;
-    return InkWell(
-      borderRadius: BorderRadius.circular(ow.shape.radius),
-      onTap: () => setState(() {
-        open ? _collapsed.add(g.id) : _collapsed.remove(g.id);
-      }),
-      onDoubleTap: () => _editGroup(id: g.id),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(8.0 + depth * 12, 12, 8, 6),
-        child: Row(
-          children: [
-            Expanded(
-              child: SectionLabel(
-                g.name,
-                trailing: '${library.countUnder(g.id)}',
-                keepCase: true,
-              ),
-            ),
-            if (g.environment case final env?)
-              Padding(
-                padding: const EdgeInsets.only(left: 6),
-                child: Semantics(label: env.name, child: EnvChip(env)),
-              ),
-            const SizedBox(width: 4),
-            Icon(
-              open ? Icons.expand_more : Icons.chevron_right,
-              size: 14,
-              color: ow.colors.textSubtle,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _hostRow(HostView h, int depth, List<TerminalController> sessions) {
-    final ow = context.ow;
-    final l = context.l10n;
-    final selected = h.id == _selected;
-    final address = h.port == 22 ? h.address : '${h.address}:${h.port}';
-    final mine = [
-      for (final c in sessions)
-        if (c.hostId == h.id) c,
-    ];
-    // Dragged onto a terminal, it opens in a pane there; onto the tab bar,
-    // in a tab.
-    return WindowDraggable(
-      data: HostDrag(h),
-      subtitle: '${h.user}@$address',
-      child: GestureDetector(
-        excludeFromSemantics: true,
-        onSecondaryTapDown: (d) {
-          setState(() => _selected = h.id);
-          _menu(d.globalPosition, [
-            _item(l.connect, () => _connect(h)),
-            _item(
-              l.openSftp,
-              () => ref
-                  .read(tabsProvider.notifier)
-                  .openSftp(hostId: h.id, label: h.label),
-            ),
-            _item(
-              h.favorite == null ? l.addFavorite : l.removeFavorite,
-              () => _favorite(h, h.favorite == null),
-            ),
-            _item(l.editEllipsis, () => _editHost(id: h.id)),
-            _item(l.delete, () => _delete(h.id, h.label, group: false)),
-          ]);
-        },
-        child: Padding(
-          padding: EdgeInsets.only(left: depth * 12.0, bottom: 2),
-          child: Material(
-            color: selected ? ow.colors.selected : Colors.transparent,
-            shadowColor: Colors.black26,
-            elevation: selected && !ow.colors.dark ? 1 : 0,
-            borderRadius: BorderRadius.circular(ow.shape.radius + 2),
-            // Enter connects; the row is named by its status, label and
-            // address, with «connect» among its actions.
-            child: CallbackShortcuts(
-              bindings: {
-                const SingleActivator(LogicalKeyboardKey.enter): () =>
-                    _connect(h),
-                const SingleActivator(LogicalKeyboardKey.numpadEnter): () =>
-                    _connect(h),
-              },
-              child: FocusOutline(
-                child: MergeSemantics(
-                  child: Semantics(
-                    button: true,
-                    selected: selected,
-                    customSemanticsActions: {
-                      CustomSemanticsAction(label: l.connect): () =>
-                          _connect(h),
-                      CustomSemanticsAction(label: l.openSftp): () => ref
-                          .read(tabsProvider.notifier)
-                          .openSftp(hostId: h.id, label: h.label),
-                      CustomSemanticsAction(label: l.editEllipsis): () =>
-                          _editHost(id: h.id),
-                      CustomSemanticsAction(
-                        label: h.favorite == null
-                            ? l.addFavorite
-                            : l.removeFavorite,
-                      ): () =>
-                          _favorite(h, h.favorite == null),
-                    },
-                    child: _hostInk(h, selected, address, mine),
+        padding: const EdgeInsets.only(bottom: 2),
+        child: CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.enter): connect,
+            const SingleActivator(LogicalKeyboardKey.numpadEnter): connect,
+          },
+          child: FocusOutline(
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(ow.shape.radius + 2),
+              child: MergeSemantics(
+                child: Semantics(
+                  button: true,
+                  customSemanticsActions: {
+                    CustomSemanticsAction(label: l.connect): connect,
+                    CustomSemanticsAction(label: l.saveAsHost): () =>
+                        _saveAddress(t),
+                  },
+                  child: InkWell(
+                    key: ValueKey(key),
+                    borderRadius: BorderRadius.circular(ow.shape.radius + 2),
+                    onTap: clearAfter ? connect : null,
+                    onDoubleTap: clearAfter ? null : connect,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 7,
+                      ),
+                      child: Row(
+                        children: [
+                          const SystemBadge(code: '?'),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 1),
+                                Text(
+                                  subtitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: monoStyle(context, size: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          trailing,
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -468,23 +416,87 @@ class _SidebarState extends ConsumerState<Sidebar> {
     );
   }
 
-  Widget _hostInk(
-    HostView h,
-    bool selected,
-    String address,
-    List<TerminalController> mine,
-  ) {
+  /// A saved host: a click picks it, a double click or Enter connects in a
+  /// new tab; dragged onto a terminal it opens in a pane there. `at`: when
+  /// it was last connected, for the recent ones.
+  Widget _hostRow(HostView h, List<TerminalController> sessions, {int? at}) {
+    final ow = context.ow;
+    final l = context.l10n;
+    final selected = h.id == _selected;
+    final actions = _actions;
+    final mine = [
+      for (final c in sessions)
+        if (c.hostId == h.id) c,
+    ];
+    return WindowDraggable(
+      data: HostDrag(h),
+      subtitle: hostAddress(h),
+      child: GestureDetector(
+        excludeFromSemantics: true,
+        onSecondaryTapDown: (d) {
+          setState(() => _selected = h.id);
+          actions.menu(d.globalPosition, actions.hostMenu(h));
+        },
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 2),
+          child: Material(
+            color: selected ? ow.colors.selected : Colors.transparent,
+            shadowColor: Colors.black26,
+            elevation: selected && !ow.colors.dark ? 1 : 0,
+            borderRadius: BorderRadius.circular(ow.shape.radius + 2),
+            // Enter connects; the row is named by its status, label and
+            // address, with «connect» among its actions.
+            child: CallbackShortcuts(
+              bindings: {
+                const SingleActivator(LogicalKeyboardKey.enter): () =>
+                    actions.connect(h),
+                const SingleActivator(LogicalKeyboardKey.numpadEnter): () =>
+                    actions.connect(h),
+              },
+              child: FocusOutline(
+                child: MergeSemantics(
+                  child: Semantics(
+                    button: true,
+                    selected: selected,
+                    customSemanticsActions: {
+                      CustomSemanticsAction(label: l.connect): () =>
+                          actions.connect(h),
+                      CustomSemanticsAction(label: l.openSftp): () =>
+                          actions.sftp(h),
+                      CustomSemanticsAction(label: l.editEllipsis): () =>
+                          actions.editHost(id: h.id),
+                      CustomSemanticsAction(
+                        label: h.favorite == null
+                            ? l.addFavorite
+                            : l.removeFavorite,
+                      ): () =>
+                          actions.toggleFavorite(h),
+                    },
+                    child: _hostInk(h, mine, at),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _hostInk(HostView h, List<TerminalController> mine, int? at) {
     final ow = context.ow;
     final l = context.l10n;
     final env = h.environment;
     final system = h.system;
+    final actions = _actions;
     return _Hovered(
       builder: (hovered) => InkWell(
+        key: ValueKey('sidebar.host.${h.label}'),
         borderRadius: BorderRadius.circular(ow.shape.radius + 2),
         onTap: () => setState(() => _selected = h.id),
         onDoubleTap: () {
           setState(() => _selected = h.id);
-          _connect(h);
+          actions.connect(h);
         },
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
@@ -514,7 +526,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
                     ),
                     const SizedBox(height: 1),
                     Text(
-                      '${h.user}@$address',
+                      hostAddress(h),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: monoStyle(context, size: 12),
@@ -522,12 +534,8 @@ class _SidebarState extends ConsumerState<Sidebar> {
                   ],
                 ),
               ),
-              for (final t in h.tags.take(2))
-                Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: Pill.tag(t),
-                ),
-              // On hover, the star; otherwise how its tabs are doing.
+              // On hover, the star; otherwise how its tabs are doing, or
+              // when it was last used.
               if (hovered)
                 SizedBox.square(
                   dimension: 26,
@@ -546,15 +554,370 @@ class _SidebarState extends ConsumerState<Sidebar> {
                           ? Icons.star_outline_rounded
                           : Icons.star_rounded,
                     ),
-                    onPressed: () => _favorite(h, h.favorite == null),
+                    onPressed: () => actions.toggleFavorite(h),
                   ),
                 )
               else if (mine.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(left: 8),
                   child: _HostStatus(sessions: mine),
+                )
+              else if (at != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: _ago(at),
                 ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A section's title: it folds and opens its rows.
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    super.key,
+    required this.label,
+    required this.count,
+    required this.shown,
+    required this.onToggle,
+    this.lead,
+  });
+
+  final String label;
+  final int count;
+  final bool shown;
+  final VoidCallback onToggle;
+  final Widget? lead;
+
+  @override
+  Widget build(BuildContext context) {
+    final ow = context.ow;
+    return FocusOutline(
+      radius: ow.shape.radius,
+      child: Semantics(
+        expanded: shown,
+        button: true,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(ow.shape.radius),
+          onTap: onToggle,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 12, 8, 6),
+            child: Row(
+              children: [
+                if (lead != null) ...[lead!, const SizedBox(width: 6)],
+                Expanded(child: SectionLabel(label, trailing: '$count')),
+                const SizedBox(width: 4),
+                Icon(
+                  shown ? Icons.expand_more : Icons.chevron_right,
+                  size: 14,
+                  color: ow.colors.textSubtle,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The open terminal and file tabs, one row each; local shells (and tabs
+/// of the same host) with the same name go in one row, «Local × 4», that
+/// goes through them.
+class _OpenTabs extends ConsumerWidget {
+  const _OpenTabs({required this.shown, required this.onToggle});
+
+  final bool shown;
+  final ValueChanged<bool> onToggle;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(tabsProvider);
+    final tabs = state.tabs;
+    final listenable = Listenable.merge([
+      for (final t in tabs)
+        ...switch (t) {
+          SessionTab(:final panes) => [panes, ...panes.controllers],
+          SftpTab(:final controller) => [controller],
+          PageTab() => const <Listenable>[],
+        },
+    ]);
+    return ListenableBuilder(
+      listenable: listenable,
+      builder: (context, _) {
+        final rows = <String, List<int>>{};
+        for (final (i, t) in tabs.indexed) {
+          final key = switch (t) {
+            SessionTab(:final panes) when !panes.isSplit =>
+              switch (panes.active.controller) {
+                final c? =>
+                  'session:${c.hostId ?? c.target?.label ?? ''}:'
+                      '${tabTitle(context, t)}',
+                null => 'tab:$i',
+              },
+            SessionTab() || SftpTab() => 'tab:$i',
+            PageTab() => null,
+          };
+          if (key != null) rows.putIfAbsent(key, () => []).add(i);
+        }
+        if (rows.isEmpty) return const SizedBox.shrink();
+        final l = context.l10n;
+        final count = rows.values.fold(0, (n, r) => n + r.length);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _SectionHeader(
+              key: const ValueKey('sidebar.open'),
+              label: l.openSection,
+              count: count,
+              shown: shown,
+              onToggle: () => onToggle(shown),
+            ),
+            if (shown)
+              for (final indices in rows.values)
+                _OpenRow(indices: indices, state: state),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _OpenRow extends ConsumerWidget {
+  const _OpenRow({required this.indices, required this.state});
+
+  /// The tabs it stands for, in their order.
+  final List<int> indices;
+  final TabsState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ow = context.ow;
+    final c = ow.colors;
+    final l = context.l10n;
+    final library = ref.watch(libraryProvider);
+    final tabs = ref.read(tabsProvider.notifier);
+    final first = state.tabs[indices.first];
+    final title = tabTitle(context, first);
+    final controllers = [
+      for (final i in indices)
+        if (state.tabs[i] case SessionTab(:final panes)) ...panes.controllers,
+    ];
+    final env = tabHost(first, library)?.environment;
+    final lead = tabBadge(first, library);
+    final selected = indices.contains(state.active);
+    final status = controllers.isEmpty ? null : hostStatus(controllers);
+    void open() {
+      // Through the tabs of the row, one after another.
+      final at = indices.indexOf(state.active);
+      tabs.select(at < 0 ? indices.first : indices[(at + 1) % indices.length]);
+    }
+
+    void close() {
+      for (final i in indices.reversed) {
+        tabs.close(i);
+      }
+    }
+
+    final closeText = indices.length == 1
+        ? l.closeTab
+        : l.closeTabs(indices.length);
+    return GestureDetector(
+      excludeFromSemantics: true,
+      onSecondaryTapDown: (d) async {
+        final action = await showMenu<VoidCallback>(
+          context: context,
+          position: RelativeRect.fromLTRB(
+            d.globalPosition.dx,
+            d.globalPosition.dy,
+            d.globalPosition.dx,
+            d.globalPosition.dy,
+          ),
+          items: [
+            PopupMenuItem(value: close, height: 36, child: Text(closeText)),
+          ],
+        );
+        action?.call();
+      },
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 1),
+        child: FocusOutline(
+          child: Material(
+            color: selected ? c.selected : Colors.transparent,
+            borderRadius: BorderRadius.circular(ow.shape.radius + 2),
+            child: Semantics(
+              button: true,
+              selected: selected,
+              label: [
+                title,
+                ?env?.name,
+                if (indices.length > 1) l.openTabsCount(indices.length),
+              ].join(', '),
+              customSemanticsActions: {
+                CustomSemanticsAction(label: closeText): close,
+              },
+              excludeSemantics: true,
+              child: InkWell(
+                key: ValueKey('sidebar.open.$title'),
+                borderRadius: BorderRadius.circular(ow.shape.radius + 2),
+                onTap: open,
+                child: SizedBox(
+                  height: 32,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      children: [
+                        lead,
+                        const SizedBox(width: 9),
+                        // The name and its mark together; the count and
+                        // how it is doing, at the end.
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              if (env != null) ...[
+                                const SizedBox(width: 8),
+                                EnvChip(env),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        if (indices.length > 1)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: Text(
+                              '× ${indices.length}',
+                              style: monoStyle(context, size: 12),
+                            ),
+                          ),
+                        if (status != null) StatusDot(status, size: 7),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The saved host a tab is connected to, if it is one.
+HostView? tabHost(OpenTab tab, Library library) {
+  final id = switch (tab) {
+    SessionTab(:final panes) =>
+      (panes.active.controller ?? panes.controllers.firstOrNull)?.hostId,
+    SftpTab(:final controller) => controller.hostId,
+    PageTab() => null,
+  };
+  return id == null ? null : library.host(id);
+}
+
+/// A tab's mark: its host's monogram, tinted by its environment; a folder
+/// for its files, the panes' glyph when split, a shell for a local one and
+/// «?» for an address not saved.
+Widget tabBadge(OpenTab tab, Library library, {double size = 22}) {
+  final host = tabHost(tab, library);
+  final env = host?.environment;
+  return switch (tab) {
+    SftpTab() => SystemBadge(icon: Icons.folder_outlined, env: env, size: size),
+    SessionTab(:final panes) when panes.isSplit => SystemBadge(
+      icon: Icons.vertical_split_outlined,
+      env: env,
+      size: size,
+    ),
+    SessionTab(:final panes) => switch (panes.active.controller ??
+        panes.controllers.firstOrNull) {
+      final c? when c.isLocal => SystemBadge(icon: Icons.terminal, size: size),
+      final c? when c.hostId == null => SystemBadge(code: '?', size: size),
+      _ => SystemBadge(code: host?.system?.code, env: env, size: size),
+    },
+    PageTab(:final page) => SystemBadge(icon: pageIcon(page), size: size),
+  };
+}
+
+/// Every host, on their page: how many and in how many groups.
+class _HostsEntry extends ConsumerWidget {
+  const _HostsEntry();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ow = context.ow;
+    final c = ow.colors;
+    final l = context.l10n;
+    final library = ref.watch(libraryProvider);
+    final current = ref.watch(tabsProvider.select((s) => s.current));
+    final here = current is PageTab && current.page == PageKind.hosts;
+    final summary = l.hostsSummary(library.hosts.length, library.groups.length);
+    final radius = BorderRadius.circular(ow.shape.radiusLarge);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+      child: Tooltip(
+        message: withKeys(l.shortcutHosts, hostsKeys(l)),
+        waitDuration: const Duration(milliseconds: 500),
+        child: Semantics(
+          button: true,
+          selected: here,
+          label: '${l.hosts}, $summary',
+          excludeSemantics: true,
+          child: FocusOutline(
+            radius: ow.shape.radiusLarge,
+            child: Material(
+              color: here ? c.selected : c.raised,
+              shape: RoundedRectangleBorder(
+                borderRadius: radius,
+                side: BorderSide(color: here ? c.accent : c.border),
+              ),
+              child: InkWell(
+                key: const ValueKey('sidebar.hosts'),
+                borderRadius: radius,
+                onTap: () =>
+                    ref.read(tabsProvider.notifier).openPage(PageKind.hosts),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 9,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.dns_outlined, size: 17, color: c.accentText),
+                      const SizedBox(width: 10),
+                      Text(
+                        l.hosts,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          summary,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 12, color: c.textMuted),
+                        ),
+                      ),
+                      KeyCap(hostsKeys(l)),
+                      const SizedBox(width: 4),
+                      Icon(Icons.chevron_right, size: 16, color: c.textSubtle),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -657,13 +1020,14 @@ class _SearchField extends StatelessWidget {
           },
         },
         child: TextField(
+          key: const ValueKey('sidebar.search'),
           controller: controller,
           focusNode: focusNode,
           onChanged: ref.read(searchProvider.notifier).set,
           style: const TextStyle(fontSize: 13),
           decoration: InputDecoration(
-            hintText: l.filterHosts,
-            prefixIcon: const Icon(Icons.filter_list, size: 16),
+            hintText: l.sidebarSearchHint,
+            prefixIcon: const Icon(Icons.search, size: 16),
             prefixIconConstraints: const BoxConstraints(minWidth: 34),
             contentPadding: const EdgeInsets.symmetric(vertical: 9),
             border: OutlineInputBorder(
@@ -729,8 +1093,79 @@ class _Empty extends StatelessWidget {
   }
 }
 
-/// What is kept besides hosts: tunnels, identities, keys, snippets,
-/// workspaces and trusted host keys.
+/// A library page: its icon, name and how many things it has.
+typedef LibraryEntry = ({
+  PageKind page,
+  IconData icon,
+  String label,
+  int count,
+  int open,
+});
+
+/// The library's pages and what is in each; tunnels say how many are open.
+/// From a build that listens to the tunnel board.
+List<LibraryEntry> libraryEntries(BuildContext context, WidgetRef ref) {
+  final l = context.l10n;
+  final board = ref.watch(tunnelBoardProvider);
+  // Read again whenever this rebuilds (a tab opens or closes): new keys
+  // are trusted as connections come up.
+  final known = ref.read(openWardProvider).knownHostRows(query: '').length;
+  return [
+    (
+      page: PageKind.tunnels,
+      icon: Icons.swap_horiz,
+      label: l.tunnels,
+      count: board.tunnels.length,
+      open: board.open,
+    ),
+    (
+      page: PageKind.identities,
+      icon: Icons.badge_outlined,
+      label: l.identities,
+      count: ref.watch(identitiesProvider).length,
+      open: 0,
+    ),
+    (
+      page: PageKind.keys,
+      icon: Icons.key_outlined,
+      label: l.keys,
+      count: ref.watch(keysProvider).length,
+      open: 0,
+    ),
+    (
+      page: PageKind.snippets,
+      icon: Icons.terminal,
+      label: l.snippets,
+      count: ref.watch(snippetsProvider).length,
+      open: 0,
+    ),
+    (
+      page: PageKind.workspaces,
+      icon: Icons.dashboard_outlined,
+      label: l.workspaces,
+      count: ref.watch(workspacesProvider).length,
+      open: 0,
+    ),
+    (
+      page: PageKind.knownHosts,
+      icon: Icons.verified_user_outlined,
+      label: l.knownHosts,
+      count: known,
+      open: 0,
+    ),
+  ];
+}
+
+/// «Túneles · 3 · 1 abierto»: zeros are noise.
+String libraryEntryText(BuildContext context, LibraryEntry e) => [
+  e.label,
+  if (e.count > 0) '${e.count}',
+  if (e.open > 0) context.l10n.openCount(e.open),
+].join(' · ');
+
+/// What is kept besides hosts, in one row of icons: tunnels, identities,
+/// keys, snippets, workspaces and trusted host keys. Each says its name
+/// and how many on hover.
 class _Library extends ConsumerWidget {
   const _Library();
 
@@ -740,56 +1175,10 @@ class _Library extends ConsumerWidget {
     final c = ow.colors;
     final l = context.l10n;
     final board = ref.watch(tunnelBoardProvider);
-    final identities = ref.watch(identitiesProvider);
-    final snippets = ref.watch(snippetsProvider);
-    final keys = ref.watch(keysProvider);
-    final workspaces = ref.watch(workspacesProvider);
-    // Read again whenever this rebuilds (a tab opens or closes): new keys
-    // are trusted as connections come up.
-    final known = ref.read(openWardProvider).knownHostRows(query: '').length;
     final current = ref.watch(tabsProvider.select((s) => s.current));
     bool here(PageKind page) => current is PageTab && current.page == page;
-    // A count only when there is something: zeros are noise. Empty
-    // entries are quieter.
-    Widget count(int n) => n == 0
-        ? const SizedBox.shrink()
-        : Text('$n', style: monoStyle(context, size: 12));
-    Widget entry({
-      required String key,
-      required PageKind page,
-      required IconData icon,
-      required String label,
-      required List<Widget> trailing,
-      bool empty = false,
-    }) => FocusOutline(
-      child: Material(
-        color: here(page) ? c.selected : Colors.transparent,
-        borderRadius: BorderRadius.circular(ow.shape.radius + 2),
-        child: InkWell(
-          key: ValueKey(key),
-          borderRadius: BorderRadius.circular(ow.shape.radius + 2),
-          onTap: () => ref.read(tabsProvider.notifier).openPage(page),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-            child: Row(
-              children: [
-                Icon(icon, size: 16, color: empty ? c.textSubtle : c.textMuted),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: empty ? TextStyle(color: c.textMuted) : null,
-                  ),
-                ),
-                ...trailing,
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: c.border)),
       ),
@@ -797,71 +1186,97 @@ class _Library extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+            padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
             child: SectionLabel(l.library),
           ),
+          // Again as tunnels open and close.
           ListenableBuilder(
             listenable: board,
-            builder: (context, _) => entry(
-              key: 'library.tunnels',
-              page: PageKind.tunnels,
-              icon: Icons.swap_horiz,
-              label: l.tunnels,
-              trailing: [
-                if (board.open > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Text(
-                      l.openCount(board.open),
-                      style: TextStyle(fontSize: 12, color: c.accentText),
+            builder: (context, _) => Consumer(
+              builder: (context, ref, _) => Row(
+                children: [
+                  for (final e in libraryEntries(context, ref))
+                    Expanded(
+                      child: _LibraryButton(
+                        entry: e,
+                        selected: here(e.page),
+                        onPressed: () =>
+                            ref.read(tabsProvider.notifier).openPage(e.page),
+                      ),
                     ),
-                  ),
-                count(board.tunnels.length),
-              ],
-              empty: board.tunnels.isEmpty,
+                ],
+              ),
             ),
           ),
-          entry(
-            key: 'library.identities',
-            page: PageKind.identities,
-            icon: Icons.badge_outlined,
-            label: l.identities,
-            trailing: [count(identities.length)],
-            empty: identities.isEmpty,
-          ),
-          entry(
-            key: 'library.keys',
-            page: PageKind.keys,
-            icon: Icons.key_outlined,
-            label: l.keys,
-            trailing: [count(keys.length)],
-            empty: keys.isEmpty,
-          ),
-          entry(
-            key: 'library.snippets',
-            page: PageKind.snippets,
-            icon: Icons.terminal,
-            label: l.snippets,
-            trailing: [count(snippets.length)],
-            empty: snippets.isEmpty,
-          ),
-          entry(
-            key: 'library.workspaces',
-            page: PageKind.workspaces,
-            icon: Icons.dashboard_outlined,
-            label: l.workspaces,
-            trailing: [count(workspaces.length)],
-            empty: workspaces.isEmpty,
-          ),
-          entry(
-            key: 'library.knownHosts',
-            page: PageKind.knownHosts,
-            icon: Icons.verified_user_outlined,
-            label: l.knownHosts,
-            trailing: [count(known)],
-            empty: known == 0,
-          ),
         ],
+      ),
+    );
+  }
+}
+
+class _LibraryButton extends StatelessWidget {
+  const _LibraryButton({
+    required this.entry,
+    required this.selected,
+    required this.onPressed,
+  });
+
+  final LibraryEntry entry;
+  final bool selected;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final ow = context.ow;
+    final c = ow.colors;
+    final e = entry;
+    final text = libraryEntryText(context, e);
+    final radius = BorderRadius.circular(ow.shape.radius + 2);
+    return Tooltip(
+      message: text,
+      waitDuration: const Duration(milliseconds: 300),
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: text,
+        excludeSemantics: true,
+        child: FocusOutline(
+          radius: ow.shape.radius + 2,
+          child: Material(
+            color: selected ? c.selected : Colors.transparent,
+            borderRadius: radius,
+            child: InkWell(
+              key: ValueKey('library.${e.page.name}'),
+              borderRadius: radius,
+              onTap: onPressed,
+              child: SizedBox(
+                height: 34,
+                child: Center(
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Icon(
+                        e.icon,
+                        size: 17,
+                        color: selected
+                            ? c.text
+                            : e.count == 0
+                            ? c.textSubtle
+                            : c.textMuted,
+                      ),
+                      if (e.open > 0)
+                        const Positioned(
+                          right: -4,
+                          top: -3,
+                          child: StatusDot(Status.connected, size: 6),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -67,7 +67,6 @@
       }
     }
   },
-  "allHosts": "Todos los hosts",
   "alreadyImported": "ya importado",
   "alreadyUses": "Ya la usa",
   "alsoOnThisComputer": "También en este equipo",
@@ -347,6 +346,14 @@
   "closeOtherTabs": "Cerrar las demás",
   "closePane": "Cerrar el panel",
   "closeTab": "Cerrar la pestaña",
+  "closeTabs": "Cerrar las {count}",
+  "@closeTabs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "closeTheTab": "Cerrar la pestaña",
   "colModified": "Modificado",
   "colName": "Nombre",
@@ -918,7 +925,8 @@
   "favoriteLower": "favorito",
   "favoriteNote": "arriba en la barra, en el raíl y en el inicio",
   "favorites": "Favoritos",
-  "favoritesEmpty": "Marca con ★ los hosts que más usas (en la barra lateral, al pasar el ratón, o en su editor) y aparecerán aquí, en el orden que les des.",
+  "favoritesEmpty": "Marca con ★ los hosts que más usas (en su página, al pasar el ratón, o en su editor) y aparecerán aquí, en el orden que les des.",
+  "favoritesEmptyShort": "Marca con ★ en Hosts los que más uses.",
   "featureFirewall": "el firewall «{name}» de SecureCRT",
   "@featureFirewall": {
     "placeholders": {
@@ -987,7 +995,6 @@
   },
   "filledInEachPane": "También se rellenan solas, en cada panel:",
   "filterFolder": "Filtrar en esta carpeta",
-  "filterHosts": "Filtrar hosts",
   "filterHostsAndGroups": "Filtrar hosts y grupos",
   "filterIdentities": "Filtrar por nombre, usuario o clave",
   "filterSnippets": "Filtrar por nombre o comando",
@@ -1169,7 +1176,36 @@
   },
   "hostKeys": "Claves de host nuevas",
   "hostNeedsName": "El host necesita un nombre.",
+  "hosts": "Hosts",
+  "hostsAll": "Todos",
+  "hostsClearFilters": "Quitar los filtros",
+  "hostsColAddress": "Dirección",
+  "hostsColEnvironment": "Entorno",
+  "hostsColLast": "Última conexión",
+  "hostsColName": "Nombre",
+  "hostsColSystem": "Sistema",
+  "hostsFilters": "Filtros",
+  "hostsHintConnect": "conectar",
+  "hostsHintDrag": "arrastra uno a la barra de pestañas para abrirlo ahí",
+  "hostsHintEdit": "editar",
+  "hostsHintFavorite": "favorito",
+  "hostsNoGroup": "Sin grupo",
+  "hostsOpenNow": "abierto ahora",
+  "hostsSearchHint": "Busca por nombre, dirección, etiqueta o sistema",
   "hostsSection": "Hosts",
+  "hostsSummary": "{hosts} · {groups, plural, =0{sin grupos} =1{1 grupo} other{{groups} grupos}}",
+  "@hostsSummary": {
+    "placeholders": {
+      "hosts": {
+        "type": "int"
+      },
+      "groups": {
+        "type": "int"
+      }
+    }
+  },
+  "hostsViewCards": "Tarjetas",
+  "hostsViewList": "Lista",
   "howCsv": "Un host por fila, con cabecera: la plantilla de Termius o columnas como nombre, host, puerto, usuario y grupo.",
   "howMobaXterm": "Sessions › Export all sessions to file: un archivo .mxtsessions",
   "howPutty": "Un .reg exportado del registro (reg export HKCU\\Software\\SimonTatham\\PuTTY\\Sessions putty.reg)",
@@ -1917,6 +1953,15 @@
     }
   },
   "newsShortcutsTitle": "Todos los atajos, a mano",
+  "newsSidebarBody": "Todos los hosts están en Hosts ({keys}), con filtros por entorno, etiqueta y sistema. La barra lateral se queda con lo de cada día: lo abierto, los favoritos y los recientes, con la Biblioteca en una fila; plegada en raíl, lo abierto cabe en un contador.",
+  "@newsSidebarBody": {
+    "placeholders": {
+      "keys": {
+        "type": "String"
+      }
+    }
+  },
+  "newsSidebarTitle": "Los hosts, en su página",
   "newsSnippetsBody": "Comandos con variables a un atajo ({shortcut}), y las claves en las que confías, con las de ~/.ssh/known_hosts.",
   "@newsSnippetsBody": {
     "placeholders": {
@@ -2065,12 +2110,21 @@
   },
   "openOnConnectNote": "Desde un terminal o un SFTP. Si el puerto está ocupado, la conexión sigue y el túnel avisa.",
   "openOtherHere": "Abrir otra cosa aquí…",
+  "openSection": "Abiertas",
   "openSftp": "Abrir SFTP",
   "openSshStillWarns": "OpenWard no modifica ~/.ssh/known_hosts: ssh seguirá avisando hasta que quites la clave vieja de allí ({command}).",
   "@openSshStillWarns": {
     "placeholders": {
       "command": {
         "type": "String"
+      }
+    }
+  },
+  "openTabsCount": "{count, plural, =1{1 pestaña abierta} other{{count} pestañas abiertas}}",
+  "@openTabsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
     }
   },
@@ -2781,6 +2835,7 @@
   "shortcutFindOlder": "Coincidencia anterior, más arriba",
   "shortcutGoToPane": "Ir al panel en esa dirección",
   "shortcutGoToTab": "Ir a la pestaña 1 a 8",
+  "shortcutHosts": "Todos los hosts, en su página",
   "shortcutLastTab": "Ir a la última pestaña",
   "shortcutLocal": "Abre un terminal local",
   "shortcutNewHost": "Guarda un host nuevo",
@@ -2827,6 +2882,7 @@
   "sidebarOnSessionHelp": "Con un terminal o un SFTP delante, la barra puede plegarse sola. En el inicio y en las páginas vuelve a como esté arriba.",
   "sidebarOpen": "Abierta",
   "sidebarRail": "Raíl",
+  "sidebarSearchHint": "Buscar o conectar…",
   "sidebarSetting": "Barra lateral",
   "sidebarWidth": "Ancho de la barra",
   "sidebarWidthHelp": "Arrastra el borde de la barra para cambiarlo, entre 220 y 420 px. Un doble clic en el borde lo restablece.",
@@ -2922,6 +2978,7 @@
   "start": "Empezar",
   "startAction": "Empezar",
   "startHere": "Empieza aquí",
+  "startShortcutHosts": "todos los hosts",
   "startShortcutLocal": "terminal local",
   "startShortcutNewHost": "host nuevo",
   "startShortcutSearch": "buscar",

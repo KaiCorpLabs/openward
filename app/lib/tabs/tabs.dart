@@ -41,6 +41,7 @@ final class SftpTab extends OpenTab {
 }
 
 enum PageKind {
+  hosts,
   settings,
   tunnels,
   identities,

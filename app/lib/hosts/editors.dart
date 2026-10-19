@@ -1322,105 +1322,112 @@ class _EnvDialogState extends State<_EnvDialog> {
     final l = context.l10n;
     final ow = context.ow;
     final c = ow.colors;
-    return AlertDialog(
-      title: Text(l.envDialogTitle),
-      content: SizedBox(
-        width: 380,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              key: const ValueKey('envDialog.name'),
-              controller: _name,
-              autofocus: true,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(labelText: l.envName),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              key: const ValueKey('envDialog.short'),
-              controller: _short,
-              maxLength: 12,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                labelText: l.envShort,
-                helperText: l.envShortHelp,
+    // Esc also from a field, which would keep it otherwise.
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): () =>
+            Navigator.pop(context),
+      },
+      child: AlertDialog(
+        title: Text(l.envDialogTitle),
+        content: SizedBox(
+          width: 380,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                key: const ValueKey('envDialog.name'),
+                controller: _name,
+                autofocus: true,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(labelText: l.envName),
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(l.envColor, style: TextStyle(color: c.textMuted)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (final name in envColorNames)
-                  Semantics(
-                    inMutuallyExclusiveGroup: true,
-                    checked: name == _color,
-                    label: envColorName(l, name),
-                    child: Tooltip(
-                      message: envColorName(l, name),
-                      child: InkWell(
-                        key: ValueKey('envDialog.color.$name'),
-                        borderRadius: BorderRadius.circular(8),
-                        onTap: () => setState(() => _color = name),
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: name == _color
-                                  ? c.text
-                                  : Colors.transparent,
-                              width: 2,
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: DecoratedBox(
+              const SizedBox(height: 12),
+              TextField(
+                key: const ValueKey('envDialog.short'),
+                controller: _short,
+                maxLength: 12,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  labelText: l.envShort,
+                  helperText: l.envShortHelp,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(l.envColor, style: TextStyle(color: c.textMuted)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final name in envColorNames)
+                    Semantics(
+                      inMutuallyExclusiveGroup: true,
+                      checked: name == _color,
+                      label: envColorName(l, name),
+                      child: Tooltip(
+                        message: envColorName(l, name),
+                        child: InkWell(
+                          key: ValueKey('envDialog.color.$name'),
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: () => setState(() => _color = name),
+                          child: Container(
+                            width: 30,
+                            height: 30,
+                            padding: const EdgeInsets.all(3),
                             decoration: BoxDecoration(
-                              color: envColors(c, name).fg,
-                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: name == _color
+                                    ? c.text
+                                    : Colors.transparent,
+                                width: 2,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: envColors(c, name).fg,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-            if (_name.text.trim().isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: EnvChip(
-                  EnvironmentView(
-                    name: _name.text.trim(),
-                    short: _short.text.trim().isEmpty
-                        ? _name.text.trim().toLowerCase()
-                        : _short.text.trim(),
-                    color: _color,
-                  ),
-                  big: true,
-                ),
+                ],
               ),
+              if (_name.text.trim().isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: EnvChip(
+                    EnvironmentView(
+                      name: _name.text.trim(),
+                      short: _short.text.trim().isEmpty
+                          ? _name.text.trim().toLowerCase()
+                          : _short.text.trim(),
+                      color: _color,
+                    ),
+                    big: true,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
+        actions: [
+          OutlinedButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l.cancel),
+          ),
+          FilledButton(
+            key: const ValueKey('envDialog.ok'),
+            onPressed: _name.text.trim().isEmpty ? null : _done,
+            child: Text(l.envUse),
+          ),
+        ],
       ),
-      actions: [
-        OutlinedButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(l.cancel),
-        ),
-        FilledButton(
-          key: const ValueKey('envDialog.ok'),
-          onPressed: _name.text.trim().isEmpty ? null : _done,
-          child: Text(l.envUse),
-        ),
-      ],
     );
   }
 }

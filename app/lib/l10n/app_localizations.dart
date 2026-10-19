@@ -248,12 +248,6 @@ abstract class AppLocalizations {
   /// **'Todas · {count}'**
   String allCount(int count);
 
-  /// No description provided for @allHosts.
-  ///
-  /// In es, this message translates to:
-  /// **'Todos los hosts'**
-  String get allHosts;
-
   /// No description provided for @alreadyImported.
   ///
   /// In es, this message translates to:
@@ -709,6 +703,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cerrar la pestaña'**
   String get closeTab;
+
+  /// No description provided for @closeTabs.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar las {count}'**
+  String closeTabs(int count);
 
   /// No description provided for @closeTheTab.
   ///
@@ -1715,8 +1715,14 @@ abstract class AppLocalizations {
   /// No description provided for @favoritesEmpty.
   ///
   /// In es, this message translates to:
-  /// **'Marca con ★ los hosts que más usas (en la barra lateral, al pasar el ratón, o en su editor) y aparecerán aquí, en el orden que les des.'**
+  /// **'Marca con ★ los hosts que más usas (en su página, al pasar el ratón, o en su editor) y aparecerán aquí, en el orden que les des.'**
   String get favoritesEmpty;
+
+  /// No description provided for @favoritesEmptyShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Marca con ★ en Hosts los que más uses.'**
+  String get favoritesEmptyShort;
 
   /// No description provided for @featureFirewall.
   ///
@@ -1831,12 +1837,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Filtrar en esta carpeta'**
   String get filterFolder;
-
-  /// No description provided for @filterHosts.
-  ///
-  /// In es, this message translates to:
-  /// **'Filtrar hosts'**
-  String get filterHosts;
 
   /// No description provided for @filterHostsAndGroups.
   ///
@@ -2198,11 +2198,125 @@ abstract class AppLocalizations {
   /// **'El host necesita un nombre.'**
   String get hostNeedsName;
 
+  /// No description provided for @hosts.
+  ///
+  /// In es, this message translates to:
+  /// **'Hosts'**
+  String get hosts;
+
+  /// No description provided for @hostsAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Todos'**
+  String get hostsAll;
+
+  /// No description provided for @hostsClearFilters.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar los filtros'**
+  String get hostsClearFilters;
+
+  /// No description provided for @hostsColAddress.
+  ///
+  /// In es, this message translates to:
+  /// **'Dirección'**
+  String get hostsColAddress;
+
+  /// No description provided for @hostsColEnvironment.
+  ///
+  /// In es, this message translates to:
+  /// **'Entorno'**
+  String get hostsColEnvironment;
+
+  /// No description provided for @hostsColLast.
+  ///
+  /// In es, this message translates to:
+  /// **'Última conexión'**
+  String get hostsColLast;
+
+  /// No description provided for @hostsColName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre'**
+  String get hostsColName;
+
+  /// No description provided for @hostsColSystem.
+  ///
+  /// In es, this message translates to:
+  /// **'Sistema'**
+  String get hostsColSystem;
+
+  /// No description provided for @hostsFilters.
+  ///
+  /// In es, this message translates to:
+  /// **'Filtros'**
+  String get hostsFilters;
+
+  /// No description provided for @hostsHintConnect.
+  ///
+  /// In es, this message translates to:
+  /// **'conectar'**
+  String get hostsHintConnect;
+
+  /// No description provided for @hostsHintDrag.
+  ///
+  /// In es, this message translates to:
+  /// **'arrastra uno a la barra de pestañas para abrirlo ahí'**
+  String get hostsHintDrag;
+
+  /// No description provided for @hostsHintEdit.
+  ///
+  /// In es, this message translates to:
+  /// **'editar'**
+  String get hostsHintEdit;
+
+  /// No description provided for @hostsHintFavorite.
+  ///
+  /// In es, this message translates to:
+  /// **'favorito'**
+  String get hostsHintFavorite;
+
+  /// No description provided for @hostsNoGroup.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin grupo'**
+  String get hostsNoGroup;
+
+  /// No description provided for @hostsOpenNow.
+  ///
+  /// In es, this message translates to:
+  /// **'abierto ahora'**
+  String get hostsOpenNow;
+
+  /// No description provided for @hostsSearchHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Busca por nombre, dirección, etiqueta o sistema'**
+  String get hostsSearchHint;
+
   /// No description provided for @hostsSection.
   ///
   /// In es, this message translates to:
   /// **'Hosts'**
   String get hostsSection;
+
+  /// No description provided for @hostsSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'{hosts} · {groups, plural, =0{sin grupos} =1{1 grupo} other{{groups} grupos}}'**
+  String hostsSummary(int hosts, int groups);
+
+  /// No description provided for @hostsViewCards.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarjetas'**
+  String get hostsViewCards;
+
+  /// No description provided for @hostsViewList.
+  ///
+  /// In es, this message translates to:
+  /// **'Lista'**
+  String get hostsViewList;
 
   /// No description provided for @howCsv.
   ///
@@ -3596,6 +3710,18 @@ abstract class AppLocalizations {
   /// **'Todos los atajos, a mano'**
   String get newsShortcutsTitle;
 
+  /// No description provided for @newsSidebarBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Todos los hosts están en Hosts ({keys}), con filtros por entorno, etiqueta y sistema. La barra lateral se queda con lo de cada día: lo abierto, los favoritos y los recientes, con la Biblioteca en una fila; plegada en raíl, lo abierto cabe en un contador.'**
+  String newsSidebarBody(String keys);
+
+  /// No description provided for @newsSidebarTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Los hosts, en su página'**
+  String get newsSidebarTitle;
+
   /// No description provided for @newsSnippetsBody.
   ///
   /// In es, this message translates to:
@@ -4046,6 +4172,12 @@ abstract class AppLocalizations {
   /// **'Abrir otra cosa aquí…'**
   String get openOtherHere;
 
+  /// No description provided for @openSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Abiertas'**
+  String get openSection;
+
   /// No description provided for @openSftp.
   ///
   /// In es, this message translates to:
@@ -4057,6 +4189,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'OpenWard no modifica ~/.ssh/known_hosts: ssh seguirá avisando hasta que quites la clave vieja de allí ({command}).'**
   String openSshStillWarns(String command);
+
+  /// No description provided for @openTabsCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 pestaña abierta} other{{count} pestañas abiertas}}'**
+  String openTabsCount(int count);
 
   /// No description provided for @openTunnels.
   ///
@@ -5576,6 +5714,12 @@ abstract class AppLocalizations {
   /// **'Ir a la pestaña 1 a 8'**
   String get shortcutGoToTab;
 
+  /// No description provided for @shortcutHosts.
+  ///
+  /// In es, this message translates to:
+  /// **'Todos los hosts, en su página'**
+  String get shortcutHosts;
+
   /// No description provided for @shortcutLastTab.
   ///
   /// In es, this message translates to:
@@ -5768,6 +5912,12 @@ abstract class AppLocalizations {
   /// **'Raíl'**
   String get sidebarRail;
 
+  /// No description provided for @sidebarSearchHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar o conectar…'**
+  String get sidebarSearchHint;
+
   /// No description provided for @sidebarSetting.
   ///
   /// In es, this message translates to:
@@ -5923,6 +6073,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Empieza aquí'**
   String get startHere;
+
+  /// No description provided for @startShortcutHosts.
+  ///
+  /// In es, this message translates to:
+  /// **'todos los hosts'**
+  String get startShortcutHosts;
 
   /// No description provided for @startShortcutLocal.
   ///

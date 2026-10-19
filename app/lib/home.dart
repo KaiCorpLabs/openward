@@ -8,6 +8,7 @@ import 'core/providers.dart';
 import 'core/settings.dart';
 import 'home/start_page.dart';
 import 'hosts/editors.dart';
+import 'hosts/hosts_page.dart';
 import 'hosts/rail.dart';
 import 'hosts/sidebar.dart';
 import 'settings/settings_page.dart';
@@ -117,6 +118,7 @@ class _HomeState extends ConsumerState<Home> {
     void splitDown() => tabs.split(Axis.vertical);
     void go(AxisDirection d) => tabs.focusPane(d);
     void settings() => tabs.openPage(PageKind.settings);
+    void hosts() => tabs.openPage(PageKind.hosts);
     void last() => tabs.select(ref.read(tabsProvider).tabs.length - 1);
     TerminalController? session() => ref.read(tabsProvider).currentSession;
     void find() => session()?.openFind();
@@ -149,6 +151,8 @@ class _HomeState extends ConsumerState<Home> {
             closeCurrent,
         const SingleActivator(LogicalKeyboardKey.keyK, meta: true): palette,
         const SingleActivator(LogicalKeyboardKey.keyB, meta: true): sidebar,
+        const SingleActivator(LogicalKeyboardKey.keyH, meta: true, shift: true):
+            hosts,
         // ⌘/ wherever the layout has the slash (⌘⇧7 on a Spanish one).
         const SingleActivator(LogicalKeyboardKey.slash, meta: true): shortcuts,
         const CharacterActivator('/', meta: true): shortcuts,
@@ -250,6 +254,11 @@ class _HomeState extends ConsumerState<Home> {
           control: true,
           shift: true,
         ): sidebar,
+        const SingleActivator(
+          LogicalKeyboardKey.keyH,
+          control: true,
+          shift: true,
+        ): hosts,
         const SingleActivator(
           LogicalKeyboardKey.slash,
           control: true,
@@ -389,6 +398,8 @@ class _HomeState extends ConsumerState<Home> {
                                   key: ObjectKey(tab),
                                   controller: tab.controller,
                                 ),
+                                PageTab(page: PageKind.hosts) =>
+                                  const HostsPage(),
                                 PageTab(page: PageKind.settings) =>
                                   const SettingsPage(),
                                 PageTab(page: PageKind.tunnels) =>

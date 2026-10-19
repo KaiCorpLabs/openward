@@ -243,6 +243,9 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('news.start')));
     await tester.pump(const Duration(milliseconds: 400));
     await audit('start');
+    // Every host on their page; a host's and a group's editors from there.
+    tabs.openPage(PageKind.hosts);
+    await audit('hosts page');
     await tapText('web', secondary: true);
     await tapText('Editar…');
     await audit('host editor');
@@ -271,6 +274,9 @@ void main() {
     await audit('another environment');
     await close();
     await close();
+    // Back to the start page.
+    tabs.closeCurrent();
+    await tester.pump(const Duration(milliseconds: 400));
 
     // With connections behind: the recent ones, what the quick connection
     // suggests, and every shortcut.
@@ -370,6 +376,13 @@ void main() {
     tabs.openPage(PageKind.workspaces);
     await audit('workspaces');
 
+    tabs.openPage(PageKind.hosts);
+    await audit('hosts page, with a favorite and a recent one');
+    await tester.tap(find.byKey(const ValueKey('hosts.view.cards')));
+    await audit('hosts page, cards');
+    await tester.tap(find.byKey(const ValueKey('hosts.view.list')));
+    await tester.pump(const Duration(milliseconds: 300));
+
     tabs.openLocal();
     final term = container.read(tabsProvider).currentSession!;
     final deadline = DateTime.now().add(const Duration(seconds: 15));
@@ -381,6 +394,9 @@ void main() {
     final sidebarState = container.read(sidebarProvider.notifier);
     sidebarState.chose(SidebarMode.rail);
     await audit('rail');
+    await tester.tap(find.byKey(const ValueKey('rail.open')));
+    await audit('rail: the open tabs');
+    await close();
     sidebarState.setPeek(true);
     await audit('sidebar over the window');
     sidebarState.setPeek(false);

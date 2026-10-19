@@ -187,6 +187,13 @@ Sigue siendo solo escritorio y sin cuenta.
 - En el tema Papel, de pestañas redondeadas, la pestaña lleva solo el nombre corto del entorno, sin raya.
 - Las direcciones sin guardar de los recientes llevan «?»: no hay host donde guardar su sistema.
 
+**Revisión de la barra lateral (0.3.1-beta.4):** con 5 hosts y 7 terminales, abierta en una ventana de 555 px los hosts tenían 150 px (2,5 de 5 a la vista) y la Biblioteca 235; plegada en raíl, las pestañas empujaban «Todos los hosts» fuera de la vista. Maquetas aprobadas el 2026-10-18 (fila «Barra lateral» del lienzo).
+- **Hosts** (`hosts/hosts_page.dart`, `PageKind.hosts`, ⌘⇧H): todos los hosts por grupos, en lista (las columnas que caben) o en tarjetas; búsqueda del núcleo más el sistema; filtros por entorno (uno), favoritos, etiquetas y sistemas; la última conexión de `recent.json`; al pasar el ratón o con el foco, «Conectar», SFTP y «Editar»; Intro, ⌥Intro, E y F. Lo que se hace con un host o un grupo está en `hosts/host_actions.dart`, para la barra y la página.
+- **Barra** (`hosts/sidebar.dart`): «Abiertas» (`_OpenTabs`: las pestañas de terminal y SFTP; las de un panel con el mismo destino y nombre van en una fila que pasa por ellas), «Favoritos» y «Recientes» (cinco, sin los abiertos ni los favoritos; en el inicio empiezan plegados), la entrada a Hosts y la Biblioteca en una fila de iconos (`libraryEntries`). El buscador conecta a una dirección si no encuentra un host.
+- **Raíl** (`hosts/rail.dart`): búsqueda y Hosts arriba; en medio, los favoritos (con su punto; un clic lleva a su pestaña o conecta) y el contador de abiertas con su menú; abajo, la Biblioteca en un menú, abrir la barra y los ajustes. `tabBadge` da la misma marca a una pestaña en la barra y en el raíl.
+- **Pruebas:** la prueba de ventana pasa por la página (búsqueda, etiqueta, tarjetas) y conecta desde ella; el raíl con su contador y su menú; la galería y la de accesibilidad, con la página de Hosts, sus tarjetas y la lista de abiertas.
+- **Diferencias con las maquetas:** el icono de Hosts es el del servidor (el de los monogramas sin sistema), no el de una lista; la página tiene también «Nuevo grupo»; y arrastrar un host desde la página lo abre en la barra de pestañas, no en un terminal, que no se ve mientras la página está delante (desde los favoritos y los recientes de la barra sigue yendo a un panel).
+
 **El orden:** primero el editor (beta.4), porque F2 le añade filas (entorno, sistema, favorito) y conviene hacerlas ya sobre el nuevo; los favoritos del inicio, con F2 (0.3.1).
 
 **Pruebas que hacen falta:**

@@ -455,6 +455,7 @@ class _NewTabDrop extends ConsumerWidget {
 
 /// A page's icon, the same in its tab, the rail and the palette.
 IconData pageIcon(PageKind page) => switch (page) {
+  PageKind.hosts => Icons.dns_outlined,
   PageKind.settings => Icons.settings_outlined,
   PageKind.tunnels => Icons.swap_horiz,
   PageKind.identities => Icons.badge_outlined,
@@ -483,6 +484,7 @@ String tabTitle(BuildContext context, OpenTab tab) {
           l.newPane,
     SftpTab(:final controller) => l.sftpTabTitle(controller.label),
     PageTab(:final page) => switch (page) {
+      PageKind.hosts => l.hosts,
       PageKind.settings => l.settings,
       PageKind.tunnels => l.tunnels,
       PageKind.identities => l.identities,

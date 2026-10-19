@@ -143,15 +143,24 @@ class EnvChip extends StatelessWidget {
 }
 
 /// The system's monogram, tinted by the environment. Before the first
-/// connection tells it, a server's outline.
+/// connection tells it, a server's outline (or `icon`: a local shell's).
 class SystemBadge extends StatelessWidget {
-  const SystemBadge({super.key, this.code, this.env, this.size = 26});
+  const SystemBadge({
+    super.key,
+    this.code,
+    this.env,
+    this.size = 26,
+    this.icon,
+  });
 
   final String? code;
   final EnvironmentView? env;
 
   /// Its height; a little wider, for four letters.
   final double size;
+
+  /// Instead of the server's outline when there is no monogram.
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -175,7 +184,7 @@ class SystemBadge extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
         ),
         child: code == null
-            ? Icon(Icons.dns_outlined, size: size * 0.55, color: fg)
+            ? Icon(icon ?? Icons.dns_outlined, size: size * 0.55, color: fg)
             : Text(
                 code,
                 maxLines: 1,

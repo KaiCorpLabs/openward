@@ -6,6 +6,7 @@ import '../l10n/l10n.dart';
 import '../src/rust/api/vault.dart' show HostView;
 import '../tabs/tab_strip.dart' show tabTitle;
 import '../tabs/tabs.dart';
+import '../terminal/controller.dart';
 import '../terminal/keys.dart';
 import '../tunnels/tunnels.dart';
 import '../ui/environment.dart';
@@ -14,11 +15,15 @@ import '../ui/widgets.dart';
 import '../window/chrome.dart';
 import '../window/shortcuts.dart';
 import '../window/sidebar_state.dart';
-import 'sidebar.dart' show tabStatus;
+import 'host_actions.dart';
+import 'sidebar.dart'
+    show hostStatus, libraryEntries, tabBadge, tabHost, tabStatus;
 
-/// The sidebar folded to a column of icons: search, the open tabs, the
-/// favorites, the whole host list (shown over the window), the library and
-/// the settings.
+/// The sidebar folded to a column of icons. Fixed at the top, the search
+/// and the Hosts page; in the middle, the favorites to launch and a counter
+/// of the open tabs that lists them; fixed at the bottom, the library (a
+/// menu of its pages), opening the sidebar and the settings. However many
+/// tabs are open, nothing pushes the ends out of sight.
 class SidebarRail extends ConsumerWidget {
   const SidebarRail({super.key, required this.onSearch});
 
@@ -32,40 +37,19 @@ class SidebarRail extends ConsumerWidget {
     final l = context.l10n;
     final state = ref.watch(tabsProvider);
     final tabs = ref.read(tabsProvider.notifier);
-    final board = ref.watch(tunnelBoardProvider);
+    final library = ref.watch(libraryProvider);
+    final current = state.current;
+    bool here(PageKind kind) => current is PageTab && current.page == kind;
     Widget divider() => Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: SizedBox(width: 24, child: Divider(height: 1, color: c.border)),
     );
-    Widget page(PageKind kind, IconData icon, String label, {Widget? mark}) {
-      final here =
-          state.current is PageTab && (state.current! as PageTab).page == kind;
-      return _RailButton(
-        key: ValueKey('rail.${kind.name}'),
-        tooltip: label,
-        selected: here,
-        onPressed: () => tabs.openPage(kind),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Icon(icon, size: 18, color: c.textMuted),
-            if (mark != null) Positioned(right: -3, top: -2, child: mark),
-          ],
-        ),
-      );
-    }
-
-    final library = ref.watch(libraryProvider);
-    final sessions = [
+    final open = [
       for (final (i, t) in state.tabs.indexed)
         if (t is SessionTab || t is SftpTab) (i, t),
     ];
-    // Favorites without a tab open, to connect in one click.
-    final open = {for (final c in state.sessions) ?c.hostId};
-    final favorites = [
-      for (final h in library.favorites)
-        if (!open.contains(h.id)) h,
-    ];
+    final favorites = library.favorites;
+    final sessions = state.sessions.toList();
     return ColoredBox(
       color: c.window,
       child: Column(
@@ -78,63 +62,46 @@ class SidebarRail extends ConsumerWidget {
             onPressed: onSearch,
             child: Icon(Icons.search, size: 18, color: c.textMuted),
           ),
-          divider(),
+          _RailButton(
+            key: const ValueKey('rail.hosts'),
+            tooltip: withKeys(l.hosts, hostsKeys(l)),
+            selected: here(PageKind.hosts),
+            onPressed: () => tabs.openPage(PageKind.hosts),
+            child: Icon(Icons.dns_outlined, size: 18, color: c.accentText),
+          ),
           Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
+            // The favorites scroll when they do not fit; the counter stays
+            // right under them.
+            child: Column(
               children: [
-                for (final (i, t) in sessions)
-                  Center(
-                    child: _TabBadge(
-                      tab: t,
-                      selected: i == state.active,
-                      onPressed: () => tabs.select(i),
-                    ),
-                  ),
-                for (final h in favorites)
-                  Center(
-                    child: _RailButton(
-                      key: ValueKey('rail.favorite.${h.label}'),
-                      tooltip: _favoriteTip(context, h),
-                      onPressed: () => tabs.openHost(h),
-                      child: SystemBadge(
-                        code: h.system?.code,
-                        env: h.environment,
-                        size: 24,
-                      ),
-                    ),
-                  ),
-                Center(
-                  child: _RailButton(
-                    key: const ValueKey('rail.allHosts'),
-                    tooltip: l.allHosts,
-                    onPressed: () =>
-                        ref.read(sidebarProvider.notifier).setPeek(true),
-                    child: Icon(Icons.list, size: 18, color: c.textMuted),
+                if (favorites.isNotEmpty) divider(),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    children: [
+                      for (final h in favorites)
+                        Center(
+                          child: _FavoriteButton(
+                            host: h,
+                            sessions: [
+                              for (final s in sessions)
+                                if (s.hostId == h.id) s,
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
                 ),
+                if (open.isNotEmpty) ...[
+                  divider(),
+                  _OpenCounter(open: open, active: state.active),
+                ],
               ],
             ),
           ),
-          ListenableBuilder(
-            listenable: board,
-            builder: (context, _) => page(
-              PageKind.tunnels,
-              Icons.swap_horiz,
-              board.open > 0
-                  ? '${l.tunnels} · ${l.openCount(board.open)}'
-                  : l.tunnels,
-              mark: board.open > 0
-                  ? const StatusDot(Status.connected, size: 6)
-                  : null,
-            ),
-          ),
-          page(PageKind.identities, Icons.badge_outlined, l.identities),
-          page(PageKind.keys, Icons.key_outlined, l.keys),
-          page(PageKind.snippets, Icons.terminal, l.snippets),
-          page(PageKind.workspaces, Icons.dashboard_outlined, l.workspaces),
-          page(PageKind.knownHosts, Icons.verified_user_outlined, l.knownHosts),
           divider(),
+          const _LibraryButton(),
           _RailButton(
             key: const ValueKey('rail.expand'),
             tooltip: withKeys(l.showSidebar, sidebarKeys(l)),
@@ -145,7 +112,13 @@ class SidebarRail extends ConsumerWidget {
               color: c.textMuted,
             ),
           ),
-          page(PageKind.settings, Icons.settings_outlined, l.settings),
+          _RailButton(
+            key: const ValueKey('rail.settings'),
+            tooltip: l.settings,
+            selected: here(PageKind.settings),
+            onPressed: () => tabs.openPage(PageKind.settings),
+            child: Icon(Icons.settings_outlined, size: 18, color: c.textMuted),
+          ),
           const SizedBox(height: 8),
         ],
       ),
@@ -153,13 +126,270 @@ class SidebarRail extends ConsumerWidget {
   }
 }
 
-/// «db-primary · prod · admin@10.0.4.21 · favorito».
-String _favoriteTip(BuildContext context, HostView h) => [
-  h.label,
-  ?h.environment?.short,
-  '${h.user}@${h.address}${h.port == 22 ? '' : ':${h.port}'}',
-  context.l10n.favoriteLower,
-].join(' · ');
+/// A menu beside the rail button at `context`, level with it.
+Future<T?> _menuBeside<T>(BuildContext context, List<PopupMenuEntry<T>> items) {
+  final box = context.findRenderObject()! as RenderBox;
+  final at = box.localToGlobal(Offset(box.size.width + 6, 0));
+  return showMenu<T>(
+    context: context,
+    position: RelativeRect.fromLTRB(at.dx, at.dy, at.dx, at.dy),
+    items: items,
+  );
+}
+
+/// A favorite: its tab comes to the front if it has one; otherwise it
+/// connects. A dot says it is open.
+class _FavoriteButton extends StatelessWidget {
+  const _FavoriteButton({required this.host, required this.sessions});
+
+  final HostView host;
+  final List<TerminalController> sessions;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final h = host;
+    final open = sessions.isNotEmpty;
+    return Consumer(
+      builder: (context, ref, _) => ListenableBuilder(
+        listenable: Listenable.merge(sessions),
+        builder: (context, _) {
+          final status = open ? hostStatus(sessions) : null;
+          return _RailButton(
+            key: ValueKey('rail.favorite.${h.label}'),
+            tooltip: [
+              h.label,
+              ?h.environment?.short,
+              hostAddress(h),
+              l.favoriteLower,
+              if (status == Status.connected) l.hostsOpenNow,
+            ].join(' · '),
+            onPressed: () {
+              final state = ref.read(tabsProvider);
+              final tabs = ref.read(tabsProvider.notifier);
+              final at = state.tabs.indexWhere(
+                (t) =>
+                    t is SessionTab &&
+                    t.panes.controllers.any((s) => s.hostId == h.id),
+              );
+              at >= 0 ? tabs.select(at) : tabs.openHost(h);
+            },
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                SystemBadge(code: h.system?.code, env: h.environment, size: 24),
+                if (status != null)
+                  Positioned(
+                    right: -3,
+                    bottom: -3,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: context.ow.colors.window,
+                        shape: BoxShape.circle,
+                      ),
+                      child: StatusDot(status, size: 7),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// How many terminal and file tabs are open; a click lists them, each
+/// with its mark, to bring one to the front.
+class _OpenCounter extends ConsumerWidget {
+  const _OpenCounter({required this.open, required this.active});
+
+  final List<(int, OpenTab)> open;
+  final int active;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ow = context.ow;
+    final c = ow.colors;
+    final l = context.l10n;
+    final inFront = open.any((e) => e.$1 == active);
+    return Builder(
+      builder: (context) => _RailButton(
+        key: const ValueKey('rail.open'),
+        tooltip: l.openTabsCount(open.length),
+        selected: inFront,
+        onPressed: () async {
+          final library = ref.read(libraryProvider);
+          final picked = await _menuBeside<int>(context, [
+            PopupMenuItem<int>(
+              enabled: false,
+              height: 28,
+              child: SectionLabel(l.openSection, trailing: '${open.length}'),
+            ),
+            for (final (i, t) in open)
+              PopupMenuItem<int>(
+                key: ValueKey('rail.open.${tabTitle(context, t)}'),
+                value: i,
+                height: 36,
+                child: _OpenItem(
+                  tab: t,
+                  library: library,
+                  current: i == active,
+                ),
+              ),
+          ]);
+          if (picked != null) ref.read(tabsProvider.notifier).select(picked);
+        },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.layers_outlined, size: 15, color: c.text),
+            Text(
+              '${open.length}',
+              style: monoStyle(
+                context,
+                size: 12,
+                color: c.text,
+              ).copyWith(fontWeight: FontWeight.w600, height: 1.1),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A row of the open tabs' list.
+class _OpenItem extends StatelessWidget {
+  const _OpenItem({
+    required this.tab,
+    required this.library,
+    required this.current,
+  });
+
+  final OpenTab tab;
+  final Library library;
+  final bool current;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ow.colors;
+    final env = tabHost(tab, library)?.environment;
+    final t = tab;
+    final status = t is SessionTab
+        ? (t.panes.active.controller ?? t.panes.controllers.firstOrNull)?.let(
+            tabStatus,
+          )
+        : null;
+    return SizedBox(
+      width: 260,
+      child: Row(
+        children: [
+          tabBadge(tab, library),
+          const SizedBox(width: 10),
+          // The name and its mark together; how it is doing, at the end.
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    tabTitle(context, tab),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: current ? FontWeight.w600 : FontWeight.w400,
+                      color: c.text,
+                    ),
+                  ),
+                ),
+                if (env != null) ...[const SizedBox(width: 8), EnvChip(env)],
+              ],
+            ),
+          ),
+          if (status != null) ...[
+            const SizedBox(width: 8),
+            StatusDot(status, size: 7),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The library: a menu of its pages, with how many things each has.
+class _LibraryButton extends ConsumerWidget {
+  const _LibraryButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.ow.colors;
+    final l = context.l10n;
+    final board = ref.watch(tunnelBoardProvider);
+    final current = ref.watch(tabsProvider.select((s) => s.current));
+    return ListenableBuilder(
+      listenable: board,
+      builder: (context, _) => Consumer(
+        builder: (context, ref, _) {
+          final entries = libraryEntries(context, ref);
+          final here = entries.any(
+            (e) => current is PageTab && current.page == e.page,
+          );
+          final open = board.open;
+          return Builder(
+            builder: (context) => _RailButton(
+              key: const ValueKey('rail.library'),
+              tooltip: open > 0
+                  ? '${l.library} · ${l.tunnels} · ${l.openCount(open)}'
+                  : l.library,
+              selected: here,
+              onPressed: () async {
+                final page = await _menuBeside<PageKind>(context, [
+                  for (final e in entries)
+                    PopupMenuItem<PageKind>(
+                      key: ValueKey('rail.library.${e.page.name}'),
+                      value: e.page,
+                      height: 36,
+                      child: Row(
+                        children: [
+                          Icon(e.icon, size: 16, color: c.textMuted),
+                          const SizedBox(width: 10),
+                          Expanded(child: Text(e.label)),
+                          const SizedBox(width: 16),
+                          Text(
+                            [
+                              if (e.count > 0) '${e.count}',
+                              if (e.open > 0) l.openCount(e.open),
+                            ].join(' · '),
+                            style: monoStyle(context, size: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                ]);
+                if (page != null) {
+                  ref.read(tabsProvider.notifier).openPage(page);
+                }
+              },
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(Icons.apps, size: 18, color: c.textMuted),
+                  if (open > 0)
+                    const Positioned(
+                      right: -3,
+                      top: -2,
+                      child: StatusDot(Status.connected, size: 6),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
 
 class _RailButton extends StatelessWidget {
   const _RailButton({
@@ -207,126 +437,6 @@ class _RailButton extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// An open terminal or file tab in the rail: its initials and how it is
-/// doing.
-class _TabBadge extends ConsumerWidget {
-  const _TabBadge({
-    required this.tab,
-    required this.selected,
-    required this.onPressed,
-  });
-
-  final OpenTab tab;
-  final bool selected;
-  final VoidCallback onPressed;
-
-  /// Two letters for a name: the first of each part (`web-1` → `w1`), or
-  /// its first two.
-  static String initials(String name) {
-    final parts = name
-        .split(RegExp(r'[\s\-_.@:]+'))
-        .where((p) => p.isNotEmpty)
-        .toList();
-    if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toLowerCase();
-    final one = parts.firstOrNull ?? '?';
-    return (one.length >= 2 ? one.substring(0, 2) : one).toLowerCase();
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final ow = context.ow;
-    final c = ow.colors;
-    final library = ref.watch(libraryProvider);
-    final listenable = switch (tab) {
-      SessionTab(:final panes) => Listenable.merge([
-        panes,
-        ...panes.controllers,
-      ]),
-      SftpTab(:final controller) => controller,
-      _ => Listenable.merge(const []),
-    };
-    return ListenableBuilder(
-      listenable: listenable,
-      builder: (context, _) {
-        final title = tabTitle(context, tab);
-        final status = switch (tab) {
-          SessionTab(:final panes) =>
-            (panes.active.controller ?? panes.controllers.firstOrNull)?.let(
-                  tabStatus,
-                ) ??
-                Status.idle,
-          _ => Status.idle,
-        };
-        final sftp = tab is SftpTab;
-        final hostId = switch (tab) {
-          SessionTab(:final panes) =>
-            (panes.active.controller ?? panes.controllers.firstOrNull)?.hostId,
-          SftpTab(:final controller) => controller.hostId,
-          _ => null,
-        };
-        final host = hostId == null ? null : library.host(hostId);
-        // A saved host's monogram, tinted by its environment.
-        final env = host?.environment;
-        final tint = env == null ? null : envColors(c, env.color);
-        return _RailButton(
-          tooltip: title,
-          selected: selected,
-          onPressed: onPressed,
-          child: SizedBox(
-            width: 32,
-            height: 28,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: tint?.soft ?? c.raised,
-                    border: Border.all(color: tint?.line ?? c.control),
-                    borderRadius: BorderRadius.circular(ow.shape.radius),
-                  ),
-                  child: sftp
-                      ? Icon(
-                          Icons.folder_outlined,
-                          size: 14,
-                          color: tint?.fg ?? c.textMuted,
-                        )
-                      : Text(
-                          host?.system?.code ?? initials(title),
-                          maxLines: 1,
-                          style:
-                              monoStyle(
-                                context,
-                                size: 12,
-                                color: tint?.fg ?? c.text,
-                              ).copyWith(
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: -0.5,
-                              ),
-                        ),
-                ),
-                if (!sftp)
-                  Positioned(
-                    right: -3,
-                    bottom: -3,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: c.window,
-                        shape: BoxShape.circle,
-                      ),
-                      child: StatusDot(status, size: 7),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }

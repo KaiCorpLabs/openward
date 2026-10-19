@@ -37,6 +37,7 @@ import 'package:openward/src/rust/api/identities.dart';
 import 'package:openward/src/rust/api/session.dart';
 import 'package:openward/src/rust/api/vault.dart';
 import 'package:openward/src/rust/frb_generated.dart';
+import 'package:openward/hosts/hosts_page.dart';
 import 'package:openward/hosts/sidebar.dart';
 import 'package:openward/tabs/session_view.dart';
 import 'package:openward/tabs/tab_strip.dart';
@@ -208,10 +209,32 @@ Future<void> _shortcut(
   await tester.pump();
 }
 
-Future<void> _doubleTap(WidgetTester tester, String text) async {
-  await tester.tap(find.text(text));
+/// Connects to a saved host as a person would: a double click on its row
+/// of the Hosts page, opened from the sidebar when it shows. The page is
+/// closed after (⌘W), so the tabs are the ones the test opened.
+Future<void> _connect(WidgetTester tester, String label) async {
+  final container = ProviderScope.containerOf(
+    tester.element(find.byType(OpenWardApp)),
+  );
+  final row = find.byKey(ValueKey('hosts.row.$label'));
+  if (row.evaluate().isEmpty) {
+    final entry = find.byKey(const ValueKey('sidebar.hosts'));
+    if (entry.evaluate().isNotEmpty) {
+      await tester.tap(entry);
+    } else {
+      container.read(tabsProvider.notifier).openPage(PageKind.hosts);
+    }
+    await tester.pump(const Duration(milliseconds: 300));
+  }
+  await tester.tap(row);
   await tester.pump(kDoubleTapMinTime);
-  await tester.tap(find.text(text));
+  await tester.tap(row);
+  await tester.pump();
+  final page = container
+      .read(tabsProvider)
+      .tabs
+      .indexWhere((t) => t is PageTab && t.page == PageKind.hosts);
+  if (page >= 0) container.read(tabsProvider.notifier).close(page);
   await tester.pump();
 }
 
@@ -292,19 +315,54 @@ Host web-1 web-2
       ),
     );
     final container = await launch(tester);
+    Finder field(String key) => find.byKey(ValueKey(key));
 
+    // The sidebar keeps what is used every day; every host is on its page,
+    // a click below.
+    expect(field('sidebar.hosts'), findsOneWidget);
+    expect(find.text('4 · 1 grupo'), findsOneWidget);
+    expect(field('sidebar.host.web-1'), findsNothing);
+    await _shot(tester, '1-sidebar');
+    await tester.tap(field('sidebar.hosts'));
+    await _settle(tester);
+    expect(find.byType(HostsPage), findsOneWidget);
     // Group names are as written: never in capitals, they are the user's.
     expect(find.text('~/.ssh/config'), findsOneWidget);
-    expect(find.text('web-1'), findsOneWidget);
+    expect(field('hosts.row.web-1'), findsOneWidget);
     expect(find.text('admin@10.0.0.5'), findsOneWidget);
-    expect(find.text('postgres'), findsOneWidget);
+    expect(field('hosts.filter.tag.postgres'), findsOneWidget);
     await _shot(tester, '1-hosts');
 
-    await tester.enterText(find.byType(TextField).first, 'web');
+    // A tag keeps its hosts; «Todos» brings back the rest. A search too.
+    await tester.tap(field('hosts.filter.tag.postgres'));
     await _settle(tester);
-    expect(find.text('web-1'), findsOneWidget);
-    expect(find.text('db'), findsNothing);
-    await tester.enterText(find.byType(TextField).first, '');
+    expect(field('hosts.row.db'), findsOneWidget);
+    expect(field('hosts.row.web-1'), findsNothing);
+    await tester.tap(field('hosts.filter.all'));
+    await _settle(tester);
+    expect(field('hosts.row.web-1'), findsOneWidget);
+    await tester.enterText(field('hosts.search'), 'web');
+    await _settle(tester);
+    expect(field('hosts.row.web-1'), findsOneWidget);
+    expect(field('hosts.row.web-2'), findsOneWidget);
+    expect(field('hosts.row.db'), findsNothing);
+    // As cards, the same.
+    await tester.tap(field('hosts.view.cards'));
+    await _settle(tester);
+    expect(field('hosts.card.web-1'), findsOneWidget);
+    expect(field('hosts.row.web-1'), findsNothing);
+    await _shot(tester, '1b-hosts-cards');
+    await tester.tap(field('hosts.view.list'));
+    await _settle(tester);
+
+    // The sidebar's search finds them as well.
+    await tester.enterText(field('sidebar.search'), 'web');
+    await _settle(tester);
+    expect(field('sidebar.host.web-1'), findsOneWidget);
+    expect(field('sidebar.host.db'), findsNothing);
+    await tester.enterText(field('sidebar.search'), '');
+    await _settle(tester);
+    container.read(tabsProvider.notifier).close(0);
     await _settle(tester);
 
     await tester.tap(find.text('Abrir un terminal local'));
@@ -545,19 +603,43 @@ Host web-1 web-2
     final c = container.read(tabsProvider).currentSession!;
     await _until(tester, () => c.phase == Phase.running, 'the shell');
 
-    // Folded to a rail: the open tab is there, the host list is not.
+    // In the open sidebar: the open tab, in its section.
+    expect(field('sidebar.open.Local'), findsOneWidget);
+
+    // Folded to a rail: the open tabs, in a counter that lists them.
     await tester.tap(field('sidebar.fold'));
     await wait();
     expect(find.byType(Sidebar), findsNothing);
     expect(field('rail.search'), findsOneWidget);
+    expect(field('rail.hosts'), findsOneWidget);
     expect(container.read(settingsProvider).sidebar, SidebarMode.rail);
     await _shot(tester, '85-rail');
+    await tester.tap(field('rail.open'));
+    await wait();
+    expect(keyed('rail.open.'), findsOneWidget);
+    await _shot(tester, '85b-rail-open');
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await wait();
+    // The library, in a menu.
+    await tester.tap(field('rail.library'));
+    await wait();
+    expect(field('rail.library.keys'), findsOneWidget);
+    await tester.tap(field('rail.library.keys'));
+    await wait();
+    expect(container.read(tabsProvider).current, isA<PageTab>());
+    tabs.closeCurrent();
+    await wait();
 
-    // «All hosts» shows the list over the window; kept open with the pin.
-    await tester.tap(field('rail.allHosts'));
+    // Hosts, on their page.
+    await tester.tap(field('rail.hosts'));
+    await wait();
+    expect(find.byType(HostsPage), findsOneWidget);
+    expect(field('hosts.row.web-1'), findsOneWidget);
+
+    // The sidebar over the window; kept open with the pin.
+    container.read(sidebarProvider.notifier).setPeek(true);
     await wait();
     expect(field('sidebar.peek'), findsOneWidget);
-    expect(find.text('web-1'), findsOneWidget);
     await _shot(tester, '86-peek');
     await tester.tap(field('sidebar.pin'));
     await wait();
@@ -608,7 +690,7 @@ Host web-1 web-2
     await _shortcut(tester, LogicalKeyboardKey.keyK, letter: true);
     await wait();
     expect(field('palette.query'), findsOneWidget);
-    expect(keyed('palette.tab.'), findsNWidgets(2));
+    expect(keyed('palette.tab.'), findsNWidgets(3));
     await _shot(tester, '89-palette-tabs');
     // `>`: only the actions (here on a page: no terminal actions).
     await tester.enterText(field('palette.query'), '>ajus');
@@ -779,7 +861,7 @@ Host web-1 web-2
     await tester.pump();
     final c = container.read(tabsProvider).currentSession!;
     await _until(tester, () => c.phase == Phase.running, 'the shell');
-    c.customTitle = 'uno';
+    tabs.rename(0, 'uno');
     await tester.pump(const Duration(milliseconds: 300));
     final tab = container.read(tabsProvider).current! as SessionTab;
 
@@ -915,9 +997,11 @@ Host web-1 web-2
   testWidgets(
     'tabs and panes: drag to reorder and split, menus, close on exit',
     (tester) async {
-      await app.createHost(
+      final far = await app.createHost(
         spec: const HostSpec(label: 'lejos', address: '192.0.2.1'),
       );
+      // A favorite, to be in the sidebar.
+      await app.setFavorite(id: far, favorite: true);
       final container = await launch(tester);
       final tabs = container.read(tabsProvider.notifier);
       List<String> titles() => [
@@ -970,7 +1054,7 @@ Host web-1 web-2
       split.panes.focus(split.panes.leaves.first);
       await tester.pump();
 
-      // A host from the sidebar, onto the bottom half of the first pane.
+      // A favorite from the sidebar, onto the bottom half of the first pane.
       final first = tester.getRect(find.byType(TerminalPane).first);
       await _drag(
         tester,
@@ -1083,9 +1167,11 @@ Host web-1 web-2
     await tester.enterText(field('settings.user'), 'deploy');
     await tester.tap(find.text('Guardar'));
     await _settle(tester);
+    await tester.tap(field('sidebar.hosts'));
+    await _settle(tester);
     expect(find.text('prod'), findsOneWidget);
 
-    await tester.tap(find.text('Nuevo host'));
+    await tester.tap(field('hosts.new'));
     await _settle(tester);
     await tester.enterText(field('host.label'), 'web');
     await tester.enterText(field('host.address'), 'web.example.com');
@@ -1161,7 +1247,7 @@ Host web-1 web-2
       ),
     );
     final container = await launch(tester);
-    await _doubleTap(tester, 'ninetwo');
+    await _connect(tester, 'ninetwo');
     final c = container.read(tabsProvider).currentSession!;
     await _until(tester, () => c.phase == Phase.closed, 'the refusal');
     await tester.pump(const Duration(milliseconds: 100));
@@ -1229,11 +1315,11 @@ Host web-1 web-2
       ),
     );
     final container = await launch(tester);
-    await _doubleTap(tester, 'target1');
+    await _connect(tester, 'target1');
     final c = container.read(tabsProvider).currentSession!;
     await _until(tester, () => c.phase == Phase.connected, 'the connection');
     expect(c.route, ['bastion', 'target1']);
-    // Connecting told each saved hop's system by its banner: the sidebar
+    // Connecting told each saved hop's system by its banner: the Hosts page
     // shows their monograms.
     await _until(
       tester,
@@ -1244,11 +1330,14 @@ Host web-1 web-2
       container.read(libraryProvider).host(bastion)?.system?.name,
       'Debian 13',
     );
-    await tester.pump();
+    container.read(tabsProvider.notifier).openPage(PageKind.hosts);
+    await tester.pump(const Duration(milliseconds: 300));
+    // Both rows, and the filter by system.
     expect(
-      find.descendant(of: find.byType(Sidebar), matching: find.text('deb')),
-      findsNWidgets(2),
+      find.descendant(of: find.byType(HostsPage), matching: find.text('deb')),
+      findsNWidgets(3),
     );
+    container.read(tabsProvider.notifier).closeCurrent();
     await tester.pump(const Duration(milliseconds: 100));
     await tester.tap(find.textContaining('Conectado'));
     await tester.pump(const Duration(milliseconds: 400));
@@ -1372,7 +1461,7 @@ Host web-1 web-2
     await freeze(true);
     late final TerminalController c;
     try {
-      await _doubleTap(tester, 'minipc');
+      await _connect(tester, 'minipc');
       c = container.read(tabsProvider).currentSession!;
       await tester.pump(const Duration(seconds: 1));
       expect(find.text('Conectando con minipc'), findsOneWidget);
@@ -1455,7 +1544,7 @@ Host web-1 web-2
       ),
     );
     final container = await launch(tester);
-    await _doubleTap(tester, 'bastion');
+    await _connect(tester, 'bastion');
     final c = container.read(tabsProvider).currentSession!;
     await _until(tester, () => c.phase == Phase.connected, 'the connection');
     expect(c.persistent?.state, PersistenceKind.new_);
@@ -1537,7 +1626,7 @@ Host web-1 web-2
     );
     final container = await launch(tester);
 
-    await _doubleTap(tester, 'bastion');
+    await _connect(tester, 'bastion');
     final c = container.read(tabsProvider).currentSession!;
     await _until(tester, () => c.prompts.isNotEmpty, 'the host key question');
     // Not pumpAndSettle: a terminal pane repaints every frame.
@@ -1611,8 +1700,10 @@ Host db
     expect(container.read(settingsProvider).welcomed, isTrue);
     expect(app.hosts().map((h) => h.label).toSet(), {'bastion', 'web-1'});
     expect(find.text('Empieza aquí'), findsOneWidget);
-    expect(find.text('web-1'), findsOneWidget);
     await _shot(tester, '13-start-light');
+    await tester.tap(find.byKey(const ValueKey('sidebar.hosts')));
+    await _settle(tester);
+    expect(find.byKey(const ValueKey('hosts.row.web-1')), findsOneWidget);
   });
 
   testWidgets('start: a quick connection that completes, the recent ones '
@@ -1764,6 +1855,8 @@ Host db
     HostView host(String id) => app.hosts().firstWhere((h) => h.id == id);
 
     // The group marks its hosts as production.
+    await tester.tap(key('sidebar.hosts'));
+    await _settle(tester);
     await tester.tap(find.text('tienda'), buttons: kSecondaryButton);
     await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text('Editar grupo…'));
@@ -1828,14 +1921,16 @@ Host db
     expect(host(lab).environment?.short, 'cli-a');
     expect(host(lab).environment?.color, 'green');
 
-    // A star on hover makes it a favorite too.
-    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
-    await mouse.addPointer(location: tester.getCenter(find.text('lab').last));
-    await tester.pump(const Duration(milliseconds: 100));
-    await tester.tap(key('host.favorite.lab'));
+    // The star on its row makes it a favorite too.
+    await tester.tap(key('hosts.star.lab'));
     // The vault answers on its own thread.
     await _until(tester, () => host(lab).favorite != null, 'the star');
-    await mouse.removePointer();
+    await _settle(tester);
+    await _shot(tester, '97b-hosts-page');
+    // Both in the sidebar now, in their order.
+    expect(key('sidebar.host.web-1'), findsOneWidget);
+    expect(key('sidebar.host.lab'), findsOneWidget);
+    container.read(tabsProvider.notifier).close(0);
     await _settle(tester);
 
     // The start page has them as cards, in their order; a drag reorders.
@@ -2224,7 +2319,7 @@ Host db
       File('${work.path}/hola.txt').writeAsStringSync('hola desde la ui\n');
       File('${work.path}/otro.txt').writeAsStringSync('otro\n');
       final container = await launch(tester);
-      await _doubleTap(tester, 'bastion');
+      await _connect(tester, 'bastion');
       final term = container.read(tabsProvider).currentSession!;
       await _until(tester, () => term.phase == Phase.connected, 'the shell');
       await tester.pump(const Duration(milliseconds: 100));
@@ -2234,7 +2329,7 @@ Host db
       await tester.pump();
       final tab = container.read(tabsProvider).current! as SftpTab;
       final c = tab.controller;
-      expect(find.text('SFTP · bastion'), findsOneWidget);
+      expect(_tab('SFTP · bastion'), findsOneWidget);
       await _until(tester, () => c.remote.path == '/home/demo', 'home');
       await c.local.open(work.path);
       await tester.pump(const Duration(milliseconds: 100));
@@ -2488,11 +2583,7 @@ Host db
       ),
     );
     board.refresh();
-    // The sidebar's, not the table's.
-    await tester.tap(find.text('bastion').first);
-    await tester.pump(kDoubleTapMinTime);
-    await tester.tap(find.text('bastion').first);
-    await tester.pump();
+    await _connect(tester, 'bastion');
     final term = container.read(tabsProvider).currentSession!;
     await _until(tester, () => term.phase == Phase.connected, 'the shell');
     await _until(
@@ -2609,7 +2700,9 @@ Host db
       expect(named('demo en S2')!.hostCount, 2);
       expect(find.text('Grupo Producción · 2 hosts'), findsOneWidget);
       await _shot(tester, '28-identities');
-      // The sidebar shows the identity's user.
+      // The Hosts page shows the identity's user.
+      await tester.tap(field('sidebar.hosts'));
+      await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('demo@127.0.0.1:22100'), findsOneWidget);
 
       // The host editor says where each value comes from.
@@ -2626,7 +2719,7 @@ Host db
 
       // The group's editor, with the choice open.
       await tester.tap(
-        find.text('Producción').first,
+        field('hosts.group.Producción'),
         buttons: kSecondaryButton,
       );
       await _settle(tester);
@@ -2642,7 +2735,7 @@ Host db
       await _settle(tester);
 
       // In with the identity's user, key and certificate, nothing asked.
-      await _doubleTap(tester, 'bastion');
+      await _connect(tester, 'bastion');
       final term = container.read(tabsProvider).currentSession!;
       await _until(tester, () => term.phase == Phase.connected, 'the shell');
       expect(term.prompts, isEmpty);

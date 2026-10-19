@@ -73,7 +73,12 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - con dos paneles, prueba el menú «…» de uno: moverlo a una pestaña nueva, intercambiarlo, abrir otra cosa e igualar tamaños; y arrastra su cabecera al hueco vacío de la barra;
    - divide un terminal y elige en el panel nuevo una pestaña ya abierta; prueba también «Dividir con …» en la paleta;
    - agarra el borde entre paneles y dinos si se encuentra a la primera.
-10. **CSV** («Importar…» › CSV):
+10. **Barra lateral y Hosts** (0.3.1-beta.4):
+   - trabaja un día con la barra abierta: ¿encuentras lo que usas sin abrir Hosts? Dinos si echas en falta algo de la barra de antes;
+   - abre Hosts (⌘⇧H), busca, filtra por entorno y por etiqueta, prueba las tarjetas y conecta con doble clic, con Intro y con «Conectar»;
+   - con varios terminales locales abiertos, mira «Local × N» en «Abiertas» y pasa por ellos con clics;
+   - pliega la barra a raíl con 8 o más pestañas: los botones de arriba y de abajo deben seguir a la vista; abre la lista con el contador.
+11. **CSV** («Importar…» › CSV):
    - exporta tus hosts de una hoja de cálculo o usa la plantilla de Termius;
    - comprueba los grupos, puertos, usuarios y etiquetas, y los avisos de lo que no entra;
    - impórtalo dos veces y comprueba que no se duplica.

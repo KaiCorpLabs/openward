@@ -202,14 +202,15 @@ void main() {
       await shot('$name-1-terminal');
 
       // The editor of a new host in prod: what it inherits, and where from.
-      await tester.tap(
-        find.descendant(of: find.byType(Sidebar), matching: find.text('web-1')),
-      );
       await tester.tap(find.text('Nuevo host'));
       await tester.pump(const Duration(milliseconds: 500));
       await shot('$name-2-host-editor');
       await tester.tap(find.text('Cancelar'));
       await tester.pump(const Duration(milliseconds: 400));
+
+      tabs.openPage(PageKind.hosts);
+      await tester.pump(const Duration(milliseconds: 300));
+      await shot('$name-2b-hosts');
 
       tabs.openPage(PageKind.tunnels);
       await shot('$name-3-tunnels');
