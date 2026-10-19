@@ -15,5 +15,6 @@
 | [plan/prueba-v0.3.md](plan/prueba-v0.3.md) | Guía de prueba de la v0.3 |
 | [notas/v0.3.md](notas/v0.3.md) | Notas de la versión 0.3 |
 | [plan/foco-y-pulido.md](plan/foco-y-pulido.md) | Foco y pulido: barra plegable, ⌘K, latencia y pulido (0.3.0-beta.3); editor e inicio (0.3.0-beta.4); entorno, sistema y favoritos (v0.3.1) |
+| [plan/temas.md](plan/temas.md) | Temas nuevos (propuesta): Monitor, Berenjena y Búnker, y otras apariencias para elegir |
 
 Pendientes: `THREAT_MODEL.md` (antes de la fase 2) y `PROTOCOL.md` (en [`spec/`](../spec/)).

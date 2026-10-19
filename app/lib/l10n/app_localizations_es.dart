@@ -2393,6 +2393,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get newsLatencyTitle => 'La latencia, siempre a la vista';
 
   @override
+  String get newsMoreThemesBody =>
+      'Monitor, con letras verdes de verdad; Berenjena, con el terminal morado; Búnker, todo en un solo fósforo; Marino, verde sobre azul marino; y Catppuccin, Dracula y Tokyo Night para toda la ventana. En Ajustes › Apariencia.';
+
+  @override
+  String get newsMoreThemesTitle => 'Siete familias de temas más';
+
+  @override
   String newsPaletteBody(String shortcut) {
     return 'Todo lo que hace la ventana, tus hosts, snippets y los comandos que ya ejecutaste, a unas letras ($shortcut). El historial se queda en este equipo y nunca guarda contraseñas.';
   }

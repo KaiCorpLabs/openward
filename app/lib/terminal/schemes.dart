@@ -104,6 +104,148 @@ abstract final class ThemePalettes {
       '#0040C0', '#8F00B3', '#00707D', '#1A1A1A',
     ],
   );
+
+  /// Monitor's: green phosphor that keeps the programs' colors.
+  static final monitor = TermPalette.hex(
+    foreground: '#33FF66',
+    background: '#040904',
+    cursor: '#33FF66',
+    selection: '#1C5E30',
+    ansi: [
+      '#0F2A17', '#FF5C57', '#33FF66', '#E6F25C', //
+      '#5CB8FF', '#E07CFF', '#4DF2E0', '#A8E6B8',
+      '#3E7A50', '#FF8A80', '#8AFFA6', '#F5FF8A',
+      '#8FD0FF', '#EEA8FF', '#8AFFF0', '#E6FFEC',
+    ],
+  );
+
+  /// Berenjena's, in light and dark: Tango on aubergine, its blue and
+  /// gray lifted to read there.
+  static final berenjena = TermPalette.hex(
+    foreground: '#FFFFFF',
+    background: '#300A24',
+    cursor: '#FFFFFF',
+    selection: '#7A4D6E',
+    ansi: [
+      '#2E3436', '#EF2929', '#73D216', '#EDD400', //
+      '#729FCF', '#C49BC0', '#2BC4C4', '#D3D7CF',
+      '#888A85', '#FF6B6B', '#8AE234', '#FCE94F',
+      '#9DBFEA', '#DDB8D9', '#5FF0F0', '#EEEEEC',
+    ],
+  );
+
+  /// Búnker's: one phosphor; each color a brightness.
+  static final bunker = TermPalette.hex(
+    foreground: '#66FF9F',
+    background: '#071A0D',
+    cursor: '#66FF9F',
+    selection: '#1E6B3D',
+    ansi: [
+      '#123A20', '#3BBF6A', '#66FF9F', '#B8FFD2', //
+      '#2E9E58', '#4FD785', '#94FFC0', '#7DF0AA',
+      '#2C7247', '#5FE08E', '#8CFFB8', '#DAFFE8',
+      '#45BE74', '#73EBA2', '#BBFFD7', '#EDFFF4',
+    ],
+  );
+
+  /// Marino's: green text on indigo navy.
+  static final marino = TermPalette.hex(
+    foreground: '#21B263',
+    background: '#131729',
+    cursor: '#21B263',
+    selection: '#1F4A3E',
+    ansi: [
+      '#262B3F', '#E5484F', '#0E9A6E', '#DDB03E', //
+      '#2E73C9', '#C8378A', '#2B92F5', '#BAC0D0',
+      '#666D87', '#FF6B73', '#3DDC86', '#F2CC5C',
+      '#5A9BEA', '#E163A6', '#5CB2FF', '#EEF0F6',
+    ],
+  );
+
+  /// Catppuccin Mocha, as published.
+  static final catppuccinMocha = TermPalette.hex(
+    foreground: '#CDD6F4',
+    background: '#1E1E2E',
+    cursor: '#F5E0DC',
+    selection: '#585B70',
+    ansi: [
+      '#45475A', '#F38BA8', '#A6E3A1', '#F9E2AF', //
+      '#89B4FA', '#F5C2E7', '#94E2D5', '#BAC2DE',
+      '#585B70', '#F38BA8', '#A6E3A1', '#F9E2AF',
+      '#89B4FA', '#F5C2E7', '#94E2D5', '#A6ADC8',
+    ],
+  );
+
+  /// Catppuccin Latte, as published.
+  static final catppuccinLatte = TermPalette.hex(
+    foreground: '#4C4F69',
+    background: '#EFF1F5',
+    cursor: '#DC8A78',
+    selection: '#ACB0BE',
+    ansi: [
+      '#5C5F77', '#D20F39', '#40A02B', '#DF8E1D', //
+      '#1E66F5', '#EA76CB', '#179299', '#ACB0BE',
+      '#6C6F85', '#D20F39', '#40A02B', '#DF8E1D',
+      '#1E66F5', '#EA76CB', '#179299', '#BCC0CC',
+    ],
+  );
+
+  /// Dracula, as published.
+  static final dracula = TermPalette.hex(
+    foreground: '#F8F8F2',
+    background: '#282A36',
+    cursor: '#F8F8F2',
+    selection: '#44475A',
+    ansi: [
+      '#21222C', '#FF5555', '#50FA7B', '#F1FA8C', //
+      '#BD93F9', '#FF79C6', '#8BE9FD', '#F8F8F2',
+      '#6272A4', '#FF6E6E', '#69FF94', '#FFFFA5',
+      '#D6ACFF', '#FF92DF', '#A4FFFF', '#FFFFFF',
+    ],
+  );
+
+  /// Alucard, Dracula's light palette, as published.
+  static final alucard = TermPalette.hex(
+    foreground: '#1F1F1F',
+    background: '#FFFBEB',
+    cursor: '#1F1F1F',
+    selection: '#CFCFDE',
+    ansi: [
+      '#FFFBEB', '#CB3A2A', '#14710A', '#846E15', //
+      '#644AC9', '#A3144D', '#036A96', '#1F1F1F',
+      '#6C664B', '#D74C3D', '#198D0C', '#9E841A',
+      '#7862D0', '#BF185A', '#047FB4', '#2C2B31',
+    ],
+  );
+
+  /// Tokyo Night, as published.
+  static final tokyoNight = TermPalette.hex(
+    foreground: '#C0CAF5',
+    background: '#1A1B26',
+    cursor: '#C0CAF5',
+    selection: '#33467C',
+    ansi: [
+      '#15161E', '#F7768E', '#9ECE6A', '#E0AF68', //
+      '#7AA2F7', '#BB9AF7', '#7DCFFF', '#A9B1D6',
+      '#414868', '#F7768E', '#9ECE6A', '#E0AF68',
+      '#7AA2F7', '#BB9AF7', '#7DCFFF', '#C0CAF5',
+    ],
+  );
+
+  /// Tokyo Night Day; its foreground (#3760BF) a touch darker to read
+  /// at 4.5:1 on its background.
+  static final tokyoNightDay = TermPalette.hex(
+    foreground: '#3459B5',
+    background: '#E1E2E7',
+    cursor: '#3760BF',
+    selection: '#B7C1E3',
+    ansi: [
+      '#B4B5B9', '#F52A65', '#587539', '#8C6C3E', //
+      '#2E7DE9', '#9854F1', '#007197', '#6172B0',
+      '#A1A6C5', '#FF4774', '#5C8524', '#A27629',
+      '#358AFF', '#A463FF', '#007EA8', '#3760BF',
+    ],
+  );
 }
 
 /// Well-known schemes, to pick for any theme.
@@ -138,22 +280,8 @@ final knownSchemes = <TerminalScheme>[
       ],
     ),
   ),
-  TerminalScheme(
-    'dracula',
-    'Dracula',
-    TermPalette.hex(
-      foreground: '#F8F8F2',
-      background: '#282A36',
-      cursor: '#F8F8F2',
-      selection: '#44475A',
-      ansi: [
-        '#21222C', '#FF5555', '#50FA7B', '#F1FA8C', //
-        '#BD93F9', '#FF79C6', '#8BE9FD', '#F8F8F2',
-        '#6272A4', '#FF6E6E', '#69FF94', '#FFFFA5',
-        '#D6ACFF', '#FF92DF', '#A4FFFF', '#FFFFFF',
-      ],
-    ),
-  ),
+  TerminalScheme('dracula', 'Dracula', ThemePalettes.dracula),
+  TerminalScheme('alucard', 'Alucard', ThemePalettes.alucard),
   TerminalScheme(
     'nord',
     'Nord',
@@ -218,52 +346,20 @@ final knownSchemes = <TerminalScheme>[
       ],
     ),
   ),
+  TerminalScheme('tokyo-night', 'Tokyo Night', ThemePalettes.tokyoNight),
   TerminalScheme(
-    'tokyo-night',
-    'Tokyo Night',
-    TermPalette.hex(
-      foreground: '#C0CAF5',
-      background: '#1A1B26',
-      cursor: '#C0CAF5',
-      selection: '#33467C',
-      ansi: [
-        '#15161E', '#F7768E', '#9ECE6A', '#E0AF68', //
-        '#7AA2F7', '#BB9AF7', '#7DCFFF', '#A9B1D6',
-        '#414868', '#F7768E', '#9ECE6A', '#E0AF68',
-        '#7AA2F7', '#BB9AF7', '#7DCFFF', '#C0CAF5',
-      ],
-    ),
+    'tokyo-night-day',
+    'Tokyo Night Day',
+    ThemePalettes.tokyoNightDay,
   ),
   TerminalScheme(
     'catppuccin-mocha',
     'Catppuccin Mocha',
-    TermPalette.hex(
-      foreground: '#CDD6F4',
-      background: '#1E1E2E',
-      cursor: '#F5E0DC',
-      selection: '#585B70',
-      ansi: [
-        '#45475A', '#F38BA8', '#A6E3A1', '#F9E2AF', //
-        '#89B4FA', '#F5C2E7', '#94E2D5', '#BAC2DE',
-        '#585B70', '#F38BA8', '#A6E3A1', '#F9E2AF',
-        '#89B4FA', '#F5C2E7', '#94E2D5', '#A6ADC8',
-      ],
-    ),
+    ThemePalettes.catppuccinMocha,
   ),
   TerminalScheme(
     'catppuccin-latte',
     'Catppuccin Latte',
-    TermPalette.hex(
-      foreground: '#4C4F69',
-      background: '#EFF1F5',
-      cursor: '#DC8A78',
-      selection: '#ACB0BE',
-      ansi: [
-        '#5C5F77', '#D20F39', '#40A02B', '#DF8E1D', //
-        '#1E66F5', '#EA76CB', '#179299', '#ACB0BE',
-        '#6C6F85', '#D20F39', '#40A02B', '#DF8E1D',
-        '#1E66F5', '#EA76CB', '#179299', '#BCC0CC',
-      ],
-    ),
+    ThemePalettes.catppuccinLatte,
   ),
 ];

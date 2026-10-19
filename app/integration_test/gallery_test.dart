@@ -64,6 +64,17 @@ const _themes = [
   ('nativo', false),
   ('contraste', true),
   ('contraste', false),
+  ('monitor', false),
+  ('berenjena', true),
+  ('berenjena', false),
+  ('bunker', false),
+  ('marino', false),
+  ('catppuccin', true),
+  ('catppuccin', false),
+  ('dracula', true),
+  ('dracula', false),
+  ('tokyo-night', true),
+  ('tokyo-night', false),
 ];
 
 void main() {

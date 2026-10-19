@@ -18,9 +18,15 @@ License 1.1 (el texto de cada una va junto a sus ficheros):
   https://github.com/Instrument/instrument-serif
 - Martian Mono. Copyright 2021 The Martian Mono Project Authors.
   https://github.com/evilmartians/mono
+- Share Tech Mono. Copyright 2012 Carrois Type Design, Ralph du Carrois,
+  con el nombre reservado "Share". https://fonts.google.com/specimen/Share+Tech+Mono
+- VT323. Copyright 2011 The VT323 Project Authors (Peter Hull).
+  https://github.com/phoikoi/VT323
 
 Esquemas de color del terminal incluidos en app/lib/terminal/schemes.dart,
 publicados con licencia MIT por sus autores: Solarized (Ethan Schoonover),
-Dracula (Dracula Theme), Nord (Arctic Ice Studio), Gruvbox (Pavel Pertsev),
-One Dark (GitHub, Atom), Tokyo Night (enkia) y Catppuccin (Catppuccin
-Org).
+Dracula y Alucard (Dracula Theme), Nord (Arctic Ice Studio), Gruvbox (Pavel
+Pertsev), One Dark (GitHub, Atom), Tokyo Night (enkia), Tokyo Night Day
+(Folke Lemaitre) y Catppuccin (Catppuccin Org). Los temas Catppuccin,
+Dracula y Tokyo Night de app/lib/ui/themes.dart parten de esas mismas
+paletas.

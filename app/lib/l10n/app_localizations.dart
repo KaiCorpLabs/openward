@@ -3638,6 +3638,18 @@ abstract class AppLocalizations {
   /// **'La latencia, siempre a la vista'**
   String get newsLatencyTitle;
 
+  /// No description provided for @newsMoreThemesBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Monitor, con letras verdes de verdad; Berenjena, con el terminal morado; Búnker, todo en un solo fósforo; Marino, verde sobre azul marino; y Catppuccin, Dracula y Tokyo Night para toda la ventana. En Ajustes › Apariencia.'**
+  String get newsMoreThemesBody;
+
+  /// No description provided for @newsMoreThemesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Siete familias de temas más'**
+  String get newsMoreThemesTitle;
+
   /// No description provided for @newsPaletteBody.
   ///
   /// In es, this message translates to:

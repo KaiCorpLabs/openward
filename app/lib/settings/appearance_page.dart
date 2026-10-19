@@ -20,9 +20,17 @@ const _uiFonts = [
   'IBM Plex Sans',
   'Instrument Sans',
   'JetBrains Mono',
+  'IBM Plex Mono',
   'Martian Mono',
+  'Share Tech Mono',
 ];
-const _terminalFonts = ['JetBrains Mono', 'IBM Plex Mono', 'Martian Mono'];
+const _terminalFonts = [
+  'JetBrains Mono',
+  'IBM Plex Mono',
+  'Martian Mono',
+  'Share Tech Mono',
+  'VT323',
+];
 
 /// A contrast ratio as the language writes decimals: 4,5 or 4.5.
 String _ratio(AppLocalizations l, double value) =>

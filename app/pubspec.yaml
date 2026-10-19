@@ -43,6 +43,8 @@ flutter:
     - assets/fonts/instrument/OFL-InstrumentSans.txt
     - assets/fonts/instrument/OFL-InstrumentSerif.txt
     - assets/fonts/martian-mono/OFL.txt
+    - assets/fonts/share-tech-mono/OFL.txt
+    - assets/fonts/vt323/OFL.txt
   # The themes' fonts, all OFL-1.1 (NOTICE). Instrument Sans is a variable
   # font: Flutter maps FontWeight to its weight axis.
   fonts:
@@ -68,6 +70,8 @@ flutter:
         - asset: assets/fonts/ibm-plex/IBMPlexMono-Regular.ttf
         - asset: assets/fonts/ibm-plex/IBMPlexMono-Medium.ttf
           weight: 500
+        - asset: assets/fonts/ibm-plex/IBMPlexMono-Bold.ttf
+          weight: 700
     - family: Instrument Sans
       fonts:
         - asset: assets/fonts/instrument/InstrumentSans-Variable.ttf
@@ -83,3 +87,9 @@ flutter:
           weight: 500
         - asset: assets/fonts/martian-mono/MartianMono-Bold.ttf
           weight: 700
+    - family: Share Tech Mono
+      fonts:
+        - asset: assets/fonts/share-tech-mono/ShareTechMono-Regular.ttf
+    - family: VT323
+      fonts:
+        - asset: assets/fonts/vt323/VT323-Regular.ttf

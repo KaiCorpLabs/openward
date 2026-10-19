@@ -2388,6 +2388,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newsLatencyTitle => 'Latency in sight';
 
   @override
+  String get newsMoreThemesBody =>
+      'Monitor, with real green letters; Berenjena, with an aubergine terminal; Búnker, all in one phosphor; Marino, green on navy; and Catppuccin, Dracula and Tokyo Night for the whole window. In Settings › Appearance.';
+
+  @override
+  String get newsMoreThemesTitle => 'Seven more theme families';
+
+  @override
   String newsPaletteBody(String shortcut) {
     return 'Everything the window does, your hosts, snippets and the commands you ran, a few letters away ($shortcut). The history stays on this computer and never keeps passwords.';
   }
