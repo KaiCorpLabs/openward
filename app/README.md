@@ -45,10 +45,10 @@ fvm flutter test integration_test/ui_test.dart -d macos
 tool/package-macos.sh
 ```
 
-**Regenerar el icono** después de cambiar el dibujo en `tool/make_icons.dart`.
+**Regenerar los iconos Umbral** desde sus fuentes aprobadas. La [guía de marca](../assets/brand/umbral/README.md) documenta los SVG editables, los másteres oscuro y claro, la máscara de escritorio y las rutas de cada plataforma. Grafito oscuro es el predeterminado; la variante clara se exporta a `build/branding/`.
 
 ```bash
-fvm flutter test tool/make_icons.dart
+fvm flutter test --no-pub tool/make_icons.dart
 ```
 
 **Regenerar los bindings** después de cambiar `core/crates/openward-ffi/src/api`. El resultado va a `lib/src/rust`, que se versiona.
