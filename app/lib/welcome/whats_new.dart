@@ -6,6 +6,7 @@ import '../core/version.dart';
 import '../l10n/l10n.dart';
 import '../terminal/keys.dart';
 import '../ui/tokens.dart';
+import '../ui/umbral.dart';
 import '../ui/widgets.dart';
 import '../window/shortcuts.dart';
 
@@ -19,8 +20,9 @@ import '../window/shortcuts.dart';
 /// shortcuts sheet and each hop's latency, 0.3.1-beta.1 the environment,
 /// the system and the favorites, 0.3.1-beta.2 panes that are handled
 /// without guessing, 0.3.1-beta.4 the hosts on their page and the sidebar
-/// for every day, 0.3.1-beta.5 seven more theme families.
-const newsVersion = '0.3.1-beta.5';
+/// for every day, 0.3.1-beta.5 seven more theme families, 0.3.1-beta.6 the
+/// new logo.
+const newsVersion = '0.3.1-beta.6';
 
 /// Who updated and has not seen this release's news yet.
 bool shouldShowNews(Settings s) => s.welcomed && s.seenNews != newsVersion;
@@ -45,11 +47,12 @@ class _WhatsNew extends StatelessWidget {
     String keys(String apple, String other) => isApple ? apple : other;
     // Marked new: what came after who saw the news before.
     final items = [
+      (Icons.auto_awesome, l.newsLogoTitle, l.newsLogoBody, true),
       (
         Icons.palette_outlined,
         l.newsMoreThemesTitle,
         l.newsMoreThemesBody,
-        true,
+        false,
       ),
       (
         Icons.dns_outlined,
@@ -152,7 +155,7 @@ class _WhatsNew extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.auto_awesome, size: 16, color: c.accentText),
+              const UmbralMark(size: 18),
               const SizedBox(width: 8),
               Text(
                 'OpenWard $appVersion',

@@ -11,6 +11,7 @@ import '../l10n/l10n.dart';
 import '../src/rust/api/app.dart';
 import '../terminal/keys.dart';
 import '../ui/tokens.dart';
+import '../ui/umbral.dart';
 import '../ui/widgets.dart';
 import '../welcome/whats_new.dart';
 import 'appearance_page.dart';
@@ -358,6 +359,8 @@ class _General extends ConsumerWidget {
           ),
           child: Row(
             children: [
+              const UmbralMark(size: 36),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -383,6 +386,10 @@ class _General extends ConsumerWidget {
                   context: context,
                   applicationName: 'OpenWard',
                   applicationVersion: appVersion,
+                  applicationIcon: const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: UmbralMark(size: 48),
+                  ),
                 ),
                 child: Text(l.licenses),
               ),

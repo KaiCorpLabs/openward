@@ -770,6 +770,8 @@
   "newsKeysTitle": "Keys",
   "newsLatencyBody": "The status bar shows how long the server takes to answer, with a chart of the last checks; amber when it rises well above the usual. Hover for the route and the cipher.",
   "newsLatencyTitle": "Latency in sight",
+  "newsLogoBody": "Umbral, an open O with a chevron: in the app's icon and, inside, on the welcome, the start page, About and here, in your theme's color.",
+  "newsLogoTitle": "A new logo",
   "newsMoreThemesBody": "Monitor, with real green letters; Berenjena, with an aubergine terminal; Búnker, all in one phosphor; Marino, green on navy; and Catppuccin, Dracula and Tokyo Night for the whole window. In Settings › Appearance.",
   "newsMoreThemesTitle": "Seven more theme families",
   "newsPaletteBody": "Everything the window does, your hosts, snippets and the commands you ran, a few letters away ({shortcut}). The history stays on this computer and never keeps passwords.",

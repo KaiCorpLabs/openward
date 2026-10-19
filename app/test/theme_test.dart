@@ -51,6 +51,19 @@ void main() {
       }
     });
 
+    test('${theme.id}: the logo, in the accent, stands out from every '
+        'background (3:1)', () {
+      final c = theme.colors;
+      for (final (name, bg) in [
+        ('window', c.window),
+        ('surface', c.surface),
+        ('raised', c.raised),
+        ('sunken', c.sunken),
+      ]) {
+        expect(_contrast(c.accent, bg), greaterThanOrEqualTo(3), reason: name);
+      }
+    });
+
     test('${theme.id}: status marks stand out from the window (3:1)', () {
       final c = theme.colors;
       for (final (name, color) in [

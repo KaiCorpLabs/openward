@@ -1896,6 +1896,8 @@
   "newsKeysTitle": "Claves",
   "newsLatencyBody": "La barra de estado dice cuánto tarda el servidor en responder, con una gráfica de las últimas comprobaciones; en ámbar si sube mucho sobre lo habitual. Al pasar el ratón, la ruta y el cifrado.",
   "newsLatencyTitle": "La latencia, siempre a la vista",
+  "newsLogoBody": "Umbral, una O abierta con un chevrón: en el icono de la app y, dentro, en la bienvenida, el inicio, Acerca de y aquí, en el color de tu tema.",
+  "newsLogoTitle": "Logo nuevo",
   "newsMoreThemesBody": "Monitor, con letras verdes de verdad; Berenjena, con el terminal morado; Búnker, todo en un solo fósforo; Marino, verde sobre azul marino; y Catppuccin, Dracula y Tokyo Night para toda la ventana. En Ajustes › Apariencia.",
   "newsMoreThemesTitle": "Siete familias de temas más",
   "newsPaletteBody": "Todo lo que hace la ventana, tus hosts, snippets y los comandos que ya ejecutaste, a unas letras ({shortcut}). El historial se queda en este equipo y nunca guarda contraseñas.",

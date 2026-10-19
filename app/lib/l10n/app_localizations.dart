@@ -3638,6 +3638,18 @@ abstract class AppLocalizations {
   /// **'La latencia, siempre a la vista'**
   String get newsLatencyTitle;
 
+  /// No description provided for @newsLogoBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Umbral, una O abierta con un chevrón: en el icono de la app y, dentro, en la bienvenida, el inicio, Acerca de y aquí, en el color de tu tema.'**
+  String get newsLogoBody;
+
+  /// No description provided for @newsLogoTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Logo nuevo'**
+  String get newsLogoTitle;
+
   /// No description provided for @newsMoreThemesBody.
   ///
   /// In es, this message translates to:

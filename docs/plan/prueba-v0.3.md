@@ -82,7 +82,10 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - prueba unos días alguno de los temas nuevos (Monitor, Berenjena, Búnker, Marino, Catppuccin, Dracula o Tokyo Night) y dinos si se lee bien con tus programas de siempre (`htop`, `git diff`, `vim`…);
    - en Búnker, el terminal es de un solo color: ¿echas de menos el rojo de los errores?;
    - combina capas (por ejemplo, la ventana de Grafito con los colores del terminal de Marino) y prueba VT323 como letra del terminal.
-12. **CSV** («Importar…» › CSV):
+12. **Logo** (0.3.1-beta.6):
+   - mira el icono nuevo en el Dock, en el selector de apps (⌘Tab) y en Finder: ¿se reconoce en pequeño?;
+   - en tu tema de siempre, mira el logo en el inicio, en Acerca de y en «Qué hay de nuevo», y dinos si se ve bien con su color.
+13. **CSV** («Importar…» › CSV):
    - exporta tus hosts de una hoja de cálculo o usa la plantilla de Termius;
    - comprueba los grupos, puertos, usuarios y etiquetas, y los avisos de lo que no entra;
    - impórtalo dos veces y comprueba que no se duplica.

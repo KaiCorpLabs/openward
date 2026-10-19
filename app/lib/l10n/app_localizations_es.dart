@@ -2393,6 +2393,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get newsLatencyTitle => 'La latencia, siempre a la vista';
 
   @override
+  String get newsLogoBody =>
+      'Umbral, una O abierta con un chevrón: en el icono de la app y, dentro, en la bienvenida, el inicio, Acerca de y aquí, en el color de tu tema.';
+
+  @override
+  String get newsLogoTitle => 'Logo nuevo';
+
+  @override
   String get newsMoreThemesBody =>
       'Monitor, con letras verdes de verdad; Berenjena, con el terminal morado; Búnker, todo en un solo fósforo; Marino, verde sobre azul marino; y Catppuccin, Dracula y Tokyo Night para toda la ventana. En Ajustes › Apariencia.';
 

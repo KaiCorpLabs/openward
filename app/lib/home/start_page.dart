@@ -18,6 +18,7 @@ import '../tunnels/tunnels.dart';
 import '../tunnels/tunnels_page.dart' show forwardText;
 import '../ui/environment.dart';
 import '../ui/tokens.dart';
+import '../ui/umbral.dart';
 import '../ui/widgets.dart';
 import '../window/shortcuts.dart';
 import 'recent.dart';
@@ -186,12 +187,18 @@ class _StartPageState extends ConsumerState<StartPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Semantics(
-                  header: true,
-                  child: Text(
-                    firstDay ? l.startHere : l.startTitle,
-                    style: theme.textTheme.titleLarge,
-                  ),
+                Row(
+                  children: [
+                    const UmbralMark(size: 30),
+                    const SizedBox(width: 12),
+                    Semantics(
+                      header: true,
+                      child: Text(
+                        firstDay ? l.startHere : l.startTitle,
+                        style: theme.textTheme.titleLarge,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 _quick(context),

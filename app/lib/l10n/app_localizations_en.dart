@@ -2388,6 +2388,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newsLatencyTitle => 'Latency in sight';
 
   @override
+  String get newsLogoBody =>
+      'Umbral, an open O with a chevron: in the app\'s icon and, inside, on the welcome, the start page, About and here, in your theme\'s color.';
+
+  @override
+  String get newsLogoTitle => 'A new logo';
+
+  @override
   String get newsMoreThemesBody =>
       'Monitor, with real green letters; Berenjena, with an aubergine terminal; Búnker, all in one phosphor; Marino, green on navy; and Catppuccin, Dracula and Tokyo Night for the whole window. In Settings › Appearance.';
 

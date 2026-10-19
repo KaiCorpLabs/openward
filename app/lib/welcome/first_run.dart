@@ -12,6 +12,7 @@ import '../src/rust/api/vault.dart';
 import '../terminal/keys.dart';
 import '../ui/themes.dart';
 import '../ui/tokens.dart';
+import '../ui/umbral.dart';
 import '../ui/widgets.dart';
 import '../window/chrome.dart';
 import 'whats_new.dart';
@@ -139,6 +140,11 @@ class _FirstRunState extends ConsumerState<FirstRun> {
     final previews = _previews;
     final found = previews != null && previews.isNotEmpty;
     return [
+      const Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: UmbralMark(size: 56),
+      ),
+      const SizedBox(height: 14),
       Semantics(
         header: true,
         child: Text(l.welcomeTitle, style: theme.textTheme.headlineSmall),
