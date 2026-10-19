@@ -534,7 +534,7 @@ class _KeyItem extends StatelessWidget {
               child: TextButton(
                 onPressed: onAddCert,
                 style: TextButton.styleFrom(
-                  textStyle: const TextStyle(fontSize: 12),
+                  textStyle: smallButtonText(context),
                   visualDensity: VisualDensity.compact,
                 ),
                 child: Text(l.addCertificate),

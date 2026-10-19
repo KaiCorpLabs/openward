@@ -316,7 +316,7 @@ class _IdentitiesPageState extends ConsumerState<IdentitiesPage> {
                       minimumSize: const Size(0, 28),
                       visualDensity: VisualDensity.standard,
                       padding: const EdgeInsets.symmetric(horizontal: 10),
-                      textStyle: const TextStyle(fontSize: 12),
+                      textStyle: smallButtonText(context),
                       foregroundColor: c.accentText,
                     ),
                     onPressed: () => showUseIdentity(context, ref, i),

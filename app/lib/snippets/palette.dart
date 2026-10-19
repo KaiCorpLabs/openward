@@ -189,7 +189,7 @@ class _PaletteState extends ConsumerState<_Palette> {
                               .openPage(PageKind.snippets);
                         },
                         style: TextButton.styleFrom(
-                          textStyle: const TextStyle(fontSize: 12),
+                          textStyle: smallButtonText(context),
                           visualDensity: VisualDensity.compact,
                         ),
                         child: Text(l.manageSnippets),

@@ -98,7 +98,7 @@ class _SmallButton extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(0, 28),
         padding: const EdgeInsets.symmetric(horizontal: 10),
-        textStyle: const TextStyle(fontSize: 12),
+        textStyle: smallButtonText(context),
         foregroundColor: accent ? c.accentText : null,
         backgroundColor: accent ? c.accentSoft : null,
       ),
@@ -443,7 +443,7 @@ class TransferIndicator extends ConsumerWidget {
                 foregroundColor: failed ? c.danger : c.accentText,
                 backgroundColor: failed ? c.dangerSoft : c.accentSoft,
                 side: BorderSide(color: failed ? c.dangerLine : c.accent),
-                textStyle: const TextStyle(fontSize: 12),
+                textStyle: smallButtonText(context),
               ),
               icon: const Icon(Icons.swap_vert, size: 15),
               label: Text(text),

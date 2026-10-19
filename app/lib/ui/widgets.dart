@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 
 import 'tokens.dart';
 
+/// A small button's text: 12 px in the interface's font. A button style's
+/// own text style replaces the theme's instead of merging with it, so it
+/// names the font too.
+TextStyle smallButtonText(BuildContext context) =>
+    TextStyle(fontFamily: context.ow.fonts.ui, fontSize: 12);
+
 /// How a host or a tab is doing. Each one has its own shape as well as its
 /// color, so it does not depend on telling colors apart.
 enum Status { idle, connecting, connected, warning, failed }

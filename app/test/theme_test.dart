@@ -1,6 +1,6 @@
 import 'dart:math' as math;
-import 'dart:ui';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openward/core/settings.dart';
 import 'package:openward/terminal/palette.dart';
@@ -151,6 +151,86 @@ void main() {
       4.5,
     );
     expect(TermPalette.luminance(onWhite), lessThan(0.3));
+  });
+
+  /// The font of `text` as drawn, in a window with [theme].
+  Future<String? Function(String)> fontsIn(
+    WidgetTester tester,
+    OwTheme theme,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: materialTheme(theme),
+        home: Scaffold(
+          body: Column(
+            children: [
+              FilledButton(onPressed: () {}, child: const Text('filled')),
+              OutlinedButton(onPressed: () {}, child: const Text('outlined')),
+              TextButton(onPressed: () {}, child: const Text('text')),
+              TextButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.terminal),
+                label: const Text('icon'),
+              ),
+              const Tooltip(message: 'tip', child: Text('hover me')),
+              const Text('body'),
+              const TextField(
+                decoration: InputDecoration(
+                  labelText: 'label',
+                  helperText: 'helper',
+                ),
+              ),
+              const TextField(decoration: InputDecoration(hintText: 'hint')),
+            ],
+          ),
+        ),
+      ),
+    );
+    tester.state<TooltipState>(find.byType(Tooltip)).ensureTooltipVisible();
+    ScaffoldMessenger.of(tester.element(find.byType(Column)))
+        .showSnackBar(const SnackBar(content: Text('snack')));
+    await tester.pump(const Duration(milliseconds: 500));
+    return (text) => tester
+        .widget<RichText>(
+          find.descendant(of: find.text(text), matching: find.byType(RichText)),
+        )
+        .text
+        .style
+        ?.fontFamily;
+  }
+
+  const drawn = [
+    'filled',
+    'outlined',
+    'text',
+    'icon',
+    'tip',
+    'snack',
+    'body',
+    'label',
+    'helper',
+    'hint',
+  ];
+
+  testWidgets("buttons, tooltips and snack bars use the theme's font", (
+    tester,
+  ) async {
+    final font = await fontsIn(tester, OwThemes.fosforo);
+    expect(
+      {for (final t in drawn) t: font(t)},
+      {for (final t in drawn) t: 'JetBrains Mono'},
+    );
+  });
+
+  testWidgets('…and the interface font chosen as a layer', (tester) async {
+    final s = const Settings(
+      darkTheme: 'grafito',
+    ).withOverrides('grafito', (o) => o.copyWith(uiFont: () => 'Martian Mono'));
+    final font = await fontsIn(tester, resolveTheme(s, Brightness.dark));
+    expect(
+      {for (final t in drawn) t: font(t)},
+      {for (final t in drawn) t: 'Martian Mono'},
+    );
   });
 
   test('known schemes have 16 colors and read at least 3:1', () {

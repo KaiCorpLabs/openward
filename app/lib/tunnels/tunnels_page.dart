@@ -353,7 +353,7 @@ class _TunnelsPageState extends ConsumerState<TunnelsPage> {
       minimumSize: const Size(0, 28),
       visualDensity: VisualDensity.standard,
       padding: const EdgeInsets.symmetric(horizontal: 10),
-      textStyle: const TextStyle(fontSize: 12),
+      textStyle: smallButtonText(context),
     );
     final action = switch (t.state) {
       TunnelStateKind.open => OutlinedButton(
@@ -567,7 +567,7 @@ class _TunnelChipState extends ConsumerState<TunnelChip> {
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(0, 22),
               padding: const EdgeInsets.symmetric(horizontal: 8),
-              textStyle: const TextStyle(fontSize: 12),
+              textStyle: smallButtonText(context),
               foregroundColor: open > 0 ? c.accentText : c.textMuted,
               backgroundColor: open > 0 ? c.accentSoft : null,
               side: BorderSide(color: open > 0 ? c.accent : c.border),

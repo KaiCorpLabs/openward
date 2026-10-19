@@ -1019,6 +1019,9 @@ ThemeData materialTheme(OwTheme ow) {
         ),
       )
       .apply(bodyColor: c.text, displayColor: c.text);
+  // Material's own styles for buttons, tooltips and snack bars replace the
+  // theme's text style instead of merging with it: they name the font too.
+  final font = ow.fonts.ui;
   OutlineInputBorder outline(Color color, [double width = 1]) =>
       OutlineInputBorder(
         borderRadius: radius,
@@ -1051,7 +1054,11 @@ ThemeData materialTheme(OwTheme ow) {
         minimumSize: const Size(0, 34),
         padding: const EdgeInsets.symmetric(horizontal: 16),
         shape: control,
-        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        textStyle: TextStyle(
+          fontFamily: font,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -1061,7 +1068,11 @@ ThemeData materialTheme(OwTheme ow) {
         minimumSize: const Size(0, 34),
         padding: const EdgeInsets.symmetric(horizontal: 14),
         shape: control,
-        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        textStyle: TextStyle(
+          fontFamily: font,
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     ),
     // Links and secondary actions in the text's color, underlined on
@@ -1076,6 +1087,7 @@ ThemeData materialTheme(OwTheme ow) {
           ).copyWith(
             textStyle: WidgetStateProperty.resolveWith(
               (states) => TextStyle(
+                fontFamily: font,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
                 decoration: states.contains(WidgetState.hovered)
@@ -1134,7 +1146,7 @@ ThemeData materialTheme(OwTheme ow) {
         color: c.text,
         borderRadius: BorderRadius.circular(shape.radiusSmall),
       ),
-      textStyle: TextStyle(color: c.surface, fontSize: 12),
+      textStyle: TextStyle(fontFamily: font, color: c.surface, fontSize: 12),
       waitDuration: const Duration(milliseconds: 500),
     ),
     dividerTheme: DividerThemeData(color: c.border, space: 1, thickness: 1),
@@ -1175,7 +1187,7 @@ ThemeData materialTheme(OwTheme ow) {
     ),
     snackBarTheme: SnackBarThemeData(
       backgroundColor: c.text,
-      contentTextStyle: TextStyle(color: c.surface),
+      contentTextStyle: TextStyle(fontFamily: font, color: c.surface),
       actionTextColor: c.accent,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: radius),
