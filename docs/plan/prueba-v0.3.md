@@ -65,7 +65,7 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - con un host detrás de un bastion, pasa el ratón por la latencia y comprueba que dice la del bastion y la del destino.
 8. **Entorno, sistema y favoritos** (0.3.1-beta.1):
    - marca tu grupo de producción como Producción y comprueba que sus pestañas y terminales lo dicen; dinos si la marca de la esquina del terminal molesta;
-   - conéctate a tus servidores y mira qué sistema dice la barra; en los que salga «?», activa «Leer /etc/os-release» y dinos si acierta;
+   - conéctate a tus servidores y mira qué sistema dice la barra; en los que no lo diga, acepta el aviso «Leer /etc/os-release» (0.3.1-beta.7) y dinos si acierta;
    - marca tus hosts de cada día como favoritos y ordénalos en el inicio arrastrando sus tarjetas.
 9. **Paneles** (0.3.1-beta.2):
    - arrastra una pestaña sobre un terminal y suéltala en una mitad: la ventana ya no debe moverse;
@@ -85,7 +85,11 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
 12. **Logo** (0.3.1-beta.6):
    - mira el icono nuevo en el Dock, en el selector de apps (⌘Tab) y en Finder: ¿se reconoce en pequeño?;
    - en tu tema de siempre, mira el logo en el inicio, en Acerca de y en «Qué hay de nuevo», y dinos si se ve bien con su color.
-13. **CSV** («Importar…» › CSV):
+13. **Sistema con logo** (0.3.1-beta.7):
+   - mira los logos de tus hosts en la barra, el raíl, la página de Hosts y el inicio: ¿se reconocen en pequeño y con el color de cada entorno?;
+   - conéctate por primera vez a un servidor que no diga su sistema (uno con Tailscale SSH, Fedora o macOS) y acepta el aviso: el logo debe cambiar sin reconectar;
+   - en uno que no hayas conectado aún, prueba «Averiguar el sistema» en su menú; y activa «Leer /etc/os-release en todos los hosts» en Ajustes › General.
+14. **CSV** («Importar…» › CSV):
    - exporta tus hosts de una hoja de cálculo o usa la plantilla de Termius;
    - comprueba los grupos, puertos, usuarios y etiquetas, y los avisos de lo que no entra;
    - impórtalo dos veces y comprueba que no se duplica.

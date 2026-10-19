@@ -11,6 +11,10 @@ import 'address.dart';
 /// host's system): the library reads them again.
 final hostsChanged = ValueNotifier<int>(0);
 
+/// Saved hosts a connection just found not to tell their system, which do
+/// not read `/etc/os-release`: the window offers to.
+final systemsNotTold = ValueNotifier<List<String>>(const []);
+
 /// Where a connection stands.
 enum Phase { connecting, connected, reconnecting, running, closed }
 
@@ -188,6 +192,9 @@ abstract class ConnectionController extends ChangeNotifier {
         hopRttMs = e.hopRttMs;
       case SessionEventKind.hostsChanged:
         hostsChanged.value++;
+        if (e.unknownSystems.isNotEmpty) {
+          systemsNotTold.value = e.unknownSystems;
+        }
       case SessionEventKind.persistent:
         persistent = e.persistent;
       case SessionEventKind.reconnecting:

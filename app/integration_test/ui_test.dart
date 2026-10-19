@@ -52,6 +52,7 @@ import 'package:openward/sftp/sftp_controller.dart';
 import 'package:openward/sftp/transfers.dart';
 import 'package:openward/src/rust/api/tunnels.dart';
 import 'package:openward/tunnels/tunnels.dart';
+import 'package:openward/ui/environment.dart';
 import 'package:openward/ui/tokens.dart';
 import 'package:openward/welcome/whats_new.dart';
 import 'package:openward/window/sidebar_state.dart';
@@ -518,6 +519,9 @@ Host web-1 web-2
     expect(container.read(tabsProvider).tabs, hasLength(1));
 
     await tester.tap(find.text('General'));
+    await _settle(tester);
+    // The page keeps where Apariencia was scrolled to.
+    await tester.ensureVisible(find.text('Español'));
     await _settle(tester);
     await tester.tap(find.text('Español'));
     await _settle(tester);
@@ -1277,6 +1281,100 @@ Host web-1 web-2
     await _settle(tester);
   });
 
+  testWidgets('ssh: a server that does not tell its system, found out in '
+      'one click', (tester) async {
+    final fixtures = await _servers();
+    if (fixtures == null) return markTestSkipped('S2 servers not running');
+    final settings = SettingsSpec(
+      user: 'demo',
+      port: 22200,
+      identityFiles: ['$fixtures/id_ed25519'],
+      agent: AgentKind.off,
+      hostKeyPolicy: KeyPolicy.acceptNew,
+    );
+    final alpine = await app.createHost(
+      spec: HostSpec(label: 'alpine', address: '127.0.0.1', settings: settings),
+    );
+    final other = await app.createHost(
+      spec: HostSpec(label: 'other', address: '127.0.0.1'),
+    );
+    final container = await launch(tester);
+    HostView? host(String id) => container.read(libraryProvider).host(id);
+    await _connect(tester, 'alpine');
+    final c = container.read(tabsProvider).currentSession!;
+    await _until(tester, () => c.phase == Phase.connected, 'the connection');
+    // Dropbear's banner does not say: the window offers to read it.
+    await _until(
+      tester,
+      () => find.byKey(const ValueKey('system.offer')).evaluate().isNotEmpty,
+      'the offer',
+    );
+    expect(host(alpine)?.system?.code, '?');
+    expect(
+      find.text('«alpine» no dice su sistema al conectar.'),
+      findsOneWidget,
+    );
+    // Once it has come in.
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 500));
+    await _shot(tester, '7b-system-offer');
+    await tester.tap(
+      find.widgetWithText(SnackBarAction, 'Leer /etc/os-release'),
+    );
+    await _until(
+      tester,
+      () => host(alpine)?.system?.code == 'alp',
+      'the system read',
+    );
+    expect(host(alpine)?.system?.kind, SystemKind.osRelease);
+    await _until(
+      tester,
+      () => find
+          .textContaining('«alpine» es Alpine Linux 3.')
+          .evaluate()
+          .isNotEmpty,
+      'what came of it',
+    );
+    // From now on, for this host.
+    expect(app.host(id: alpine).spec.settings.readOsRelease, isTrue);
+
+    // Never connected: the menu offers it too, for the next connection.
+    container.read(tabsProvider.notifier).openPage(PageKind.hosts);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(
+      find.byKey(const ValueKey('hosts.row.other')),
+      buttons: kSecondaryButton,
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Averiguar el sistema'));
+    await _until(
+      tester,
+      () => find.text('Se leerá al conectar a «other».').evaluate().isNotEmpty,
+      'the next connection',
+    );
+    expect(app.host(id: other).spec.settings.readOsRelease, isTrue);
+
+    // In Ajustes, for every host that does not say otherwise, on this
+    // device.
+    final loose = await app.createHost(
+      spec: HostSpec(label: 'loose', address: '127.0.0.1'),
+    );
+    expect(app.host(id: loose).effective.readOsRelease, isFalse);
+    container
+        .read(settingsProvider.notifier)
+        .update((s) => s.copyWith(readOsRelease: true));
+    await tester.pump();
+    expect(app.host(id: loose).effective.readOsRelease, isTrue);
+    container
+        .read(settingsProvider.notifier)
+        .update((s) => s.copyWith(readOsRelease: false));
+    await tester.pump();
+    expect(app.host(id: loose).effective.readOsRelease, isFalse);
+    container.read(tabsProvider.notifier).closeCurrent();
+    container.read(tabsProvider.notifier).close(0);
+    await _settle(tester);
+  });
+
   testWidgets('ssh: through a jump, the route in the details, and back after '
       'a drop', (tester) async {
     final fixtures = await _servers();
@@ -1320,7 +1418,7 @@ Host web-1 web-2
     await _until(tester, () => c.phase == Phase.connected, 'the connection');
     expect(c.route, ['bastion', 'target1']);
     // Connecting told each saved hop's system by its banner: the Hosts page
-    // shows their monograms.
+    // shows their logos.
     await _until(
       tester,
       () => container.read(libraryProvider).host(target)?.system?.code == 'deb',
@@ -1332,10 +1430,22 @@ Host web-1 web-2
     );
     container.read(tabsProvider.notifier).openPage(PageKind.hosts);
     await tester.pump(const Duration(milliseconds: 300));
-    // Both rows, and the filter by system.
+    // Both rows, and the filter by system, by its name.
     expect(
-      find.descendant(of: find.byType(HostsPage), matching: find.text('deb')),
+      find.descendant(
+        of: find.byType(HostsPage),
+        matching: find.byWidgetPredicate(
+          (w) => w is SystemGlyph && w.code == 'deb',
+        ),
+      ),
       findsNWidgets(3),
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('hosts.filter.system.deb')),
+        matching: find.text('Debian'),
+      ),
+      findsOneWidget,
     );
     container.read(tabsProvider.notifier).closeCurrent();
     await tester.pump(const Duration(milliseconds: 100));

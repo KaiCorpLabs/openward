@@ -97,4 +97,11 @@ void main() {
     expect(wide.sidebarWidth, Settings.defaultSidebarWidth);
     expect(wide.terminalPadding, 12);
   });
+
+  test('reading /etc/os-release everywhere is off unless chosen', () {
+    expect(const Settings().readOsRelease, isFalse);
+    const s = Settings(readOsRelease: true);
+    expect(Settings.fromJson(s.toJson()), s);
+    expect(Settings.fromJson({'font_size': 13}).readOsRelease, isFalse);
+  });
 }

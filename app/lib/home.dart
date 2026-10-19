@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/connection.dart' show systemsNotTold;
 import 'core/providers.dart';
 import 'core/settings.dart';
 import 'home/start_page.dart';
 import 'hosts/editors.dart';
+import 'hosts/host_actions.dart';
 import 'hosts/hosts_page.dart';
 import 'hosts/rail.dart';
 import 'hosts/sidebar.dart';
@@ -62,9 +64,46 @@ class _HomeState extends ConsumerState<Home> {
   final FocusNode _search = FocusNode(debugLabel: 'host search');
 
   @override
+  void initState() {
+    super.initState();
+    // This device's choice reaches the core now and on every change.
+    ref.listenManual(
+      settingsProvider.select((s) => s.readOsRelease),
+      (_, enabled) => ref
+          .read(openWardProvider)
+          .setReadOsReleaseEverywhere(enabled: enabled),
+      fireImmediately: true,
+    );
+    systemsNotTold.addListener(_offerOsRelease);
+  }
+
+  @override
   void dispose() {
+    systemsNotTold.removeListener(_offerOsRelease);
     _search.dispose();
     super.dispose();
+  }
+
+  /// A connection found a host that does not tell its system: one click
+  /// reads its /etc/os-release, now and from then on.
+  void _offerOsRelease() {
+    final ids = systemsNotTold.value;
+    if (ids.isEmpty || !mounted) return;
+    // The target (jumps come first), when neither tells.
+    final h = ref.read(libraryProvider).host(ids.last);
+    if (h == null) return;
+    final l = context.l10n;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: const ValueKey('system.offer'),
+        content: Text(l.systemNotTold(h.label)),
+        duration: const Duration(seconds: 8),
+        action: SnackBarAction(
+          label: l.readOsRelease,
+          onPressed: () => HostActions(context, ref).findOutSystem(h),
+        ),
+      ),
+    );
   }
 
   void _palette() => showCommandPalette(context, ref);

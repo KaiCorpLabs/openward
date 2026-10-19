@@ -160,11 +160,12 @@ pub struct Host {
     pub extra: Extra,
 }
 
-/// The system a server runs, for its monogram in the sidebar.
+/// The system a server runs, for its logo in the sidebar.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct System {
-    /// `deb`, `ubu`, `fed`, `rhel`, `alp`, `arch`, `bsd`, `mac`, `win`, or
-    /// `?` when it could not be told.
+    /// `deb`, `ubu`, `fed`, `rhel`, `mint`… (four letters at most: a
+    /// version that does not know one shows it as text), `lnx` for a Linux
+    /// whose distribution is unknown, or `?` when it could not be told.
     pub code: String,
     /// What to call it ("Debian 12"); empty when unknown.
     #[serde(default, skip_serializing_if = "String::is_empty")]

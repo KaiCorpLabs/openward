@@ -154,6 +154,7 @@ class Settings {
     this.sidebarWidth = defaultSidebarWidth,
     this.terminalPadding = 12,
     this.recentConnections = true,
+    this.readOsRelease = false,
   });
 
   /// Terminal font size, in logical pixels.
@@ -221,6 +222,10 @@ class Settings {
   /// palette and the start page.
   final bool recentConnections;
 
+  /// `/etc/os-release` is read after connecting to the hosts that do not
+  /// say otherwise, to tell their system; on this device only.
+  final bool readOsRelease;
+
   static const defaultSidebarWidth = 272.0;
   static const minSidebarWidth = 220.0;
   static const maxSidebarWidth = 420.0;
@@ -266,6 +271,7 @@ class Settings {
     double? sidebarWidth,
     double? terminalPadding,
     bool? recentConnections,
+    bool? readOsRelease,
   }) => Settings(
     fontSize: fontSize ?? this.fontSize,
     theme: theme ?? this.theme,
@@ -292,6 +298,7 @@ class Settings {
     sidebarWidth: sidebarWidth ?? this.sidebarWidth,
     terminalPadding: terminalPadding ?? this.terminalPadding,
     recentConnections: recentConnections ?? this.recentConnections,
+    readOsRelease: readOsRelease ?? this.readOsRelease,
   );
 
   /// The same settings with one theme's layers changed (or reset).
@@ -340,6 +347,7 @@ class Settings {
     'sidebar_width': sidebarWidth,
     'terminal_padding': terminalPadding,
     'recent_connections': recentConnections,
+    'read_os_release': readOsRelease,
   };
 
   /// Unknown or broken values fall back to the defaults, one by one.
@@ -403,6 +411,7 @@ class Settings {
       ),
       terminalPadding: number('terminal_padding', 0, 24, d.terminalPadding),
       recentConnections: flag('recent_connections', d.recentConnections),
+      readOsRelease: flag('read_os_release', d.readOsRelease),
     );
   }
 

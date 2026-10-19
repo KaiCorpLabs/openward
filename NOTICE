@@ -30,3 +30,8 @@ Pertsev), One Dark (GitHub, Atom), Tokyo Night (enkia), Tokyo Night Day
 (Folke Lemaitre) y Catppuccin (Catppuccin Org). Los temas Catppuccin,
 Dracula y Tokyo Night de app/lib/ui/themes.dart parten de esas mismas
 paletas.
+
+Logotipos de los sistemas en app/lib/ui/system_logos.dart, de Simple Icons
+16.34.0, publicados con licencia CC0 1.0 (https://simpleicons.org). Son
+marcas de sus propietarios y solo dicen qué sistema tiene cada servidor;
+su uso no supone ninguna relación con ellos.

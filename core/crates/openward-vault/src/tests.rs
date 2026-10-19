@@ -181,6 +181,42 @@ fn the_environment_is_inherited_and_can_be_turned_off() {
     assert_eq!(e.settings.read_os_release, Some(false));
 }
 
+/// This device's defaults go over the built-in ones, and groups and hosts
+/// over them; they are never stored.
+#[test]
+fn this_devices_defaults_go_under_groups_and_hosts() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("vault.db");
+    let mut v = Vault::open(&path).unwrap();
+    let off = Settings {
+        read_os_release: Some(false),
+        ..Settings::default()
+    };
+    let g = v.create(group("quiet", None, off)).unwrap();
+    let quiet = v
+        .create(host("quiet", Some(g), Settings::default()))
+        .unwrap();
+    let loose = v.create(host("loose", None, Settings::default())).unwrap();
+    v.set_device_defaults(Settings {
+        read_os_release: Some(true),
+        ..Settings::default()
+    });
+    let e = v.effective(loose).unwrap();
+    assert_eq!(e.settings.read_os_release, Some(true));
+    assert_eq!(e.origin("read_os_release"), Some(Origin::Default));
+    let e = v.effective(quiet).unwrap();
+    assert_eq!(e.settings.read_os_release, Some(false));
+    assert_eq!(e.origin("read_os_release"), Some(Origin::Group(g)));
+    let e = v.inherited(None, None).unwrap();
+    assert_eq!(e.settings.read_os_release, Some(true));
+    drop(v);
+    let v = Vault::open(&path).unwrap();
+    assert_eq!(
+        v.effective(loose).unwrap().settings.read_os_release,
+        Some(false)
+    );
+}
+
 /// What the server runs and the place among the favorites go with the
 /// host.
 #[test]

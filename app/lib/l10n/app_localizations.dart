@@ -1904,6 +1904,12 @@ abstract class AppLocalizations {
   /// **'Anterior, más arriba (Intro)'**
   String get findOlder;
 
+  /// No description provided for @findOutSystem.
+  ///
+  /// In es, this message translates to:
+  /// **'Averiguar el sistema'**
+  String get findOutSystem;
+
   /// No description provided for @findTotal.
   ///
   /// In es, this message translates to:
@@ -3770,17 +3776,17 @@ abstract class AppLocalizations {
   /// **'Un inicio para volver a lo de siempre'**
   String get newsStartTitle;
 
-  /// No description provided for @newsSystemBody.
+  /// No description provided for @newsSystemBody2.
   ///
   /// In es, this message translates to:
-  /// **'Un monograma (deb, ubu, alp…) por el banner del servidor al conectar, sin ejecutar nada; «Leer /etc/os-release» lo afina donde el banner no lo dice.'**
-  String get newsSystemBody;
+  /// **'Debian, Ubuntu, Fedora, Alpine y 22 sistemas más, con su logo del color de su entorno; macOS y Windows, con un icono propio. Para los que no lo dicen al conectar, como los de Tailscale SSH, «Averiguar el sistema» en su menú lee /etc/os-release; o en todos, desde Ajustes › General.'**
+  String get newsSystemBody2;
 
-  /// No description provided for @newsSystemTitle.
+  /// No description provided for @newsSystemTitle2.
   ///
   /// In es, this message translates to:
-  /// **'El sistema de cada servidor'**
-  String get newsSystemTitle;
+  /// **'El sistema de cada servidor, con su logo'**
+  String get newsSystemTitle2;
 
   /// No description provided for @newsThemesBody.
   ///
@@ -4909,6 +4915,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Leer /etc/os-release'**
   String get readOsRelease;
+
+  /// No description provided for @readOsReleaseEverywhere.
+  ///
+  /// In es, this message translates to:
+  /// **'Leer /etc/os-release en todos los hosts'**
+  String get readOsReleaseEverywhere;
+
+  /// No description provided for @readOsReleaseEverywhereHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Para saber el sistema de los servidores que no lo dicen al conectar. Ejecuta un comando en cada uno; un host o un grupo puede apagarlo. Solo en este equipo.'**
+  String get readOsReleaseEverywhereHelp;
 
   /// No description provided for @readOsReleaseNote.
   ///
@@ -6260,11 +6278,35 @@ abstract class AppLocalizations {
   /// **'Elegido a mano'**
   String get systemManual;
 
+  /// No description provided for @systemNotTold.
+  ///
+  /// In es, this message translates to:
+  /// **'«{name}» no dice su sistema al conectar.'**
+  String systemNotTold(String name);
+
   /// No description provided for @systemNotYet.
   ///
   /// In es, this message translates to:
   /// **'Se sabrá al conectar, por el banner del servidor.'**
   String get systemNotYet;
+
+  /// No description provided for @systemOnNextConnection.
+  ///
+  /// In es, this message translates to:
+  /// **'Se leerá al conectar a «{name}».'**
+  String systemOnNextConnection(String name);
+
+  /// No description provided for @systemStillUnknown.
+  ///
+  /// In es, this message translates to:
+  /// **'«{name}» tampoco lo dice en /etc/os-release.'**
+  String systemStillUnknown(String name);
+
+  /// No description provided for @systemTold.
+  ///
+  /// In es, this message translates to:
+  /// **'«{name}» es {system}.'**
+  String systemTold(String name, String system);
 
   /// No description provided for @systemUnknown.
   ///

@@ -51,6 +51,12 @@ tool/package-macos.sh
 fvm flutter test --no-pub tool/make_icons.dart
 ```
 
+**Regenerar los logos de los sistemas** desde la versión de Simple Icons fijada en el script (los códigos son los de `openward-app::system`):
+
+```bash
+dart run tool/system_logos.dart
+```
+
 **Regenerar los bindings** después de cambiar `core/crates/openward-ffi/src/api`. El resultado va a `lib/src/rust`, que se versiona.
 
 ```bash

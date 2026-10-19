@@ -220,6 +220,11 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// A key's public half, as an `authorized_keys` line.
   String? publicKeyLine({required String path});
 
+  /// From now on, reads a host's `/etc/os-release` after connecting, and
+  /// now over its connection if one is up. False when there is none: it
+  /// is read on the next one.
+  Future<bool> readOsRelease({required String id});
+
   /// Reads a file or folder of another program, recognizing whose it
   /// is. For Termius's data the system asks the user first, to let
   /// OpenWard use Termius's key from the keychain.
@@ -251,6 +256,10 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   /// Makes a host a favorite (the last one) or not.
   Future<void> setFavorite({required String id, required bool favorite});
+
+  /// Reads `/etc/os-release` after connecting to the hosts that do not
+  /// say otherwise, on this device; from Ajustes, at start and on change.
+  void setReadOsReleaseEverywhere({required bool enabled});
 
   /// A new SFTP browser, not connected yet.
   SftpBrowser sftp();

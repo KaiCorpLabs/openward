@@ -387,7 +387,7 @@ class _SettingsFields extends ConsumerStatefulWidget {
   /// The title over the connection settings.
   final String connectionTitle;
 
-  /// A host's «Sistema» block (its monogram and what told it); reading
+  /// A host's «Sistema» block (its logo and what told it); reading
   /// os-release goes under it. Groups have none: it goes in «Advanced».
   final Widget? system;
 
@@ -2237,8 +2237,8 @@ class _FavoriteRow extends StatelessWidget {
   }
 }
 
-/// What the server runs: its monogram, what told it, and the monograms to
-/// choose one by hand.
+/// What the server runs: its logo, what told it, and the systems to choose
+/// one by hand.
 class _SystemBlock extends StatelessWidget {
   const _SystemBlock({
     required this.told,

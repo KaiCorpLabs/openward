@@ -1,7 +1,7 @@
-//! What a server runs, for its monogram in the sidebar: told from the
-//! banner it sends before anything else (`SSH-2.0-OpenSSH_9.2p1
+//! What a server runs, for its logo in the sidebar: told from the banner
+//! it sends before anything else (`SSH-2.0-OpenSSH_9.2p1
 //! Debian-2+deb12u3`), which runs nothing, or, when the host asks for it,
-//! from `/etc/os-release` (`uname -s` where there is none, as on macOS).
+//! from `/etc/os-release` and `uname -s` (which is all there is on macOS).
 //! A system chosen by hand stays as it is.
 
 use std::time::Duration;
@@ -9,13 +9,18 @@ use std::time::Duration;
 use openward_vault::proto::{System, SystemSource};
 
 /// The command that reads the system, under `sh` whatever the login shell.
-pub(crate) const OS_RELEASE: &str = "sh -c 'cat /etc/os-release 2>/dev/null || uname -s'";
+/// The kernel's name goes last, so that a distribution this does not know
+/// is still told as Linux.
+pub(crate) const OS_RELEASE: &str = "sh -c 'cat /etc/os-release 2>/dev/null; uname -s'";
 
 /// How long reading it may take before it is left for another time.
 pub(crate) const OS_RELEASE_WITHIN: Duration = Duration::from_secs(5);
 
-/// Unknown: the monogram says «?».
+/// Unknown: «?».
 pub(crate) const UNKNOWN: &str = "?";
+
+/// Linux, without knowing which distribution.
+const LINUX: &str = "lnx";
 
 /// From the server's banner; «?» when it does not say.
 pub(crate) fn from_banner(banner: &str) -> System {
@@ -39,10 +44,10 @@ fn told_by_banner(banner: &str) -> Option<(&'static str, String)> {
         return Some(("win", "Windows".into()));
     }
     if software.starts_with("NetBSD") {
-        return Some(("bsd", "NetBSD".into()));
+        return Some(("nbsd", "NetBSD".into()));
     }
     if lower.starts_with("raspbian") {
-        return Some(("deb", "Raspberry Pi OS".into()));
+        return Some(("rpi", "Raspberry Pi OS".into()));
     }
     if lower.starts_with("debian") {
         // `+deb12u3`: Debian 12.
@@ -81,20 +86,24 @@ fn told_by_banner(banner: &str) -> Option<(&'static str, String)> {
 
 /// From what [`OS_RELEASE`] printed; `None` when it says nothing useful.
 pub(crate) fn from_os_release(text: &str) -> Option<System> {
-    let text = text.trim();
     let value = |key: &str| {
         text.lines().find_map(|line| {
             let (k, v) = line.split_once('=')?;
             (k.trim() == key).then(|| v.trim().trim_matches(['"', '\'']).to_owned())
         })
     };
+    // `uname -s`: the last line that is not `KEY=value`.
+    let kernel = text
+        .lines()
+        .map(str::trim)
+        .rfind(|line| !line.is_empty() && !line.contains('='))
+        .unwrap_or_default();
     let (code, name, evidence) = match value("ID") {
         Some(id) => {
             let like = value("ID_LIKE").unwrap_or_default();
-            let code = std::iter::once(id.as_str())
-                .chain(like.split_whitespace())
-                .find_map(code_of)
-                .unwrap_or(UNKNOWN);
+            let code = code_of(&id)
+                .or_else(|| like.split_whitespace().find_map(family_of))
+                .unwrap_or(if kernel == "Linux" { LINUX } else { UNKNOWN });
             let name = value("NAME").unwrap_or_default();
             let name = name.trim_end_matches(" GNU/Linux");
             let version = value("VERSION_ID").unwrap_or_default();
@@ -102,10 +111,13 @@ pub(crate) fn from_os_release(text: &str) -> Option<System> {
             let evidence = value("PRETTY_NAME").unwrap_or_else(|| name.clone());
             (code, name, evidence)
         }
-        // `uname -s`, where there is no os-release.
-        None => match text {
-            "Darwin" => ("mac", "macOS".to_owned(), text.to_owned()),
-            "FreeBSD" | "OpenBSD" | "NetBSD" => ("bsd", text.to_owned(), text.to_owned()),
+        // No os-release, as on macOS: the kernel.
+        None => match kernel {
+            "Darwin" => ("mac", "macOS".to_owned(), kernel.to_owned()),
+            "FreeBSD" => ("bsd", kernel.to_owned(), kernel.to_owned()),
+            "OpenBSD" => ("obsd", kernel.to_owned(), kernel.to_owned()),
+            "NetBSD" => ("nbsd", kernel.to_owned(), kernel.to_owned()),
+            "Linux" => (LINUX, "Linux".to_owned(), kernel.to_owned()),
             _ => return None,
         },
     };
@@ -117,16 +129,56 @@ pub(crate) fn from_os_release(text: &str) -> Option<System> {
     })
 }
 
-/// A monogram for an os-release `ID` (or one of its `ID_LIKE`).
+/// The code for an os-release `ID`: each distribution with a logo of its
+/// own has its code.
 fn code_of(id: &str) -> Option<&'static str> {
     Some(match id {
-        "debian" | "raspbian" => "deb",
+        "debian" => "deb",
+        "raspbian" => "rpi",
+        "ubuntu" => "ubu",
+        "linuxmint" => "mint",
+        "pop" => "pop",
+        "elementary" => "elem",
+        "zorin" => "zor",
+        "kali" => "kali",
+        "fedora" => "fed",
+        "rhel" | "ol" => "rhel",
+        "centos" => "cent",
+        "rocky" => "rock",
+        "almalinux" => "alma",
+        "alpine" => "alp",
+        "arch" => "arch",
+        "manjaro" | "manjaro-arm" => "manj",
+        "endeavouros" => "endv",
+        "opensuse"
+        | "opensuse-leap"
+        | "opensuse-tumbleweed"
+        | "opensuse-microos"
+        | "sles"
+        | "sled" => "suse",
+        "nixos" => "nix",
+        "gentoo" => "gent",
+        "void" => "void",
+        "openwrt" => "owrt",
+        "freebsd" => "bsd",
+        "openbsd" => "obsd",
+        "netbsd" => "nbsd",
+        _ => return None,
+    })
+}
+
+/// The family for one of an os-release's `ID_LIKE`, for a distribution
+/// without a code of its own (Amazon Linux goes as Red Hat).
+fn family_of(like: &str) -> Option<&'static str> {
+    Some(match like {
+        "debian" => "deb",
         "ubuntu" => "ubu",
         "fedora" => "fed",
-        "rhel" | "centos" | "rocky" | "almalinux" | "ol" => "rhel",
+        "rhel" | "centos" => "rhel",
+        "arch" => "arch",
+        "suse" | "opensuse" => "suse",
         "alpine" => "alp",
-        "arch" | "manjaro" | "endeavouros" => "arch",
-        "freebsd" => "bsd",
+        "gentoo" => "gent",
         _ => return None,
     })
 }
@@ -174,7 +226,7 @@ mod tests {
             ("SSH-2.0-OpenSSH_7.4p1 Debian-10", ("deb", "Debian")),
             (
                 "SSH-2.0-OpenSSH_9.2p1 Raspbian-2+deb12u3",
-                ("deb", "Raspberry Pi OS"),
+                ("rpi", "Raspberry Pi OS"),
             ),
             (
                 "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.10",
@@ -188,7 +240,7 @@ mod tests {
             ("SSH-2.0-OpenSSH_9.7 FreeBSD-20240806", ("bsd", "FreeBSD")),
             (
                 "SSH-2.0-NetBSD_Secure_Shell-20240801-hpn13v14-lpk",
-                ("bsd", "NetBSD"),
+                ("nbsd", "NetBSD"),
             ),
             ("SSH-2.0-OpenSSH_for_Windows_9.5", ("win", "Windows")),
         ];
@@ -203,6 +255,7 @@ mod tests {
             "SSH-2.0-OpenSSH_9.8",
             "SSH-2.0-dropbear_2025.88",
             "SSH-2.0-ROSSSH",
+            "SSH-2.0-Tailscale",
             "garbage",
             "",
         ] {
@@ -227,24 +280,79 @@ mod tests {
             (s.code.as_str(), s.name.as_str()),
             ("alp", "Alpine Linux 3.20.3")
         );
-        // A derivative goes by what it is like.
+        // A distribution with a logo of its own goes by its own code.
         let mint =
             "NAME=\"Linux Mint\"\nID=linuxmint\nID_LIKE=\"ubuntu debian\"\nVERSION_ID=\"22\"\n";
-        assert_eq!(from_os_release(mint).unwrap().code, "ubu");
+        assert_eq!(from_os_release(mint).unwrap().code, "mint");
         let rocky = "NAME=\"Rocky Linux\"\nID=\"rocky\"\nID_LIKE=\"rhel centos fedora\"\nVERSION_ID=\"9.4\"\n";
-        assert_eq!(from_os_release(rocky).unwrap().code, "rhel");
+        assert_eq!(from_os_release(rocky).unwrap().code, "rock");
         let suse = "NAME=\"openSUSE Leap\"\nID=\"opensuse-leap\"\nID_LIKE=\"suse opensuse\"\nVERSION_ID=\"15.6\"\n";
         let s = from_os_release(suse).unwrap();
         assert_eq!(
             (s.code.as_str(), s.name.as_str()),
-            ("?", "openSUSE Leap 15.6")
+            ("suse", "openSUSE Leap 15.6")
         );
+        // One without, by what it is like.
+        let amazon = "NAME=\"Amazon Linux\"\nID=\"amzn\"\nID_LIKE=\"centos rhel fedora\"\nVERSION_ID=\"2023\"\nLinux\n";
+        assert_eq!(from_os_release(amazon).unwrap().code, "rhel");
+        let nobara = "NAME=\"Nobara Linux\"\nID=nobara\nID_LIKE=\"rhel centos fedora\"\n";
+        assert_eq!(from_os_release(nobara).unwrap().code, "rhel");
+        // Neither: Linux, if the kernel says so.
+        let clear = "NAME=\"Clear Linux OS\"\nID=clear-linux-os\nVERSION_ID=43000\nLinux\n";
+        let s = from_os_release(clear).unwrap();
+        assert_eq!(
+            (s.code.as_str(), s.name.as_str()),
+            ("lnx", "Clear Linux OS 43000")
+        );
+        let indiana = "NAME=\"OpenIndiana Hipster\"\nID=openindiana\nSunOS\n";
+        assert_eq!(from_os_release(indiana).unwrap().code, "?");
         // No os-release: `uname -s`.
         let s = from_os_release("Darwin\n").unwrap();
         assert_eq!((s.code.as_str(), s.name.as_str()), ("mac", "macOS"));
-        assert_eq!(from_os_release("OpenBSD").unwrap().code, "bsd");
-        assert_eq!(from_os_release("Linux"), None);
+        assert_eq!(from_os_release("FreeBSD").unwrap().code, "bsd");
+        assert_eq!(from_os_release("OpenBSD").unwrap().code, "obsd");
+        assert_eq!(from_os_release("NetBSD\n").unwrap().code, "nbsd");
+        let s = from_os_release("Linux\n").unwrap();
+        assert_eq!((s.code.as_str(), s.name.as_str()), ("lnx", "Linux"));
+        assert_eq!(from_os_release("SunOS"), None);
         assert_eq!(from_os_release(""), None);
+    }
+
+    #[test]
+    fn every_distribution_has_its_code() {
+        let cases = [
+            ("debian", "deb"),
+            ("raspbian", "rpi"),
+            ("ubuntu", "ubu"),
+            ("linuxmint", "mint"),
+            ("pop", "pop"),
+            ("elementary", "elem"),
+            ("zorin", "zor"),
+            ("kali", "kali"),
+            ("fedora", "fed"),
+            ("rhel", "rhel"),
+            ("ol", "rhel"),
+            ("centos", "cent"),
+            ("rocky", "rock"),
+            ("almalinux", "alma"),
+            ("alpine", "alp"),
+            ("arch", "arch"),
+            ("manjaro", "manj"),
+            ("endeavouros", "endv"),
+            ("opensuse-tumbleweed", "suse"),
+            ("sles", "suse"),
+            ("nixos", "nix"),
+            ("gentoo", "gent"),
+            ("void", "void"),
+            ("openwrt", "owrt"),
+            ("freebsd", "bsd"),
+        ];
+        for (id, code) in cases {
+            let text = format!("NAME=x\nID={id}\nLinux\n");
+            assert_eq!(from_os_release(&text).unwrap().code, code, "{id}");
+            // Four letters at most: an older version shows it as text.
+            assert!(code.len() <= 4, "{code}");
+        }
     }
 
     #[test]

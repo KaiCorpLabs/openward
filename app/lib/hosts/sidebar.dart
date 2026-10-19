@@ -828,9 +828,9 @@ HostView? tabHost(OpenTab tab, Library library) {
   return id == null ? null : library.host(id);
 }
 
-/// A tab's mark: its host's monogram, tinted by its environment; a folder
+/// A tab's mark: its host's system, tinted by its environment; a folder
 /// for its files, the panes' glyph when split, a shell for a local one and
-/// «?» for an address not saved.
+/// a server's outline for an address not saved.
 Widget tabBadge(OpenTab tab, Library library, {double size = 22}) {
   final host = tabHost(tab, library);
   final env = host?.environment;

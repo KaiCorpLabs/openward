@@ -159,7 +159,7 @@ fn outcome(rx: &Receiver<Event>) -> (Result<Connected, Option<Failure>>, Vec<Pro
             | Event::Reconnecting { .. }
             | Event::Health(_)
             | Event::Hops { .. }
-            | Event::HostsChanged
+            | Event::HostsChanged { .. }
             | Event::Persistent { .. } => {}
         }
     }
@@ -800,8 +800,42 @@ fn connecting_tells_the_system() {
 
     let plain = demo_host(&f, "dropbear", 22200, None);
     let (_term, rx) = f.connect(plain, |_| Answer::Cancel);
-    outcome(&rx).0.unwrap();
+    // Connected, and the app can offer to read os-release for it (the two
+    // come in either order).
+    let (mut connected, mut unknown) = (false, None);
+    let deadline = Instant::now() + Duration::from_secs(30);
+    while !connected || unknown.is_none() {
+        let left = deadline.saturating_duration_since(Instant::now());
+        match rx.recv_timeout(left).expect("not connected and told") {
+            Event::Connected(_) => connected = true,
+            Event::HostsChanged { unknown: u } => unknown = Some(u),
+            Event::Closed { failure, .. } => panic!("closed: {failure:?}"),
+            _ => {}
+        }
+    }
     assert_eq!(system_of(&f, plain).code, "?");
+    assert_eq!(unknown, Some(vec![plain]));
+    // Asked to, it is read from now on, and now over the connection that
+    // is up.
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    assert!(runtime.block_on(f.app.read_os_release(plain)).unwrap());
+    let h = f.app.vault().host(plain).unwrap().clone();
+    assert_eq!(h.settings.read_os_release, Some(true));
+    let s = h.system.unwrap();
+    assert_eq!(
+        (s.code.as_str(), s.source),
+        ("alp", SystemSource::OsRelease)
+    );
+    // Without a connection it waits for the next one.
+    let idle = demo_host(&f, "idle", 22299, None);
+    assert!(!runtime.block_on(f.app.read_os_release(idle)).unwrap());
+    assert_eq!(
+        f.app.vault().host(idle).unwrap().settings.read_os_release,
+        Some(true)
+    );
 
     let asks = f.host(
         "dropbear-os",

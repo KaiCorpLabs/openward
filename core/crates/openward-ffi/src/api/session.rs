@@ -28,7 +28,8 @@ pub enum SessionEventKind {
     /// The round trip to each jump host (`hop_rtt_ms`).
     Hops,
     /// Saved hosts changed (connecting told their system): read them
-    /// again.
+    /// again. `unknown_systems`: the ones just found not to tell their
+    /// system, to offer reading `/etc/os-release`.
     HostsChanged,
     /// How the shell of a host with a persistent session started
     /// (`persistent`).
@@ -54,6 +55,9 @@ pub struct SessionEvent {
     pub persistent: Option<PersistentView>,
     pub program: Option<String>,
     pub closed: Option<ClosedView>,
+    /// Saved hosts (by id) that do not tell their system and do not read
+    /// `/etc/os-release`, with `HostsChanged`.
+    pub unknown_systems: Vec<String>,
 }
 
 /// An answer from the server (after `rtt_ms`, when it was a question's),
@@ -406,6 +410,7 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
         persistent: None,
         program: None,
         closed: None,
+        unknown_systems: Vec::new(),
     };
     match e {
         Event::Route { hops } => {
@@ -497,7 +502,10 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
             v.kind = SessionEventKind::Hops;
             v.hop_rtt_ms = rtt_ms;
         }
-        Event::HostsChanged => v.kind = SessionEventKind::HostsChanged,
+        Event::HostsChanged { unknown } => {
+            v.kind = SessionEventKind::HostsChanged;
+            v.unknown_systems = unknown.iter().map(ToString::to_string).collect();
+        }
         Event::Persistent { session, state } => {
             v.kind = SessionEventKind::Persistent;
             v.persistent = Some(PersistentView {

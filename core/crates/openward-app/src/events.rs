@@ -53,8 +53,11 @@ pub enum Event {
         rtt_ms: Vec<Option<u32>>,
     },
     /// Saved hosts changed under the UI (connecting told their system):
-    /// it should read them again.
-    HostsChanged,
+    /// it should read them again. `unknown`: the ones just found not to
+    /// tell their system, which do not read `/etc/os-release`.
+    HostsChanged {
+        unknown: Vec<openward_vault::proto::ItemId>,
+    },
     /// The shell of a host with a persistent session: its tmux session,
     /// found again or new, or no tmux on the server (an ordinary shell).
     Persistent {

@@ -1016,6 +1016,7 @@
   "findInTerminal": "Buscar en el terminal",
   "findNewer": "Siguiente, más abajo (Mayús+Intro)",
   "findOlder": "Anterior, más arriba (Intro)",
+  "findOutSystem": "Averiguar el sistema",
   "findTotal": "{count, plural, =0{Sin resultados} =1{1 resultado} other{{count} resultados}}",
   "@findTotal": {
     "placeholders": {
@@ -1977,8 +1978,8 @@
   "newsSnippetsTitle": "Snippets y hosts conocidos",
   "newsStartBody": "La conexión rápida completa con tus hosts y las direcciones que ya usaste; debajo, las conexiones recientes con cuánto duraron y los túneles abiertos.",
   "newsStartTitle": "Un inicio para volver a lo de siempre",
-  "newsSystemBody": "Un monograma (deb, ubu, alp…) por el banner del servidor al conectar, sin ejecutar nada; «Leer /etc/os-release» lo afina donde el banner no lo dice.",
-  "newsSystemTitle": "El sistema de cada servidor",
+  "newsSystemBody2": "Debian, Ubuntu, Fedora, Alpine y 22 sistemas más, con su logo del color de su entorno; macOS y Windows, con un icono propio. Para los que no lo dicen al conectar, como los de Tailscale SSH, «Averiguar el sistema» en su menú lee /etc/os-release; o en todos, desde Ajustes › General.",
+  "newsSystemTitle2": "El sistema de cada servidor, con su logo",
   "newsThemesBody": "Cinco temas en claro y oscuro, capas que se combinan, tamaño del texto, contraste mínimo y reducir movimiento.",
   "newsThemesTitle": "Temas y accesibilidad visual",
   "newsTunnelsBody": "Local, remoto y SOCKS5, que se abren al conectar; también proxy HTTP y SOCKS5 para llegar al servidor.",
@@ -2466,6 +2467,8 @@
   },
   "readNotRecognized": "No se reconoce de qué programa es. Elige el que exporta PuTTY (.reg), MobaXterm (.mxtsessions), SecureCRT (.xml) o el config.yaml de Tabby.",
   "readOsRelease": "Leer /etc/os-release",
+  "readOsReleaseEverywhere": "Leer /etc/os-release en todos los hosts",
+  "readOsReleaseEverywhereHelp": "Para saber el sistema de los servidores que no lo dicen al conectar. Ejecuta un comando en cada uno; un host o un grupo puede apagarlo. Solo en este equipo.",
   "readOsReleaseNote": "Para afinar el sistema; ejecuta un comando en el servidor. Apagado, no se ejecuta nada.",
   "readOsReleaseOff": "No",
   "readOsReleaseOn": "Sí, al conectar",
@@ -3023,7 +3026,42 @@
   "systemDetectAgain": "Volver a deducirlo al conectar",
   "systemIcon": "Icono del sistema",
   "systemManual": "Elegido a mano",
+  "systemNotTold": "«{name}» no dice su sistema al conectar.",
+  "@systemNotTold": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "systemNotYet": "Se sabrá al conectar, por el banner del servidor.",
+  "systemOnNextConnection": "Se leerá al conectar a «{name}».",
+  "@systemOnNextConnection": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "systemStillUnknown": "«{name}» tampoco lo dice en /etc/os-release.",
+  "@systemStillUnknown": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "systemTold": "«{name}» es {system}.",
+  "@systemTold": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "system": {
+        "type": "String"
+      }
+    }
+  },
   "systemUnknown": "Desconocido",
   "systemUnknownYet": "Aún sin saber",
   "tabMenuHint": "También puedes arrastrar la pestaña sobre un terminal para dividirlo, o a otro sitio de la barra para ordenarla.",

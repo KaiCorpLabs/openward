@@ -1,6 +1,6 @@
 // What can be done to a saved host or group wherever they are listed (the
-// sidebar, the Hosts page): connect, browse its files, star it, edit or
-// delete it, and the menu that offers all of that.
+// sidebar, the Hosts page): connect, browse its files, star it, find out
+// its system, edit or delete it, and the menu that offers all of that.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +10,7 @@ import '../import/import_dialog.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/vault.dart';
 import '../tabs/tabs.dart';
+import '../ui/environment.dart';
 import 'editors.dart';
 
 /// `user@address`, and the port when it is not 22.
@@ -91,6 +92,32 @@ class HostActions {
     refresh();
   }
 
+  /// From now on, reads the host's `/etc/os-release` after connecting, and
+  /// now if it is connected; says what came of it.
+  Future<void> findOutSystem(HostView h) async {
+    final l = context.l10n;
+    final app = ref.read(openWardProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    String text;
+    try {
+      if (await app.readOsRelease(id: h.id)) {
+        final s = app.host(id: h.id).system;
+        text = systemKnown(s?.code)
+            ? l.systemTold(
+                h.label,
+                s!.name.isEmpty ? systemName(l, s.code) : s.name,
+              )
+            : l.systemStillUnknown(h.label);
+      } else {
+        text = l.systemOnNextConnection(h.label);
+      }
+    } catch (e) {
+      text = l.saveFailed('$e');
+    }
+    refresh();
+    messenger.showSnackBar(SnackBar(content: Text(text)));
+  }
+
   /// A menu at `at`, in global coordinates; runs what is picked.
   Future<void> menu(Offset at, List<PopupMenuEntry<VoidCallback>> items) async {
     final action = await showMenu<VoidCallback>(
@@ -104,7 +131,8 @@ class HostActions {
   PopupMenuItem<VoidCallback> item(String text, VoidCallback action) =>
       PopupMenuItem(value: action, height: 36, child: Text(text));
 
-  /// A host's menu: connect, its files, the star, edit and delete.
+  /// A host's menu: connect, its files, the star, finding out its system
+  /// while it is not known, edit and delete.
   List<PopupMenuEntry<VoidCallback>> hostMenu(HostView h) {
     final l = context.l10n;
     return [
@@ -114,6 +142,8 @@ class HostActions {
         h.favorite == null ? l.addFavorite : l.removeFavorite,
         () => toggleFavorite(h),
       ),
+      if (!systemKnown(h.system?.code))
+        item(l.findOutSystem, () => findOutSystem(h)),
       item(l.editEllipsis, () => editHost(id: h.id)),
       item(l.delete, () => delete(h.id, h.label, group: false)),
     ];

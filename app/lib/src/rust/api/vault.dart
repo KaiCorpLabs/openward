@@ -228,7 +228,7 @@ class HostSpec {
   /// Among the favorites; a new one goes last.
   final bool favorite;
 
-  /// The system's monogram, chosen by hand; null leaves it to what
+  /// The system's code, chosen by hand; null leaves it to what
   /// connecting tells.
   final String? systemCode;
 
@@ -741,8 +741,8 @@ enum SystemKind {
 
 /// What a server runs.
 class SystemView {
-  /// `deb`, `ubu`, `fed`, `rhel`, `alp`, `arch`, `bsd`, `mac`, `win` or
-  /// `?`.
+  /// `deb`, `ubu`, `fed`, `mint`… (four letters at most, the app knows
+  /// their logos), `lnx` for an unknown Linux, or `?`.
   final String code;
 
   /// «Debian 12»; empty when unknown.

@@ -62,6 +62,9 @@ pub struct Vault {
     /// Rows this version cannot read: a newer item type or a newer
     /// envelope. They stay in storage untouched.
     unreadable: usize,
+    /// This device's own defaults, over the built-in ones: chosen in its
+    /// settings, never stored in the vault nor synced.
+    device: Settings,
 }
 
 fn now_ms() -> i64 {
@@ -96,6 +99,7 @@ impl Vault {
             store,
             items,
             unreadable,
+            device: Settings::default(),
         })
     }
 
@@ -418,6 +422,13 @@ impl Vault {
         users
     }
 
+    /// This device's defaults (only `read_os_release` so far): they go over
+    /// the built-in ones, and groups, identities and hosts over them. Their
+    /// origin is [`Origin::Default`].
+    pub fn set_device_defaults(&mut self, device: Settings) {
+        self.device = device;
+    }
+
     /// The settings a connection to `host` uses, and where each came from.
     pub fn effective(&self, host: ItemId) -> Result<Effective> {
         let h = self.host(host)?;
@@ -459,7 +470,12 @@ impl Vault {
             Some(UseIdentity::Id(iid)) => self.identity(iid).ok().map(|i| (iid, &i.settings)),
             _ => None,
         };
-        Ok(Effective::resolve(chain.into_iter().rev(), identity, own))
+        Ok(Effective::resolve(
+            &self.device,
+            chain.into_iter().rev(),
+            identity,
+            own,
+        ))
     }
 
     /// The identity `host` ends up with and who chose it (the host, or a

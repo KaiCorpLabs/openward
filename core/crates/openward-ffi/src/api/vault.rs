@@ -86,8 +86,8 @@ pub enum SystemKind {
 /// What a server runs.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SystemView {
-    /// `deb`, `ubu`, `fed`, `rhel`, `alp`, `arch`, `bsd`, `mac`, `win` or
-    /// `?`.
+    /// `deb`, `ubu`, `fed`, `mint`… (four letters at most, the app knows
+    /// their logos), `lnx` for an unknown Linux, or `?`.
     pub code: String,
     /// «Debian 12»; empty when unknown.
     pub name: String,
@@ -432,7 +432,7 @@ pub struct HostSpec {
     /// Among the favorites; a new one goes last.
     #[frb(default = "false")]
     pub favorite: bool,
-    /// The system's monogram, chosen by hand; null leaves it to what
+    /// The system's code, chosen by hand; null leaves it to what
     /// connecting tells.
     #[frb(default = "null")]
     pub system_code: Option<String>,

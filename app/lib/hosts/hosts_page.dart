@@ -91,6 +91,13 @@ class _HostsPageState extends ConsumerState<HostsPage> {
     _systems.clear();
   });
 
+  /// The system's filter: unknown («?») whether connecting could not tell
+  /// it or has not yet.
+  static String _systemKey(HostView h) {
+    final code = h.system?.code;
+    return systemKnown(code) ? code! : '?';
+  }
+
   /// What the system is called, for the column and the search.
   static String systemText(BuildContext context, HostView h) {
     final s = h.system;
@@ -127,7 +134,7 @@ class _HostsPageState extends ConsumerState<HostsPage> {
       if (_env != null && h.environment?.name != _env) return false;
       if (_favorites && h.favorite == null) return false;
       if (_tags.isNotEmpty && !h.tags.any(_tags.contains)) return false;
-      if (_systems.isNotEmpty && !_systems.contains(h.system?.code)) {
+      if (_systems.isNotEmpty && !_systems.contains(_systemKey(h))) {
         return false;
       }
       return true;
@@ -341,7 +348,8 @@ class _HostsPageState extends ConsumerState<HostsPage> {
       for (final t in h.tags) {
         tags[t] = (tags[t] ?? 0) + 1;
       }
-      if (h.system case final s?) systems[s.code] = (systems[s.code] ?? 0) + 1;
+      final system = _systemKey(h);
+      systems[system] = (systems[system] ?? 0) + 1;
     }
     int byCount(MapEntry<String, int> a, MapEntry<String, int> b) {
       final n = b.value - a.value;
@@ -403,24 +411,26 @@ class _HostsPageState extends ConsumerState<HostsPage> {
                     : _tags.add(t.key),
               ),
             ),
-          if (systems.isNotEmpty) gap(),
-          for (final code in [
-            for (final s in systemCodes)
-              if (systems.containsKey(s)) s,
-          ])
-            _FilterChip(
-              key: ValueKey('hosts.filter.system.$code'),
-              text: code,
-              tooltip: systemName(l, code),
-              mono: true,
-              count: systems[code]!,
-              on: _systems.contains(code),
-              onTap: () => setState(
-                () => _systems.contains(code)
-                    ? _systems.remove(code)
-                    : _systems.add(code),
+          // Only with some system known: «unknown» alone is all of them.
+          if (systems.keys.any(systemKnown)) ...[
+            gap(),
+            for (final code in [
+              for (final s in systemCodes)
+                if (systems.containsKey(s)) s,
+            ])
+              _FilterChip(
+                key: ValueKey('hosts.filter.system.$code'),
+                text: systemName(l, code),
+                system: code,
+                count: systems[code]!,
+                on: _systems.contains(code),
+                onTap: () => setState(
+                  () => _systems.contains(code)
+                      ? _systems.remove(code)
+                      : _systems.add(code),
+                ),
               ),
-            ),
+          ],
         ],
       ),
     );
@@ -612,8 +622,7 @@ class _FilterChip extends StatelessWidget {
     required this.onTap,
     this.env,
     this.star = false,
-    this.mono = false,
-    this.tooltip,
+    this.system,
   });
 
   final String text;
@@ -622,8 +631,9 @@ class _FilterChip extends StatelessWidget {
   final VoidCallback onTap;
   final EnvironmentView? env;
   final bool star;
-  final bool mono;
-  final String? tooltip;
+
+  /// A system's code, for its logo before the name.
+  final String? system;
 
   @override
   Widget build(BuildContext context) {
@@ -635,13 +645,11 @@ class _FilterChip extends StatelessWidget {
               ? (tint.fg, tint.soft, tint.line)
               : (c.onPrimary, c.primary, c.primary)
         : (c.text, Colors.transparent, c.control);
-    final style = mono
-        ? monoStyle(context, size: 12, color: fg)
-        : TextStyle(fontSize: 12.5, color: fg);
-    final chip = Semantics(
+    final style = TextStyle(fontSize: 12.5, color: fg);
+    return Semantics(
       button: true,
       selected: on,
-      label: '${tooltip ?? text}, $count',
+      label: '$text, $count',
       excludeSemantics: true,
       child: FocusOutline(
         radius: 999,
@@ -671,6 +679,10 @@ class _FilterChip extends StatelessWidget {
                     Icon(Icons.star_rounded, size: 14, color: on ? fg : c.warn),
                     const SizedBox(width: 4),
                   ],
+                  if (system case final code?) ...[
+                    SystemGlyph(code: code, color: fg, size: 14),
+                    const SizedBox(width: 5),
+                  ],
                   Text(text, style: style),
                   const SizedBox(width: 6),
                   Text(
@@ -688,7 +700,6 @@ class _FilterChip extends StatelessWidget {
         ),
       ),
     );
-    return tooltip == null ? chip : Tooltip(message: tooltip, child: chip);
   }
 }
 

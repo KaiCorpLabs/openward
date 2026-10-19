@@ -682,6 +682,10 @@ class SessionEvent {
   final String? program;
   final ClosedView? closed;
 
+  /// Saved hosts (by id) that do not tell their system and do not read
+  /// `/etc/os-release`, with `HostsChanged`.
+  final List<String> unknownSystems;
+
   const SessionEvent({
     required this.kind,
     required this.route,
@@ -694,6 +698,7 @@ class SessionEvent {
     this.persistent,
     this.program,
     this.closed,
+    required this.unknownSystems,
   });
 
   @override
@@ -708,7 +713,8 @@ class SessionEvent {
       hopRttMs.hashCode ^
       persistent.hashCode ^
       program.hashCode ^
-      closed.hashCode;
+      closed.hashCode ^
+      unknownSystems.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -725,7 +731,8 @@ class SessionEvent {
           hopRttMs == other.hopRttMs &&
           persistent == other.persistent &&
           program == other.program &&
-          closed == other.closed;
+          closed == other.closed &&
+          unknownSystems == other.unknownSystems;
 }
 
 enum SessionEventKind {
@@ -745,7 +752,8 @@ enum SessionEventKind {
   hops,
 
   /// Saved hosts changed (connecting told their system): read them
-  /// again.
+  /// again. `unknown_systems`: the ones just found not to tell their
+  /// system, to offer reading `/etc/os-release`.
   hostsChanged,
 
   /// How the shell of a host with a persistent session started

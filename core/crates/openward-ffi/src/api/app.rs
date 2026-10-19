@@ -280,6 +280,20 @@ impl OpenWard {
         })
     }
 
+    /// From now on, reads a host's `/etc/os-release` after connecting, and
+    /// now over its connection if one is up. False when there is none: it
+    /// is read on the next one.
+    pub async fn read_os_release(&self, id: String) -> anyhow::Result<bool> {
+        self.app.read_os_release(super::vault::id(&id)?).await
+    }
+
+    /// Reads `/etc/os-release` after connecting to the hosts that do not
+    /// say otherwise, on this device; from Ajustes, at start and on change.
+    #[frb(sync)]
+    pub fn set_read_os_release_everywhere(&self, enabled: bool) {
+        self.app.set_read_os_release_everywhere(enabled);
+    }
+
     /// Makes a host a favorite (the last one) or not.
     pub fn set_favorite(&self, id: String, favorite: bool) -> anyhow::Result<()> {
         let hid = super::vault::id(&id)?;

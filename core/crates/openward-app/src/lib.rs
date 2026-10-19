@@ -299,6 +299,47 @@ impl App {
         Ok(())
     }
 
+    /// Tells the system of a saved host again over its connection, if one
+    /// is up (as when it starts reading `/etc/os-release`), and stores it
+    /// if it changed. False when there is no connection: it is told on the
+    /// next one.
+    async fn learn_system(&self, host: ItemId) -> anyhow::Result<bool> {
+        let plan = self.plan(host)?;
+        let Some(live) = self.live.find(&plan.key()) else {
+            return Ok(false);
+        };
+        let vault = Arc::clone(&self.vault);
+        self.runtime
+            .spawn(async move { connect::learn_systems(&vault, &plan, &live).await })
+            .await?;
+        Ok(true)
+    }
+
+    /// From now on, reads a host's `/etc/os-release` after connecting (its
+    /// own setting), and now over its connection if one is up. False when
+    /// there is none: it is read on the next one.
+    pub async fn read_os_release(&self, host: ItemId) -> anyhow::Result<bool> {
+        {
+            let mut vault = self.vault();
+            let mut h = vault.host(host)?.clone();
+            if h.settings.read_os_release != Some(true) {
+                h.settings.read_os_release = Some(true);
+                let rev = vault.get(host).map_or(0, |item| item.rev);
+                vault.update(host, rev, vault::proto::Data::Host(h))?;
+            }
+        }
+        self.learn_system(host).await
+    }
+
+    /// Reads `/etc/os-release` after connecting to the hosts that do not
+    /// say otherwise (their own setting, a group's), on this device only.
+    pub fn set_read_os_release_everywhere(&self, on: bool) {
+        self.vault().set_device_defaults(vault::proto::Settings {
+            read_os_release: on.then_some(true),
+            ..Default::default()
+        });
+    }
+
     /// Closes a tunnel; its connection goes too unless something else uses
     /// it.
     pub fn close_tunnel(&self, id: ItemId) {

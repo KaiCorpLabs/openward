@@ -1,12 +1,15 @@
 // A host's identity at a glance: its environment (a color and a short
-// name, «prod», inherited from its group) and the system it runs (a
-// monogram, «deb»). The vault keeps colors by name; each theme draws them.
+// name, «prod», inherited from its group) and the system it runs (its
+// logo in one color, the environment's). The vault keeps colors by name;
+// each theme draws them.
 
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/vault.dart';
+import 'svg_path.dart';
+import 'system_logos.dart';
 import 'tokens.dart';
 
 /// The colors a mark can take, by the name the vault keeps.
@@ -81,33 +84,175 @@ List<EnvironmentView> envPresets(AppLocalizations l) => [
   ),
 ];
 
-/// The monograms there are, in the picker's order; «?» is unknown.
+/// The systems there are, in the picker's order (families together);
+/// «?» is unknown.
 const systemCodes = [
   'deb',
   'ubu',
+  'mint',
+  'pop',
+  'elem',
+  'zor',
+  'kali',
+  'rpi',
   'fed',
   'rhel',
-  'alp',
+  'cent',
+  'rock',
+  'alma',
   'arch',
+  'manj',
+  'endv',
+  'alp',
+  'suse',
+  'nix',
+  'gent',
+  'void',
+  'owrt',
   'bsd',
+  'obsd',
+  'nbsd',
   'mac',
   'win',
+  'lnx',
   '?',
 ];
 
-/// What a monogram stands for.
+/// What a system's code stands for.
 String systemName(AppLocalizations l, String code) => switch (code) {
   'deb' => 'Debian',
   'ubu' => 'Ubuntu',
+  'mint' => 'Linux Mint',
+  'pop' => 'Pop!_OS',
+  'elem' => 'elementary OS',
+  'zor' => 'Zorin OS',
+  'kali' => 'Kali Linux',
+  'rpi' => 'Raspberry Pi OS',
   'fed' => 'Fedora',
   'rhel' => 'Red Hat',
-  'alp' => 'Alpine',
+  'cent' => 'CentOS',
+  'rock' => 'Rocky Linux',
+  'alma' => 'AlmaLinux',
   'arch' => 'Arch',
-  'bsd' => 'BSD',
+  'manj' => 'Manjaro',
+  'endv' => 'EndeavourOS',
+  'alp' => 'Alpine',
+  'suse' => 'openSUSE',
+  'nix' => 'NixOS',
+  'gent' => 'Gentoo',
+  'void' => 'Void Linux',
+  'owrt' => 'OpenWrt',
+  'bsd' => 'FreeBSD',
+  'obsd' => 'OpenBSD',
+  'nbsd' => 'NetBSD',
   'mac' => 'macOS',
   'win' => 'Windows',
+  'lnx' => 'Linux',
   _ => l.systemUnknown,
 };
+
+/// Whether a host's system is told: «?» is as unknown as none.
+bool systemKnown(String? code) => code != null && code != '?';
+
+final _logoPaths = <String, Path>{};
+
+/// Logos of fine lines, which fade below 24 px: there, an outline this
+/// thick (in their 24×24 box) goes round them.
+const _fineLogos = {
+  'kali': 1.0,
+  'nbsd': 0.8,
+  'obsd': 0.7,
+  'cent': 0.6,
+  'deb': 0.4,
+  'elem': 0.4,
+};
+
+/// What stands for a system, in `color`, `size` high: its logo; for macOS
+/// and Windows, whose logos are not lent, the command key and a window;
+/// its code where there is no logo (a newer version's); and a server's
+/// outline (or `unknown`) when it is not known.
+class SystemGlyph extends StatelessWidget {
+  const SystemGlyph({
+    super.key,
+    required this.code,
+    required this.color,
+    this.size = 16,
+    this.unknown,
+  });
+
+  final String? code;
+  final Color color;
+  final double size;
+
+  /// Instead of the server's outline when the system is not known.
+  final IconData? unknown;
+
+  @override
+  Widget build(BuildContext context) {
+    final code = this.code;
+    final icon = switch (code) {
+      _ when !systemKnown(code) => unknown ?? Icons.dns_outlined,
+      'mac' => Icons.keyboard_command_key,
+      'win' => Icons.window_outlined,
+      _ => null,
+    };
+    if (icon != null) return Icon(icon, size: size, color: color);
+    final data = systemLogos[code];
+    if (data == null) {
+      return Text(
+        code!,
+        maxLines: 1,
+        style: TextStyle(
+          fontFamily: context.ow.fonts.mono,
+          fontSize: size >= 20 ? 14 : 12,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.5,
+          color: color,
+        ),
+      );
+    }
+    final path = _logoPaths.putIfAbsent(code!, () => parseSvgPath(data));
+    return CustomPaint(
+      size: Size.square(size),
+      painter: SystemLogoPainter(
+        path,
+        color,
+        bold: size < 24 ? _fineLogos[code] ?? 0 : 0,
+      ),
+    );
+  }
+}
+
+class SystemLogoPainter extends CustomPainter {
+  SystemLogoPainter(this.logo, this.color, {this.bold = 0});
+
+  /// In a 24×24 box.
+  final Path logo;
+  final Color color;
+
+  /// An outline round it, in the box's units, for fine lines drawn small.
+  final double bold;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.scale(size.width / 24, size.height / 24);
+    canvas.drawPath(logo, Paint()..color = color);
+    if (bold > 0) {
+      canvas.drawPath(
+        logo,
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = bold
+          ..strokeJoin = StrokeJoin.round,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(SystemLogoPainter old) =>
+      old.logo != logo || old.color != color || old.bold != bold;
+}
 
 /// «prod», or «prod · Producción» where there is room.
 class EnvChip extends StatelessWidget {
@@ -142,8 +287,9 @@ class EnvChip extends StatelessWidget {
   }
 }
 
-/// The system's monogram, tinted by the environment. Before the first
-/// connection tells it, a server's outline (or `icon`: a local shell's).
+/// The system's logo, tinted by the environment. Before a connection
+/// tells it (or when it cannot), a server's outline (or `icon`: a local
+/// shell's).
 class SystemBadge extends StatelessWidget {
   const SystemBadge({
     super.key,
@@ -156,10 +302,11 @@ class SystemBadge extends StatelessWidget {
   final String? code;
   final EnvironmentView? env;
 
-  /// Its height; a little wider, for four letters.
+  /// Its height; a little wider, for the four letters of a code without a
+  /// logo.
   final double size;
 
-  /// Instead of the server's outline when there is no monogram.
+  /// Instead of the server's outline when the system is not known.
   final IconData? icon;
 
   @override
@@ -172,7 +319,7 @@ class SystemBadge extends StatelessWidget {
         : switch (envColors(c, e.color)) {
             final x => (x.fg, x.soft, x.line),
           };
-    final code = this.code;
+    final known = systemKnown(code);
     return ExcludeSemantics(
       child: Container(
         width: size + 6,
@@ -183,19 +330,13 @@ class SystemBadge extends StatelessWidget {
           border: Border.all(color: line),
           borderRadius: BorderRadius.circular(6),
         ),
-        child: code == null
-            ? Icon(icon ?? Icons.dns_outlined, size: size * 0.55, color: fg)
-            : Text(
-                code,
-                maxLines: 1,
-                style: TextStyle(
-                  fontFamily: ow.fonts.mono,
-                  fontSize: size >= 36 ? 14 : 12,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -0.5,
-                  color: fg,
-                ),
-              ),
+        child: SystemGlyph(
+          code: code,
+          color: fg,
+          // A logo fills its box; the icons have their own margin.
+          size: size * (known && systemLogos.containsKey(code) ? 0.6 : 0.55),
+          unknown: icon,
+        ),
       ),
     );
   }

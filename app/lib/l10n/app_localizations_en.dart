@@ -1190,6 +1190,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get findOlder => 'Previous, further up (Enter)';
 
   @override
+  String get findOutSystem => 'Find out the system';
+
+  @override
   String findTotal(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -2473,11 +2476,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newsStartTitle => 'A start page to get back to work';
 
   @override
-  String get newsSystemBody =>
-      'A monogram (deb, ubu, alp…) from the server\'s banner when connecting, running nothing; «Read /etc/os-release» tells it where the banner does not.';
+  String get newsSystemBody2 =>
+      'Debian, Ubuntu, Fedora, Alpine and 22 more systems, by their logo in the color of their environment; macOS and Windows, by an icon of their own. For the ones that do not say it when connecting, such as those behind Tailscale SSH, «Find out the system» in their menu reads /etc/os-release; or on every host, from Settings › General.';
 
   @override
-  String get newsSystemTitle => 'Each server\'s system';
+  String get newsSystemTitle2 => 'Each server\'s system, by its logo';
 
   @override
   String get newsThemesBody =>
@@ -3213,6 +3216,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get readOsRelease => 'Read /etc/os-release';
+
+  @override
+  String get readOsReleaseEverywhere => 'Read /etc/os-release on every host';
+
+  @override
+  String get readOsReleaseEverywhereHelp =>
+      'To tell the system of the servers that do not say it when connecting. It runs a command on each one; a host or a group can turn it off. On this device only.';
 
   @override
   String get readOsReleaseNote =>
@@ -4046,7 +4056,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get systemManual => 'Chosen by hand';
 
   @override
+  String systemNotTold(String name) {
+    return '“$name” does not tell its system when connecting.';
+  }
+
+  @override
   String get systemNotYet => 'Connecting will tell, from the server\'s banner.';
+
+  @override
+  String systemOnNextConnection(String name) {
+    return 'It will be read when connecting to “$name”.';
+  }
+
+  @override
+  String systemStillUnknown(String name) {
+    return '“$name” does not say it in /etc/os-release either.';
+  }
+
+  @override
+  String systemTold(String name, String system) {
+    return '“$name” runs $system.';
+  }
 
   @override
   String get systemUnknown => 'Unknown';

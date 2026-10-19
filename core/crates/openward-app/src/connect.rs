@@ -25,7 +25,7 @@ use openward_ssh::proxy::ProxyAuthRequired;
 use openward_ssh::russh::MethodKind;
 use openward_ssh::russh::keys::{Certificate, HashAlg, PrivateKey, PublicKey};
 use openward_vault::Vault;
-use openward_vault::proto::{Data, HostKeyPolicy};
+use openward_vault::proto::{Data, HostKeyPolicy, ItemId};
 use zeroize::Zeroizing;
 
 use crate::events::{
@@ -56,47 +56,16 @@ impl Ctx {
     /// too) and stores it where it changed, in the background: from the
     /// banner, and from `/etc/os-release` where the host asks for it.
     pub fn learn_systems(&self, plan: &Plan, live: &Arc<crate::live::Live>) {
-        let hops: Vec<_> = plan
-            .hops
-            .iter()
-            .zip(live.sessions())
-            .filter_map(|(hop, s)| Some((hop.host?, hop.read_os_release, s.info().server_id)))
-            .collect();
-        if hops.is_empty() {
-            return;
-        }
+        let plan = plan.clone();
         let live = Arc::clone(live);
         let vault = Arc::clone(&self.vault);
         let sink = Arc::clone(&self.sink);
         self.runtime.spawn(async move {
-            let mut changed = false;
-            for (i, (host, read, banner)) in hops.into_iter().enumerate() {
-                let mut told = system::from_banner(&banner);
-                if read && told.code != "win" {
-                    let read = tokio::time::timeout(
-                        system::OS_RELEASE_WITHIN,
-                        live.sessions()[i].exec(system::OS_RELEASE),
-                    )
-                    .await;
-                    if let Some(s) = read
-                        .ok()
-                        .and_then(Result::ok)
-                        .and_then(|out| system::from_os_release(&out.text()))
-                    {
-                        told = s;
-                    }
-                }
-                let mut vault = lock(&vault);
-                let Ok(h) = vault.host(host) else { continue };
-                if let Some(system) = system::learned(h.system.as_ref(), told) {
-                    let mut h = h.clone();
-                    h.system = Some(system);
-                    let rev = vault.get(host).map_or(0, |item| item.rev);
-                    changed |= vault.update(host, rev, Data::Host(h)).is_ok();
-                }
-            }
-            if changed {
-                sink.send(Event::HostsChanged);
+            let learned = learn_systems(&vault, &plan, &live).await;
+            if learned.changed {
+                sink.send(Event::HostsChanged {
+                    unknown: learned.unknown,
+                });
             }
         });
     }
@@ -117,6 +86,63 @@ impl Ctx {
             self.tunnels.autostart(live, forwards).await;
         }
     }
+}
+
+/// What telling the systems of a connection changed.
+pub(crate) struct Learned {
+    /// Something was stored.
+    pub changed: bool,
+    /// Saved hosts that were just found not to tell their system, and that
+    /// do not read `/etc/os-release`: the app can offer to.
+    pub unknown: Vec<ItemId>,
+}
+
+/// Tells the system of each saved host of `live` (the jumps too) and stores
+/// it where it changed.
+pub(crate) async fn learn_systems(
+    vault: &Mutex<Vault>,
+    plan: &Plan,
+    live: &crate::live::Live,
+) -> Learned {
+    let mut learned = Learned {
+        changed: false,
+        unknown: Vec::new(),
+    };
+    let hops = plan
+        .hops
+        .iter()
+        .zip(live.sessions())
+        .filter_map(|(hop, s)| Some((hop.host?, hop.read_os_release, s)));
+    for (host, read, session) in hops {
+        let mut told = system::from_banner(&session.info().server_id);
+        if read && told.code != "win" {
+            let out =
+                tokio::time::timeout(system::OS_RELEASE_WITHIN, session.exec(system::OS_RELEASE))
+                    .await;
+            if let Some(s) = out
+                .ok()
+                .and_then(Result::ok)
+                .and_then(|out| system::from_os_release(&out.text()))
+            {
+                told = s;
+            }
+        }
+        let mut vault = lock(vault);
+        let Ok(h) = vault.host(host) else { continue };
+        if let Some(system) = system::learned(h.system.as_ref(), told) {
+            let unknown = system.code == system::UNKNOWN && !read;
+            let mut h = h.clone();
+            h.system = Some(system);
+            let rev = vault.get(host).map_or(0, |item| item.rev);
+            if vault.update(host, rev, Data::Host(h)).is_ok() {
+                learned.changed = true;
+                if unknown {
+                    learned.unknown.push(host);
+                }
+            }
+        }
+    }
+    learned
 }
 
 impl Ctx {

@@ -245,6 +245,16 @@ class _General extends ConsumerWidget {
             ],
           ),
         ),
+        _Row(
+          label: l.readOsReleaseEverywhere,
+          help: l.readOsReleaseEverywhereHelp,
+          control: Switch(
+            key: const ValueKey('settings.readOsRelease'),
+            value: s.readOsRelease,
+            onChanged: (v) =>
+                notifier.update((s) => s.copyWith(readOsRelease: v)),
+          ),
+        ),
         const SizedBox(height: 24),
         SectionLabel(l.settingsWindow),
         _Row(

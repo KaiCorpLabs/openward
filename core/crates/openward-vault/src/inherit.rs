@@ -1,5 +1,6 @@
-//! Settings inheritance: defaults ← root group ← … ← group ← identity ←
-//! host. The identity is the one the host or its nearest group chooses.
+//! Settings inheritance: defaults ← this device's defaults ← root group ←
+//! … ← group ← identity ← host. The identity is the one the host or its
+//! nearest group chooses.
 
 use std::collections::BTreeMap;
 
@@ -44,9 +45,10 @@ pub fn defaults() -> Settings {
 }
 
 impl Effective {
-    /// Overlays `groups` (root first), the identity and then the host on
-    /// the defaults.
+    /// Overlays this device's defaults, `groups` (root first), the
+    /// identity and then the host on the defaults.
     pub(crate) fn resolve<'a>(
+        device: &Settings,
         groups: impl Iterator<Item = (ItemId, &'a Settings)>,
         identity: Option<(ItemId, &Settings)>,
         host: &Settings,
@@ -54,6 +56,9 @@ impl Effective {
         let mut settings = Settings::default();
         let mut origins = BTreeMap::new();
         settings.overlay(&defaults(), |f| {
+            origins.insert(f, Origin::Default);
+        });
+        settings.overlay(device, |f| {
             origins.insert(f, Origin::Default);
         });
         for (id, layer) in groups {
