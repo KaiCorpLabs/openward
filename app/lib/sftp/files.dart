@@ -249,6 +249,33 @@ class FilePane extends ChangeNotifier {
     _notify();
   }
 
+  /// A row pressed within the selection, until released or dragged.
+  String? _pressed;
+
+  /// A press on a row: a [click], except that a plain press on a selected
+  /// row keeps the selection, to drag all of it.
+  void press(String name, {bool toggle = false, bool range = false}) {
+    _pressed = null;
+    if (toggle || range || !selected.contains(name)) {
+      click(name, toggle: toggle, range: range);
+      return;
+    }
+    _pressed = name;
+    cursor = name;
+    _notify();
+  }
+
+  /// Released without a drag: a press within the selection was a click
+  /// there after all, as in the Finder.
+  void release(String name) {
+    if (_pressed != name) return;
+    _pressed = null;
+    click(name);
+  }
+
+  /// The press became a drag, or was cancelled: the selection stays.
+  void keepSelection() => _pressed = null;
+
   /// Arrow keys: moves the keyboard row, extending the selection with ⇧.
   void moveCursor(int delta, {bool extend = false}) {
     final names = [for (final e in visible) e.name];

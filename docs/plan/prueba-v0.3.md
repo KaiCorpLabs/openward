@@ -89,7 +89,10 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - mira los logos de tus hosts en la barra, el raíl, la página de Hosts y el inicio: ¿se reconocen en pequeño y con el color de cada entorno?;
    - conéctate por primera vez a un servidor que no diga su sistema (uno con Tailscale SSH, Fedora o macOS) y acepta el aviso: el logo debe cambiar sin reconectar;
    - en uno que no hayas conectado aún, prueba «Averiguar el sistema» en su menú; y activa «Leer /etc/os-release en todos los hosts» en Ajustes › General.
-14. **CSV** («Importar…» › CSV):
+14. **Arrastrar en el SFTP** (0.3.1-beta.8):
+   - haz clic y doble clic en archivos y carpetas, también con el trackpad: no debe aparecer la etiqueta del arrastre;
+   - selecciona varios, haz clic en uno sin moverlo (queda solo ese) y arrastra varios al otro lado: dinos si el arrastre empieza cuando lo esperas.
+15. **CSV** («Importar…» › CSV):
    - exporta tus hosts de una hoja de cálculo o usa la plantilla de Termius;
    - comprueba los grupos, puertos, usuarios y etiquetas, y los avisos de lo que no entra;
    - impórtalo dos veces y comprueba que no se duplica.

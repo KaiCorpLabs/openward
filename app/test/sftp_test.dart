@@ -175,6 +175,30 @@ void main() {
       expect(pane.selected.length, 5);
     });
 
+    test('a press within the selection keeps it until released', () {
+      pane.click('Alpha.txt');
+      pane.click('zeta.txt', range: true);
+      pane.press('beta.log');
+      expect(pane.selected, {'Alpha.txt', 'beta.log', 'zeta.txt'});
+      expect(pane.cursor, 'beta.log');
+      // Dragged: all of it went, and it stays selected.
+      pane.keepSelection();
+      pane.release('beta.log');
+      expect(pane.selected, {'Alpha.txt', 'beta.log', 'zeta.txt'});
+      // Released without a drag: a click there, as in the Finder.
+      pane.press('beta.log');
+      pane.release('beta.log');
+      expect(pane.selected, {'beta.log'});
+      // With ⌘, or outside the selection, the press is the click.
+      pane.click('zeta.txt', toggle: true);
+      pane.press('zeta.txt', toggle: true);
+      expect(pane.selected, {'beta.log'});
+      pane.press('Alpha.txt');
+      expect(pane.selected, {'Alpha.txt'});
+      pane.release('Alpha.txt');
+      expect(pane.selected, {'Alpha.txt'});
+    });
+
     test('folders, the way up and the breadcrumb', () async {
       expect(pane.crumbs(), [('~', '/home/demo')]);
       await pane.enter(pane.visible.firstWhere((e) => e.name == 'releases'));

@@ -16,6 +16,7 @@ import '../tabs/connection_panels.dart';
 import '../tabs/messages.dart';
 import '../tabs/prompt_card.dart';
 import '../terminal/keys.dart';
+import '../ui/move_draggable.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../window/shortcuts.dart';
@@ -348,14 +349,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
       _activate(e);
       return;
     }
-    // Pressing a row already selected keeps the selection, to drag it.
-    if (!keys.isShiftPressed &&
-        !(isApple ? keys.isMetaPressed : keys.isControlPressed) &&
-        _pane.selected.contains(e.name)) {
-      _pane.cursor = e.name;
-      return;
-    }
-    _pane.click(
+    _pane.press(
       e.name,
       toggle: isApple ? keys.isMetaPressed : keys.isControlPressed,
       range: keys.isShiftPressed,
@@ -907,11 +901,16 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
     return Listener(
       key: ValueKey('${widget.side.name}.row.${e.name}'),
       onPointerDown: (d) => _pointerDown(e, d),
+      onPointerUp: (_) => pane.release(e.name),
+      onPointerCancel: (_) => pane.keepSelection(),
       child: GestureDetector(
         onSecondaryTapDown: (d) => _menu(d.globalPosition, e),
-        child: Draggable<FileDrag>(
+        // Nothing else here wants the press: a plain Draggable would take
+        // it at once and flash its badge on every click.
+        child: MoveDraggable<FileDrag>(
           data: FileDrag(widget.side, paths),
           dragAnchorStrategy: pointerDragAnchorStrategy,
+          onDragStarted: pane.keepSelection,
           feedback: _DragBadge(count: paths.length, name: e.name),
           child: row,
         ),
