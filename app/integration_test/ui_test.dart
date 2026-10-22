@@ -1860,6 +1860,30 @@ Host db
     );
     await _shot(tester, '91-start');
 
+    // «Conectar» on one line, the button wider instead: in Berenjena's
+    // font at the biggest text size it read «Connec / t».
+    final settings = container.read(settingsProvider);
+    container
+        .read(settingsProvider.notifier)
+        .update(
+          (s) => s.copyWith(
+            theme: ThemeChoice.dark,
+            darkTheme: 'berenjena',
+            textScale: 1.5,
+          ),
+        );
+    await _settle(tester);
+    final label = tester.renderObject<RenderBox>(
+      find.descendant(
+        of: find.byKey(const ValueKey('quick.connect')),
+        matching: find.byType(RichText),
+      ),
+    );
+    expect(label.size.height, label.getMaxIntrinsicHeight(double.infinity));
+    await _shot(tester, '91b-start-big-text');
+    container.read(settingsProvider.notifier).update((_) => settings);
+    await _settle(tester);
+
     // Saved hosts first; of two as good, the one used last.
     final quick = find.byKey(const ValueKey('quick.address'));
     await tester.enterText(quick, 'web');

@@ -242,79 +242,76 @@ class _StartPageState extends ConsumerState<StartPage> {
     final ow = context.ow;
     final c = ow.colors;
     final l = context.l10n;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // The suggestions as wide as the field (the button takes 104).
-        final width = constraints.maxWidth - 104;
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: RawAutocomplete<_Suggestion>(
-                textEditingController: _address,
-                focusNode: _focus,
-                displayStringForOption: (_) => _address.text,
-                optionsBuilder: (value) => _suggest(value.text),
-                onSelected: _run,
-                fieldViewBuilder: (context, controller, focus, submit) =>
-                    CallbackShortcuts(
-                      bindings: {
-                        const SingleActivator(
-                          LogicalKeyboardKey.enter,
-                          alt: true,
-                        ): _connectTyped,
-                      },
-                      child: TextField(
-                        key: const ValueKey('quick.address'),
-                        controller: controller,
-                        focusNode: focus,
-                        style: monoStyle(context, size: 13, color: c.text),
-                        decoration: InputDecoration(
-                          hintText: l.quickConnectHint,
-                          errorText: _error,
-                          prefixIcon: const Icon(Icons.terminal, size: 16),
-                          prefixIconConstraints: const BoxConstraints(
-                            minWidth: 36,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
-                          ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          // The suggestions as wide as the field.
+          child: LayoutBuilder(
+            builder: (context, field) => RawAutocomplete<_Suggestion>(
+              textEditingController: _address,
+              focusNode: _focus,
+              displayStringForOption: (_) => _address.text,
+              optionsBuilder: (value) => _suggest(value.text),
+              onSelected: _run,
+              fieldViewBuilder: (context, controller, focus, submit) =>
+                  CallbackShortcuts(
+                    bindings: {
+                      const SingleActivator(
+                        LogicalKeyboardKey.enter,
+                        alt: true,
+                      ): _connectTyped,
+                    },
+                    child: TextField(
+                      key: const ValueKey('quick.address'),
+                      controller: controller,
+                      focusNode: focus,
+                      style: monoStyle(context, size: 13, color: c.text),
+                      decoration: InputDecoration(
+                        hintText: l.quickConnectHint,
+                        errorText: _error,
+                        prefixIcon: const Icon(Icons.terminal, size: 16),
+                        prefixIconConstraints: const BoxConstraints(
+                          minWidth: 36,
                         ),
-                        onChanged: (_) {
-                          if (_error != null) setState(() => _error = null);
-                        },
-                        // A suggestion if there is one; else, as typed.
-                        onSubmitted: (text) =>
-                            _suggest(text).isEmpty ? _connectTyped() : submit(),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
                       ),
+                      onChanged: (_) {
+                        if (_error != null) setState(() => _error = null);
+                      },
+                      // A suggestion if there is one; else, as typed.
+                      onSubmitted: (text) =>
+                          _suggest(text).isEmpty ? _connectTyped() : submit(),
                     ),
-                optionsViewBuilder: (context, select, options) => Align(
-                  alignment: Alignment.topLeft,
-                  child: _Suggestions(
-                    width: width,
-                    options: options.toList(),
-                    onSelect: select,
-                    hostAddress: _hostAddress,
                   ),
+              optionsViewBuilder: (context, select, options) => Align(
+                alignment: Alignment.topLeft,
+                child: _Suggestions(
+                  width: field.maxWidth,
+                  options: options.toList(),
+                  onSelect: select,
+                  hostAddress: _hostAddress,
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 96,
-              height: 44,
-              child: FilledButton(
-                onPressed: () {
-                  final options = _suggest(_address.text);
-                  options.isEmpty ? _connectTyped() : _run(options.first);
-                },
-                child: Text(l.connect),
-              ),
-            ),
-          ],
-        );
-      },
+          ),
+        ),
+        const SizedBox(width: 8),
+        FilledButton(
+          key: const ValueKey('quick.connect'),
+          // As tall as the field; wider when its label needs it (the theme's
+          // font, a bigger text size or another language), never wrapped.
+          style: FilledButton.styleFrom(minimumSize: const Size(96, 44)),
+          onPressed: () {
+            final options = _suggest(_address.text);
+            options.isEmpty ? _connectTyped() : _run(options.first);
+          },
+          child: Text(l.connect),
+        ),
+      ],
     );
   }
 

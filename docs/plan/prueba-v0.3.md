@@ -59,6 +59,7 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
 7. **Editor e inicio** (0.3.0-beta.4):
    - edita un host de un grupo: cambia un valor heredado escribiendo encima, vuelve a heredarlo con ↺ y comprueba que el editor dice bien de dónde viene cada uno; dinos si echas en falta algo fuera de «Avanzado»;
    - cierra todas las pestañas y conéctate desde el inicio: escribe parte del nombre de un host, una dirección a la que ya fuiste y una nueva (⌥Intro la abre tal cual; «Guardar como host…» la guarda);
+   - con el texto al 150 % (Ajustes › Apariencia) y en tu tema, mira que «Conectar» se lee en una sola línea (0.3.1-beta.9);
    - después de unos días, mira si los recientes del inicio (cuándo, cuánto duró, tmux) te sirven para volver;
    - con un túnel abierto y sin pestañas, detenlo desde el inicio;
    - abre la hoja de atajos con ⌘/ (en un teclado español, ⌘⇧7) y busca alguno por su nombre y por su tecla;
