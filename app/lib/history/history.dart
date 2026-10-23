@@ -2,6 +2,7 @@
 // only (history.json beside the settings, never in the vault), newest
 // first, to find and send again.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -9,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/connection.dart';
+import '../core/json_file.dart';
 import '../core/settings.dart';
 
 @immutable
@@ -81,8 +83,9 @@ class HistoryNotifier extends Notifier<List<HistoryEntry>> {
 
   @override
   List<HistoryEntry> build() {
+    ref.onDispose(flush);
     try {
-      final json = jsonDecode(ref.read(historyFileProvider).readAsStringSync());
+      final json = readJsonFile(ref.read(historyFileProvider));
       if (json is Map && json['commands'] is List) {
         return [
           for (final e in json['commands'] as List) ?HistoryEntry.fromJson(e),
@@ -117,20 +120,35 @@ class HistoryNotifier extends Notifier<List<HistoryEntry>> {
     _save();
   }
 
+  /// Forgets every command, on disk too, at once.
   void clear() {
     state = const [];
     _save();
+    flush();
   }
 
+  /// Commands come in with every Enter: they are written a moment after
+  /// the last one, not each time.
+  Timer? _pending;
+
   void _save() {
+    _pending?.cancel();
+    _pending = Timer(const Duration(milliseconds: 500), flush);
+  }
+
+  /// Writes what is waiting to be written now.
+  void flush() {
+    if (_pending == null) return;
+    _pending!.cancel();
+    _pending = null;
     final file = ref.read(historyFileProvider);
     try {
       if (state.isEmpty) {
         if (file.existsSync()) file.deleteSync();
         return;
       }
-      file.parent.createSync(recursive: true);
-      file.writeAsStringSync(
+      writeFileAtomically(
+        file,
         jsonEncode({
           'version': 1,
           'commands': [for (final e in state) e.toJson()],

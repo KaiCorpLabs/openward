@@ -140,6 +140,10 @@ pub struct PromptView {
     pub questions: Vec<QuestionView>,
     /// The previous answer was wrong.
     pub retry: bool,
+    /// With [`PromptKind::HostKey`]: the types of the keys already known
+    /// for the host. Empty for a new host; otherwise the server did not
+    /// offer the key that is known.
+    pub known_types: Vec<String>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -345,6 +349,7 @@ fn prompt_view(id: u64, p: Prompt) -> PromptView {
             port,
             algorithm,
             fingerprint,
+            known_types,
         } => PromptView {
             kind: Some(PromptKind::HostKey),
             label,
@@ -352,6 +357,7 @@ fn prompt_view(id: u64, p: Prompt) -> PromptView {
             port,
             algorithm,
             fingerprint,
+            known_types,
             ..v
         },
         Prompt::Passphrase { key, retry } => PromptView {
@@ -591,6 +597,8 @@ pub struct SearchView {
 /// A link on screen (OSC 8, or a URL in the text); columns inclusive.
 pub struct LinkView {
     pub url: String,
+    /// What the screen shows of it (an OSC 8 link's text may differ).
+    pub text: String,
     pub row: u16,
     pub start: u16,
     pub end: u16,
@@ -709,6 +717,7 @@ impl TerminalSession {
     pub fn link_at(&self, x: f32, y: f32) -> Option<LinkView> {
         self.term.link_at(x, y).map(|l| LinkView {
             url: l.url,
+            text: l.text,
             row: l.row,
             start: l.start,
             end: l.end,

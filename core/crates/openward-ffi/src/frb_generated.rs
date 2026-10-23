@@ -7616,11 +7616,13 @@ impl SseDecode for crate::api::session::LinkView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_url = <String>::sse_decode(deserializer);
+        let mut var_text = <String>::sse_decode(deserializer);
         let mut var_row = <u16>::sse_decode(deserializer);
         let mut var_start = <u16>::sse_decode(deserializer);
         let mut var_end = <u16>::sse_decode(deserializer);
         return crate::api::session::LinkView {
             url: var_url,
+            text: var_text,
             row: var_row,
             start: var_start,
             end: var_end,
@@ -8811,11 +8813,12 @@ impl SseDecode for crate::api::programs::ProgramWarningKind {
         return match inner {
             0 => crate::api::programs::ProgramWarningKind::Mosh,
             1 => crate::api::programs::ProgramWarningKind::StartupCommand,
-            2 => crate::api::programs::ProgramWarningKind::Unsupported,
-            3 => crate::api::programs::ProgramWarningKind::BadValue,
-            4 => crate::api::programs::ProgramWarningKind::Shared,
-            5 => crate::api::programs::ProgramWarningKind::HostChain,
-            6 => crate::api::programs::ProgramWarningKind::Unreadable,
+            2 => crate::api::programs::ProgramWarningKind::ProxyCommand,
+            3 => crate::api::programs::ProgramWarningKind::Unsupported,
+            4 => crate::api::programs::ProgramWarningKind::BadValue,
+            5 => crate::api::programs::ProgramWarningKind::Shared,
+            6 => crate::api::programs::ProgramWarningKind::HostChain,
+            7 => crate::api::programs::ProgramWarningKind::Unreadable,
             _ => unreachable!("Invalid variant for ProgramWarningKind: {}", inner),
         };
     }
@@ -8864,6 +8867,7 @@ impl SseDecode for crate::api::session::PromptView {
         let mut var_instructions = <String>::sse_decode(deserializer);
         let mut var_questions = <Vec<crate::api::session::QuestionView>>::sse_decode(deserializer);
         let mut var_retry = <bool>::sse_decode(deserializer);
+        let mut var_knownTypes = <Vec<String>>::sse_decode(deserializer);
         return crate::api::session::PromptView {
             id: var_id,
             kind: var_kind,
@@ -8878,6 +8882,7 @@ impl SseDecode for crate::api::session::PromptView {
             instructions: var_instructions,
             questions: var_questions,
             retry: var_retry,
+            known_types: var_knownTypes,
         };
     }
 }
@@ -9089,6 +9094,7 @@ impl SseDecode for crate::api::vault::SettingsSpec {
         let mut var_env = <Option<Vec<crate::api::vault::EnvVar>>>::sse_decode(deserializer);
         let mut var_hostKeyPolicy =
             <Option<crate::api::vault::KeyPolicy>>::sse_decode(deserializer);
+        let mut var_legacyHostKeys = <Option<bool>>::sse_decode(deserializer);
         let mut var_identity =
             <Option<crate::api::vault::IdentityChoice>>::sse_decode(deserializer);
         let mut var_identityId = <String>::sse_decode(deserializer);
@@ -9119,6 +9125,7 @@ impl SseDecode for crate::api::vault::SettingsSpec {
             term: var_term,
             env: var_env,
             host_key_policy: var_hostKeyPolicy,
+            legacy_host_keys: var_legacyHostKeys,
             identity: var_identity,
             identity_id: var_identityId,
             environment: var_environment,
@@ -11096,6 +11103,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::session::LinkView {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.url.into_into_dart().into_dart(),
+            self.text.into_into_dart().into_dart(),
             self.row.into_into_dart().into_dart(),
             self.start.into_into_dart().into_dart(),
             self.end.into_into_dart().into_dart(),
@@ -11454,11 +11462,12 @@ impl flutter_rust_bridge::IntoDart for crate::api::programs::ProgramWarningKind 
         match self {
             Self::Mosh => 0.into_dart(),
             Self::StartupCommand => 1.into_dart(),
-            Self::Unsupported => 2.into_dart(),
-            Self::BadValue => 3.into_dart(),
-            Self::Shared => 4.into_dart(),
-            Self::HostChain => 5.into_dart(),
-            Self::Unreadable => 6.into_dart(),
+            Self::ProxyCommand => 2.into_dart(),
+            Self::Unsupported => 3.into_dart(),
+            Self::BadValue => 4.into_dart(),
+            Self::Shared => 5.into_dart(),
+            Self::HostChain => 6.into_dart(),
+            Self::Unreadable => 7.into_dart(),
             _ => unreachable!(),
         }
     }
@@ -11536,6 +11545,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::session::PromptView {
             self.instructions.into_into_dart().into_dart(),
             self.questions.into_into_dart().into_dart(),
             self.retry.into_into_dart().into_dart(),
+            self.known_types.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -11832,6 +11842,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::vault::SettingsSpec {
             self.term.into_into_dart().into_dart(),
             self.env.into_into_dart().into_dart(),
             self.host_key_policy.into_into_dart().into_dart(),
+            self.legacy_host_keys.into_into_dart().into_dart(),
             self.identity.into_into_dart().into_dart(),
             self.identity_id.into_into_dart().into_dart(),
             self.environment.into_into_dart().into_dart(),
@@ -13361,6 +13372,7 @@ impl SseEncode for crate::api::session::LinkView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.url, serializer);
+        <String>::sse_encode(self.text, serializer);
         <u16>::sse_encode(self.row, serializer);
         <u16>::sse_encode(self.start, serializer);
         <u16>::sse_encode(self.end, serializer);
@@ -14332,11 +14344,12 @@ impl SseEncode for crate::api::programs::ProgramWarningKind {
             match self {
                 crate::api::programs::ProgramWarningKind::Mosh => 0,
                 crate::api::programs::ProgramWarningKind::StartupCommand => 1,
-                crate::api::programs::ProgramWarningKind::Unsupported => 2,
-                crate::api::programs::ProgramWarningKind::BadValue => 3,
-                crate::api::programs::ProgramWarningKind::Shared => 4,
-                crate::api::programs::ProgramWarningKind::HostChain => 5,
-                crate::api::programs::ProgramWarningKind::Unreadable => 6,
+                crate::api::programs::ProgramWarningKind::ProxyCommand => 2,
+                crate::api::programs::ProgramWarningKind::Unsupported => 3,
+                crate::api::programs::ProgramWarningKind::BadValue => 4,
+                crate::api::programs::ProgramWarningKind::Shared => 5,
+                crate::api::programs::ProgramWarningKind::HostChain => 6,
+                crate::api::programs::ProgramWarningKind::Unreadable => 7,
                 _ => {
                     unimplemented!("");
                 }
@@ -14389,6 +14402,7 @@ impl SseEncode for crate::api::session::PromptView {
         <String>::sse_encode(self.instructions, serializer);
         <Vec<crate::api::session::QuestionView>>::sse_encode(self.questions, serializer);
         <bool>::sse_encode(self.retry, serializer);
+        <Vec<String>>::sse_encode(self.known_types, serializer);
     }
 }
 
@@ -14567,6 +14581,7 @@ impl SseEncode for crate::api::vault::SettingsSpec {
         <Option<String>>::sse_encode(self.term, serializer);
         <Option<Vec<crate::api::vault::EnvVar>>>::sse_encode(self.env, serializer);
         <Option<crate::api::vault::KeyPolicy>>::sse_encode(self.host_key_policy, serializer);
+        <Option<bool>>::sse_encode(self.legacy_host_keys, serializer);
         <Option<crate::api::vault::IdentityChoice>>::sse_encode(self.identity, serializer);
         <String>::sse_encode(self.identity_id, serializer);
         <Option<crate::api::vault::EnvironmentKind>>::sse_encode(self.environment, serializer);

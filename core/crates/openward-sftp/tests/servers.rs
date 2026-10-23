@@ -1,11 +1,12 @@
 //! `openward-sftp` against the S2 test servers
-//! (`spikes/s2-ssh/servers/up.sh`). Skipped when they are not running.
+//! (`spikes/s2-ssh/servers/up.sh`). Skipped when they are not running,
+//! unless `OPENWARD_REQUIRE_SERVERS` is set (`make ci`).
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use openward_sftp::transfer::{PART, RESUME_OVERLAP};
+use openward_sftp::transfer::{PART, RESUME_OVERLAP, part_path};
 use openward_sftp::{
     Direction, Entry, JobState, Kind, Link, OnConflict, Remote, Request, Transfers, join,
 };
@@ -36,6 +37,10 @@ macro_rules! servers {
     () => {
         match fixtures() {
             Some(dir) => dir,
+            // `make ci` sets it: there a skipped test would pass untested.
+            None if std::env::var_os("OPENWARD_REQUIRE_SERVERS").is_some_and(|v| !v.is_empty()) => {
+                panic!("S2 servers not running (spikes/s2-ssh/servers/up.sh)")
+            }
             None => {
                 eprintln!("S2 servers not running: skipped");
                 return;
@@ -56,6 +61,7 @@ async fn server(fx: &Path, port: u16, name: &str) -> Server {
         user: "demo".into(),
         known_hosts: Arc::new(Mutex::new(KnownHosts::new(Unknown::Learn))),
         host_certificates: false,
+        legacy_host_keys: false,
         keepalive: None,
         agent_forward: None,
         on_untrusted: None,
@@ -97,6 +103,18 @@ impl Server {
 
     async fn entry(&self, rel: &str) -> Option<Entry> {
         self.remote.lstat(&join(&self.dir, rel)).await.unwrap()
+    }
+
+    /// The `.part` files in a folder of the test's.
+    async fn parts(&self, rel: &str) -> Vec<String> {
+        let mut names: Vec<String> = (self.remote.list(&join(&self.dir, rel)).await)
+            .unwrap()
+            .into_iter()
+            .map(|e| e.name)
+            .filter(|n| n.ends_with(PART))
+            .collect();
+        names.sort();
+        names
     }
 
     async fn done(self) {
@@ -276,7 +294,7 @@ async fn copies_a_folder_both_ways_everywhere() {
         assert_eq!(s.entry("site/big.bin").await.unwrap().size, 3 << 20);
         assert_eq!(s.entry("site/empty").await.unwrap().size, 0);
         assert!(s.entry("site/assets/img").await.unwrap().is_dir());
-        assert!(s.entry(&format!("site/big.bin{PART}")).await.is_none());
+        assert!(s.parts("site").await.is_empty());
         let mtime = |p: &Path| {
             std::fs::metadata(p)
                 .unwrap()
@@ -397,9 +415,11 @@ async fn conflicts_skip_replace_newer_or_keep_both() {
     s.done().await;
 }
 
-/// An upload finds the `.part` a previous one left and goes on from it,
-/// rewriting the last [`RESUME_OVERLAP`] bytes. The test leaves a marker
-/// in the part's first bytes: had it started over, the marker would be gone.
+/// An upload finds the `.part` a previous one of the same file left and
+/// goes on from it, rewriting the last [`RESUME_OVERLAP`] bytes. The test
+/// leaves a marker in the part's first bytes: had it started over, the
+/// marker would be gone. Someone else's `name.part` is neither used nor
+/// deleted.
 #[tokio::test]
 async fn uploads_and_downloads_resume_from_the_part() {
     let fx = servers!();
@@ -415,18 +435,25 @@ async fn uploads_and_downloads_resume_from_the_part() {
     part[..1024].fill(0);
     let staged = local.path().join("stage");
     std::fs::create_dir(&staged).unwrap();
-    std::fs::write(staged.join(format!("big.bin{PART}")), &part).unwrap();
+    let modified = openward_sftp::local::stat(&file).unwrap().unwrap().modified;
+    let ours = part_path("big.bin", &path_str(&file), len as u64, modified);
+    // A browser's download of a file with the same name.
+    let theirs = format!("big.bin{PART}");
+    std::fs::write(staged.join(&ours), &part).unwrap();
+    std::fs::write(staged.join(&theirs), b"someone else's").unwrap();
     let (t, l) = (transfers(), link(&s.remote));
-    let stage = copy(
-        &t,
-        &l,
-        Direction::Upload,
-        path_str(&staged.join(format!("big.bin{PART}"))),
-        &s.dir,
-        OnConflict::Replace,
-    )
-    .await;
-    assert_eq!(stage.state, JobState::Done);
+    for name in [&ours, &theirs] {
+        let stage = copy(
+            &t,
+            &l,
+            Direction::Upload,
+            path_str(&staged.join(name)),
+            &s.dir,
+            OnConflict::Replace,
+        )
+        .await;
+        assert_eq!(stage.state, JobState::Done);
+    }
 
     let up = copy(
         &t,
@@ -442,11 +469,19 @@ async fn uploads_and_downloads_resume_from_the_part() {
     assert_eq!(got.len(), len);
     assert_eq!(&got[..1024], &[0u8; 1024], "went on from the part");
     assert_eq!(&got[1024..], &data[1024..]);
-    assert!(s.entry(&format!("big.bin{PART}")).await.is_none());
+    assert_eq!(s.parts("").await, std::slice::from_ref(&theirs));
+    assert_eq!(s.cat(&theirs).await, b"someone else's");
 
-    // Downloads go on from the local part's length exactly.
+    // Downloads go on from the local part's length exactly; a part of
+    // another version of the file is left as it was.
     let back = tempfile::tempdir().unwrap();
-    std::fs::write(back.path().join(format!("big.bin{PART}")), vec![1u8; 4096]).unwrap();
+    let remote = join(&s.dir, "big.bin");
+    let modified = s.remote.stat(&remote).await.unwrap().unwrap().modified;
+    let ours = part_path("big.bin", &remote, len as u64, modified);
+    let old = part_path("big.bin", &remote, len as u64 - 1, modified);
+    std::fs::write(back.path().join(&ours), vec![1u8; 4096]).unwrap();
+    std::fs::write(back.path().join(&old), vec![2u8; 8192]).unwrap();
+    std::fs::write(back.path().join(&theirs), b"someone else's").unwrap();
     let down = copy(
         &t,
         &l,
@@ -460,6 +495,12 @@ async fn uploads_and_downloads_resume_from_the_part() {
     let mine = std::fs::read(back.path().join("big.bin")).unwrap();
     assert_eq!(&mine[..4096], &[1u8; 4096]);
     assert_eq!(&mine[4096..], &got[4096..]);
+    assert!(!back.path().join(&ours).exists());
+    assert_eq!(std::fs::read(back.path().join(&old)).unwrap(), [2u8; 8192]);
+    assert_eq!(
+        std::fs::read(back.path().join(&theirs)).unwrap(),
+        b"someone else's"
+    );
     s.done().await;
 }
 
@@ -487,7 +528,9 @@ async fn pause_resume_and_cancel() {
     t.pause(id);
     assert_eq!(progress(&t, id).state, JobState::Paused);
     assert_eq!(t.active(), 1);
-    let part = s.entry(&format!("video.bin{PART}")).await.unwrap();
+    let parts = s.parts("").await;
+    assert_eq!(parts.len(), 1);
+    let part = s.entry(&parts[0]).await.unwrap();
     assert!(part.size < data.len() as u64);
     assert!(s.entry("video.bin").await.is_none());
     t.resume(id);
@@ -506,12 +549,12 @@ async fn pause_resume_and_cancel() {
     t.cancel(id);
     assert_eq!(progress(&t, id).state, JobState::Cancelled);
     for _ in 0..100 {
-        if s.entry(&format!("video.bin{PART}")).await.is_none() {
+        if s.parts("").await.is_empty() {
             break;
         }
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
-    assert!(s.entry(&format!("video.bin{PART}")).await.is_none());
+    assert!(s.parts("").await.is_empty());
     assert!(s.entry("video.bin").await.is_none());
     assert_eq!(t.active(), 0);
     s.done().await;

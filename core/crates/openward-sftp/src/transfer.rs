@@ -1,13 +1,19 @@
 //! The transfer queue. Each job copies a file or a folder one way; a few
 //! run at once, the rest wait their turn.
 //!
-//! A file is written under its name plus `.part` and renamed when its size
-//! checks out, so the real name never holds half a file. A job that stops
-//! (paused, or the connection dropped) keeps that `.part` and the files it
-//! finished; resuming goes on from where it was. Uploads rewrite the last
-//! [`RESUME_OVERLAP`] bytes they had sent, in case the end of what the
-//! server wrote was not what it acknowledged. Copies keep the date the
-//! file had.
+//! A file is written under a `.part` name ([`part_path`]) and renamed when
+//! its size checks out, so the real name never holds half a file. A job
+//! that stops (paused, or the connection dropped) keeps that `.part` and
+//! the files it finished; resuming, or copying the same file again later,
+//! goes on from where it was. The part's name says which file it is a copy
+//! of, as it was then (its path, size and date): a part of anything else (a
+//! browser's `name.part`, an older version of the file) is never resumed
+//! nor deleted. Uploads rewrite the last [`RESUME_OVERLAP`] bytes they had
+//! sent, in case the end of what the server wrote was not what it
+//! acknowledged. Copies keep the date the file had.
+//!
+//! The names in a download come from the server, and none may lead outside
+//! the folder it goes to (`..`; `\` and `:` on Windows).
 //!
 //! The UI asks for [`Transfers::jobs`] as often as it repaints; nothing is
 //! pushed to it.
@@ -22,7 +28,7 @@ use tokio::task::AbortHandle;
 
 use crate::entry::{Entry, Kind};
 use crate::remote::Remote;
-use crate::{Error, Result, join, local, pipe};
+use crate::{Error, Result, is_name, join, local, pipe};
 
 /// Jobs running at once.
 const PARALLEL: usize = 2;
@@ -30,6 +36,25 @@ const PARALLEL: usize = 2;
 pub const RESUME_OVERLAP: u64 = 16 << 20;
 /// The suffix of a file being written.
 pub const PART: &str = ".part";
+
+/// Where a copy of `source` (with this size and date) writes `dest` until
+/// it is whole: `dest.ow-<id>.part`, the id naming the source as it is.
+pub fn part_path(dest: &str, source: &str, size: u64, modified: Option<i64>) -> String {
+    format!("{dest}{}", part_suffix(source, size, modified))
+}
+
+fn part_suffix(source: &str, size: u64, modified: Option<i64>) -> String {
+    // FNV-1a: the same in every version, so a part outlives an upgrade.
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    let bytes = source
+        .bytes()
+        .chain(size.to_le_bytes())
+        .chain(modified.unwrap_or(i64::MIN).to_le_bytes());
+    for b in bytes {
+        h = (h ^ u64::from(b)).wrapping_mul(0x0100_0000_01b3);
+    }
+    format!(".ow-{:08x}{PART}", (h ^ (h >> 32)) as u32)
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Direction {
@@ -571,7 +596,7 @@ async fn run(inner: &Arc<Inner>, id: u64) -> Result<()> {
     for (i, item) in items.iter().enumerate().skip(s.next) {
         let src_rel = item.rel.as_str();
         let skipped = if up {
-            let src = local_join(Path::new(&req.source), src_rel);
+            let src = local_join(Path::new(&req.source), src_rel)?;
             let dest = join(&req.dest_dir, &rel_join(&dest_name, src_rel));
             upload_item(
                 inner,
@@ -587,7 +612,7 @@ async fn run(inner: &Arc<Inner>, id: u64) -> Result<()> {
             .await?
         } else {
             let src = rel_join(&req.source, src_rel);
-            let dest = local_join(&Path::new(&req.dest_dir).join(&dest_name), src_rel);
+            let dest = local_join(Path::new(&req.dest_dir), &rel_join(&dest_name, src_rel))?;
             download_item(
                 inner,
                 id,
@@ -627,10 +652,18 @@ fn rel_join(base: &str, rel: &str) -> String {
     }
 }
 
-fn local_join(base: &Path, rel: &str) -> PathBuf {
-    rel.split('/')
-        .filter(|p| !p.is_empty())
-        .fold(base.to_owned(), |p, part| p.join(part))
+/// `base` with `rel` (`/`-separated names) below it. A name that would lead
+/// elsewhere fails, so a download never writes outside its folder.
+fn local_join(base: &Path, rel: &str) -> Result<PathBuf> {
+    let mut path = base.to_owned();
+    for name in rel.split('/').filter(|p| !p.is_empty()) {
+        // On Windows `\` separates too, and `:` names a drive or a stream.
+        if !is_name(name) || (cfg!(windows) && name.contains(['\\', ':'])) {
+            return Err(Error::Other(format!("{rel}: not a valid name here")));
+        }
+        path.push(name);
+    }
+    Ok(path)
 }
 
 /// The files and folders a request copies, the item itself first.
@@ -736,11 +769,10 @@ async fn upload_item(
     {
         return Ok(true);
     }
-    let part = format!("{dest}{PART}");
+    let source = local::stat(src)?.ok_or_else(|| Error::NotFound(src.display().to_string()))?;
+    let size = source.size;
+    let part = part_path(dest, &src.display().to_string(), size, source.modified);
     with_job(inner, id, |j| j.part = Some(Part::Remote(part.clone())));
-    let size = std::fs::metadata(src)
-        .map_err(|e| Error::local(src, &e))?
-        .len();
     let had = remote
         .lstat(&part)
         .await?
@@ -799,15 +831,15 @@ async fn download_item(
     {
         return Ok(true);
     }
-    let mut part = dest.as_os_str().to_owned();
-    part.push(PART);
-    let part = PathBuf::from(part);
-    with_job(inner, id, |j| j.part = Some(Part::Local(part.clone())));
-    let size = remote
+    let source = remote
         .stat(src)
         .await?
-        .ok_or_else(|| Error::NotFound(src.to_owned()))?
-        .size;
+        .ok_or_else(|| Error::NotFound(src.to_owned()))?;
+    let size = source.size;
+    let mut part = dest.as_os_str().to_owned();
+    part.push(part_suffix(src, size, source.modified));
+    let part = PathBuf::from(part);
+    with_job(inner, id, |j| j.part = Some(Part::Local(part.clone())));
     let offset = std::fs::metadata(&part)
         .map(|m| m.len())
         .ok()
@@ -925,9 +957,41 @@ mod tests {
         assert_eq!(rel_join("/srv/app", ""), "/srv/app");
         assert_eq!(rel_join("/srv/app", "a/b.txt"), "/srv/app/a/b.txt");
         assert_eq!(
-            local_join(Path::new("/tmp/x"), "a/b.txt"),
+            local_join(Path::new("/tmp/x"), "a/b.txt").unwrap(),
             Path::new("/tmp/x").join("a").join("b.txt")
         );
-        assert_eq!(local_join(Path::new("/tmp/x"), ""), Path::new("/tmp/x"));
+        assert_eq!(
+            local_join(Path::new("/tmp/x"), "").unwrap(),
+            Path::new("/tmp/x")
+        );
+    }
+
+    /// A server's names never lead out of the folder a download goes to.
+    #[test]
+    fn downloads_stay_in_their_folder() {
+        for rel in ["..", "a/../../.zshrc", "site/./x", "a/\0"] {
+            assert!(local_join(Path::new("/tmp/x"), rel).is_err(), "{rel:?}");
+        }
+        let windows = local_join(Path::new("/tmp/x"), "a\\..\\..\\x");
+        assert_eq!(windows.is_err(), cfg!(windows));
+        assert_eq!(
+            local_join(Path::new("/tmp/x"), "c:x").is_err(),
+            cfg!(windows)
+        );
+    }
+
+    /// The part names its source: another file, size or date, another part.
+    /// The value is fixed so a part left by this version resumes in the next.
+    #[test]
+    fn parts_name_their_source() {
+        let part = |source, size, modified| part_path("/srv/big.bin", source, size, modified);
+        let mine = part("/home/me/big.bin", 10, Some(1_700_000_000));
+        assert_eq!(mine, part("/home/me/big.bin", 10, Some(1_700_000_000)));
+        assert!(mine.starts_with("/srv/big.bin.ow-") && mine.ends_with(PART));
+        assert_ne!(mine, part("/home/me/big.bin", 11, Some(1_700_000_000)));
+        assert_ne!(mine, part("/home/me/big.bin", 10, Some(1_700_000_001)));
+        assert_ne!(mine, part("/home/you/big.bin", 10, Some(1_700_000_000)));
+        assert_ne!(mine, part("/home/me/big.bin", 10, None));
+        assert_eq!(part_suffix("a", 1, None), ".ow-3a363c90.part");
     }
 }

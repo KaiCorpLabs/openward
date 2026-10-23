@@ -89,6 +89,8 @@ pub struct HostKeyQuery {
     pub port: u16,
     pub key: PublicKey,
     pub verdict: Verdict,
+    /// The types of the keys known for the host (with [`Verdict::OtherType`]).
+    pub known_types: Vec<String>,
 }
 
 /// Decides on a [`HostKeyQuery`]: true to go on. It may take its time, to
@@ -102,6 +104,10 @@ pub struct Options {
     pub known_hosts: Arc<Mutex<KnownHosts>>,
     /// Ask servers for host certificates (only useful with a trusted CA).
     pub host_certificates: bool,
+    /// Accept `ssh-rsa` host key signatures, made with SHA-1, for servers
+    /// older than OpenSSH 7.2 that sign no other way. OpenSSH stopped
+    /// accepting them in 8.8.
+    pub legacy_host_keys: bool,
     pub keepalive: Option<Duration>,
     /// Local agent that forwarded agent requests are relayed to.
     pub agent_forward: Option<PathBuf>,
@@ -156,11 +162,12 @@ impl client::Handler for Handler {
         &mut self,
         offered: &PublicKeyOrCertificate,
     ) -> Result<bool, Self::Error> {
-        let mut verdict =
-            self.known_hosts
-                .lock()
-                .unwrap()
-                .check(&self.target.host, self.target.port, offered);
+        let (mut verdict, known_types) = {
+            let mut known = self.known_hosts.lock().unwrap();
+            let verdict = known.check(&self.target.host, self.target.port, offered);
+            let types = known.algorithms(&self.target.host, self.target.port);
+            (verdict, types.iter().map(ToString::to_string).collect())
+        };
         let key = match offered {
             PublicKeyOrCertificate::PublicKey { key, .. } => key.clone(),
             PublicKeyOrCertificate::Certificate(cert) => PublicKey::from(cert.public_key().clone()),
@@ -175,6 +182,7 @@ impl client::Handler for Handler {
                 port: self.target.port,
                 key: key.clone(),
                 verdict: verdict.clone(),
+                known_types,
             };
             if hook(query).await {
                 verdict = Verdict::Learned;
@@ -302,6 +310,25 @@ const CERT_ALGORITHMS: &[Algorithm] = &[
     },
 ];
 
+/// The host key types to ask for, best first: those of the keys already
+/// known for the host go ahead, as OpenSSH does, so that a host known by
+/// its ECDSA key is checked against that key and not taken for a new host
+/// when it also has an Ed25519 one. `ssh-rsa` with SHA-1 only if `legacy`.
+fn host_key_order(known: &[Algorithm], legacy: bool) -> Vec<Algorithm> {
+    let same_type = |a: &Algorithm, b: &Algorithm| match (a, b) {
+        // One RSA key signs with any of the hashes.
+        (Algorithm::Rsa { .. }, Algorithm::Rsa { .. }) => true,
+        _ => a == b,
+    };
+    let (first, rest): (Vec<Algorithm>, Vec<Algorithm>) = russh::Preferred::DEFAULT
+        .key
+        .iter()
+        .filter(|a| legacy || !matches!(a, Algorithm::Rsa { hash: None }))
+        .cloned()
+        .partition(|a| known.iter().any(|k| same_type(k, a)));
+    first.into_iter().chain(rest).collect()
+}
+
 /// Opens the transport and checks the host key; the session still has to
 /// authenticate (the `auth_*` methods) before it can open channels.
 pub async fn open(target: &Target, hop: Hop<'_>, opts: &Options) -> anyhow::Result<Session> {
@@ -320,6 +347,12 @@ pub async fn open(target: &Target, hop: Hop<'_>, opts: &Options) -> anyhow::Resu
     if opts.host_certificates {
         config.preferred.host_key_certificates = Cow::Borrowed(CERT_ALGORITHMS);
     }
+    let known = opts
+        .known_hosts
+        .lock()
+        .unwrap()
+        .algorithms(&target.host, target.port);
+    config.preferred.key = Cow::Owned(host_key_order(&known, opts.legacy_host_keys));
     let config = Arc::new(config);
     let shared = Arc::new(Mutex::new(Shared {
         info: Info::default(),
@@ -907,4 +940,31 @@ pub async fn send(channel: &Channel<client::Msg>, data: &[u8]) -> anyhow::Result
     writer.write_all(data).await?;
     writer.flush().await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn known_key_types_go_first_and_sha1_only_when_allowed() {
+        let p256 = Algorithm::Ecdsa {
+            curve: EcdsaCurve::NistP256,
+        };
+        let sha1 = Algorithm::Rsa { hash: None };
+        let fresh = host_key_order(&[], false);
+        assert_eq!(fresh[0], Algorithm::Ed25519);
+        assert!(!fresh.contains(&sha1));
+        assert!(host_key_order(&[], true).contains(&sha1));
+
+        let ecdsa = host_key_order(std::slice::from_ref(&p256), false);
+        assert_eq!(ecdsa[0], p256);
+        assert_eq!(ecdsa.len(), fresh.len());
+
+        // A known RSA key: its SHA-2 signatures first, SHA-1 still not.
+        let rsa = host_key_order(std::slice::from_ref(&sha1), false);
+        assert!(matches!(rsa[0], Algorithm::Rsa { hash: Some(_) }));
+        assert!(matches!(rsa[1], Algorithm::Rsa { hash: Some(_) }));
+        assert!(!rsa.contains(&sha1));
+    }
 }

@@ -352,6 +352,10 @@ enum ProgramWarningKind {
   /// A command run on connect.
   startupCommand,
 
+  /// A `ProxyCommand` left out (it would run a program here); `detail`
+  /// is the command.
+  proxyCommand,
+
   /// Something OpenWard does not have; `detail` names it.
   unsupported,
 

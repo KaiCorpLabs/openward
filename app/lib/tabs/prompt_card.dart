@@ -51,7 +51,12 @@ class _PromptCardState extends State<PromptCard> {
     widget.controller.answer(_p, PromptAnswer(kind: kind, texts: texts));
   }
 
+  /// A host known by keys of other types offers one that is not known.
+  bool get _otherType =>
+      _p.kind == PromptKind.hostKey && _p.knownTypes.isNotEmpty;
+
   String _title(AppLocalizations l) => switch (_p.kind) {
+    PromptKind.hostKey when _otherType => l.hostKeyOtherTypeTitle(_p.label),
     PromptKind.hostKey => l.firstConnectionTo(_p.label),
     PromptKind.passphrase => l.passphraseTitle,
     PromptKind.password => l.passwordTitle,
@@ -74,7 +79,13 @@ class _PromptCardState extends State<PromptCard> {
         final where = _p.port == 22 ? _p.host : '${_p.host}:${_p.port}';
         return [
           Text(
-            l.hostKeyUnknownBody(where),
+            _otherType
+                ? l.hostKeyOtherTypeBody(
+                    where,
+                    _p.knownTypes.join(', '),
+                    _p.algorithm,
+                  )
+                : l.hostKeyUnknownBody(where),
             style: const TextStyle(height: 1.45),
           ),
           const SizedBox(height: 12),
@@ -186,10 +197,18 @@ class _PromptCardState extends State<PromptCard> {
           constraints: const BoxConstraints(maxWidth: 460),
           padding: const EdgeInsets.fromLTRB(22, 20, 22, 16),
           decoration: BoxDecoration(
-            color: hostKey ? ow.colors.infoSoft : ow.colors.raised,
+            color: _otherType
+                ? ow.colors.warnSoft
+                : hostKey
+                ? ow.colors.infoSoft
+                : ow.colors.raised,
             borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
             border: Border.all(
-              color: hostKey ? ow.colors.infoLine : ow.colors.control,
+              color: _otherType
+                  ? ow.colors.warnLine
+                  : hostKey
+                  ? ow.colors.infoLine
+                  : ow.colors.control,
             ),
             boxShadow: const [
               BoxShadow(

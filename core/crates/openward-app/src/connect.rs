@@ -217,6 +217,7 @@ pub(crate) async fn run(plan: &Plan, ctx: &Ctx) -> Result<Vec<Session>, Failure>
             user: hop.user.clone(),
             known_hosts: Arc::new(Mutex::new(KnownHosts::parse(&known, Unknown::Reject))),
             host_certificates: known.contains("@cert-authority"),
+            legacy_host_keys: hop.legacy_host_keys,
             keepalive: hop.keepalive,
             agent_forward: if last && plan.agent_forward {
                 hop.agent.clone()
@@ -259,17 +260,22 @@ fn host_key_hook(hop: &Hop, ctx: &Ctx, refused: Arc<Mutex<Option<HostKeyQuery>>>
     Arc::new(move |q: HostKeyQuery| {
         let (ctx, refused, label) = (ctx.clone(), Arc::clone(&refused), label.clone());
         Box::pin(async move {
+            let ask = |known_types: Vec<String>| Prompt::HostKey {
+                label: label.clone(),
+                host: q.host.clone(),
+                port: q.port,
+                algorithm: q.key.algorithm().to_string(),
+                fingerprint: q.key.fingerprint(HashAlg::Sha256).to_string(),
+                known_types,
+            };
             let accept = match (&q.verdict, policy) {
                 (Verdict::Unknown, HostKeyPolicy::AcceptNew) => true,
                 (Verdict::Unknown, HostKeyPolicy::Ask) => {
-                    let prompt = Prompt::HostKey {
-                        label,
-                        host: q.host.clone(),
-                        port: q.port,
-                        algorithm: q.key.algorithm().to_string(),
-                        fingerprint: q.key.fingerprint(HashAlg::Sha256).to_string(),
-                    };
-                    matches!(ctx.ask(prompt).await, Answer::Accept)
+                    matches!(ctx.ask(ask(Vec::new())).await, Answer::Accept)
+                }
+                // Known by other keys: asked even where new hosts are not.
+                (Verdict::OtherType, HostKeyPolicy::Ask | HostKeyPolicy::AcceptNew) => {
+                    matches!(ctx.ask(ask(q.known_types.clone())).await, Answer::Accept)
                 }
                 // Strict, a changed key, a bad certificate, a revoked key.
                 _ => false,

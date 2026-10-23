@@ -186,6 +186,7 @@ String warningText(AppLocalizations l, ProgramWarning w) {
   return switch (w.kind) {
     ProgramWarningKind.mosh => l.warnMosh(who),
     ProgramWarningKind.startupCommand => l.warnStartupCommand(who),
+    ProgramWarningKind.proxyCommand => l.warnProxyCommand(who, w.detail),
     ProgramWarningKind.unsupported =>
       who.isEmpty
           ? l.warnFeatureGeneral(featureName(l, w.detail))

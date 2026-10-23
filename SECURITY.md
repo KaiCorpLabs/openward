@@ -20,4 +20,4 @@ Incluye, si puedes:
 
 ## Estado actual
 
-El proyecto está en **fase 0** y **no tiene auditoría externa**. No lo uses con credenciales reales. La arquitectura prevé una auditoría externa del núcleo criptográfico antes de lanzar la sincronización.
+OpenWard está en **beta** (0.3, solo escritorio) y **no tiene auditoría externa**. Hasta la v0.4 el vault va sin cifrar en el disco: no guarda secretos (las claves privadas se usan desde su archivo y las contraseñas se piden al conectar), pero sí los hosts, sus direcciones y las claves de host en las que confías. La arquitectura prevé una auditoría externa del núcleo criptográfico antes de lanzar la sincronización.

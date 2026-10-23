@@ -168,6 +168,9 @@ Finder _tab(String title) => find.descendant(
   matching: find.textContaining(title),
 );
 
+/// `make ci` passes it: there a skipped SSH case would pass untested.
+const _requireServers = bool.fromEnvironment('OPENWARD_REQUIRE_SERVERS');
+
 /// The S2 fixtures directory if the test servers are up, else null.
 Future<String?> _servers() async {
   final cache = Platform.isMacOS ? 'Library/Caches' : '.cache';
@@ -179,7 +182,11 @@ Future<String?> _servers() async {
     22100,
     timeout: const Duration(milliseconds: 300),
   ).then((s) => (s..destroy()) == s).catchError((_) => false);
-  return up && File('$fixtures/id_ed25519').existsSync() ? fixtures : null;
+  if (up && File('$fixtures/id_ed25519').existsSync()) return fixtures;
+  if (_requireServers) {
+    fail('S2 servers not running (spikes/s2-ssh/servers/up.sh)');
+  }
+  return null;
 }
 
 /// A segment of the light / dark / system choice (cards say «Claro» too).
@@ -923,6 +930,8 @@ Host web-1 web-2
     // A home of its own: the tester's own Termius and ~/.ssh stay out.
     final home = Directory('${dir.path}/home')..createSync();
     _termiusIn(home.path);
+    // The one setUp opened lets go of the vault first: one at a time.
+    app.dispose();
     app = await OpenWard.openWithHome(
       dataDir: '${dir.path}/data',
       home: home.path,
@@ -3076,6 +3085,7 @@ Host db
   ) async {
     // A home of its own: the tester's ~/.ssh stays out.
     final home = Directory('${dir.path}/home')..createSync();
+    app.dispose();
     app = await OpenWard.openWithHome(
       dataDir: '${dir.path}/data',
       home: home.path,

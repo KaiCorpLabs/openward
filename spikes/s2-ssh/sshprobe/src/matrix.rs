@@ -118,6 +118,7 @@ fn options(user: &str, known: KnownHosts, host_certificates: bool) -> Options {
         user: user.to_owned(),
         known_hosts: Arc::new(Mutex::new(known)),
         host_certificates,
+        legacy_host_keys: false,
         keepalive: None,
         agent_forward: None,
         on_untrusted: None,

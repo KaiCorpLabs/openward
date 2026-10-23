@@ -150,11 +150,12 @@ impl App {
     ) -> Result<(), PlanError> {
         // Checked now so that a plan that cannot run fails at once.
         target.plan(&self.vault(), &self.local)?;
-        terminal.close();
+        // A reconnection (by hand, too) leaves the tmux session there to
+        // find it again under the same name.
+        terminal.detach();
         let ctx = self.ctx(&sink);
         let term = Arc::downgrade(terminal);
-        // The same on every reconnection, to find the session again.
-        let tmux = tmux_session_name();
+        let tmux = terminal.tmux_name(tmux_session_name);
         let task = self.runtime.spawn(async move {
             let mut attempt = 0;
             loop {

@@ -142,7 +142,7 @@ TermFrame decodeFrame(Uint8List bytes) {
       final fg = r.u32();
       final bg = r.u32();
       final attrs = r.u16();
-      final text = utf8.decode(r.take(r.u16()));
+      final text = utf8.decode(r.take(r.u16()), allowMalformed: true);
       spans.add(
         Span(col: col, width: width, fg: fg, bg: bg, attrs: attrs, text: text),
       );

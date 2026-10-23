@@ -10,7 +10,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::task::JoinSet;
 
 use crate::entry::{Entry, Kind, kind};
-use crate::{Error, Result, join};
+use crate::{Error, Result, is_name, join};
 
 /// The most a request reads or writes: what OpenSSH's `sftp-server` takes
 /// (its `limits@openssh.com` says 255 KiB), within russh-sftp's 256 KiB
@@ -94,7 +94,9 @@ impl Remote {
     }
 
     /// What is in a directory, `.` and `..` left out, in no order. Links
-    /// say where they point and whether that is a directory.
+    /// say where they point and whether that is a directory. A name that
+    /// is a path (`a/b`, `../x`) is left out too: only a hostile server
+    /// sends one.
     pub async fn list(&self, dir: &str) -> Result<Vec<Entry>> {
         let err = |e| Error::sftp(dir, e);
         let handle = self.raw.opendir(dir).await.map_err(err)?.handle;
@@ -103,7 +105,8 @@ impl Remote {
             match self.raw.readdir(handle.as_str()).await {
                 Ok(name) => {
                     for f in name.files {
-                        if f.filename == "." || f.filename == ".." {
+                        // `.`, `..`, and names no server should send.
+                        if !is_name(&f.filename) {
                             continue;
                         }
                         out.push(Entry::remote(f.filename, &f.longname, &f.attrs));

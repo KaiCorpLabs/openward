@@ -8,7 +8,7 @@
 
 ## Comprobaciones
 
-- [ ] `make lint` y `make test` pasan
+- [ ] `make ci` pasa (o `make ci-quick`, si no toca la interfaz)
 - [ ] Commits firmados con `git commit -s` (DCO)
 - [ ] Sin datos reales (hosts, usuarios, claves, grabaciones) en el diff
 - [ ] Si cambia una decisión de arquitectura: ADR nuevo o actualizado

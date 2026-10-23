@@ -3,13 +3,14 @@
 //! Reads OpenSSH `known_hosts` lines: plain and hashed (`|1|salt|hmac`)
 //! host patterns, `[host]:port` for non-standard ports, `@cert-authority`
 //! lines that trust host certificates from a CA, and `@revoked` keys that
-//! are refused whatever else says.
+//! are refused whatever else says. Host names match without regard to case,
+//! as OpenSSH lowercases them.
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use hmac::{Hmac, Mac};
 use russh::keys::ssh_key::certificate::CertType;
-use russh::keys::{HashAlg, PublicKey, PublicKeyOrCertificate};
+use russh::keys::{Algorithm, HashAlg, PublicKey, PublicKeyOrCertificate};
 use sha1::Sha1;
 
 /// What to do with a host whose key is not known yet.
@@ -33,6 +34,10 @@ pub enum Verdict {
     Unknown,
     /// Listed with a different key: possible man in the middle.
     Changed,
+    /// Listed only with keys of other types: the server no longer offers
+    /// the key that is known, or someone else is answering. Never learned
+    /// on its own, not even when new hosts are.
+    OtherType,
     /// A certificate that does not check out.
     BadCertificate(String),
     /// The key, or the CA that signed it, is marked `@revoked`.
@@ -99,10 +104,11 @@ pub struct KnownHosts {
     pub unknown: Unknown,
 }
 
-/// `host` or `[host]:port`, as OpenSSH writes host names.
+/// `host` or `[host]:port`, as OpenSSH writes host names: in lowercase.
 fn host_spec(host: &str, port: u16) -> String {
+    let host = host.to_ascii_lowercase();
     if port == 22 {
-        host.to_owned()
+        host
     } else {
         format!("[{host}]:{port}")
     }
@@ -199,6 +205,18 @@ impl KnownHosts {
             .collect()
     }
 
+    /// The types of the keys listed for `host:port`, to ask the server for
+    /// those first.
+    pub fn algorithms(&self, host: &str, port: u16) -> Vec<Algorithm> {
+        let mut out: Vec<Algorithm> = Vec::new();
+        for key in self.listed(host, port) {
+            if !out.contains(&key.algorithm()) {
+                out.push(key.algorithm());
+            }
+        }
+        out
+    }
+
     /// `key` is marked `@revoked` for `spec`.
     fn revoked(&self, spec: &str, key: &russh::keys::ssh_key::public::KeyData) -> bool {
         self.entries.iter().any(|e| {
@@ -226,6 +244,8 @@ impl KnownHosts {
                 } else if listed.iter().any(|k| k.algorithm() == key.algorithm()) {
                     // Same algorithm, different key: the classic warning.
                     Verdict::Changed
+                } else if !listed.is_empty() {
+                    Verdict::OtherType
                 } else if self.unknown == Unknown::Learn {
                     self.add(host, port, key.clone());
                     Verdict::Learned
@@ -264,7 +284,7 @@ impl KnownHosts {
             return Verdict::BadCertificate(format!("{e}"));
         }
         let principals = cert.valid_principals();
-        if !principals.is_empty() && !principals.iter().any(|p| p == host) {
+        if !principals.is_empty() && !principals.iter().any(|p| p.eq_ignore_ascii_case(host)) {
             return Verdict::BadCertificate(format!("host {host} not in principals"));
         }
         let ca = cas
@@ -318,7 +338,7 @@ pub fn lines(text: &str) -> Vec<Line> {
             }
         } else {
             (
-                Patterns::Plain(first.split(',').map(str::to_owned).collect()),
+                Patterns::Plain(first.split(',').map(str::to_ascii_lowercase).collect()),
                 Some(first.to_owned()),
             )
         };
@@ -367,6 +387,52 @@ mod tests {
         assert_eq!(
             kh.check("127.0.0.1", 2222, &offered(OTHER)),
             Verdict::Changed
+        );
+    }
+
+    const ECDSA: &str = "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBMIZhRFAgWfopKyt4kiX10TmV5mtEHg5naGWD4vZbxbMtJ1QP8QXWI2/WkTTQ2HTk7ehoQLsA34iYt/4+YlPX0A=";
+
+    /// A host known only by a key of another type is neither new nor
+    /// learned: its server should have offered the key that is known.
+    #[test]
+    fn keys_of_another_type_are_not_new() {
+        let mut kh = KnownHosts::parse(&format!("h {ECDSA}\n"), Unknown::Learn);
+        assert_eq!(
+            kh.algorithms("h", 22),
+            [PublicKey::from_openssh(ECDSA).unwrap().algorithm()]
+        );
+        assert_eq!(kh.check("h", 22, &offered(KEY)), Verdict::OtherType);
+        assert!(!Verdict::OtherType.trusted());
+        assert!(kh.algorithms("h", 22).len() == 1, "not learned");
+        assert_eq!(kh.check("h", 22, &offered(ECDSA)), Verdict::Known);
+        assert_eq!(kh.check("new", 22, &offered(KEY)), Verdict::Learned);
+    }
+
+    /// Names match whatever their case, as OpenSSH lowercases them.
+    #[test]
+    fn host_names_ignore_case() {
+        let mut kh = KnownHosts::parse(&format!("Web.Example.COM {KEY}\n"), Unknown::Reject);
+        assert_eq!(
+            kh.check("web.example.com", 22, &offered(KEY)),
+            Verdict::Known
+        );
+        assert_eq!(
+            kh.check("WEB.example.com", 22, &offered(KEY)),
+            Verdict::Known
+        );
+        let salt = b"0123456789abcdefghij";
+        let mut mac = Hmac::<Sha1>::new_from_slice(salt).unwrap();
+        mac.update(b"web.example.com");
+        let b64 = data_encoding::BASE64;
+        let line = format!(
+            "|1|{}|{} {KEY}",
+            b64.encode(salt),
+            b64.encode(&mac.finalize().into_bytes())
+        );
+        let mut kh = KnownHosts::parse(&line, Unknown::Reject);
+        assert_eq!(
+            kh.check("Web.Example.com", 22, &offered(KEY)),
+            Verdict::Known
         );
     }
 

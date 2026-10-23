@@ -10,7 +10,7 @@
 
 use std::collections::BTreeMap;
 
-use openward_proto::{Agent, Proxy, ProxyServer, Route, Settings};
+use openward_proto::{Agent, Proxy, ProxyServer, Settings};
 
 use crate::bundle::{Bundle, Group, Host, JumpRef, KeyRef, Warning, WarningKind};
 use crate::text;
@@ -166,9 +166,10 @@ pub fn parse(bytes: &[u8]) -> Bundle {
             "" | "0" => {}
             "2" if !field(20).is_empty() => settings.proxy = Some(Proxy::Socks5(server())),
             "3" if !field(20).is_empty() => settings.proxy = Some(Proxy::Http(server())),
-            "5" if !field(26).is_empty() => {
-                settings.route = Some(Route::Command(field(26).to_owned()))
-            }
+            "5" if !field(26).is_empty() => out.warnings.push(Warning::about(
+                &name,
+                WarningKind::ProxyCommand(field(26).to_owned()),
+            )),
             "1" => out.warnings.push(Warning::about(
                 &name,
                 WarningKind::Unsupported("SOCKS4 proxy".into()),

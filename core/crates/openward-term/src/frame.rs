@@ -23,6 +23,21 @@
 use crate::engine::{CursorShape, CursorState};
 
 pub const FRAME_VERSION: u8 = 1;
+
+/// The most bytes of text a span holds (its length is a u16).
+const MAX_SPAN_TEXT: usize = u16::MAX as usize;
+
+/// `text` cut to at most `max` bytes, at a character boundary.
+fn truncate(text: &str, max: usize) -> &str {
+    if text.len() <= max {
+        return text;
+    }
+    let mut end = max;
+    while !text.is_char_boundary(end) {
+        end -= 1;
+    }
+    &text[..end]
+}
 pub const FLAG_FULL: u8 = 1;
 
 /// Text attributes, as a bit set in [`Style::attrs`].
@@ -169,11 +184,15 @@ impl FrameEncoder {
     /// must not be pushed. Blank default cells may be skipped by the caller.
     pub fn push_cell(&mut self, col: u16, text: &str, width: u16, style: Style) {
         let wide = width > 1;
+        // A cell may hold dozens of combining marks, so a row of them can
+        // pass what a span's u16 length says: such a span is split.
+        let text = truncate(text, MAX_SPAN_TEXT);
         if let Some(span) = &mut self.open
             && !wide
             && !span.wide
             && span.style == style
             && span.col + span.width == col
+            && span.text.len() + text.len() <= MAX_SPAN_TEXT
         {
             span.width += width;
             span.text.push_str(text);
@@ -212,7 +231,7 @@ impl FrameEncoder {
         let Some(span) = self.open.take() else {
             return;
         };
-        // A u16 length is plenty: a span never exceeds one row of cells.
+        // `push_cell` keeps it within a u16.
         let text = span.text.as_bytes();
         self.put_u16(span.col);
         self.put_u16(span.width);
@@ -378,6 +397,30 @@ mod tests {
         assert_eq!(frame.cursor, cursor());
         assert_eq!(frame.lines[0].spans[0].text, "abc");
         assert_eq!(frame.lines[0].spans[0].width, 3);
+    }
+
+    /// A wide row of cells with many combining marks each passes 64 KiB in
+    /// one style: it goes in several spans, and decodes.
+    #[test]
+    fn spans_stay_within_their_u16_length() {
+        let cell = format!("e{}", "\u{E0100}".repeat(64)); // 257 bytes
+        let mut enc = FrameEncoder::new();
+        enc.begin(true, 300, 1, cursor(), 0);
+        enc.begin_row(0);
+        for col in 0..300 {
+            enc.push_cell(col, &cell, 1, Style::default());
+        }
+        enc.end_row();
+        enc.finish();
+        let frame = decode(enc.bytes()).unwrap();
+        let spans = &frame.lines[0].spans;
+        assert!(spans.len() > 1);
+        assert!(spans.iter().all(|s| s.text.len() <= MAX_SPAN_TEXT));
+        assert_eq!(spans.iter().map(|s| s.width).sum::<u16>(), 300);
+        assert_eq!(
+            spans.iter().map(|s| s.text.len()).sum::<usize>(),
+            300 * cell.len()
+        );
     }
 
     #[test]

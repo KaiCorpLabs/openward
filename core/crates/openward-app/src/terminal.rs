@@ -98,6 +98,9 @@ pub struct Terminal {
     /// Run when the terminal is closed on purpose: ending a persistent
     /// session on the server.
     closer: Mutex<Option<Box<dyn FnOnce() + Send>>>,
+    /// The tmux session of a persistent shell: the same for every
+    /// connection of this terminal, so that reconnecting finds it again.
+    tmux: Mutex<Option<String>>,
 }
 
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -116,7 +119,13 @@ impl Terminal {
             task: Mutex::new(None),
             activity: Arc::default(),
             closer: Mutex::new(None),
+            tmux: Mutex::new(None),
         })
+    }
+
+    /// The name of this terminal's tmux session, made the first time.
+    pub(crate) fn tmux_name(&self, make: impl FnOnce() -> String) -> String {
+        lock(&self.tmux).get_or_insert_with(make).clone()
     }
 
     pub fn size(&self) -> Size {
@@ -206,11 +215,19 @@ impl Terminal {
         }
     }
 
-    /// Ends the connection or the local program. The screen stays.
+    /// Ends the connection or the local program for good, a persistent
+    /// session on the server too. The screen stays.
     pub fn close(&self) {
         if let Some(closer) = lock(&self.closer).take() {
             closer();
         }
+        self.detach();
+    }
+
+    /// Drops the connection or the local program, leaving a persistent
+    /// session on the server to be found again: what reconnecting does.
+    pub(crate) fn detach(&self) {
+        lock(&self.closer).take();
         if let Some(task) = lock(&self.task).take() {
             task.abort();
         }

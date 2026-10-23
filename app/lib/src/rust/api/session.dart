@@ -353,12 +353,16 @@ enum KeySourceKind {
 /// A link on screen (OSC 8, or a URL in the text); columns inclusive.
 class LinkView {
   final String url;
+
+  /// What the screen shows of it (an OSC 8 link's text may differ).
+  final String text;
   final int row;
   final int start;
   final int end;
 
   const LinkView({
     required this.url,
+    required this.text,
     required this.row,
     required this.start,
     required this.end,
@@ -366,7 +370,11 @@ class LinkView {
 
   @override
   int get hashCode =>
-      url.hashCode ^ row.hashCode ^ start.hashCode ^ end.hashCode;
+      url.hashCode ^
+      text.hashCode ^
+      row.hashCode ^
+      start.hashCode ^
+      end.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -374,6 +382,7 @@ class LinkView {
       other is LinkView &&
           runtimeType == other.runtimeType &&
           url == other.url &&
+          text == other.text &&
           row == other.row &&
           start == other.start &&
           end == other.end;
@@ -484,6 +493,11 @@ class PromptView {
   /// The previous answer was wrong.
   final bool retry;
 
+  /// With [`PromptKind::HostKey`]: the types of the keys already known
+  /// for the host. Empty for a new host; otherwise the server did not
+  /// offer the key that is known.
+  final List<String> knownTypes;
+
   const PromptView({
     required this.id,
     this.kind,
@@ -498,6 +512,7 @@ class PromptView {
     required this.instructions,
     required this.questions,
     required this.retry,
+    required this.knownTypes,
   });
 
   static Future<PromptView> default_() =>
@@ -517,7 +532,8 @@ class PromptView {
       name.hashCode ^
       instructions.hashCode ^
       questions.hashCode ^
-      retry.hashCode;
+      retry.hashCode ^
+      knownTypes.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -536,7 +552,8 @@ class PromptView {
           name == other.name &&
           instructions == other.instructions &&
           questions == other.questions &&
-          retry == other.retry;
+          retry == other.retry &&
+          knownTypes == other.knownTypes;
 }
 
 class QuestionView {

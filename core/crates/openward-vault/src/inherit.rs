@@ -38,6 +38,7 @@ pub fn defaults() -> Settings {
         persistent_session: Some(false),
         term: Some("xterm-256color".into()),
         host_key_policy: Some(HostKeyPolicy::Ask),
+        legacy_host_keys: Some(false),
         environment: Some(Environment::None),
         read_os_release: Some(false),
         ..Settings::default()

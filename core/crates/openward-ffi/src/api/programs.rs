@@ -126,6 +126,9 @@ pub enum ProgramWarningKind {
     Mosh,
     /// A command run on connect.
     StartupCommand,
+    /// A `ProxyCommand` left out (it would run a program here); `detail`
+    /// is the command.
+    ProxyCommand,
     /// Something OpenWard does not have; `detail` names it.
     Unsupported,
     /// `detail` is `field=value`.
@@ -149,6 +152,7 @@ fn warning(w: &Warning) -> ProgramWarning {
     let (kind, detail) = match &w.kind {
         WarningKind::Mosh => (ProgramWarningKind::Mosh, String::new()),
         WarningKind::StartupCommand => (ProgramWarningKind::StartupCommand, String::new()),
+        WarningKind::ProxyCommand(command) => (ProgramWarningKind::ProxyCommand, command.clone()),
         WarningKind::Unsupported(what) => (ProgramWarningKind::Unsupported, what.clone()),
         WarningKind::BadValue { field, value } => {
             (ProgramWarningKind::BadValue, format!("{field}={value}"))

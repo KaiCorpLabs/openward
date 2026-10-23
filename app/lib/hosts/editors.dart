@@ -121,6 +121,7 @@ class _SettingsForm {
       agent = original.agent,
       route = original.route,
       policy = original.hostKeyPolicy,
+      legacyHostKeys = original.legacyHostKeys,
       persistent = original.persistentSession,
       keepalive = original.keepaliveSecs,
       identity = original.identity,
@@ -140,6 +141,7 @@ class _SettingsForm {
         if (original.route != null) 'route',
         if (original.proxy != null) 'proxy',
         if (original.hostKeyPolicy != null) 'host_key_policy',
+        if (original.legacyHostKeys != null) 'legacy_host_keys',
         if (original.persistentSession != null) 'persistent_session',
         if (original.keepaliveSecs != null) 'keepalive_secs',
         if (original.environment != null) 'environment',
@@ -153,6 +155,7 @@ class _SettingsForm {
   RouteKind? route;
   ProxyKind? proxy;
   KeyPolicy? policy;
+  bool? legacyHostKeys;
   IdentityChoice? identity;
   bool? persistent;
   int? keepalive;
@@ -216,6 +219,8 @@ class _SettingsForm {
         proxyUser.text = inherited.proxyUser;
       case 'host_key_policy':
         policy = inherited.hostKeyPolicy ?? KeyPolicy.ask;
+      case 'legacy_host_keys':
+        legacyHostKeys = inherited.legacyHostKeys ?? false;
       case 'identity':
         identity = inherited.identity ?? IdentityChoice.none;
         identityId = inherited.identityId;
@@ -257,6 +262,8 @@ class _SettingsForm {
         proxyUser.clear();
       case 'host_key_policy':
         policy = null;
+      case 'legacy_host_keys':
+        legacyHostKeys = null;
       case 'identity':
         identity = null;
         identityId = '';
@@ -359,6 +366,9 @@ class _SettingsForm {
       term: original.term,
       env: original.env,
       hostKeyPolicy: setHere.contains('host_key_policy') ? policy : null,
+      legacyHostKeys: setHere.contains('legacy_host_keys')
+          ? legacyHostKeys
+          : null,
       identity: identityChoice,
       identityId: identityChoice == IdentityChoice.use ? identityId : '',
       environment: setHere.contains('environment') ? envKind : null,
@@ -411,6 +421,7 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
   List<String> get _advanced => [
     'proxy',
     'host_key_policy',
+    'legacy_host_keys',
     'persistent_session',
     'keepalive_secs',
     'agent',
@@ -537,6 +548,8 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
         _ => l.proxyNone,
       },
       'host_key_policy' => _policy(l, e.hostKeyPolicy ?? KeyPolicy.ask),
+      'legacy_host_keys' =>
+        e.legacyHostKeys ?? false ? l.legacyHostKeysOn : l.legacyHostKeysOff,
       'persistent_session' =>
         e.persistentSession ?? false ? l.persistentOn : l.persistentOff,
       'keepalive_secs' => _keepalive(l, e.keepaliveSecs ?? 10),
@@ -991,6 +1004,38 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
                   DropdownMenuItem(value: p, child: Text(_policy(l, p))),
               ],
               onChanged: (v) => setState(() => f.policy = v),
+            ),
+          ),
+          _row(
+            field: 'legacy_host_keys',
+            label: l.legacyHostKeys,
+            editor: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<bool>(
+                  style: fieldTextStyle(context),
+                  key: const ValueKey('settings.legacyHostKeys'),
+                  autofocus: focusFor('legacy_host_keys'),
+                  initialValue: f.legacyHostKeys ?? false,
+                  isExpanded: true,
+                  items: [
+                    DropdownMenuItem(
+                      value: true,
+                      child: Text(l.legacyHostKeysOn),
+                    ),
+                    DropdownMenuItem(
+                      value: false,
+                      child: Text(l.legacyHostKeysOff),
+                    ),
+                  ],
+                  onChanged: (v) => setState(() => f.legacyHostKeys = v),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l.legacyHostKeysNote,
+                  style: TextStyle(fontSize: 12, color: ow.colors.textMuted),
+                ),
+              ],
             ),
           ),
           _row(

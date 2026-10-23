@@ -19,6 +19,9 @@ cd "$app_dir"
 version="$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)"
 dmg="build/OpenWard-$version-macos.dmg"
 [[ -f "$dmg" ]] || { echo "no $dmg: run tool/package-macos.sh first" >&2; exit 1; }
+# The commit it was built from, which package-macos.sh checked was the tag.
+[[ -f "$dmg.commit" ]] || { echo "no $dmg.commit: run tool/package-macos.sh again" >&2; exit 1; }
+commit="$(cat "$dmg.commit")"
 sha="$(shasum -a 256 "$dmg" | cut -d' ' -f1)"
 
 repo=KaiCorpLabs/homebrew-tap
@@ -49,7 +52,7 @@ Paquete de macOS de OpenWard $version para el cask \`openward\` de este tap.
 brew install --cask openward    # o brew upgrade --cask openward
 \`\`\`
 
-sha256 \`$sha\`
+sha256 \`$sha\`, compilado desde el commit \`$commit\` (tag \`v$version\`).
 EOF
 )"
 fi

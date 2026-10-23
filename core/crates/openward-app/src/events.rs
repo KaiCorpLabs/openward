@@ -132,7 +132,8 @@ pub enum Trust {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Prompt {
-    /// A host seen for the first time. Accepting saves the key.
+    /// A host seen for the first time, or one known only by keys of other
+    /// types. Accepting saves the key.
     HostKey {
         label: String,
         host: String,
@@ -140,6 +141,10 @@ pub enum Prompt {
         algorithm: String,
         /// `SHA256:…`, as OpenSSH shows it.
         fingerprint: String,
+        /// The types of the keys already known for the host: empty for a
+        /// new host. Otherwise the server did not offer the key that is
+        /// known, which may be someone else answering.
+        known_types: Vec<String>,
     },
     Passphrase {
         key: String,

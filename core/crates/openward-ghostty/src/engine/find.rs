@@ -35,6 +35,10 @@ pub struct SearchState {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Link {
     pub url: String,
+    /// What the screen shows of it: for an OSC 8 hyperlink, text that may
+    /// say something else than where it leads.
+    pub text: String,
+    /// The part of it on the row under the pointer.
     pub row: u16,
     pub start: u16,
     pub end: u16,
@@ -223,7 +227,7 @@ impl GhosttyEngine {
     }
 
     /// The link under a point in logical pixels: an OSC 8 hyperlink, or else
-    /// a URL written in the text of that row.
+    /// a URL written in the text, also one that wraps onto other rows.
     pub fn link_at(&self, x: f32, y: f32) -> Option<Link> {
         let (col, row) = self.cell_at(x, y);
         if let Some(url) = self.hyperlink(col, row) {
@@ -238,21 +242,52 @@ impl GhosttyEngine {
                 end += 1;
             }
             return Some(Link {
+                text: (start..=end).map(|c| self.cell_text(c, row)).collect(),
                 url,
                 row,
                 start,
                 end,
             });
         }
-        let cells: Vec<String> = (0..self.size.cols)
-            .map(|c| self.cell_text(c, row))
+        // The rows that wrap into one line with this one, a few at most.
+        let mut first = row;
+        while first > 0 && row - first < MAX_WRAPPED && self.wraps(first - 1) {
+            first -= 1;
+        }
+        let mut last = row;
+        while last + 1 < self.size.rows && last - row < MAX_WRAPPED && self.wraps(last) {
+            last += 1;
+        }
+        let cols = self.size.cols;
+        let cells: Vec<String> = (first..=last)
+            .flat_map(|r| (0..cols).map(move |c| (c, r)))
+            .map(|(c, r)| self.cell_text(c, r))
             .collect();
-        url_in_row(&cells, col).map(|(start, end, url)| Link {
+        let offset = (row - first) * cols;
+        url_in_row(&cells, offset + col).map(|(start, end, url)| Link {
+            text: url.clone(),
             url,
             row,
-            start,
-            end,
+            start: start.max(offset) - offset,
+            end: end.min(offset + cols - 1) - offset,
         })
+    }
+
+    /// The row goes on in the next one: the text was wrapped, not ended.
+    fn wraps(&self, row: u16) -> bool {
+        let Some(r) = self.grid_ref(0, row) else {
+            return false;
+        };
+        let mut handle: sys::GhosttyRow = 0;
+        let mut wrap = false;
+        // SAFETY: a grid ref just taken; out-pointers to locals of the
+        // documented types (a row handle, and a bool for WRAP).
+        unsafe {
+            sys::ghostty_grid_ref_row(&r, &mut handle) == sys::GHOSTTY_SUCCESS
+                && sys::ghostty_row_get(handle, sys::GHOSTTY_ROW_DATA_WRAP, (&raw mut wrap).cast())
+                    == sys::GHOSTTY_SUCCESS
+                && wrap
+        }
     }
 
     fn hyperlink(&self, col: u16, row: u16) -> Option<String> {
@@ -298,6 +333,9 @@ impl GhosttyEngine {
             .collect()
     }
 }
+
+/// Rows above and below the pointer a wrapped URL is looked for in.
+const MAX_WRAPPED: u16 = 4;
 
 /// Schemes a written URL may start with.
 const SCHEMES: &[&str] = &["https://", "http://", "ftp://", "file://", "mailto:"];
@@ -444,6 +482,7 @@ mod tests {
             link,
             Link {
                 url: "https://openward.dev".into(),
+                text: "docs".into(),
                 row: 0,
                 start: 0,
                 end: 3
@@ -451,8 +490,26 @@ mod tests {
         );
         let written = e.link_at(120.0, 5.0).unwrap();
         assert_eq!(written.url, "http://x.test/a");
+        assert_eq!(written.text, written.url);
         assert_eq!((written.start, written.end), (9, 23));
         assert_eq!(e.link_at(65.0, 5.0), None);
+    }
+
+    /// A URL longer than the row, wrapped onto the next, opens whole from
+    /// either row; each row underlines its own part.
+    #[test]
+    fn a_wrapped_url_is_one_link() {
+        let url = "https://openward.dev/docs/a/long/path/that/wraps";
+        let e = engine(format!("see {url} ok\r\n").as_bytes());
+        let top = e.link_at(200.0, 5.0).unwrap();
+        assert_eq!(top.url, url);
+        assert_eq!((top.row, top.start, top.end), (0, 4, 39));
+        let bottom = e.link_at(30.0, 25.0).unwrap();
+        assert_eq!(bottom.url, url);
+        assert_eq!((bottom.row, bottom.start), (1, 0));
+        // A row that ends is not joined to the next.
+        let e = engine(b"see https://a.test/x\r\nmore/text\r\n");
+        assert_eq!(e.link_at(100.0, 5.0).unwrap().url, "https://a.test/x");
     }
 
     #[test]

@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/connection.dart';
+import '../core/json_file.dart';
 import '../core/settings.dart';
 import '../history/history.dart' show historyPlace;
 import '../src/rust/api/session.dart' show PersistenceKind;
@@ -105,7 +106,7 @@ class RecentNotifier extends Notifier<Recent> {
   @override
   Recent build() {
     try {
-      final json = jsonDecode(ref.read(recentFileProvider).readAsStringSync());
+      final json = readJsonFile(ref.read(recentFileProvider));
       if (json is Map) {
         final list = json['connections'];
         final actions = json['actions'];
@@ -200,8 +201,8 @@ class RecentNotifier extends Notifier<Recent> {
         if (file.existsSync()) file.deleteSync();
         return;
       }
-      file.parent.createSync(recursive: true);
-      file.writeAsStringSync(
+      writeFileAtomically(
+        file,
         jsonEncode({
           'version': 1,
           'connections': [for (final e in state.connections) e.toJson()],

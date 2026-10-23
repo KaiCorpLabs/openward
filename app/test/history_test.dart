@@ -197,7 +197,10 @@ void main() {
       );
       expect(list[1].count, 2);
 
-      // Read back by a new container.
+      // Read back by a new container, once written: a moment after the
+      // last command, or now.
+      expect(File('${dir.path}/history.json').existsSync(), isFalse);
+      h.flush();
       final again = ProviderContainer(
         overrides: [
           settingsFileProvider.overrideWithValue(

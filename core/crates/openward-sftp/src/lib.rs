@@ -90,6 +90,12 @@ pub fn join(dir: &str, name: &str) -> String {
     }
 }
 
+/// Whether a server's `name` is one name and not a path. A hostile server
+/// could list `../../.zshrc` to have a download write outside its folder.
+pub(crate) fn is_name(name: &str) -> bool {
+    !name.is_empty() && name != "." && name != ".." && !name.contains(['/', '\0'])
+}
+
 /// The directory a remote path is in (`/` for `/x`).
 pub fn parent(path: &str) -> String {
     let trimmed = path.trim_end_matches('/');
@@ -121,5 +127,15 @@ mod tests {
         assert_eq!(parent("rel"), ".");
         assert_eq!(file_name("/var/www/app/"), "app");
         assert_eq!(file_name("deploy.sh"), "deploy.sh");
+    }
+
+    #[test]
+    fn names_from_a_server() {
+        assert!(is_name("deploy.sh"));
+        assert!(is_name(".zshrc"));
+        assert!(is_name("a\\b:c"));
+        for bad in ["", ".", "..", "../../.zshrc", "a/b", "/etc", "a\0b"] {
+            assert!(!is_name(bad), "{bad:?}");
+        }
     }
 }

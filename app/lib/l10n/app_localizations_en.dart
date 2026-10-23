@@ -1388,6 +1388,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hostKey => 'Host key';
 
   @override
+  String hostKeyOtherTypeBody(String where, String known, String offered) {
+    return 'OpenWard knows $where by its $known key, but it now offers a $offered key that OpenWard does not know. The server may have changed its keys, or another machine may be posing as it: trust it only if you know why it changed.';
+  }
+
+  @override
+  String hostKeyOtherTypeTitle(String label) {
+    return 'A different key for $label';
+  }
+
+  @override
   String hostKeyUnknownBody(String where) {
     return 'OpenWard does not know the key of $where yet. Compare the fingerprint with the one the server\'s administrator gives you before trusting it.';
   }
@@ -2024,6 +2034,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get legacyHostKeys => 'Old host keys (ssh-rsa)';
+
+  @override
+  String get legacyHostKeysNote =>
+      'Only for servers older than OpenSSH 7.2, which sign their key with SHA-1. OpenSSH stopped accepting it in 8.8.';
+
+  @override
+  String get legacyHostKeysOff => 'No';
+
+  @override
+  String get legacyHostKeysOn => 'Accept ssh-rsa with SHA-1';
+
+  @override
   String get legendInheritAgain => 'inherits again';
 
   @override
@@ -2052,6 +2075,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String linesCount(int count) {
     return '$count lines';
+  }
+
+  @override
+  String linkLeadsElsewhere(String url) {
+    return 'Careful: the text says otherwise, but it leads to $url';
   }
 
   @override
@@ -3989,6 +4017,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get starting => 'Starting…';
 
   @override
+  String startupErrorBody(String folder) {
+    return 'They may have been written by a newer version of OpenWard, the folder may lack permissions, or the file may be damaged. Nothing in $folder was deleted or changed.';
+  }
+
+  @override
+  String get startupErrorDetails => 'Details';
+
+  @override
+  String get startupErrorTitle => 'OpenWard could not open its data';
+
+  @override
+  String get startupQuit => 'Quit';
+
+  @override
+  String get startupShowFolder => 'Show the data folder';
+
+  @override
   String get state => 'State';
 
   @override
@@ -4548,6 +4593,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String warnPartlyUnreadable(String detail) {
     return 'Part of the data could not be read: $detail.';
+  }
+
+  @override
+  String warnProxyCommand(String host, String command) {
+    return '$host used a ProxyCommand, which runs a program on this computer; it was not imported so as not to run what another program\'s file says. If you trust it, set it on the host by hand: $command';
   }
 
   @override

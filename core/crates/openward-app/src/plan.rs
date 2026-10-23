@@ -40,6 +40,8 @@ pub struct Hop {
     pub proxy: Option<openward_ssh::proxy::Proxy>,
     pub keepalive: Option<Duration>,
     pub host_key_policy: HostKeyPolicy,
+    /// Accept `ssh-rsa` host key signatures (SHA-1).
+    pub legacy_host_keys: bool,
     /// Read `/etc/os-release` once connected, to tell the system.
     pub read_os_release: bool,
 }
@@ -64,6 +66,10 @@ pub enum PlanError {
     JumpLoop(String),
     #[error("too many jumps")]
     TooManyHops,
+    /// The `%h`, `%r` or `%n` a `ProxyCommand` uses has characters a
+    /// shell would run.
+    #[error("the ProxyCommand of {label} would pass %{token} with characters a shell runs")]
+    UnsafeToken { label: String, token: char },
 }
 
 impl Plan {
@@ -100,7 +106,8 @@ impl Plan {
             port,
             ..defaults()
         };
-        let target = hop(address, None, address, &bare, local, true);
+        let target = hop(address, None, address, &bare, local, true)
+            .expect("an address alone has no ProxyCommand");
         Self {
             term: settings.term.unwrap_or_else(|| "xterm-256color".into()),
             env: settings.env.unwrap_or_default().into_iter().collect(),
@@ -160,7 +167,7 @@ fn chain(
                         port: *port,
                         ..defaults()
                     };
-                    hops.push(hop(host, None, host, &bare, local, hops.is_empty()));
+                    hops.push(hop(host, None, host, &bare, local, hops.is_empty())?);
                 }
             }
             if hops.len() > MAX_HOPS {
@@ -175,7 +182,7 @@ fn chain(
         &settings,
         local,
         hops.is_empty(),
-    ));
+    )?);
     visiting.pop();
     Ok(())
 }
@@ -204,7 +211,7 @@ fn hop(
     s: &Settings,
     local: &Local,
     first: bool,
-) -> Hop {
+) -> Result<Hop, PlanError> {
     let user = s.user.clone().unwrap_or_else(|| local.user.clone());
     let port = s.port.unwrap_or(22);
     let t = Tokens {
@@ -223,10 +230,19 @@ fn hop(
         Agent::Socket(path) => Some(local.path(path, &t)),
     };
     let proxy_command = match &s.route {
-        Some(Route::Command(c)) if first => Some(local.command(c, &t)),
+        Some(Route::Command(c)) if first => {
+            Some(
+                local
+                    .command(c, &t)
+                    .map_err(|token| PlanError::UnsafeToken {
+                        label: label.to_owned(),
+                        token,
+                    })?,
+            )
+        }
         _ => None,
     };
-    Hop {
+    Ok(Hop {
         label: label.to_owned(),
         host,
         address: address.to_owned(),
@@ -247,9 +263,10 @@ fn hop(
             .filter(|&k| k > 0)
             .map(|k| Duration::from_secs(u64::from(k))),
         host_key_policy: s.host_key_policy.unwrap_or(HostKeyPolicy::Ask),
+        legacy_host_keys: s.legacy_host_keys.unwrap_or(false),
         read_os_release: s.read_os_release.unwrap_or(false),
         user,
-    }
+    })
 }
 
 #[cfg(test)]

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../terminal/schemes.dart';
+import 'json_file.dart';
 
 /// Light, dark, or as the system is.
 enum ThemeChoice { system, dark, light }
@@ -433,12 +434,11 @@ final settingsFileProvider = Provider<File>(
 class SettingsNotifier extends Notifier<Settings> {
   @override
   Settings build() {
-    final file = ref.read(settingsFileProvider);
     try {
-      final json = jsonDecode(file.readAsStringSync());
+      final json = readJsonFile(ref.read(settingsFileProvider));
       if (json is Map<String, Object?>) return Settings.fromJson(json);
     } catch (_) {
-      // No file yet, or not ours to read: the defaults.
+      // Not ours to read: the defaults.
     }
     return const Settings();
   }
@@ -449,8 +449,8 @@ class SettingsNotifier extends Notifier<Settings> {
     state = next;
     final file = ref.read(settingsFileProvider);
     try {
-      file.parent.createSync(recursive: true);
-      file.writeAsStringSync(
+      writeFileAtomically(
+        file,
         const JsonEncoder.withIndent('  ').convert(next.toJson()),
       );
     } catch (_) {

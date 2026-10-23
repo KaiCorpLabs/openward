@@ -66,6 +66,8 @@ jobs:
         env:
           # The reconnection test drops a connection inside a container.
           S2_RUNTIME: docker
+          # Where the servers run, a test that cannot reach them fails.
+          OPENWARD_REQUIRE_SERVERS: ${{ runner.os == 'Linux' && '1' || '' }}
         run: |
           cargo test --workspace
           # The reference engine of the spikes, off by default.
@@ -241,7 +243,8 @@ jobs:
           once() {
             local log want got
             log="$(mktemp)"
-            if flutter test "$1" -d linux --dart-define=OPENWARD_SHOTS="$OPENWARD_SHOTS" 2>&1 | tee "$log"; then
+            if flutter test "$1" -d linux --dart-define=OPENWARD_SHOTS="$OPENWARD_SHOTS" \
+              --dart-define=OPENWARD_REQUIRE_SERVERS=true 2>&1 | tee "$log"; then
               return 0
             fi
             want="$(grep -cE '^\s*(testWidgets|test)\(' "$1")"
@@ -296,7 +299,12 @@ jobs:
               tar -C build/linux/x64/release -czf "build/OpenWard-$version-linux-x64.tar.gz" bundle
               ;;
             macOS)
-              FLUTTER=flutter tool/package-macos.sh
+              # A published .dmg comes from its tag; the weekly run's, not.
+              if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+                FLUTTER=flutter tool/package-macos.sh
+              else
+                FLUTTER=flutter tool/package-macos.sh --snapshot
+              fi
               ;;
             Windows)
               flutter build windows --release

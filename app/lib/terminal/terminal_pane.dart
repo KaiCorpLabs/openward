@@ -93,7 +93,8 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   Offset _dragAt = Offset.zero;
 
   /// The link under the pointer while ⌘ (Ctrl elsewhere) is held.
-  String? _linkUrl;
+  LinkView? _link;
+  String? get _linkUrl => _link?.url;
 
   @override
   void initState() {
@@ -742,7 +743,9 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     _renderer?.setLink(
       link == null ? null : (row: link.row, start: link.start, end: link.end),
     );
-    if (link?.url != _linkUrl) setState(() => _linkUrl = link?.url);
+    if (link?.url != _link?.url || link?.text != _link?.text) {
+      setState(() => _link = link);
+    }
   }
 
   /// Web and mail links open in their apps; others are not opened from a
@@ -935,6 +938,12 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
                           cols: _cols,
                           rows: _rows,
                         ),
+                        if (_link case final link?)
+                          Positioned(
+                            left: 0,
+                            bottom: 0,
+                            child: _LinkTarget(link: link),
+                          ),
                         if (_composing.isNotEmpty && cursor != null)
                           Positioned(
                             left: cursor.col * m.width,
@@ -951,6 +960,54 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+/// Whether a link's `text` reads as an address of another host than the
+/// `url` it opens (an OSC 8 link's text is anything the program wrote).
+bool linkMisleads(String text, String url) {
+  final shown = text.trim();
+  if (shown == url || !shown.contains('.') || shown.contains(' ')) {
+    return false;
+  }
+  final said = Uri.tryParse(shown.contains('://') ? shown : 'https://$shown');
+  final real = Uri.tryParse(url);
+  if (said == null || real == null || said.host.isEmpty) return false;
+  return said.host.toLowerCase() != real.host.toLowerCase();
+}
+
+/// Where the link under the pointer leads, as a browser says it: an OSC 8
+/// link's text can name another site than the one it opens.
+class _LinkTarget extends StatelessWidget {
+  const _LinkTarget({required this.link});
+
+  final LinkView link;
+
+  @override
+  Widget build(BuildContext context) {
+    final ow = context.ow;
+    final warn = linkMisleads(link.text, link.url);
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 560),
+        margin: const EdgeInsets.all(4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: warn ? ow.colors.warnSoft : ow.colors.raised,
+          borderRadius: BorderRadius.circular(ow.shape.radius),
+          border: Border.all(
+            color: warn ? ow.colors.warnLine : ow.colors.control,
+          ),
+        ),
+        child: Text(
+          warn ? context.l10n.linkLeadsElsewhere(link.url) : link.url,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 12, color: ow.colors.text),
         ),
       ),
     );

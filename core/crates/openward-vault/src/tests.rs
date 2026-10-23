@@ -384,6 +384,45 @@ fn search_and_tags() {
     assert_eq!(v.tags()["postgres"], 1);
 }
 
+/// A known host is one `known_hosts` line: a comment with a line break
+/// could otherwise add a line that makes a key a CA for every host.
+#[test]
+fn a_known_host_cannot_add_lines() {
+    let mut v = Vault::open_in_memory().unwrap();
+    let ok = KnownHost {
+        hosts: "web.example.com".into(),
+        key: "ssh-ed25519 AAAAOK".into(),
+        comment: Some("from the old laptop".into()),
+        ..KnownHost::default()
+    };
+    v.create(Data::KnownHost(ok.clone())).unwrap();
+    for bad in [
+        KnownHost {
+            comment: Some("x\n@cert-authority * ssh-ed25519 AAAAEVIL".into()),
+            ..ok.clone()
+        },
+        KnownHost {
+            hosts: "web.example.com\n@cert-authority *".into(),
+            ..ok.clone()
+        },
+        KnownHost {
+            key: "ssh-ed25519 AAAAOK extra".into(),
+            ..ok.clone()
+        },
+        KnownHost {
+            hosts: "a b".into(),
+            ..ok.clone()
+        },
+    ] {
+        assert!(v.create(Data::KnownHost(bad.clone())).is_err(), "{bad:?}");
+    }
+    assert!(
+        v.trust_host_key("evil\n@cert-authority", 22, "ssh-ed25519 AAAAX")
+            .is_err()
+    );
+    assert_eq!(v.known_hosts_text().lines().count(), 1);
+}
+
 #[test]
 fn trusting_a_host_key_replaces_the_old_one() {
     let mut v = Vault::open_in_memory().unwrap();
@@ -748,4 +787,16 @@ fn using_an_identity_on_groups_and_hosts_at_once() {
         v.use_identity(prod, &choosers),
         Err(Error::WrongType { .. })
     ));
+}
+
+/// One process at a time: a second one would write over the first's
+/// changes from its own copy of the items. Closing lets go.
+#[test]
+fn a_vault_opens_in_one_place_at_a_time() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("vault.db");
+    let v = Vault::open(&path).unwrap();
+    assert!(matches!(Vault::open(&path), Err(Error::OpenElsewhere)));
+    drop(v);
+    Vault::open(&path).unwrap();
 }

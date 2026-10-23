@@ -1,5 +1,6 @@
 //! Connections through `App` against the S2 test servers
-//! (`spikes/s2-ssh/servers/up.sh`). Skipped when they are not running.
+//! (`spikes/s2-ssh/servers/up.sh`). Skipped when they are not running,
+//! unless `OPENWARD_REQUIRE_SERVERS` is set (`make ci`).
 
 use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, Sender, channel};
@@ -39,6 +40,10 @@ macro_rules! servers {
     () => {
         match fixtures() {
             Some(dir) => dir,
+            // `make ci` sets it: there a skipped test would pass untested.
+            None if std::env::var_os("OPENWARD_REQUIRE_SERVERS").is_some_and(|v| !v.is_empty()) => {
+                panic!("S2 servers not running (spikes/s2-ssh/servers/up.sh)")
+            }
             None => {
                 eprintln!("S2 servers not running: skipped");
                 return;
@@ -129,6 +134,18 @@ impl Fixture {
         host: ItemId,
         reply: impl Fn(&Prompt) -> Answer + Send + Sync + 'static,
     ) -> (Arc<Terminal>, Receiver<Event>) {
+        let term = self.app.terminal(80, 24, 1000);
+        let rx = self.reconnect(&term, host, reply);
+        (term, rx)
+    }
+
+    /// Connects `term` again, as «Reconnect» does.
+    fn reconnect(
+        &self,
+        term: &Arc<Terminal>,
+        host: ItemId,
+        reply: impl Fn(&Prompt) -> Answer + Send + Sync + 'static,
+    ) -> Receiver<Event> {
         let (tx, rx) = channel();
         let ui = Arc::new(Ui {
             app: OnceLock::new(),
@@ -136,9 +153,8 @@ impl Fixture {
             reply: Box::new(reply),
         });
         let _ = ui.app.set(Arc::downgrade(&self.app));
-        let term = self.app.terminal(80, 24, 1000);
-        self.app.connect(&term, host, ui).unwrap();
-        (term, rx)
+        self.app.connect(term, host, ui).unwrap();
+        rx
     }
 }
 
@@ -459,8 +475,8 @@ fn a_persistent_session_without_tmux_is_an_ordinary_shell() {
     wait_for(&term, "plain-42");
 }
 
-/// With tmux, a persistent session is found as it was after a cut, and
-/// ends with the terminal.
+/// With tmux, a persistent session is found as it was after a cut and
+/// after reconnecting by hand, and ends with the terminal.
 #[test]
 fn a_persistent_session_comes_back_as_it_was() {
     let f = Fixture::new(servers!());
@@ -487,7 +503,8 @@ fn a_persistent_session_comes_back_as_it_was() {
             }
         }
     };
-    let (term, rx) = f.connect(bastion_host(&f, Some(true)), |_| Answer::Cancel);
+    let host = bastion_host(&f, Some(true));
+    let (term, rx) = f.connect(host, |_| Answer::Cancel);
     assert_eq!(persistence(&rx), Some(Persistence::New));
     term.text("MARK=kept-$((6*7)); echo set-$MARK\n");
     wait_for(&term, "set-kept-42");
@@ -514,6 +531,11 @@ fn a_persistent_session_comes_back_as_it_was() {
     assert_eq!(persistence(&rx), Some(Persistence::Resumed));
     term.text("echo again-$MARK\n");
     wait_for(&term, "again-kept-42");
+    // «Reconnect» by hand: the same session, not a new one.
+    let rx = f.reconnect(&term, host, |_| Answer::Cancel);
+    assert_eq!(persistence(&rx), Some(Persistence::Resumed));
+    term.text("echo by-hand-$MARK\n");
+    wait_for(&term, "by-hand-kept-42");
     let sessions = || {
         let out = std::process::Command::new(runtime())
             .args(["exec", "-u", "demo", "bastion", "tmux", "ls"])
@@ -521,7 +543,7 @@ fn a_persistent_session_comes_back_as_it_was() {
             .unwrap();
         String::from_utf8_lossy(&out.stdout).into_owned()
     };
-    assert!(sessions().contains("ow-"), "{}", sessions());
+    assert_eq!(sessions().matches("ow-").count(), 1, "{}", sessions());
     // Closing the terminal ends it on the server.
     term.close();
     let deadline = Instant::now() + Duration::from_secs(10);
@@ -1553,4 +1575,75 @@ fn a_revoked_host_key_is_refused() {
         }
         other => panic!("not refused as revoked: {other:?}"),
     }
+}
+
+/// A host known in `~/.ssh/known_hosts` only by its ECDSA key is checked
+/// against that key, not taken for a new host because it also has an
+/// Ed25519 one.
+#[test]
+fn a_host_known_by_another_key_type_is_checked_against_it() {
+    let f = Fixture::new(servers!());
+    let scan = std::process::Command::new("ssh-keyscan")
+        .args(["-t", "ecdsa", "-p", &BASTION.to_string(), "127.0.0.1"])
+        .output()
+        .unwrap();
+    let ecdsa = String::from_utf8(scan.stdout).unwrap();
+    assert!(ecdsa.contains("ecdsa-sha2-nistp256"), "{ecdsa}");
+    let ssh = f.app.local().ssh_dir.clone();
+    std::fs::create_dir_all(&ssh).unwrap();
+    std::fs::write(ssh.join("known_hosts"), &ecdsa).unwrap();
+    let host = f.host(
+        "bastion",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: f.key("id_ed25519"),
+            ..Settings::default()
+        },
+    );
+    let (_term, rx) = f.connect(host, |_| Answer::Cancel);
+    let (connected, prompts) = outcome(&rx);
+    assert!(prompts.is_empty(), "asked: {prompts:?}");
+    assert_eq!(connected.unwrap().trust, Trust::Known);
+}
+
+/// A host known only by keys of a type its server does not offer is asked
+/// about, saying which types are known, even where new hosts are accepted.
+#[test]
+fn keys_of_another_type_are_asked_about_even_with_accept_new() {
+    let f = Fixture::new(servers!());
+    // A security key's host key: no server here offers that type.
+    let sk = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gAAAABHNzaDo=";
+    let ssh = f.app.local().ssh_dir.clone();
+    std::fs::create_dir_all(&ssh).unwrap();
+    std::fs::write(
+        ssh.join("known_hosts"),
+        format!("[127.0.0.1]:{BASTION} {sk}\n"),
+    )
+    .unwrap();
+    let host = f.host(
+        "bastion",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: f.key("id_ed25519"),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    let (_term, rx) = f.connect(host, |_| Answer::Cancel);
+    let (closed, prompts) = outcome(&rx);
+    match prompts.as_slice() {
+        [Prompt::HostKey { known_types, .. }] => {
+            assert_eq!(known_types, &["sk-ssh-ed25519@openssh.com"]);
+        }
+        other => panic!("not asked about the other type: {other:?}"),
+    }
+    assert!(
+        matches!(closed, Err(Some(Failure::HostKeyRejected { .. }))),
+        "{closed:?}"
+    );
+    assert!(f.app.vault().known_hosts().is_empty(), "not trusted");
 }

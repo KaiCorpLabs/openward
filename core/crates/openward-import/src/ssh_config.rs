@@ -10,7 +10,8 @@
 //! `~/.ssh`, scoped to the block it appears in), `HostName`, `User`, `Port`,
 //! `IdentityFile`, `CertificateFile`, `IdentitiesOnly`, `IdentityAgent`,
 //! `ProxyJump`, `ProxyCommand`, `ServerAliveInterval`, `ForwardAgent`,
-//! `SetEnv`, `StrictHostKeyChecking` and the TCP forwards (`LocalForward`,
+//! `SetEnv`, `StrictHostKeyChecking`, `HostKeyAlgorithms` (only whether it
+//! lets in `ssh-rsa`, for old servers) and the TCP forwards (`LocalForward`,
 //! `RemoteForward`, `DynamicForward`), which become saved tunnels that open
 //! on connect, as `ssh` opens them. Anything else is reported once as
 //! a [`Warning`], as are the other `Match` blocks, whose lines are skipped.
@@ -135,6 +136,7 @@ enum Value {
     ForwardAgent(bool),
     SetEnv(BTreeMap<String, String>),
     Strict(HostKeyPolicy),
+    LegacyHostKeys,
     Forward(ForwardSpec),
 }
 
@@ -188,6 +190,8 @@ pub struct Resolved {
     pub agent_forward: Option<bool>,
     pub env: Option<BTreeMap<String, String>>,
     pub host_key_policy: Option<HostKeyPolicy>,
+    /// `HostKeyAlgorithms` lets in `ssh-rsa` (SHA-1).
+    pub legacy_host_keys: Option<bool>,
     /// Every forward of every matching block: they add up, as in `ssh`.
     pub forwards: Vec<ForwardSpec>,
 }
@@ -260,6 +264,9 @@ impl SshConfig {
                 }
                 Value::Strict(p) => {
                     r.host_key_policy.get_or_insert(*p);
+                }
+                Value::LegacyHostKeys => {
+                    r.legacy_host_keys.get_or_insert(true);
                 }
                 Value::Forward(f) => {
                     if !r.forwards.contains(f) {
@@ -440,6 +447,17 @@ fn parse_value(keyword: &str, raw: &str, args: &[String]) -> Result<Option<Value
             "accept-new" | "no" | "off" | "false" => HostKeyPolicy::AcceptNew,
             _ => return Err(()),
         }),
+        // Only what it says of `ssh-rsa` (SHA-1): added (`+ssh-rsa`) or
+        // listed. Any other list is not imported.
+        "hostkeyalgorithms"
+            if !first.starts_with('-')
+                && first
+                    .trim_start_matches(['+', '^'])
+                    .split(',')
+                    .any(|a| a == "ssh-rsa") =>
+        {
+            Value::LegacyHostKeys
+        }
         _ => return Ok(None),
     }))
 }
@@ -713,6 +731,7 @@ pub fn import(config: &SshConfig) -> Import {
             agent_forward: r.agent_forward,
             env: r.env.clone(),
             host_key_policy: r.host_key_policy,
+            legacy_host_keys: r.legacy_host_keys,
             ..Settings::default()
         };
         hosts.push((

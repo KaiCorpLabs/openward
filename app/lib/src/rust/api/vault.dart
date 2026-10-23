@@ -617,6 +617,9 @@ class SettingsSpec {
   final String? term;
   final List<EnvVar>? env;
   final KeyPolicy? hostKeyPolicy;
+
+  /// Accept `ssh-rsa` host keys signed with SHA-1 (old servers).
+  final bool? legacyHostKeys;
   final IdentityChoice? identity;
 
   /// With [`IdentityChoice::Use`].
@@ -652,6 +655,7 @@ class SettingsSpec {
     this.term,
     this.env,
     this.hostKeyPolicy,
+    this.legacyHostKeys = null,
     this.identity,
     this.identityId = r"",
     this.environment = null,
@@ -686,6 +690,7 @@ class SettingsSpec {
       term.hashCode ^
       env.hashCode ^
       hostKeyPolicy.hashCode ^
+      legacyHostKeys.hashCode ^
       identity.hashCode ^
       identityId.hashCode ^
       environment.hashCode ^
@@ -719,6 +724,7 @@ class SettingsSpec {
           term == other.term &&
           env == other.env &&
           hostKeyPolicy == other.hostKeyPolicy &&
+          legacyHostKeys == other.legacyHostKeys &&
           identity == other.identity &&
           identityId == other.identityId &&
           environment == other.environment &&

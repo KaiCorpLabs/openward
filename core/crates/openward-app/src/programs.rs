@@ -774,17 +774,35 @@ pub fn apply(
         report.snippets += 1;
     }
     for k in b.known_hosts.iter().filter(|k| !have.known_host(k)) {
-        items.push((
-            ItemId::new(),
-            Data::KnownHost(KnownHost {
-                hosts: k.hosts.clone(),
-                key: k.key.clone(),
-                marker: k.marker,
-                comment: k.comment.clone(),
-                imported: imported(&k.id),
-                ..KnownHost::default()
-            }),
-        ));
+        // The key's own comment (`… user@host`) and line breaks go; what
+        // is still not one known_hosts line is left out.
+        let mut key = k.key.split_whitespace();
+        let known = KnownHost {
+            hosts: k.hosts.trim().to_owned(),
+            key: [key.next(), key.next()]
+                .into_iter()
+                .flatten()
+                .collect::<Vec<_>>()
+                .join(" "),
+            marker: k.marker,
+            comment: k
+                .comment
+                .as_deref()
+                .map(|c| {
+                    c.split(char::is_control)
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                        .trim()
+                        .to_owned()
+                })
+                .filter(|c| !c.is_empty()),
+            imported: imported(&k.id),
+            ..KnownHost::default()
+        };
+        if !known.is_well_formed() {
+            continue;
+        }
+        items.push((ItemId::new(), Data::KnownHost(known)));
         report.known_hosts += 1;
     }
     report.without_key.sort();

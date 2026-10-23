@@ -224,7 +224,20 @@ class TerminalController extends ConnectionController {
     if (renderer == null || isDisposed) return false;
     final f = session.poll();
     if (f == null) return false;
-    renderer.apply(decodeFrame(f.frame));
+    final frame = () {
+      try {
+        return decodeFrame(f.frame);
+      } on Object {
+        return null;
+      }
+    }();
+    if (frame == null) {
+      // A bug, never the server's doing. The core already sent this
+      // damage: without a full frame its rows would stay as they were.
+      session.redraw();
+      return false;
+    }
+    renderer.apply(frame);
     renderer.setSelection([
       for (final r in f.selection) (row: r.row, start: r.start, end: r.end),
     ]);

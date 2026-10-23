@@ -179,10 +179,18 @@ class ReconnectBanner extends ConsumerStatefulWidget {
 }
 
 class _ReconnectBannerState extends ConsumerState<ReconnectBanner> {
-  late final Timer _tick = Timer.periodic(
-    const Duration(milliseconds: 250),
-    (_) => setState(() {}),
-  );
+  // Started in initState: a `late` initializer runs at the first read,
+  // which would be dispose().
+  late final Timer _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    _tick = Timer.periodic(
+      const Duration(milliseconds: 250),
+      (_) => setState(() {}),
+    );
+  }
 
   @override
   void dispose() {

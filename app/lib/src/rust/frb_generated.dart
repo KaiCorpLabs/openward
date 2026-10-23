@@ -6326,13 +6326,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   LinkView dco_decode_link_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return LinkView(
       url: dco_decode_String(arr[0]),
-      row: dco_decode_u_16(arr[1]),
-      start: dco_decode_u_16(arr[2]),
-      end: dco_decode_u_16(arr[3]),
+      text: dco_decode_String(arr[1]),
+      row: dco_decode_u_16(arr[2]),
+      start: dco_decode_u_16(arr[3]),
+      end: dco_decode_u_16(arr[4]),
     );
   }
 
@@ -7008,8 +7009,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   PromptView dco_decode_prompt_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 13)
-      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
+    if (arr.length != 14)
+      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
     return PromptView(
       id: dco_decode_u_64(arr[0]),
       kind: dco_decode_opt_box_autoadd_prompt_kind(arr[1]),
@@ -7024,6 +7025,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       instructions: dco_decode_String(arr[10]),
       questions: dco_decode_list_question_view(arr[11]),
       retry: dco_decode_bool(arr[12]),
+      knownTypes: dco_decode_list_String(arr[13]),
     );
   }
 
@@ -7155,8 +7157,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   SettingsSpec dco_decode_settings_spec(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 27)
-      throw Exception('unexpected arr length: expect 27 but see ${arr.length}');
+    if (arr.length != 28)
+      throw Exception('unexpected arr length: expect 28 but see ${arr.length}');
     return SettingsSpec(
       user: dco_decode_opt_String(arr[0]),
       port: dco_decode_opt_box_autoadd_u_16(arr[1]),
@@ -7178,13 +7180,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       term: dco_decode_opt_String(arr[17]),
       env: dco_decode_opt_list_env_var(arr[18]),
       hostKeyPolicy: dco_decode_opt_box_autoadd_key_policy(arr[19]),
-      identity: dco_decode_opt_box_autoadd_identity_choice(arr[20]),
-      identityId: dco_decode_String(arr[21]),
-      environment: dco_decode_opt_box_autoadd_environment_kind(arr[22]),
-      environmentName: dco_decode_String(arr[23]),
-      environmentShort: dco_decode_String(arr[24]),
-      environmentColor: dco_decode_String(arr[25]),
-      readOsRelease: dco_decode_opt_box_autoadd_bool(arr[26]),
+      legacyHostKeys: dco_decode_opt_box_autoadd_bool(arr[20]),
+      identity: dco_decode_opt_box_autoadd_identity_choice(arr[21]),
+      identityId: dco_decode_String(arr[22]),
+      environment: dco_decode_opt_box_autoadd_environment_kind(arr[23]),
+      environmentName: dco_decode_String(arr[24]),
+      environmentShort: dco_decode_String(arr[25]),
+      environmentColor: dco_decode_String(arr[26]),
+      readOsRelease: dco_decode_opt_box_autoadd_bool(arr[27]),
     );
   }
 
@@ -8781,10 +8784,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   LinkView sse_decode_link_view(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_url = sse_decode_String(deserializer);
+    var var_text = sse_decode_String(deserializer);
     var var_row = sse_decode_u_16(deserializer);
     var var_start = sse_decode_u_16(deserializer);
     var var_end = sse_decode_u_16(deserializer);
-    return LinkView(url: var_url, row: var_row, start: var_start, end: var_end);
+    return LinkView(
+      url: var_url,
+      text: var_text,
+      row: var_row,
+      start: var_start,
+      end: var_end,
+    );
   }
 
   @protected
@@ -9998,6 +10008,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_instructions = sse_decode_String(deserializer);
     var var_questions = sse_decode_list_question_view(deserializer);
     var var_retry = sse_decode_bool(deserializer);
+    var var_knownTypes = sse_decode_list_String(deserializer);
     return PromptView(
       id: var_id,
       kind: var_kind,
@@ -10012,6 +10023,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       instructions: var_instructions,
       questions: var_questions,
       retry: var_retry,
+      knownTypes: var_knownTypes,
     );
   }
 
@@ -10168,6 +10180,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_term = sse_decode_opt_String(deserializer);
     var var_env = sse_decode_opt_list_env_var(deserializer);
     var var_hostKeyPolicy = sse_decode_opt_box_autoadd_key_policy(deserializer);
+    var var_legacyHostKeys = sse_decode_opt_box_autoadd_bool(deserializer);
     var var_identity = sse_decode_opt_box_autoadd_identity_choice(deserializer);
     var var_identityId = sse_decode_String(deserializer);
     var var_environment = sse_decode_opt_box_autoadd_environment_kind(
@@ -10198,6 +10211,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       term: var_term,
       env: var_env,
       hostKeyPolicy: var_hostKeyPolicy,
+      legacyHostKeys: var_legacyHostKeys,
       identity: var_identity,
       identityId: var_identityId,
       environment: var_environment,
@@ -11744,6 +11758,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_link_view(LinkView self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.url, serializer);
+    sse_encode_String(self.text, serializer);
     sse_encode_u_16(self.row, serializer);
     sse_encode_u_16(self.start, serializer);
     sse_encode_u_16(self.end, serializer);
@@ -12876,6 +12891,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.instructions, serializer);
     sse_encode_list_question_view(self.questions, serializer);
     sse_encode_bool(self.retry, serializer);
+    sse_encode_list_String(self.knownTypes, serializer);
   }
 
   @protected
@@ -13002,6 +13018,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_String(self.term, serializer);
     sse_encode_opt_list_env_var(self.env, serializer);
     sse_encode_opt_box_autoadd_key_policy(self.hostKeyPolicy, serializer);
+    sse_encode_opt_box_autoadd_bool(self.legacyHostKeys, serializer);
     sse_encode_opt_box_autoadd_identity_choice(self.identity, serializer);
     sse_encode_String(self.identityId, serializer);
     sse_encode_opt_box_autoadd_environment_kind(self.environment, serializer);

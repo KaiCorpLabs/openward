@@ -9,7 +9,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use openward_proto::{ForwardKind, Proxy, ProxyServer, Route, Settings};
+use openward_proto::{ForwardKind, Proxy, ProxyServer, Settings};
 use yaml_rust2::{Yaml, YamlLoader};
 
 use crate::bundle::{Bundle, Group, Host, JumpRef, KeyRef, Tunnel, Warning, WarningKind};
@@ -147,7 +147,8 @@ pub fn parse(bytes: &[u8]) -> Result<Bundle, String> {
             ));
         }
         if let Some(cmd) = s(&o["proxyCommand"]) {
-            settings.route = Some(Route::Command(cmd));
+            out.warnings
+                .push(Warning::about(&name, WarningKind::ProxyCommand(cmd)));
         }
         let server = |host: &str, port: &str, default: u16| {
             s(&o[host]).map(|host| ProxyServer {
@@ -295,6 +296,19 @@ profiles:
         assert_eq!(b.hosts[2].group.as_deref(), Some("Old"));
         assert!(b.groups.iter().any(|g| g.id == "Old"));
         assert_eq!(b.groups[1].parent.as_deref(), Some("g1"));
+    }
+
+    /// A ProxyCommand from another program's file is not taken: it would
+    /// run here. The report says it, with the command.
+    #[test]
+    fn a_proxy_command_is_left_out_and_said() {
+        let config = "version: 5\nprofiles:\n  - id: p\n    type: ssh\n    name: edge\n    options:\n      host: edge.example.com\n      proxyCommand: nc -X connect -x proxy:3128 %h %p\n";
+        let b = parse(config.as_bytes()).unwrap();
+        assert_eq!(b.hosts[0].settings.route, None);
+        assert!(b.warnings.contains(&Warning::about(
+            "edge",
+            WarningKind::ProxyCommand("nc -X connect -x proxy:3128 %h %p".into())
+        )));
     }
 
     #[test]

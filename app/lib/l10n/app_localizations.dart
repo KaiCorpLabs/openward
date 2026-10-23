@@ -2186,6 +2186,18 @@ abstract class AppLocalizations {
   /// **'Clave del host'**
   String get hostKey;
 
+  /// No description provided for @hostKeyOtherTypeBody.
+  ///
+  /// In es, this message translates to:
+  /// **'OpenWard conoce {where} por su clave {known}, pero ahora ofrece una {offered} que no conoce. Puede que el servidor haya cambiado sus claves, o que otro equipo se haga pasar por él: confía en ella solo si sabes por qué ha cambiado.'**
+  String hostKeyOtherTypeBody(String where, String known, String offered);
+
+  /// No description provided for @hostKeyOtherTypeTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Otra clave para {label}'**
+  String hostKeyOtherTypeTitle(String label);
+
   /// No description provided for @hostKeyUnknownBody.
   ///
   /// In es, this message translates to:
@@ -3098,6 +3110,30 @@ abstract class AppLocalizations {
   /// **'Latencia con {host}'**
   String latencyWith(String host);
 
+  /// No description provided for @legacyHostKeys.
+  ///
+  /// In es, this message translates to:
+  /// **'Claves antiguas (ssh-rsa)'**
+  String get legacyHostKeys;
+
+  /// No description provided for @legacyHostKeysNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo para servidores anteriores a OpenSSH 7.2, que firman su clave con SHA-1. OpenSSH dejó de aceptarlo en la 8.8.'**
+  String get legacyHostKeysNote;
+
+  /// No description provided for @legacyHostKeysOff.
+  ///
+  /// In es, this message translates to:
+  /// **'No'**
+  String get legacyHostKeysOff;
+
+  /// No description provided for @legacyHostKeysOn.
+  ///
+  /// In es, this message translates to:
+  /// **'Aceptar ssh-rsa con SHA-1'**
+  String get legacyHostKeysOn;
+
   /// No description provided for @legendInheritAgain.
   ///
   /// In es, this message translates to:
@@ -3151,6 +3187,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{count} líneas'**
   String linesCount(int count);
+
+  /// No description provided for @linkLeadsElsewhere.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuidado: el texto dice otra cosa, pero lleva a {url}'**
+  String linkLeadsElsewhere(String url);
 
   /// No description provided for @linkNotOpened.
   ///
@@ -6152,6 +6194,36 @@ abstract class AppLocalizations {
   /// **'Arrancando…'**
   String get starting;
 
+  /// No description provided for @startupErrorBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Puede que los escribiera una versión más nueva de OpenWard, que la carpeta no tenga permisos o que el archivo esté dañado. No se ha borrado ni cambiado nada en {folder}.'**
+  String startupErrorBody(String folder);
+
+  /// No description provided for @startupErrorDetails.
+  ///
+  /// In es, this message translates to:
+  /// **'Detalles'**
+  String get startupErrorDetails;
+
+  /// No description provided for @startupErrorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'OpenWard no ha podido abrir sus datos'**
+  String get startupErrorTitle;
+
+  /// No description provided for @startupQuit.
+  ///
+  /// In es, this message translates to:
+  /// **'Salir'**
+  String get startupQuit;
+
+  /// No description provided for @startupShowFolder.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar la carpeta de datos'**
+  String get startupShowFolder;
+
   /// No description provided for @state.
   ///
   /// In es, this message translates to:
@@ -7027,6 +7099,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Una parte de los datos no se ha podido leer: {detail}.'**
   String warnPartlyUnreadable(String detail);
+
+  /// No description provided for @warnProxyCommand.
+  ///
+  /// In es, this message translates to:
+  /// **'{host} usaba un ProxyCommand, que ejecuta un programa en este equipo; no se ha importado para no ejecutar lo que dice el archivo de otro programa. Si confías en él, ponlo en el host a mano: {command}'**
+  String warnProxyCommand(String host, String command);
 
   /// No description provided for @warnShared.
   ///

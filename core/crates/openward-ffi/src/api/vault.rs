@@ -179,6 +179,9 @@ pub struct SettingsSpec {
     pub term: Option<String>,
     pub env: Option<Vec<EnvVar>>,
     pub host_key_policy: Option<KeyPolicy>,
+    /// Accept `ssh-rsa` host keys signed with SHA-1 (old servers).
+    #[frb(default = "null")]
+    pub legacy_host_keys: Option<bool>,
     pub identity: Option<IdentityChoice>,
     /// With [`IdentityChoice::Use`].
     #[frb(default = "")]
@@ -265,6 +268,7 @@ impl SettingsSpec {
             environment_short: mark.map(|m| m.short.clone()).unwrap_or_default(),
             environment_color: mark.map(|m| m.color.clone()).unwrap_or_default(),
             read_os_release: s.read_os_release,
+            legacy_host_keys: s.legacy_host_keys,
             proxy,
             proxy_host: server.map(|s| s.host.clone()).unwrap_or_default(),
             proxy_port: server.map_or(0, |s| s.port),
@@ -379,6 +383,7 @@ impl SettingsSpec {
             }
         };
         s.read_os_release = self.read_os_release;
+        s.legacy_host_keys = self.legacy_host_keys;
         Ok(())
     }
 }

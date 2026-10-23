@@ -240,6 +240,7 @@ fn create_ssh(
         user: user.to_owned(),
         known_hosts: Arc::new(Mutex::new(KnownHosts::new(Unknown::Learn))),
         host_certificates: false,
+        legacy_host_keys: false,
         keepalive: Some(Duration::from_secs(15)),
         agent_forward: None,
         on_untrusted: None,

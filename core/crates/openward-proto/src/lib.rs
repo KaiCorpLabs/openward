@@ -391,6 +391,25 @@ pub enum Marker {
 }
 
 impl KnownHost {
+    /// Whether it makes exactly one `known_hosts` line: patterns and a key
+    /// in two parts, without spaces or control characters, and a comment
+    /// without them either. A comment holding `\n@cert-authority * …` would
+    /// otherwise add a line trusting a CA for every host.
+    pub fn is_well_formed(&self) -> bool {
+        let token =
+            |s: &str| !s.is_empty() && !s.chars().any(|c| c.is_whitespace() || c.is_control());
+        let mut key = self.key.split(' ');
+        token(&self.hosts)
+            && matches!(
+                (key.next(), key.next(), key.next()),
+                (Some(kind), Some(data), None) if token(kind) && token(data)
+            )
+            && self
+                .comment
+                .as_deref()
+                .is_none_or(|c| !c.chars().any(char::is_control))
+    }
+
     /// The entry as a `known_hosts` line.
     pub fn to_line(&self) -> String {
         let mut line = String::new();

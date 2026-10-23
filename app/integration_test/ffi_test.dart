@@ -276,6 +276,10 @@ Host db
             })
             .catchError((_) => false);
     if (!up || !File('$fixtures/id_ed25519').existsSync()) {
+      // `make ci` passes it: there a skip would pass untested.
+      if (const bool.fromEnvironment('OPENWARD_REQUIRE_SERVERS')) {
+        fail('S2 servers not running (spikes/s2-ssh/servers/up.sh)');
+      }
       markTestSkipped('S2 servers not running');
       return;
     }

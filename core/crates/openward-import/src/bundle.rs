@@ -210,6 +210,10 @@ pub enum WarningKind {
     Mosh,
     /// A command run on connect, which OpenWard does not do yet.
     StartupCommand,
+    /// A `ProxyCommand`, left out: it would run a program on this computer
+    /// on the word of another program's file. The text is the command, for
+    /// the user to set it by hand if they trust it.
+    ProxyCommand(String),
     /// Something OpenWard does not have, named in the program's terms
     /// (`X11 forwarding`, `a telnet proxy`); the rest of the item came in.
     Unsupported(String),

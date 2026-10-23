@@ -24,13 +24,38 @@ CREATE TABLE items (
 ) STRICT;
 ";
 
+/// Takes `<path>.lock` for this process, or fails if another holds it.
+/// The system lets go of it when the process ends, however it ends.
+fn lock(path: &Path) -> Result<std::fs::File> {
+    let mut name = path.as_os_str().to_owned();
+    name.push(".lock");
+    let mut options = std::fs::OpenOptions::new();
+    options.create(true).truncate(false).write(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let file = options.open(std::path::PathBuf::from(name))?;
+    match file.try_lock() {
+        Ok(()) => Ok(file),
+        Err(std::fs::TryLockError::WouldBlock) => Err(Error::OpenElsewhere),
+        Err(std::fs::TryLockError::Error(e)) => Err(e.into()),
+    }
+}
+
 pub struct Store {
     conn: Connection,
     pub vault_id: ItemId,
+    /// Held while the vault is open, on `<file>.lock`: each process has its
+    /// own copy of the items in memory, so a second one would write over
+    /// what the first changed.
+    _lock: Option<std::fs::File>,
 }
 
 impl Store {
     pub fn open(path: &Path) -> Result<Self> {
+        let lock = lock(path)?;
         #[cfg(unix)]
         if !path.exists() {
             // Created here, owner-only, so SQLite never makes it with the
@@ -45,7 +70,9 @@ impl Store {
         let conn = Connection::open(path)?;
         conn.pragma_update(None, "journal_mode", "WAL")?;
         conn.pragma_update(None, "synchronous", "FULL")?;
-        Self::init(conn)
+        let mut store = Self::init(conn)?;
+        store._lock = Some(lock);
+        Ok(store)
     }
 
     pub fn open_in_memory() -> Result<Self> {
@@ -76,7 +103,11 @@ impl Store {
             .and_then(|b| <[u8; 16]>::try_from(b).ok())
             .map(ItemId::from_bytes)
             .ok_or(Error::Invalid("the vault has no id"))?;
-        Ok(Self { conn, vault_id })
+        Ok(Self {
+            conn,
+            vault_id,
+            _lock: None,
+        })
     }
 
     /// Every row: id, head revision and envelope.

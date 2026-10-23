@@ -16,6 +16,8 @@ make test
 make deny     # licencias y avisos de seguridad de las dependencias
 ```
 
+Todo lo que hace la CI, aquí (núcleo, destinos móviles, spikes, dependencias, la app y sus pruebas de ventana, con los servidores SSH de prueba): `make ci`. Sin las pruebas de ventana, `make ci-quick`. Nada llega a `main` sin `make ci` en verde.
+
 El núcleo prohíbe `unsafe` (`unsafe_code = "forbid"`). Las únicas excepciones son crates de FFI aislados y revisados (bindings de Flutter, firmantes de plataforma, motores en C).
 
 ## Datos de prueba

@@ -68,9 +68,29 @@ impl Local {
         }
     }
 
-    /// A `ProxyCommand`: only the `%` tokens; the shell does the rest.
-    pub fn command(&self, text: &str, t: &Tokens) -> String {
-        self.expand(text, t, false)
+    /// A `ProxyCommand`: only the `%` tokens; the shell does the rest. The
+    /// host name, the remote user and the alias go in as they are, so one
+    /// that a shell would read as more than a name (`a$(…)`, `x;y`) fails
+    /// with its token, as in OpenSSH 9.6: it may come from an import or a
+    /// shared vault, and would run here.
+    pub fn command(&self, text: &str, t: &Tokens) -> Result<String, char> {
+        let mut chars = text.chars();
+        while let Some(c) = chars.next() {
+            if c != '%' {
+                continue;
+            }
+            let token = chars.next();
+            let value = match token {
+                Some('h') => t.host,
+                Some('r') => t.user,
+                Some('n') => t.alias,
+                _ => continue,
+            };
+            if !shell_safe(value) {
+                return Err(token.unwrap_or('%'));
+            }
+        }
+        Ok(self.expand(text, t, false))
     }
 
     /// `%d %u %h %p %r %n %%`, and `${VAR}` when `env` is set. Unknown
@@ -115,6 +135,16 @@ impl Local {
         }
         out
     }
+}
+
+/// Whether a shell (`sh` or `cmd`) reads `value` as one plain word: no
+/// quotes, `$`, `\`, `;`, `&`, `|`, `<`, `>`, brackets, `^` or `%`, no
+/// spaces or control characters, and no leading `-`.
+fn shell_safe(value: &str) -> bool {
+    !value.starts_with('-')
+        && !value
+            .chars()
+            .any(|c| c.is_whitespace() || c.is_control() || "'\"`$\\;&|<>(){}^%!*?[]~#".contains(c))
 }
 
 #[cfg(test)]
@@ -164,7 +194,39 @@ mod tests {
     fn commands() {
         assert_eq!(
             local().command("ssh -W %h:%p -l %u ${X} ~/x", &T),
-            "ssh -W db.example.com:2222 -l ana ${X} ~/x"
+            Ok("ssh -W db.example.com:2222 -l ana ${X} ~/x".into())
         );
+    }
+
+    /// A name a shell would run part of never reaches it (CVE-2023-51385).
+    #[test]
+    fn names_that_a_shell_would_run_fail() {
+        let l = local();
+        let with = |host: &'static str, user: &'static str, alias: &'static str| Tokens {
+            host,
+            port: 22,
+            user,
+            alias,
+        };
+        assert_eq!(
+            l.command("nc %h %p", &with("a$(touch x)", "u", "a")),
+            Err('h')
+        );
+        assert_eq!(l.command("nc %h %p", &with("a;b", "u", "a")), Err('h'));
+        assert_eq!(
+            l.command("ssh -l %r -W %h:%p j", &with("a", "x`id`", "a")),
+            Err('r')
+        );
+        assert_eq!(
+            l.command("connect %n", &with("a", "u", "web prod")),
+            Err('n')
+        );
+        assert_eq!(l.command("nc %h %p", &with("-oProxy", "u", "a")), Err('h'));
+        // Only the tokens the command uses count, and IPv6 addresses pass.
+        assert!(
+            l.command("nc %h %p", &with("fe80::1", "u", "web prod"))
+                .is_ok()
+        );
+        assert!(l.command("nc 100%% %p", &with("a b", "u", "a")).is_ok());
     }
 }

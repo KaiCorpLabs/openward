@@ -10,17 +10,24 @@ import 'core/providers.dart';
 import 'core/settings.dart';
 import 'src/rust/api/app.dart';
 import 'src/rust/frb_generated.dart';
+import 'startup_error.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   registerFontLicenses();
-  await RustLib.init();
   // OPENWARD_DATA: another data directory, to try things without touching
   // the real one.
   final dir =
       Platform.environment['OPENWARD_DATA'] ??
       (await getApplicationSupportDirectory()).path;
-  final app = await OpenWard.open(dataDir: dir);
+  final OpenWard app;
+  try {
+    await RustLib.init();
+    app = await OpenWard.open(dataDir: dir);
+  } catch (e) {
+    // Rather than an empty window: what happened, and where the data is.
+    return runApp(StartupErrorApp(error: '$e', dataDir: dir));
+  }
   runApp(
     ProviderScope(
       overrides: [

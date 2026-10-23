@@ -16,7 +16,7 @@ use std::fs;
 use std::io;
 use std::path::Path;
 
-use openward_proto::{Agent, ForwardKind, Proxy, ProxyServer, Route, Settings};
+use openward_proto::{Agent, ForwardKind, Proxy, ProxyServer, Settings};
 
 use crate::bundle::{Bundle, Group, Host, JumpRef, KeyRef, Program, Tunnel, Warning, WarningKind};
 use crate::text;
@@ -286,8 +286,11 @@ fn bundle(sessions: Vec<(String, Session)>, folders: &HashMap<String, Vec<String
             3 => settings.proxy = server().map(Proxy::Http),
             5 => {
                 if let Some(cmd) = text("ProxyTelnetCommand") {
-                    settings.route = Some(Route::Command(
-                        cmd.replace("%host", "%h").replace("%port", "%p"),
+                    out.warnings.push(Warning::about(
+                        &name,
+                        WarningKind::ProxyCommand(
+                            cmd.replace("%host", "%h").replace("%port", "%p"),
+                        ),
                     ));
                 }
             }

@@ -1,10 +1,23 @@
-.PHONY: test lint fmt deny bench corpus conformance conformance-record ssh ssh-down clean
+.PHONY: test lint fmt deny ci ci-quick ci-check bench corpus conformance conformance-record ssh ssh-down clean
 
 TERMBENCH := spikes/s1-terminal/termbench
 CORPUS := spikes/s1-terminal/corpus/synthetic
 
+# Without the S2 servers the connection tests pass without testing anything.
 test:
+	@nc -z 127.0.0.1 22100 2>/dev/null || echo "warning: S2 servers not running: the SSH tests skip (make ssh, or make ci)"
 	cd core && cargo test --workspace
+
+# The CI, run here (tool/ci.sh): everything before a release or a push to
+# main; without the window tests for each commit; and whether HEAD passed.
+ci:
+	tool/ci.sh
+
+ci-quick:
+	tool/ci.sh --quick
+
+ci-check:
+	tool/ci.sh --check
 
 lint:
 	cd core && cargo fmt --all -- --check

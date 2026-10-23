@@ -32,6 +32,10 @@ pub enum Error {
     Io(#[from] std::io::Error),
     #[error("the vault was written by a newer version (format {0})")]
     NewerFormat(i64),
+    /// Another OpenWard (another copy of the app, or a build of it) has it
+    /// open: two at once would undo each other's changes.
+    #[error("the vault is open in another OpenWard")]
+    OpenElsewhere,
     #[error("item {0} not found")]
     NotFound(ItemId),
     #[error("item {id} is a {found}, not a {expected}")]
@@ -659,9 +663,13 @@ impl Vault {
     /// The trusted keys as `known_hosts` text, for `openward-ssh`.
     pub fn known_hosts_text(&self) -> String {
         let mut text = String::new();
+        // One that is not a single line (written before the vault checked)
+        // is left out rather than read as several.
         for (_, k) in self.known_hosts() {
-            text.push_str(&k.to_line());
-            text.push('\n');
+            if k.is_well_formed() {
+                text.push_str(&k.to_line());
+                text.push('\n');
+            }
         }
         text
     }
@@ -685,6 +693,14 @@ impl Vault {
             })
             .map(|(id, _)| id)
             .collect();
+        let known = KnownHost {
+            hosts,
+            key: key.split_whitespace().take(2).collect::<Vec<_>>().join(" "),
+            ..KnownHost::default()
+        };
+        if !known.is_well_formed() {
+            return Err(Error::Invalid("not a host name and a key"));
+        }
         let id = ItemId::new();
         let now = now_ms();
         let item = Item {
@@ -693,11 +709,7 @@ impl Vault {
             body: Body {
                 created: now,
                 modified: now,
-                data: Data::KnownHost(KnownHost {
-                    hosts,
-                    key: key.split_whitespace().take(2).collect::<Vec<_>>().join(" "),
-                    ..KnownHost::default()
-                }),
+                data: Data::KnownHost(known),
             },
         };
         self.store.write(std::slice::from_ref(&item), &replaced)?;
@@ -812,8 +824,10 @@ impl Vault {
                 Ok(())
             }
             Data::KnownHost(k) => {
-                if k.hosts.trim().is_empty() || k.key.split_whitespace().count() < 2 {
-                    return Err(Error::Invalid("a known host needs patterns and a key"));
+                if !k.is_well_formed() {
+                    return Err(Error::Invalid(
+                        "a known host needs patterns and a key, on one line",
+                    ));
                 }
                 Ok(())
             }

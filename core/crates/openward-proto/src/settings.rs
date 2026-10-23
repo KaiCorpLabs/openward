@@ -81,6 +81,10 @@ settings! {
     /// Variables sent with the session (`SetEnv`).
     env: BTreeMap<String, String>,
     host_key_policy: HostKeyPolicy,
+    /// Accept host keys signed with `ssh-rsa` (SHA-1), for servers older
+    /// than OpenSSH 7.2 that sign no other way. Off by default, as in
+    /// OpenSSH since 8.8.
+    legacy_host_keys: bool,
     /// The identity whose user, keys and agent apply (below the host's
     /// own settings).
     identity: UseIdentity,

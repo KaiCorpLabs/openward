@@ -313,6 +313,37 @@ Match all
     assert_eq!(config.resolve("b").user.as_deref(), Some("everyone"));
 }
 
+/// `HostKeyAlgorithms +ssh-rsa` lets an old server in; nothing else of the
+/// list is imported.
+#[test]
+fn old_host_keys_are_allowed_where_the_config_does() {
+    let (_dir, paths) = home(
+        "
+Host old
+    HostKeyAlgorithms +ssh-rsa,ssh-dss
+Host listed
+    HostKeyAlgorithms ssh-ed25519,ssh-rsa
+Host modern
+    HostKeyAlgorithms ssh-ed25519
+Host removed
+    HostKeyAlgorithms -ssh-rsa
+",
+        &[],
+    );
+    let config = load(&paths);
+    assert_eq!(config.resolve("old").legacy_host_keys, Some(true));
+    assert_eq!(config.resolve("listed").legacy_host_keys, Some(true));
+    assert_eq!(config.resolve("modern").legacy_host_keys, None);
+    assert_eq!(config.resolve("removed").legacy_host_keys, None);
+    let imported = import(&config);
+    let old = imported
+        .hosts
+        .iter()
+        .find(|(_, h)| h.label == "old")
+        .unwrap();
+    assert_eq!(old.1.settings.legacy_host_keys, Some(true));
+}
+
 #[test]
 fn a_missing_config_imports_nothing() {
     let dir = tempfile::tempdir().unwrap();

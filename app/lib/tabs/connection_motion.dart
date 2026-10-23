@@ -341,10 +341,15 @@ class StalledNotice extends StatefulWidget {
 }
 
 class _StalledNoticeState extends State<StalledNotice> {
-  late final Timer _tick = Timer.periodic(
-    const Duration(seconds: 1),
-    (_) => setState(() {}),
-  );
+  // Started in initState: a `late` initializer runs at the first read,
+  // which would be dispose().
+  late final Timer _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    _tick = Timer.periodic(const Duration(seconds: 1), (_) => setState(() {}));
+  }
 
   @override
   void dispose() {
@@ -463,10 +468,18 @@ class ReconnectCard extends ConsumerStatefulWidget {
 }
 
 class _ReconnectCardState extends ConsumerState<ReconnectCard> {
-  late final Timer _tick = Timer.periodic(
-    const Duration(milliseconds: 250),
-    (_) => setState(() {}),
-  );
+  // Started in initState: a `late` initializer runs at the first read,
+  // which would be dispose().
+  late final Timer _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    _tick = Timer.periodic(
+      const Duration(milliseconds: 250),
+      (_) => setState(() {}),
+    );
+  }
 
   @override
   void dispose() {
