@@ -100,9 +100,10 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   void initState() {
     super.initState();
     focusNode.addListener(_onFocusChange);
+    _c.wakePane = _wake;
     _c.visible = true;
     _c.focusTerminal = _focusSoon;
-    _ticker.start();
+    _wake();
     // Its language for the line that marks a new shell after a cut.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -146,7 +147,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   TerminalRenderer _look() {
     final settings = ref.watch(settingsProvider);
     final ow = context.ow;
-    return _renderer = _c.renderer(
+    final r = _c.renderer(
       MediaQuery.devicePixelRatioOf(context),
       fontSize: (settings.fontSize + _c.zoom).clamp(6, 48),
       palette: ow.terminal,
@@ -154,6 +155,11 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
       lineHeight: settings.lineHeight,
       minimumContrast: settings.minimumContrast ? ow.minimumContrast : 1,
     );
+    // Another font, theme or density: the whole screen to draw again.
+    if (!identical(r, _renderer)) {
+      SchedulerBinding.instance.addPostFrameCallback((_) => _wake());
+    }
+    return _renderer = r;
   }
 
   @override
@@ -165,8 +171,13 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
       if (oldWidget.controller.focusTerminal == _focusSoon) {
         oldWidget.controller.focusTerminal = null;
       }
+      if (oldWidget.controller.wakePane == _wake) {
+        oldWidget.controller.wakePane = null;
+      }
+      _c.wakePane = _wake;
       _c.visible = true;
       _c.focusTerminal = _focusSoon;
+      _wake();
       _applyCursor(ref.read(settingsProvider));
       _cols = _rows = 0;
     }
@@ -175,10 +186,12 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   @override
   void dispose() {
     _ticker.dispose();
+    _resize?.cancel();
     _blink?.cancel();
     _autoScroll?.cancel();
     _input?.close();
     focusNode.dispose();
+    if (_c.wakePane == _wake) _c.wakePane = null;
     _c.visible = false;
     if (_c.focusTerminal == _focusSoon) _c.focusTerminal = null;
     super.dispose();
@@ -186,28 +199,62 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
 
   // ---------------------------------------------------------------- frames
 
+  /// Frames in a row with nothing new.
+  int _idleTicks = 0;
+
+  /// It asks for frames: something changed and is being drawn.
+  @visibleForTesting
+  bool get polling => _ticker.isActive;
+
+  /// There is something to draw: frames until the core has nothing new.
+  void _wake() {
+    if (!mounted) return;
+    _idleTicks = 0;
+    if (!_ticker.isActive) _ticker.start();
+  }
+
   void _onTick(Duration _) {
     final before = _renderer?.cursor;
-    if (!_c.poll()) return;
+    if (!_c.poll()) {
+      // An idle terminal asks for no frames until the core says otherwise.
+      if (++_idleTicks >= 2) _ticker.stop();
+      return;
+    }
+    _idleTicks = 0;
     final after = _renderer?.cursor;
     if (before?.row != after?.row || before?.col != after?.col) {
       SchedulerBinding.instance.addPostFrameCallback((_) => _updateImeRects());
     }
   }
 
+  /// The size on its way to the core. Dragging a divider or the window
+  /// changes it every frame, and each change reflows the history and sends
+  /// the server a window change, which makes the shell redraw its prompt:
+  /// the size goes once it stops changing for a moment.
+  Timer? _resize;
+
   void _layout(BoxConstraints c, TerminalRenderer r) {
     final m = r.metrics;
     final cols = math.max(10, (c.maxWidth / m.width).floor());
     final rows = math.max(4, (c.maxHeight / m.height).floor());
     if (cols == _cols && rows == _rows) return;
+    final first = _cols == 0;
     _cols = cols;
     _rows = rows;
-    SchedulerBinding.instance.addPostFrameCallback((_) {
+    void apply() {
       if (!mounted) return;
       _session.resize(cols: cols, rows: rows);
-      widget.controller.grid.value = (cols, rows);
       _updateImeRects();
+    }
+
+    _resize?.cancel();
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // What the pane says it measures follows the drag as it happens.
+      widget.controller.grid.value = (cols, rows);
+      if (first) apply();
     });
+    if (!first) _resize = Timer(const Duration(milliseconds: 120), apply);
   }
 
   // -------------------------------------------------------------- keyboard

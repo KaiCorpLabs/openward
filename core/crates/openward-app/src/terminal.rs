@@ -1,9 +1,11 @@
 //! A terminal: the engine's state, the program behind it (a remote shell or
 //! a local one), and the input and frames the UI exchanges with it.
 //!
-//! The UI pulls damage frames once per refresh with [`Terminal::poll`] and
-//! sends input with the other methods; output from the program feeds the
-//! engine from a background thread or task. The engine outlives the
+//! The UI pulls damage frames with [`Terminal::poll`], once per refresh
+//! while there is something to draw: the waker ([`Terminal::set_waker`])
+//! tells it when there is again, so an idle terminal asks for no frames.
+//! It sends input with the other methods; output from the program feeds
+//! the engine from a background thread or task. The engine outlives the
 //! connection, so a reconnect continues on the same screen.
 
 use std::io::Read;
@@ -69,10 +71,30 @@ pub struct Frame {
     pub search: Option<SearchState>,
 }
 
+/// Called when the screen changes after the UI last looked.
+pub type Waker = Arc<dyn Fn() + Send + Sync>;
+
 struct State {
     engine: GhosttyEngine,
     enc: FrameEncoder,
     dirty: bool,
+    /// The waker was called and the UI has not polled since: one call per
+    /// look, however much output comes in between.
+    notified: bool,
+    waker: Option<Waker>,
+}
+
+impl State {
+    /// Something to draw: tells the UI, once until it looks.
+    fn touch(&mut self) {
+        self.dirty = true;
+        if !self.notified {
+            self.notified = true;
+            if let Some(wake) = &self.waker {
+                wake();
+            }
+        }
+    }
 }
 
 enum Io {
@@ -81,6 +103,9 @@ enum Io {
     Pty(Arc<Pty>),
     Ssh(mpsc::UnboundedSender<SshCmd>),
 }
+
+/// Chunks of output waiting for the parse thread.
+const PARSE_QUEUE: usize = 64;
 
 pub(crate) enum SshCmd {
     Data(Vec<u8>),
@@ -114,6 +139,8 @@ impl Terminal {
                 engine: GhosttyEngine::new(Size::new(cols, rows), scrollback),
                 enc: FrameEncoder::new(),
                 dirty: true,
+                notified: false,
+                waker: None,
             })),
             io: Arc::new(Mutex::new(Io::None)),
             task: Mutex::new(None),
@@ -132,11 +159,23 @@ impl Terminal {
         lock(&self.state).engine.size()
     }
 
+    /// Called (from any thread) when there is something to draw that the
+    /// UI has not polled yet. The UI polls, and stops asking for frames
+    /// while nothing changes.
+    pub fn set_waker(&self, wake: Waker) {
+        let mut s = lock(&self.state);
+        s.waker = Some(wake);
+        s.notified = false;
+        if s.dirty {
+            s.touch();
+        }
+    }
+
     /// Output from the program; replies to its queries go straight back.
     fn output(state: &Mutex<State>, bytes: &[u8]) -> Vec<u8> {
         let mut s = lock(state);
         s.engine.feed(bytes);
-        s.dirty = true;
+        s.touch();
         s.engine.take_host_writes()
     }
 
@@ -170,7 +209,7 @@ impl Terminal {
                         let _ = pty.write(&replies);
                     }
                 }
-                lock(&state).dirty = true;
+                lock(&state).touch();
                 // EOF can come a moment before the program is reaped.
                 let mut exit_code = pty.exit_code();
                 for _ in 0..50 {
@@ -247,7 +286,7 @@ impl Terminal {
             s.engine.scroll_to_bottom();
             if s.engine.has_selection() {
                 s.engine.clear_selection();
-                s.dirty = true;
+                s.touch();
             }
         }
         match &*lock(&self.io) {
@@ -260,6 +299,7 @@ impl Terminal {
     /// Everything that changed since the last call, or `None` if nothing did.
     pub fn poll(&self) -> Option<Frame> {
         let mut s = lock(&self.state);
+        s.notified = false;
         if !s.dirty {
             return None;
         }
@@ -267,6 +307,11 @@ impl Terminal {
         let State { engine, enc, .. } = &mut *s;
         engine.encode_damage(enc);
         let modes = engine.input_modes();
+        let search = engine.search_state();
+        // A search still going through the history goes on with the next
+        // frame: the UI keeps polling while there is something to draw.
+        s.dirty = search.as_ref().is_some_and(|st| st.searching);
+        let State { engine, enc, .. } = &mut *s;
         Some(Frame {
             frame: enc.bytes().to_vec(),
             mouse_tracking: modes.mouse_tracking,
@@ -277,8 +322,22 @@ impl Terminal {
             selection: engine.selected_rows(),
             bell: engine.take_bell(),
             cursor_blinks: engine.cursor_blinks(),
-            search: engine.search_state(),
+            search,
         })
+    }
+
+    /// Compresses the history a step at a time, letting output and the UI
+    /// in between: for a terminal that has been quiet for a while.
+    pub fn compress_history(&self) {
+        while lock(&self.state).engine.compress_step() {}
+    }
+
+    /// The title and whether a bell rang, without the screen: what a
+    /// hidden tab needs. The damage stays for when it shows.
+    pub fn poll_meta(&self) -> (String, bool) {
+        let mut s = lock(&self.state);
+        s.notified = false;
+        (s.engine.title().unwrap_or_default(), s.engine.take_bell())
     }
 
     /// A key event; returns whether it produced any bytes.
@@ -356,7 +415,7 @@ impl Terminal {
             }
             None => {
                 s.engine.scroll_display(lines);
-                s.dirty = true;
+                s.touch();
             }
         }
     }
@@ -373,7 +432,7 @@ impl Terminal {
                 return;
             }
             s.engine.resize(Size::new(cols, rows));
-            s.dirty = true;
+            s.touch();
         }
         match &*lock(&self.io) {
             Io::Pty(pty) => {
@@ -414,7 +473,7 @@ impl Terminal {
     fn select(&self, change: impl FnOnce(&mut GhosttyEngine)) {
         let mut s = lock(&self.state);
         change(&mut s.engine);
-        s.dirty = true;
+        s.touch();
     }
 
     /// Selection with the mouse, in logical pixels: press, drag (a block
@@ -450,20 +509,20 @@ impl Terminal {
     pub fn search(&self, needle: &str) {
         let mut s = lock(&self.state);
         s.engine.search(needle);
-        s.dirty = true;
+        s.touch();
     }
 
     /// The next match towards older output, or towards newer.
     pub fn search_step(&self, older: bool) {
         let mut s = lock(&self.state);
         s.engine.search_step(older);
-        s.dirty = true;
+        s.touch();
     }
 
     pub fn end_search(&self) {
         let mut s = lock(&self.state);
         s.engine.end_search();
-        s.dirty = true;
+        s.touch();
     }
 
     /// The link under a point, in the logical pixels of [`Terminal::pointer`].
@@ -475,7 +534,7 @@ impl Terminal {
     pub fn set_cursor(&self, shape: CursorShape, blink: bool) {
         let mut s = lock(&self.state);
         s.engine.set_cursor_defaults(shape, blink);
-        s.dirty = true;
+        s.touch();
     }
 
     /// See [`GhosttyEngine::set_theme`]; the screen is sent again, for the
@@ -484,14 +543,14 @@ impl Terminal {
         let mut s = lock(&self.state);
         s.engine.set_theme(dark, foreground, background);
         s.engine.redraw();
-        s.dirty = true;
+        s.touch();
     }
 
     /// The next [`Terminal::poll`] returns the whole screen.
     pub fn redraw(&self) {
         let mut s = lock(&self.state);
         s.engine.redraw();
-        s.dirty = true;
+        s.touch();
     }
 }
 
@@ -559,6 +618,24 @@ impl Pipe {
                 }
             }
         };
+        // The engine parses on a thread of its own: a flood of output in one
+        // tab would otherwise hold the runtime's few threads, which every
+        // connection's keepalives, transfers and tunnels share. The channel
+        // is bounded, so a slow parse still slows the server down.
+        let (feed, mut parsed) = mpsc::channel::<Vec<u8>>(PARSE_QUEUE);
+        let parser_state = Arc::clone(&state);
+        let replies = tx.clone();
+        let parser = thread::Builder::new()
+            .name("openward-parse".into())
+            .spawn(move || {
+                while let Some(data) = parsed.blocking_recv() {
+                    let out = Terminal::output(&parser_state, &data);
+                    if !out.is_empty() {
+                        let _ = replies.send(SshCmd::Data(out));
+                    }
+                }
+            });
+        let mut feed = parser.is_ok().then_some(feed);
         let reader_state = Arc::clone(&state);
         let reader = async move {
             let mut exit = None;
@@ -567,9 +644,17 @@ impl Pipe {
                 match msg {
                     ChannelMsg::Data { data } | ChannelMsg::ExtendedData { data, .. } => {
                         activity.received();
-                        let replies = Terminal::output(&reader_state, &data);
-                        if !replies.is_empty() {
-                            let _ = tx.send(SshCmd::Data(replies));
+                        let parsed = match &feed {
+                            Some(f) => f.send(data.to_vec()).await.is_ok(),
+                            None => false,
+                        };
+                        if !parsed {
+                            // No parse thread: here, as before.
+                            feed = None;
+                            let out = Terminal::output(&reader_state, &data);
+                            if !out.is_empty() {
+                                let _ = tx.send(SshCmd::Data(out));
+                            }
                         }
                     }
                     ChannelMsg::ExitStatus { exit_status } => {
@@ -595,7 +680,7 @@ impl Pipe {
             },
             writer
         );
-        lock(&state).dirty = true;
+        lock(&state).touch();
         let failure = (!ended).then(|| Failure::Network {
             label,
             message: "connection lost".into(),
@@ -607,5 +692,40 @@ impl Pipe {
 impl Drop for Terminal {
     fn drop(&mut self) {
         self.close();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    /// The UI hears of new output once until it looks, and nothing while
+    /// nothing changes: an idle terminal costs no frames.
+    #[test]
+    fn the_waker_calls_once_per_look() {
+        let term = Terminal::new(40, 4, 100);
+        let calls = Arc::new(AtomicUsize::new(0));
+        let counted = Arc::clone(&calls);
+        term.set_waker(Arc::new(move || {
+            counted.fetch_add(1, Ordering::Relaxed);
+        }));
+        // The first screen is there to draw.
+        assert_eq!(calls.load(Ordering::Relaxed), 1);
+        assert!(term.poll().is_some());
+        assert!(term.poll().is_none());
+        assert_eq!(calls.load(Ordering::Relaxed), 1);
+
+        term.note("one");
+        term.note("two");
+        assert_eq!(calls.load(Ordering::Relaxed), 2, "once until it looks");
+        // A hidden tab reads the title only: the damage stays, and it is
+        // told of the next output.
+        let _ = term.poll_meta();
+        term.note("three");
+        assert_eq!(calls.load(Ordering::Relaxed), 3);
+        assert!(term.poll().is_some());
+        assert!(term.poll().is_none());
+        assert_eq!(calls.load(Ordering::Relaxed), 3);
     }
 }

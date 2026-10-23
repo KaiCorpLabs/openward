@@ -924,6 +924,71 @@ Host web-1 web-2
     expect((root.first as PaneSplit).axis, Axis.vertical);
   });
 
+  /// What R2 of the audit promises: a terminal with nothing new asks for no
+  /// frames, output brings them back, and a thousand hosts do not make the
+  /// window slow to build. The times are of a debug build, and only bound
+  /// loosely; they are printed for the record.
+  testWidgets(
+    'an idle terminal asks for no frames; a thousand hosts stay quick',
+    (tester) async {
+      final config = File('${dir.path}/thousand.config')
+        ..writeAsStringSync(
+          [
+            for (var i = 0; i < 1000; i++)
+              'Host web-$i\n  HostName 10.0.${i ~/ 250}.${i % 250}\n  User deploy\n',
+          ].join(),
+        );
+      final report = await app.importSshConfig(file: config.path);
+      expect(report.created, 1000);
+      final container = await launch(tester);
+      final tabs = container.read(tabsProvider.notifier);
+      tabs.openLocal();
+      final c = container.read(tabsProvider).currentSession!;
+      await _until(tester, () => c.phase == Phase.running, 'the shell');
+      TerminalPaneState pane() =>
+          tester.state<TerminalPaneState>(find.byType(TerminalPane));
+      await _until(tester, () => !pane().polling, 'the terminal to go idle');
+      // Nothing comes: it stays idle.
+      await tester.pump(const Duration(seconds: 1));
+      expect(pane().polling, isFalse);
+      // Output brings frames back, and they stop once it is drawn.
+      c.session.text(text: 'sleep 0.3; echo idle-\$((6*7))\n');
+      await _until(tester, () => pane().polling, 'frames for the output');
+      await _until(
+        tester,
+        () => c.session.screenText().contains('idle-42'),
+        'the output',
+      );
+      await _until(
+        tester,
+        () => !pane().polling,
+        'the terminal to go idle again',
+      );
+
+      // A thousand hosts: a new tab rebuilds the window around them.
+      final watch = Stopwatch()..start();
+      tabs.openLocal();
+      await tester.pump();
+      watch.stop();
+      debugPrint('a new tab with 1000 hosts: ${watch.elapsedMilliseconds} ms');
+      expect(watch.elapsed, lessThan(const Duration(milliseconds: 500)));
+      // A search that finds them all builds only the rows on view.
+      container.read(searchProvider.notifier).set('web');
+      final search = Stopwatch()..start();
+      await tester.pump();
+      search.stop();
+      debugPrint(
+        'a search finding 1000 hosts: ${search.elapsedMilliseconds} ms',
+      );
+      expect(search.elapsed, lessThan(const Duration(milliseconds: 500)));
+      container.read(searchProvider.notifier).set('');
+      while (container.read(tabsProvider).tabs.isNotEmpty) {
+        tabs.close(0);
+      }
+      await _settle(tester);
+    },
+  );
+
   testWidgets('import from Termius: read it, pick, save a key, and again', (
     tester,
   ) async {
@@ -3035,14 +3100,21 @@ Host db
     Finder field(String key) => find.byKey(ValueKey(key));
 
     await tester.tap(field('library.knownHosts'));
-    await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('Nombre cifrado'), findsOneWidget);
+    // The rows come from the core off the UI thread.
+    await _until(
+      tester,
+      () => find.text('Nombre cifrado').evaluate().isNotEmpty,
+      'the known hosts',
+    );
     expect(find.text('Coincide con bastion.example.com'), findsOneWidget);
     expect(find.text('Revocada: se rechaza siempre'), findsOneWidget);
     expect(find.text('Todas · 4'), findsOneWidget);
     await tester.enterText(field('known.query'), 'bastion.example.com');
-    await tester.pump(const Duration(milliseconds: 200));
-    expect(find.text('2 coinciden'), findsOneWidget);
+    await _until(
+      tester,
+      () => find.text('2 coinciden').evaluate().isNotEmpty,
+      'the search',
+    );
     await _shot(tester, '35-known-hosts');
 
     await tester.tap(field('known.forget.line1'));
@@ -3056,7 +3128,11 @@ Host db
     await tester.pump(const Duration(milliseconds: 300));
     expect(file.readAsStringSync(), isNot(contains(hashed)));
     expect(File('${file.path}.old').existsSync(), isTrue);
-    expect(find.text('1 coincide'), findsOneWidget);
+    await _until(
+      tester,
+      () => find.text('1 coincide').evaluate().isNotEmpty,
+      'the list without it',
+    );
     ProviderScope.containerOf(tester.element(find.byType(OpenWardApp)))
         .read(tabsProvider.notifier)
         .close(0);

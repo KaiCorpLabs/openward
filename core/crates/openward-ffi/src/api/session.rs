@@ -592,6 +592,8 @@ pub struct SearchView {
     /// 1-based from the newest match; none before the first step.
     pub selected: Option<u32>,
     pub hits: Vec<SearchHitView>,
+    /// Still going through the history: more matches may come.
+    pub searching: bool,
 }
 
 /// A link on screen (OSC 8, or a URL in the text); columns inclusive.
@@ -653,7 +655,38 @@ pub struct TerminalSession {
     pub(crate) term: Arc<Terminal>,
 }
 
+/// What a hidden tab reads instead of the screen.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TermMeta {
+    pub title: String,
+    /// A BEL arrived since the last look.
+    pub bell: bool,
+}
+
 impl TerminalSession {
+    /// An event each time there is something new to draw that has not
+    /// been polled: the UI polls while it has events, and asks for no
+    /// frames while nothing changes.
+    pub fn watch(&self, wakes: StreamSink<bool>) {
+        self.term.set_waker(Arc::new(move || {
+            let _ = wakes.add(true);
+        }));
+    }
+
+    /// Compresses the history, in steps that let output in between: for a
+    /// terminal that has been quiet for a while. Off the UI thread.
+    pub fn compress_history(&self) {
+        self.term.compress_history();
+    }
+
+    /// The title and the bell, leaving the screen's damage for later: for
+    /// a tab that is not on view.
+    #[frb(sync)]
+    pub fn poll_meta(&self) -> TermMeta {
+        let (title, bell) = self.term.poll_meta();
+        TermMeta { title, bell }
+    }
+
     /// What changed since the last call, or nothing; once per refresh.
     #[frb(sync)]
     pub fn poll(&self) -> Option<TermFrame> {
@@ -676,6 +709,7 @@ impl TerminalSession {
             bell: f.bell,
             cursor_blinks: f.cursor_blinks,
             search: f.search.map(|s| SearchView {
+                searching: s.searching,
                 total: s.total as u32,
                 selected: s.selected.map(|i| i as u32),
                 hits: s

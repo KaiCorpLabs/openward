@@ -70,8 +70,8 @@ fn row(e: KnownEntry, label: impl Fn(ItemId) -> Option<String>) -> KnownHostRow 
 
 impl OpenWard {
     /// OpenWard's trusted keys and then `~/.ssh/known_hosts`', those that
-    /// match `query` (all of them when empty).
-    #[frb(sync)]
+    /// match `query` (all of them when empty). Off the UI thread: it reads
+    /// the file and works out which hashed names are saved hosts.
     pub fn known_host_rows(&self, query: String) -> Vec<KnownHostRow> {
         let entries = self.app.known_hosts(&query);
         let vault = self.app.vault();
@@ -79,6 +79,12 @@ impl OpenWard {
             .into_iter()
             .map(|e| row(e, |id| vault.host(id).ok().map(|h| h.label.clone())))
             .collect()
+    }
+
+    /// How many rows [`OpenWard::known_host_rows`] would list with no
+    /// query, without working out their hosts: for a counter.
+    pub fn known_host_count(&self) -> u32 {
+        self.app.known_host_count() as u32
     }
 
     /// The `known_hosts` file OpenWard reads, as the UI names it.

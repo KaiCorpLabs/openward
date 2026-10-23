@@ -356,6 +356,11 @@ void main() {
     await close();
 
     tabs.openPage(PageKind.knownHosts);
+    // Its rows come from the core off the UI thread.
+    for (var i = 0; find.byTooltip('Olvidar').evaluate().isEmpty; i++) {
+      if (i == 100) fail('the known hosts never showed');
+      await tester.pump(const Duration(milliseconds: 50));
+    }
     await audit('known hosts');
     await tester.tap(find.byTooltip('Olvidar').first);
     await tester.pump(const Duration(milliseconds: 400));

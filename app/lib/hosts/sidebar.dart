@@ -14,6 +14,7 @@ import '../tabs/tabs.dart';
 import '../terminal/controller.dart';
 import '../identities/identities.dart';
 import '../keys/keys.dart';
+import '../known_hosts/known_hosts_page.dart' show knownHostCountProvider;
 import '../snippets/snippets.dart';
 import '../tunnels/tunnels.dart';
 import '../ui/environment.dart';
@@ -104,7 +105,9 @@ class _SidebarState extends ConsumerState<Sidebar> {
   Widget build(BuildContext context) {
     final library = ref.watch(libraryProvider);
     final results = ref.watch(searchResultsProvider);
-    final sessions = ref.watch(tabsProvider).sessions.toList();
+    // Which sessions there are, not every change of focus or panes.
+    ref.watch(tabsProvider.select((s) => Object.hashAll(s.sessions)));
+    final sessions = ref.read(tabsProvider).sessions.toList();
     final start = ref.watch(tabsProvider.select((s) => s.current == null));
     final ow = context.ow;
     final l = context.l10n;
@@ -142,11 +145,16 @@ class _SidebarState extends ConsumerState<Sidebar> {
         ),
       );
     } else {
-      body = ListView(
-        padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-        children: results != null
-            ? [for (final h in results) _hostRow(h, sessions)]
-            : [
+      body = results != null
+          // A search can find hundreds: rows are made as they show.
+          ? ListView.builder(
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              itemCount: results.length,
+              itemBuilder: (context, i) => _hostRow(results[i], sessions),
+            )
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              children: [
                 _OpenTabs(
                   shown: _openShown ?? true,
                   onToggle: (shown) => setState(() => _openShown = !shown),
@@ -154,7 +162,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
                 ..._favorites(library, sessions, start),
                 ..._recent(library, sessions, start),
               ],
-      );
+            );
     }
     return ColoredBox(
       color: ow.colors.window,
@@ -1107,9 +1115,7 @@ typedef LibraryEntry = ({
 List<LibraryEntry> libraryEntries(BuildContext context, WidgetRef ref) {
   final l = context.l10n;
   final board = ref.watch(tunnelBoardProvider);
-  // Read again whenever this rebuilds (a tab opens or closes): new keys
-  // are trusted as connections come up.
-  final known = ref.read(openWardProvider).knownHostRows(query: '').length;
+  final known = ref.watch(knownHostCountProvider).value ?? 0;
   return [
     (
       page: PageKind.tunnels,

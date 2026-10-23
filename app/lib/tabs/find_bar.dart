@@ -26,17 +26,38 @@ class _FindBarState extends State<FindBar> {
 
   TerminalController get _c => widget.controller;
 
+  /// Each change starts the search over: it waits for a pause in the
+  /// typing, or for Enter.
+  Timer? _pending;
+
   @override
   void dispose() {
+    _pending?.cancel();
     _text.dispose();
     _focus.dispose();
     super.dispose();
   }
 
   void _changed(String text) {
+    _pending?.cancel();
+    _pending = Timer(const Duration(milliseconds: 120), () => _search(text));
+  }
+
+  void _search(String text) {
+    _pending = null;
     _c.find(text);
     // The newest match, nearest the prompt, comes into view at once.
     _c.findStep();
+  }
+
+  /// Enter right after typing searches for what is there first.
+  void _step({bool older = true}) {
+    if (_pending != null) {
+      _pending!.cancel();
+      _search(_text.text);
+      if (older) return;
+    }
+    _c.findStep(older: older);
   }
 
   @override
@@ -46,15 +67,17 @@ class _FindBarState extends State<FindBar> {
     final l = context.l10n;
     final count = _c.findText.isEmpty
         ? ''
+        : _c.findSearching && _c.findTotal == 0
+        ? l.findSearching
         : _c.findSelected != null
         ? l.findCount(_c.findSelected!, _c.findTotal)
         : l.findTotal(_c.findTotal);
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.escape): _c.closeFind,
-        const SingleActivator(LogicalKeyboardKey.enter): () => _c.findStep(),
+        const SingleActivator(LogicalKeyboardKey.enter): _step,
         const SingleActivator(LogicalKeyboardKey.enter, shift: true): () =>
-            _c.findStep(older: false),
+            _step(older: false),
       },
       child: Container(
         width: 380,

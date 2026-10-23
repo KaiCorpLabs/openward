@@ -29,3 +29,12 @@ unsafe_code = "forbid"
 
 [workspace.lints.clippy]
 all = "warn"
+
+# What the app ships: the core as one library. No symbols (the app finds
+# its functions by their exported names, which stay), and the optimizer
+# sees across crates. Panics still unwind: flutter_rust_bridge turns them
+# into Dart errors.
+[profile.release]
+strip = "symbols"
+lto = "thin"
+codegen-units = 1

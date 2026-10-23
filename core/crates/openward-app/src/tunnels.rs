@@ -4,7 +4,10 @@
 //! tunnel closes, and one that opens on connect comes back with the next
 //! connection to its host.
 //!
-//! The UI asks for [`Tunnels::states`] as often as it repaints.
+//! The UI asks for [`Tunnels::states`] when [`Tunnels::set_waker`] says
+//! something changed: a state, or a local tunnel's connections. A remote
+//! tunnel's connections are counted on the server's side of the session,
+//! with no word when they change; a page that shows them asks now and then.
 
 use std::collections::HashMap;
 use std::io::ErrorKind;
@@ -21,6 +24,19 @@ use tokio::task::JoinHandle;
 use crate::connect::lock;
 use crate::events::Failure;
 use crate::live::Live;
+use crate::terminal::Waker;
+
+/// Tells the UI that a tunnel changed.
+#[derive(Clone, Default)]
+struct Changes(Arc<Mutex<Option<Waker>>>);
+
+impl Changes {
+    fn tell(&self) {
+        if let Some(wake) = &*lock(&self.0) {
+            wake();
+        }
+    }
+}
 
 /// How often an open tunnel checks that its connection is still there.
 const WATCH: Duration = Duration::from_secs(1);
@@ -112,6 +128,7 @@ struct State {
 pub(crate) struct Tunnels {
     runtime: Handle,
     state: Arc<Mutex<State>>,
+    changes: Changes,
 }
 
 /// Where to listen: loopback unless the tunnel says otherwise.
@@ -134,7 +151,14 @@ impl Tunnels {
         Self {
             runtime,
             state: Arc::default(),
+            changes: Changes::default(),
         }
+    }
+
+    /// Called (from any thread) when a tunnel's state or a local tunnel's
+    /// connections change.
+    pub fn set_waker(&self, wake: Waker) {
+        *lock(&self.changes.0) = Some(wake);
     }
 
     /// The state of every tunnel the app has touched; the rest are closed.
@@ -161,6 +185,8 @@ impl Tunnels {
         let mut s = lock(&self.state);
         s.running.remove(&id);
         s.other.insert(id, state);
+        drop(s);
+        self.changes.tell();
     }
 
     /// Closes it, if open, and forgets it (it was deleted).
@@ -168,6 +194,8 @@ impl Tunnels {
         let mut s = lock(&self.state);
         s.running.remove(&id);
         s.other.remove(&id);
+        drop(s);
+        self.changes.tell();
     }
 
     /// Closes it, if open. The connection goes too, unless something else
@@ -176,6 +204,8 @@ impl Tunnels {
         let mut s = lock(&self.state);
         s.running.remove(&id);
         s.other.insert(id, TunnelState::Closed);
+        drop(s);
+        self.changes.tell();
     }
 
     /// Opens `spec` over `live`. `on_connect` marks a failure as one of
@@ -194,8 +224,10 @@ impl Tunnels {
                 s.running.remove(&id);
                 s.other
                     .insert(id, TunnelState::Failed { error, on_connect });
+                drop(s);
             }
         }
+        self.changes.tell();
     }
 
     /// Opens on `live` those of `forwards` that open on connect and are
@@ -212,6 +244,7 @@ impl Tunnels {
     /// Closes the tunnel when its connection goes.
     fn watch(&self, id: ItemId, live: Arc<Live>) {
         let state = Arc::clone(&self.state);
+        let changes = self.changes.clone();
         let weak = Arc::downgrade(&live);
         drop(live);
         self.runtime.spawn(async move {
@@ -235,6 +268,8 @@ impl Tunnels {
                             on_connect: false,
                         },
                     );
+                    drop(s);
+                    changes.tell();
                     return;
                 }
             }
@@ -287,16 +322,20 @@ impl Tunnels {
                         ErrorKind::AddrNotAvailable => TunnelError::BadAddress(address.clone()),
                         _ => TunnelError::Other(e.to_string()),
                     })?;
+                let counted = Counted {
+                    active,
+                    changes: self.changes.clone(),
+                };
                 let task = if spec.kind == ForwardKind::Local {
                     self.runtime.spawn(serve_local(
                         listener,
                         Arc::clone(live),
                         spec.clone(),
-                        active,
+                        counted,
                     ))
                 } else {
                     self.runtime
-                        .spawn(serve_dynamic(listener, Arc::clone(live), active))
+                        .spawn(serve_dynamic(listener, Arc::clone(live), counted))
                 };
                 running.tasks.push(task);
             }
@@ -305,34 +344,38 @@ impl Tunnels {
     }
 }
 
+/// A local tunnel's connection count, and who to tell when it changes.
+#[derive(Clone)]
+struct Counted {
+    active: Arc<AtomicU32>,
+    changes: Changes,
+}
+
 /// Counts a connection while it lasts.
-struct Count(Arc<AtomicU32>);
+struct Count(Counted);
 
 impl Count {
-    fn new(active: &Arc<AtomicU32>) -> Self {
-        active.fetch_add(1, Ordering::Relaxed);
-        Self(Arc::clone(active))
+    fn new(counted: &Counted) -> Self {
+        counted.active.fetch_add(1, Ordering::Relaxed);
+        counted.changes.tell();
+        Self(counted.clone())
     }
 }
 
 impl Drop for Count {
     fn drop(&mut self) {
-        self.0.fetch_sub(1, Ordering::Relaxed);
+        self.0.active.fetch_sub(1, Ordering::Relaxed);
+        self.0.changes.tell();
     }
 }
 
-async fn serve_local(
-    listener: TcpListener,
-    live: Arc<Live>,
-    spec: PortForward,
-    active: Arc<AtomicU32>,
-) {
+async fn serve_local(listener: TcpListener, live: Arc<Live>, spec: PortForward, counted: Counted) {
     let host = spec.dest_host.unwrap_or_default();
     let port = u32::from(spec.dest_port.unwrap_or(0));
     while let Ok((mut socket, peer)) = listener.accept().await {
-        let (live, host, active) = (Arc::clone(&live), host.clone(), Arc::clone(&active));
+        let (live, host, counted) = (Arc::clone(&live), host.clone(), counted.clone());
         tokio::spawn(async move {
-            let _count = Count::new(&active);
+            let _count = Count::new(&counted);
             let Ok(channel) = live
                 .target()
                 .handle
@@ -352,11 +395,11 @@ async fn serve_local(
     }
 }
 
-async fn serve_dynamic(listener: TcpListener, live: Arc<Live>, active: Arc<AtomicU32>) {
+async fn serve_dynamic(listener: TcpListener, live: Arc<Live>, counted: Counted) {
     while let Ok((socket, _)) = listener.accept().await {
-        let (live, active) = (Arc::clone(&live), Arc::clone(&active));
+        let (live, counted) = (Arc::clone(&live), counted.clone());
         tokio::spawn(async move {
-            let _count = Count::new(&active);
+            let _count = Count::new(&counted);
             let _ = openward_ssh::forward::socks5(socket, live.target()).await;
         });
     }

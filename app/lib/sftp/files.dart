@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
@@ -118,7 +120,7 @@ class FilePane extends ChangeNotifier {
   SortBy sortBy = SortBy.name;
   bool ascending = true;
 
-  final Set<String> selected = {};
+  final SelectedNames selected = SelectedNames();
 
   /// The row with the keyboard.
   String? cursor;
@@ -128,8 +130,12 @@ class FilePane extends ChangeNotifier {
   p.Context get paths => fs.paths;
 
   /// What shows, after the filter and the hidden files, sorted with folders
-  /// first.
+  /// first. Worked out again only when the listing or how it shows changes:
+  /// rows, keys and the footer ask for it many times a frame.
   List<FileEntry> get visible {
+    final key = (entries, filter, showHidden, sortBy, ascending);
+    final cached = _visible;
+    if (cached != null && key == _visibleOf) return cached;
     final f = filter.toLowerCase();
     final out = [
       for (final e in entries)
@@ -137,8 +143,11 @@ class FilePane extends ChangeNotifier {
             (f.isEmpty || e.name.toLowerCase().contains(f)))
           e,
     ];
+    final names = {for (final e in out) e.name: NaturalName(e.name)};
+    int byName(FileEntry a, FileEntry b) =>
+        names[a.name]!.compareTo(names[b.name]!);
     int by(FileEntry a, FileEntry b) => switch (sortBy) {
-      SortBy.name => compareNames(a.name, b.name),
+      SortBy.name => byName(a, b),
       SortBy.size => a.size.compareTo(b.size),
       SortBy.modified => (a.modified ?? 0).compareTo(b.modified ?? 0),
     };
@@ -146,15 +155,35 @@ class FilePane extends ChangeNotifier {
       if (a.isDir != b.isDir) return a.isDir ? -1 : 1;
       final c = by(a, b);
       final r = ascending ? c : -c;
-      return r != 0 ? r : compareNames(a.name, b.name);
+      return r != 0 ? r : byName(a, b);
     });
-    return out;
+    _visibleOf = key;
+    return _visible = out;
   }
 
-  List<FileEntry> get selection => [
-    for (final e in visible)
-      if (selected.contains(e.name)) e,
-  ];
+  List<FileEntry>? _visible;
+  Object? _visibleOf;
+
+  /// The selected entries, in the order they show.
+  List<FileEntry> get selection {
+    final shown = visible;
+    final cached = _selection;
+    if (cached != null &&
+        identical(shown, _selectionOf) &&
+        selected.version == _selectionVersion) {
+      return cached;
+    }
+    _selectionOf = shown;
+    _selectionVersion = selected.version;
+    return _selection = [
+      for (final e in shown)
+        if (selected.contains(e.name)) e,
+    ];
+  }
+
+  List<FileEntry>? _selection;
+  List<FileEntry>? _selectionOf;
+  int _selectionVersion = -1;
 
   int get selectedBytes => selection
       .where((e) => !e.isDir)
@@ -340,18 +369,79 @@ class FilePane extends ChangeNotifier {
   }
 }
 
+/// The selected names. It counts its changes, so that what depends on it
+/// is worked out again only when it changed.
+class SelectedNames extends SetBase<String> {
+  final _names = <String>{};
+
+  /// Goes up with every change.
+  int version = 0;
+
+  @override
+  bool add(String value) {
+    final added = _names.add(value);
+    if (added) version++;
+    return added;
+  }
+
+  @override
+  bool remove(Object? value) {
+    final removed = _names.remove(value);
+    if (removed) version++;
+    return removed;
+  }
+
+  @override
+  void clear() {
+    if (_names.isNotEmpty) version++;
+    _names.clear();
+  }
+
+  @override
+  bool contains(Object? element) => _names.contains(element);
+
+  @override
+  String? lookup(Object? element) => _names.lookup(element);
+
+  @override
+  Iterator<String> get iterator => _names.iterator;
+
+  @override
+  int get length => _names.length;
+
+  @override
+  Set<String> toSet() => _names.toSet();
+}
+
+/// A name split once into its runs of digits and of the rest, to sort as
+/// [compareNames] does without working it out for every comparison.
+class NaturalName implements Comparable<NaturalName> {
+  NaturalName(this.name)
+    : _parts = [
+        for (final m in _runs.allMatches(name.toLowerCase()))
+          int.tryParse(m[0]!) ?? m[0]!,
+      ];
+
+  final String name;
+  final List<Object> _parts;
+  static final _runs = RegExp(r'(\d+)|(\D+)');
+
+  @override
+  int compareTo(NaturalName other) {
+    final x = _parts, y = other._parts;
+    for (var i = 0; i < x.length && i < y.length; i++) {
+      final a = x[i], b = y[i];
+      final c = a is int && b is int
+          ? a.compareTo(b)
+          : a.toString().compareTo(b.toString());
+      if (c != 0) return c;
+    }
+    final c = x.length.compareTo(y.length);
+    return c != 0 ? c : name.compareTo(other.name);
+  }
+}
+
 /// Names as people sort them: case aside, and numbers by value
 /// (`file2` before `file10`).
-int compareNames(String a, String b) {
-  final re = RegExp(r'(\d+)|(\D+)');
-  final x = re.allMatches(a.toLowerCase()).toList();
-  final y = re.allMatches(b.toLowerCase()).toList();
-  for (var i = 0; i < x.length && i < y.length; i++) {
-    final sa = x[i][0]!, sb = y[i][0]!;
-    final na = int.tryParse(sa), nb = int.tryParse(sb);
-    final c = na != null && nb != null ? na.compareTo(nb) : sa.compareTo(sb);
-    if (c != 0) return c;
-  }
-  final c = x.length.compareTo(y.length);
-  return c != 0 ? c : a.compareTo(b);
-}
+int compareNames(String a, String b) =>
+    NaturalName(a).compareTo(NaturalName(b));

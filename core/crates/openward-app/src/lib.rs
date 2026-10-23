@@ -29,7 +29,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
 use std::time::Duration;
 
-use openward_import::ssh_config::Paths;
+use openward_import::ssh_config::{Paths, SshConfig};
 use openward_pty::Spawn;
 use openward_vault::Vault;
 use openward_vault::proto::ItemId;
@@ -204,6 +204,12 @@ impl App {
             tunnels: Arc::clone(&self.tunnels),
             runtime: self.runtime.handle().clone(),
         }
+    }
+
+    /// Called (from any thread) when a tunnel opens, closes, fails, or a
+    /// local tunnel's connections change: when to ask [`App::tunnels`].
+    pub fn watch_tunnels(&self, wake: terminal::Waker) {
+        self.tunnels.set_waker(wake);
     }
 
     /// Every saved tunnel with its host's label and its state now, by
@@ -448,7 +454,16 @@ impl App {
     /// The trusted host keys, OpenWard's and those of `~/.ssh/known_hosts`,
     /// that match `query` (all of them when it is empty).
     pub fn known_hosts(&self, query: &str) -> Vec<known::KnownEntry> {
-        known::known_hosts(&self.vault(), &self.local.known_hosts_file(), query)
+        // The vault's part first: the file and the matching go without it.
+        let ours = known::Ours::of(&self.vault());
+        known::known_hosts(ours, &self.local.known_hosts_file(), query)
+    }
+
+    /// How many trusted host keys there are, as [`App::known_hosts`] would
+    /// list them with no query: cheap, for a counter.
+    pub fn known_host_count(&self) -> usize {
+        let ours = known::Ours::of(&self.vault());
+        known::known_host_count(&ours, &self.local.known_hosts_file())
     }
 
     /// Forgets a trusted key: OpenWard's, or the line of `~/.ssh/known_hosts`
@@ -470,7 +485,9 @@ impl App {
     /// What importing `file` (or `~/.ssh/config`) would bring.
     pub fn preview_ssh_config(&self, file: Option<&Path>) -> Vec<import::Preview> {
         let (paths, file) = self.ssh_config_file(file);
-        import::preview(&self.vault(), &file, &paths)
+        // Read before taking the vault: the file and its Includes.
+        let config = SshConfig::load(&file, &paths);
+        import::preview(&self.vault(), &config)
     }
 
     /// Imports `file`, or `~/.ssh/config`; with `only`, just those aliases
@@ -481,7 +498,8 @@ impl App {
         only: Option<&[String]>,
     ) -> openward_vault::Result<import::Report> {
         let (paths, file) = self.ssh_config_file(file);
-        import::ssh_config(&mut self.vault(), &file, &paths, only)
+        let config = SshConfig::load(&file, &paths);
+        import::ssh_config(&mut self.vault(), &config, only)
     }
 
     /// Other programs' data on this computer, ready to import.

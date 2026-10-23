@@ -123,6 +123,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustStreamSink<bool> dco_decode_StreamSink_bool_Sse(dynamic raw);
+
+  @protected
   RustStreamSink<SessionEvent> dco_decode_StreamSink_session_event_Sse(
     dynamic raw,
   );
@@ -803,6 +806,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TermFrame dco_decode_term_frame(dynamic raw);
 
   @protected
+  TermMeta dco_decode_term_meta(dynamic raw);
+
+  @protected
   TransferDirection dco_decode_transfer_direction(dynamic raw);
 
   @protected
@@ -943,6 +949,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   TerminalSession
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RustStreamSink<bool> sse_decode_StreamSink_bool_Sse(
     SseDeserializer deserializer,
   );
 
@@ -1761,6 +1772,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TermFrame sse_decode_term_frame(SseDeserializer deserializer);
 
   @protected
+  TermMeta sse_decode_term_meta(SseDeserializer deserializer);
+
+  @protected
   TransferDirection sse_decode_transfer_direction(SseDeserializer deserializer);
 
   @protected
@@ -1916,6 +1930,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
     TerminalSession self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_StreamSink_bool_Sse(
+    RustStreamSink<bool> self,
     SseSerializer serializer,
   );
 
@@ -2973,6 +2993,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_term_frame(TermFrame self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_term_meta(TermMeta self, SseSerializer serializer);
 
   @protected
   void sse_encode_transfer_direction(

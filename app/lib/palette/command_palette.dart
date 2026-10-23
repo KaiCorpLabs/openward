@@ -88,16 +88,17 @@ int? matchScore(String text, String q) {
   if (t.startsWith(q)) return 0;
   final at = t.indexOf(q);
   if (at > 0) {
-    final before = t[at - 1];
-    return RegExp(r'[\s/._@:-]').hasMatch(before) ? 1 : 2;
+    return _wordStart.hasMatch(t[at - 1]) ? 1 : 2;
   }
   if (q.length < 2) return null;
   var i = 0;
-  for (final ch in t.split('')) {
-    if (ch == q[i] && ++i == q.length) return 3;
+  for (var j = 0; j < t.length; j++) {
+    if (t.codeUnitAt(j) == q.codeUnitAt(i) && ++i == q.length) return 3;
   }
   return null;
 }
+
+final _wordStart = RegExp(r'[\s/._@:-]');
 
 /// Opens the palette over the window whose `context` and `ref` are given:
 /// what it picks runs there, once the palette is gone.
@@ -133,6 +134,22 @@ class _PaletteState extends ConsumerState<_Palette> {
   final _query = TextEditingController();
   final _scroll = ScrollController();
   int _selected = 0;
+
+  /// The entries, made once (the palette shows a moment of the window),
+  /// and what shows for the query, scored once per query: moving the
+  /// selection with the arrows changes neither.
+  List<_Entry>? _entries;
+  List<_Entry>? _shownNow;
+  String? _shownFor;
+
+  List<_Entry> get _visible {
+    final all = _entries ??= _all();
+    if (_shownNow == null || _shownFor != _query.text) {
+      _shownFor = _query.text;
+      _shownNow = _shown(all);
+    }
+    return _shownNow!;
+  }
 
   @override
   void dispose() {
@@ -621,7 +638,7 @@ class _PaletteState extends ConsumerState<_Palette> {
       final h = shown[_selected.clamp(0, shown.length - 1)].history;
       if (h != null) {
         ref.read(historyProvider.notifier).remove(h);
-        setState(() {});
+        setState(() => _entries = _shownNow = null);
         return KeyEventResult.handled;
       }
     }
@@ -662,7 +679,7 @@ class _PaletteState extends ConsumerState<_Palette> {
     final ow = context.ow;
     final c = ow.colors;
     final l = context.l10n;
-    final shown = _shown(_all());
+    final shown = _visible;
     final selected = shown.isEmpty ? -1 : _selected.clamp(0, shown.length - 1);
     final mono = monoStyle(context, size: 12);
     Widget hint(String keys, String text) => Padding(

@@ -7,9 +7,13 @@
 
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard};
+use std::time::Duration;
 
-use portable_pty::{Child, CommandBuilder, MasterPty, PtySize, native_pty_system};
+use portable_pty::{Child, ChildKiller, CommandBuilder, MasterPty, PtySize, native_pty_system};
+
+/// How long a program that ignores the hang-up has before it is killed.
+const GRACE: Duration = Duration::from_secs(1);
 
 /// What to start and how.
 #[derive(Clone, Debug, Default)]
@@ -38,7 +42,9 @@ pub struct Pty {
     // Mutexes: callers share a Pty across threads; these are only Send.
     master: Mutex<Box<dyn MasterPty + Send>>,
     writer: Mutex<Box<dyn Write + Send>>,
-    child: Mutex<Box<dyn Child + Send + Sync>>,
+    child: Arc<Mutex<Box<dyn Child + Send + Sync>>>,
+    /// Signals the program without waiting, as the child's own kill does.
+    killer: Mutex<Box<dyn ChildKiller + Send + Sync>>,
 }
 
 fn lock<T: ?Sized>(m: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -86,6 +92,7 @@ impl Pty {
             }
         }
         let child = pair.slave.spawn_command(cmd)?;
+        let killer = child.clone_killer();
         drop(pair.slave);
         let reader = pair.master.try_clone_reader()?;
         let writer = pair.master.take_writer()?;
@@ -93,7 +100,8 @@ impl Pty {
             Self {
                 master: Mutex::new(pair.master),
                 writer: Mutex::new(writer),
-                child: Mutex::new(child),
+                child: Arc::new(Mutex::new(child)),
+                killer: Mutex::new(killer),
             },
             reader,
         ))
@@ -119,8 +127,26 @@ impl Pty {
             .map(|s| s.exit_code())
     }
 
+    /// Ends the program without making the caller (the UI) wait: a hang-up
+    /// now, as closing a terminal window sends, and from a thread of its
+    /// own, a kill if it is still there a moment later.
     pub fn kill(&self) {
-        let _ = lock(&self.child).kill();
+        // Already gone and reaped: its pid may be someone else's now.
+        if !matches!(lock(&self.child).try_wait(), Ok(None)) {
+            return;
+        }
+        let _ = lock(&self.killer).kill();
+        let child = Arc::clone(&self.child);
+        let _ = std::thread::Builder::new()
+            .name("openward-pty-kill".into())
+            .spawn(move || {
+                std::thread::sleep(GRACE);
+                let mut child = lock(&child);
+                if matches!(child.try_wait(), Ok(None)) {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                }
+            });
     }
 }
 
@@ -178,5 +204,44 @@ mod tests {
             std::thread::sleep(Duration::from_millis(20));
         }
         assert_eq!(pty.exit_code(), Some(3));
+    }
+}
+
+#[cfg(all(test, unix))]
+mod kill_tests {
+    use super::*;
+    use std::time::Instant;
+
+    fn spawn(program: &str, args: &[&str]) -> Pty {
+        Pty::spawn(&Spawn {
+            program: Some(program.into()),
+            args: args.iter().map(|a| (*a).to_owned()).collect(),
+            cols: 80,
+            rows: 24,
+            ..Spawn::default()
+        })
+        .unwrap()
+        .0
+    }
+
+    /// Closing returns at once; a program that ignores the hang-up still
+    /// goes, a moment later.
+    #[test]
+    fn closing_does_not_wait_and_ignoring_the_hangup_does_not_help() {
+        let pty = spawn("sh", &["-c", "trap '' HUP; sleep 30"]);
+        // Time for the trap to be set.
+        std::thread::sleep(Duration::from_millis(300));
+        let started = Instant::now();
+        pty.kill();
+        assert!(
+            started.elapsed() < Duration::from_millis(50),
+            "{:?}",
+            started.elapsed()
+        );
+        let deadline = Instant::now() + GRACE + Duration::from_secs(5);
+        while pty.exit_code().is_none() && lock(&pty.child).try_wait().ok().flatten().is_none() {
+            assert!(Instant::now() < deadline, "still running");
+            std::thread::sleep(Duration::from_millis(50));
+        }
     }
 }

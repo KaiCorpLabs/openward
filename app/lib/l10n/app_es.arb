@@ -1017,6 +1017,7 @@
   "findNewer": "Siguiente, más abajo (Mayús+Intro)",
   "findOlder": "Anterior, más arriba (Intro)",
   "findOutSystem": "Averiguar el sistema",
+  "findSearching": "Buscando…",
   "findTotal": "{count, plural, =0{Sin resultados} =1{1 resultado} other{{count} resultados}}",
   "@findTotal": {
     "placeholders": {

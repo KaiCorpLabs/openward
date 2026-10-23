@@ -7,6 +7,25 @@ import 'home.dart';
 import 'l10n/l10n.dart';
 import 'ui/themes.dart';
 
+/// The light and dark themes as the settings make them. Made again only
+/// when what they come from changes: a new theme rebuilds everything under
+/// it, terminals included, and most settings (the sidebar, ⌘B) have nothing
+/// to do with it.
+final materialThemesProvider = Provider<({ThemeData light, ThemeData dark})>((
+  ref,
+) {
+  ref.watch(
+    settingsProvider.select(
+      (s) => (s.lightTheme, s.darkTheme, s.overrides, s.schemes),
+    ),
+  );
+  final s = ref.read(settingsProvider);
+  return (
+    light: materialTheme(resolveTheme(s, Brightness.light)),
+    dark: materialTheme(resolveTheme(s, Brightness.dark)),
+  );
+});
+
 class OpenWardApp extends ConsumerWidget {
   const OpenWardApp({super.key});
 
@@ -15,12 +34,13 @@ class OpenWardApp extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
     final choice = settings.theme;
     final language = settings.language;
+    final themes = ref.watch(materialThemesProvider);
     return MaterialApp(
       title: 'OpenWard',
       debugShowCheckedModeBanner: false,
       // The themes chosen for light and for dark, with their layers.
-      theme: materialTheme(resolveTheme(settings, Brightness.light)),
-      darkTheme: materialTheme(resolveTheme(settings, Brightness.dark)),
+      theme: themes.light,
+      darkTheme: themes.dark,
       // Text size and fewer animations on top of what the system says.
       builder: (context, child) {
         final mq = MediaQuery.of(context);

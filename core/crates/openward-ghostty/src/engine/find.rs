@@ -8,6 +8,7 @@
 
 use std::ffi::c_void;
 use std::ptr;
+use std::time::{Duration, Instant};
 
 use super::{GhosttyEngine, ok, sized};
 use crate::sys;
@@ -29,7 +30,14 @@ pub struct SearchState {
     /// 1-based, counting from the newest match; `None` before the first step.
     pub selected: Option<usize>,
     pub hits: Vec<SearchHit>,
+    /// It has not been through the whole history yet: more matches may
+    /// come with the next looks.
+    pub searching: bool,
 }
+
+/// How long one look at the search may take. A long history is searched a
+/// little each frame, not all at once on the UI thread with every key.
+const SEARCH_BUDGET: Duration = Duration::from_millis(2);
 
 /// A link on the screen; columns inclusive, on one row.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -89,7 +97,7 @@ impl GhosttyEngine {
             },
             "search needle",
         );
-        self.catch_up();
+        self.advance();
         self.force_full = true;
     }
 
@@ -111,7 +119,7 @@ impl GhosttyEngine {
         if self.search.is_null() {
             return;
         }
-        self.catch_up();
+        self.advance();
         let option = if older {
             sys::GHOSTTY_SEARCH_OPT_SELECT_NEXT
         } else {
@@ -123,13 +131,32 @@ impl GhosttyEngine {
         self.force_full = true;
     }
 
-    /// Feeds the terminal's changes to the search until it is caught up.
-    fn catch_up(&mut self) {
-        // SAFETY: valid search; `&mut self` serializes it with the terminal.
-        ok(
-            unsafe { sys::ghostty_search_run(self.search) },
-            "search_run",
-        );
+    /// Searches on for [`SEARCH_BUDGET`], feeding it the terminal's changes,
+    /// and says whether it has caught up with the terminal.
+    fn advance(&mut self) -> bool {
+        let started = Instant::now();
+        // SAFETY: valid search; `&mut self` serializes it with the terminal
+        // (feeding reads it). Each feed does a bounded amount of work.
+        unsafe { sys::ghostty_search_feed(self.search) };
+        loop {
+            let mut status = sys::GHOSTTY_SEARCH_STATUS_RUNNING;
+            // SAFETY: valid search; out-pointer to a local of its type.
+            if unsafe { sys::ghostty_search_tick(self.search, &mut status) } != sys::GHOSTTY_SUCCESS
+            {
+                return true;
+            }
+            match status {
+                sys::GHOSTTY_SEARCH_STATUS_COMPLETE => return true,
+                // SAFETY: as above.
+                sys::GHOSTTY_SEARCH_STATUS_FEED_REQUIRED => unsafe {
+                    sys::ghostty_search_feed(self.search);
+                },
+                _ => {}
+            }
+            if started.elapsed() >= SEARCH_BUDGET {
+                return false;
+            }
+        }
     }
 
     /// The search's counts and its matches on the visible rows; `None`
@@ -138,7 +165,7 @@ impl GhosttyEngine {
         if self.search.is_null() {
             return None;
         }
-        self.catch_up();
+        let searching = !self.advance();
         let search = self.search;
         let mut total = 0usize;
         let mut index = 0usize;
@@ -208,6 +235,7 @@ impl GhosttyEngine {
             total,
             selected,
             hits,
+            searching,
         })
     }
 
@@ -510,6 +538,39 @@ mod tests {
         // A row that ends is not joined to the next.
         let e = engine(b"see https://a.test/x\r\nmore/text\r\n");
         assert_eq!(e.link_at(100.0, 5.0).unwrap().url, "https://a.test/x");
+    }
+
+    /// A long history is searched over several looks, each one short, and
+    /// ends up with every match.
+    #[test]
+    fn a_long_history_is_searched_a_bit_each_look() {
+        let mut e = GhosttyEngine::new(Size::new(40, 4), 60_000);
+        e.set_cell_pixels(10.0, 20.0);
+        let mut text = String::new();
+        for i in 0..50_000 {
+            text.push_str(&format!(
+                "line {i} {}\r\n",
+                if i % 1000 == 7 { "NEEDLE" } else { "hay" }
+            ));
+        }
+        e.feed(text.as_bytes());
+        e.search("needle");
+        let mut looks = 0;
+        let state = loop {
+            let started = Instant::now();
+            let state = e.search_state().unwrap();
+            looks += 1;
+            assert!(
+                started.elapsed() < Duration::from_millis(50),
+                "one look took {:?}",
+                started.elapsed()
+            );
+            if !state.searching {
+                break state;
+            }
+            assert!(looks < 10_000, "never caught up");
+        };
+        assert_eq!(state.total, 50);
     }
 
     #[test]

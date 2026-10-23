@@ -509,18 +509,6 @@ class TunnelChip extends ConsumerStatefulWidget {
 class _TunnelChipState extends ConsumerState<TunnelChip> {
   late final TunnelBoard _board = ref.read(tunnelBoardProvider);
 
-  @override
-  void initState() {
-    super.initState();
-    _board.watch(true);
-  }
-
-  @override
-  void dispose() {
-    _board.watch(false);
-    super.dispose();
-  }
-
   void _popover() {
     final box = context.findRenderObject()! as RenderBox;
     final at = box.localToGlobal(Offset.zero);
@@ -697,18 +685,6 @@ class TunnelNotices extends ConsumerStatefulWidget {
 
 class _TunnelNoticesState extends ConsumerState<TunnelNotices> {
   late final TunnelBoard _board = ref.read(tunnelBoardProvider);
-
-  @override
-  void initState() {
-    super.initState();
-    _board.watch(true);
-  }
-
-  @override
-  void dispose() {
-    _board.watch(false);
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {

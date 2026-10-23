@@ -677,18 +677,30 @@ async fn expand(remote: &Remote, req: &Request) -> Result<Vec<Item>> {
     };
     match req.direction {
         Direction::Upload => {
-            let path = Path::new(&req.source);
-            let top = local::stat(path)?.ok_or_else(|| Error::NotFound(req.source.clone()))?;
+            // A big folder takes a while to walk: off the runtime's threads,
+            // which every connection shares.
+            let path = PathBuf::from(&req.source);
+            let source = req.source.clone();
+            let walked = tokio::task::spawn_blocking(move || {
+                let top = local::stat(&path)?.ok_or(Error::NotFound(source))?;
+                let below = if top.kind == Kind::Dir {
+                    local::walk(&path)?
+                } else {
+                    Vec::new()
+                };
+                Ok::<_, Error>((top, below))
+            })
+            .await
+            .map_err(|e| Error::Other(e.to_string()))??;
+            let (top, below) = walked;
             let mut items = vec![item(String::new(), &top)];
-            if top.kind == Kind::Dir {
-                for (rel, e) in local::walk(path)? {
-                    let rel = rel
-                        .components()
-                        .map(|c| c.as_os_str().to_string_lossy())
-                        .collect::<Vec<_>>()
-                        .join("/");
-                    items.push(item(rel, &e));
-                }
+            for (rel, e) in below {
+                let rel = rel
+                    .components()
+                    .map(|c| c.as_os_str().to_string_lossy())
+                    .collect::<Vec<_>>()
+                    .join("/");
+                items.push(item(rel, &e));
             }
             Ok(items)
         }

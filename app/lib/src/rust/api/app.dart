@@ -144,8 +144,9 @@ abstract class OpenWard implements RustOpaqueInterface {
   });
 
   /// Other programs' data on this computer: Termius, Tabby, PuTTY's
-  /// sessions, SecureCRT's, MobaXterm's.
-  List<FoundProgram> installedPrograms();
+  /// sessions, SecureCRT's, MobaXterm's. Off the UI thread: it looks in
+  /// their folders, which macOS may ask the user about.
+  Future<List<FoundProgram>> installedPrograms();
 
   /// The local user and computer, as a new key's comment usually says.
   String keyComment();
@@ -160,9 +161,14 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// The private keys in `~/.ssh`, by name.
   List<SshKey> keys();
 
+  /// How many rows [`OpenWard::known_host_rows`] would list with no
+  /// query, without working out their hosts: for a counter.
+  Future<int> knownHostCount();
+
   /// OpenWard's trusted keys and then `~/.ssh/known_hosts`', those that
-  /// match `query` (all of them when empty).
-  List<KnownHostRow> knownHostRows({required String query});
+  /// match `query` (all of them when empty). Off the UI thread: it reads
+  /// the file and works out which hashed names are saved hosts.
+  Future<List<KnownHostRow>> knownHostRows({required String query});
 
   List<KnownHostView> knownHosts();
 
@@ -299,7 +305,6 @@ abstract class OpenWard implements RustOpaqueInterface {
     required String key,
   });
 
-  /// Every saved tunnel with its state now, by name.
   List<TunnelView> tunnels();
 
   Future<BigInt> updateGroup({
@@ -352,6 +357,12 @@ abstract class OpenWard implements RustOpaqueInterface {
     required String identityId,
     required List<String> choosers,
   });
+
+  /// Every saved tunnel with its state now, by name.
+  /// An event each time a tunnel opens, closes or fails, or a local
+  /// tunnel's connections change: ask [`OpenWard::tunnels`] then. A remote
+  /// tunnel's connections change without one.
+  Stream<bool> watchTunnels();
 
   /// Every workspace, by name.
   List<WorkspaceView> workspaces();

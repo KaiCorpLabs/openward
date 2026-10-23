@@ -82,22 +82,51 @@ fn entry(source: KnownSource, line: Line, saved: &[(ItemId, String, String, u16)
 /// OpenWard's keys and then the file's, keeping those that match `query`
 /// (any of it, or every one when it is empty): by pattern, fingerprint,
 /// comment or saved host, and a hashed name when `query` is its host.
-pub fn known_hosts(vault: &Vault, file: &Path, query: &str) -> Vec<KnownEntry> {
-    let saved: Vec<(ItemId, String, String, u16)> = vault
-        .hosts()
-        .into_iter()
-        .map(|(id, h)| {
-            let port = vault
-                .effective(id)
-                .ok()
-                .and_then(|e| e.settings.port)
-                .unwrap_or(22);
-            (id, h.label.clone(), h.address.clone(), port)
-        })
-        .collect();
+/// What the known hosts screen needs of the vault, taken under its lock so
+/// that reading `~/.ssh/known_hosts` and matching names happen without it.
+pub struct Ours {
+    /// Saved hosts: id, label, address and port.
+    saved: Vec<(ItemId, String, String, u16)>,
+    /// OpenWard's trusted keys: id, `known_hosts` line, and when added.
+    keys: Vec<(ItemId, String, i64)>,
+}
+
+impl Ours {
+    pub fn of(vault: &Vault) -> Self {
+        let saved = vault
+            .hosts()
+            .into_iter()
+            .map(|(id, h)| {
+                let port = vault
+                    .effective(id)
+                    .ok()
+                    .and_then(|e| e.settings.port)
+                    .unwrap_or(22);
+                (id, h.label.clone(), h.address.clone(), port)
+            })
+            .collect();
+        let keys = vault
+            .known_hosts_with_dates()
+            .into_iter()
+            .filter(|(_, k, _)| k.is_well_formed())
+            .map(|(id, k, added)| (id, k.to_line(), added))
+            .collect();
+        Self { saved, keys }
+    }
+}
+
+/// How many trusted keys there are, OpenWard's and `file`'s: what a list of
+/// them would hold, without matching them to hosts.
+pub fn known_host_count(ours: &Ours, file: &Path) -> usize {
+    let text = std::fs::read_to_string(file).unwrap_or_default();
+    ours.keys.len() + lines(&text).len()
+}
+
+pub fn known_hosts(ours: Ours, file: &Path, query: &str) -> Vec<KnownEntry> {
+    let Ours { saved, keys } = ours;
     let mut all = Vec::new();
-    for (id, k, added) in vault.known_hosts_with_dates() {
-        for line in lines(&k.to_line()) {
+    for (id, line, added) in keys {
+        for line in lines(&line) {
             all.push((KnownSource::OpenWard { id, added }, line));
         }
     }
@@ -234,7 +263,8 @@ mod tests {
             .unwrap();
         v.trust_host_key("web.example.com", 2222, KEY).unwrap();
 
-        let all = known_hosts(&v, &file, "");
+        assert_eq!(known_host_count(&Ours::of(&v), &file), 4);
+        let all = known_hosts(Ours::of(&v), &file, "");
         assert_eq!(all.len(), 4);
         assert!(matches!(all[0].source, KnownSource::OpenWard { .. }));
         assert_eq!(all[0].hosts.as_deref(), Some("[web.example.com]:2222"));
@@ -248,12 +278,15 @@ mod tests {
         assert_eq!(all[0].algorithm, "Ed25519");
 
         // A hashed line answers to its host; the saved host's name too.
-        let found = known_hosts(&v, &file, "bastion.example.com");
+        let found = known_hosts(Ours::of(&v), &file, "bastion.example.com");
         assert_eq!(found.len(), 1);
         assert_eq!(found[0].source, KnownSource::File { line: 2 });
-        assert_eq!(known_hosts(&v, &file, "bastion").len(), 1);
-        assert_eq!(known_hosts(&v, &file, "web.example.com:2222").len(), 1);
-        assert_eq!(known_hosts(&v, &file, "nothing-like-it").len(), 0);
+        assert_eq!(known_hosts(Ours::of(&v), &file, "bastion").len(), 1);
+        assert_eq!(
+            known_hosts(Ours::of(&v), &file, "web.example.com:2222").len(),
+            1
+        );
+        assert_eq!(known_hosts(Ours::of(&v), &file, "nothing-like-it").len(), 0);
     }
 
     #[test]

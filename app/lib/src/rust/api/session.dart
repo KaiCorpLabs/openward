@@ -9,7 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `event_view`, `failure_view`, `into_answer`, `prompt_view`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DartSink`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<TerminalSession>>
 abstract class TerminalSession implements RustOpaqueInterface {
@@ -17,6 +17,10 @@ abstract class TerminalSession implements RustOpaqueInterface {
 
   /// Ends the connection or program; the screen stays until dropped.
   void close();
+
+  /// Compresses the history, in steps that let output in between: for a
+  /// terminal that has been quiet for a while. Off the UI thread.
+  Future<void> compressHistory();
 
   /// The cursor's cell while the live screen is on view: where a prompt
   /// begins, read when typing starts.
@@ -56,6 +60,10 @@ abstract class TerminalSession implements RustOpaqueInterface {
 
   /// What changed since the last call, or nothing; once per refresh.
   TermFrame? poll();
+
+  /// The title and the bell, leaving the screen's damage for later: for
+  /// a tab that is not on view.
+  TermMeta pollMeta();
 
   /// The next poll returns the whole screen: after the UI dropped its
   /// cached rows (new font, theme or pixel density).
@@ -113,6 +121,11 @@ abstract class TerminalSession implements RustOpaqueInterface {
   /// What was typed since `start` (see [`Self::cursor_cell`]): for the
   /// command history.
   TypedLine? typedSince({required CellPos start});
+
+  /// An event each time there is something new to draw that has not
+  /// been polled: the UI polls while it has events, and asks for no
+  /// frames while nothing changes.
+  Stream<bool> watch();
 
   /// `lines` notches, positive up.
   void wheel({
@@ -642,10 +655,19 @@ class SearchView {
   final int? selected;
   final List<SearchHitView> hits;
 
-  const SearchView({required this.total, this.selected, required this.hits});
+  /// Still going through the history: more matches may come.
+  final bool searching;
+
+  const SearchView({
+    required this.total,
+    this.selected,
+    required this.hits,
+    required this.searching,
+  });
 
   @override
-  int get hashCode => total.hashCode ^ selected.hashCode ^ hits.hashCode;
+  int get hashCode =>
+      total.hashCode ^ selected.hashCode ^ hits.hashCode ^ searching.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -654,7 +676,8 @@ class SearchView {
           runtimeType == other.runtimeType &&
           total == other.total &&
           selected == other.selected &&
-          hits == other.hits;
+          hits == other.hits &&
+          searching == other.searching;
 }
 
 /// One visible row's selected columns, both inclusive.
@@ -875,6 +898,27 @@ class TermFrame {
           bell == other.bell &&
           cursorBlinks == other.cursorBlinks &&
           search == other.search;
+}
+
+/// What a hidden tab reads instead of the screen.
+class TermMeta {
+  final String title;
+
+  /// A BEL arrived since the last look.
+  final bool bell;
+
+  const TermMeta({required this.title, required this.bell});
+
+  @override
+  int get hashCode => title.hashCode ^ bell.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TermMeta &&
+          runtimeType == other.runtimeType &&
+          title == other.title &&
+          bell == other.bell;
 }
 
 enum TrustKind { known, certified, new_ }

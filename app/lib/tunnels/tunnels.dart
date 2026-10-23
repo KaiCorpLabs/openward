@@ -12,18 +12,31 @@ import '../tabs/connection_panels.dart';
 import '../tabs/prompt_card.dart';
 import '../ui/tokens.dart';
 
-/// The saved tunnels and how they stand, asked for every half second while
-/// someone looks or anything is opening.
+/// The saved tunnels and how they stand: asked again when the core says a
+/// tunnel changed, and every second while a page shows the connections of
+/// remote tunnels (the core has no word for those).
 class TunnelBoard extends ChangeNotifier {
   TunnelBoard(this.app) {
+    _changes = app.watchTunnels().listen((_) => _soon());
     refresh();
   }
 
   final OpenWard app;
   List<TunnelView> tunnels = const [];
+  StreamSubscription<bool>? _changes;
   Timer? _timer;
+
+  /// A burst of changes (connections coming and going) asks once.
+  Timer? _pending;
   int _watchers = 0;
   bool _disposed = false;
+
+  void _soon() {
+    _pending ??= Timer(const Duration(milliseconds: 50), () {
+      _pending = null;
+      refresh();
+    });
+  }
 
   /// Asks again now.
   void refresh() {
@@ -44,7 +57,8 @@ class TunnelBoard extends ChangeNotifier {
     return true;
   }
 
-  /// Keeps it fresh while `true` (a page or a bar shows it).
+  /// Asks every second while `true`, for the connections of remote
+  /// tunnels, which come and go without a word (the tunnels page).
   void watch(bool on) {
     _watchers += on ? 1 : -1;
     _schedule();
@@ -52,12 +66,14 @@ class TunnelBoard extends ChangeNotifier {
 
   void _schedule() {
     final busy =
-        _watchers > 0 || tunnels.any((t) => t.state == TunnelStateKind.opening);
+        _watchers > 0 &&
+        tunnels.any(
+          (t) =>
+              t.state == TunnelStateKind.open &&
+              t.spec.kind == TunnelKind.remote,
+        );
     if (busy && _timer == null) {
-      _timer = Timer.periodic(
-        const Duration(milliseconds: 500),
-        (_) => refresh(),
-      );
+      _timer = Timer.periodic(const Duration(seconds: 1), (_) => refresh());
     } else if (!busy) {
       _timer?.cancel();
       _timer = null;
@@ -81,6 +97,8 @@ class TunnelBoard extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _changes?.cancel();
+    _pending?.cancel();
     _timer?.cancel();
     super.dispose();
   }

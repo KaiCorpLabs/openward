@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../src/rust/api/app.dart';
@@ -16,33 +18,43 @@ final sshConfigFileProvider = Provider<String?>((ref) => null);
 /// Termius's key instead of the keychain's (tests).
 final termiusKeyProvider = Provider<List<int>?>((ref) => null);
 
-/// Saved hosts and groups, as the vault has them now.
+/// Saved hosts and groups, as the vault has them now. Looked up by id and
+/// by group through indexes made once: with a thousand hosts, a scan per
+/// row adds up.
 class Library {
-  const Library({required this.hosts, required this.groups});
+  Library({required this.hosts, required this.groups});
 
   final List<HostView> hosts;
   final List<GroupView> groups;
 
-  HostView? host(String id) {
+  late final Map<String, HostView> _hosts = {for (final h in hosts) h.id: h};
+  late final Map<String, GroupView> _groups = {for (final g in groups) g.id: g};
+  late final Map<String?, List<HostView>> _hostsIn = () {
+    final out = <String?, List<HostView>>{};
     for (final h in hosts) {
-      if (h.id == id) return h;
+      (out[h.groupId] ??= []).add(h);
     }
-    return null;
-  }
-
-  GroupView? group(String id) {
+    return out;
+  }();
+  late final Map<String?, List<GroupView>> _groupsIn = () {
+    final out = <String?, List<GroupView>>{};
     for (final g in groups) {
-      if (g.id == id) return g;
+      (out[g.parentId] ??= []).add(g);
     }
-    return null;
-  }
+    return out;
+  }();
+  final Map<String, int> _under = {};
+
+  HostView? host(String id) => _hosts[id];
+
+  GroupView? group(String id) => _groups[id];
 
   /// Hosts directly in `groupId` (null: at the top level).
   List<HostView> hostsIn(String? groupId) =>
-      hosts.where((h) => h.groupId == groupId).toList();
+      UnmodifiableListView(_hostsIn[groupId] ?? const <HostView>[]);
 
   List<GroupView> groupsIn(String? parentId) =>
-      groups.where((g) => g.parentId == parentId).toList();
+      UnmodifiableListView(_groupsIn[parentId] ?? const <GroupView>[]);
 
   /// The favorites, in their order.
   List<HostView> get favorites =>
@@ -50,9 +62,12 @@ class Library {
         ..sort((a, b) => a.favorite!.compareTo(b.favorite!));
 
   /// Hosts in the group and everything under it.
-  int countUnder(String groupId) =>
-      hostsIn(groupId).length +
-      groupsIn(groupId).fold(0, (n, g) => n + countUnder(g.id));
+  int countUnder(String groupId) => _under[groupId] ??=
+      (_hostsIn[groupId]?.length ?? 0) +
+      (_groupsIn[groupId] ?? const <GroupView>[]).fold(
+        0,
+        (n, g) => n + countUnder(g.id),
+      );
 }
 
 class LibraryNotifier extends Notifier<Library> {

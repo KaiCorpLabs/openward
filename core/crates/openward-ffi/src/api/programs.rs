@@ -304,8 +304,8 @@ fn failure(e: detect::Error) -> ReadFailure {
 
 impl OpenWard {
     /// Other programs' data on this computer: Termius, Tabby, PuTTY's
-    /// sessions, SecureCRT's, MobaXterm's.
-    #[frb(sync)]
+    /// sessions, SecureCRT's, MobaXterm's. Off the UI thread: it looks in
+    /// their folders, which macOS may ask the user about.
     pub fn installed_programs(&self) -> Vec<FoundProgram> {
         self.app
             .installed_programs()

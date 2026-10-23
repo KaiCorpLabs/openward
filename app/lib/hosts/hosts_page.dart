@@ -110,7 +110,9 @@ class _HostsPageState extends ConsumerState<HostsPage> {
     final ow = context.ow;
     final c = ow.colors;
     final library = ref.watch(libraryProvider);
-    final sessions = ref.watch(tabsProvider).sessions.toList();
+    // Which sessions there are, not every change of focus or panes.
+    ref.watch(tabsProvider.select((s) => Object.hashAll(s.sessions)));
+    final sessions = ref.read(tabsProvider).sessions.toList();
     final recent = ref.watch(recentProvider).connections;
     final actions = HostActions(context, ref);
     // When each host was last connected: the newest entry comes first.
@@ -141,7 +143,8 @@ class _HostsPageState extends ConsumerState<HostsPage> {
     }
 
     final filtering = _filtering;
-    int countUnder(String id) =>
+    final counted = <String, int>{};
+    int countUnder(String id) => counted[id] ??=
         library.hostsIn(id).where(keep).length +
         library.groupsIn(id).fold(0, (n, g) => n + countUnder(g.id));
     final sections = <_Section>[];
@@ -471,58 +474,62 @@ class _HostsPageState extends ConsumerState<HostsPage> {
           ? null
           : (at) => actions.menu(at, actions.groupMenu(s.group!)),
     );
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 12),
-      children: [
-        if (!_cards) _ColumnTitles(cols: cols),
-        for (final s in sections) ...[
-          if (s.group != null || showLoose) head(s),
-          if (_cards && s.hosts.isNotEmpty)
-            Padding(
-              padding: EdgeInsets.fromLTRB(s.depth * 16.0, 4, 0, 8),
-              child: LayoutBuilder(
-                builder: (context, box) {
-                  final n = ((box.maxWidth + 10) / 250).floor().clamp(1, 6);
-                  final w = (box.maxWidth - 10 * (n - 1)) / n;
-                  return Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      for (final h in s.hosts)
-                        SizedBox(
-                          width: w,
-                          child: _HostItem(
-                            host: h,
-                            card: true,
-                            depth: 0,
-                            cols: cols,
-                            sessions: mine(h),
-                            last: last[h.id],
-                            selected: h.id == _selected,
-                            onSelect: () => select(h),
-                            actions: actions,
-                          ),
+    // Rows are made as they scroll into view: a thousand hosts make as many
+    // widgets as fit on the screen.
+    final items = <Widget Function()>[
+      if (!_cards) () => _ColumnTitles(cols: cols),
+      for (final s in sections) ...[
+        if (s.group != null || showLoose) () => head(s),
+        if (_cards && s.hosts.isNotEmpty)
+          () => Padding(
+            padding: EdgeInsets.fromLTRB(s.depth * 16.0, 4, 0, 8),
+            child: LayoutBuilder(
+              builder: (context, box) {
+                final n = ((box.maxWidth + 10) / 250).floor().clamp(1, 6);
+                final w = (box.maxWidth - 10 * (n - 1)) / n;
+                return Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    for (final h in s.hosts)
+                      SizedBox(
+                        width: w,
+                        child: _HostItem(
+                          host: h,
+                          card: true,
+                          depth: 0,
+                          cols: cols,
+                          sessions: mine(h),
+                          last: last[h.id],
+                          selected: h.id == _selected,
+                          onSelect: () => select(h),
+                          actions: actions,
                         ),
-                    ],
-                  );
-                },
-              ),
-            )
-          else
-            for (final h in s.hosts)
-              _HostItem(
-                host: h,
-                card: false,
-                depth: s.depth,
-                cols: cols,
-                sessions: mine(h),
-                last: last[h.id],
-                selected: h.id == _selected,
-                onSelect: () => select(h),
-                actions: actions,
-              ),
-        ],
+                      ),
+                  ],
+                );
+              },
+            ),
+          )
+        else
+          for (final h in s.hosts)
+            () => _HostItem(
+              host: h,
+              card: false,
+              depth: s.depth,
+              cols: cols,
+              sessions: mine(h),
+              last: last[h.id],
+              selected: h.id == _selected,
+              onSelect: () => select(h),
+              actions: actions,
+            ),
       ],
+    ];
+    return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 12),
+      itemCount: items.length,
+      itemBuilder: (context, i) => items[i](),
     );
   }
 

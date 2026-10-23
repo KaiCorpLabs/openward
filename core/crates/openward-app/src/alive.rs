@@ -5,10 +5,11 @@
 //! when the server stops answering, and returns when it is gone.
 
 use std::future::Future;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
 
-use tokio::time::Instant;
+use tokio::sync::Notify;
+use tokio::time::{Instant, sleep_until};
 
 use crate::events::Health;
 
@@ -48,6 +49,9 @@ pub struct Activity {
     /// Milliseconds after `base`, plus one; 0 is never.
     input: AtomicU64,
     output: AtomicU64,
+    /// Wakes the watcher: on input, and on output while it waits for some.
+    changed: Notify,
+    wants_output: AtomicBool,
 }
 
 impl Default for Activity {
@@ -56,6 +60,8 @@ impl Default for Activity {
             base: Instant::now(),
             input: AtomicU64::new(0),
             output: AtomicU64::new(0),
+            changed: Notify::new(),
+            wants_output: AtomicBool::new(false),
         }
     }
 }
@@ -77,25 +83,42 @@ impl Activity {
 
     pub fn sent(&self) {
         self.stamp(&self.input);
+        self.changed.notify_one();
     }
 
+    /// Output wakes the watcher only when it waits for it: there can be a
+    /// lot of it.
     pub fn received(&self) {
         self.stamp(&self.output);
+        if self.wants_output.swap(false, Ordering::Relaxed) {
+            self.changed.notify_one();
+        }
     }
 
     fn last_output(&self) -> Option<Instant> {
         self.get(&self.output)
     }
 
-    /// Input sent at least `after` ago that no output followed: when.
-    fn unanswered_input(&self, now: Instant, after: Duration) -> Option<Instant> {
+    /// Input that no output followed: when it was sent.
+    fn unanswered_input(&self) -> Option<Instant> {
         let input = self.get(&self.input)?;
         let answered = self.last_output().is_some_and(|o| o >= input);
-        (!answered && now.saturating_duration_since(input) >= after).then_some(input)
+        (!answered).then_some(input)
     }
 }
 
-const TICK: Duration = Duration::from_millis(250);
+/// Until `at`, or until `activity` has something new.
+async fn sleep_or_activity(at: Instant, activity: Option<&Activity>) {
+    match activity {
+        Some(a) => {
+            tokio::select! {
+                () = sleep_until(at) => {}
+                () = a.changed.notified() => {}
+            }
+        }
+        None => sleep_until(at).await,
+    }
+}
 
 /// Watches a connection with `ping` (true when the server answered, false
 /// when the connection is gone) until it stops answering for good: returns
@@ -116,17 +139,26 @@ where
     // The input that last made it ask, so that it asks once for it.
     let mut asked_for: Option<Instant> = None;
     loop {
+        // Until it is time to ask: the next question, or input that goes
+        // unanswered for `after_typing`. It sleeps until then, and wakes
+        // with new input to work it out again.
         loop {
-            tokio::time::sleep(TICK).await;
             let now = Instant::now();
-            if now.saturating_duration_since(last_asked) >= timing.every {
+            let next = last_asked + timing.every;
+            if now >= next {
                 break;
             }
-            let typed = activity.and_then(|a| a.unanswered_input(now, timing.after_typing));
-            if typed.is_some() && typed != asked_for {
-                asked_for = typed;
+            let typed = activity
+                .and_then(Activity::unanswered_input)
+                .filter(|i| Some(*i) != asked_for);
+            if let Some(i) = typed
+                && now.saturating_duration_since(i) >= timing.after_typing
+            {
+                asked_for = Some(i);
                 break;
             }
+            let until = typed.map_or(next, |i| next.min(i + timing.after_typing));
+            sleep_or_activity(until, activity).await;
         }
         let sent = Instant::now();
         last_asked = sent;
@@ -134,6 +166,36 @@ where
         tokio::pin!(answer);
         let mut stalled = false;
         loop {
+            let now = Instant::now();
+            // Output after the question shows the server is there.
+            let heard = activity
+                .and_then(Activity::last_output)
+                .filter(|o| *o > sent)
+                .map_or(sent, |o| o.max(sent));
+            let silent = now.saturating_duration_since(heard);
+            if silent >= timing.lost_after {
+                return silent;
+            }
+            if !stalled && silent >= timing.stalled_after {
+                stalled = true;
+                report(Health::Stalled {
+                    silent_ms: silent.as_millis() as u64,
+                });
+            } else if stalled && silent < timing.stalled_after {
+                stalled = false;
+                report(Health::Answered { rtt_ms: None });
+            }
+            // Until the next threshold from what it last heard; while it does
+            // not respond, any output wakes it to say it is back.
+            let until = heard
+                + if stalled {
+                    timing.lost_after
+                } else {
+                    timing.stalled_after
+                };
+            if stalled && let Some(a) = activity {
+                a.wants_output.store(true, Ordering::Relaxed);
+            }
             tokio::select! {
                 alive = &mut answer => {
                     if !alive {
@@ -145,27 +207,7 @@ where
                     });
                     break;
                 }
-                () = tokio::time::sleep(TICK) => {
-                    let now = Instant::now();
-                    // Output after the question shows the server is there.
-                    let heard = activity
-                        .and_then(Activity::last_output)
-                        .filter(|o| *o > sent)
-                        .map_or(sent, |o| o.max(sent));
-                    let silent = now.saturating_duration_since(heard);
-                    if silent >= timing.lost_after {
-                        return silent;
-                    }
-                    if !stalled && silent >= timing.stalled_after {
-                        stalled = true;
-                        report(Health::Stalled {
-                            silent_ms: silent.as_millis() as u64,
-                        });
-                    } else if stalled && silent < timing.stalled_after {
-                        stalled = false;
-                        report(Health::Answered { rtt_ms: None });
-                    }
-                }
+                () = sleep_or_activity(until, activity) => {}
             }
         }
     }
@@ -316,16 +358,15 @@ mod tests {
             _ = watching => panic!("a server that answers is not lost"),
             () = typing => {}
         }
-        // 2 s after the unanswered key (at 5.05 s), on the next tick: before
-        // the one at 10 s.
+        // 2 s after the unanswered key (at 5.05 s): before the one at 10 s.
         let asked: Vec<u128> = server
             .asked
             .lock()
             .unwrap()
             .iter()
-            .map(|d| d.as_millis() / 250 * 250)
+            .map(Duration::as_millis)
             .collect();
-        assert_eq!(asked, [7250]);
+        assert_eq!(asked, [7050]);
     }
 
     #[tokio::test(start_paused = true)]
@@ -356,6 +397,43 @@ mod tests {
                 .unwrap()
                 .iter()
                 .any(|h| matches!(h, Health::Stalled { .. }))
+        );
+    }
+
+    /// Output from a server that did not respond says at once that it is
+    /// back, without waiting for the answer to the question.
+    #[tokio::test(start_paused = true)]
+    async fn output_after_a_stall_is_heard_at_once() {
+        let server = Server::new(Duration::from_secs(12), None);
+        let activity = Activity::default();
+        let reports = Mutex::new(Vec::new());
+        let start = Instant::now();
+        let watching = watch(
+            || server.ping(),
+            Some(&activity),
+            timing(),
+            |h| {
+                reports
+                    .lock()
+                    .unwrap()
+                    .push(((Instant::now() - start).as_millis(), h))
+            },
+        );
+        let output = async {
+            tokio::time::sleep(Duration::from_millis(16_500)).await;
+            activity.received();
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        };
+        tokio::select! {
+            _ = watching => panic!("it came back"),
+            () = output => {}
+        }
+        assert_eq!(
+            reports.into_inner().unwrap(),
+            [
+                (15_000, Health::Stalled { silent_ms: 5000 }),
+                (16_500, Health::Answered { rtt_ms: None }),
+            ]
         );
     }
 

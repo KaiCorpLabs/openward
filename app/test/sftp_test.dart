@@ -110,6 +110,38 @@ void main() {
     expect(names, ['a9b', 'a10b', 'b', 'file1', 'File2', 'file10']);
   });
 
+  /// A big folder is sorted once per change, not once per row, key or
+  /// footer that asks: ⌘A and an arrow fit in a frame.
+  test(
+    'a folder of 5000 files is sorted once, however often it is asked',
+    () async {
+      final pane = FilePane(
+        Side.remote,
+        FakeFiles({
+          '/big': [for (var i = 0; i < 5000; i++) entry('file$i.log', size: i)],
+        }),
+      );
+      await pane.open('/big');
+      final shown = pane.visible;
+      expect(shown.take(3).map((e) => e.name), [
+        'file0.log',
+        'file1.log',
+        'file2.log',
+      ]);
+      pane.selectAll();
+      final watch = Stopwatch()..start();
+      for (var i = 0; i < 5000; i++) {
+        expect(identical(pane.visible, shown), isTrue);
+        expect(pane.selection.length, 5000);
+      }
+      expect(watch.elapsed, lessThan(const Duration(milliseconds: 200)));
+      pane.selected.remove('file0.log');
+      expect(pane.selection.length, 4999);
+      pane.setFilter('file1');
+      expect(identical(pane.visible, shown), isFalse);
+    },
+  );
+
   group('a pane', () {
     late FilePane pane;
 

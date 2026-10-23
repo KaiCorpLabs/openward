@@ -66,6 +66,19 @@ window_test() {
 clean=true
 [[ -z "$(git status --porcelain)" ]] || clean=false
 
+# Building the spikes rewrites their lock files (the version of the core's
+# crates they use): those that were as committed are put back at the end.
+spike_locks=()
+for lock in spikes/s1-terminal/termbench/Cargo.lock spikes/s2-ssh/sshprobe/Cargo.lock; do
+  git diff --quiet -- "$lock" && spike_locks+=("$lock")
+done
+restore_locks() {
+  if ((${#spike_locks[@]})); then
+    git -C "$root" checkout -- "${spike_locks[@]}"
+  fi
+}
+trap restore_locks EXIT
+
 step "libghostty-vt"
 core/crates/openward-ghostty/build-libghostty.sh
 
@@ -105,6 +118,7 @@ fi
 cleanup() {
   "$root/spikes/s2-ssh/servers/down.sh"
   if $machine; then podman machine stop >/dev/null 2>&1 || true; fi
+  restore_locks
 }
 trap cleanup EXIT
 spikes/s2-ssh/servers/up.sh

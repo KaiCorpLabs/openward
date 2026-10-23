@@ -79,18 +79,19 @@ const NOT_KEYS: &[&str] = &[
     "rc",
 ];
 
-/// The private keys in `~/.ssh`, by name, with who uses each.
-pub fn list(local: &Local, vault: &Vault) -> Vec<KeyFile> {
+/// The private keys in `~/.ssh`, by name, with who uses each (from
+/// [`users`], taken with the vault's lock, which reading the files does not
+/// need).
+pub fn list(local: &Local, users: &Users) -> Vec<KeyFile> {
     let Ok(entries) = fs::read_dir(&local.ssh_dir) else {
         return Vec::new();
     };
     let mut files: Vec<PathBuf> = entries.flatten().map(|e| e.path()).collect();
     files.sort();
-    let users = users(local, vault);
     files
         .iter()
         .filter(|f| looks_like_key(f))
-        .map(|f| describe(local, f, &users))
+        .map(|f| describe(local, f, users))
         .collect()
 }
 
@@ -126,7 +127,10 @@ fn tilde(local: &Local, path: &Path) -> String {
 }
 
 /// For each key file that settings name, who names it.
-fn users(local: &Local, vault: &Vault) -> Vec<(PathBuf, String)> {
+pub type Users = Vec<(PathBuf, String)>;
+
+/// Who names each key file, from the vault.
+pub fn users(local: &Local, vault: &Vault) -> Users {
     let t = Tokens {
         host: "",
         port: 22,
@@ -218,13 +222,15 @@ fn new_path(local: &Local, name: &str) -> Result<PathBuf, KeyError> {
 
 /// Makes a key in `~/.ssh/<name>`, with its `.pub`; behind `passphrase`
 /// if there is one. The comment is often `user@computer`.
+/// `users` is asked once the key is written: generating an RSA key takes
+/// seconds, and needs nothing from the vault.
 pub fn generate(
     local: &Local,
-    vault: &Vault,
     name: &str,
     kind: NewKey,
     comment: &str,
     passphrase: Option<&str>,
+    users: impl FnOnce() -> Users,
 ) -> Result<KeyFile, KeyError> {
     let path = new_path(local, name)?;
     let mut rng = rand::rng();
@@ -252,12 +258,17 @@ pub fn generate(
         .to_openssh(LineEnding::LF)
         .map_err(|e| KeyError::Make(e.to_string()))?;
     write_pair(&path, text.as_bytes(), Some(&public))?;
-    Ok(describe(local, &path, &users(local, vault)))
+    Ok(describe(local, &path, &users()))
 }
 
 /// Saves a private key given as text (OpenSSH, PEM or PuTTY's) as
 /// `~/.ssh/<name>`, with its `.pub` when its public half can be read.
-pub fn import(local: &Local, vault: &Vault, name: &str, text: &str) -> Result<KeyFile, KeyError> {
+pub fn import(
+    local: &Local,
+    name: &str,
+    text: &str,
+    users: impl FnOnce() -> Users,
+) -> Result<KeyFile, KeyError> {
     let path = new_path(local, name)?;
     let text = text.replace("\r\n", "\n");
     let text = text.trim();
@@ -280,7 +291,7 @@ pub fn import(local: &Local, vault: &Vault, name: &str, text: &str) -> Result<Ke
         })
         .and_then(|p| p.to_openssh().ok());
     write_pair(&path, format!("{text}\n").as_bytes(), public.as_deref())?;
-    Ok(describe(local, &path, &users(local, vault)))
+    Ok(describe(local, &path, &users()))
 }
 
 fn write_pair(path: &Path, private: &[u8], public: Option<&str>) -> Result<(), KeyError> {
@@ -385,11 +396,11 @@ mod tests {
         let vault = Vault::open_in_memory().unwrap();
         let k = generate(
             &local,
-            &vault,
             "id_demo",
             NewKey::Ed25519,
             "ana@mac",
             Some("frase"),
+            || users(&local, &vault),
         )
         .unwrap();
         assert_eq!(k.path, "~/.ssh/id_demo");
@@ -403,17 +414,27 @@ mod tests {
             assert_eq!(mode(&local.ssh_dir), 0o700);
             assert_eq!(mode(&local.ssh_dir.join("id_demo")), 0o600);
         }
-        let again = generate(&local, &vault, "id_demo", NewKey::Ecdsa, "", None);
+        let again = generate(&local, "id_demo", NewKey::Ecdsa, "", None, || {
+            users(&local, &vault)
+        });
         assert_eq!(again, Err(KeyError::Exists("id_demo".into())));
         assert_eq!(
-            generate(&local, &vault, "../x", NewKey::Ed25519, "", None),
+            generate(&local, "../x", NewKey::Ed25519, "", None, || users(
+                &local, &vault
+            )),
             Err(KeyError::BadName("../x".into()))
         );
-        let e = generate(&local, &vault, "id_ecdsa_x", NewKey::Ecdsa, "", None).unwrap();
+        let e = generate(&local, "id_ecdsa_x", NewKey::Ecdsa, "", None, || {
+            users(&local, &vault)
+        })
+        .unwrap();
         assert_eq!(e.algorithm.as_deref(), Some("ECDSA P-256"));
         fs::write(local.ssh_dir.join("config"), "Host *\n").unwrap();
         fs::write(local.ssh_dir.join("notes.txt"), "hello").unwrap();
-        let names: Vec<String> = list(&local, &vault).into_iter().map(|k| k.name).collect();
+        let names: Vec<String> = list(&local, &users(&local, &vault))
+            .into_iter()
+            .map(|k| k.name)
+            .collect();
         assert_eq!(names, ["id_demo", "id_ecdsa_x"]);
         // The public line comes from the .pub even behind a passphrase.
         let line = public_line(&local, "~/.ssh/id_demo").unwrap();
@@ -428,7 +449,7 @@ mod tests {
         let key = PrivateKey::random(&mut rand::rng(), Algorithm::Ed25519).unwrap();
         let text = key.to_openssh(LineEnding::CRLF).unwrap();
         assert_eq!(
-            import(&local, &vault, "x", "not a key"),
+            import(&local, "x", "not a key", || users(&local, &vault)),
             Err(KeyError::NotAKey)
         );
         vault
@@ -446,7 +467,7 @@ mod tests {
                 },
             ))
             .unwrap();
-        let k = import(&local, &vault, "traida", &text).unwrap();
+        let k = import(&local, "traida", &text, || users(&local, &vault)).unwrap();
         assert!(k.has_public && !k.encrypted);
         assert_eq!(k.used_by, ["web"]);
         assert_eq!(

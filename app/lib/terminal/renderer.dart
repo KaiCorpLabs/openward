@@ -33,6 +33,7 @@ class TerminalRenderer extends ChangeNotifier {
   /// Text is made to reach this contrast on its background; 1 is off.
   final double minimumContrast;
   final Map<(int, int), Color> _contrasted = {};
+  static const _maxContrasted = 4096;
   final GlyphAtlas? _atlas;
 
   int cols = 0;
@@ -91,8 +92,11 @@ class TerminalRenderer extends ChangeNotifier {
   }
 
   /// `fg`, or the nearest color that reads on `bg` (minimum contrast).
+  /// Programs that paint in 24-bit color (lolcat, image previews) bring
+  /// new pairs all the time: past a few thousand the cache starts over.
   Color _readable(Color fg, Color bg) {
     if (minimumContrast <= 1) return fg;
+    if (_contrasted.length >= _maxContrasted) _contrasted.clear();
     return _contrasted.putIfAbsent((
       fg.toARGB32(),
       bg.toARGB32(),

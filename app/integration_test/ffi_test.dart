@@ -387,7 +387,8 @@ Host db
     await own.trustHostKey(host: 'web.example.com', port: 2222, key: key);
     expect(own.knownHostsFile(), file.path);
 
-    final rows = own.knownHostRows(query: '');
+    final rows = await own.knownHostRows(query: '');
+    expect(await own.knownHostCount(), rows.length);
     expect(rows.map((r) => r.source), [
       KnownSourceKind.openWard,
       KnownSourceKind.file,
@@ -399,7 +400,7 @@ Host db
     expect(rows[1].revealed, 'bastion.example.com');
     expect(rows[1].saved, ['bastion']);
     expect(rows[2].comment, 'db');
-    final found = own.knownHostRows(query: 'bastion.example.com');
+    final found = await own.knownHostRows(query: 'bastion.example.com');
     expect(found.single.line, 2);
 
     await own.forgetKnownHost(row: found.single);

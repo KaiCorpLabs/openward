@@ -1910,6 +1910,12 @@ abstract class AppLocalizations {
   /// **'Averiguar el sistema'**
   String get findOutSystem;
 
+  /// No description provided for @findSearching.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscando…'**
+  String get findSearching;
+
   /// No description provided for @findTotal.
   ///
   /// In es, this message translates to:

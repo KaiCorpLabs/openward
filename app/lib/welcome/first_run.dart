@@ -34,13 +34,16 @@ class _FirstRunState extends ConsumerState<FirstRun> {
   bool _importing = false;
 
   /// Other programs on this computer: Termius, Tabby…
-  late final List<FoundProgram> _found = ref
-      .read(openWardProvider)
-      .installedPrograms();
+  List<FoundProgram> _found = const [];
 
   @override
   void initState() {
     super.initState();
+    ref
+        .read(openWardProvider)
+        .installedPrograms()
+        .then((f) => mounted ? setState(() => _found = f) : null)
+        .catchError((_) {});
     ref
         .read(openWardProvider)
         .previewSshConfig(file: ref.read(sshConfigFileProvider))

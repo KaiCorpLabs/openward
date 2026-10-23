@@ -1,6 +1,6 @@
 # Auditoría de la 0.3.1 y plan de remediación
 
-- **Estado:** R0 y R1 hechos el 2026-10-23, sin publicar (irán en la 0.3.2-beta.1); R2 a R6, propuesta.
+- **Estado:** R0 y R1 publicados en la 0.3.2-beta.1 (2026-10-23); R2 hecho, sin publicar (irá en la 0.3.2-beta.2); R3 a R6, propuesta.
 - **Fecha:** 2026-10-23.
 - **Base:** 0.3.1-beta.9 (`fe9f887`), antes de la v0.4 (el vault cifrado). Los hitos se llaman R0–R6 para no confundirlos con los de otros planes (A, B, C, D, F).
 - **Duración estimada:** unas 12 semanas de trabajo en total. Lo que va antes de la v0.4 (R0–R3) suma unas 5,5; R4 se hace al principio de la v0.4, y R5 y R6 se reparten.
@@ -123,6 +123,36 @@ Que la app no haga nada cuando no pasa nada, y que aguante 1000 hosts y carpetas
 - en una carpeta de 5000 archivos, ⌘A y una flecha caben en un frame;
 - subir una carpeta de 20.000 archivos no hace saltar «Sin respuesta» en otra pestaña;
 - el dmg mide lo mismo o menos que el de la beta.9.
+
+**Qué deja hecho:**
+- **Terminal a demanda** (`openward-app::terminal`): `Terminal::set_waker` avisa una vez cada vez que hay algo nuevo sin mirar, y `poll_meta` lee solo el título y la campana. El panel arranca su `Ticker` con el aviso y lo para tras dos frames sin nada; una pestaña oculta lee título y campana como mucho cuatro veces por segundo y solo si algo cambió, y al mostrarse pide la pantalla entera.
+- **Búsqueda:** `ghostty_search_feed` y `ghostty_search_tick` con 2 ms por mirada (`SearchState.searching`); el panel sigue pidiendo frames mientras busca. La barra espera 120 ms tras la última tecla (Intro busca ya) y dice «Buscando…».
+- **Redimensionado:** el tamaño va al núcleo 120 ms después del último cambio; lo que el panel dice que mide sigue al arrastre.
+- **Historial:** un tope de 256 MiB por terminal además del de líneas; tras un minuto sin salida se comprime por pasos (`compress_step`), fuera del hilo de la interfaz.
+- **Contraste:** la caché se vacía al llegar a 4096 parejas.
+- **Túneles por eventos:** `App::watch_tunnels` avisa con cada cambio de estado y de conexiones de un túnel local; el tablero de Dart pregunta entonces. Solo la página de Túneles pregunta cada segundo, y solo con túneles remotos abiertos (sus conexiones se cuentan en la sesión, sin aviso).
+- **Vigilante de la conexión** (`alive.rs`): duerme hasta el próximo plazo (la siguiente pregunta, una tecla sin respuesta, «no responde», «perdida»); la entrada lo despierta, y la salida solo mientras no responde.
+- **Hilo de la interfaz:** `knownHostRows` e `installedPrograms` pasan a asíncronas; un `knownHostCount` barato para el contador de la Biblioteca (`knownHostCountProvider`); `keyComment` pregunta a `hostname` una vez.
+- **Mutex del vault:** `known::Ours` toma del vault lo que hace falta y lee `known_hosts` sin él; `~/.ssh/config` se lee antes de tomarlo; las claves (`keychain::users`) lo toman solo al final, después de generar una RSA.
+- **Terminal local:** cerrarlo manda la señal de cuelgue sin esperar; si el programa sigue un segundo después, se mata desde un hilo propio.
+- **Runtime:** la salida de cada terminal SSH se analiza en su propio hilo, con una cola acotada (64 trozos) que sigue frenando al servidor si el análisis va lento; el recorrido de una carpeta local antes de subirla va a `spawn_blocking`.
+- **Interfaz a escala:** `materialThemesProvider` hace los temas solo cuando cambia algo del tema; `FilePane.visible` y `selection` en caché, con la clave de orden natural (`NaturalName`) y un contador de cambios en la selección (`SelectedNames`); la paleta hace sus entradas una vez y las puntúa una vez por consulta; `Library` con índices por id y por grupo y `countUnder` memorizado; filas perezosas en la búsqueda de la barra y en Hosts, que escuchan qué sesiones hay y no cada cambio de pestañas.
+- **Tamaño:** `[profile.release]` con `strip`, `lto = "thin"` y `codegen-units = 1`.
+- **CI:** `tool/ci.sh` deja como estaban los `Cargo.lock` de los spikes que compila.
+- **Pruebas:** el aviso una vez por mirada y `poll_meta`; la búsqueda por pasos en 50.000 líneas; el vigilante con tiempo simulado (la pregunta, exacta a los 2 s de la tecla; la salida tras «no responde», al instante); cerrar un programa que ignora el cuelgue; los hosts conocidos contados; los temas iguales al plegar la barra; 5000 archivos ordenados una vez; y, en las pruebas de ventana, un terminal quieto que deja de pedir frames y la ventana con 1000 hosts.
+
+**La puerta, medida:**
+- un terminal quieto deja de pedir frames en cuanto el prompt está dibujado, la salida los trae otra vez y vuelven a parar (prueba de ventana, por el estado del `Ticker`);
+- con 1000 hosts, una pestaña nueva construye la ventana en 58 ms y una búsqueda que los encuentra todos, en 51 ms, en una build de depuración (en release no se ha medido a mano);
+- 5000 archivos: `visible` y `selection` pedidos 5000 veces cada uno con todo seleccionado, en menos de 200 ms en total;
+- el paquete de macOS pasa de 49,5 a 47,0 MB, la app de 115,8 a 103,8 MB y la librería del núcleo de 56 a 45 MB, con los mismos 4223 símbolos exportados que la beta.1;
+- no se han medido a mano la CPU en reposo ni la subida de 20.000 archivos: lo cubren el `Ticker` parado y el recorrido fuera del runtime.
+
+**Diferencias con el plan:**
+- El atlas compartido (TM-6) y un notificador por división de paneles (UI-19) siguen en R6, como decía el plan en su apartado de lo que puede esperar.
+- Los túneles y el SFTP siguen comprobando una vez por segundo si su conexión se cerró: esperar a un aviso de cierre necesita que russh lo dé. Lo que se quitó es el sondeo del vigilante (cuatro veces por segundo por conexión) y el del tablero de túneles (dos por segundo).
+- `keys()` e `identities()` siguen siendo síncronas: leen pocos archivos y ya no retienen el vault. Importar desde otro programa sigue con el vault tomado mientras guarda las claves, que se arregla con DT-18 en R6.
+- La caché de contraste se vacía entera en lugar de ser una LRU: con colores de 24 bits vuelve a llenarse de los que se usan.
 
 ### R3 · Conexiones que no se cuelgan y trabajo que no se pierde (0.3.2-beta.3, ~1,5 semanas)
 

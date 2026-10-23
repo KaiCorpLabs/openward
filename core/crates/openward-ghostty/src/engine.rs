@@ -24,6 +24,10 @@ const CELL_H_PX: u32 = 16;
 /// in modes.h, so bindgen does not generate it).
 const GRAPHEME_CLUSTER_MODE: sys::GhosttyMode = 2027 & 0x7FFF;
 
+/// The most a terminal's history may take, whatever its line limit:
+/// about 250,000 lines of plain text.
+const SCROLLBACK_MAX_BYTES: usize = 256 << 20;
+
 /// What the terminal reports back while parsing, and what it needs to know
 /// to answer the program's queries.
 struct Effects {
@@ -283,13 +287,16 @@ impl GhosttyEngine {
                 ),
                 "set scrollback lines",
             );
+            // And a byte limit under it, whatever the lines are set to:
+            // ten tabs of a long history would otherwise take gigabytes.
+            let bytes: usize = SCROLLBACK_MAX_BYTES;
             ok(
                 sys::ghostty_terminal_set(
                     term,
                     sys::GHOSTTY_TERMINAL_OPT_SCROLLBACK_MAX_BYTES,
-                    ptr::null(),
+                    (&bytes as *const usize).cast::<c_void>(),
                 ),
-                "clear scrollback byte limit",
+                "set scrollback byte limit",
             );
             // Grapheme clustering (DEC mode 2027) on by default, as in the
             // Ghostty app: emoji with modifiers or ZWJ stay in one cell.
@@ -445,27 +452,29 @@ impl GhosttyEngine {
         self.force_full = true;
     }
 
+    /// One bounded step of compressing the history; true while there is
+    /// more to do. Idle-time work: between steps, output and the UI go on.
+    pub fn compress_step(&mut self) -> bool {
+        let mut result: sys::GhosttyTerminalCompressionResult = 0;
+        // SAFETY: valid terminal, out-pointer to a local.
+        unsafe {
+            ok(
+                sys::ghostty_terminal_compress(
+                    self.term,
+                    sys::GHOSTTY_TERMINAL_COMPRESSION_MODE_INCREMENTAL,
+                    &mut result,
+                ),
+                "compress",
+            );
+        }
+        result == sys::GHOSTTY_TERMINAL_COMPRESSION_RESULT_PENDING
+    }
+
     /// Compresses scrollback as far as possible (an idle-time operation).
     pub fn compress_scrollback(&mut self) -> CompressionReport {
         let before = self.resident_bytes();
         let supported = self.memory_usage().compression_supported;
-        loop {
-            let mut result: sys::GhosttyTerminalCompressionResult = 0;
-            // SAFETY: valid terminal, out-pointer to a local.
-            unsafe {
-                ok(
-                    sys::ghostty_terminal_compress(
-                        self.term,
-                        sys::GHOSTTY_TERMINAL_COMPRESSION_MODE_INCREMENTAL,
-                        &mut result,
-                    ),
-                    "compress",
-                );
-            }
-            if result != sys::GHOSTTY_TERMINAL_COMPRESSION_RESULT_PENDING {
-                break;
-            }
-        }
+        while self.compress_step() {}
         CompressionReport {
             supported,
             resident_before: before,

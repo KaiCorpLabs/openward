@@ -23,7 +23,7 @@ Future<void> showImport(
 }) async {
   final container = ProviderScope.containerOf(context);
   final app = container.read(openWardProvider);
-  final found = app.installedPrograms();
+  final found = await app.installedPrograms();
   final ssh = sshConfig
       ? await app.previewSshConfig(file: container.read(sshConfigFileProvider))
       : <ImportPreview>[];

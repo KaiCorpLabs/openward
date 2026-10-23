@@ -92,7 +92,8 @@ impl OpenWard {
     /// The private keys in `~/.ssh`, by name.
     #[frb(sync)]
     pub fn keys(&self) -> Vec<SshKey> {
-        keychain::list(self.app.local(), &self.app.vault())
+        let users = keychain::users(self.app.local(), &self.app.vault());
+        keychain::list(self.app.local(), &users)
             .into_iter()
             .map(SshKey::from)
             .collect()
@@ -111,24 +112,22 @@ impl OpenWard {
             SshKeyType::Ecdsa => NewKey::Ecdsa,
             SshKeyType::Rsa => NewKey::Rsa,
         };
+        // The vault only after the key is made: an RSA key takes seconds.
         result(keychain::generate(
             self.app.local(),
-            &self.app.vault(),
             &name,
             kind,
             &comment,
             passphrase.as_deref(),
+            || keychain::users(self.app.local(), &self.app.vault()),
         ))
     }
 
     /// Saves a private key given as text as `~/.ssh/<name>`.
     pub fn import_key(&self, name: String, text: String) -> SshKeyResult {
-        result(keychain::import(
-            self.app.local(),
-            &self.app.vault(),
-            &name,
-            &text,
-        ))
+        result(keychain::import(self.app.local(), &name, &text, || {
+            keychain::users(self.app.local(), &self.app.vault())
+        }))
     }
 
     /// A key's public half, as an `authorized_keys` line.
@@ -140,16 +139,21 @@ impl OpenWard {
     /// The local user and computer, as a new key's comment usually says.
     #[frb(sync)]
     pub fn key_comment(&self) -> String {
-        let host = std::env::var("HOSTNAME")
-            .ok()
-            .or_else(|| {
-                std::process::Command::new("hostname")
-                    .output()
-                    .ok()
-                    .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
-            })
-            .filter(|h| !h.is_empty())
-            .unwrap_or_else(|| "openward".into());
+        // Asked of `hostname` once: apps started from the Finder have no
+        // HOSTNAME.
+        static HOST: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+        let host = HOST.get_or_init(|| {
+            std::env::var("HOSTNAME")
+                .ok()
+                .or_else(|| {
+                    std::process::Command::new("hostname")
+                        .output()
+                        .ok()
+                        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
+                })
+                .filter(|h| !h.is_empty())
+                .unwrap_or_else(|| "openward".into())
+        });
         format!(
             "{}@{}",
             self.app.local().user,

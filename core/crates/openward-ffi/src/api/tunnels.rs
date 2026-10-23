@@ -203,6 +203,15 @@ fn view(t: TunnelInfo) -> TunnelView {
 
 impl OpenWard {
     /// Every saved tunnel with its state now, by name.
+    /// An event each time a tunnel opens, closes or fails, or a local
+    /// tunnel's connections change: ask [`OpenWard::tunnels`] then. A remote
+    /// tunnel's connections change without one.
+    pub fn watch_tunnels(&self, changes: StreamSink<bool>) {
+        self.app.watch_tunnels(std::sync::Arc::new(move || {
+            let _ = changes.add(true);
+        }));
+    }
+
     #[frb(sync)]
     pub fn tunnels(&self) -> Vec<TunnelView> {
         self.app.tunnels().into_iter().map(view).collect()

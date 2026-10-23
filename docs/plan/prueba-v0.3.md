@@ -99,7 +99,12 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - con ⌘ sobre un enlace del terminal, mira que abajo dice adónde lleva; con `printf '\e]8;;https://openward.dev\e\\banco.example.com\e]8;;\e\\\n'`, en ámbar;
    - descarga una carpeta grande por SFTP, páusala, cierra la pestaña y vuelve a bajarla: debe seguir donde iba;
    - abre la app instalada con otra ya abierta sobre los mismos datos (por ejemplo, con `open -n`): la segunda debe decir que no puede abrirlos.
-16. **CSV** («Importar…» › CSV):
+16. **Rendimiento** (0.3.2-beta.2):
+   - deja la app abierta con un terminal quieto y mira en el Monitor de Actividad que su CPU baja casi a 0 %; dinos si notas la batería;
+   - con muchos hosts (importa un `~/.ssh/config` grande si tienes uno), busca en la barra, abre Hosts y la paleta: dinos si algo tarda;
+   - haz `seq 1 200000` en un terminal y busca en él (⌘F) escribiendo deprisa: la ventana no debe pararse;
+   - con un shell delante, arrastra el borde entre dos paneles: el prompt no debe repetirse.
+17. **CSV** («Importar…» › CSV):
    - exporta tus hosts de una hoja de cálculo o usa la plantilla de Termius;
    - comprueba los grupos, puertos, usuarios y etiquetas, y los avisos de lo que no entra;
    - impórtalo dos veces y comprueba que no se duplica.

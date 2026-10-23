@@ -21,7 +21,9 @@ class TerminalController extends ConnectionController {
     super.hostId,
     super.target,
     int scrollback = 0,
-  }) : session = app.terminal(cols: 80, rows: 24, scrollback: scrollback);
+  }) : session = app.terminal(cols: 80, rows: 24, scrollback: scrollback) {
+    _wakes = session.watch().listen((_) => _onWake());
+  }
 
   /// Set by the user (rename); wins over [label] and the program's title.
   String? customTitle;
@@ -48,6 +50,9 @@ class TerminalController extends ConnectionController {
   /// 1-based from the newest match; null before the first step.
   int? findSelected;
 
+  /// The search is still going through the history.
+  bool findSearching = false;
+
   /// Extra font size for this tab only (⌘+ and ⌘−).
   double zoom = 0;
 
@@ -61,6 +66,13 @@ class TerminalController extends ConnectionController {
   /// Set by the visible pane: gives it the keyboard back (after the find
   /// bar, say).
   VoidCallback? focusTerminal;
+
+  /// Set by the visible pane: there is something new to draw, so it asks
+  /// for frames again (it stops while nothing changes).
+  VoidCallback? wakePane;
+
+  /// The core says when the screen changed after the last look.
+  StreamSubscription<bool>? _wakes;
 
   /// Its size in columns and rows, as the visible pane lays it out.
   final grid = ValueNotifier<(int, int)>((80, 24));
@@ -199,6 +211,7 @@ class TerminalController extends ConnectionController {
     findText = '';
     findTotal = 0;
     findSelected = null;
+    findSearching = false;
     session.endSearch();
     _renderer?.setSearch(const []);
     _notify();
@@ -248,9 +261,12 @@ class TerminalController extends ConnectionController {
     ]);
     var changed = false;
     if (search != null &&
-        (search.total != findTotal || search.selected != findSelected)) {
+        (search.total != findTotal ||
+            search.selected != findSelected ||
+            search.searching != findSearching)) {
       findTotal = search.total;
       findSelected = search.selected;
+      findSearching = search.searching;
       changed = true;
     }
     if (f.bell) {
@@ -277,8 +293,10 @@ class TerminalController extends ConnectionController {
     return true;
   }
 
-  /// A visible tab is polled every frame by its pane; a hidden one a few
-  /// times a second, so its title stays current and damage does not pile up.
+  /// A visible tab is polled by its pane, every frame while something
+  /// changes; a hidden one only reads its title and bell, at most a few
+  /// times a second and only when something changed, and gets the whole
+  /// screen when it shows again.
   set visible(bool visible) {
     _shown = visible;
     if (visible && bellUnseen) {
@@ -287,15 +305,49 @@ class TerminalController extends ConnectionController {
       SchedulerBinding.instance.addPostFrameCallback((_) => _notify());
     }
     _background?.cancel();
-    _background = visible || isDisposed
-        ? null
-        : Timer.periodic(const Duration(milliseconds: 250), (_) => poll());
+    _background = null;
+    if (visible && !isDisposed) session.redraw();
+  }
+
+  /// Compresses the history once the terminal has been quiet a while.
+  Timer? _quiet;
+
+  void _onWake() {
+    if (isDisposed) return;
+    _quiet?.cancel();
+    _quiet = Timer(const Duration(minutes: 1), () {
+      if (!isDisposed) session.compressHistory();
+    });
+    if (_shown) {
+      wakePane?.call();
+    } else {
+      _background ??= Timer(const Duration(milliseconds: 250), _pollMeta);
+    }
+  }
+
+  void _pollMeta() {
+    _background = null;
+    if (isDisposed || _shown) return;
+    final m = session.pollMeta();
+    var changed = false;
+    if (m.title != title) {
+      title = m.title;
+      changed = true;
+    }
+    if (m.bell) {
+      bells++;
+      bellUnseen = true;
+      changed = true;
+    }
+    if (changed) _notify();
   }
 
   void _notify() => notify();
 
   @override
   void dispose() {
+    _wakes?.cancel();
+    _quiet?.cancel();
     _background?.cancel();
     grid.dispose();
     session.close();

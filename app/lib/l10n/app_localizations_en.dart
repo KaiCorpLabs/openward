@@ -1193,6 +1193,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get findOutSystem => 'Find out the system';
 
   @override
+  String get findSearching => 'Searching…';
+
+  @override
   String findTotal(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

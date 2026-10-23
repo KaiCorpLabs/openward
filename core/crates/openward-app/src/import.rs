@@ -13,9 +13,8 @@
 //! kind and port is not brought twice.
 
 use std::collections::{HashMap, HashSet};
-use std::path::Path;
 
-use openward_import::ssh_config::{self, Paths, SshConfig, Warning};
+use openward_import::ssh_config::{self, SshConfig, Warning};
 use openward_vault::Vault;
 use openward_vault::proto::{
     Data, ForwardKind, Group, Host, ItemId, Jump, PortForward, Route, Source,
@@ -52,8 +51,8 @@ pub struct Preview {
 }
 
 /// What [`ssh_config`] would bring in, in the file's order.
-pub fn preview(vault: &Vault, file: &Path, paths: &Paths) -> Vec<Preview> {
-    let imported = ssh_config::import(&SshConfig::load(file, paths));
+pub fn preview(vault: &Vault, config: &SshConfig) -> Vec<Preview> {
+    let imported = ssh_config::import(config);
     let existing = existing_aliases(vault);
     let have = existing_tunnels(vault);
     let labels: HashMap<ItemId, &str> = imported
@@ -94,12 +93,10 @@ pub fn preview(vault: &Vault, file: &Path, paths: &Paths) -> Vec<Preview> {
 /// imported hosts they jump through.
 pub fn ssh_config(
     vault: &mut Vault,
-    file: &Path,
-    paths: &Paths,
+    config: &SshConfig,
     only: Option<&[String]>,
 ) -> openward_vault::Result<Report> {
-    let config = SshConfig::load(file, paths);
-    let mut imported = ssh_config::import(&config);
+    let mut imported = ssh_config::import(config);
     if let Some(only) = only {
         imported.hosts = select(imported.hosts, only);
         let kept: HashSet<String> = imported
@@ -246,6 +243,7 @@ fn select(hosts: Vec<(ItemId, Host)>, only: &[String]) -> Vec<(ItemId, Host)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use openward_import::ssh_config::Paths;
 
     #[test]
     fn a_second_import_brings_only_new_aliases() {
@@ -260,7 +258,7 @@ mod tests {
         .unwrap();
 
         let mut vault = Vault::open_in_memory().unwrap();
-        let first = ssh_config(&mut vault, &file, &paths, None).unwrap();
+        let first = ssh_config(&mut vault, &SshConfig::load(&file, &paths), None).unwrap();
         assert_eq!((first.created, first.skipped), (2, 0));
 
         // Edited in OpenWard: must survive the next import.
@@ -280,7 +278,7 @@ mod tests {
             "Host bastion\n  User ops\nHost web\n  ProxyJump bastion\nHost db\n  ProxyJump bastion\n",
         )
         .unwrap();
-        let second = ssh_config(&mut vault, &file, &paths, None).unwrap();
+        let second = ssh_config(&mut vault, &SshConfig::load(&file, &paths), None).unwrap();
         assert_eq!((second.created, second.skipped), (1, 2));
         assert_eq!(second.group, first.group);
         assert_eq!(vault.host(bastion).unwrap().address, "bastion.example.com");
@@ -309,7 +307,7 @@ mod tests {
         .unwrap();
 
         let mut vault = Vault::open_in_memory().unwrap();
-        let first = preview(&vault, &file, &paths);
+        let first = preview(&vault, &SshConfig::load(&file, &paths));
         let web = first.iter().find(|p| p.alias == "web").unwrap();
         assert_eq!(web.jumps, ["bastion"]);
         assert_eq!(web.port, Some(2222));
@@ -320,7 +318,12 @@ mod tests {
         );
         assert!(first.iter().all(|p| !p.existing));
 
-        let report = ssh_config(&mut vault, &file, &paths, Some(&["WEB".into()])).unwrap();
+        let report = ssh_config(
+            &mut vault,
+            &SshConfig::load(&file, &paths),
+            Some(&["WEB".into()]),
+        )
+        .unwrap();
         assert_eq!(report.created, 2);
         let mut labels: Vec<String> = vault
             .hosts()
@@ -337,7 +340,7 @@ mod tests {
                 .any(|w| matches!(w, Warning::JumpLossy { alias, .. } if alias == "old"))
         );
 
-        let again = preview(&vault, &file, &paths);
+        let again = preview(&vault, &SshConfig::load(&file, &paths));
         let existing: Vec<&str> = again
             .iter()
             .filter(|p| p.existing)
@@ -355,7 +358,7 @@ mod tests {
         // Imported by an OpenWard without tunnels.
         std::fs::write(&file, "Host db\n  User ops\n").unwrap();
         let mut vault = Vault::open_in_memory().unwrap();
-        ssh_config(&mut vault, &file, &paths, None).unwrap();
+        ssh_config(&mut vault, &SshConfig::load(&file, &paths), None).unwrap();
 
         std::fs::write(
             &file,
@@ -363,14 +366,14 @@ mod tests {
              Host web\n  RemoteForward 8080 localhost:5173\n",
         )
         .unwrap();
-        let preview = preview(&vault, &file, &paths);
+        let preview = preview(&vault, &SshConfig::load(&file, &paths));
         let counts: Vec<_> = preview
             .iter()
             .map(|p| (p.alias.as_str(), p.existing, p.tunnels))
             .collect();
         assert_eq!(counts, [("db", true, 2), ("web", false, 1)]);
 
-        let second = ssh_config(&mut vault, &file, &paths, None).unwrap();
+        let second = ssh_config(&mut vault, &SshConfig::load(&file, &paths), None).unwrap();
         assert_eq!((second.created, second.skipped, second.tunnels), (1, 1, 3));
         let (db, _) = vault
             .hosts()
@@ -392,13 +395,16 @@ mod tests {
         );
 
         // Once is enough.
-        let third = ssh_config(&mut vault, &file, &paths, None).unwrap();
+        let third = ssh_config(&mut vault, &SshConfig::load(&file, &paths), None).unwrap();
         assert_eq!((third.created, third.tunnels), (0, 0));
         assert_eq!(vault.port_forwards().len(), 3);
         assert!(preview_tunnels(&vault, &file, &paths) == 0);
     }
 
-    fn preview_tunnels(vault: &Vault, file: &Path, paths: &Paths) -> usize {
-        preview(vault, file, paths).iter().map(|p| p.tunnels).sum()
+    fn preview_tunnels(vault: &Vault, file: &std::path::Path, paths: &Paths) -> usize {
+        preview(vault, &SshConfig::load(file, paths))
+            .iter()
+            .map(|p| p.tunnels)
+            .sum()
     }
 }

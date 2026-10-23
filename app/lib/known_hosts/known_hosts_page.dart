@@ -1,6 +1,8 @@
 // The «Hosts conocidos» page: the host keys OpenWard trusts and those of
 // ~/.ssh/known_hosts, to look up and forget.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,8 +11,17 @@ import '../core/providers.dart';
 import '../identities/identities.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/known_hosts.dart';
+import '../tabs/tabs.dart' show tabsProvider;
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
+
+/// How many host keys are trusted, for the library's counter. Asked again
+/// when a tab opens or closes (keys are trusted as connections come up) and
+/// when one is forgotten; off the UI thread, without matching them to hosts.
+final knownHostCountProvider = FutureProvider<int>((ref) {
+  ref.watch(tabsProvider.select((s) => s.tabs.length));
+  return ref.watch(openWardProvider).knownHostCount();
+});
 
 enum _Show { all, openWard, file }
 
@@ -26,10 +37,39 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
   _Show _show = _Show.all;
   String? _error;
 
+  /// What the core found for the query; null until it answers. It reads
+  /// the file and matches hashed names, so off the UI thread, and a moment
+  /// after the typing stops.
+  List<KnownHostRow>? _rows;
+  Timer? _search;
+
+  /// Answers to older queries are dropped.
+  int _asked = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
   @override
   void dispose() {
+    _search?.cancel();
     _query.dispose();
     super.dispose();
+  }
+
+  Future<void> _load() async {
+    final asked = ++_asked;
+    final rows = await ref
+        .read(openWardProvider)
+        .knownHostRows(query: _query.text.trim());
+    if (mounted && asked == _asked) setState(() => _rows = rows);
+  }
+
+  void _typed(String _) {
+    _search?.cancel();
+    _search = Timer(const Duration(milliseconds: 150), _load);
   }
 
   String get _file => tildePath(ref.read(openWardProvider).knownHostsFile());
@@ -115,7 +155,9 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
     if (sure != true) return;
     try {
       await ref.read(openWardProvider).forgetKnownHost(row: r);
-      setState(() => _error = null);
+      ref.invalidate(knownHostCountProvider);
+      await _load();
+      if (mounted) setState(() => _error = null);
     } catch (e) {
       setState(
         () => _error = '$e'.contains('file changed')
@@ -131,7 +173,7 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
     final l = context.l10n;
     final theme = Theme.of(context);
     final query = _query.text.trim();
-    final rows = ref.read(openWardProvider).knownHostRows(query: query);
+    final rows = _rows ?? const <KnownHostRow>[];
     final ours = rows.where((r) => r.source == KnownSourceKind.openWard);
     final theirs = rows.where((r) => r.source == KnownSourceKind.file);
     final shown = switch (_show) {
@@ -168,7 +210,7 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
                 child: TextField(
                   key: const ValueKey('known.query'),
                   controller: _query,
-                  onChanged: (_) => setState(() {}),
+                  onChanged: _typed,
                   style: monoStyle(context, size: 12, color: c.text),
                   decoration: InputDecoration(
                     isDense: true,
