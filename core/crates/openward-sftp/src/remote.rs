@@ -1,6 +1,7 @@
 //! A server's files over SFTP (version 3, with OpenSSH's extensions when
 //! the server has them).
 
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -11,12 +12,17 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::task::JoinSet;
 
 use crate::entry::{Entry, Kind, kind};
+use crate::flight::InFlight;
 use crate::{Error, Result, is_name, join};
 
 /// How many links of a listing are asked about at once: a directory of
 /// thousands of them (`/usr/lib`, `node_modules/.bin`) no longer queues
 /// thousands of requests on the channel.
 const LINKS_AT_ONCE: usize = 16;
+/// How many directories a walk lists at once: far away, a folder with many
+/// below it no longer waits for the 4 round trips of each listing (open,
+/// read, read to the end, close) one after another.
+const DIRS_AT_ONCE: usize = 8;
 
 /// The most a request reads or writes: what OpenSSH's `sftp-server` takes
 /// (its `limits@openssh.com` says 255 KiB), within russh-sftp's 256 KiB
@@ -398,20 +404,53 @@ impl Remote {
     /// Everything under `dir`, depth first: (path relative to `dir`, entry),
     /// directories before what they hold. Links to directories are not
     /// followed (they could loop); links to files count as the file.
+    /// [`DIRS_AT_ONCE`] directories are listed at once, and the order is
+    /// that of listing them one after another.
     pub async fn walk(&self, dir: &str) -> Result<Vec<(String, Entry)>> {
+        // What each directory holds, by its path relative to `dir`.
+        let mut listed = HashMap::new();
+        let mut waiting = vec![String::new()];
+        let mut listing = InFlight::default();
+        let mut failed = None;
+        loop {
+            // Once one fails, no other starts; those on their way finish,
+            // and close what they opened.
+            while failed.is_none()
+                && listing.len() < DIRS_AT_ONCE
+                && let Some(rel) = waiting.pop()
+            {
+                listing.push(async move {
+                    let abs = if rel.is_empty() {
+                        dir.to_owned()
+                    } else {
+                        join(dir, &rel)
+                    };
+                    let entries = self.walk_one(&abs).await;
+                    (rel, entries)
+                });
+            }
+            let Some((rel, entries)) = listing.next().await else {
+                break;
+            };
+            match entries {
+                Ok(entries) => {
+                    let dirs = entries.iter().filter(|e| e.kind == Kind::Dir);
+                    waiting.extend(dirs.map(|e| join(&rel, &e.name)));
+                    listed.insert(rel, entries);
+                }
+                Err(e) => {
+                    failed.get_or_insert(e);
+                }
+            }
+        }
+        if let Some(e) = failed {
+            return Err(e);
+        }
         let mut out = Vec::new();
         let mut stack = vec![String::new()];
         while let Some(rel) = stack.pop() {
-            let abs = if rel.is_empty() {
-                dir.to_owned()
-            } else {
-                join(dir, &rel)
-            };
-            // Whether a link is to a directory, not where it points.
-            let mut entries = self.read_dir(&abs).await?;
-            self.follow_links(&abs, &mut entries, false).await;
-            entries.sort_by(|a, b| a.name.cmp(&b.name));
-            for e in entries {
+            // Nothing the second time, for a name a server lists twice.
+            for e in listed.remove(&rel).unwrap_or_default() {
                 let r = join(&rel, &e.name);
                 match e.kind {
                     Kind::Dir => {
@@ -425,6 +464,15 @@ impl Remote {
             }
         }
         Ok(out)
+    }
+
+    /// One directory of a [`walk`](Self::walk), by name.
+    async fn walk_one(&self, dir: &str) -> Result<Vec<Entry>> {
+        let mut entries = self.read_dir(dir).await?;
+        // Whether a link is to a directory, not where it points.
+        self.follow_links(dir, &mut entries, false).await;
+        entries.sort_by(|a, b| a.name.cmp(&b.name));
+        Ok(entries)
     }
 
     /// A small file, all of it; `None` when it is not there. One larger

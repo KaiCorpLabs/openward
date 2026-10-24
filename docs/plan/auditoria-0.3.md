@@ -368,10 +368,28 @@ Cada archivo de una carpeta costaba sus peticiones en serie, uno detrás de otro
 Un archivo nuevo cuesta ahora abrir, escribir, cerrar, poner fecha y permisos, y renombrar: 5 peticiones en 5 idas y vueltas. Uno bajado, las mismas 4 peticiones que antes, en 2 idas y vueltas. Y van 8 archivos a la vez. Por extrapolación, subir los 5000 archivos a 80 ms de la estimación de R6 pasa de unos 57 minutos a unos 5.
 
 **Diferencias con el plan:**
-- Recorrer la carpeta del servidor antes de bajarla sigue en serie: 4 idas y vueltas por carpeta (abrir, leer, leer el final, cerrar), unos 5 de los 17,7 s de la medida. Listar varias carpetas a la vez va aparte.
+- Recorrer la carpeta del servidor antes de bajarla seguía en serie: 4 idas y vueltas por carpeta (abrir, leer, leer el final, cerrar), unos 5 de los 17,7 s de la medida. Listar varias carpetas a la vez fue aparte (hecho: ver la sección siguiente).
 - «Solo si es más nuevo» y «Omitir» preguntan ahora 2 cosas por archivo en vez de 1 (el `.part` va con el nombre, por si hay que copiarlo), pero en una sola ida y vuelta y 8 a la vez.
 - «Reemplazar» sigue preguntando de quién son el archivo y el `.part` antes de escribir, para no cambiarle el dueño (DT-8): 9 peticiones por archivo, en 7 idas y vueltas.
 - Las mayúsculas se comparan con `to_lowercase`, no con la normalización de Unicode de APFS: dos nombres que solo difieren en cómo se escribe un acento van a la vez.
+
+### DT-7 · Varias carpetas a la vez al recorrer el servidor (aparte, tras DT-7; sin publicar)
+
+Antes de bajar una carpeta se lista todo lo que tiene, y cada carpeta eran 4 idas y vueltas en serie (abrir, leer, leer el final, cerrar): a 80 ms, 5,5 de los 17,4 s que tardaba en bajar la carpeta de la medida.
+
+**Qué deja hecho** (`openward-sftp::remote`):
+- **Varias a la vez:** `Remote::walk` lista hasta 8 carpetas a la vez (`DIRS_AT_ONCE`), cada una en cuanto sale en el listado de la de arriba, y lo junta al final en el mismo orden que antes: cada carpeta antes de lo que tiene (la cola espera a que exista la carpeta de cada archivo), los enlaces a carpetas sin seguir, los enlaces a archivos como el archivo, y fuera los nombres que no son un solo nombre. Los enlaces de cada carpeta se siguen preguntando de 16 en 16: 128 preguntas en camino como mucho.
+- **Si una falla:** no empieza ninguna más, y las que iban terminan y cierran lo que abrieron, para no dejar listados abiertos en el servidor. Borrar y cambiar permisos siguen con un listado detrás de otro, cada uno cerrado antes del `rmdir`.
+- **Pruebas** (contra S2): el orden y los enlaces en los cuatro servidores; a 50 ms, 33 carpetas en menos de la mitad de lo que tardan una detrás de otra (1,2 s, contra 7,4 s con una a la vez); y una carpeta sin permiso, que hace fallar el recorrido sin romper la sesión. `InFlight`, lo que tiene un trabajo en camino, sale a su módulo (`flight.rs`) y lo usan los dos.
+
+**La medida:** la de DT-7, que ahora cuenta también el recorrido solo; dos veces cada una, iguales a la décima (arriba, la misma medida de bajar dio 17,7 s):
+
+| | Antes | Después |
+|---|---|---|
+| Recorrer la carpeta (16 carpetas, 64 peticiones) | 5,5 s | 1,4 s |
+| Bajar la carpeta | 17,4 s, 4,13 peticiones por archivo | 13,3 s, 4,13 |
+
+Las mismas peticiones, pero el recorrido pasa de 64 idas y vueltas una detrás de otra a unas 16: 4 por cada altura del árbol (3), y otras 4 porque la primera tiene 10 carpetas, más de 8. Lo que queda de los 13,3 s es copiar: 500 archivos de 2 idas y vueltas, 8 a la vez.
 
 ## Qué no entra
 

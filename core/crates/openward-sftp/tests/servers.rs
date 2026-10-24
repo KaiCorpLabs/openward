@@ -538,6 +538,69 @@ async fn lists_and_changes_files() {
     s.done().await;
 }
 
+/// Walking a folder, what a download does first, on every server of the
+/// matrix; and far away, with several listings at once.
+#[tokio::test]
+async fn walks_a_folder_several_listings_at_once() {
+    let fx = servers!();
+    for port in ALL {
+        let s = server(&fx, port, "walk").await;
+        s.sh(
+            "mkdir -p t/a/b/c t/d && printf x > t/a/b/c/f && printf yy > t/a/one \
+             && printf z > t/d/z && ln -s a t/dirlink && ln -s a/one t/filelink",
+        )
+        .await;
+        let walked = s.remote.walk(&join(&s.dir, "t")).await.unwrap();
+        let rels: Vec<&str> = walked.iter().map(|(rel, _)| rel.as_str()).collect();
+        // Folders before what they hold, in the order of one listing after
+        // another; the link to a folder is not followed.
+        assert_eq!(
+            rels,
+            [
+                "a", "d", "filelink", "d/z", "a/b", "a/one", "a/b/c", "a/b/c/f"
+            ],
+            "port {port}"
+        );
+        let filelink = &walked[2].1;
+        assert_eq!(
+            (filelink.kind, filelink.link_dir, filelink.size),
+            (Kind::Link, false, 2),
+            "port {port}"
+        );
+        s.done().await;
+    }
+
+    // Far away, the listings overlap.
+    let s = server(&fx, OPENSSH, "walk-far").await;
+    s.sh("for i in $(seq 10 25); do mkdir -p w/d$i/in && printf x > w/d$i/in/f; done")
+        .await;
+    let rtt = Duration::from_millis(50);
+    let far = Far::new(OPENSSH, rtt / 2).await;
+    let sent = Sent::default();
+    let (_ssh, remote) = far.remote(&fx, &sent).await;
+    let w = join(&s.dir, "w");
+    sent.take();
+    let started = Instant::now();
+    let walked = remote.walk(&w).await.unwrap();
+    let took = started.elapsed();
+    assert_eq!(walked.len(), 16 * 3);
+    let folders = 1 + 16 * 2;
+    assert_eq!(sent.take().get(&11), Some(&folders), "an opendir each");
+    // One after another, each folder costs 4 round trips.
+    let one_by_one = rtt * 4 * folders as u32;
+    assert!(took < one_by_one / 2, "{took:?}, one by one {one_by_one:?}");
+
+    // One that cannot be read fails the walk, and the session goes on.
+    s.sh("mkdir w/d17/locked && chmod 000 w/d17/locked").await;
+    assert_eq!(
+        remote.walk(&w).await.map(|walked| walked.len()),
+        Err(openward_sftp::Error::Denied(join(&w, "d17/locked")))
+    );
+    assert_eq!(remote.list(&join(&w, "d17")).await.unwrap().len(), 2);
+    s.sh("chmod 755 w/d17/locked").await;
+    s.done().await;
+}
+
 /// A folder up and back down, on every server of the matrix.
 #[tokio::test]
 async fn copies_a_folder_both_ways_everywhere() {
@@ -1349,6 +1412,15 @@ async fn measure_many_small_files_far_away() {
         again.push((on, started.elapsed(), sent.take()));
     }
 
+    // What a download does first, alone: walk the folder.
+    let started = Instant::now();
+    let walked = remote.walk(&join(&s.dir, "tree")).await.unwrap();
+    let (walk_time, walk_sent) = (started.elapsed(), sent.take());
+    assert_eq!(
+        walked.iter().filter(|(_, e)| e.kind == Kind::File).count(),
+        n
+    );
+
     let back = tempfile::tempdir().unwrap();
     let started = Instant::now();
     let down = copy(
@@ -1389,6 +1461,11 @@ async fn measure_many_small_files_far_away() {
             requests(sent, n)
         );
     }
+    println!(
+        "  walk: {:.1} s, {}",
+        walk_time.as_secs_f64(),
+        requests(&walk_sent, n)
+    );
     println!(
         "  down: {:.1} s, {}",
         down_time.as_secs_f64(),

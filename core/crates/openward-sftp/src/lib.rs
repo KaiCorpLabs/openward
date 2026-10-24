@@ -15,6 +15,7 @@ pub mod local;
 pub mod remote;
 pub mod transfer;
 
+mod flight;
 mod pipe;
 
 pub use entry::{Entry, Kind};

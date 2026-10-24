@@ -27,18 +27,16 @@
 //! pushed to it.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-use std::future::Future;
 use std::path::{Path, PathBuf};
-use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::task::Poll;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 
 use crate::entry::{Entry, Kind};
+use crate::flight::InFlight;
 use crate::remote::Remote;
 use crate::{Error, Result, is_name, join, local, pipe};
 
@@ -813,47 +811,6 @@ fn mark_finished(next: &mut usize, ahead: &mut BTreeSet<usize>, i: usize) {
 /// itself); `None` for the item itself.
 fn parent_rel(rel: &str) -> Option<&str> {
     (!rel.is_empty()).then(|| rel.rfind('/').map_or("", |k| &rel[..k]))
-}
-
-/// Futures polled together on the job's own task, each in turn: when the
-/// job stops (paused, cancelled), they stop with it.
-struct InFlight<'a, T> {
-    futures: Vec<Pin<Box<dyn Future<Output = T> + Send + 'a>>>,
-}
-
-impl<T> Default for InFlight<'_, T> {
-    fn default() -> Self {
-        Self {
-            futures: Vec::new(),
-        }
-    }
-}
-
-impl<'a, T> InFlight<'a, T> {
-    fn len(&self) -> usize {
-        self.futures.len()
-    }
-
-    fn push(&mut self, future: impl Future<Output = T> + Send + 'a) {
-        self.futures.push(Box::pin(future));
-    }
-
-    /// What the next one to finish gives; `None` when there are none.
-    async fn next(&mut self) -> Option<T> {
-        if self.futures.is_empty() {
-            return None;
-        }
-        std::future::poll_fn(|cx| {
-            for k in 0..self.futures.len() {
-                if let Poll::Ready(out) = self.futures[k].as_mut().poll(cx) {
-                    drop(self.futures.swap_remove(k));
-                    return Poll::Ready(Some(out));
-                }
-            }
-            Poll::Pending
-        })
-        .await
-    }
 }
 
 /// `base` joined with `rel` (`""` is `base` itself).
