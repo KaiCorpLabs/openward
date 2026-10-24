@@ -503,6 +503,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<PreviousKeyView> dco_decode_list_previous_key_view(dynamic raw);
 
   @protected
+  List<int> dco_decode_list_prim_u_32_loose(dynamic raw);
+
+  @protected
+  Uint32List dco_decode_list_prim_u_32_strict(dynamic raw);
+
+  @protected
   List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
 
   @protected
@@ -699,6 +705,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<EnvVar>? dco_decode_opt_list_env_var(dynamic raw);
+
+  @protected
+  OptionAlt dco_decode_option_alt(dynamic raw);
 
   @protected
   OriginKind dco_decode_origin_kind(dynamic raw);
@@ -1423,6 +1432,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<int> sse_decode_list_prim_u_32_loose(SseDeserializer deserializer);
+
+  @protected
+  Uint32List sse_decode_list_prim_u_32_strict(SseDeserializer deserializer);
+
+  @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
 
   @protected
@@ -1699,6 +1714,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<EnvVar>? sse_decode_opt_list_env_var(SseDeserializer deserializer);
+
+  @protected
+  OptionAlt sse_decode_option_alt(SseDeserializer deserializer);
 
   @protected
   OriginKind sse_decode_origin_kind(SseDeserializer deserializer);
@@ -2588,6 +2606,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_prim_u_32_loose(
+    List<int> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_prim_u_32_strict(
+    Uint32List self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
 
   @protected
@@ -2947,6 +2977,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     List<EnvVar>? self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_option_alt(OptionAlt self, SseSerializer serializer);
 
   @protected
   void sse_encode_origin_kind(OriginKind self, SseSerializer serializer);

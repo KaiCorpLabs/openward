@@ -8,6 +8,7 @@
 //! the engine from a background thread or task. The engine outlives the
 //! connection, so a reconnect continues on the same screen.
 
+pub use openward_ghostty::OptionAsAlt;
 use std::io::Read;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
@@ -59,6 +60,13 @@ pub struct Frame {
     pub bracketed_paste: bool,
     /// Kitty "report all keys": printable keys go through [`Terminal::key`].
     pub report_all_keys: bool,
+    /// DECKPAM: so do the keypad's.
+    pub keypad_application: bool,
+    /// What the program set for itself over the theme (OSC 10, 11, 12);
+    /// its palette changes come painted in the frame.
+    pub program_foreground: Option<[u8; 3]>,
+    pub program_background: Option<[u8; 3]>,
+    pub program_cursor: Option<[u8; 3]>,
     pub alt_screen: bool,
     pub title: String,
     /// The selected range of each visible row that has one; empty without
@@ -322,6 +330,10 @@ impl Terminal {
             mouse_tracking: modes.mouse_tracking,
             bracketed_paste: modes.bracketed_paste,
             report_all_keys: modes.report_all_keys(),
+            keypad_application: modes.keypad_application,
+            program_foreground: engine.program_colors().foreground,
+            program_background: engine.program_colors().background,
+            program_cursor: engine.program_colors().cursor,
             alt_screen: modes.alt_screen,
             title: engine.title().unwrap_or_default(),
             selection: engine.selected_rows(),
@@ -433,6 +445,13 @@ impl Terminal {
         s.touch();
     }
 
+    /// Forgets what scrolled above the screen; the program is not told.
+    pub fn clear_history(&self) {
+        let mut s = lock(&self.state);
+        s.engine.clear_history();
+        s.touch();
+    }
+
     pub fn focus(&self, gained: bool) {
         let bytes = lock(&self.state).engine.encode_focus(gained);
         self.send(bytes);
@@ -464,8 +483,8 @@ impl Terminal {
     }
 
     /// macOS: Option sends Alt (ESC-prefixed) instead of typing symbols.
-    pub fn set_option_as_alt(&self, enabled: bool) {
-        lock(&self.state).engine.set_option_as_alt(enabled);
+    pub fn set_option_as_alt(&self, which: OptionAsAlt) {
+        lock(&self.state).engine.set_option_as_alt(which);
     }
 
     pub fn screen_text(&self) -> String {
@@ -552,9 +571,17 @@ impl Terminal {
 
     /// See [`GhosttyEngine::set_theme`]; the screen is sent again, for the
     /// UI to paint it in the new colors.
-    pub fn set_theme(&self, dark: bool, foreground: [u8; 3], background: [u8; 3]) {
+    pub fn set_theme(
+        &self,
+        dark: bool,
+        foreground: [u8; 3],
+        background: [u8; 3],
+        cursor: [u8; 3],
+        palette: &[[u8; 3]; 256],
+    ) {
         let mut s = lock(&self.state);
-        s.engine.set_theme(dark, foreground, background);
+        s.engine
+            .set_theme(dark, foreground, background, cursor, palette);
         s.engine.redraw();
         s.touch();
     }

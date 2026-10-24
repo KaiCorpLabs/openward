@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'focus_ring.dart';
 import 'tokens.dart';
 
 /// A small button's text: 12 px in the interface's font. A button style's
@@ -295,8 +296,7 @@ class _FocusOutlineState extends State<FocusOutline> {
   @override
   Widget build(BuildContext context) {
     final ow = context.ow;
-    final keyboard =
-        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+    final keyboard = KeyboardMode.active.value;
     return Focus(
       canRequestFocus: false,
       skipTraversal: true,
@@ -316,3 +316,8 @@ class _FocusOutlineState extends State<FocusOutline> {
     );
   }
 }
+
+/// A height that holds a line of text: `base` at the usual size, more as
+/// the text grows.
+double heightForText(BuildContext context, double base) =>
+    base * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);

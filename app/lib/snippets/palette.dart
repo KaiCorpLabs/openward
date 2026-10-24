@@ -65,6 +65,11 @@ class _PaletteState extends ConsumerState<_Palette> {
       return KeyEventResult.ignored;
     }
     final k = e.logicalKey;
+    // Also with the cursor in the search, which would keep Esc otherwise.
+    if (k == LogicalKeyboardKey.escape) {
+      Navigator.maybePop(context);
+      return KeyEventResult.handled;
+    }
     if (k == LogicalKeyboardKey.arrowDown || k == LogicalKeyboardKey.arrowUp) {
       if (shown.isEmpty) return KeyEventResult.handled;
       final step = k == LogicalKeyboardKey.arrowDown ? 1 : -1;
@@ -135,7 +140,7 @@ class _PaletteState extends ConsumerState<_Palette> {
                       filled: false,
                       hintText: l.findASnippet,
                       prefixIcon: Icon(
-                        Icons.terminal,
+                        Icons.text_snippet_outlined,
                         size: 16,
                         color: c.accentText,
                       ),
@@ -176,11 +181,18 @@ class _PaletteState extends ConsumerState<_Palette> {
                   padding: const EdgeInsets.fromLTRB(10, 8, 6, 4),
                   child: Row(
                     children: [
-                      hint('↑↓', l.paletteChoose),
-                      hint('↩', l.paletteRun),
-                      hint(alt, l.paletteTypeOnly),
-                      hint('Esc', l.close.toLowerCase()),
-                      const Spacer(),
+                      // With large text, the hints go on to a second line.
+                      Expanded(
+                        child: Wrap(
+                          runSpacing: 2,
+                          children: [
+                            hint('↑↓', l.paletteChoose),
+                            hint('↩', l.paletteRun),
+                            hint(alt, l.paletteTypeOnly),
+                            hint('Esc', l.close.toLowerCase()),
+                          ],
+                        ),
+                      ),
                       TextButton(
                         onPressed: () {
                           Navigator.pop(context);

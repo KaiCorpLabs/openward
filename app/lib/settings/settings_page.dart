@@ -218,10 +218,22 @@ class _General extends ConsumerWidget {
           _Row(
             label: l.optionAsAlt,
             help: l.optionAsAltHelp,
-            control: Switch(
+            control: DropdownButton<OptionAltChoice>(
+              key: const ValueKey('settings.optionAsAlt'),
               value: s.optionAsAlt,
-              onChanged: (v) =>
-                  notifier.update((s) => s.copyWith(optionAsAlt: v)),
+              underline: const SizedBox.shrink(),
+              items: [
+                for (final (v, text) in [
+                  (OptionAltChoice.off, l.optionAltOff),
+                  (OptionAltChoice.both, l.optionAltBoth),
+                  (OptionAltChoice.left, l.optionAltLeft),
+                  (OptionAltChoice.right, l.optionAltRight),
+                ])
+                  DropdownMenuItem(value: v, child: Text(text)),
+              ],
+              onChanged: (v) => notifier.update(
+                (s) => s.copyWith(optionAsAlt: v ?? OptionAltChoice.off),
+              ),
             ),
           ),
         _Row(
@@ -507,7 +519,7 @@ class _Terminal extends ConsumerWidget {
         ),
         _Row(
           label: l.commandHistory,
-          help: l.commandHistoryHelp(isApple ? '⌘K' : 'Ctrl+Shift+K'),
+          help: l.commandHistoryHelp(keysFor('⌘K', '${l.ctrlShiftPrefix}K')),
           control: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

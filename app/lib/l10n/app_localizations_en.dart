@@ -139,17 +139,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String announceTunnelFailed(String name, String why) {
-    return 'The tunnel «$name» did not open: $why';
+    return 'The tunnel “$name” did not open: $why';
   }
 
   @override
   String announceTunnelLost(String name) {
-    return 'The tunnel «$name» dropped';
+    return 'The tunnel “$name” dropped';
   }
 
   @override
   String announceTunnelOpen(String name, int port) {
-    return 'Tunnel «$name» open on port $port';
+    return 'Tunnel “$name” open on port $port';
   }
 
   @override
@@ -414,6 +414,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clearAction => 'Clear';
 
   @override
+  String get clearFilter => 'Clear the filter';
+
+  @override
   String get clearFinished => 'Clear finished';
 
   @override
@@ -446,6 +449,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clearRecentTitle => 'Clear recent connections?';
+
+  @override
+  String get clearScrollback => 'Clear the scrollback';
 
   @override
   String get clearSelection => 'Clear the selection';
@@ -698,6 +704,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get copyFingerprint => 'Copy the fingerprint';
 
   @override
+  String copyOfName(String name) {
+    return '$name (copy)';
+  }
+
+  @override
   String get copyPath => 'Copy path';
 
   @override
@@ -714,6 +725,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ctrlShiftPrefix => 'Ctrl+Shift+';
+
+  @override
+  String get currentPassphrase => 'Current passphrase';
 
   @override
   String get cursor => 'Cursor';
@@ -761,7 +775,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get deleteGroup => 'Delete group';
+  String get deleteGroup => 'Delete group…';
 
   @override
   String get deleteGroupBody => 'What it holds moves up to its parent group.';
@@ -794,12 +808,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String deleteIdentityTitle(String name) {
-    return 'Delete «$name»?';
+    return 'Delete “$name”?';
   }
 
   @override
   String get deleteIdentityUnused =>
       'Nobody uses it. The keys stay where they are: only the identity goes.';
+
+  @override
+  String deleteKeyBody(String path) {
+    return '$path and its .pub are removed from this computer. It cannot be undone: without another copy, you cannot log in with it again.';
+  }
+
+  @override
+  String deleteKeyTitle(String name) {
+    return 'Delete $name?';
+  }
+
+  @override
+  String deleteKeyUsed(String who) {
+    return '$who use it: they will still name it and not be able to log in with it.';
+  }
 
   @override
   String get deleteLocalBody =>
@@ -893,6 +922,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dropBottom => 'below';
 
   @override
+  String get dropHereToMove => 'Drop it to move it here';
+
+  @override
   String dropHostNewTab(String name) {
     return 'Drop here: open $name in a new tab';
   }
@@ -950,6 +982,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dropTop => 'above';
+
+  @override
+  String get duplicate => 'Duplicate';
 
   @override
   String get duplicateTab => 'Duplicate';
@@ -1142,6 +1177,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expand => 'Expand';
 
   @override
+  String get exportEllipsis => 'Export…';
+
+  @override
   String failureAuth(String user, String label) {
     return '$user@$label could not sign in.';
   }
@@ -1299,6 +1337,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String findCount(int selected, int total) {
     return '$selected of $total';
   }
+
+  @override
+  String get findEllipsis => 'Find…';
 
   @override
   String get findHint => 'Search the terminal';
@@ -1660,7 +1701,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get identityNewNote =>
-      'Use it from the editor of a host or a group, or with «Use on…» in the list of identities.';
+      'Use it from the editor of a host or a group, or with “Use on…” in the list of identities.';
 
   @override
   String get identityNone => 'None';
@@ -1966,6 +2007,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get keyBackspace => 'Backspace';
+
+  @override
   String get keyBefore => 'Before';
 
   @override
@@ -1992,7 +2036,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get keyDelete => 'Del';
 
   @override
+  String keyDeleted(String name) {
+    return '$name deleted.';
+  }
+
+  @override
   String get keyExchange => 'Key exchange';
+
+  @override
+  String keyExported(String name, String path) {
+    return '$name copied to $path.';
+  }
 
   @override
   String get keyFailed => 'It could not be done (more in Details).';
@@ -2033,12 +2087,33 @@ class AppLocalizationsEn extends AppLocalizations {
       'No .pub next to it: its type shows when connecting';
 
   @override
+  String get keyNotOpenSsh =>
+      'This key is not an OpenSSH one: its passphrase is changed with the program that made it.';
+
+  @override
   String get keyNotReadable =>
       'That is not a private key OpenWard can read (OpenSSH, PEM or PuTTY).';
 
   @override
   String keyNow(String algorithm) {
     return 'Now ($algorithm)';
+  }
+
+  @override
+  String keyPassphraseChanged(String name) {
+    return 'The passphrase of $name has changed.';
+  }
+
+  @override
+  String get keyPassphraseEllipsis => 'Change the passphrase…';
+
+  @override
+  String get keyPassphraseEmpty =>
+      'Empty, the key is left without a passphrase: whoever has the file can use it.';
+
+  @override
+  String keyPassphraseTitle(String name) {
+    return 'Passphrase of $name';
   }
 
   @override
@@ -2051,6 +2126,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get keyReceived => 'Received';
+
+  @override
+  String get keyRenameNote =>
+      'Its .pub and certificate go with it, and the hosts, groups and identities that use it name it so from now on.';
+
+  @override
+  String keyRenameTitle(String name) {
+    return 'Rename $name';
+  }
 
   @override
   String get keySaved => 'Saved';
@@ -2145,6 +2229,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String latencyHigh(int ms, int times) {
     return '$ms ms: $times times the usual';
+  }
+
+  @override
+  String latencyHighLabel(int ms) {
+    return 'High latency: $ms ms';
+  }
+
+  @override
+  String latencyLabel(int ms) {
+    return 'Latency: $ms ms';
   }
 
   @override
@@ -2388,6 +2482,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get moveToNewTab => 'Move to a new tab';
 
   @override
+  String movedToGroup(String host, String group) {
+    return '$host is now in $group.';
+  }
+
+  @override
   String get name => 'Name';
 
   @override
@@ -2480,6 +2579,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newPane => 'New pane';
 
   @override
+  String get newPassphrase => 'New passphrase';
+
+  @override
   String get newSnippet => 'New snippet';
 
   @override
@@ -2543,7 +2645,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get newsImportBody =>
-      'Hosts, groups, identities and tunnels from Termius, PuTTY, KiTTY, MobaXterm, Tabby or SecureCRT, and hosts from a CSV, from «…» › Import… in the sidebar. Passwords do not come along.';
+      'Hosts, groups, identities and tunnels from Termius, PuTTY, KiTTY, MobaXterm, Tabby or SecureCRT, and hosts from a CSV, from “…” › Import… in the sidebar. Passwords do not come along.';
 
   @override
   String get newsImportTitle => 'Import from your previous client';
@@ -2649,7 +2751,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get newsSystemBody2 =>
-      'Debian, Ubuntu, Fedora, Alpine and 22 more systems, by their logo in the color of their environment; macOS and Windows, by an icon of their own. For the ones that do not say it when connecting, such as those behind Tailscale SSH, «Find out the system» in their menu reads /etc/os-release; or on every host, from Settings › General.';
+      'Debian, Ubuntu, Fedora, Alpine and 22 more systems, by their logo in the color of their environment; macOS and Windows, by an icon of their own. For the ones that do not say it when connecting, such as those behind Tailscale SSH, “Find out the system” in their menu reads /etc/os-release; or on every host, from Settings › General.';
 
   @override
   String get newsSystemTitle2 => 'Each server\'s system, by its logo';
@@ -2700,7 +2802,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noIdentitiesBody =>
-      'An identity puts a user, their keys and the agent under a name («deploy in production»). Put it on a group and all its hosts log in the same way; change it once and they all change.';
+      'An identity puts a user, their keys and the agent under a name (“deploy in production”). Put it on a group and all its hosts log in the same way; change it once and they all change.';
 
   @override
   String get noIdentityInherited => 'No group sets one';
@@ -2712,9 +2814,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noJumpsYet => 'None yet.';
 
   @override
-  String get noKeyMatches => 'No key matches.';
-
-  @override
   String get noKeys => 'No keys in ~/.ssh';
 
   @override
@@ -2724,9 +2823,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get noKeysYet =>
       'No keys: the usual ones in ~/.ssh and the agent\'s are tried.';
-
-  @override
-  String get noKnownHostMatches => 'No key matches';
 
   @override
   String get noKnownHosts => 'You trust no keys yet';
@@ -2919,11 +3015,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openTunnels => 'Open tunnels';
 
   @override
+  String get optionAltBoth => 'Both';
+
+  @override
+  String get optionAltLeft => 'The left one';
+
+  @override
+  String get optionAltOff => 'Neither';
+
+  @override
+  String get optionAltRight => 'The right one';
+
+  @override
   String get optionAsAlt => 'Option as Alt';
 
   @override
   String get optionAsAltHelp =>
-      'Option sends Esc + key, as emacs and readline expect, instead of typing symbols like @ or €.';
+      'The Option that is Alt sends Esc + key, as emacs and readline expect; the other still types symbols such as @ or €.';
 
   @override
   String get orAnAddress => 'or an address: user@host:port';
@@ -3024,6 +3132,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paste => 'Paste';
 
   @override
+  String get pasteHasHidden =>
+      'It holds characters that do not show, in amber: a terminal obeys them even though it does not show them.';
+
+  @override
+  String get pasteHiddenTitle => 'Paste with characters that do not show?';
+
+  @override
   String pasteInPanes(int total) {
     return 'Paste in $total panes';
   }
@@ -3119,7 +3234,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get persistentSession => 'Persistent session';
 
   @override
-  String get pickIdentity => 'Pick an identity or «None».';
+  String get pickIdentity => 'Pick an identity or “None”.';
 
   @override
   String get pinSidebar => 'Keep the sidebar open';
@@ -3553,6 +3668,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rename => 'Rename';
 
   @override
+  String get renameEllipsis => 'Rename…';
+
+  @override
   String get renameTab => 'Rename…';
 
   @override
@@ -3696,6 +3814,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get retryNow => 'Retry now';
 
   @override
+  String get revealInExplorer => 'Show in Explorer';
+
+  @override
+  String get revealInFinder => 'Show in Finder';
+
+  @override
+  String get revealInFolder => 'Show the folder';
+
+  @override
   String get review => 'Review';
 
   @override
@@ -3734,7 +3861,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String runSnippetTitle(String name) {
-    return 'Run «$name»';
+    return 'Run “$name”';
   }
 
   @override
@@ -4120,6 +4247,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'It is kept without secrets, like the rest of the vault. What you type when it runs is not kept.';
 
   @override
+  String snippetScriptExample(String open, String close) {
+    return 'sudo systemctl restart ${open}service$close';
+  }
+
+  @override
   String get snippetTypeOnlyNote => 'It is left typed, without pressing Enter.';
 
   @override
@@ -4140,8 +4272,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get snippetsEllipsis => 'Snippets…';
+
+  @override
   String snippetsHowToRun(String shortcut) {
-    return 'In a terminal: $shortcut or the «Snippets» button of the status bar. With broadcast, they go to every pane that receives.';
+    return 'In a terminal: $shortcut or the “Snippets” button of the status bar. With broadcast, they go to every pane that receives.';
   }
 
   @override
@@ -4350,6 +4485,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get terminalColors => 'Terminal colors';
 
   @override
+  String get terminalCursorLine => 'Cursor line';
+
+  @override
   String get terminalFont => 'Terminal font';
 
   @override
@@ -4538,7 +4676,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String tunnelDidNotOpen(String name, String why) {
-    return '«$name» did not open on connect: $why';
+    return '“$name” did not open on connect: $why';
   }
 
   @override
@@ -4702,7 +4840,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String useIdentityOn(String name) {
-    return 'Use «$name» on…';
+    return 'Use “$name” on…';
   }
 
   @override

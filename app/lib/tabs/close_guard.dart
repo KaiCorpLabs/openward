@@ -8,6 +8,7 @@ import '../src/rust/api/sftp.dart' show TransferState;
 import '../terminal/controller.dart';
 import '../tunnels/tunnels.dart';
 import '../ui/confirm.dart';
+import '../ui/environment.dart' show shownEnv;
 import 'tabs.dart';
 
 /// Closing asks first only when it would cut off a session that is up on
@@ -27,7 +28,8 @@ List<(TerminalController, String)> _marked(
     for (final c in sessions)
       if (c.phase == Phase.connected || c.phase == Phase.reconnecting)
         if (c.hostId case final id?)
-          if (library.host(id)?.environment case final env?) (c, env.name),
+          if (library.host(id)?.environment case final env?)
+            (c, shownEnv(context.l10n, env).name),
   ];
 }
 

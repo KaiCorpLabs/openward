@@ -293,6 +293,9 @@ class _HomeState extends ConsumerState<Home> {
       });
     } else {
       bindings.addAll({
+        // As ⌘1…⌘9 on macOS: Ctrl+Alt+1…9, the left Alt.
+        for (var i = 1; i <= 9; i++)
+          TabDigitActivator(i): i == 9 ? last : () => tabs.select(i - 1),
         const SingleActivator(LogicalKeyboardKey.comma, control: true):
             settings,
         const SingleActivator(

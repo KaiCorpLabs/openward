@@ -123,6 +123,8 @@ class _NewKeyState extends ConsumerState<_NewKey> {
     final mono = monoStyle(context, size: 13, color: c.text);
     final name = _name.text.trim().isEmpty ? 'id_ed25519' : _name.text.trim();
     return AlertDialog(
+      // A small window scrolls it.
+      scrollable: true,
       title: Text(l.newKey),
       content: SizedBox(
         width: 480,
@@ -352,6 +354,7 @@ class _ImportKeyState extends ConsumerState<_ImportKey> {
     final mono = monoStyle(context, size: 12, color: c.text);
     final ready = _name.text.trim().isNotEmpty && _text.text.trim().isNotEmpty;
     return AlertDialog(
+      scrollable: true,
       title: Text(l.importKey),
       content: SizedBox(
         width: 520,

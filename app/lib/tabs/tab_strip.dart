@@ -54,73 +54,78 @@ class TabStrip extends ConsumerWidget {
       TabStyle.block => (topBarHeight - 1, 0, CrossAxisAlignment.start),
       TabStyle.segment => (28, 4, CrossAxisAlignment.center),
     };
-    return Container(
-      height: topBarHeight,
-      decoration: BoxDecoration(
-        color: ow.colors.window,
-        border: style == TabStyle.pill
-            ? null
-            : Border(bottom: BorderSide(color: ow.colors.border)),
-      ),
-      padding: EdgeInsets.only(left: style == TabStyle.block ? 0 : 6),
-      child: Row(
-        crossAxisAlignment: align,
-        children: [
-          ?leading,
-          // The tabs take what they need (scrolling past that); all the
-          // rest of the bar is empty, after the + button.
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, box) => Row(
-                crossAxisAlignment: align,
-                children: [
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: math.max(0, box.maxWidth - _emptyAtLeast),
-                    ),
-                    child: SizedBox(
-                      height: height,
-                      child: _TabRow(
-                        state: state,
-                        gap: gap,
-                        onRename: (i) => _rename(context, ref, i),
+    // The bar keeps its height (the window's buttons sit in it on macOS):
+    // its text grows only so far.
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.3,
+      child: Container(
+        height: topBarHeight,
+        decoration: BoxDecoration(
+          color: ow.colors.window,
+          border: style == TabStyle.pill
+              ? null
+              : Border(bottom: BorderSide(color: ow.colors.border)),
+        ),
+        padding: EdgeInsets.only(left: style == TabStyle.block ? 0 : 6),
+        child: Row(
+          crossAxisAlignment: align,
+          children: [
+            ?leading,
+            // The tabs take what they need (scrolling past that); all the
+            // rest of the bar is empty, after the + button.
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, box) => Row(
+                  crossAxisAlignment: align,
+                  children: [
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: math.max(0, box.maxWidth - _emptyAtLeast),
                       ),
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.only(
-                      left: 2,
-                      bottom: style == TabStyle.folder ? 3 : 0,
-                      top: style == TabStyle.block ? 4 : 0,
-                    ),
-                    child: IconButton(
-                      tooltip: withKeys(
-                        l.newLocalTerminal,
-                        keysFor('⌘T', '${l.ctrlShiftPrefix}T'),
-                      ),
-                      icon: const Icon(Icons.add, size: 16),
-                      onPressed: tabs.openLocal,
-                    ),
-                  ),
-                  // Empty, it moves the window; while something is
-                  // dragged, it takes it as a tab of its own.
-                  const Expanded(
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        _NewTabDrop(child: WindowDragArea()),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TransferIndicator(),
+                      child: SizedBox(
+                        height: height,
+                        child: _TabRow(
+                          state: state,
+                          gap: gap,
+                          onRename: (i) => _rename(context, ref, i),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                    Padding(
+                      padding: EdgeInsets.only(
+                        left: 2,
+                        bottom: style == TabStyle.folder ? 3 : 0,
+                        top: style == TabStyle.block ? 4 : 0,
+                      ),
+                      child: IconButton(
+                        tooltip: withKeys(
+                          l.newLocalTerminal,
+                          keysFor('⌘T', '${l.ctrlShiftPrefix}T'),
+                        ),
+                        icon: const Icon(Icons.add, size: 16),
+                        onPressed: tabs.openLocal,
+                      ),
+                    ),
+                    // Empty, it moves the window; while something is
+                    // dragged, it takes it as a tab of its own.
+                    const Expanded(
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          _NewTabDrop(child: WindowDragArea()),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TransferIndicator(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -468,9 +473,11 @@ IconData pageIcon(PageKind page) => switch (page) {
   PageKind.tunnels => Icons.swap_horiz,
   PageKind.identities => Icons.badge_outlined,
   PageKind.keys => Icons.key_outlined,
-  PageKind.snippets => Icons.terminal,
+  // Their own: the terminal's is a shell's, the shield the post-quantum
+  // exchange's.
+  PageKind.snippets => Icons.text_snippet_outlined,
   PageKind.workspaces => Icons.dashboard_outlined,
-  PageKind.knownHosts => Icons.verified_user_outlined,
+  PageKind.knownHosts => Icons.fingerprint,
 };
 
 /// A tab's name, as its label says.
@@ -720,86 +727,97 @@ class _Tab extends ConsumerWidget {
             : null,
       ),
     };
-    Widget tab = Semantics(
-      selected: active,
-      button: true,
-      label: env == null ? title : '$title, ${env.name}',
-      child: Listener(
-        // At once on press, without waiting to tell a click from a double
-        // click; middle click closes, as in browsers.
-        onPointerDown: (e) {
-          if (e.buttons == kPrimaryMouseButton) onSelect();
-          if (e.buttons == kMiddleMouseButton) onClose();
-          if (e.buttons == kSecondaryMouseButton) onMenu(e.position);
-        },
-        child: GestureDetector(
-          onDoubleTap: onRename,
-          child: Container(
-            constraints: const BoxConstraints(minWidth: 96, maxWidth: 220),
-            padding: EdgeInsets.only(left: 12, right: active ? 2 : 12),
-            decoration: decoration,
-            child: IconTheme.merge(
-              data: IconThemeData(color: fg),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  leading,
-                  const SizedBox(width: 8),
-                  if (bell)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 4),
-                      child: Tooltip(
-                        message: l.bellRang,
-                        child: Icon(
-                          Icons.notifications_active_outlined,
-                          size: 14,
-                          color: inverted ? fg : c.warn,
+    Widget tab = _Hover(
+      builder: (hovered) => Semantics(
+        selected: active,
+        button: true,
+        label: env == null ? title : '$title, ${shownEnv(l, env).name}',
+        // The pointer goes by press, not tap: say what a tap does.
+        onTap: onSelect,
+        child: Listener(
+          // At once on press, without waiting to tell a click from a double
+          // click; middle click closes, as in browsers.
+          onPointerDown: (e) {
+            if (e.buttons == kPrimaryMouseButton) onSelect();
+            if (e.buttons == kMiddleMouseButton) onClose();
+            if (e.buttons == kSecondaryMouseButton) onMenu(e.position);
+          },
+          child: GestureDetector(
+            onDoubleTap: onRename,
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 96, maxWidth: 220),
+              padding: const EdgeInsets.only(left: 12, right: 2),
+              decoration: decoration,
+              child: IconTheme.merge(
+                data: IconThemeData(color: fg),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    leading,
+                    const SizedBox(width: 8),
+                    if (bell)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: Tooltip(
+                          message: l.bellRang,
+                          child: Icon(
+                            Icons.notifications_active_outlined,
+                            size: 14,
+                            color: inverted ? fg : c.warn,
+                          ),
+                        ),
+                      ),
+                    if (waiting)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: Tooltip(
+                          message: l.waitingForYou,
+                          child: Icon(
+                            Icons.help_outline,
+                            size: 14,
+                            color: inverted ? fg : c.warn,
+                          ),
+                        ),
+                      ),
+                    Flexible(
+                      child: ExcludeSemantics(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: fg,
+                            fontWeight: active
+                                ? FontWeight.w500
+                                : FontWeight.w400,
+                          ),
                         ),
                       ),
                     ),
-                  if (waiting)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 4),
-                      child: Tooltip(
-                        message: l.waitingForYou,
-                        child: Icon(
-                          Icons.help_outline,
-                          size: 14,
-                          color: inverted ? fg : c.warn,
-                        ),
+                    if (env != null)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: ExcludeSemantics(child: EnvChip(env)),
+                      ),
+                    // On the active tab, and on the others under the pointer;
+                    // its room always kept, so the tabs do not move.
+                    Visibility(
+                      visible: active || hovered,
+                      maintainSize: true,
+                      maintainAnimation: true,
+                      maintainState: true,
+                      child: IconButton(
+                        tooltip: l.closeTab,
+                        visualDensity: VisualDensity.compact,
+                        iconSize: 14,
+                        color: fg,
+                        icon: const Icon(Icons.close),
+                        onPressed: onClose,
                       ),
                     ),
-                  Flexible(
-                    child: ExcludeSemantics(
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: fg,
-                          fontWeight: active
-                              ? FontWeight.w500
-                              : FontWeight.w400,
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (env != null)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 6),
-                      child: ExcludeSemantics(child: EnvChip(env)),
-                    ),
-                  if (active)
-                    IconButton(
-                      tooltip: l.closeTab,
-                      visualDensity: VisualDensity.compact,
-                      iconSize: 14,
-                      color: fg,
-                      icon: const Icon(Icons.close),
-                      onPressed: onClose,
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -835,4 +853,25 @@ class _Tab extends ConsumerWidget {
       child: tab,
     );
   }
+}
+
+/// Tells its builder whether the pointer is over it.
+class _Hover extends StatefulWidget {
+  const _Hover({required this.builder});
+
+  final Widget Function(bool hovered) builder;
+
+  @override
+  State<_Hover> createState() => _HoverState();
+}
+
+class _HoverState extends State<_Hover> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    onEnter: (_) => setState(() => _hovered = true),
+    onExit: (_) => setState(() => _hovered = false),
+    child: widget.builder(_hovered),
+  );
 }

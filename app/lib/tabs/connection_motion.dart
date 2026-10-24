@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/providers.dart';
@@ -777,9 +778,10 @@ class StalledBar extends StatelessWidget {
 
 /// The comeback line's words for a terminal, in the interface's language.
 String comebackWords(AppLocalizations l, DateTime at, Duration away) {
-  final hh = at.hour.toString().padLeft(2, '0');
-  final mm = at.minute.toString().padLeft(2, '0');
-  return l.comebackLine('$hh:$mm', awayText(l, away));
+  return l.comebackLine(
+    DateFormat.Hm(l.localeName).format(at),
+    awayText(l, away),
+  );
 }
 
 /// Pill for the status bar: the shell is in tmux (or tmux was missing).

@@ -19,7 +19,7 @@ mod engine;
 
 pub use engine::find::{Link, SearchHit, SearchState, url_in_row};
 pub use engine::input::{
-    InputModes, KeyAction, KeyInput, MouseAction, MouseButton, MouseInput, Paste, mods,
+    InputModes, KeyAction, KeyInput, MouseAction, MouseButton, MouseInput, OptionAsAlt, Paste, mods,
 };
 pub use engine::select::SelectedRow;
-pub use engine::{CompressionReport, GhosttyEngine};
+pub use engine::{CompressionReport, GhosttyEngine, ProgramColors};

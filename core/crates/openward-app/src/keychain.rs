@@ -14,7 +14,7 @@ use openward_ssh::russh::keys::ssh_key::{
 };
 use openward_ssh::russh::keys::{HashAlg, decode_secret_key};
 use openward_vault::Vault;
-use openward_vault::proto::Settings;
+use openward_vault::proto::{Data, Settings};
 
 use crate::keys::algorithm;
 use crate::local::{Local, Tokens};
@@ -62,6 +62,11 @@ pub enum KeyError {
     Io(String),
     #[error("could not make the key: {0}")]
     Make(String),
+    #[error("that is not the key's passphrase")]
+    WrongPassphrase,
+    /// PEM and PuTTY keys: their passphrase is changed with their program.
+    #[error("only OpenSSH keys can be given another passphrase here")]
+    NotOpenSsh,
 }
 
 fn io(e: impl std::fmt::Display) -> KeyError {
@@ -218,6 +223,163 @@ fn new_path(local: &Local, name: &str) -> Result<PathBuf, KeyError> {
         return Err(KeyError::Exists(name.to_owned()));
     }
     Ok(path)
+}
+
+/// The key file `path` names (`~/.ssh/…`), if it is one of the keys in
+/// `~/.ssh`: nothing else is deleted or renamed through here.
+fn key_file(local: &Local, path: &str) -> Result<PathBuf, KeyError> {
+    let file = local.path(path, &tokens(local));
+    if file.parent() != Some(local.ssh_dir.as_path()) || !looks_like_key(&file) {
+        return Err(KeyError::NotAKey);
+    }
+    Ok(file)
+}
+
+fn tokens(local: &Local) -> Tokens<'_> {
+    Tokens {
+        host: "",
+        port: 22,
+        user: &local.user,
+        alias: "",
+    }
+}
+
+/// Where `path` (`~/.ssh/…`) is on this computer.
+pub fn absolute(local: &Local, path: &str) -> PathBuf {
+    local.path(path, &tokens(local))
+}
+
+/// What goes with a key file, beside it.
+const COMPANIONS: &[&str] = &[".pub", "-cert.pub"];
+
+/// Deletes a key and its `.pub` and certificate. Who names it keeps the
+/// name: the app says who before asking.
+pub fn delete(local: &Local, path: &str) -> Result<(), KeyError> {
+    let file = key_file(local, path)?;
+    fs::remove_file(&file).map_err(io)?;
+    for suffix in COMPANIONS {
+        let _ = fs::remove_file(with_suffix(&file, suffix));
+    }
+    Ok(())
+}
+
+/// Renames a key, its `.pub` and its certificate, and the hosts, groups
+/// and identities that name it with it, in one change: if the vault cannot
+/// take it, the files go back.
+pub fn rename(
+    local: &Local,
+    vault: &mut Vault,
+    path: &str,
+    name: &str,
+) -> Result<KeyFile, KeyError> {
+    let from = key_file(local, path)?;
+    let to = new_path(local, name)?;
+    if COMPANIONS.iter().any(|s| with_suffix(&to, s).exists()) {
+        return Err(KeyError::Exists(name.to_owned()));
+    }
+    let moved: Vec<(PathBuf, PathBuf)> = std::iter::once((from.clone(), to.clone()))
+        .chain(COMPANIONS.iter().filter_map(|s| {
+            let f = with_suffix(&from, s);
+            f.exists().then(|| (f, with_suffix(&to, s)))
+        }))
+        .collect();
+    let back = |done: &[(PathBuf, PathBuf)]| {
+        for (a, b) in done.iter().rev() {
+            let _ = fs::rename(b, a);
+        }
+    };
+    for (i, (a, b)) in moved.iter().enumerate() {
+        if let Err(e) = fs::rename(a, b) {
+            back(&moved[..i]);
+            return Err(io(e));
+        }
+    }
+    let t = tokens(local);
+    let named = tilde(local, &to);
+    let rename_in = |s: &Settings| -> Option<Settings> {
+        let files = s.identity_files.as_ref()?;
+        if !files.iter().any(|f| local.path(f, &t) == from) {
+            return None;
+        }
+        let mut s = s.clone();
+        s.identity_files = Some(
+            files
+                .iter()
+                .map(|f| {
+                    if local.path(f, &t) == from {
+                        named.clone()
+                    } else {
+                        f.clone()
+                    }
+                })
+                .collect(),
+        );
+        Some(s)
+    };
+    let changes: Vec<_> = vault
+        .items()
+        .filter_map(|item| {
+            let data = match &item.body.data {
+                Data::Host(h) => Data::Host(openward_vault::proto::Host {
+                    settings: rename_in(&h.settings)?,
+                    ..h.clone()
+                }),
+                Data::Group(g) => Data::Group(openward_vault::proto::Group {
+                    settings: rename_in(&g.settings)?,
+                    ..g.clone()
+                }),
+                Data::Identity(i) => Data::Identity(openward_vault::proto::Identity {
+                    settings: rename_in(&i.settings)?,
+                    ..i.clone()
+                }),
+                _ => return None,
+            };
+            Some((item.id, item.rev, data))
+        })
+        .collect();
+    if !changes.is_empty()
+        && let Err(e) = vault.update_all(changes)
+    {
+        back(&moved);
+        return Err(io(e));
+    }
+    Ok(describe(local, &to, &users(local, vault)))
+}
+
+/// Puts an OpenSSH key behind another passphrase, or none: `old` opens
+/// it (unused if it has none), `new` closes it. The file is replaced
+/// whole, never left half written.
+pub fn change_passphrase(
+    local: &Local,
+    path: &str,
+    old: Option<&str>,
+    new: Option<&str>,
+) -> Result<(), KeyError> {
+    let file = key_file(local, path)?;
+    let text = zeroize::Zeroizing::new(fs::read_to_string(&file).map_err(io)?);
+    let key = PrivateKey::from_openssh(text.as_str()).map_err(|_| KeyError::NotOpenSsh)?;
+    let key = if key.is_encrypted() {
+        key.decrypt(old.unwrap_or_default())
+            .map_err(|_| KeyError::WrongPassphrase)?
+    } else {
+        key
+    };
+    let key = match new.filter(|p| !p.is_empty()) {
+        Some(p) => key
+            .encrypt(&mut rand::rng(), p)
+            .map_err(|e| KeyError::Make(e.to_string()))?,
+        None => key,
+    };
+    let out = key
+        .to_openssh(LineEnding::LF)
+        .map_err(|e| KeyError::Make(e.to_string()))?;
+    let tmp = with_suffix(&file, ".ow-new");
+    let _ = fs::remove_file(&tmp);
+    write_new(&tmp, out.as_bytes(), 0o600).map_err(io)?;
+    fs::rename(&tmp, &file).map_err(|e| {
+        let _ = fs::remove_file(&tmp);
+        io(e)
+    })
 }
 
 /// Makes a key in `~/.ssh/<name>`, with its `.pub`; behind `passphrase`
@@ -488,5 +650,81 @@ mod tests {
         // There already, with options and another comment.
         let there = b"from=\"10.0.0.0/8\" ssh-ed25519 AAAAC3Nz old comment\n";
         assert_eq!(with_authorized(Some(there), line), None);
+    }
+
+    /// Deleting, renaming and another passphrase: only keys in `~/.ssh`, and
+    /// a rename takes who names the key along.
+    #[test]
+    fn a_key_deleted_renamed_and_given_another_passphrase() {
+        let dir = tempfile::tempdir().unwrap();
+        let local = local(dir.path());
+        let mut vault = Vault::open_in_memory().unwrap();
+        let new = |name: &str, phrase: Option<&str>| {
+            generate(&local, name, NewKey::Ed25519, "ana@mac", phrase, Vec::new).unwrap()
+        };
+        new("id_old", None);
+        fs::write(local.ssh_dir.join("id_old-cert.pub"), "cert").unwrap();
+        let host = vault
+            .create(Data::Host(openward_vault::proto::Host {
+                label: "web".into(),
+                address: "web.example.com".into(),
+                settings: Settings {
+                    identity_files: Some(vec!["~/.ssh/id_old".into(), "~/.ssh/id_other".into()]),
+                    ..Settings::default()
+                },
+                ..Default::default()
+            }))
+            .unwrap();
+
+        // Renamed: the files and the host that names it.
+        let k = rename(&local, &mut vault, "~/.ssh/id_old", "id_web").unwrap();
+        assert_eq!(k.path, "~/.ssh/id_web");
+        assert_eq!(k.used_by, ["web"]);
+        assert!(k.has_public && k.certificate);
+        assert!(!local.ssh_dir.join("id_old").exists());
+        let Data::Host(h) = &vault.get(host).unwrap().body.data else {
+            panic!("not a host")
+        };
+        assert_eq!(
+            h.settings.identity_files.as_deref(),
+            Some(&["~/.ssh/id_web".to_owned(), "~/.ssh/id_other".to_owned()][..])
+        );
+        new("id_taken", None);
+        assert_eq!(
+            rename(&local, &mut vault, "~/.ssh/id_web", "id_taken").map(|_| ()),
+            Err(KeyError::Exists("id_taken".into()))
+        );
+
+        // Another passphrase: put on, needed to take it off, taken off.
+        change_passphrase(&local, "~/.ssh/id_web", None, Some("frase")).unwrap();
+        let listed = |name: &str| {
+            list(&local, &users(&local, &vault))
+                .into_iter()
+                .find(|k| k.name == name)
+                .unwrap()
+        };
+        assert!(listed("id_web").encrypted);
+        assert_eq!(
+            change_passphrase(&local, "~/.ssh/id_web", Some("otra"), None),
+            Err(KeyError::WrongPassphrase)
+        );
+        change_passphrase(&local, "~/.ssh/id_web", Some("frase"), None).unwrap();
+        assert!(!listed("id_web").encrypted);
+        assert!(!local.ssh_dir.join("id_web.ow-new").exists());
+
+        // Deleted, with what goes with it; nothing that is not a key.
+        delete(&local, "~/.ssh/id_web").unwrap();
+        for f in ["id_web", "id_web.pub", "id_web-cert.pub"] {
+            assert!(!local.ssh_dir.join(f).exists(), "{f}");
+        }
+        fs::write(local.ssh_dir.join("config"), "Host *\n").unwrap();
+        for not_a_key in ["~/.ssh/config", "~/.ssh/../.ssh/id_taken.pub", "/etc/hosts"] {
+            assert_eq!(
+                delete(&local, not_a_key),
+                Err(KeyError::NotAKey),
+                "{not_a_key}"
+            );
+        }
+        assert!(local.ssh_dir.join("config").exists());
     }
 }

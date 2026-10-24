@@ -103,6 +103,29 @@ class OwColors {
   final Color scrim;
 
   bool get dark => brightness == Brightness.dark;
+
+  /// Text on a [danger] fill: a button that deletes.
+  Color get onDanger => _on(danger);
+
+  /// Text on a [warn] fill: a button that reaches more than one place.
+  Color get onWarn => _on(warn);
+
+  /// Text on the snack bar, the tooltip and other inverted boxes, whose
+  /// background is [text]: its action too, in bold.
+  Color get onInverse => surface;
+
+  /// The theme's own dark or light that reads on `fill` (4.5:1), or black
+  /// or white when neither does.
+  Color _on(Color fill) {
+    for (final c in [surface, text]) {
+      if (TermPalette.contrast(c, fill) >= 4.5) return c;
+    }
+    const black = Color(0xFF000000), white = Color(0xFFFFFFFF);
+    return TermPalette.contrast(black, fill) >=
+            TermPalette.contrast(white, fill)
+        ? black
+        : white;
+  }
 }
 
 /// How tabs look.

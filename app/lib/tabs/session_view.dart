@@ -472,8 +472,9 @@ class _PaneHeader extends ConsumerWidget {
         ),
       ],
     );
+    // 28 inside its line, for the controls in it.
     return Container(
-      height: 28,
+      height: 29,
       padding: const EdgeInsets.only(left: 4, right: 2),
       decoration: BoxDecoration(
         color: receives
@@ -495,30 +496,44 @@ class _PaneHeader extends ConsumerWidget {
                     builder: (context, _) => title(controller),
                   ),
           ),
+          // The box and its word, one target: a click on either.
           if (panes.broadcast && controller != null)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox.square(
-                  dimension: 24,
-                  child: Checkbox(
-                    value: receives,
-                    visualDensity: VisualDensity.compact,
-                    onChanged: (v) {
-                      panes.setReceives(pane, v ?? false);
-                      tabs.focusActive(tab);
-                    },
+            MergeSemantics(
+              child: InkWell(
+                key: const ValueKey('pane.receives'),
+                borderRadius: BorderRadius.circular(context.ow.shape.radius),
+                onTap: () {
+                  panes.setReceives(pane, !receives);
+                  tabs.focusActive(tab);
+                },
+                child: SizedBox(
+                  height: 28,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox.square(
+                        dimension: 28,
+                        child: Checkbox(
+                          value: receives,
+                          visualDensity: VisualDensity.compact,
+                          onChanged: (v) {
+                            panes.setReceives(pane, v ?? false);
+                            tabs.focusActive(tab);
+                          },
+                        ),
+                      ),
+                      Text(
+                        l.receives,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: receives ? c.warn : c.textMuted,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
                   ),
                 ),
-                Text(
-                  l.receives,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: receives ? c.warn : c.textMuted,
-                  ),
-                ),
-                const SizedBox(width: 6),
-              ],
+              ),
             ),
           PopupMenuButton<VoidCallback>(
             tooltip: l.paneOptions,
@@ -1114,77 +1129,125 @@ class _StatusBar extends ConsumerWidget {
       );
     }
     final inset = ow.shape.insetTerminal;
-    return Container(
-      height: 30,
-      padding: EdgeInsets.symmetric(horizontal: inset ? 16 : 12),
-      decoration: BoxDecoration(
-        color: inset ? c.window : c.sunken,
-        border: inset ? null : Border(top: BorderSide(color: c.border)),
-      ),
-      child: Row(
-        children: [
-          if (panes?.broadcast ?? false)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Text(
-                l.broadcastStatus(panes!.receiving),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: c.warn,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          // Connected, the line opens the connection's details.
-          Expanded(
-            child: k != null
-                ? InkWell(
-                    onTap: () => showConnectionInfo(context, s),
-                    child: line,
-                  )
-                : line,
+    return LayoutBuilder(
+      // Narrow (a small window, a pane of a split), the actions as icons:
+      // their names stay in the tooltips, nothing is cut without a word.
+      builder: (context, box) {
+        final narrow = box.maxWidth < 640;
+        return Container(
+          height: heightForText(context, 30),
+          padding: EdgeInsets.symmetric(horizontal: inset ? 16 : 12),
+          decoration: BoxDecoration(
+            color: inset ? c.window : c.sunken,
+            border: inset ? null : Border(top: BorderSide(color: c.border)),
           ),
-          if (failure?.kind == FailureKind.hostKeyChanged)
-            TextButton(
-              onPressed: () => showHostKeyChanged(context, ref, s),
-              child: Text(l.reviewKey),
-            )
-          else if ((failed ? failure ?? s.errorCause : null) case final e?)
-            DetailsButton(e),
-          if (k != null && s.hostId != null)
-            TunnelChip(hostId: s.hostId!, hostLabel: s.label),
-          if (s.phase == Phase.connected || s.phase == Phase.running)
-            TextButton.icon(
-              key: const ValueKey('status.snippets'),
-              style: TextButton.styleFrom(foregroundColor: c.textMuted),
-              onPressed: () => showSnippetPalette(context),
-              icon: const Icon(Icons.terminal, size: 14),
-              label: _Keyed(
-                l.snippets,
-                keysFor('⌘⇧S', '${l.ctrlShiftPrefix}S'),
+          child: Row(
+            children: [
+              if (panes?.broadcast ?? false)
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Text(
+                    l.broadcastStatus(panes!.receiving),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: c.warn,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              // Connected, the line opens the connection's details.
+              Expanded(
+                child: k != null
+                    ? InkWell(
+                        onTap: () => showConnectionInfo(context, s),
+                        child: line,
+                      )
+                    : line,
               ),
-            ),
-          if (k != null)
-            TextButton.icon(
-              key: const ValueKey('status.sftp'),
-              style: TextButton.styleFrom(foregroundColor: c.textMuted),
-              onPressed: () => ref
-                  .read(tabsProvider.notifier)
-                  .openSftp(hostId: s.hostId, target: s.target, label: s.label),
-              icon: const Icon(Icons.folder_outlined, size: 14),
-              label: _Keyed(
-                l.openSftp,
-                keysFor('⌘⇧O', '${l.ctrlShiftPrefix}O'),
-              ),
-            ),
-          if (s.phase == Phase.closed)
-            TextButton.icon(
-              onPressed: s.start,
-              icon: const Icon(Icons.refresh, size: 14),
-              label: Text(s.isLocal ? l.restart : l.reconnect),
-            ),
-        ],
-      ),
+              if (failure?.kind == FailureKind.hostKeyChanged)
+                TextButton(
+                  onPressed: () => showHostKeyChanged(context, ref, s),
+                  child: Text(l.reviewKey),
+                )
+              else if ((failed ? failure ?? s.errorCause : null) case final e?)
+                DetailsButton(e),
+              if (k != null && s.hostId != null)
+                TunnelChip(hostId: s.hostId!, hostLabel: s.label),
+              if (s.phase == Phase.connected || s.phase == Phase.running)
+                _StatusAction(
+                  key: const ValueKey('status.snippets'),
+                  narrow: narrow,
+                  icon: Icons.text_snippet_outlined,
+                  label: l.snippets,
+                  keys: keysFor('⌘⇧S', '${l.ctrlShiftPrefix}S'),
+                  onPressed: () => showSnippetPalette(context),
+                ),
+              if (k != null)
+                _StatusAction(
+                  key: const ValueKey('status.sftp'),
+                  narrow: narrow,
+                  icon: Icons.folder_outlined,
+                  label: l.openSftp,
+                  keys: keysFor('⌘⇧O', '${l.ctrlShiftPrefix}O'),
+                  onPressed: () => ref
+                      .read(tabsProvider.notifier)
+                      .openSftp(
+                        hostId: s.hostId,
+                        target: s.target,
+                        label: s.label,
+                      ),
+                ),
+              if (s.phase == Phase.closed)
+                _StatusAction(
+                  narrow: narrow,
+                  icon: Icons.refresh,
+                  label: s.isLocal ? l.restart : l.reconnect,
+                  onPressed: s.start,
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// An action of the status bar: its icon and name, with its shortcut;
+/// only the icon when narrow, the rest in its tooltip.
+class _StatusAction extends StatelessWidget {
+  const _StatusAction({
+    super.key,
+    required this.narrow,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    this.keys,
+  });
+
+  final bool narrow;
+  final IconData icon;
+  final String label;
+  final String? keys;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ow.colors;
+    if (narrow) {
+      return IconButton(
+        tooltip: keys == null ? label : '$label  $keys',
+        onPressed: onPressed,
+        iconSize: 14,
+        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+        padding: EdgeInsets.zero,
+        icon: Icon(icon, color: c.textMuted),
+      );
+    }
+    return TextButton.icon(
+      style: TextButton.styleFrom(foregroundColor: c.textMuted),
+      onPressed: onPressed,
+      icon: Icon(icon, size: 14),
+      label: keys == null ? Text(label) : _Keyed(label, keys!),
     );
   }
 }

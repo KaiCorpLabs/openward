@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -58,7 +61,8 @@ Future<bool> showSidePanel(
     pageBuilder: (context, _, _) => Align(
       alignment: Alignment.centerRight,
       child: SizedBox(
-        width: width,
+        // In a small window it leaves a strip of the window to click out.
+        width: math.min(width, MediaQuery.sizeOf(context).width - 48),
         height: double.infinity,
         child: Material(
           color: ow.colors.raised,
@@ -103,6 +107,17 @@ List<(String, String)> _groupChoices(Library library, {String? excluding}) {
   walk(null, '');
   return out;
 }
+
+/// Where an agent's socket tends to be, on this system: a password
+/// manager's on macOS and Linux, OpenSSH's pipe on Windows.
+String get agentSocketExample => Platform.isMacOS
+    ? '~/Library/Group Containers/…/agent.sock'
+    : Platform.isWindows
+    ? r'\\.\pipe\openssh-ssh-agent'
+    : '~/.1password/agent.sock';
+
+/// What stops an editor from saving, and the field it is on.
+typedef FieldProblem = ({String field, String text});
 
 /// The connection settings a host or group may set. A field is either set
 /// here or inherited; [setHere] says which.
@@ -181,6 +196,24 @@ class _SettingsForm {
   /// Fields this item sets itself, by their vault name.
   final Set<String> setHere;
 
+  /// What stops it from saving, on its field: shown there, with the
+  /// focus, «Advanced» opened if it is under it.
+  final problem = ValueNotifier<FieldProblem?>(null);
+
+  /// The fields a problem can be on, to take the focus.
+  final focus = {
+    for (final f in ['port', 'socket', 'command', 'proxy']) f: FocusNode(),
+  };
+
+  /// The problem's text if it is on `field`.
+  String? errorOn(String field) =>
+      problem.value?.field == field ? problem.value!.text : null;
+
+  /// Typing in `field` puts its problem away.
+  void edited(String field) {
+    if (problem.value?.field == field) problem.value = null;
+  }
+
   void dispose() {
     for (final c in [
       user,
@@ -195,6 +228,10 @@ class _SettingsForm {
     ]) {
       c.dispose();
     }
+    for (final n in focus.values) {
+      n.dispose();
+    }
+    problem.dispose();
   }
 
   /// Starts setting `field` here, from the value it inherits.
@@ -341,31 +378,36 @@ class _SettingsForm {
       setHere.contains('proxy') &&
       (proxy == ProxyKind.http || proxy == ProxyKind.socks5);
 
-  String? validate(AppLocalizations l) {
+  /// What stops it from saving, and on which field; null if nothing.
+  FieldProblem? validate(AppLocalizations l) {
     final p = port.text.trim();
     if (setHere.contains('port') && p.isNotEmpty) {
       final n = int.tryParse(p);
-      if (n == null || n < 1 || n > 65535) return l.portRange;
+      if (n == null || n < 1 || n > 65535) {
+        return (field: 'port', text: l.portRange);
+      }
     }
     if (agent == AgentKind.socket && socket.text.trim().isEmpty) {
-      return l.missingSocket;
+      return (field: 'socket', text: l.missingSocket);
     }
     if (identityChoice == IdentityChoice.use && identityId.isEmpty) {
-      return l.pickIdentity;
+      return (field: 'identity', text: l.pickIdentity);
     }
     if (setHere.contains('environment') &&
         envKind == EnvironmentKind.mark &&
         envName.trim().isEmpty) {
-      return l.envNeedsName;
+      return (field: 'environment', text: l.envNeedsName);
     }
-    if (route == RouteKind.jump && jumps.isEmpty) return l.missingJump;
+    if (route == RouteKind.jump && jumps.isEmpty) {
+      return (field: 'route', text: l.missingJump);
+    }
     if (route == RouteKind.command && command.text.trim().isEmpty) {
-      return l.missingProxyCommand;
+      return (field: 'command', text: l.missingProxyCommand);
     }
     if (proxyServer) {
       final n = int.tryParse(proxyPort.text.trim());
       if (proxyHost.text.trim().isEmpty || n == null || n < 1 || n > 65535) {
-        return l.missingProxy;
+        return (field: 'proxy', text: l.missingProxy);
       }
     }
     return null;
@@ -459,6 +501,33 @@ class _SettingsFields extends ConsumerStatefulWidget {
 
 class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
   late bool _more = _advanced.any(widget.form.setHere.contains);
+
+  @override
+  void initState() {
+    super.initState();
+    widget.form.problem.addListener(_onProblem);
+  }
+
+  @override
+  void dispose() {
+    widget.form.problem.removeListener(_onProblem);
+    super.dispose();
+  }
+
+  /// A problem on a field: shown on it, «Advanced» opened if the field is
+  /// under it, and the focus there.
+  void _onProblem() {
+    final field = widget.form.problem.value?.field;
+    setState(() {
+      if (field == 'proxy' || field == 'socket') _more = true;
+    });
+    final node = widget.form.focus[field];
+    if (node != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) node.requestFocus();
+      });
+    }
+  }
 
   /// Fields under «Advanced», folded unless one is set here.
   List<String> get _advanced => [
@@ -855,10 +924,13 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
           editor: TextField(
             key: const ValueKey('settings.port'),
             controller: f.port,
+            focusNode: f.focus['port'],
             autofocus: focusFor('port'),
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            onChanged: (_) => f.edited('port'),
             style: monoStyle(context, size: 13, color: ow.colors.text),
+            decoration: InputDecoration(errorText: f.errorOn('port')),
           ),
         ),
         _row(
@@ -916,9 +988,12 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
                 const SizedBox(height: 10),
                 TextField(
                   controller: f.command,
+                  focusNode: f.focus['command'],
+                  onChanged: (_) => f.edited('command'),
                   style: monoStyle(context, size: 13, color: ow.colors.text),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'cloudflared access ssh --hostname %h',
+                    errorText: f.errorOn('command'),
                   ),
                 ),
               ],
@@ -966,13 +1041,20 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
                         child: TextField(
                           key: const ValueKey('settings.proxyHost'),
                           controller: f.proxyHost,
-                          onChanged: (_) => setState(() {}),
+                          focusNode: f.focus['proxy'],
+                          onChanged: (_) {
+                            f.edited('proxy');
+                            setState(() {});
+                          },
                           style: monoStyle(
                             context,
                             size: 13,
                             color: ow.colors.text,
                           ),
-                          decoration: InputDecoration(labelText: l.proxyServer),
+                          decoration: InputDecoration(
+                            labelText: l.proxyServer,
+                            errorText: f.errorOn('proxy'),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -1168,9 +1250,12 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
                   const SizedBox(height: 10),
                   TextField(
                     controller: f.socket,
+                    focusNode: f.focus['socket'],
+                    onChanged: (_) => f.edited('socket'),
                     style: monoStyle(context, size: 13, color: ow.colors.text),
-                    decoration: const InputDecoration(
-                      hintText: '~/Library/Group Containers/…/agent.sock',
+                    decoration: InputDecoration(
+                      hintText: agentSocketExample,
+                      errorText: f.errorOn('socket'),
                     ),
                   ),
                 ],
@@ -1199,7 +1284,11 @@ class _EnvPicker extends StatelessWidget {
     final ow = context.ow;
     final c = ow.colors;
     final presets = envPresets(l);
-    final mark = chosen;
+    // One of the four made in another language is that one here.
+    final mark = switch (chosen) {
+      final m? => shownEnv(l, m),
+      null => null,
+    };
     final options = <EnvironmentView?>[
       null,
       ...presets,
@@ -1249,7 +1338,12 @@ class _EnvPicker extends StatelessWidget {
                   ),
                   Text(
                     env?.short ?? l.envNoneNote,
-                    style: monoStyle(context, size: 12, color: c.textSubtle),
+                    // On the chosen one's fill, the subtle gray does not read.
+                    style: monoStyle(
+                      context,
+                      size: 12,
+                      color: on ? c.accentText : c.textSubtle,
+                    ),
                   ),
                 ],
               ),
@@ -1317,7 +1411,7 @@ class _EnvPreview extends StatelessWidget {
     final c = ow.colors;
     final line = envColors(c, env.color).fg;
     return Semantics(
-      label: l.envPreview(env.name),
+      label: l.envPreview(shownEnv(l, env).name),
       excludeSemantics: true,
       child: Container(
         clipBehavior: Clip.antiAlias,
@@ -1681,6 +1775,8 @@ class _SettingRow extends StatelessWidget {
         button: true,
         label: '$label: $inherited',
         hint: '$origin. ${l.setHereHint}',
+        // It hides the InkWell's own: the action goes here.
+        onTap: onChange,
         excludeSemantics: true,
         child: FocusOutline(
           radius: ow.shape.radius,
@@ -2095,8 +2191,8 @@ class _TagsFieldState extends State<_TagsField> {
                     tooltip: l.removeTag(t),
                     visualDensity: VisualDensity.compact,
                     constraints: const BoxConstraints(
-                      minWidth: 22,
-                      minHeight: 22,
+                      minWidth: 28,
+                      minHeight: 28,
                     ),
                     padding: EdgeInsets.zero,
                     iconSize: 12,
@@ -2119,9 +2215,10 @@ class _TagsFieldState extends State<_TagsField> {
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
+                // 28 high: a target like the rest.
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 4,
-                  vertical: 6,
+                  vertical: 8,
                 ),
               ),
               onChanged: (v) {
@@ -2311,8 +2408,15 @@ class _EditorFrameState extends State<EditorFrame> {
                     padding: const EdgeInsets.fromLTRB(24, 0, 16, 8),
                     child: Row(
                       children: [
+                        // Said as it appears, also where the field is.
                         Expanded(
-                          child: Text(error, style: TextStyle(color: c.danger)),
+                          child: Semantics(
+                            liveRegion: true,
+                            child: Text(
+                              error,
+                              style: TextStyle(color: c.danger),
+                            ),
+                          ),
                         ),
                         if (widget.errorCause case final cause?)
                           TextButton(
@@ -2544,6 +2648,7 @@ class _SystemBlock extends StatelessWidget {
                         button: true,
                         selected: s == code,
                         label: systemName(l, s),
+                        onTap: () => onChanged(s),
                         excludeSemantics: true,
                         child: InkWell(
                           key: ValueKey('system.$s'),
@@ -2611,6 +2716,8 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
       HostSpec(label: '', address: '', groupId: widget.groupId);
   late final _label = TextEditingController(text: _spec.label);
   late final _address = TextEditingController(text: _spec.address);
+  final _labelFocus = FocusNode();
+  final _addressFocus = FocusNode();
   late final List<String> _tags = [..._spec.tags];
   late final _notes = TextEditingController(text: _spec.notes ?? '');
   late final _settings = _SettingsForm(_spec.settings);
@@ -2621,6 +2728,13 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
   late String? _systemCode = _spec.systemCode;
   String? _error;
   Object? _cause;
+
+  /// Typing takes the field's problem away, and its red with it.
+  void _edited(String field) {
+    if (_settings.errorOn(field) != null) {
+      setState(() => _settings.edited(field));
+    }
+  }
 
   String _snapshot() => [
     _label.text,
@@ -2638,6 +2752,8 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
     for (final c in [_label, _address, _notes]) {
       c.dispose();
     }
+    _labelFocus.dispose();
+    _addressFocus.dispose();
     _settings.dispose();
     super.dispose();
   }
@@ -2646,13 +2762,23 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
     final l = context.l10n;
     final label = _label.text.trim();
     final address = _address.text.trim();
-    final problem = label.isEmpty
-        ? l.hostNeedsName
+    final FieldProblem? problem = label.isEmpty
+        ? (field: 'label', text: l.hostNeedsName)
         : address.isEmpty
-        ? l.missingAddress
+        ? (field: 'address', text: l.missingAddress)
         : _settings.validate(l);
     _cause = null;
-    if (problem != null) return setState(() => _error = problem);
+    _settings.problem.value = problem;
+    if (problem != null) {
+      setState(() => _error = problem.text);
+      switch (problem.field) {
+        case 'label':
+          _labelFocus.requestFocus();
+        case 'address':
+          _addressFocus.requestFocus();
+      }
+      return;
+    }
     final spec = HostSpec(
       label: label,
       address: address,
@@ -2715,7 +2841,10 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
           TextField(
             key: const ValueKey('host.label'),
             controller: _label,
+            focusNode: _labelFocus,
             autofocus: true,
+            onChanged: (_) => _edited('label'),
+            decoration: InputDecoration(errorText: _settings.errorOn('label')),
           ),
         ),
         EditorFieldRow(
@@ -2723,8 +2852,13 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
           TextField(
             key: const ValueKey('host.address'),
             controller: _address,
+            focusNode: _addressFocus,
+            onChanged: (_) => _edited('address'),
             style: mono,
-            decoration: InputDecoration(hintText: l.addressHint),
+            decoration: InputDecoration(
+              hintText: l.addressHint,
+              errorText: _settings.errorOn('address'),
+            ),
           ),
         ),
         EditorFieldRow(
@@ -2795,10 +2929,17 @@ class _GroupEditorState extends ConsumerState<_GroupEditor> {
   late final GroupSpec _spec =
       _detail?.spec ?? GroupSpec(name: '', parentId: widget.parentId);
   late final _name = TextEditingController(text: _spec.name);
+  final _nameFocus = FocusNode();
   late final _settings = _SettingsForm(_spec.settings);
   late String? _parent = _spec.parentId;
   String? _error;
   Object? _cause;
+
+  void _edited(String field) {
+    if (_settings.errorOn(field) != null) {
+      setState(() => _settings.edited(field));
+    }
+  }
 
   String _snapshot() =>
       [_name.text, _parent, _settings.signature].join('\u0000');
@@ -2806,6 +2947,7 @@ class _GroupEditorState extends ConsumerState<_GroupEditor> {
   @override
   void dispose() {
     _name.dispose();
+    _nameFocus.dispose();
     _settings.dispose();
     super.dispose();
   }
@@ -2813,9 +2955,13 @@ class _GroupEditorState extends ConsumerState<_GroupEditor> {
   Future<void> _save() async {
     final l = context.l10n;
     final name = _name.text.trim();
-    final problem = name.isEmpty ? l.groupNeedsName : _settings.validate(l);
+    final FieldProblem? problem = name.isEmpty
+        ? (field: 'name', text: l.groupNeedsName)
+        : _settings.validate(l);
+    _settings.problem.value = problem;
+    if (problem?.field == 'name') _nameFocus.requestFocus();
     _cause = null;
-    if (problem != null) return setState(() => _error = problem);
+    if (problem != null) return setState(() => _error = problem.text);
     final spec = GroupSpec(
       name: name,
       parentId: _parent,
@@ -2858,7 +3004,10 @@ class _GroupEditorState extends ConsumerState<_GroupEditor> {
           TextField(
             key: const ValueKey('group.name'),
             controller: _name,
+            focusNode: _nameFocus,
             autofocus: true,
+            onChanged: (_) => _edited('name'),
+            decoration: InputDecoration(errorText: _settings.errorOn('name')),
           ),
         ),
         EditorFieldRow(

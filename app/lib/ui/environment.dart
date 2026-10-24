@@ -5,7 +5,6 @@
 
 import 'package:flutter/material.dart';
 
-import '../l10n/app_localizations.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/vault.dart';
 import 'svg_path.dart';
@@ -83,6 +82,25 @@ List<EnvironmentView> envPresets(AppLocalizations l) => [
     color: 'violet',
   ),
 ];
+
+/// The four marks in each of the app's languages, to know them.
+final _presetsByLanguage = {
+  for (final locale in AppLocalizations.supportedLocales)
+    locale.languageCode: envPresets(lookupAppLocalizations(locale)),
+};
+
+/// A mark as it reads in the interface's language: one of the four every
+/// install offers, made while the app was in another language, says its
+/// name in this one. The vault keeps what it was made with.
+EnvironmentView shownEnv(AppLocalizations l, EnvironmentView env) {
+  for (final presets in _presetsByLanguage.values) {
+    final i = presets.indexWhere(
+      (p) => p.name == env.name && p.short == env.short && p.color == env.color,
+    );
+    if (i >= 0) return _presetsByLanguage[l.localeName]?[i] ?? env;
+  }
+  return env;
+}
 
 /// The systems there are, in the picker's order (families together);
 /// «?» is unknown.
@@ -264,6 +282,7 @@ class EnvChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ow = context.ow;
+    final env = shownEnv(context.l10n, this.env);
     final colors = envColors(ow.colors, env.color);
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 6, vertical: big ? 2 : 0),
@@ -297,10 +316,16 @@ class SystemBadge extends StatelessWidget {
     this.env,
     this.size = 26,
     this.icon,
+    this.tagged = false,
   });
 
   final String? code;
   final EnvironmentView? env;
+
+  /// The environment's short name on its corner too, where there is no
+  /// room for it beside: the color alone does not tell it (a theme in one
+  /// color, someone who does not see it).
+  final bool tagged;
 
   /// Its height; a little wider, for the four letters of a code without a
   /// logo.
@@ -320,7 +345,7 @@ class SystemBadge extends StatelessWidget {
             final x => (x.fg, x.soft, x.line),
           };
     final known = systemKnown(code);
-    return ExcludeSemantics(
+    final badge = ExcludeSemantics(
       child: Container(
         width: size + 6,
         height: size,
@@ -336,6 +361,49 @@ class SystemBadge extends StatelessWidget {
           // A logo fills its box; the icons have their own margin.
           size: size * (known && systemLogos.containsKey(code) ? 0.6 : 0.55),
           unknown: icon,
+        ),
+      ),
+    );
+    if (!tagged || e == null) return badge;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        badge,
+        Positioned(top: -7, right: -9, child: EnvTag(e)),
+      ],
+    );
+  }
+}
+
+/// An environment's first letters, «pro», on a badge's corner.
+class EnvTag extends StatelessWidget {
+  const EnvTag(this.env, {super.key});
+
+  final EnvironmentView env;
+
+  @override
+  Widget build(BuildContext context) {
+    final ow = context.ow;
+    final env = shownEnv(context.l10n, this.env);
+    final colors = envColors(ow.colors, env.color);
+    final short = env.short.characters;
+    return ExcludeSemantics(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 3),
+        decoration: BoxDecoration(
+          color: colors.soft,
+          border: Border.all(color: colors.line),
+          borderRadius: BorderRadius.circular(ow.shape.radiusSmall),
+        ),
+        child: Text(
+          short.length > 3 ? short.take(3).toString() : env.short,
+          maxLines: 1,
+          style: TextStyle(
+            fontSize: 12,
+            height: 1.15,
+            fontWeight: FontWeight.w700,
+            color: colors.fg,
+          ),
         ),
       ),
     );

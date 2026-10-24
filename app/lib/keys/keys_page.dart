@@ -9,8 +9,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/keychain.dart';
 import '../ui/announcer.dart';
+import '../ui/page.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
+import 'key_actions.dart';
 import 'key_dialogs.dart';
 import 'keys.dart';
 
@@ -77,7 +79,6 @@ class _KeysPageState extends ConsumerState<KeysPage> {
   Widget build(BuildContext context) {
     final c = context.ow.colors;
     final l = context.l10n;
-    final theme = Theme.of(context);
     final all = ref.watch(keysProvider);
     final q = _query.text.trim().toLowerCase();
     final shown = q.isEmpty
@@ -96,62 +97,38 @@ class _KeysPageState extends ConsumerState<KeysPage> {
     return ColoredBox(
       color: c.surface,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
+        padding: pagePadding,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Semantics(
-                      header: true,
-                      child: Text(l.keys, style: theme.textTheme.titleLarge),
-                    ),
-                    const SizedBox(height: 4),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 720),
-                      child: Text(
-                        l.keysIntro,
-                        style: TextStyle(color: c.textMuted),
-                      ),
-                    ),
-                  ],
+          OwPageHeader(
+            title: l.keys,
+            intro: l.keysIntro,
+            action: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                OutlinedButton.icon(
+                  key: const ValueKey('keys.import'),
+                  onPressed: () async =>
+                      _added(await showImportKeyDialog(context)),
+                  icon: const Icon(Icons.file_download_outlined, size: 16),
+                  label: Text(l.importKeyAction),
                 ),
-              ),
-              const SizedBox(width: 16),
-              OutlinedButton.icon(
-                key: const ValueKey('keys.import'),
-                onPressed: () async =>
-                    _added(await showImportKeyDialog(context)),
-                icon: const Icon(Icons.file_download_outlined, size: 16),
-                label: Text(l.importKeyAction),
-              ),
-              const SizedBox(width: 8),
-              FilledButton.icon(
-                key: const ValueKey('keys.new'),
-                onPressed: () async => _added(await showNewKeyDialog(context)),
-                icon: const Icon(Icons.add, size: 16),
-                label: Text(l.newKeyAction),
-              ),
-            ],
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  key: const ValueKey('keys.new'),
+                  onPressed: () async =>
+                      _added(await showNewKeyDialog(context)),
+                  icon: const Icon(Icons.add, size: 16),
+                  label: Text(l.newKeyAction),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: 340,
-            height: 34,
-            child: TextField(
-              key: const ValueKey('keys.query'),
-              controller: _query,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                isDense: true,
-                hintText: l.searchKeys,
-                hintStyle: TextStyle(fontSize: 13, color: c.textSubtle),
-                prefixIcon: Icon(Icons.search, size: 16, color: c.textSubtle),
-              ),
-            ),
+          OwFilterField(
+            key: const ValueKey('keys.query'),
+            controller: _query,
+            hint: l.searchKeys,
+            onChanged: (_) => setState(() {}),
           ),
           if (_note != null)
             Padding(
@@ -159,100 +136,46 @@ class _KeysPageState extends ConsumerState<KeysPage> {
               child: Text(_note!, style: TextStyle(color: c.textMuted)),
             ),
           const SizedBox(height: 12),
-          if (shown.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 40),
-              child: Column(
-                children: [
-                  Icon(Icons.key_outlined, size: 36, color: c.textSubtle),
-                  const SizedBox(height: 12),
-                  Text(
-                    all.isEmpty ? l.noKeys : l.noKeyMatches,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  if (all.isEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      l.noKeysBody,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: c.textMuted),
-                    ),
-                  ],
-                ],
-              ),
+          if (all.isEmpty)
+            OwEmptyState(
+              icon: Icons.key_outlined,
+              title: l.noKeys,
+              body: l.noKeysBody,
+            )
+          else if (shown.isEmpty)
+            OwEmptyState.noMatch(
+              filter: _query.text.trim(),
+              onClear: () => setState(_query.clear),
             )
           else
-            _table(context, shown),
-        ],
-      ),
-    );
-  }
-
-  static const _widths = [1.5, 1.9, 0.9, 1.2, 0.6];
-
-  Widget _cells(List<Widget> cells) => Row(
-    children: [
-      for (var i = 0; i < cells.length; i++)
-        Expanded(
-          flex: (_widths[i] * 100).round(),
-          child: Padding(
-            padding: EdgeInsets.only(right: i == cells.length - 1 ? 0 : 12),
-            child: cells[i],
-          ),
-        ),
-    ],
-  );
-
-  Widget _table(BuildContext context, List<SshKey> keys) {
-    final ow = context.ow;
-    final c = ow.colors;
-    final l = context.l10n;
-    final head = TextStyle(
-      fontSize: 12,
-      fontWeight: FontWeight.w600,
-      letterSpacing: 0.6,
-      color: c.textSubtle,
-    );
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        border: Border.all(color: c.border),
-        borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
-      ),
-      child: Column(
-        children: [
-          Container(
-            color: c.sunken,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: _cells([
-              for (final h in [
+            OwDataTable(
+              widths: _widths,
+              headings: [
                 l.keyColumn,
                 l.typeAndFingerprint,
                 l.protection,
                 l.usedBy,
                 '',
-              ])
-                Text(h.toUpperCase(), style: head),
-            ]),
-          ),
-          for (final k in keys) _row(context, k),
+              ],
+              hideBelow: const [null, null, 600, 700, null],
+              rows: [for (final k in shown) _row(context, k)],
+            ),
         ],
       ),
     );
   }
 
+  static const _widths = [1.5, 1.9, 0.9, 1.2, 0.8];
+
   Widget _row(BuildContext context, SshKey k) {
     final c = context.ow.colors;
     final l = context.l10n;
     final fresh = k.path == _fresh;
-    return Container(
+    return OwTableRow(
       key: ValueKey('key.${k.name}'),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: fresh ? c.accentSoft.withValues(alpha: 0.5) : null,
-        border: Border(top: BorderSide(color: c.border)),
-      ),
-      child: _cells([
+      color: fresh ? c.accentSoft.withValues(alpha: 0.5) : null,
+      widths: _widths,
+      cells: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -309,8 +232,9 @@ class _KeysPageState extends ConsumerState<KeysPage> {
           maxLines: 2,
           style: TextStyle(color: k.usedBy.isEmpty ? c.textSubtle : c.text),
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
+        // Narrow, the buttons go on to a second line.
+        Wrap(
+          alignment: WrapAlignment.end,
           children: [
             IconButton(
               key: ValueKey('key.copy.${k.name}'),
@@ -328,9 +252,29 @@ class _KeysPageState extends ConsumerState<KeysPage> {
               icon: const Icon(Icons.cloud_upload_outlined),
               onPressed: () => _upload(k),
             ),
+            PopupMenuButton<VoidCallback>(
+              key: ValueKey('key.menu.${k.name}'),
+              tooltip: l.moreActions,
+              iconSize: 15,
+              icon: const Icon(Icons.more_horiz),
+              onSelected: (action) => action(),
+              itemBuilder: (context) => [
+                for (final (text, action) in [
+                  (l.renameEllipsis, () => renameKey(context, k)),
+                  (
+                    l.keyPassphraseEllipsis,
+                    () => changeKeyPassphrase(context, k),
+                  ),
+                  (l.exportEllipsis, () => exportKey(context, ref, k)),
+                  (revealLabel(l), () => revealKey(ref, k)),
+                  (l.deleteEllipsis, () => deleteKey(context, ref, k)),
+                ])
+                  PopupMenuItem(value: action, height: 36, child: Text(text)),
+              ],
+            ),
           ],
         ),
-      ]),
+      ],
     );
   }
 }

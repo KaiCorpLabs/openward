@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/settings.dart';
 import '../terminal/palette.dart';
 import '../terminal/schemes.dart';
+import 'focus_ring.dart';
 import 'tokens.dart';
 
 /// The themes, by id. Grafito, Fósforo, Monitor, Búnker and Marino are
@@ -215,7 +216,7 @@ abstract final class OwThemes {
       primary: Color(0xFF0066CC),
       onPrimary: Color(0xFFFFFFFF),
       accent: Color(0xFF0071E3),
-      accentText: Color(0xFF0060C0),
+      accentText: Color(0xFF005AB5),
       accentSoft: Color(0xFFE1EEFC),
       info: Color(0xFF0066CC),
       infoSoft: Color(0xFFE8F1FC),
@@ -430,7 +431,7 @@ abstract final class OwThemes {
       info: Color(0xFF1A65C2),
       infoSoft: Color(0xFFE3EDFA),
       infoLine: Color(0xFFAFCBEF),
-      warn: Color(0xFFA55800),
+      warn: Color(0xFFA05500),
       warnSoft: Color(0xFFFCEFD9),
       warnLine: Color(0xFFEBC68A),
       danger: Color(0xFFB81D27),
@@ -607,7 +608,7 @@ abstract final class OwThemes {
       raised: Color(0xFF313244),
       sunken: Color(0xFF11111B),
       hover: Color(0xFF2A2B3C),
-      selected: Color(0xFF45475A),
+      selected: Color(0xFF42445A),
       border: Color(0xFF313244),
       control: Color(0xFF585B70),
       text: Color(0xFFCDD6F4),
@@ -697,7 +698,7 @@ abstract final class OwThemes {
       primary: Color(0xFFBD93F9),
       onPrimary: Color(0xFF191A21),
       accent: Color(0xFFBD93F9),
-      accentText: Color(0xFFC9A6FA),
+      accentText: Color(0xFFCDABFB),
       accentSoft: Color(0xFF3D3557),
       info: Color(0xFF8BE9FD),
       infoSoft: Color(0xFF2A3B48),
@@ -1047,11 +1048,13 @@ ThemeData materialTheme(OwTheme ow) {
       hintStyle: TextStyle(color: c.textSubtle),
       prefixIconColor: c.textSubtle,
     ),
+    // Every button shows the focus ring when the keyboard reaches it.
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: c.primary,
         foregroundColor: c.onPrimary,
-        minimumSize: const Size(0, 34),
+        // 28 once the compact density takes its 8 off.
+        minimumSize: const Size(0, 36),
         padding: const EdgeInsets.symmetric(horizontal: 16),
         shape: control,
         textStyle: TextStyle(
@@ -1059,21 +1062,24 @@ ThemeData materialTheme(OwTheme ow) {
           fontSize: 13,
           fontWeight: FontWeight.w600,
         ),
-      ),
+      ).copyWith(side: ringedSide(c, fill: c.primary)),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        foregroundColor: c.text,
-        side: BorderSide(color: c.control),
-        minimumSize: const Size(0, 34),
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        shape: control,
-        textStyle: TextStyle(
-          fontFamily: font,
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
+      style:
+          OutlinedButton.styleFrom(
+            foregroundColor: c.text,
+            // 28 once the compact density takes its 8 off.
+            minimumSize: const Size(0, 36),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            shape: control,
+            textStyle: TextStyle(
+              fontFamily: font,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ).copyWith(
+            side: ringedSide(c, side: BorderSide(color: c.control)),
+          ),
     ),
     // Links and secondary actions in the text's color, underlined on
     // hover: the accent is for what is alive, chosen or the main action.
@@ -1081,10 +1087,11 @@ ThemeData materialTheme(OwTheme ow) {
       style:
           TextButton.styleFrom(
             foregroundColor: c.text,
-            minimumSize: const Size(0, 32),
+            minimumSize: const Size(0, 36),
             padding: const EdgeInsets.symmetric(horizontal: 10),
             shape: control,
           ).copyWith(
+            side: ringedSide(c),
             textStyle: WidgetStateProperty.resolveWith(
               (states) => TextStyle(
                 fontFamily: font,
@@ -1100,9 +1107,9 @@ ThemeData materialTheme(OwTheme ow) {
     iconButtonTheme: IconButtonThemeData(
       style: IconButton.styleFrom(
         foregroundColor: c.textMuted,
-        minimumSize: const Size(32, 32),
+        minimumSize: const Size(36, 36),
         shape: RoundedRectangleBorder(borderRadius: radius),
-      ),
+      ).copyWith(side: ringedSide(c)),
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: c.raised,
@@ -1146,7 +1153,7 @@ ThemeData materialTheme(OwTheme ow) {
         color: c.text,
         borderRadius: BorderRadius.circular(shape.radiusSmall),
       ),
-      textStyle: TextStyle(fontFamily: font, color: c.surface, fontSize: 12),
+      textStyle: TextStyle(fontFamily: font, color: c.onInverse, fontSize: 12),
       waitDuration: const Duration(milliseconds: 500),
     ),
     dividerTheme: DividerThemeData(color: c.border, space: 1, thickness: 1),
@@ -1187,8 +1194,10 @@ ThemeData materialTheme(OwTheme ow) {
     ),
     snackBarTheme: SnackBarThemeData(
       backgroundColor: c.text,
-      contentTextStyle: TextStyle(fontFamily: font, color: c.surface),
-      actionTextColor: c.accent,
+      contentTextStyle: TextStyle(fontFamily: font, color: c.onInverse),
+      // Not the accent: on the text's color it does not read in any theme.
+      actionTextColor: c.onInverse,
+      actionBackgroundColor: c.onInverse.withValues(alpha: 0.14),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: radius),
     ),

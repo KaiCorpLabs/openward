@@ -454,25 +454,32 @@ class _HostsPageState extends ConsumerState<HostsPage> {
         if (s.hostId == h.id) s,
     ];
     void select(HostView h) => setState(() => _selected = h.id);
-    Widget head(_Section s) => _GroupHeader(
-      key: ValueKey('hosts.group.${s.group?.name ?? ''}'),
-      title: s.group?.name ?? l.hostsNoGroup,
-      env: s.group?.environment,
-      count: s.count,
-      depth: s.depth,
-      open: s.open,
-      onToggle: s.group == null || _filtering
-          ? null
-          : () => setState(() {
-              final id = s.group!.id;
-              _collapsed.contains(id)
-                  ? _collapsed.remove(id)
-                  : _collapsed.add(id);
-            }),
-      onEdit: s.group == null ? null : () => actions.editGroup(id: s.group!.id),
-      onMenu: s.group == null
-          ? null
-          : (at) => actions.menu(at, actions.groupMenu(s.group!)),
+    // A host dropped on a group goes into it; on «No group», out of any.
+    Widget head(_Section s) => _GroupDrop(
+      groupId: s.group?.id,
+      onDrop: (h) => actions.moveToGroup(h, s.group?.id),
+      child: _GroupHeader(
+        key: ValueKey('hosts.group.${s.group?.name ?? ''}'),
+        title: s.group?.name ?? l.hostsNoGroup,
+        env: s.group?.environment,
+        count: s.count,
+        depth: s.depth,
+        open: s.open,
+        onToggle: s.group == null || _filtering
+            ? null
+            : () => setState(() {
+                final id = s.group!.id;
+                _collapsed.contains(id)
+                    ? _collapsed.remove(id)
+                    : _collapsed.add(id);
+              }),
+        onEdit: s.group == null
+            ? null
+            : () => actions.editGroup(id: s.group!.id),
+        onMenu: s.group == null
+            ? null
+            : (at) => actions.menu(at, actions.groupMenu(s.group!)),
+      ),
     );
     // Rows are made as they scroll into view: a thousand hosts make as many
     // widgets as fit on the screen.
@@ -657,6 +664,7 @@ class _FilterChip extends StatelessWidget {
       button: true,
       selected: on,
       label: '$text, $count',
+      onTap: onTap,
       excludeSemantics: true,
       child: FocusOutline(
         radius: 999,
@@ -789,6 +797,44 @@ Widget _cells(
 
 /// A group's title: it folds, opens its editor on a double click, and has
 /// its menu on a right click.
+/// Where a dragged host can be dropped to go into a group: outlined while
+/// one is over it, if it is not there already.
+class _GroupDrop extends StatelessWidget {
+  const _GroupDrop({
+    required this.groupId,
+    required this.onDrop,
+    required this.child,
+  });
+
+  final String? groupId;
+  final void Function(HostView host) onDrop;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final ow = context.ow;
+    return DragTarget<WindowDrag>(
+      onWillAcceptWithDetails: (d) =>
+          d.data is HostDrag && (d.data as HostDrag).host.groupId != groupId,
+      onAcceptWithDetails: (d) => onDrop((d.data as HostDrag).host),
+      builder: (context, over, _) => over.isEmpty
+          ? child
+          : Tooltip(
+              message: context.l10n.dropHereToMove,
+              child: DecoratedBox(
+                position: DecorationPosition.foreground,
+                decoration: BoxDecoration(
+                  color: ow.colors.accentSoft.withValues(alpha: 0.35),
+                  border: Border.all(color: ow.colors.accent, width: 2),
+                  borderRadius: BorderRadius.circular(ow.shape.radius),
+                ),
+                child: child,
+              ),
+            ),
+    );
+  }
+}
+
 class _GroupHeader extends StatelessWidget {
   const _GroupHeader({
     super.key,
@@ -836,7 +882,7 @@ class _GroupHeader extends StatelessWidget {
           ),
           if (env case final env?) ...[
             const SizedBox(width: 8),
-            Semantics(label: env.name, child: EnvChip(env)),
+            Semantics(label: shownEnv(l, env).name, child: EnvChip(env)),
           ],
           const SizedBox(width: 8),
           Text('$count', style: monoStyle(context, size: 12)),
@@ -1161,7 +1207,10 @@ class _HostItemState extends State<_HostItem> {
             alignment: Alignment.centerLeft,
             child: env == null
                 ? Text('—', style: TextStyle(color: c.textSubtle))
-                : Semantics(label: env.name, child: EnvChip(env)),
+                : Semantics(
+                    label: shownEnv(context.l10n, env).name,
+                    child: EnvChip(env),
+                  ),
           ),
           dot: _dot(),
           trailing: Align(
@@ -1219,7 +1268,10 @@ class _HostItemState extends State<_HostItem> {
                 child: Row(
                   children: [
                     if (env != null)
-                      Semantics(label: env.name, child: EnvChip(env))
+                      Semantics(
+                        label: shownEnv(l, env).name,
+                        child: EnvChip(env),
+                      )
                     else
                       Text(
                         l.envNoneNote,

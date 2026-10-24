@@ -13,9 +13,11 @@ import 'core/settings.dart';
 import 'src/rust/api/app.dart';
 import 'src/rust/frb_generated.dart';
 import 'startup_error.dart';
+import 'ui/focus_ring.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  KeyboardMode.watch();
   registerFontLicenses();
   // OPENWARD_DATA: another data directory, to try things without touching
   // the real one.

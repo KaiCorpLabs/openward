@@ -686,6 +686,12 @@ abstract class AppLocalizations {
   /// **'Borrar'**
   String get clearAction;
 
+  /// No description provided for @clearFilter.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar el filtro'**
+  String get clearFilter;
+
   /// No description provided for @clearFinished.
   ///
   /// In es, this message translates to:
@@ -727,6 +733,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'¿Borrar las conexiones recientes?'**
   String get clearRecentTitle;
+
+  /// No description provided for @clearScrollback.
+  ///
+  /// In es, this message translates to:
+  /// **'Limpiar el búfer'**
+  String get clearScrollback;
 
   /// No description provided for @clearSelection.
   ///
@@ -1118,6 +1130,12 @@ abstract class AppLocalizations {
   /// **'Copiar la huella'**
   String get copyFingerprint;
 
+  /// No description provided for @copyOfName.
+  ///
+  /// In es, this message translates to:
+  /// **'{name} (copia)'**
+  String copyOfName(String name);
+
   /// No description provided for @copyPath.
   ///
   /// In es, this message translates to:
@@ -1153,6 +1171,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ctrl+Mayús+'**
   String get ctrlShiftPrefix;
+
+  /// No description provided for @currentPassphrase.
+  ///
+  /// In es, this message translates to:
+  /// **'Frase de paso actual'**
+  String get currentPassphrase;
 
   /// No description provided for @cursor.
   ///
@@ -1235,7 +1259,7 @@ abstract class AppLocalizations {
   /// No description provided for @deleteGroup.
   ///
   /// In es, this message translates to:
-  /// **'Eliminar grupo'**
+  /// **'Eliminar grupo…'**
   String get deleteGroup;
 
   /// No description provided for @deleteGroupBody.
@@ -1279,6 +1303,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Nadie la usa. Las claves siguen en su sitio: solo se borra la identidad.'**
   String get deleteIdentityUnused;
+
+  /// No description provided for @deleteKeyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se borran {path} y su .pub de este equipo. No se puede deshacer: si no tienes otra copia, no podrás volver a entrar con ella.'**
+  String deleteKeyBody(String path);
+
+  /// No description provided for @deleteKeyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar {name}?'**
+  String deleteKeyTitle(String name);
+
+  /// No description provided for @deleteKeyUsed.
+  ///
+  /// In es, this message translates to:
+  /// **'La usan {who}: seguirán nombrándola y no podrán entrar con ella.'**
+  String deleteKeyUsed(String who);
 
   /// No description provided for @deleteLocalBody.
   ///
@@ -1424,6 +1466,12 @@ abstract class AppLocalizations {
   /// **'abajo'**
   String get dropBottom;
 
+  /// No description provided for @dropHereToMove.
+  ///
+  /// In es, this message translates to:
+  /// **'Suéltalo para moverlo aquí'**
+  String get dropHereToMove;
+
   /// No description provided for @dropHostNewTab.
   ///
   /// In es, this message translates to:
@@ -1507,6 +1555,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'arriba'**
   String get dropTop;
+
+  /// No description provided for @duplicate.
+  ///
+  /// In es, this message translates to:
+  /// **'Duplicar'**
+  String get duplicate;
 
   /// No description provided for @duplicateTab.
   ///
@@ -1838,6 +1892,12 @@ abstract class AppLocalizations {
   /// **'Desplegar'**
   String get expand;
 
+  /// No description provided for @exportEllipsis.
+  ///
+  /// In es, this message translates to:
+  /// **'Exportar…'**
+  String get exportEllipsis;
+
   /// No description provided for @failureAuth.
   ///
   /// In es, this message translates to:
@@ -2089,6 +2149,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{selected} de {total}'**
   String findCount(int selected, int total);
+
+  /// No description provided for @findEllipsis.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar…'**
+  String get findEllipsis;
 
   /// No description provided for @findHint.
   ///
@@ -3038,6 +3104,12 @@ abstract class AppLocalizations {
   /// **'Guardada en {path}.'**
   String keyAdded(String path);
 
+  /// No description provided for @keyBackspace.
+  ///
+  /// In es, this message translates to:
+  /// **'Retroceso'**
+  String get keyBackspace;
+
   /// No description provided for @keyBefore.
   ///
   /// In es, this message translates to:
@@ -3080,11 +3152,23 @@ abstract class AppLocalizations {
   /// **'Supr'**
   String get keyDelete;
 
+  /// No description provided for @keyDeleted.
+  ///
+  /// In es, this message translates to:
+  /// **'{name} eliminada.'**
+  String keyDeleted(String name);
+
   /// No description provided for @keyExchange.
   ///
   /// In es, this message translates to:
   /// **'Intercambio'**
   String get keyExchange;
+
+  /// No description provided for @keyExported.
+  ///
+  /// In es, this message translates to:
+  /// **'{name} copiada a {path}.'**
+  String keyExported(String name, String path);
 
   /// No description provided for @keyFailed.
   ///
@@ -3134,6 +3218,12 @@ abstract class AppLocalizations {
   /// **'Sin .pub al lado: su tipo se sabrá al conectar'**
   String get keyNoPublicHalf;
 
+  /// No description provided for @keyNotOpenSsh.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta clave no es de OpenSSH: su frase de paso se cambia con el programa que la hizo.'**
+  String get keyNotOpenSsh;
+
   /// No description provided for @keyNotReadable.
   ///
   /// In es, this message translates to:
@@ -3145,6 +3235,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ahora ({algorithm})'**
   String keyNow(String algorithm);
+
+  /// No description provided for @keyPassphraseChanged.
+  ///
+  /// In es, this message translates to:
+  /// **'La frase de paso de {name} ha cambiado.'**
+  String keyPassphraseChanged(String name);
+
+  /// No description provided for @keyPassphraseEllipsis.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar la frase de paso…'**
+  String get keyPassphraseEllipsis;
+
+  /// No description provided for @keyPassphraseEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Vacía, la clave queda sin frase de paso: quien tenga el archivo podrá usarla.'**
+  String get keyPassphraseEmpty;
+
+  /// No description provided for @keyPassphraseTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Frase de paso de {name}'**
+  String keyPassphraseTitle(String name);
 
   /// No description provided for @keyPerHost.
   ///
@@ -3163,6 +3277,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Recibida'**
   String get keyReceived;
+
+  /// No description provided for @keyRenameNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Su .pub y su certificado van con ella, y los hosts, grupos e identidades que la usan pasan a nombrarla así.'**
+  String get keyRenameNote;
+
+  /// No description provided for @keyRenameTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Renombrar {name}'**
+  String keyRenameTitle(String name);
 
   /// No description provided for @keySaved.
   ///
@@ -3313,6 +3439,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{ms} ms: {times} veces lo habitual'**
   String latencyHigh(int ms, int times);
+
+  /// No description provided for @latencyHighLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Latencia alta: {ms} ms'**
+  String latencyHighLabel(int ms);
+
+  /// No description provided for @latencyLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Latencia: {ms} ms'**
+  String latencyLabel(int ms);
 
   /// No description provided for @latencyUsual.
   ///
@@ -3626,6 +3764,12 @@ abstract class AppLocalizations {
   /// **'Mover a una pestaña nueva'**
   String get moveToNewTab;
 
+  /// No description provided for @movedToGroup.
+  ///
+  /// In es, this message translates to:
+  /// **'{host} está ahora en {group}.'**
+  String movedToGroup(String host, String group);
+
   /// No description provided for @name.
   ///
   /// In es, this message translates to:
@@ -3787,6 +3931,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Panel nuevo'**
   String get newPane;
+
+  /// No description provided for @newPassphrase.
+  ///
+  /// In es, this message translates to:
+  /// **'Frase de paso nueva'**
+  String get newPassphrase;
 
   /// No description provided for @newSnippet.
   ///
@@ -4178,12 +4328,6 @@ abstract class AppLocalizations {
   /// **'Ninguno todavía.'**
   String get noJumpsYet;
 
-  /// No description provided for @noKeyMatches.
-  ///
-  /// In es, this message translates to:
-  /// **'Ninguna clave coincide.'**
-  String get noKeyMatches;
-
   /// No description provided for @noKeys.
   ///
   /// In es, this message translates to:
@@ -4201,12 +4345,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Sin claves: se prueban las habituales de ~/.ssh y las del agente.'**
   String get noKeysYet;
-
-  /// No description provided for @noKnownHostMatches.
-  ///
-  /// In es, this message translates to:
-  /// **'Ninguna clave coincide'**
-  String get noKnownHostMatches;
 
   /// No description provided for @noKnownHosts.
   ///
@@ -4520,6 +4658,30 @@ abstract class AppLocalizations {
   /// **'Túneles abiertos'**
   String get openTunnels;
 
+  /// No description provided for @optionAltBoth.
+  ///
+  /// In es, this message translates to:
+  /// **'Las dos'**
+  String get optionAltBoth;
+
+  /// No description provided for @optionAltLeft.
+  ///
+  /// In es, this message translates to:
+  /// **'La izquierda'**
+  String get optionAltLeft;
+
+  /// No description provided for @optionAltOff.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguna'**
+  String get optionAltOff;
+
+  /// No description provided for @optionAltRight.
+  ///
+  /// In es, this message translates to:
+  /// **'La derecha'**
+  String get optionAltRight;
+
   /// No description provided for @optionAsAlt.
   ///
   /// In es, this message translates to:
@@ -4529,7 +4691,7 @@ abstract class AppLocalizations {
   /// No description provided for @optionAsAltHelp.
   ///
   /// In es, this message translates to:
-  /// **'Opción envía Esc + tecla, como esperan emacs y readline, en vez de escribir símbolos como @ o €.'**
+  /// **'La Opción que sea Alt envía Esc + tecla, como esperan emacs y readline; la otra sigue escribiendo símbolos como @ o €.'**
   String get optionAsAltHelp;
 
   /// No description provided for @orAnAddress.
@@ -4717,6 +4879,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Pegar'**
   String get paste;
+
+  /// No description provided for @pasteHasHidden.
+  ///
+  /// In es, this message translates to:
+  /// **'Lleva caracteres que no se ven, en ámbar: un terminal los obedece aunque no los enseñe.'**
+  String get pasteHasHidden;
+
+  /// No description provided for @pasteHiddenTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Pegar con caracteres que no se ven?'**
+  String get pasteHiddenTitle;
 
   /// No description provided for @pasteInPanes.
   ///
@@ -5444,6 +5618,12 @@ abstract class AppLocalizations {
   /// **'Renombrar'**
   String get rename;
 
+  /// No description provided for @renameEllipsis.
+  ///
+  /// In es, this message translates to:
+  /// **'Renombrar…'**
+  String get renameEllipsis;
+
   /// No description provided for @renameTab.
   ///
   /// In es, this message translates to:
@@ -5635,6 +5815,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Reintentar ahora'**
   String get retryNow;
+
+  /// No description provided for @revealInExplorer.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar en el Explorador'**
+  String get revealInExplorer;
+
+  /// No description provided for @revealInFinder.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar en el Finder'**
+  String get revealInFinder;
+
+  /// No description provided for @revealInFolder.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar la carpeta'**
+  String get revealInFolder;
 
   /// No description provided for @review.
   ///
@@ -6350,6 +6548,12 @@ abstract class AppLocalizations {
   /// **'Se guarda sin secretos, como el resto del vault. Lo que escribas al ejecutarlo no se guarda.'**
   String get snippetNoSecrets;
 
+  /// No description provided for @snippetScriptExample.
+  ///
+  /// In es, this message translates to:
+  /// **'sudo systemctl restart {open}servicio{close}'**
+  String snippetScriptExample(String open, String close);
+
   /// No description provided for @snippetTypeOnlyNote.
   ///
   /// In es, this message translates to:
@@ -6373,6 +6577,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{count, plural, =1{1 snippet} other{{count} snippets}}'**
   String snippetsCount(int count);
+
+  /// No description provided for @snippetsEllipsis.
+  ///
+  /// In es, this message translates to:
+  /// **'Snippets…'**
+  String get snippetsEllipsis;
 
   /// No description provided for @snippetsHowToRun.
   ///
@@ -6727,6 +6937,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Colores del terminal'**
   String get terminalColors;
+
+  /// No description provided for @terminalCursorLine.
+  ///
+  /// In es, this message translates to:
+  /// **'Línea del cursor'**
+  String get terminalCursorLine;
 
   /// No description provided for @terminalFont.
   ///

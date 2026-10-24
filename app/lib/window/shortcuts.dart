@@ -73,10 +73,9 @@ List<ShortcutGroup> shortcutGroups(AppLocalizations l, {bool? apple}) {
         k('⌃⇧Tab', '${cs}Tab'),
         if (mac) '⌘⇧[',
       ]),
-      if (mac) ...[
-        ShortcutRow(l.shortcutGoToTab, ['⌘1 … ⌘8']),
-        ShortcutRow(l.shortcutLastTab, ['⌘9']),
-      ],
+      // Off macOS with the left Alt: the right one is AltGr.
+      ShortcutRow(l.shortcutGoToTab, [k('⌘1 … ⌘8', 'Ctrl+Alt+1 … Ctrl+Alt+8')]),
+      ShortcutRow(l.shortcutLastTab, [k('⌘9', 'Ctrl+Alt+9')]),
     ]),
     ShortcutGroup(l.shortcutsPanes, [
       ShortcutRow(l.splitRight, [w('D')]),
@@ -109,7 +108,7 @@ List<ShortcutGroup> shortcutGroups(AppLocalizations l, {bool? apple}) {
     ]),
     ShortcutGroup('SFTP', [
       ShortcutRow(l.filterFolder, [c('F')]),
-      ShortcutRow(l.upOneLevel, [c('↑'), '⌫']),
+      ShortcutRow(l.upOneLevel, [c('↑'), k('⌫', l.keyBackspace)]),
       ShortcutRow(l.reload, [c('R'), 'F5']),
       ShortcutRow(l.newFolder, [k('⌘⇧N', '${cs}N')]),
       ShortcutRow(l.rename, ['F2']),

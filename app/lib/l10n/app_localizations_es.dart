@@ -415,6 +415,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get clearAction => 'Borrar';
 
   @override
+  String get clearFilter => 'Quitar el filtro';
+
+  @override
   String get clearFinished => 'Quitar las terminadas';
 
   @override
@@ -447,6 +450,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get clearRecentTitle => '¿Borrar las conexiones recientes?';
+
+  @override
+  String get clearScrollback => 'Limpiar el búfer';
 
   @override
   String get clearSelection => 'Quitar la selección';
@@ -699,6 +705,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get copyFingerprint => 'Copiar la huella';
 
   @override
+  String copyOfName(String name) {
+    return '$name (copia)';
+  }
+
+  @override
   String get copyPath => 'Copiar la ruta';
 
   @override
@@ -715,6 +726,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get ctrlShiftPrefix => 'Ctrl+Mayús+';
+
+  @override
+  String get currentPassphrase => 'Frase de paso actual';
 
   @override
   String get cursor => 'Cursor';
@@ -762,7 +776,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get deleteGroup => 'Eliminar grupo';
+  String get deleteGroup => 'Eliminar grupo…';
 
   @override
   String get deleteGroupBody => 'Lo que contiene pasa a su grupo padre.';
@@ -801,6 +815,21 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get deleteIdentityUnused =>
       'Nadie la usa. Las claves siguen en su sitio: solo se borra la identidad.';
+
+  @override
+  String deleteKeyBody(String path) {
+    return 'Se borran $path y su .pub de este equipo. No se puede deshacer: si no tienes otra copia, no podrás volver a entrar con ella.';
+  }
+
+  @override
+  String deleteKeyTitle(String name) {
+    return '¿Eliminar $name?';
+  }
+
+  @override
+  String deleteKeyUsed(String who) {
+    return 'La usan $who: seguirán nombrándola y no podrán entrar con ella.';
+  }
 
   @override
   String get deleteLocalBody =>
@@ -895,6 +924,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get dropBottom => 'abajo';
 
   @override
+  String get dropHereToMove => 'Suéltalo para moverlo aquí';
+
+  @override
   String dropHostNewTab(String name) {
     return 'Soltar aquí: abrir $name en una pestaña nueva';
   }
@@ -952,6 +984,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get dropTop => 'arriba';
+
+  @override
+  String get duplicate => 'Duplicar';
 
   @override
   String get duplicateTab => 'Duplicar';
@@ -1144,6 +1179,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get expand => 'Desplegar';
 
   @override
+  String get exportEllipsis => 'Exportar…';
+
+  @override
   String failureAuth(String user, String label) {
     return '$user@$label no ha podido autenticarse.';
   }
@@ -1299,6 +1337,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String findCount(int selected, int total) {
     return '$selected de $total';
   }
+
+  @override
+  String get findEllipsis => 'Buscar…';
 
   @override
   String get findHint => 'Buscar en el terminal';
@@ -1968,6 +2009,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get keyBackspace => 'Retroceso';
+
+  @override
   String get keyBefore => 'Antes';
 
   @override
@@ -1994,7 +2038,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get keyDelete => 'Supr';
 
   @override
+  String keyDeleted(String name) {
+    return '$name eliminada.';
+  }
+
+  @override
   String get keyExchange => 'Intercambio';
+
+  @override
+  String keyExported(String name, String path) {
+    return '$name copiada a $path.';
+  }
 
   @override
   String get keyFailed => 'No se ha podido (más en «Detalles»).';
@@ -2035,12 +2089,33 @@ class AppLocalizationsEs extends AppLocalizations {
       'Sin .pub al lado: su tipo se sabrá al conectar';
 
   @override
+  String get keyNotOpenSsh =>
+      'Esta clave no es de OpenSSH: su frase de paso se cambia con el programa que la hizo.';
+
+  @override
   String get keyNotReadable =>
       'Eso no es una clave privada que OpenWard pueda leer (OpenSSH, PEM o PuTTY).';
 
   @override
   String keyNow(String algorithm) {
     return 'Ahora ($algorithm)';
+  }
+
+  @override
+  String keyPassphraseChanged(String name) {
+    return 'La frase de paso de $name ha cambiado.';
+  }
+
+  @override
+  String get keyPassphraseEllipsis => 'Cambiar la frase de paso…';
+
+  @override
+  String get keyPassphraseEmpty =>
+      'Vacía, la clave queda sin frase de paso: quien tenga el archivo podrá usarla.';
+
+  @override
+  String keyPassphraseTitle(String name) {
+    return 'Frase de paso de $name';
   }
 
   @override
@@ -2053,6 +2128,15 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get keyReceived => 'Recibida';
+
+  @override
+  String get keyRenameNote =>
+      'Su .pub y su certificado van con ella, y los hosts, grupos e identidades que la usan pasan a nombrarla así.';
+
+  @override
+  String keyRenameTitle(String name) {
+    return 'Renombrar $name';
+  }
 
   @override
   String get keySaved => 'Guardada';
@@ -2148,6 +2232,16 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String latencyHigh(int ms, int times) {
     return '$ms ms: $times veces lo habitual';
+  }
+
+  @override
+  String latencyHighLabel(int ms) {
+    return 'Latencia alta: $ms ms';
+  }
+
+  @override
+  String latencyLabel(int ms) {
+    return 'Latencia: $ms ms';
   }
 
   @override
@@ -2392,6 +2486,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get moveToNewTab => 'Mover a una pestaña nueva';
 
   @override
+  String movedToGroup(String host, String group) {
+    return '$host está ahora en $group.';
+  }
+
+  @override
   String get name => 'Nombre';
 
   @override
@@ -2482,6 +2581,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get newPane => 'Panel nuevo';
+
+  @override
+  String get newPassphrase => 'Frase de paso nueva';
 
   @override
   String get newSnippet => 'Nuevo snippet';
@@ -2716,9 +2818,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get noJumpsYet => 'Ninguno todavía.';
 
   @override
-  String get noKeyMatches => 'Ninguna clave coincide.';
-
-  @override
   String get noKeys => 'No hay claves en ~/.ssh';
 
   @override
@@ -2728,9 +2827,6 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get noKeysYet =>
       'Sin claves: se prueban las habituales de ~/.ssh y las del agente.';
-
-  @override
-  String get noKnownHostMatches => 'Ninguna clave coincide';
 
   @override
   String get noKnownHosts => 'Aún no confías en ninguna clave';
@@ -2929,11 +3025,23 @@ class AppLocalizationsEs extends AppLocalizations {
   String get openTunnels => 'Túneles abiertos';
 
   @override
+  String get optionAltBoth => 'Las dos';
+
+  @override
+  String get optionAltLeft => 'La izquierda';
+
+  @override
+  String get optionAltOff => 'Ninguna';
+
+  @override
+  String get optionAltRight => 'La derecha';
+
+  @override
   String get optionAsAlt => 'Opción como Alt';
 
   @override
   String get optionAsAltHelp =>
-      'Opción envía Esc + tecla, como esperan emacs y readline, en vez de escribir símbolos como @ o €.';
+      'La Opción que sea Alt envía Esc + tecla, como esperan emacs y readline; la otra sigue escribiendo símbolos como @ o €.';
 
   @override
   String get orAnAddress => 'o una dirección: usuario@host:puerto';
@@ -3033,6 +3141,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get paste => 'Pegar';
+
+  @override
+  String get pasteHasHidden =>
+      'Lleva caracteres que no se ven, en ámbar: un terminal los obedece aunque no los enseñe.';
+
+  @override
+  String get pasteHiddenTitle => '¿Pegar con caracteres que no se ven?';
 
   @override
   String pasteInPanes(int total) {
@@ -3567,6 +3682,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get rename => 'Renombrar';
 
   @override
+  String get renameEllipsis => 'Renombrar…';
+
+  @override
   String get renameTab => 'Renombrar…';
 
   @override
@@ -3708,6 +3826,15 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get retryNow => 'Reintentar ahora';
+
+  @override
+  String get revealInExplorer => 'Mostrar en el Explorador';
+
+  @override
+  String get revealInFinder => 'Mostrar en el Finder';
+
+  @override
+  String get revealInFolder => 'Mostrar la carpeta';
 
   @override
   String get review => 'Revisar';
@@ -4133,6 +4260,11 @@ class AppLocalizationsEs extends AppLocalizations {
       'Se guarda sin secretos, como el resto del vault. Lo que escribas al ejecutarlo no se guarda.';
 
   @override
+  String snippetScriptExample(String open, String close) {
+    return 'sudo systemctl restart ${open}servicio$close';
+  }
+
+  @override
   String get snippetTypeOnlyNote => 'Se deja escrito, sin pulsar Intro.';
 
   @override
@@ -4151,6 +4283,9 @@ class AppLocalizationsEs extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get snippetsEllipsis => 'Snippets…';
 
   @override
   String snippetsHowToRun(String shortcut) {
@@ -4362,6 +4497,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get terminalColors => 'Colores del terminal';
+
+  @override
+  String get terminalCursorLine => 'Línea del cursor';
 
   @override
   String get terminalFont => 'Fuente del terminal';

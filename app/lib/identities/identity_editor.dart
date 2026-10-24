@@ -10,6 +10,7 @@ import '../hosts/editors.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/identities.dart';
 import '../src/rust/api/vault.dart';
+import '../ui/confirm.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import 'identities.dart';
@@ -154,32 +155,16 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
     final old = _old;
     if (old == null) return;
     final l = context.l10n;
-    final sure = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l.deleteIdentityTitle(old.spec.label)),
-        content: Text(
-          old.hostCount > 0
-              ? l.deleteIdentityBody(old.hostCount)
-              : l.deleteIdentityUnused,
-        ),
-        actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l.cancel),
-          ),
-          FilledButton(
-            key: const ValueKey('identity.delete.confirm'),
-            style: FilledButton.styleFrom(
-              backgroundColor: context.ow.colors.danger,
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l.delete),
-          ),
-        ],
-      ),
+    final sure = await confirmDestructive(
+      context,
+      title: l.deleteIdentityTitle(old.spec.label),
+      body: old.hostCount > 0
+          ? l.deleteIdentityBody(old.hostCount)
+          : l.deleteIdentityUnused,
+      action: l.delete,
+      actionKey: const ValueKey('identity.delete.confirm'),
     );
-    if (sure != true) return;
+    if (!sure) return;
     await ref.read(openWardProvider).delete(id: old.id);
     identitiesChanged(ref);
     if (mounted) Navigator.pop(context, true);

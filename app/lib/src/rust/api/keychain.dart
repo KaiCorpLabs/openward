@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `result`
+// These functions are ignored because they are not marked as `pub`: `failure`, `result`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `from`
 
 class SshKey {
@@ -82,7 +82,17 @@ class SshKeyFailure {
           message == other.message;
 }
 
-enum SshKeyFailureKind { exists, badName, notAKey, io, make }
+enum SshKeyFailureKind {
+  exists,
+  badName,
+  notAKey,
+  io,
+  make,
+  wrongPassphrase,
+
+  /// PEM and PuTTY keys change their passphrase with their program.
+  notOpenSsh,
+}
 
 /// A key made or brought in, or why not.
 class SshKeyResult {

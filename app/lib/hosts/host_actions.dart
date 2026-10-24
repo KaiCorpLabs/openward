@@ -11,6 +11,7 @@ import '../import/import_dialog.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/vault.dart';
 import '../tabs/tabs.dart';
+import '../ui/confirm.dart';
 import '../ui/environment.dart';
 import 'editors.dart';
 
@@ -50,6 +51,66 @@ class HostActions {
     }
   }
 
+  /// A copy of `h` beside it, without the star, opened in its editor to
+  /// tell it apart.
+  Future<void> duplicate(HostView h) async {
+    final l = context.l10n;
+    final app = ref.read(openWardProvider);
+    String? copy;
+    final ok = await runAction(context, () async {
+      final s = app.host(id: h.id).spec;
+      copy = await app.createHost(
+        spec: HostSpec(
+          label: l.copyOfName(s.label),
+          address: s.address,
+          groupId: s.groupId,
+          tags: s.tags,
+          notes: s.notes,
+          settings: s.settings,
+          systemCode: s.systemCode,
+        ),
+      );
+    });
+    refresh();
+    if (ok && copy != null && context.mounted) await editHost(id: copy);
+  }
+
+  /// `h` into the group `groupId` (null: out of any), as it was dropped
+  /// there.
+  Future<void> moveToGroup(HostView h, String? groupId) async {
+    final l = context.l10n;
+    final app = ref.read(openWardProvider);
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final ok = await runAction(context, () async {
+      final d = app.host(id: h.id);
+      final s = d.spec;
+      await app.updateHost(
+        id: h.id,
+        rev: d.rev,
+        spec: HostSpec(
+          label: s.label,
+          address: s.address,
+          groupId: groupId,
+          tags: s.tags,
+          notes: s.notes,
+          settings: s.settings,
+          favorite: s.favorite,
+          systemCode: s.systemCode,
+        ),
+        base: s,
+      );
+    });
+    refresh();
+    final group = groupId == null
+        ? l.hostsNoGroup
+        : ref.read(libraryProvider).group(groupId)?.name ?? '';
+    if (ok) {
+      messenger?.showSnackBar(
+        SnackBar(content: Text(l.movedToGroup(h.label, group))),
+      );
+    }
+  }
+
   Future<void> editGroup({String? id, String? parentId}) async {
     if (await showGroupEditor(context, ref, id: id, parentId: parentId)) {
       refresh();
@@ -64,24 +125,14 @@ class HostActions {
   /// Asks first; a host others jump through stays.
   Future<void> delete(String id, String name, {required bool group}) async {
     final l = context.l10n;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(group ? l.deleteGroupTitle(name) : l.deleteHostTitle(name)),
-        content: Text(group ? l.deleteGroupBody : l.deleteHostBody),
-        actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l.delete),
-          ),
-        ],
-      ),
+    final ok = await confirmDestructive(
+      context,
+      title: group ? l.deleteGroupTitle(name) : l.deleteHostTitle(name),
+      body: group ? l.deleteGroupBody : l.deleteHostBody,
+      action: l.delete,
+      actionKey: const ValueKey('host.delete.confirm'),
     );
-    if (ok != true || !context.mounted) return;
+    if (!ok || !context.mounted) return;
     try {
       await ref.read(openWardProvider).delete(id: id);
     } catch (e) {
@@ -151,7 +202,9 @@ class HostActions {
       if (!systemKnown(h.system?.code))
         item(l.findOutSystem, () => findOutSystem(h)),
       item(l.editEllipsis, () => editHost(id: h.id)),
-      item(l.delete, () => delete(h.id, h.label, group: false)),
+      item(l.duplicate, () => duplicate(h)),
+      // It asks first: «…».
+      item(l.deleteEllipsis, () => delete(h.id, h.label, group: false)),
     ];
   }
 

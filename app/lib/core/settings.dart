@@ -17,6 +17,9 @@ enum Language { system, es, en }
 /// Animations: as the system says, always fewer, or always.
 enum MotionChoice { system, reduce, full }
 
+/// macOS: which Option keys act as Alt.
+enum OptionAltChoice { off, both, left, right }
+
 /// The cursor's shape when the program does not choose one.
 enum CursorChoice { block, bar, underline }
 
@@ -136,7 +139,7 @@ class Settings {
     this.darkTheme = 'grafito',
     this.overrides = const {},
     this.schemes = const [],
-    this.optionAsAlt = false,
+    this.optionAsAlt = OptionAltChoice.off,
     this.scrollback = 10000,
     this.language = Language.system,
     this.welcomed = false,
@@ -173,7 +176,7 @@ class Settings {
   final List<TerminalScheme> schemes;
 
   /// macOS: Option sends Alt (Esc-prefixed keys) instead of typing symbols.
-  final bool optionAsAlt;
+  final OptionAltChoice optionAsAlt;
 
   /// Lines of history for new terminals.
   final int scrollback;
@@ -253,7 +256,7 @@ class Settings {
     String? darkTheme,
     Map<String, ThemeOverrides>? overrides,
     List<TerminalScheme>? schemes,
-    bool? optionAsAlt,
+    OptionAltChoice? optionAsAlt,
     int? scrollback,
     Language? language,
     bool? welcomed,
@@ -329,7 +332,7 @@ class Settings {
       },
     if (schemes.isNotEmpty)
       'terminal_schemes': [for (final s in schemes) s.toJson()],
-    'option_as_alt': optionAsAlt,
+    'option_as_alt': optionAsAlt.name,
     'scrollback': scrollback,
     'language': language.name,
     'welcomed': welcomed,
@@ -382,7 +385,12 @@ class Settings {
       schemes: schemes is List
           ? [for (final s in schemes) ?TerminalScheme.fromJson(s)]
           : const [],
-      optionAsAlt: flag('option_as_alt', d.optionAsAlt),
+      // It was a yes or no: yes is both.
+      optionAsAlt: switch (json['option_as_alt']) {
+        true => OptionAltChoice.both,
+        false => OptionAltChoice.off,
+        _ => pick(OptionAltChoice.values, 'option_as_alt', d.optionAsAlt),
+      },
       scrollback: scroll is int && scroll >= 100 && scroll <= 1000000
           ? scroll
           : d.scrollback,

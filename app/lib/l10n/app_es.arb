@@ -329,6 +329,7 @@
   "cipher": "Cifrado",
   "clear": "Quitar",
   "clearAction": "Borrar",
+  "clearFilter": "Quitar el filtro",
   "clearFinished": "Quitar las terminadas",
   "clearHistory": "{count, plural, =0{Borrar el historial} =1{Borrar 1 comando} other{Borrar {count} comandos}}",
   "@clearHistory": {
@@ -350,6 +351,7 @@
   },
   "clearRecentBody": "La lista de la página de inicio y de la paleta queda vacía. Los hosts guardados no cambian.",
   "clearRecentTitle": "¿Borrar las conexiones recientes?",
+  "clearScrollback": "Limpiar el búfer",
   "clearSelection": "Quitar la selección",
   "close": "Cerrar",
   "closeAction": "Cerrar",
@@ -577,12 +579,21 @@
   "copyAction": "Copiar",
   "copyAddress": "Copiar dirección",
   "copyFingerprint": "Copiar la huella",
+  "copyOfName": "{name} (copia)",
+  "@copyOfName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "copyPath": "Copiar la ruta",
   "copyPublicKey": "Copiar la clave pública",
   "copyReport": "Copiar el informe",
   "create": "Crear",
   "csvSpreadsheet": "CSV (hoja de cálculo)",
   "ctrlShiftPrefix": "Ctrl+Mayús+",
+  "currentPassphrase": "Frase de paso actual",
   "cursor": "Cursor",
   "cursorBar": "Barra",
   "cursorBlink": "Cursor parpadeante",
@@ -610,7 +621,7 @@
       }
     }
   },
-  "deleteGroup": "Eliminar grupo",
+  "deleteGroup": "Eliminar grupo…",
   "deleteGroupBody": "Lo que contiene pasa a su grupo padre.",
   "deleteGroupTitle": "¿Eliminar el grupo «{name}»?",
   "@deleteGroupTitle": {
@@ -646,6 +657,30 @@
     }
   },
   "deleteIdentityUnused": "Nadie la usa. Las claves siguen en su sitio: solo se borra la identidad.",
+  "deleteKeyBody": "Se borran {path} y su .pub de este equipo. No se puede deshacer: si no tienes otra copia, no podrás volver a entrar con ella.",
+  "@deleteKeyBody": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteKeyTitle": "¿Eliminar {name}?",
+  "@deleteKeyTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteKeyUsed": "La usan {who}: seguirán nombrándola y no podrán entrar con ella.",
+  "@deleteKeyUsed": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
   "deleteLocalBody": "Se eliminan de este equipo sin pasar por la papelera: no se puede deshacer.",
   "deleteMany": "¿Eliminar {count} elementos?",
   "@deleteMany": {
@@ -719,6 +754,7 @@
     }
   },
   "dropBottom": "abajo",
+  "dropHereToMove": "Suéltalo para moverlo aquí",
   "dropHostNewTab": "Soltar aquí: abrir {name} en una pestaña nueva",
   "@dropHostNewTab": {
     "placeholders": {
@@ -801,6 +837,7 @@
   "dropToImport": "O arrastra aquí el archivo o la carpeta: se reconoce solo.",
   "dropToUpload": "Suelta para subir aquí",
   "dropTop": "arriba",
+  "duplicate": "Duplicar",
   "duplicateTab": "Duplicar",
   "durationHours": "{hours} h {minutes} min",
   "@durationHours": {
@@ -914,6 +951,7 @@
   "errorDetailsTitle": "Detalles del error",
   "exampleVariable": "nombre",
   "expand": "Desplegar",
+  "exportEllipsis": "Exportar…",
   "failureAuth": "{user}@{label} no ha podido autenticarse.",
   "@failureAuth": {
     "placeholders": {
@@ -1082,6 +1120,7 @@
       }
     }
   },
+  "findEllipsis": "Buscar…",
   "findHint": "Buscar en el terminal",
   "findInTerminal": "Buscar en el terminal",
   "findNewer": "Siguiente, más abajo (Mayús+Intro)",
@@ -1606,6 +1645,7 @@
       }
     }
   },
+  "keyBackspace": "Retroceso",
   "keyBefore": "Antes",
   "keyChangedBody": "Puede ser una reinstalación del servidor o alguien interceptando la conexión. No se ha enviado ninguna contraseña ni clave.",
   "keyChangedDialogBody": "{where} se presenta con una clave distinta de la que tenías como buena. Puede que el servidor se haya reinstalado o haya cambiado de clave, pero también que alguien esté interceptando la conexión. No sigas sin comprobar la huella nueva con quien administra el servidor.",
@@ -1627,7 +1667,26 @@
   "keyColumn": "Clave",
   "keyCommentLabel": "Comentario",
   "keyDelete": "Supr",
+  "keyDeleted": "{name} eliminada.",
+  "@keyDeleted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "keyExchange": "Intercambio",
+  "keyExported": "{name} copiada a {path}.",
+  "@keyExported": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "path": {
+        "type": "String"
+      }
+    }
+  },
   "keyFailed": "No se ha podido (más en «Detalles»).",
   "keyInKnownHosts": "en ~/.ssh/known_hosts",
   "keyInOpenWard": "guardada en OpenWard",
@@ -1653,11 +1712,30 @@
     }
   },
   "keyNoPublicHalf": "Sin .pub al lado: su tipo se sabrá al conectar",
+  "keyNotOpenSsh": "Esta clave no es de OpenSSH: su frase de paso se cambia con el programa que la hizo.",
   "keyNotReadable": "Eso no es una clave privada que OpenWard pueda leer (OpenSSH, PEM o PuTTY).",
   "keyNow": "Ahora ({algorithm})",
   "@keyNow": {
     "placeholders": {
       "algorithm": {
+        "type": "String"
+      }
+    }
+  },
+  "keyPassphraseChanged": "La frase de paso de {name} ha cambiado.",
+  "@keyPassphraseChanged": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "keyPassphraseEllipsis": "Cambiar la frase de paso…",
+  "keyPassphraseEmpty": "Vacía, la clave queda sin frase de paso: quien tenga el archivo podrá usarla.",
+  "keyPassphraseTitle": "Frase de paso de {name}",
+  "@keyPassphraseTitle": {
+    "placeholders": {
+      "name": {
         "type": "String"
       }
     }
@@ -1672,6 +1750,15 @@
     }
   },
   "keyReceived": "Recibida",
+  "keyRenameNote": "Su .pub y su certificado van con ella, y los hosts, grupos e identidades que la usan pasan a nombrarla así.",
+  "keyRenameTitle": "Renombrar {name}",
+  "@keyRenameTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "keySaved": "Guardada",
   "keyType": "Tipo",
   "keyTypeEcdsa": "Para servidores o normas que piden curvas NIST.",
@@ -1717,6 +1804,22 @@
         "type": "int"
       },
       "times": {
+        "type": "int"
+      }
+    }
+  },
+  "latencyHighLabel": "Latencia alta: {ms} ms",
+  "@latencyHighLabel": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "latencyLabel": "Latencia: {ms} ms",
+  "@latencyLabel": {
+    "placeholders": {
+      "ms": {
         "type": "int"
       }
     }
@@ -1912,6 +2015,17 @@
   "moveEarlier": "Mover antes",
   "moveLater": "Mover después",
   "moveToNewTab": "Mover a una pestaña nueva",
+  "movedToGroup": "{host} está ahora en {group}.",
+  "@movedToGroup": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      },
+      "group": {
+        "type": "String"
+      }
+    }
+  },
   "name": "Nombre",
   "nameAndMore": "{name} y {count} más",
   "@nameAndMore": {
@@ -1983,6 +2097,7 @@
   },
   "newLocalTerminal": "Terminal local nuevo",
   "newPane": "Panel nuevo",
+  "newPassphrase": "Frase de paso nueva",
   "newSnippet": "Nuevo snippet",
   "newSubgroup": "Nuevo subgrupo",
   "newTunnel": "Nuevo túnel",
@@ -2121,11 +2236,9 @@
   "noIdentityInherited": "Ningún grupo pone una",
   "noIdentityNow": "Sin identidad",
   "noJumpsYet": "Ninguno todavía.",
-  "noKeyMatches": "Ninguna clave coincide.",
   "noKeys": "No hay claves en ~/.ssh",
   "noKeysBody": "Crea una con «Nueva clave…» o trae la que ya tengas con «Importar…».",
   "noKeysYet": "Sin claves: se prueban las habituales de ~/.ssh y las del agente.",
-  "noKnownHostMatches": "Ninguna clave coincide",
   "noKnownHosts": "Aún no confías en ninguna clave",
   "noKnownHostsBody": "Las claves de los servidores aparecen aquí cuando conectas y confías en ellas.",
   "noMatches": "Nada coincide con «{filter}»",
@@ -2251,8 +2364,12 @@
     }
   },
   "openTunnels": "Túneles abiertos",
+  "optionAltBoth": "Las dos",
+  "optionAltLeft": "La izquierda",
+  "optionAltOff": "Ninguna",
+  "optionAltRight": "La derecha",
   "optionAsAlt": "Opción como Alt",
-  "optionAsAltHelp": "Opción envía Esc + tecla, como esperan emacs y readline, en vez de escribir símbolos como @ o €.",
+  "optionAsAltHelp": "La Opción que sea Alt envía Esc + tecla, como esperan emacs y readline; la otra sigue escribiendo símbolos como @ o €.",
   "orAnAddress": "o una dirección: usuario@host:puerto",
   "orTypeAPath": "o escribe una ruta: admite ~, %h, %r y %u",
   "ownUserWins": "Pone su propio usuario ({user}), que seguirá mandando.",
@@ -2291,6 +2408,8 @@
   "passwordTitle": "Contraseña",
   "passwordsNever": "Las contraseñas no se traen nunca: OpenWard las pide al conectar.",
   "paste": "Pegar",
+  "pasteHasHidden": "Lleva caracteres que no se ven, en ámbar: un terminal los obedece aunque no los enseñe.",
+  "pasteHiddenTitle": "¿Pegar con caracteres que no se ven?",
   "pasteInPanes": "Pegar en {total} paneles",
   "@pasteInPanes": {
     "placeholders": {
@@ -2683,6 +2802,7 @@
   },
   "removeTheLine": "Quitar la línea",
   "rename": "Renombrar",
+  "renameEllipsis": "Renombrar…",
   "renameTab": "Renombrar…",
   "renameTabHelp": "Vacío para volver al nombre del host",
   "renameTabTitle": "Renombrar pestaña",
@@ -2791,6 +2911,9 @@
     }
   },
   "retryNow": "Reintentar ahora",
+  "revealInExplorer": "Mostrar en el Explorador",
+  "revealInFinder": "Mostrar en el Finder",
+  "revealInFolder": "Mostrar la carpeta",
   "review": "Revisar",
   "reviewKey": "Revisar la clave…",
   "route": "Cómo llegar",
@@ -3056,6 +3179,17 @@
   "snippetNeedsCommand": "Escribe el comando.",
   "snippetNeedsName": "Ponle un nombre.",
   "snippetNoSecrets": "Se guarda sin secretos, como el resto del vault. Lo que escribas al ejecutarlo no se guarda.",
+  "snippetScriptExample": "sudo systemctl restart {open}servicio{close}",
+  "@snippetScriptExample": {
+    "placeholders": {
+      "open": {
+        "type": "String"
+      },
+      "close": {
+        "type": "String"
+      }
+    }
+  },
   "snippetTypeOnlyNote": "Se deja escrito, sin pulsar Intro.",
   "snippetWithEnter": "Con Intro al final.",
   "snippets": "Snippets",
@@ -3067,6 +3201,7 @@
       }
     }
   },
+  "snippetsEllipsis": "Snippets…",
   "snippetsHowToRun": "En un terminal: {shortcut} o el botón «Snippets» de la barra de estado. Con broadcast, van a todos los paneles que reciben.",
   "@snippetsHowToRun": {
     "placeholders": {
@@ -3247,6 +3382,7 @@
   "terminalAlwaysDark": "Siempre oscuro",
   "terminalAsTheme": "Como el tema",
   "terminalColors": "Colores del terminal",
+  "terminalCursorLine": "Línea del cursor",
   "terminalFont": "Fuente del terminal",
   "terminalMenuHint": "Arrastra aquí una pestaña o un host para abrirlo en una mitad de este panel.",
   "terminalPadding": "Margen del terminal",

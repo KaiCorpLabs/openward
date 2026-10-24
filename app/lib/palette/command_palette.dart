@@ -795,7 +795,13 @@ class _PaletteState extends ConsumerState<_Palette> {
                       if (!_query.text.trimLeft().startsWith('>'))
                         hint('>', l.paletteOnlyActions),
                       if (current?.kind == _Kind.history)
-                        hint(isApple ? '⌘⌫' : 'Ctrl+Shift+⌫', l.paletteForget),
+                        hint(
+                          keysFor(
+                            '⌘⌫',
+                            '${l.ctrlShiftPrefix}${l.keyBackspace}',
+                          ),
+                          l.paletteForget,
+                        ),
                       hint('Esc', l.close.toLowerCase()),
                     ],
                   ),

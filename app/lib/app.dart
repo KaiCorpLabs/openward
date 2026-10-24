@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -49,8 +51,10 @@ class OpenWardApp extends ConsumerWidget {
         final mq = MediaQuery.of(context);
         return MediaQuery(
           data: mq.copyWith(
+            // The system's and the app's together, up to twice: past that
+            // the window holds too little to be of use.
             textScaler: TextScaler.linear(
-              mq.textScaler.scale(1) * settings.textScale,
+              math.min(mq.textScaler.scale(1) * settings.textScale, 2),
             ),
             disableAnimations: switch (settings.motion) {
               MotionChoice.system => mq.disableAnimations,

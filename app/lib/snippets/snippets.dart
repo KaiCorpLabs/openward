@@ -9,6 +9,7 @@ import '../l10n/l10n.dart';
 import '../src/rust/api/snippets.dart';
 import '../tabs/tabs.dart';
 import '../terminal/controller.dart';
+import '../ui/confirm.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 
@@ -282,12 +283,7 @@ class _RunDialogState extends State<_RunDialog> {
           ),
           FilledButton(
             key: const ValueKey('snippet.send'),
-            style: many
-                ? FilledButton.styleFrom(
-                    backgroundColor: c.warn,
-                    foregroundColor: c.window,
-                  )
-                : null,
+            style: many ? warnButtonStyle(c) : null,
             onPressed: _send,
             child: Text(
               many ? l.sendToPanes(widget.targets.length) : l.sendAction,

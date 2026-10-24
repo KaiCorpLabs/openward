@@ -118,7 +118,15 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - borra un host por el que salten otros: el aviso debe decir por qué no se puede;
    - importa desde PuTTY, MobaXterm o SecureCRT algo con X11 o un proxy SOCKS4: el informe debe decirlo en español;
    - si conservas una beta anterior a esta, abre tus datos con ella después de usar esta: debe abrirlos igual.
-19. **CSV** («Importar…» › CSV):
+19. **Accesibilidad y detalles** (0.3.2-beta.5):
+   - recorre la app solo con Tab, Intro y Esc: el anillo debe decir siempre dónde estás, y no salir al hacer clic;
+   - con VoiceOver (⌘F5), recorre la barra, el raíl y las pestañas y púlsalos; en un terminal, escribe y deja que lea la línea;
+   - pon el texto al 150 % (Ajustes › Apariencia) y estrecha la ventana al mínimo: nada debe quedar cortado sin aviso;
+   - en Claves, renombra una clave que use un host (el host debe seguir entrando), ponle una frase de paso y elimina una de prueba;
+   - duplica un host y arrástralo a otro grupo en la página de Hosts;
+   - abre vim con un tema de colores o tmux con su barra de color: deben verse; prueba «Limpiar el búfer» en el menú del terminal;
+   - en un terminal, `printf 'ls \342\200\256txt.exe' | pbcopy` copia un texto con un carácter que le da la vuelta; al pegarlo, la vista previa debe marcarlo en ámbar antes de enviarlo.
+20. **CSV** («Importar…» › CSV):
    - exporta tus hosts de una hoja de cálculo o usa la plantilla de Termius;
    - comprueba los grupos, puertos, usuarios y etiquetas, y los avisos de lo que no entra;
    - impórtalo dos veces y comprueba que no se duplica.

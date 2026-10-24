@@ -159,7 +159,7 @@ class _FavoriteButton extends StatelessWidget {
             key: ValueKey('rail.favorite.${h.label}'),
             tooltip: [
               h.label,
-              ?h.environment?.short,
+              if (h.environment case final e?) shownEnv(l, e).short,
               hostAddress(h),
               l.favoriteLower,
               if (status == Status.connected) l.hostsOpenNow,
@@ -177,7 +177,12 @@ class _FavoriteButton extends StatelessWidget {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                SystemBadge(code: h.system?.code, env: h.environment, size: 24),
+                SystemBadge(
+                  code: h.system?.code,
+                  env: h.environment,
+                  size: 24,
+                  tagged: true,
+                ),
                 if (status != null)
                   Positioned(
                     right: -3,
@@ -286,7 +291,7 @@ class _OpenItem extends StatelessWidget {
       width: 260,
       child: Row(
         children: [
-          tabBadge(tab, library),
+          tabBadge(tab, library, tagged: true),
           const SizedBox(width: 10),
           // The name and its mark together; how it is doing, at the end.
           Expanded(
@@ -418,6 +423,7 @@ class _RailButton extends StatelessWidget {
           button: true,
           selected: selected,
           label: tooltip,
+          onTap: onPressed,
           excludeSemantics: true,
           child: FocusOutline(
             radius: ow.shape.radius + 2,

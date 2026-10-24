@@ -17,12 +17,15 @@ import '../core/settings.dart';
 import '../history/history.dart';
 import '../history/line_tracker.dart';
 import '../l10n/l10n.dart';
+import '../snippets/palette.dart' show showSnippetPalette;
 import '../src/rust/api/session.dart';
 import '../tabs/connection_motion.dart' show comebackWords;
+import '../ui/confirm.dart';
 import '../ui/tokens.dart';
 import 'controller.dart';
 import 'keys.dart';
 import 'renderer.dart';
+import 'visible_text.dart';
 
 class TerminalPane extends ConsumerStatefulWidget {
   const TerminalPane({
@@ -82,7 +85,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   /// A selection drag is under way (the press did not go to the program).
   bool _selecting = false;
 
-  bool _optionAsAlt = false;
+  OptionAltChoice _optionAsAlt = OptionAltChoice.off;
 
   /// Blinks the cursor when the program (or the setting) asks for it.
   Timer? _blink;
@@ -112,7 +115,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     });
     final settings = ref.read(settingsProvider);
     _optionAsAlt = settings.optionAsAlt;
-    _session.setOptionAsAlt(enabled: _optionAsAlt);
+    _session.setOptionAsAlt(which: _optionAlt(_optionAsAlt));
     _applyCursor(settings);
     _blink = Timer.periodic(const Duration(milliseconds: 530), (_) {
       final r = _renderer;
@@ -156,8 +159,14 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
       minimumContrast: settings.minimumContrast ? ow.minimumContrast : 1,
     );
     // Another font, theme or density: the whole screen to draw again.
+    // Whether it has the keyboard, told after the frame: the renderer may
+    // be another pane's still (a terminal moved), and telling it now would
+    // rebuild that one mid-build.
     if (!identical(r, _renderer)) {
-      SchedulerBinding.instance.addPostFrameCallback((_) => _wake());
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (mounted) r.setFocused(focusNode.hasFocus);
+        _wake();
+      });
     }
     return _renderer = r;
   }
@@ -354,7 +363,15 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
 
     final char = event.character ?? '';
     final printable = char.isNotEmpty && !isControlText(char);
-    final altIsMeta = !isApple || _optionAsAlt;
+    // On macOS, by which Option is held.
+    final altIsMeta =
+        !isApple ||
+        switch (_optionAsAlt) {
+          OptionAltChoice.off => false,
+          OptionAltChoice.both => true,
+          OptionAltChoice.left => mods & Mods.altRight == 0,
+          OptionAltChoice.right => mods & Mods.altRight != 0,
+        };
     final chord = mods & Mods.ctrl != 0 || (altIsMeta && mods & Mods.alt != 0);
     // AltGr on Windows is Ctrl+Alt and types characters (@ on many layouts).
     final altGr =
@@ -365,7 +382,9 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     final toEncoder =
         isFunctionalKey(hid) ||
         (chord && !altGr) ||
-        (_c.reportAllKeys && printable);
+        (_c.reportAllKeys && printable) ||
+        // DECKPAM: the program wants the keypad's own sequences.
+        (_c.keypadApplication && isKeypadKey(hid));
     // Everything else is text: the input method delivers it, so dead keys,
     // compose sequences and IMEs work.
     if (!toEncoder) return KeyEventResult.ignored;
@@ -416,6 +435,24 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
         ),
         const PopupMenuDivider(),
         PopupMenuItem(
+          value: _c.openFind,
+          height: 34,
+          child: _MenuRow(l.findEllipsis, '${key}F'),
+        ),
+        PopupMenuItem(
+          value: () => showSnippetPalette(context),
+          height: 34,
+          child: _MenuRow(l.snippetsEllipsis, isApple ? '⌘⇧S' : '${key}S'),
+        ),
+        // What scrolled away, forgotten here; the program is not told.
+        PopupMenuItem(
+          key: const ValueKey('terminal.clearScrollback'),
+          value: _session.clearHistory,
+          height: 34,
+          child: _MenuRow(l.clearScrollback, ''),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem(
           value: _session.selectAll,
           height: 34,
           child: _MenuRow(l.selectAllText, isApple ? '⌘A' : ''),
@@ -446,39 +483,41 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final text = data?.text;
     if (text == null || text.isEmpty || !mounted) return;
-    _c.line.text(text, _screen);
     final also = widget.mirrors?.call() ?? const <TerminalController>[];
     if (also.isNotEmpty) return _pasteBroadcast(text, also);
-    if (_session.paste(text: text, allowUnsafe: false)) return;
+    // Into the history only what is sent, not a paste called off. What
+    // hides characters asks first even on one line.
+    if (!hasHidden(text) && _session.paste(text: text, allowUnsafe: false)) {
+      return _c.line.text(text, _screen);
+    }
     final preview = text.length > 400 ? '${text.substring(0, 400)}…' : text;
+    final lines = '\n'.allMatches(text.trimRight()).length + 1;
     final l = context.l10n;
     final ow = context.ow;
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(l.pasteMultiTitle),
+        // On one line it asks only for what does not show.
+        title: Text(
+          lines > 1 || !hasHidden(text)
+              ? l.pasteMultiTitle
+              : l.pasteHiddenTitle,
+        ),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(l.pasteMultiBody),
+              if (lines > 1 || !hasHidden(text)) Text(l.pasteMultiBody),
               const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: ow.terminal.background,
-                  border: Border.all(color: ow.colors.border),
-                  borderRadius: BorderRadius.circular(ow.shape.radius),
+              _pastePreview(preview),
+              if (hasHidden(text)) ...[
+                const SizedBox(height: 8),
+                Text(
+                  l.pasteHasHidden,
+                  style: TextStyle(fontSize: 12, color: ow.colors.warn),
                 ),
-                child: Text(
-                  preview,
-                  style: TextStyle(
-                    fontFamily: _renderer?.metrics.fontFamily,
-                    color: ow.terminal.foreground,
-                  ),
-                ),
-              ),
+              ],
             ],
           ),
         ),
@@ -487,15 +526,46 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
             onPressed: () => Navigator.pop(context, false),
             child: Text(l.cancel),
           ),
+          // It was pasted on purpose: Enter goes ahead.
           FilledButton(
+            autofocus: true,
             onPressed: () => Navigator.pop(context, true),
             child: Text(l.paste),
           ),
         ],
       ),
     );
-    if (ok == true) _session.paste(text: text, allowUnsafe: true);
+    if (ok == true) {
+      _session.paste(text: text, allowUnsafe: true);
+      _c.line.text(text, _screen);
+    }
     focusNode.requestFocus();
+  }
+
+  /// What is pasted, in the terminal's font and colors, with what would
+  /// not show marked.
+  Widget _pastePreview(String text, {double? fontSize}) {
+    final ow = context.ow;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: ow.terminal.background,
+        border: Border.all(color: ow.colors.border),
+        borderRadius: BorderRadius.circular(ow.shape.radius),
+      ),
+      child: Text.rich(
+        visibleText(
+          text,
+          style: TextStyle(
+            fontFamily: _renderer?.metrics.fontFamily,
+            fontSize: fontSize,
+            color: ow.terminal.foreground,
+          ),
+          mark: TextStyle(color: ow.colors.warn, fontWeight: FontWeight.w700),
+        ),
+      ),
+    );
   }
 
   /// With broadcast, a paste always asks first: where it goes, and what.
@@ -528,25 +598,16 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
               ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 220),
                 child: SingleChildScrollView(
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: ow.terminal.background,
-                      border: Border.all(color: c.border),
-                      borderRadius: BorderRadius.circular(ow.shape.radius),
-                    ),
-                    child: Text(
-                      preview,
-                      style: TextStyle(
-                        fontFamily: _renderer?.metrics.fontFamily,
-                        fontSize: 12,
-                        color: ow.terminal.foreground,
-                      ),
-                    ),
-                  ),
+                  child: _pastePreview(preview, fontSize: 12),
                 ),
               ),
+              if (hasHidden(text)) ...[
+                const SizedBox(height: 8),
+                Text(
+                  l.pasteHasHidden,
+                  style: TextStyle(fontSize: 12, color: c.warn),
+                ),
+              ],
               const SizedBox(height: 10),
               Text(
                 l.broadcastPasteAlways,
@@ -560,15 +621,14 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
             onPressed: () => Navigator.pop(context),
             child: Text(l.cancel),
           ),
+          // The safe one of the two that paste: Enter does that.
           OutlinedButton(
+            autofocus: true,
             onPressed: () => Navigator.pop(context, false),
             child: Text(l.pasteOnlyHere(_c.displayTitle)),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: c.warn,
-              foregroundColor: c.surface,
-            ),
+            style: warnButtonStyle(c),
             onPressed: () => Navigator.pop(context, true),
             child: Text(l.pasteInPanes(names.length)),
           ),
@@ -582,6 +642,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     for (final s in targets) {
       s.paste(text: text, allowUnsafe: true);
     }
+    _c.line.text(text, _screen);
     focusNode.requestFocus();
   }
 
@@ -590,6 +651,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   void _onFocusChange() {
     final has = focusNode.hasFocus;
     if (!_c.isDisposed) _session.focus(gained: has);
+    _renderer?.setFocused(has);
     if (has) {
       _openInput();
     } else {
@@ -934,9 +996,9 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(settingsProvider.select((s) => s.optionAsAlt), (_, on) {
-      _optionAsAlt = on;
-      _session.setOptionAsAlt(enabled: on);
+    ref.listen(settingsProvider.select((s) => s.optionAsAlt), (_, which) {
+      _optionAsAlt = which;
+      _session.setOptionAsAlt(which: _optionAlt(which));
     });
     ref.listen(
       settingsProvider.select((s) => (s.cursor, s.cursorBlink)),
@@ -981,6 +1043,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
                           renderer: r,
                           cols: _cols,
                           rows: _rows,
+                          cursorLabel: context.l10n.terminalCursorLine,
                         ),
                         if (_link case final link?)
                           Positioned(
@@ -1131,3 +1194,10 @@ class _SessionScreen implements LineScreen {
     return t == null ? null : (text: t.text, after: t.after);
   }
 }
+
+OptionAlt _optionAlt(OptionAltChoice c) => switch (c) {
+  OptionAltChoice.off => OptionAlt.off,
+  OptionAltChoice.both => OptionAlt.both,
+  OptionAltChoice.left => OptionAlt.left,
+  OptionAltChoice.right => OptionAlt.right,
+};

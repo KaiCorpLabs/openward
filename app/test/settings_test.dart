@@ -104,4 +104,22 @@ void main() {
     expect(Settings.fromJson(s.toJson()), s);
     expect(Settings.fromJson({'font_size': 13}).readOsRelease, isFalse);
   });
+
+  /// Option as Alt was a yes or no; now it says which.
+  test('the Option keys as Alt: the old yes or no, and which', () {
+    expect(
+      Settings.fromJson({'option_as_alt': true}).optionAsAlt,
+      OptionAltChoice.both,
+    );
+    expect(
+      Settings.fromJson({'option_as_alt': false}).optionAsAlt,
+      OptionAltChoice.off,
+    );
+    final left = const Settings(optionAsAlt: OptionAltChoice.left);
+    expect(Settings.fromJson(left.toJson()).optionAsAlt, OptionAltChoice.left);
+    expect(
+      Settings.fromJson({'option_as_alt': 'odd'}).optionAsAlt,
+      OptionAltChoice.off,
+    );
+  });
 }

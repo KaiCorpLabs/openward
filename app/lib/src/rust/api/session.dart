@@ -7,12 +7,15 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `event_view`, `failure_view`, `into_answer`, `prompt_view`
+// These functions are ignored because they are not marked as `pub`: `event_view`, `failure_view`, `into_answer`, `packed`, `prompt_view`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DartSink`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<TerminalSession>>
 abstract class TerminalSession implements RustOpaqueInterface {
+  /// Forgets the history above the screen; the program is not told.
+  void clearHistory();
+
   void clearSelection();
 
   /// Ends the connection or program; the screen stays until dropped.
@@ -109,14 +112,16 @@ abstract class TerminalSession implements RustOpaqueInterface {
   /// The cursor until a program sets its own, and whether it blinks.
   void setCursor({required CursorStyle style, required bool blink});
 
-  void setOptionAsAlt({required bool enabled});
+  void setOptionAsAlt({required OptionAlt which});
 
-  /// The UI theme, which programs ask for to pick their colors. Colors
-  /// are `0xRRGGBB`.
+  /// The UI theme, which programs ask for to pick their colors: its
+  /// default colors and its 256. Colors are `0xRRGGBB`.
   void setTheme({
     required bool dark,
     required int foreground,
     required int background,
+    required int cursor,
+    required List<int> palette,
   });
 
   /// Text from an input method or soft keyboard.
@@ -435,6 +440,9 @@ enum NetKind {
   proxyCommand,
   other,
 }
+
+/// macOS: which Option keys act as Alt.
+enum OptionAlt { off, both, left, right }
 
 enum PersistenceKind {
   /// A new tmux session.
@@ -878,6 +886,13 @@ class TermFrame {
   final bool mouseTracking;
   final bool bracketedPaste;
   final bool reportAllKeys;
+  final bool keypadApplication;
+
+  /// `0xRRGGBB` the program set for itself over the theme (OSC 10, 11,
+  /// 12); its palette changes come painted in the frame.
+  final int? programForeground;
+  final int? programBackground;
+  final int? programCursor;
   final bool altScreen;
   final String title;
 
@@ -897,6 +912,10 @@ class TermFrame {
     required this.mouseTracking,
     required this.bracketedPaste,
     required this.reportAllKeys,
+    required this.keypadApplication,
+    this.programForeground,
+    this.programBackground,
+    this.programCursor,
     required this.altScreen,
     required this.title,
     required this.selection,
@@ -911,6 +930,10 @@ class TermFrame {
       mouseTracking.hashCode ^
       bracketedPaste.hashCode ^
       reportAllKeys.hashCode ^
+      keypadApplication.hashCode ^
+      programForeground.hashCode ^
+      programBackground.hashCode ^
+      programCursor.hashCode ^
       altScreen.hashCode ^
       title.hashCode ^
       selection.hashCode ^
@@ -927,6 +950,10 @@ class TermFrame {
           mouseTracking == other.mouseTracking &&
           bracketedPaste == other.bracketedPaste &&
           reportAllKeys == other.reportAllKeys &&
+          keypadApplication == other.keypadApplication &&
+          programForeground == other.programForeground &&
+          programBackground == other.programBackground &&
+          programCursor == other.programCursor &&
           altScreen == other.altScreen &&
           title == other.title &&
           selection == other.selection &&

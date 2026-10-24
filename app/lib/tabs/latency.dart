@@ -26,6 +26,7 @@ class LatencyChip extends StatelessWidget {
     final rtt = c.rttMs;
     if (rtt == null) return const SizedBox.shrink();
     final ow = context.ow;
+    final l = context.l10n;
     final color = c.rttHigh ? ow.colors.warn : ow.colors.textMuted;
     return Tooltip(
       key: const ValueKey('status.latency'),
@@ -39,28 +40,40 @@ class LatencyChip extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       preferBelow: false,
       waitDuration: const Duration(milliseconds: 300),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(ow.shape.radius),
+      child: Semantics(
+        button: true,
+        label: c.rttHigh ? l.latencyHighLabel(rtt) : l.latencyLabel(rtt),
         onTap: () => showConnectionInfo(context, c),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                context.l10n.milliseconds(rtt),
-                style: monoStyle(
-                  context,
-                  size: 12,
-                  color: color,
-                ).copyWith(fontWeight: FontWeight.w600),
-              ),
-              // A line needs two points.
-              if (c.rttHistory.length > 1) ...[
-                const SizedBox(width: 6),
-                Sparkline(values: c.rttHistory, color: color),
+        excludeSemantics: true,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(ow.shape.radius),
+          onTap: () => showConnectionInfo(context, c),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // High: more than its color says it.
+                if (c.rttHigh)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 3),
+                    child: Icon(Icons.arrow_drop_up, size: 16, color: color),
+                  ),
+                Text(
+                  l.milliseconds(rtt),
+                  style: monoStyle(
+                    context,
+                    size: 12,
+                    color: color,
+                  ).copyWith(fontWeight: FontWeight.w600),
+                ),
+                // A line needs two points.
+                if (c.rttHistory.length > 1) ...[
+                  const SizedBox(width: 6),
+                  Sparkline(values: c.rttHistory, color: color),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

@@ -10,6 +10,8 @@ import '../l10n/l10n.dart';
 import '../src/rust/api/workspaces.dart';
 import '../tabs/tabs.dart';
 import '../ui/announcer.dart';
+import '../ui/confirm.dart';
+import '../ui/page.dart';
 import '../ui/tokens.dart';
 import 'workspaces.dart';
 
@@ -227,27 +229,14 @@ class _WorkspacesPageState extends ConsumerState<WorkspacesPage> {
 
   Future<void> _delete(WorkspaceView w) async {
     final l = context.l10n;
-    final c = context.ow.colors;
-    final sure = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l.deleteWorkspaceTitle(w.spec.name)),
-        content: Text(l.deleteWorkspaceBody),
-        actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l.cancel),
-          ),
-          FilledButton(
-            key: const ValueKey('workspace.delete.confirm'),
-            style: FilledButton.styleFrom(backgroundColor: c.danger),
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l.delete),
-          ),
-        ],
-      ),
+    final sure = await confirmDestructive(
+      context,
+      title: l.deleteWorkspaceTitle(w.spec.name),
+      body: l.deleteWorkspaceBody,
+      action: l.delete,
+      actionKey: const ValueKey('workspace.delete.confirm'),
     );
-    if (sure != true || !mounted) return;
+    if (!sure || !mounted) return;
     await runAction(
       context,
       () => ref.read(openWardProvider).delete(id: w.id),
@@ -260,61 +249,36 @@ class _WorkspacesPageState extends ConsumerState<WorkspacesPage> {
   Widget build(BuildContext context) {
     final c = context.ow.colors;
     final l = context.l10n;
-    final theme = Theme.of(context);
     final all = ref.watch(workspacesProvider);
     final open = captureTabs(ref.watch(tabsProvider));
     return ColoredBox(
       color: c.surface,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
+        padding: pagePadding,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Semantics(
-                      header: true,
-                      child: Text(
-                        l.workspaces,
-                        style: theme.textTheme.titleLarge,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 720),
-                      child: Text(
-                        l.workspacesIntro,
-                        style: TextStyle(color: c.textMuted),
-                      ),
-                    ),
-                  ],
+          OwPageHeader(
+            title: l.workspaces,
+            intro: l.workspacesIntro,
+            // Greyed out, it says why.
+            action: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                FilledButton.icon(
+                  key: const ValueKey('workspaces.save'),
+                  onPressed: open.isEmpty ? null : _save,
+                  icon: const Icon(Icons.bookmark_add_outlined, size: 16),
+                  label: Text(l.saveOpenTabs),
                 ),
-              ),
-              const SizedBox(width: 16),
-              // Greyed out, it says why.
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  FilledButton.icon(
-                    key: const ValueKey('workspaces.save'),
-                    onPressed: open.isEmpty ? null : _save,
-                    icon: const Icon(Icons.bookmark_add_outlined, size: 16),
-                    label: Text(l.saveOpenTabs),
-                  ),
-                  if (open.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Text(
-                        l.saveTabsNeedsTabs,
-                        style: TextStyle(fontSize: 12, color: c.textMuted),
-                      ),
+                if (open.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      l.saveTabsNeedsTabs,
+                      style: TextStyle(fontSize: 12, color: c.textMuted),
                     ),
-                ],
-              ),
-            ],
+                  ),
+              ],
+            ),
           ),
           if (_note != null || _error != null)
             Padding(
@@ -328,24 +292,10 @@ class _WorkspacesPageState extends ConsumerState<WorkspacesPage> {
             ),
           const SizedBox(height: 16),
           if (all.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 40),
-              child: Column(
-                children: [
-                  Icon(Icons.dashboard_outlined, size: 36, color: c.textSubtle),
-                  const SizedBox(height: 12),
-                  Text(
-                    l.noWorkspaces,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    l.noWorkspacesBody,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: c.textMuted),
-                  ),
-                ],
-              ),
+            OwEmptyState(
+              icon: Icons.dashboard_outlined,
+              title: l.noWorkspaces,
+              body: l.noWorkspacesBody,
             )
           else
             for (final w in all) _card(context, w, canUpdate: open.isNotEmpty),

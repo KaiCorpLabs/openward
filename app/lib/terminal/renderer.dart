@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
 import 'frame.dart';
@@ -53,7 +54,36 @@ class TerminalRenderer extends ChangeNotifier {
 
   /// Off during the dark half of a blink.
   bool cursorOn = true;
+
+  /// Whether the terminal has the keyboard: without it, a block cursor is
+  /// hollow.
+  bool focused = true;
   List<ui.Picture?> _rows = [];
+
+  /// Each visible row's spans and its text, for the cursor and for screen
+  /// readers: only the rows a frame repaints are made again.
+  List<List<Span>?> _spans = [];
+  List<String> _text = [];
+
+  /// Goes up when a row's text changes.
+  int textVersion = 0;
+
+  /// Told when what a screen reader hears changes: a row's text, the
+  /// cursor's row, the keyboard coming or going. Not with every repaint.
+  final screen = ValueNotifier<int>(0);
+  (int, int?, bool) _heard = (0, null, true);
+
+  void _tellScreen() {
+    final now = (
+      textVersion,
+      displayOffset == 0 && (cursor?.visible ?? false) ? cursor?.row : null,
+      focused,
+    );
+    if (now == _heard) return;
+    _heard = now;
+    screen.value++;
+  }
+
   final Paint _paint = Paint();
   final Paint _atlasPaint = Paint()..filterQuality = FilterQuality.low;
 
@@ -91,6 +121,16 @@ class TerminalRenderer extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setFocused(bool value) {
+    if (value == focused) return;
+    focused = value;
+    notifyListeners();
+    _tellScreen();
+  }
+
+  /// A visible row's text, as a screen reader says it.
+  String rowText(int row) => row < _text.length ? _text[row] : '';
+
   /// `fg`, or the nearest color that reads on `bg` (minimum contrast).
   /// Programs that paint in 24-bit color (lolcat, image previews) bring
   /// new pairs all the time: past a few thousand the cache starts over.
@@ -111,8 +151,14 @@ class TerminalRenderer extends ChangeNotifier {
       cols = frame.cols;
       rows = frame.rows;
       _rows = List<ui.Picture?>.filled(rows, null);
+      _spans = List<List<Span>?>.filled(rows, null);
+      _text = List<String>.filled(rows, '');
+      textVersion++;
     } else if (frame.full) {
       _disposeRows();
+      _spans.fillRange(0, _spans.length, null);
+      _text.fillRange(0, _text.length, '');
+      textVersion++;
     }
     final atlas = _atlas;
     if (atlas != null) {
@@ -132,10 +178,17 @@ class TerminalRenderer extends ChangeNotifier {
       if (line.index >= rows) continue;
       _rows[line.index]?.dispose();
       _rows[line.index] = line.spans.isEmpty ? null : _record(line.spans);
+      _spans[line.index] = line.spans.isEmpty ? null : line.spans;
+      final text = _lineText(line.spans);
+      if (text != _text[line.index]) {
+        _text[line.index] = text;
+        textVersion++;
+      }
     }
     cursor = frame.cursor;
     displayOffset = frame.displayOffset;
     notifyListeners();
+    _tellScreen();
     return sw.elapsedMicroseconds;
   }
 
@@ -351,15 +404,31 @@ class TerminalRenderer extends ChangeNotifier {
     }
     final c = cursor;
     if (c != null && c.visible && cursorOn && displayOffset == 0) {
-      final rect = Rect.fromLTWH(c.col * cw, c.row * ch, cw, ch);
+      // A wide character takes the cursor whole.
+      final cell = cellAt(c.row, c.col);
+      final rect = Rect.fromLTWH(
+        (cell?.col ?? c.col) * cw,
+        c.row * ch,
+        (cell?.cells ?? 1) * cw,
+        ch,
+      );
       final paint = _paint..color = palette.cursor;
       switch (c.shape) {
-        case CursorShape.block:
-          canvas.drawRect(
-            rect,
-            paint..color = palette.cursor.withValues(alpha: 0.7),
-          );
-        case CursorShape.hollowBlock:
+        // Solid with its character in the background's color, as in any
+        // terminal; hollow while another place has the keyboard.
+        case CursorShape.block when focused:
+          canvas.drawRect(rect, paint);
+          if (cell != null) {
+            final p = metrics.paragraph(
+              cell.text,
+              color: palette.background,
+              bold: cell.attrs & Attr.bold != 0,
+              italic: cell.attrs & Attr.italic != 0,
+            );
+            canvas.drawParagraph(p, rect.topLeft);
+            p.dispose();
+          }
+        case CursorShape.block || CursorShape.hollowBlock:
           canvas.drawRect(
             rect.deflate(0.5),
             Paint()
@@ -397,6 +466,43 @@ class TerminalRenderer extends ChangeNotifier {
     return data?.buffer.asUint8List();
   }
 
+  /// The character under (`row`, `col`): where its cell starts, how many
+  /// it takes and how it is drawn; null on an empty cell.
+  @visibleForTesting
+  ({String text, int col, int cells, int attrs})? cellAt(int row, int col) {
+    if (row >= _spans.length) return null;
+    for (final s in _spans[row] ?? const <Span>[]) {
+      if (col < s.col || col >= s.col + s.width) continue;
+      if (s.attrs & Attr.hidden != 0) return null;
+      final clusters = _clusters(s.text);
+      if (s.width > 1 && clusters.length == 1) {
+        return (
+          text: clusters.single,
+          col: s.col,
+          cells: s.width,
+          attrs: s.attrs,
+        );
+      }
+      final i = col - s.col;
+      if (i >= clusters.length || clusters[i].trim().isEmpty) return null;
+      return (text: clusters[i], col: col, cells: 1, attrs: s.attrs);
+    }
+    return null;
+  }
+
+  /// A row's text with its gaps as spaces, without those at the end.
+  static String _lineText(List<Span> spans) {
+    final out = StringBuffer();
+    var at = 0;
+    for (final s in spans) {
+      if (s.attrs & Attr.hidden != 0) continue;
+      if (s.col > at) out.write(' ' * (s.col - at));
+      out.write(s.text);
+      at = s.col + s.width;
+    }
+    return out.toString().trimRight();
+  }
+
   void _disposeRows() {
     for (var i = 0; i < _rows.length; i++) {
       _rows[i]?.dispose();
@@ -408,6 +514,7 @@ class TerminalRenderer extends ChangeNotifier {
   void dispose() {
     _disposeRows();
     _atlas?.dispose();
+    screen.dispose();
     super.dispose();
   }
 }
@@ -420,11 +527,16 @@ class TerminalGrid extends StatelessWidget {
     required this.renderer,
     required this.cols,
     required this.rows,
+    this.cursorLabel = '',
   });
 
   final TerminalRenderer renderer;
   final int cols;
   final int rows;
+
+  /// What a screen reader calls the cursor's row, a text field whose value
+  /// is that line.
+  final String cursorLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -433,10 +545,15 @@ class TerminalGrid extends StatelessWidget {
       width: math.max(1, cols) * m.width,
       height: math.max(1, rows) * m.height,
       child: RepaintBoundary(
-        child: CustomPaint(
-          painter: _TerminalPainter(renderer),
-          isComplex: true,
-          willChange: true,
+        // A new painter when what is heard changes, for its semantics; the
+        // picture itself repaints with the renderer.
+        child: ValueListenableBuilder(
+          valueListenable: renderer.screen,
+          builder: (context, _, _) => CustomPaint(
+            painter: _TerminalPainter(renderer, cursorLabel),
+            isComplex: true,
+            willChange: true,
+          ),
         ),
       ),
     );
@@ -444,9 +561,15 @@ class TerminalGrid extends StatelessWidget {
 }
 
 class _TerminalPainter extends CustomPainter {
-  _TerminalPainter(this.renderer) : super(repaint: renderer);
+  _TerminalPainter(this.renderer, this.cursorLabel)
+    : _heard = renderer.screen.value,
+      super(repaint: renderer);
 
   final TerminalRenderer renderer;
+  final String cursorLabel;
+
+  /// The renderer's [TerminalRenderer.screen] when this was made.
+  final int _heard;
 
   @override
   void paint(Canvas canvas, Size size) => renderer.paint(canvas, size);
@@ -454,4 +577,42 @@ class _TerminalPainter extends CustomPainter {
   @override
   bool shouldRepaint(_TerminalPainter oldDelegate) =>
       oldDelegate.renderer != renderer;
+
+  /// The screen for a screen reader, a node per row that has text (ADR-002,
+  /// condition 4); the cursor's row also as a text field, so it is read
+  /// as it is typed.
+  @override
+  SemanticsBuilderCallback get semanticsBuilder => (size) {
+    final r = renderer;
+    final ch = r.metrics.height;
+    final cursor = r.displayOffset == 0 && (r.cursor?.visible ?? false)
+        ? r.cursor!.row
+        : -1;
+    return [
+      for (var i = 0; i < r.rows; i++)
+        if (i == cursor || r.rowText(i).isNotEmpty)
+          CustomPainterSemantics(
+            key: ValueKey(i),
+            rect: Rect.fromLTWH(0, i * ch, size.width, ch),
+            properties: i == cursor
+                ? SemanticsProperties(
+                    textField: true,
+                    label: cursorLabel,
+                    value: r.rowText(i),
+                    focused: r.focused,
+                    textDirection: TextDirection.ltr,
+                  )
+                : SemanticsProperties(
+                    label: r.rowText(i),
+                    textDirection: TextDirection.ltr,
+                  ),
+          ),
+    ];
+  };
+
+  @override
+  bool shouldRebuildSemantics(_TerminalPainter oldDelegate) =>
+      oldDelegate.renderer != renderer ||
+      oldDelegate._heard != _heard ||
+      oldDelegate.cursorLabel != cursorLabel;
 }

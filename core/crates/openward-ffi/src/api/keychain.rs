@@ -4,6 +4,7 @@
 
 use flutter_rust_bridge::frb;
 use openward_app::keychain::{self, KeyFile, NewKey};
+use zeroize::Zeroizing;
 
 use super::app::OpenWard;
 
@@ -52,6 +53,9 @@ pub enum SshKeyFailureKind {
     NotAKey,
     Io,
     Make,
+    WrongPassphrase,
+    /// PEM and PuTTY keys change their passphrase with their program.
+    NotOpenSsh,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -66,6 +70,21 @@ pub struct SshKeyResult {
     pub failure: Option<SshKeyFailure>,
 }
 
+fn failure(e: keychain::KeyError) -> SshKeyFailure {
+    SshKeyFailure {
+        message: e.to_string(),
+        kind: match e {
+            keychain::KeyError::Exists(_) => SshKeyFailureKind::Exists,
+            keychain::KeyError::BadName(_) => SshKeyFailureKind::BadName,
+            keychain::KeyError::NotAKey => SshKeyFailureKind::NotAKey,
+            keychain::KeyError::Io(_) => SshKeyFailureKind::Io,
+            keychain::KeyError::Make(_) => SshKeyFailureKind::Make,
+            keychain::KeyError::WrongPassphrase => SshKeyFailureKind::WrongPassphrase,
+            keychain::KeyError::NotOpenSsh => SshKeyFailureKind::NotOpenSsh,
+        },
+    }
+}
+
 fn result(r: Result<KeyFile, keychain::KeyError>) -> SshKeyResult {
     match r {
         Ok(k) => SshKeyResult {
@@ -74,16 +93,7 @@ fn result(r: Result<KeyFile, keychain::KeyError>) -> SshKeyResult {
         },
         Err(e) => SshKeyResult {
             key: None,
-            failure: Some(SshKeyFailure {
-                message: e.to_string(),
-                kind: match e {
-                    keychain::KeyError::Exists(_) => SshKeyFailureKind::Exists,
-                    keychain::KeyError::BadName(_) => SshKeyFailureKind::BadName,
-                    keychain::KeyError::NotAKey => SshKeyFailureKind::NotAKey,
-                    keychain::KeyError::Io(_) => SshKeyFailureKind::Io,
-                    keychain::KeyError::Make(_) => SshKeyFailureKind::Make,
-                },
-            }),
+            failure: Some(failure(e)),
         },
     }
 }
@@ -128,6 +138,50 @@ impl OpenWard {
         result(keychain::import(self.app.local(), &name, &text, || {
             keychain::users(self.app.local(), &self.app.vault())
         }))
+    }
+
+    /// Deletes a key of `~/.ssh` and its `.pub` and certificate; None if
+    /// it went.
+    pub fn delete_key(&self, path: String) -> Option<SshKeyFailure> {
+        keychain::delete(self.app.local(), &path).err().map(failure)
+    }
+
+    /// Renames a key and its companions, and the settings that name it.
+    pub fn rename_key(&self, path: String, name: String) -> SshKeyResult {
+        result(keychain::rename(
+            self.app.local(),
+            &mut self.app.vault(),
+            &path,
+            &name,
+        ))
+    }
+
+    /// Puts a key behind `new` (none if empty), opened with `old`; None if
+    /// it went.
+    pub fn change_key_passphrase(
+        &self,
+        path: String,
+        old: Option<String>,
+        new: Option<String>,
+    ) -> Option<SshKeyFailure> {
+        let old = old.map(Zeroizing::new);
+        let new = new.map(Zeroizing::new);
+        keychain::change_passphrase(
+            self.app.local(),
+            &path,
+            old.as_deref().map(String::as_str),
+            new.as_deref().map(String::as_str),
+        )
+        .err()
+        .map(failure)
+    }
+
+    /// Where a key's file is, `~` expanded: to export it or show it.
+    #[frb(sync)]
+    pub fn key_file_path(&self, path: String) -> String {
+        keychain::absolute(self.app.local(), &path)
+            .to_string_lossy()
+            .into_owned()
     }
 
     /// A key's public half, as an `authorized_keys` line.

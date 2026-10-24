@@ -11,6 +11,7 @@ import '../hosts/import_ssh_config.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/tunnels.dart';
 import '../tabs/messages.dart';
+import '../ui/page.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import 'tunnel_editor.dart';
@@ -162,7 +163,6 @@ class _TunnelsPageState extends ConsumerState<TunnelsPage> {
     final ow = context.ow;
     final c = ow.colors;
     final l = context.l10n;
-    final theme = Theme.of(context);
     return ColoredBox(
       color: c.surface,
       child: ListenableBuilder(
@@ -171,88 +171,62 @@ class _TunnelsPageState extends ConsumerState<TunnelsPage> {
           final all = _board.tunnels;
           final shown = all.where(_matches).toList();
           return ListView(
-            padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
+            padding: pagePadding,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 620),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Semantics(
-                              header: true,
-                              child: Text(
-                                l.tunnels,
-                                style: theme.textTheme.titleLarge,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              l.tunnelsIntro,
-                              style: TextStyle(color: c.textMuted),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      OutlinedButton(
-                        onPressed: _import,
-                        child: Text(l.importFromSshConfig),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton.icon(
-                        key: const ValueKey('tunnels.new'),
-                        onPressed: () => showTunnelEditor(context, ref),
-                        icon: const Icon(Icons.add, size: 16),
-                        label: Text(l.newTunnel),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              if (all.isEmpty)
-                _empty(context)
-              else ...[
-                Row(
+              OwPageHeader(
+                title: l.tunnels,
+                intro: l.tunnelsIntro,
+                action: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    SizedBox(
-                      width: 360,
-                      height: 34,
-                      child: TextField(
-                        controller: _filter,
-                        onChanged: (_) => setState(() {}),
-                        style: const TextStyle(fontSize: 13),
-                        decoration: InputDecoration(
-                          isDense: true,
-                          hintText: l.filterTunnels,
-                          prefixIcon: Icon(
-                            Icons.search,
-                            size: 16,
-                            color: c.textSubtle,
-                          ),
-                        ),
-                      ),
+                    OutlinedButton(
+                      onPressed: _import,
+                      child: Text(l.importFromSshConfig),
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      l.tunnelsCount(all.length, _board.open),
-                      style: TextStyle(fontSize: 12, color: c.textMuted),
+                    const SizedBox(width: 8),
+                    FilledButton.icon(
+                      key: const ValueKey('tunnels.new'),
+                      onPressed: () => showTunnelEditor(context, ref),
+                      icon: const Icon(Icons.add, size: 16),
+                      label: Text(l.newTunnel),
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 16),
+              if (all.isEmpty)
+                OwEmptyState(
+                  icon: Icons.swap_horiz,
+                  title: l.noTunnels,
+                  body: l.noTunnelsBody,
+                )
+              else ...[
+                OwFilterField(
+                  controller: _filter,
+                  hint: l.filterTunnels,
+                  onChanged: (_) => setState(() {}),
+                  count: l.tunnelsCount(all.length, _board.open),
+                ),
                 const SizedBox(height: 12),
-                _table(context, shown),
+                if (shown.isEmpty)
+                  OwEmptyState.noMatch(
+                    filter: _filter.text.trim(),
+                    onClear: () => setState(_filter.clear),
+                  )
+                else
+                  OwDataTable(
+                    widths: _widths,
+                    headings: [
+                      l.name,
+                      l.tunnelType,
+                      l.forward,
+                      l.host,
+                      l.onConnect,
+                      l.state,
+                    ],
+                    hideBelow: const [null, 560, null, 660, 760, null],
+                    rows: [for (final t in shown) _row(context, t)],
+                  ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -274,83 +248,7 @@ class _TunnelsPageState extends ConsumerState<TunnelsPage> {
     );
   }
 
-  Widget _empty(BuildContext context) {
-    final c = context.ow.colors;
-    final l = context.l10n;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 48),
-      child: Column(
-        children: [
-          Icon(Icons.swap_horiz, size: 36, color: c.textSubtle),
-          const SizedBox(height: 12),
-          Text(
-            l.noTunnels,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            l.noTunnelsBody,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: c.textMuted),
-          ),
-        ],
-      ),
-    );
-  }
-
   static const _widths = [1.35, 0.7, 1.9, 0.85, 0.75, 1.7];
-
-  Widget _cells(List<Widget> cells) => Row(
-    children: [
-      for (var i = 0; i < cells.length; i++)
-        Expanded(
-          flex: (_widths[i] * 100).round(),
-          child: Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: cells[i],
-          ),
-        ),
-    ],
-  );
-
-  Widget _table(BuildContext context, List<TunnelView> rows) {
-    final ow = context.ow;
-    final c = ow.colors;
-    final l = context.l10n;
-    final head = TextStyle(
-      fontSize: 12,
-      fontWeight: FontWeight.w600,
-      letterSpacing: 0.6,
-      color: c.textSubtle,
-    );
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        border: Border.all(color: c.border),
-        borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
-      ),
-      child: Column(
-        children: [
-          Container(
-            color: c.sunken,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: _cells([
-              for (final h in [
-                l.name,
-                l.tunnelType,
-                l.forward,
-                l.host,
-                l.onConnect,
-                l.state,
-              ])
-                Text(h.toUpperCase(), style: head),
-            ]),
-          ),
-          for (final t in rows) _row(context, t),
-        ],
-      ),
-    );
-  }
 
   Widget _row(BuildContext context, TunnelView t) {
     final ow = context.ow;
@@ -363,12 +261,7 @@ class _TunnelsPageState extends ConsumerState<TunnelsPage> {
       _ => c.textMuted,
     };
     final suggestion = failed ? suggestedPort(ref, t) : null;
-    final small = OutlinedButton.styleFrom(
-      minimumSize: const Size(0, 28),
-      visualDensity: VisualDensity.standard,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      textStyle: smallButtonText(context),
-    );
+    final small = compactButtonStyle(context);
     final action = switch (t.state) {
       TunnelStateKind.open => OutlinedButton(
         key: ValueKey('tunnel.close.${t.spec.label}'),
@@ -382,9 +275,10 @@ class _TunnelsPageState extends ConsumerState<TunnelsPage> {
       ),
       _ => OutlinedButton(
         key: ValueKey('tunnel.open.${t.spec.label}'),
-        style: small.copyWith(
-          foregroundColor: WidgetStatePropertyAll(c.accentText),
-          backgroundColor: WidgetStatePropertyAll(c.accentSoft),
+        style: compactButtonStyle(
+          context,
+          foreground: c.accentText,
+          background: c.accentSoft,
         ),
         onPressed: () => openTunnel(context, ref, t),
         child: Text(failed ? l.retry : l.openAction),
@@ -399,9 +293,10 @@ class _TunnelsPageState extends ConsumerState<TunnelsPage> {
           decoration: BoxDecoration(
             border: Border(top: BorderSide(color: c.border)),
           ),
+          // The cells, and under them why it failed: more than a row.
           child: Column(
             children: [
-              _cells([
+              OwDataTable.cells(_widths, [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -571,14 +466,18 @@ class _TunnelChipState extends ConsumerState<TunnelChip> {
           child: OutlinedButton.icon(
             key: const ValueKey('status.tunnels'),
             onPressed: _popover,
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(0, 22),
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              textStyle: smallButtonText(context),
-              foregroundColor: open > 0 ? c.accentText : c.textMuted,
-              backgroundColor: open > 0 ? c.accentSoft : null,
-              side: BorderSide(color: open > 0 ? c.accent : c.border),
-            ),
+            // 28: the least a control in a line of text takes.
+            style:
+                compactButtonStyle(
+                  context,
+                  foreground: open > 0 ? c.accentText : c.textMuted,
+                  background: open > 0 ? c.accentSoft : null,
+                  line: open > 0 ? c.accent : c.border,
+                ).copyWith(
+                  padding: const WidgetStatePropertyAll(
+                    EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                ),
             icon: const Icon(Icons.swap_horiz, size: 14),
             label: Text(open > 0 ? l.tunnelsOpenCount(open) : l.tunnels),
           ),
@@ -746,10 +645,7 @@ class _TunnelNoticesState extends ConsumerState<TunnelNotices> {
                       if (suggestedPort(ref, t) case final port?)
                         OutlinedButton(
                           onPressed: () => useOtherPort(context, ref, t, port),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(0, 28),
-                            side: BorderSide(color: c.warnLine),
-                          ),
+                          style: compactButtonStyle(context, line: c.warnLine),
                           child: Text(l.usePort(port)),
                         ),
                       TextButton(

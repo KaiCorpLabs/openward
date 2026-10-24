@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openward/l10n/app_localizations_en.dart';
 import 'package:openward/core/providers.dart';
 import 'package:openward/l10n/app_localizations_es.dart';
 import 'package:openward/src/rust/api/vault.dart';
@@ -75,5 +76,17 @@ void main() {
       groups: const [],
     );
     expect([for (final h in library.favorites) h.label], ['c', 'd', 'a']);
+  });
+
+  /// A mark of the four, made in Spanish, reads in English in English;
+  /// one of the user's own stays as they wrote it.
+  test('the built-in marks read in the interface\'s language', () {
+    final es = AppLocalizationsEs(), en = AppLocalizationsEn();
+    final made = envPresets(es).first;
+    expect(made.name, 'Producción');
+    expect(shownEnv(en, made).name, envPresets(en).first.name);
+    expect(shownEnv(es, made), made);
+    const own = EnvironmentView(name: 'Cliente', short: 'cli', color: 'red');
+    expect(shownEnv(en, own), own);
   });
 }

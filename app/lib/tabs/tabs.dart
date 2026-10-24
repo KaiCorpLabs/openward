@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/address.dart';
 import '../core/providers.dart';
 import '../core/settings.dart';
+import '../l10n/l10n.dart';
 import '../home/recent.dart';
 import '../sftp/sftp_controller.dart';
 import '../sftp/transfers.dart';
@@ -226,8 +227,12 @@ class TabsNotifier extends Notifier<TabsState> {
   void openAddress(QuickTarget target) =>
       _add(_controller(label: target.label, target: target));
 
+  /// A local shell's name, in the interface's language.
+  String get _localLabel =>
+      stringsFor(ref.read(settingsProvider).language).localShell;
+
   /// A new tab with the user's shell on this machine.
-  void openLocal() => _add(_controller(label: 'Local'));
+  void openLocal() => _add(_controller(label: _localLabel));
 
   /// Brings a page to the front, opening it if it is not open.
   void openPage(PageKind page) {
@@ -420,7 +425,7 @@ class TabsNotifier extends Notifier<TabsState> {
             ? _controller(label: host.label, hostId: host.id)
             : target != null
             ? _controller(label: target.label, target: target)
-            : _controller(label: 'Local'),
+            : _controller(label: _localLabel),
       );
 
   /// Adds tabs put together elsewhere, after the open ones, with `front`

@@ -369,6 +369,9 @@ class _SidebarState extends ConsumerState<Sidebar> {
               child: MergeSemantics(
                 child: Semantics(
                   button: true,
+                  // Where a click only selects and a double click connects,
+                  // a screen reader's tap connects.
+                  onTap: connect,
                   customSemanticsActions: {
                     CustomSemanticsAction(label: l.connect): connect,
                     CustomSemanticsAction(label: l.saveAsHost): () =>
@@ -519,7 +522,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
                     system.name.isEmpty
                         ? systemName(l, system.code)
                         : system.name,
-                  ?env?.name,
+                  if (env != null) shownEnv(l, env).name,
                 ].join(', '),
                 child: const SizedBox(width: 10),
               ),
@@ -527,11 +530,22 @@ class _SidebarState extends ConsumerState<Sidebar> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      h.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    // The name and its mark, in words as well as color.
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            h.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                        if (env != null) ...[
+                          const SizedBox(width: 6),
+                          ExcludeSemantics(child: EnvChip(env)),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 1),
                     Text(
@@ -547,7 +561,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
               // when it was last used.
               if (hovered)
                 SizedBox.square(
-                  dimension: 26,
+                  dimension: 28,
                   child: IconButton(
                     key: ValueKey('host.favorite.${h.label}'),
                     tooltip: h.favorite == null
@@ -758,9 +772,10 @@ class _OpenRow extends ConsumerWidget {
               selected: selected,
               label: [
                 title,
-                ?env?.name,
+                if (env != null) shownEnv(l, env).name,
                 if (indices.length > 1) l.openTabsCount(indices.length),
               ].join(', '),
+              onTap: open,
               customSemanticsActions: {
                 CustomSemanticsAction(label: closeText): close,
               },
@@ -836,21 +851,37 @@ HostView? tabHost(OpenTab tab, Library library) {
 /// A tab's mark: its host's system, tinted by its environment; a folder
 /// for its files, the panes' glyph when split, a shell for a local one and
 /// a server's outline for an address not saved.
-Widget tabBadge(OpenTab tab, Library library, {double size = 22}) {
+Widget tabBadge(
+  OpenTab tab,
+  Library library, {
+  double size = 22,
+  bool tagged = false,
+}) {
   final host = tabHost(tab, library);
   final env = host?.environment;
   return switch (tab) {
-    SftpTab() => SystemBadge(icon: Icons.folder_outlined, env: env, size: size),
+    SftpTab() => SystemBadge(
+      icon: Icons.folder_outlined,
+      env: env,
+      size: size,
+      tagged: tagged,
+    ),
     SessionTab(:final panes) when panes.isSplit => SystemBadge(
       icon: Icons.vertical_split_outlined,
       env: env,
       size: size,
+      tagged: tagged,
     ),
     SessionTab(:final panes) => switch (panes.active.controller ??
         panes.controllers.firstOrNull) {
       final c? when c.isLocal => SystemBadge(icon: Icons.terminal, size: size),
       final c? when c.hostId == null => SystemBadge(code: '?', size: size),
-      _ => SystemBadge(code: host?.system?.code, env: env, size: size),
+      _ => SystemBadge(
+        code: host?.system?.code,
+        env: env,
+        size: size,
+        tagged: tagged,
+      ),
     },
     PageTab(:final page) => SystemBadge(icon: pageIcon(page), size: size),
   };
@@ -879,6 +910,7 @@ class _HostsEntry extends ConsumerWidget {
           button: true,
           selected: here,
           label: '${l.hosts}, $summary',
+          onTap: () => ref.read(tabsProvider.notifier).openPage(PageKind.hosts),
           excludeSemantics: true,
           child: FocusOutline(
             radius: ow.shape.radiusLarge,
@@ -1137,7 +1169,7 @@ List<LibraryEntry> libraryEntries(BuildContext context, WidgetRef ref) {
     ),
     (
       page: PageKind.snippets,
-      icon: Icons.terminal,
+      icon: pageIcon(PageKind.snippets),
       label: l.snippets,
       count: ref.watch(snippetsProvider).length,
       open: 0,
@@ -1151,7 +1183,7 @@ List<LibraryEntry> libraryEntries(BuildContext context, WidgetRef ref) {
     ),
     (
       page: PageKind.knownHosts,
-      icon: Icons.verified_user_outlined,
+      icon: pageIcon(PageKind.knownHosts),
       label: l.knownHosts,
       count: known,
       open: 0,
@@ -1166,9 +1198,9 @@ String libraryEntryText(BuildContext context, LibraryEntry e) => [
   if (e.open > 0) context.l10n.openCount(e.open),
 ].join(' · ');
 
-/// What is kept besides hosts, in one row of icons: tunnels, identities,
-/// keys, snippets, workspaces and trusted host keys. Each says its name
-/// and how many on hover.
+/// What is kept besides hosts, by name, in two columns: tunnels,
+/// identities, keys, snippets, workspaces and trusted host keys, each with
+/// how many.
 class _Library extends ConsumerWidget {
   const _Library();
 
@@ -1192,23 +1224,36 @@ class _Library extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
             child: SectionLabel(l.library),
           ),
-          // Again as tunnels open and close.
+          // Again as tunnels open and close. Two columns, each with its
+          // name: six icons alone said little.
           ListenableBuilder(
             listenable: board,
             builder: (context, _) => Consumer(
-              builder: (context, ref, _) => Row(
-                children: [
-                  for (final e in libraryEntries(context, ref))
-                    Expanded(
-                      child: _LibraryButton(
-                        entry: e,
-                        selected: here(e.page),
-                        onPressed: () =>
-                            ref.read(tabsProvider.notifier).openPage(e.page),
+              builder: (context, ref, _) {
+                final entries = libraryEntries(context, ref);
+                Widget button(LibraryEntry e) => _LibraryButton(
+                  entry: e,
+                  selected: here(e.page),
+                  onPressed: () =>
+                      ref.read(tabsProvider.notifier).openPage(e.page),
+                );
+                return Column(
+                  children: [
+                    for (var i = 0; i < entries.length; i += 2)
+                      Row(
+                        children: [
+                          Expanded(child: button(entries[i])),
+                          const SizedBox(width: 2),
+                          Expanded(
+                            child: i + 1 < entries.length
+                                ? button(entries[i + 1])
+                                : const SizedBox.shrink(),
+                          ),
+                        ],
                       ),
-                    ),
-                ],
-              ),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -1242,6 +1287,7 @@ class _LibraryButton extends StatelessWidget {
         button: true,
         selected: selected,
         label: text,
+        onTap: onPressed,
         excludeSemantics: true,
         child: FocusOutline(
           radius: ow.shape.radius + 2,
@@ -1253,26 +1299,48 @@ class _LibraryButton extends StatelessWidget {
               borderRadius: radius,
               onTap: onPressed,
               child: SizedBox(
-                height: 34,
-                child: Center(
-                  child: Stack(
-                    clipBehavior: Clip.none,
+                height: heightForText(context, 30),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
                     children: [
-                      Icon(
-                        e.icon,
-                        size: 17,
-                        color: selected
-                            ? c.text
-                            : e.count == 0
-                            ? c.textSubtle
-                            : c.textMuted,
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Icon(
+                            e.icon,
+                            size: 16,
+                            color: selected
+                                ? c.text
+                                : e.count == 0
+                                ? c.textSubtle
+                                : c.textMuted,
+                          ),
+                          if (e.open > 0)
+                            const Positioned(
+                              right: -4,
+                              top: -3,
+                              child: StatusDot(Status.connected, size: 6),
+                            ),
+                        ],
                       ),
-                      if (e.open > 0)
-                        const Positioned(
-                          right: -4,
-                          top: -3,
-                          child: StatusDot(Status.connected, size: 6),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          e.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: selected ? c.text : c.textMuted,
+                            fontWeight: selected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
                         ),
+                      ),
+                      if (e.count > 0)
+                        Text('${e.count}', style: monoStyle(context, size: 12)),
                     ],
                   ),
                 ),

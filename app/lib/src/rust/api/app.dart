@@ -31,6 +31,14 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// Stops it for good, deleting the file it was writing.
   void cancelTransfer({required BigInt id});
 
+  /// Puts a key behind `new` (none if empty), opened with `old`; None if
+  /// it went.
+  Future<SshKeyFailure?> changeKeyPassphrase({
+    required String path,
+    String? old,
+    String? new_,
+  });
+
   void clearFinishedTransfers();
 
   /// Closes it (and forgets an error it had).
@@ -84,6 +92,10 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// A host, group or known host. A group's contents move up to its
   /// parent; a host other hosts jump through cannot go.
   Future<void> delete({required String id});
+
+  /// Deletes a key of `~/.ssh` and its `.pub` and certificate; None if
+  /// it went.
+  Future<SshKeyFailure?> deleteKey({required String path});
 
   /// Forgets a key: OpenWard's, or the line of the file if it still reads
   /// `text` (a copy of the file goes to `known_hosts.old` first).
@@ -150,6 +162,9 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   /// The local user and computer, as a new key's comment usually says.
   String keyComment();
+
+  /// Where a key's file is, `~` expanded: to export it or show it.
+  String keyFilePath({required String path});
 
   /// What the key at `path` is on this machine, and which of
   /// `certificate_files` (or `<key>-cert.pub`) goes with it.
@@ -247,6 +262,9 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   /// Takes it off the list (cancelling it if it was not finished).
   void removeTransfer({required BigInt id});
+
+  /// Renames a key and its companions, and the settings that name it.
+  Future<SshKeyResult> renameKey({required String path, required String name});
 
   /// Renames it, leaving its tabs as they are.
   Future<BigInt> renameWorkspace({

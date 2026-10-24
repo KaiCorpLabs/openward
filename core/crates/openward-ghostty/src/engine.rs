@@ -210,6 +210,21 @@ pub struct GhosttyEngine {
     select: select::Gesture,
     /// The find bar's search, while one is open; null otherwise.
     search: sys::GhosttySearch,
+    /// The colors programs set for themselves (OSC 4, 10, 11, 12).
+    program: ProgramColors,
+    /// [`ProgramColors::palette`] by index, to look up while encoding.
+    overrides: Vec<Option<[u8; 3]>>,
+}
+
+/// What a program set over the theme's colors: the default foreground,
+/// background and cursor (OSC 10, 11, 12) and palette entries (OSC 4).
+/// None and empty where it set nothing.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ProgramColors {
+    pub foreground: Option<[u8; 3]>,
+    pub background: Option<[u8; 3]>,
+    pub cursor: Option<[u8; 3]>,
+    pub palette: Vec<(u8, [u8; 3])>,
 }
 
 // SAFETY: the handles are only touched through `&mut self` or, for the
@@ -398,6 +413,8 @@ impl GhosttyEngine {
                 input: input::Input::new(),
                 select: select::Gesture::new(),
                 search: ptr::null_mut(),
+                program: ProgramColors::default(),
+                overrides: Vec::new(),
             }
         }
     }
@@ -452,11 +469,34 @@ impl GhosttyEngine {
         }
     }
 
-    /// The UI's theme: whether it is dark, and its default foreground and
-    /// background, which programs ask for (OSC 10/11, DSR 996) to pick
-    /// their own colors.
-    pub fn set_theme(&mut self, dark: bool, foreground: [u8; 3], background: [u8; 3]) {
+    /// The UI's theme: whether it is dark, its default foreground,
+    /// background and cursor, and its 256 colors, which programs ask for
+    /// (OSC 4/10/11/12, DSR 996) to pick their own. What a program set
+    /// for itself stays over it.
+    pub fn set_theme(
+        &mut self,
+        dark: bool,
+        foreground: [u8; 3],
+        background: [u8; 3],
+        cursor: [u8; 3],
+        palette: &[[u8; 3]; 256],
+    ) {
         self.effects.dark = dark;
+        let palette: Vec<sys::GhosttyColorRgb> = palette
+            .iter()
+            .map(|&[r, g, b]| sys::GhosttyColorRgb { r, g, b })
+            .collect();
+        // SAFETY: valid terminal; 256 entries, copied.
+        ok(
+            unsafe {
+                sys::ghostty_terminal_set(
+                    self.term,
+                    sys::GHOSTTY_TERMINAL_OPT_COLOR_PALETTE,
+                    palette.as_ptr().cast::<c_void>(),
+                )
+            },
+            "set palette",
+        );
         for (opt, [r, g, b], what) in [
             (
                 sys::GHOSTTY_TERMINAL_OPT_COLOR_FOREGROUND,
@@ -468,6 +508,7 @@ impl GhosttyEngine {
                 background,
                 "set background",
             ),
+            (sys::GHOSTTY_TERMINAL_OPT_COLOR_CURSOR, cursor, "set cursor"),
         ] {
             let rgb = sys::GhosttyColorRgb { r, g, b };
             // SAFETY: valid terminal; the value is a GhosttyColorRgb*, copied.
@@ -481,6 +522,80 @@ impl GhosttyEngine {
                 },
                 what,
             );
+        }
+    }
+
+    /// What programs set over the theme's colors, as of the last frame.
+    pub fn program_colors(&self) -> &ProgramColors {
+        &self.program
+    }
+
+    /// Reads what programs set over the theme's colors; true if it changed
+    /// since the last time, and the screen has to be painted again.
+    fn refresh_program_colors(&mut self) -> bool {
+        let read = |data| {
+            let mut rgb = sys::GhosttyColorRgb::default();
+            // SAFETY: valid terminal; out type as terminal.h documents.
+            let r = unsafe { self.get_raw(data, &mut rgb) };
+            (r == sys::GHOSTTY_SUCCESS).then_some([rgb.r, rgb.g, rgb.b])
+        };
+        let set_over = |now, default| match (read(now), read(default)) {
+            (Some(now), d) if Some(now) != d => Some(now),
+            _ => None,
+        };
+        let mut current = [sys::GhosttyColorRgb::default(); 256];
+        let mut default = [sys::GhosttyColorRgb::default(); 256];
+        // SAFETY: as above; 256-entry arrays.
+        unsafe {
+            self.get_raw(sys::GHOSTTY_TERMINAL_DATA_COLOR_PALETTE, &mut current);
+            self.get_raw(
+                sys::GHOSTTY_TERMINAL_DATA_COLOR_PALETTE_DEFAULT,
+                &mut default,
+            );
+        }
+        let now = ProgramColors {
+            foreground: set_over(
+                sys::GHOSTTY_TERMINAL_DATA_COLOR_FOREGROUND,
+                sys::GHOSTTY_TERMINAL_DATA_COLOR_FOREGROUND_DEFAULT,
+            ),
+            background: set_over(
+                sys::GHOSTTY_TERMINAL_DATA_COLOR_BACKGROUND,
+                sys::GHOSTTY_TERMINAL_DATA_COLOR_BACKGROUND_DEFAULT,
+            ),
+            cursor: set_over(
+                sys::GHOSTTY_TERMINAL_DATA_COLOR_CURSOR,
+                sys::GHOSTTY_TERMINAL_DATA_COLOR_CURSOR_DEFAULT,
+            ),
+            palette: (0..=255u8)
+                .zip(current.iter().zip(default.iter()))
+                .filter(|(_, (c, d))| (c.r, c.g, c.b) != (d.r, d.g, d.b))
+                .map(|(i, (c, _))| (i, [c.r, c.g, c.b]))
+                .collect(),
+        };
+        if now == self.program {
+            return false;
+        }
+        self.overrides = if now.palette.is_empty() {
+            Vec::new()
+        } else {
+            let mut by_index = vec![None; 256];
+            for &(i, rgb) in &now.palette {
+                by_index[i as usize] = Some(rgb);
+            }
+            by_index
+        };
+        self.program = now;
+        true
+    }
+
+    /// A palette color the program changed, as the color it is now.
+    fn as_painted(&self, c: Color) -> Color {
+        match c {
+            Color::Named(i) | Color::Indexed(i) => match self.overrides.get(i as usize) {
+                Some(&Some([r, g, b])) => Color::Rgb(r, g, b),
+                _ => c,
+            },
+            _ => c,
         }
     }
 
@@ -572,6 +687,17 @@ impl GhosttyEngine {
         let reset = b"\x1b[0 q";
         // SAFETY: valid terminal and buffer.
         unsafe { sys::ghostty_terminal_vt_write(self.term, reset.as_ptr(), reset.len()) };
+        self.force_full = true;
+    }
+
+    /// Forgets the history above the screen, as `CSI 3 J` does, from here
+    /// and not from the program: what is on screen stays, and the view
+    /// goes back to it.
+    pub fn clear_history(&mut self) {
+        let erase = b"\x1b[3J";
+        // SAFETY: valid terminal and buffer.
+        unsafe { sys::ghostty_terminal_vt_write(self.term, erase.as_ptr(), erase.len()) };
+        self.scroll_to_bottom();
         self.force_full = true;
     }
 
@@ -812,8 +938,8 @@ impl GhosttyEngine {
             _ => 0,
         };
         Style {
-            fg: color(s.fg_color),
-            bg: color(s.bg_color),
+            fg: self.as_painted(color(s.fg_color)),
+            bg: self.as_painted(color(s.bg_color)),
             attrs: a,
         }
     }
@@ -1039,6 +1165,11 @@ impl TermEngine for GhosttyEngine {
         if !self.effects.holding() {
             self.update_render_state();
         }
+        // A program that changed its colors changes how the whole screen
+        // is painted.
+        if self.refresh_program_colors() {
+            self.force_full = true;
+        }
         let mut dirty: sys::GhosttyRenderStateDirty = 0;
         // SAFETY: valid render state, out-pointer to a local.
         unsafe {
@@ -1081,7 +1212,7 @@ impl TermEngine for GhosttyEngine {
                     if style == Style::default()
                         && let Some(bg) = this.cell_bg_only()
                     {
-                        style.bg = bg;
+                        style.bg = this.as_painted(bg);
                     }
                     this.read_grapheme();
                     // A written space with no style is as blank as an empty
@@ -1428,6 +1559,53 @@ mod tests {
         assert!(f.full);
         assert_eq!(f.display_offset, 3);
         assert_eq!(spans_of(&f, 0)[0].2, "line43");
+    }
+
+    #[test]
+    fn a_program_s_colors_over_the_theme_s() {
+        let mut e = engine(20, 3);
+        let mut palette = [[0u8; 3]; 256];
+        palette[1] = [0xCC, 0x24, 0x1D];
+        e.set_theme(true, [0xEE; 3], [0x11; 3], [0x3C, 0xC8, 0xB0], &palette);
+        frame(&mut e);
+        // Asked, the theme's red, not Ghostty's.
+        e.feed(b"\x1b]4;1;?\x07");
+        let answer = String::from_utf8(e.take_host_writes()).unwrap();
+        assert!(answer.contains("rgb:cccc/2424/1d1d"), "{answer}");
+        // The program makes red green: red text is painted green.
+        e.feed(b"\x1b]4;1;rgb:00/ff/00\x07\x1b[31mX\x1b[0m");
+        let f = frame(&mut e);
+        assert!(f.full, "every row painted again");
+        assert_eq!(spans_of(&f, 0)[0].3, Color::Rgb(0, 0xFF, 0));
+        assert_eq!(e.program_colors().palette, [(1, [0, 0xFF, 0])]);
+        // Its own background (OSC 11), told apart from the theme's.
+        e.feed(b"\x1b]11;rgb:12/34/56\x07");
+        frame(&mut e);
+        assert_eq!(e.program_colors().background, Some([0x12, 0x34, 0x56]));
+        assert_eq!(e.program_colors().foreground, None);
+        // Back to the theme's (OSC 104, 111).
+        e.feed(b"\x1b]104\x07\x1b]111\x07");
+        frame(&mut e);
+        assert_eq!(e.program_colors(), &ProgramColors::default());
+    }
+
+    #[test]
+    fn the_history_is_cleared_and_the_screen_kept() {
+        let mut e = engine(10, 3);
+        for i in 0..20 {
+            e.feed(format!("line{i}\r\n").as_bytes());
+        }
+        e.feed(b"$ ");
+        e.scroll_display(5);
+        frame(&mut e);
+        e.clear_history();
+        let f = frame(&mut e);
+        assert!(f.full);
+        assert_eq!(f.display_offset, 0);
+        assert!(e.screen_text().contains("line19"), "{}", e.screen_text());
+        // Nothing left above to go back to.
+        e.scroll_display(5);
+        assert_eq!(frame(&mut e).display_offset, 0);
     }
 
     #[test]

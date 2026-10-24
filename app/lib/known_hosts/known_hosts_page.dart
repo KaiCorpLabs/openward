@@ -13,6 +13,8 @@ import '../identities/identities.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/known_hosts.dart';
 import '../tabs/tabs.dart' show tabsProvider;
+import '../ui/confirm.dart';
+import '../ui/page.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../src/rust/api/vault.dart' show VaultErrorKind;
@@ -90,71 +92,57 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
     final c = context.ow.colors;
     final file = r.source == KnownSourceKind.file;
     final name = r.saved.firstOrNull ?? r.hosts ?? r.revealed ?? l.hashedName;
-    final sure = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          file ? l.forgetFileKeyTitle(name, _file) : l.forgetKeyTitle(name),
-        ),
-        content: SizedBox(
-          width: 460,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: c.sunken,
-                  border: Border.all(color: c.border),
-                  borderRadius: BorderRadius.circular(context.ow.shape.radius),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      [
-                        if (file) l.lineNumber(r.line),
-                        r.hosts ?? l.hashedName,
-                        if (r.hosts == null && r.revealed != null)
-                          l.matchesHost(r.revealed!),
-                      ].join(' · '),
-                      style: TextStyle(fontSize: 12, color: c.textMuted),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${r.algorithm} · ${r.fingerprint}',
-                      style: monoStyle(context, size: 12, color: c.text),
-                    ),
-                  ],
-                ),
+    final sure = await confirmDestructive(
+      context,
+      title: file ? l.forgetFileKeyTitle(name, _file) : l.forgetKeyTitle(name),
+      action: file ? l.removeTheLine : l.forgetAction,
+      actionKey: const ValueKey('known.forget.confirm'),
+      content: SizedBox(
+        width: 460,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: c.sunken,
+                border: Border.all(color: c.border),
+                borderRadius: BorderRadius.circular(context.ow.shape.radius),
               ),
-              const SizedBox(height: 12),
-              Text(file ? l.forgetFileKeyBody : l.forgetKeyBody),
-              const SizedBox(height: 8),
-              Text(
-                l.forgetKeyThen,
-                style: TextStyle(fontSize: 12, color: c.textMuted),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    [
+                      if (file) l.lineNumber(r.line),
+                      r.hosts ?? l.hashedName,
+                      if (r.hosts == null && r.revealed != null)
+                        l.matchesHost(r.revealed!),
+                    ].join(' · '),
+                    style: TextStyle(fontSize: 12, color: c.textMuted),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${r.algorithm} · ${r.fingerprint}',
+                    style: monoStyle(context, size: 12, color: c.text),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 12),
+            Text(file ? l.forgetFileKeyBody : l.forgetKeyBody),
+            const SizedBox(height: 8),
+            Text(
+              l.forgetKeyThen,
+              style: TextStyle(fontSize: 12, color: c.textMuted),
+            ),
+          ],
         ),
-        actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l.cancel),
-          ),
-          FilledButton(
-            key: const ValueKey('known.forget.confirm'),
-            style: FilledButton.styleFrom(backgroundColor: c.danger),
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(file ? l.removeTheLine : l.forgetAction),
-          ),
-        ],
       ),
     );
-    if (sure != true) return;
+    if (!sure) return;
     try {
       await ref.read(openWardProvider).forgetKnownHost(row: r);
       ref.invalidate(knownHostCountProvider);
@@ -173,7 +161,6 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
   Widget build(BuildContext context) {
     final c = context.ow.colors;
     final l = context.l10n;
-    final theme = Theme.of(context);
     final query = _query.text.trim();
     final rows = _rows ?? const <KnownHostRow>[];
     final ours = rows.where((r) => r.source == KnownSourceKind.openWard);
@@ -186,45 +173,21 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
     return ColoredBox(
       color: c.surface,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
+        padding: pagePadding,
         children: [
-          Semantics(
-            header: true,
-            child: Text(l.knownHosts, style: theme.textTheme.titleLarge),
-          ),
-          const SizedBox(height: 4),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: Text(
-              l.knownHostsIntro(_file),
-              style: TextStyle(color: c.textMuted),
-            ),
-          ),
+          OwPageHeader(title: l.knownHosts, intro: l.knownHostsIntro(_file)),
           const SizedBox(height: 16),
           Wrap(
             spacing: 10,
             runSpacing: 8,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              SizedBox(
-                width: 340,
-                height: 34,
-                child: TextField(
-                  key: const ValueKey('known.query'),
-                  controller: _query,
-                  onChanged: _typed,
-                  style: monoStyle(context, size: 12, color: c.text),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    hintText: l.searchKnownHosts,
-                    hintStyle: TextStyle(fontSize: 13, color: c.textSubtle),
-                    prefixIcon: Icon(
-                      Icons.search,
-                      size: 16,
-                      color: c.textSubtle,
-                    ),
-                  ),
-                ),
+              OwFilterField(
+                key: const ValueKey('known.query'),
+                controller: _query,
+                hint: l.searchKnownHosts,
+                onChanged: _typed,
+                style: monoStyle(context, size: 12, color: c.text),
               ),
               SegmentedButton<_Show>(
                 showSelectedIcon: false,
@@ -259,91 +222,33 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
               child: Text(_error!, style: TextStyle(color: c.danger)),
             ),
           const SizedBox(height: 12),
-          if (shown.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 40),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.verified_user_outlined,
-                    size: 36,
-                    color: c.textSubtle,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    query.isEmpty ? l.noKnownHosts : l.noKnownHostMatches,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  if (query.isEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      l.noKnownHostsBody,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: c.textMuted),
-                    ),
-                  ],
-                ],
-              ),
+          if (shown.isNotEmpty)
+            OwDataTable(
+              widths: _widths,
+              headings: [l.host, l.keyColumn, l.whereItIs, l.savedHost, ''],
+              hideBelow: const [null, null, 680, 580, null],
+              rows: [for (final r in shown) _row(context, r)],
+            )
+          else if (query.isNotEmpty)
+            OwEmptyState.noMatch(
+              filter: query,
+              onClear: () {
+                setState(_query.clear);
+                _typed('');
+              },
             )
           else
-            _table(context, shown),
+            OwEmptyState(
+              icon: Icons.verified_user_outlined,
+              title: l.noKnownHosts,
+              body: l.noKnownHostsBody,
+            ),
         ],
       ),
     );
   }
 
   static const _widths = [1.5, 1.7, 1.45, 0.8, 0.5];
-
-  Widget _cells(List<Widget> cells) => Row(
-    children: [
-      for (var i = 0; i < cells.length; i++)
-        Expanded(
-          flex: (_widths[i] * 100).round(),
-          child: Padding(
-            padding: EdgeInsets.only(right: i == cells.length - 1 ? 0 : 12),
-            child: cells[i],
-          ),
-        ),
-    ],
-  );
-
-  Widget _table(BuildContext context, List<KnownHostRow> rows) {
-    final ow = context.ow;
-    final c = ow.colors;
-    final l = context.l10n;
-    final head = TextStyle(
-      fontSize: 12,
-      fontWeight: FontWeight.w600,
-      letterSpacing: 0.6,
-      color: c.textSubtle,
-    );
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        border: Border.all(color: c.border),
-        borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
-      ),
-      child: Column(
-        children: [
-          Container(
-            color: c.sunken,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: _cells([
-              for (final h in [
-                l.host,
-                l.keyColumn,
-                l.whereItIs,
-                l.savedHost,
-                '',
-              ])
-                Text(h.toUpperCase(), style: head),
-            ]),
-          ),
-          for (final r in rows) _row(context, r),
-        ],
-      ),
-    );
-  }
 
   Widget _row(BuildContext context, KnownHostRow r) {
     final c = context.ow.colors;
@@ -354,13 +259,10 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
       KnownMarkerKind.revoked => (l.markerRevoked, c.danger),
       null => (null, c.text),
     };
-    return Container(
+    return OwTableRow(
       key: ValueKey('known.${ours ? r.id : 'line${r.line}'}'),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: c.border)),
-      ),
-      child: _cells([
+      widths: _widths,
+      cells: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -432,8 +334,9 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
           r.saved.isEmpty ? '—' : r.saved.join(', '),
           style: TextStyle(color: r.saved.isEmpty ? c.textSubtle : c.text),
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
+        // Narrow, the buttons go on to a second line.
+        Wrap(
+          alignment: WrapAlignment.end,
           children: [
             IconButton(
               tooltip: l.copyFingerprint,
@@ -453,7 +356,7 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
             ),
           ],
         ),
-      ]),
+      ],
     );
   }
 }

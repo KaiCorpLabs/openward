@@ -26,8 +26,8 @@ import 'format.dart';
 import 'queue_view.dart';
 import 'sftp_controller.dart';
 
-/// Rows of the listings, in logical pixels.
-const double _rowHeight = 30;
+/// Rows of the listings, in logical pixels: more as the text grows.
+double _rowHeightIn(BuildContext context) => heightForText(context, 30);
 
 /// What is dragged from one side to the other.
 class FileDrag {
@@ -172,12 +172,13 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
     if (name == null || !_scroll.hasClients) return;
     final i = _pane.visible.indexWhere((e) => e.name == name);
     if (i < 0) return;
-    final top = i * _rowHeight;
+    final row = _rowHeightIn(context);
+    final top = i * row;
     final view = _scroll.position.viewportDimension;
     if (top < _scroll.offset) {
       _scroll.jumpTo(top);
-    } else if (top + _rowHeight > _scroll.offset + view) {
-      _scroll.jumpTo(top + _rowHeight - view);
+    } else if (top + row > _scroll.offset + view) {
+      _scroll.jumpTo(top + row - view);
     }
   }
 
@@ -411,7 +412,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
                 : () => _permissions(one),
           ),
         ],
-        item(l.newFolder, isApple ? '⇧⌘N' : 'Ctrl+Shift+N', _newFolder),
+        item(l.newFolder, keysFor('⌘⇧N', '${l.ctrlShiftPrefix}N'), _newFolder),
         item(l.reload, isApple ? '⌘R' : 'F5', _pane.refresh),
         item(
           _pane.showHidden ? l.hideHiddenFiles : l.showHiddenFiles,
@@ -422,7 +423,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
           const PopupMenuDivider(),
           item(
             l.deleteEllipsis,
-            isApple ? '⌘⌫' : 'Supr',
+            keysFor('⌘⌫', l.keyDelete),
             _delete,
             danger: true,
           ),
@@ -665,7 +666,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 2),
       child: SizedBox(
-        height: 30,
+        height: heightForText(context, 30),
         child: TextField(
           key: ValueKey('${widget.side.name}.filter'),
           controller: _filter,
@@ -779,7 +780,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
       list = ListView.builder(
         controller: _scroll,
         padding: const EdgeInsets.symmetric(horizontal: 8),
-        itemExtent: _rowHeight,
+        itemExtent: _rowHeightIn(context),
         itemCount: rows.length,
         itemBuilder: (context, i) => _row(rows[i]),
       );
@@ -1103,7 +1104,7 @@ class _SftpStatusBar extends StatelessWidget {
         final failed = s.phase == Phase.closed && s.closed?.failure != null;
         final hint = TextStyle(fontSize: 12, color: c.textSubtle);
         return Container(
-          height: 30,
+          height: heightForText(context, 30),
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: c.sunken,

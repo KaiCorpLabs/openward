@@ -213,7 +213,7 @@ class _SnippetEditorState extends ConsumerState<_SnippetEditor> {
             onChanged: (text) =>
                 setState(() => _vars = snippetVariables(script: text)),
             decoration: InputDecoration(
-              hintText: 'sudo systemctl restart {{servicio}}',
+              hintText: l.snippetScriptExample('{{', '}}'),
               hintStyle: monoStyle(context, size: 13, color: c.textSubtle),
             ),
           ),

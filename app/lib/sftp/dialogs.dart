@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../core/errors.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/sftp.dart';
+import '../ui/confirm.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import 'files.dart';
@@ -646,40 +647,15 @@ Future<bool> confirmDelete(
   String? host,
 }) async {
   final l = context.l10n;
-  final c = context.ow.colors;
-  final ok = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      icon: Icon(Icons.delete_outline, color: c.danger),
-      title: Text(
-        entries.length == 1
-            ? l.deleteOne(entries.first.name)
-            : l.deleteMany(entries.length),
-      ),
-      content: SizedBox(
-        width: 440,
-        child: Text(
-          host == null ? l.deleteLocalBody : l.deleteRemoteBody(host),
-          style: const TextStyle(height: 1.45),
-        ),
-      ),
-      actions: [
-        OutlinedButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: Text(l.cancel),
-        ),
-        FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: c.danger,
-            foregroundColor: c.surface,
-          ),
-          onPressed: () => Navigator.pop(context, true),
-          child: Text(l.delete),
-        ),
-      ],
-    ),
+  return confirmDestructive(
+    context,
+    icon: Icons.delete_outline,
+    title: entries.length == 1
+        ? l.deleteOne(entries.first.name)
+        : l.deleteMany(entries.length),
+    body: host == null ? l.deleteLocalBody : l.deleteRemoteBody(host),
+    action: l.delete,
   );
-  return ok ?? false;
 }
 
 /// A file error in words.

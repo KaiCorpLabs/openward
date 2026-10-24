@@ -30,6 +30,10 @@ pub mod mods {
 }
 
 /// `ghostty_mode_new(n, false)` for the DEC private modes used here.
+/// DECKPAM: the keypad sends application sequences, not digits...
+const MODE_KEYPAD_KEYS: sys::GhosttyMode = 66;
+/// ...unless this is on (the default, as in xterm): then it sends digits.
+const MODE_IGNORE_KEYPAD_WITH_NUMLOCK: sys::GhosttyMode = 1035;
 const MODE_FOCUS_EVENT: sys::GhosttyMode = 1004;
 const MODE_ALT_SCROLL: sys::GhosttyMode = 1007;
 const MODE_SGR_PIXELS_MOUSE: sys::GhosttyMode = 1016;
@@ -114,6 +118,22 @@ pub struct InputModes {
     pub focus_events: bool,
     pub alt_screen: bool,
     pub kitty_flags: u8,
+    /// DECKPAM, and mode 1035 off: keypad keys must go through
+    /// [`GhosttyEngine::encode_key`].
+    pub keypad_application: bool,
+}
+
+/// macOS: which Option keys act as Alt (sending ESC-prefixed keys) instead
+/// of typing the layout's special characters.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum OptionAsAlt {
+    /// Neither: both type, as in the system's own text fields.
+    #[default]
+    Off,
+    Both,
+    /// The left one; the right still types (é, ñ, @…).
+    Left,
+    Right,
 }
 
 impl InputModes {
@@ -130,7 +150,7 @@ pub(super) struct Input {
     key_event: sys::GhosttyKeyEvent,
     mouse_encoder: sys::GhosttyMouseEncoder,
     mouse_event: sys::GhosttyMouseEvent,
-    option_as_alt: bool,
+    option_as_alt: OptionAsAlt,
     pub(super) cell_w: f32,
     pub(super) cell_h: f32,
     /// Mouse buttons held down: bit 0 left, 1 middle, 2 right.
@@ -170,7 +190,7 @@ impl Input {
                 key_event,
                 mouse_encoder,
                 mouse_event,
-                option_as_alt: false,
+                option_as_alt: OptionAsAlt::Off,
                 cell_w: super::CELL_W_PX as f32,
                 cell_h: super::CELL_H_PX as f32,
                 held: 0,
@@ -193,11 +213,21 @@ impl Drop for Input {
 }
 
 impl GhosttyEngine {
-    /// macOS: whether Option acts as Alt (sends ESC-prefixed keys) instead
-    /// of typing the layout's special characters. Off by default, as in
-    /// the system's own text fields.
-    pub fn set_option_as_alt(&mut self, on: bool) {
-        self.input.option_as_alt = on;
+    /// macOS: which Option keys act as Alt. Off by default, as in the
+    /// system's own text fields.
+    pub fn set_option_as_alt(&mut self, which: OptionAsAlt) {
+        self.input.option_as_alt = which;
+    }
+
+    /// Whether the Alt in `mods` acts as Alt here, by which side it is.
+    fn alt_is_alt(&self, mods: u16) -> bool {
+        let right = mods & mods::ALT_RIGHT != 0;
+        match self.input.option_as_alt {
+            OptionAsAlt::Off => false,
+            OptionAsAlt::Both => true,
+            OptionAsAlt::Left => !right,
+            OptionAsAlt::Right => right,
+        }
     }
 
     /// Size of one cell on screen, in the same logical pixels as
@@ -230,6 +260,8 @@ impl GhosttyEngine {
             focus_events: self.mode(MODE_FOCUS_EVENT),
             alt_screen: screen == sys::GHOSTTY_TERMINAL_SCREEN_ALTERNATE,
             kitty_flags,
+            keypad_application: self.mode(MODE_KEYPAD_KEYS)
+                && !self.mode(MODE_IGNORE_KEYPAD_WITH_NUMLOCK),
         }
     }
 
@@ -287,7 +319,7 @@ impl GhosttyEngine {
         let mut consumed = 0;
         if !text.is_empty() {
             consumed |= mods & mods::SHIFT;
-            if cfg!(any(target_os = "macos", target_os = "ios")) && !self.input.option_as_alt {
+            if cfg!(any(target_os = "macos", target_os = "ios")) && !self.alt_is_alt(mods) {
                 consumed |= mods & mods::ALT;
             }
         }
@@ -303,10 +335,11 @@ impl GhosttyEngine {
         unsafe {
             sys::ghostty_key_encoder_setopt_from_terminal(enc, self.term);
             // setopt_from_terminal resets option-as-alt; apply ours after.
-            let option_as_alt = if self.input.option_as_alt {
-                sys::GHOSTTY_OPTION_AS_ALT_TRUE
-            } else {
-                sys::GHOSTTY_OPTION_AS_ALT_FALSE
+            let option_as_alt = match self.input.option_as_alt {
+                OptionAsAlt::Off => sys::GHOSTTY_OPTION_AS_ALT_FALSE,
+                OptionAsAlt::Both => sys::GHOSTTY_OPTION_AS_ALT_TRUE,
+                OptionAsAlt::Left => sys::GHOSTTY_OPTION_AS_ALT_LEFT,
+                OptionAsAlt::Right => sys::GHOSTTY_OPTION_AS_ALT_RIGHT,
             };
             sys::ghostty_key_encoder_setopt(
                 enc,
@@ -751,12 +784,42 @@ mod tests {
         // macOS hands Flutter "\x03" for Ctrl+C; the key code decides.
         assert_eq!(key(&mut e, press(KEY_C, mods::CTRL, "\x03", 'c')), [0x03]);
         assert_eq!(key(&mut e, press(KEY_C, mods::CTRL, "", 'c')), [0x03]);
-        e.set_option_as_alt(true);
+        e.set_option_as_alt(OptionAsAlt::Both);
         assert_eq!(key(&mut e, press(KEY_X, mods::ALT, "x", 'x')), b"\x1bx");
         assert_eq!(
             key(&mut e, press(ARROW_UP, mods::SHIFT | mods::ALT, "", '\0')),
             b"\x1b[1;4A"
         );
+    }
+
+    #[test]
+    fn one_option_is_alt_and_the_other_types() {
+        let mut e = engine();
+        e.set_option_as_alt(OptionAsAlt::Left);
+        assert_eq!(key(&mut e, press(KEY_X, mods::ALT, "≈", 'x')), b"\x1bx");
+        if cfg!(target_os = "macos") {
+            let right = press(KEY_X, mods::ALT | mods::ALT_RIGHT, "≈", 'x');
+            assert_eq!(key(&mut e, right), "≈".as_bytes());
+            e.set_option_as_alt(OptionAsAlt::Right);
+            assert_eq!(
+                key(&mut e, press(KEY_X, mods::ALT, "≈", 'x')),
+                "≈".as_bytes()
+            );
+        }
+    }
+
+    #[test]
+    fn the_keypad_follows_deckpam() {
+        const NUMPAD_1: u32 = 0x0007_0059;
+        let mut e = engine();
+        // DECKPAM alone: digits still, as xterm does with mode 1035 on.
+        e.feed(b"\x1b=");
+        assert!(!e.input_modes().keypad_application);
+        e.feed(b"\x1b[?1035l");
+        assert!(e.input_modes().keypad_application);
+        assert_eq!(key(&mut e, press(NUMPAD_1, 0, "", '1')), b"\x1bOq");
+        e.feed(b"\x1b>");
+        assert!(!e.input_modes().keypad_application);
     }
 
     #[test]

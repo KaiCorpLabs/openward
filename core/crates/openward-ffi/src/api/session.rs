@@ -196,6 +196,15 @@ pub enum FailureKind {
     Other,
 }
 
+/// macOS: which Option keys act as Alt.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OptionAlt {
+    Off,
+    Both,
+    Left,
+    Right,
+}
+
 /// With [`FailureKind::BadCertificate`]: what is wrong with it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CertKind {
@@ -695,6 +704,12 @@ pub struct TermFrame {
     pub mouse_tracking: bool,
     pub bracketed_paste: bool,
     pub report_all_keys: bool,
+    pub keypad_application: bool,
+    /// `0xRRGGBB` the program set for itself over the theme (OSC 10, 11,
+    /// 12); its palette changes come painted in the frame.
+    pub program_foreground: Option<u32>,
+    pub program_background: Option<u32>,
+    pub program_cursor: Option<u32>,
     pub alt_screen: bool,
     pub title: String,
     /// The selection as it stands now (empty: none), to paint over the
@@ -753,6 +768,10 @@ impl TerminalSession {
             mouse_tracking: f.mouse_tracking,
             bracketed_paste: f.bracketed_paste,
             report_all_keys: f.report_all_keys,
+            keypad_application: f.keypad_application,
+            program_foreground: f.program_foreground.map(packed),
+            program_background: f.program_background.map(packed),
+            program_cursor: f.program_cursor.map(packed),
             alt_screen: f.alt_screen,
             title: f.title,
             selection: f
@@ -863,12 +882,24 @@ impl TerminalSession {
         self.term.selection_text()
     }
 
-    /// The UI theme, which programs ask for to pick their colors. Colors
-    /// are `0xRRGGBB`.
+    /// The UI theme, which programs ask for to pick their colors: its
+    /// default colors and its 256. Colors are `0xRRGGBB`.
     #[frb(sync)]
-    pub fn set_theme(&self, dark: bool, foreground: u32, background: u32) {
+    pub fn set_theme(
+        &self,
+        dark: bool,
+        foreground: u32,
+        background: u32,
+        cursor: u32,
+        palette: Vec<u32>,
+    ) {
         let rgb = |c: u32| [(c >> 16) as u8, (c >> 8) as u8, c as u8];
-        self.term.set_theme(dark, rgb(foreground), rgb(background));
+        let mut colors = [[0u8; 3]; 256];
+        for (i, c) in palette.iter().take(256).enumerate() {
+            colors[i] = rgb(*c);
+        }
+        self.term
+            .set_theme(dark, rgb(foreground), rgb(background), rgb(cursor), &colors);
     }
 
     /// A key; returns whether it produced any bytes.
@@ -936,6 +967,12 @@ impl TerminalSession {
         self.term.focus(gained);
     }
 
+    /// Forgets the history above the screen; the program is not told.
+    #[frb(sync)]
+    pub fn clear_history(&self) {
+        self.term.clear_history();
+    }
+
     #[frb(sync)]
     pub fn resize(&self, cols: u16, rows: u16) {
         self.term.resize(cols, rows);
@@ -947,8 +984,13 @@ impl TerminalSession {
     }
 
     #[frb(sync)]
-    pub fn set_option_as_alt(&self, enabled: bool) {
-        self.term.set_option_as_alt(enabled);
+    pub fn set_option_as_alt(&self, which: OptionAlt) {
+        self.term.set_option_as_alt(match which {
+            OptionAlt::Off => terminal::OptionAsAlt::Off,
+            OptionAlt::Both => terminal::OptionAsAlt::Both,
+            OptionAlt::Left => terminal::OptionAsAlt::Left,
+            OptionAlt::Right => terminal::OptionAsAlt::Right,
+        });
     }
 
     #[frb(sync)]
@@ -993,4 +1035,9 @@ impl TerminalSession {
     pub fn close(&self) {
         self.term.close();
     }
+}
+
+/// `0xRRGGBB`.
+fn packed([r, g, b]: [u8; 3]) -> u32 {
+    (r as u32) << 16 | (g as u32) << 8 | b as u32
 }

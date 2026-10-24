@@ -33,6 +33,8 @@ String keyFailureText(AppLocalizations l, SshKeyFailure f, String name) =>
       SshKeyFailureKind.notAKey => l.keyNotReadable,
       // The core's words are in «Detalles».
       SshKeyFailureKind.io || SshKeyFailureKind.make => l.keyFailed,
+      SshKeyFailureKind.wrongPassphrase => l.wrongPassphrase,
+      SshKeyFailureKind.notOpenSsh => l.keyNotOpenSsh,
     };
 
 /// A name for a new key of `type` that no file in `~/.ssh` has.

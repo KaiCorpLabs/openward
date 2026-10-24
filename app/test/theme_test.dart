@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openward/core/settings.dart';
 import 'package:openward/terminal/palette.dart';
 import 'package:openward/terminal/schemes.dart';
+import 'package:openward/ui/environment.dart';
 import 'package:openward/ui/themes.dart';
 import 'package:openward/ui/tokens.dart';
 
@@ -45,10 +46,32 @@ void main() {
         'text/warnSoft': (c.text, c.warnSoft),
         'text/infoSoft': (c.text, c.infoSoft),
         'terminal': (theme.terminal.foreground, theme.terminal.background),
+        // As the app uses them: the snack bar and its action, the buttons
+        // that delete or reach several panes, a chosen row.
+        'onInverse/text': (c.onInverse, c.text),
+        'snack action': (
+          c.onInverse,
+          Color.alphaBlend(c.onInverse.withValues(alpha: 0.14), c.text),
+        ),
+        'onDanger/danger': (c.onDanger, c.danger),
+        'onWarn/warn': (c.onWarn, c.warn),
+        'text/selected': (c.text, c.selected),
+        'accentText/selected': (c.accentText, c.selected),
+        'muted/selected': (c.textMuted, c.selected),
+        'text/hover': (c.text, c.hover),
+        'muted/hover': (c.textMuted, c.hover),
+        'accentText/sunken': (c.accentText, c.sunken),
+        for (final name in envColorNames) ...{
+          'env $name/soft': (envColors(c, name).fg, envColors(c, name).soft),
+          'env $name/window': (envColors(c, name).fg, c.window),
+        },
       };
-      for (final MapEntry(key: name, value: (fg, bg)) in pairs.entries) {
-        expect(_contrast(fg, bg), greaterThanOrEqualTo(4.5), reason: name);
-      }
+      final low = [
+        for (final MapEntry(key: name, value: (fg, bg)) in pairs.entries)
+          if (_contrast(fg, bg) < 4.5)
+            '$name ${_contrast(fg, bg).toStringAsFixed(2)}',
+      ];
+      expect(low, isEmpty);
     });
 
     test('${theme.id}: the logo, in the accent, stands out from every '

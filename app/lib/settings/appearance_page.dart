@@ -102,10 +102,22 @@ class _ThemeChoice extends ConsumerWidget {
     final c = context.ow.colors;
     final now = Theme.of(context).brightness;
     final style = fieldTextStyle(context);
+    // The family of the theme in use: a setting may name one of its
+    // variants (an older one, or one written by hand).
+    String family(Brightness b) {
+      final id = resolveTheme(s, b).id;
+      return OwThemes.families
+          .firstWhere(
+            (f) => f.variant(b)?.id == id,
+            orElse: () => OwThemes.families.first,
+          )
+          .id;
+    }
+
     DropdownButton<String> slot(Brightness b) => DropdownButton<String>(
       key: ValueKey('theme.${b.name}'),
       style: style,
-      value: b == Brightness.light ? s.lightTheme : s.darkTheme,
+      value: family(b),
       items: [
         for (final f in OwThemes.families)
           if (f.variant(b) != null)
@@ -843,7 +855,9 @@ class _Preview extends ConsumerWidget {
       children: [
         SectionLabel(l.preview),
         const SizedBox(height: 10),
+        // The palette as it is, its contrast said below.
         Container(
+          key: const ValueKey('appearance.terminalSample'),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: t.background,

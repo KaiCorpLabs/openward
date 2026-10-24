@@ -2,6 +2,7 @@
 // a mark in the tab bar while anything moves.
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' show NumberFormat;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/errors.dart';
@@ -430,7 +431,8 @@ class TransferIndicator extends ConsumerWidget {
         final progress = queue.progress;
         final failed = queue.jobs.any((j) => j.state == TransferState.failed);
         final text = progress != null
-            ? '${(progress * 100).floor()} %'
+            ? NumberFormat.percentPattern(l.localeName)
+                  .format((progress * 100).floor() / 100)
             : '${queue.active}';
         return Padding(
           padding: const EdgeInsets.only(right: 8, bottom: 5),

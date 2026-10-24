@@ -13,6 +13,7 @@ import '../core/providers.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/session.dart';
 import '../terminal/controller.dart';
+import '../ui/confirm.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import 'connection_motion.dart';
@@ -561,10 +562,7 @@ class _HostKeyChangedDialogState extends State<_HostKeyChangedDialog> {
           child: Text(l.cancel),
         ),
         FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: c.danger,
-            foregroundColor: c.surface,
-          ),
+          style: dangerButtonStyle(c),
           onPressed: _checked ? () => Navigator.pop(context, true) : null,
           child: Text(l.trustNewKey),
         ),

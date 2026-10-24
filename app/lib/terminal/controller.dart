@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show Color;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
@@ -35,6 +36,17 @@ class TerminalController extends ConnectionController {
   bool mouseTracking = false;
   bool bracketedPaste = false;
   bool reportAllKeys = false;
+
+  /// DECKPAM (with mode 1035 off): the keypad goes to the encoder.
+  bool keypadApplication = false;
+
+  /// `0xRRGGBB` the program set for itself (OSC 10, 11, 12), over the
+  /// theme's; null where it set nothing.
+  ({int? foreground, int? background, int? cursor}) programColors = (
+    foreground: null,
+    background: null,
+    cursor: null,
+  );
 
   /// A full-screen program (an editor, a pager) is on view.
   bool altScreen = false;
@@ -80,6 +92,40 @@ class TerminalController extends ConnectionController {
   bool _shown = false;
 
   TerminalRenderer? _renderer;
+
+  /// The font family asked for the renderer: null is the platform's, which
+  /// its metrics name by what it resolves to.
+  String? _fontFamily;
+
+  /// The theme's palette as the engine has it (programs ask for it).
+  TermPalette? _theme;
+
+  /// [_theme] with what the program set over it, and what it was made of.
+  TermPalette? _painted;
+  Object? _paintedOf;
+
+  /// `theme`, with the program's own foreground, background and cursor.
+  TermPalette _withProgram(TermPalette theme) {
+    final p = programColors;
+    if (p.foreground == null && p.background == null && p.cursor == null) {
+      return theme;
+    }
+    final of = (theme, p);
+    if (_paintedOf == of) return _painted!;
+    Color color(int rgb) => Color(0xFF000000 | rgb);
+    final bg = p.background == null ? theme.background : color(p.background!);
+    _paintedOf = of;
+    return _painted = TermPalette(
+      dark: TermPalette.luminance(bg) < 0.4,
+      foreground: p.foreground == null
+          ? theme.foreground
+          : color(p.foreground!),
+      background: bg,
+      cursor: p.cursor == null ? theme.cursor : color(p.cursor!),
+      selection: theme.selection,
+      ansi16: theme.ansi16,
+    );
+  }
 
   /// The renderer in use, if the tab has been shown.
   TerminalRenderer? get currentRenderer => _renderer;
@@ -152,25 +198,34 @@ class TerminalController extends ConnectionController {
     double lineHeight = 1.2,
     double minimumContrast = 1,
   }) {
+    // The engine keeps the theme's; the screen is painted with what the
+    // program set over it.
+    if (!identical(_theme, palette)) {
+      _theme = palette;
+      session.setTheme(
+        dark: palette.dark,
+        foreground: TermPalette.rgb(palette.foreground),
+        background: TermPalette.rgb(palette.background),
+        cursor: TermPalette.rgb(palette.cursor),
+        palette: [
+          for (var i = 0; i < 256; i++)
+            TermPalette.rgb(palette.resolve(0x02000000 | i, foreground: true)),
+        ],
+      );
+    }
+    palette = _withProgram(palette);
     final current = _renderer;
     if (current != null &&
         current.devicePixelRatio == devicePixelRatio &&
         current.metrics.fontSize == fontSize &&
         current.metrics.lineHeight == lineHeight &&
-        current.metrics.fontFamily ==
-            (fontFamily ?? current.metrics.fontFamily) &&
+        _fontFamily == fontFamily &&
         current.minimumContrast == minimumContrast &&
         identical(current.palette, palette)) {
       return current;
     }
-    if (current == null || !identical(current.palette, palette)) {
-      session.setTheme(
-        dark: palette.dark,
-        foreground: TermPalette.rgb(palette.foreground),
-        background: TermPalette.rgb(palette.background),
-      );
-    }
     current?.dispose();
+    _fontFamily = fontFamily;
     final metrics = CellMetrics.measure(
       fontSize: fontSize,
       lineHeight: lineHeight,
@@ -283,11 +338,21 @@ class TerminalController extends ConnectionController {
     if (f.title != title ||
         f.mouseTracking != mouseTracking ||
         f.bracketedPaste != bracketedPaste ||
-        f.reportAllKeys != reportAllKeys) {
+        f.reportAllKeys != reportAllKeys ||
+        f.keypadApplication != keypadApplication ||
+        f.programForeground != programColors.foreground ||
+        f.programBackground != programColors.background ||
+        f.programCursor != programColors.cursor) {
       title = f.title;
       mouseTracking = f.mouseTracking;
       bracketedPaste = f.bracketedPaste;
       reportAllKeys = f.reportAllKeys;
+      keypadApplication = f.keypadApplication;
+      programColors = (
+        foreground: f.programForeground,
+        background: f.programBackground,
+        cursor: f.programCursor,
+      );
       _notify();
     }
     return true;

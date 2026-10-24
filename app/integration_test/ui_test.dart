@@ -1288,7 +1288,23 @@ Host web-1 web-2
     await _reveal(tester, field('setting.port'));
     await tester.tap(field('setting.port'));
     await _settle(tester);
+    // Out of range: said on the field itself, which gets the focus.
+    await tester.enterText(field('settings.port'), '70000');
+    await tester.tap(find.text('Guardar'));
+    await _settle(tester);
+    expect(find.text('El puerto va de 1 a 65535.'), findsNWidgets(2));
+    expect(
+      tester.widget<TextField>(field('settings.port')).focusNode?.hasFocus,
+      isTrue,
+    );
+    await _shot(tester, '18-port-out-of-range');
     await tester.enterText(field('settings.port'), '2222');
+    await tester.pump();
+    expect(
+      find.text('El puerto va de 1 a 65535.'),
+      findsOneWidget,
+      reason: 'off the field once it is typed in; still in the footer',
+    );
     await _reveal(tester, field('host.group'));
     await tester.tap(field('host.group'));
     await _settle(tester);
@@ -3344,6 +3360,46 @@ Host db
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Guardada en ~/.ssh/copia.'), findsOneWidget);
     await _shot(tester, '71-keys');
+
+    // From its menu: renamed, given a passphrase, and deleted.
+    Future<void> menu(String key, String item) async {
+      await tester.tap(field('key.menu.$key'));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text(item).last);
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    await menu('copia', 'Renombrar…');
+    await tester.enterText(field('key.rename.name'), 'copia2');
+    await tester.tap(field('key.rename.save'));
+    await _until(
+      tester,
+      () => container.read(keysProvider).any((k) => k.name == 'copia2'),
+      'the key renamed',
+    );
+    expect(File('${home.path}/.ssh/copia').existsSync(), isFalse);
+    expect(File('${home.path}/.ssh/copia2.pub').existsSync(), isTrue);
+    await menu('copia2', 'Cambiar la frase de paso…');
+    await tester.enterText(field('key.passphrase.new'), 'frase larga');
+    await tester.enterText(field('key.passphrase.again'), 'frase larga');
+    await tester.tap(field('key.passphrase.save'));
+    await _until(
+      tester,
+      () => container
+          .read(keysProvider)
+          .any((k) => k.name == 'copia2' && k.encrypted),
+      'the key behind a passphrase',
+    );
+    await menu('copia2', 'Eliminar…');
+    expect(find.text('¿Eliminar copia2?'), findsOneWidget);
+    await _shot(tester, '72-delete-key');
+    await tester.tap(field('key.delete.confirm'));
+    await _until(
+      tester,
+      () => container.read(keysProvider).length == 1,
+      'the key deleted',
+    );
+    expect(File('${home.path}/.ssh/copia2').existsSync(), isFalse);
 
     final fixtures = await _servers();
     if (fixtures == null) {

@@ -1,6 +1,7 @@
 import 'dart:io' show Platform;
 
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart' show ShortcutActivator;
 
 /// libghostty-vt modifier bits (`openward_ghostty::mods`).
 abstract final class Mods {
@@ -52,6 +53,49 @@ int hardwareMods() {
     m |= Mods.altRight;
   }
   return m;
+}
+
+/// Ctrl and the left Alt with a digit from 1 to 9: going to a tab, off
+/// Apple platforms. The right Alt is AltGr, which types (@ on many
+/// layouts) and is left alone.
+class TabDigitActivator extends ShortcutActivator {
+  const TabDigitActivator(this.digit);
+
+  /// From 1 to 9.
+  final int digit;
+
+  LogicalKeyboardKey get _key =>
+      LogicalKeyboardKey(LogicalKeyboardKey.digit1.keyId + digit - 1);
+
+  @override
+  Iterable<LogicalKeyboardKey>? get triggers => [_key];
+
+  @override
+  bool accepts(KeyEvent event, HardwareKeyboard state) =>
+      event is KeyDownEvent && event.logicalKey == _key && isTabDigit(state);
+
+  @override
+  String debugDescribeKeys() => 'Ctrl+Alt+$digit';
+}
+
+/// Ctrl and the left Alt held, nothing else: [TabDigitActivator]'s keys.
+bool isTabDigit(HardwareKeyboard state) {
+  final pressed = state.physicalKeysPressed;
+  return state.isControlPressed &&
+      pressed.contains(PhysicalKeyboardKey.altLeft) &&
+      !state.isShiftPressed &&
+      !state.isMetaPressed;
+}
+
+/// The keypad's keys but Enter (which is always the encoder's): digits,
+/// operators, the decimal point, `=` and `,`.
+bool isKeypadKey(int hid) {
+  if (hid >> 16 != 0x0007) return false;
+  final id = hid & 0xFFFF;
+  return (id >= 0x54 && id <= 0x57) ||
+      (id >= 0x59 && id <= 0x63) ||
+      id == 0x67 ||
+      id == 0x85;
 }
 
 /// Keys that never produce text: they always go to the encoder, never to
@@ -118,6 +162,12 @@ bool isAppShortcut(KeyEvent event, int mods) {
       (key == LogicalKeyboardKey.equal ||
           key == LogicalKeyboardKey.minus ||
           key == LogicalKeyboardKey.digit0)) {
+    return true;
+  }
+  // Ctrl+(left) Alt+1…9 go to a tab; AltGr+digit types.
+  if (key.keyId >= LogicalKeyboardKey.digit1.keyId &&
+      key.keyId <= LogicalKeyboardKey.digit9.keyId &&
+      isTabDigit(HardwareKeyboard.instance)) {
     return true;
   }
   final letter =

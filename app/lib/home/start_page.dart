@@ -506,7 +506,9 @@ class _StartPageState extends ConsumerState<StartPage> {
           key: const ValueKey('start.shortcuts'),
           borderRadius: BorderRadius.circular(context.ow.shape.radius),
           onTap: () => showShortcuts(context),
-          child: Padding(
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 28),
+            alignment: Alignment.centerLeft,
             padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
             child: item('$key/', l.shortcutAll),
           ),
