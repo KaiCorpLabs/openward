@@ -2,16 +2,22 @@
 //! (`spikes/s2-ssh/servers/up.sh`). Skipped when they are not running,
 //! unless `OPENWARD_REQUIRE_SERVERS` is set (`make ci`).
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::task::{Context, Poll};
+use std::time::{Duration, Instant};
 
-use openward_sftp::transfer::{PART, RESUME_OVERLAP, part_path};
+use openward_sftp::transfer::{FILES_AT_ONCE, PART, RESUME_OVERLAP, part_path};
 use openward_sftp::{
     Direction, Entry, JobState, Kind, Link, OnConflict, Remote, Request, Transfers, join,
 };
 use openward_ssh::client::{self, Auth, Hop, Options, Session, Target};
 use openward_ssh::known_hosts::{KnownHosts, Unknown};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadBuf};
+use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
+use tokio::task::AbortHandle;
 
 const HOST: &str = "127.0.0.1";
 const OPENSSH: u16 = 22100;
@@ -56,7 +62,7 @@ struct Server {
     dir: String,
 }
 
-async fn server(fx: &Path, port: u16, name: &str) -> Server {
+async fn connect(fx: &Path, port: u16) -> Session {
     let opts = Options {
         user: "demo".into(),
         known_hosts: Arc::new(Mutex::new(KnownHosts::new(Unknown::Learn))),
@@ -71,9 +77,13 @@ async fn server(fx: &Path, port: u16, name: &str) -> Server {
         path: fx.join("id_ed25519"),
         passphrase: None,
     };
-    let ssh = client::connect(&Target::new(HOST, port), Hop::Tcp, &auth, &opts)
+    client::connect(&Target::new(HOST, port), Hop::Tcp, &auth, &opts)
         .await
-        .unwrap();
+        .unwrap()
+}
+
+async fn server(fx: &Path, port: u16, name: &str) -> Server {
+    let ssh = connect(fx, port).await;
     let remote = Remote::open(ssh.sftp().await.unwrap()).await.unwrap();
     let dir = join(
         remote.home(),
@@ -118,9 +128,249 @@ impl Server {
         names
     }
 
+    /// The `.part` files anywhere below a folder of the test's.
+    async fn parts_below(&self, rel: &str) -> Vec<String> {
+        let out = self
+            .ssh
+            .exec(&format!(
+                "cd '{}' && find . -name '*{PART}' | sort",
+                join(&self.dir, rel)
+            ))
+            .await
+            .unwrap();
+        out.text().lines().map(str::to_owned).collect()
+    }
+
+    /// How many whole files (not parts) there are below a folder of the
+    /// test's.
+    async fn files_below(&self, rel: &str) -> usize {
+        let out = self
+            .ssh
+            .exec(&format!(
+                "cd '{}' && find . -type f ! -name '*{PART}' | wc -l",
+                join(&self.dir, rel)
+            ))
+            .await
+            .unwrap();
+        out.text().trim().parse().unwrap()
+    }
+
     async fn done(self) {
         self.remote.remove(&self.dir).await.unwrap();
         assert!(self.remote.lstat(&self.dir).await.unwrap().is_none());
+    }
+}
+
+/// A TCP proxy to a server that holds what goes through it `delay` each
+/// way, as a far server's network would; [`cut`](Far::cut) drops every
+/// connection through it, as a lost one does.
+struct Far {
+    port: u16,
+    /// The tasks that carry each connection: aborted, it is gone.
+    pipes: Arc<Mutex<Vec<AbortHandle>>>,
+}
+
+impl Far {
+    async fn new(to: u16, delay: Duration) -> Self {
+        let listener = tokio::net::TcpListener::bind((HOST, 0)).await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let pipes = Arc::new(Mutex::new(Vec::new()));
+        let held = Arc::clone(&pipes);
+        tokio::spawn(async move {
+            while let Ok((near, _)) = listener.accept().await {
+                let Ok(far) = tokio::net::TcpStream::connect((HOST, to)).await else {
+                    continue;
+                };
+                let _ = (near.set_nodelay(true), far.set_nodelay(true));
+                let (near_read, near_write) = near.into_split();
+                let (far_read, far_write) = far.into_split();
+                let mut pipes = held.lock().unwrap();
+                pipes.extend(late(near_read, far_write, delay));
+                pipes.extend(late(far_read, near_write, delay));
+            }
+        });
+        Self { port, pipes }
+    }
+
+    fn cut(&self) {
+        for pipe in self.pipes.lock().unwrap().drain(..) {
+            pipe.abort();
+        }
+    }
+
+    /// A connection to the server through here, with its SFTP requests
+    /// counted in `sent`.
+    async fn remote(&self, fx: &Path, sent: &Sent) -> (Session, Arc<Remote>) {
+        let ssh = connect(fx, self.port).await;
+        let stream = Counted {
+            inner: ssh.sftp().await.unwrap(),
+            sent: sent.clone(),
+            head: Vec::new(),
+            left: 0,
+        };
+        let remote = Remote::open(stream).await.unwrap();
+        (ssh, remote)
+    }
+}
+
+/// Copies `from` to `to`, each read `delay` after it came.
+fn late(mut from: OwnedReadHalf, mut to: OwnedWriteHalf, delay: Duration) -> [AbortHandle; 2] {
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<(tokio::time::Instant, Vec<u8>)>();
+    let write = tokio::spawn(async move {
+        while let Some((at, data)) = rx.recv().await {
+            tokio::time::sleep_until(at + delay).await;
+            if to.write_all(&data).await.is_err() {
+                break;
+            }
+        }
+    });
+    let read = tokio::spawn(async move {
+        let mut buf = vec![0u8; 64 << 10];
+        while let Ok(n @ 1..) = from.read(&mut buf).await {
+            if tx
+                .send((tokio::time::Instant::now(), buf[..n].to_vec()))
+                .is_err()
+            {
+                break;
+            }
+        }
+    });
+    [write.abort_handle(), read.abort_handle()]
+}
+
+/// The SFTP requests sent on a stream, by type.
+#[derive(Clone, Default)]
+struct Sent(Arc<Mutex<BTreeMap<u8, u64>>>);
+
+impl Sent {
+    /// What was sent since the last time.
+    fn take(&self) -> BTreeMap<u8, u64> {
+        std::mem::take(&mut self.0.lock().unwrap())
+    }
+}
+
+/// An SFTP stream that counts the packets written to it: four bytes of
+/// length, then the type.
+struct Counted<S> {
+    inner: S,
+    sent: Sent,
+    /// The start of the packet being written, until its type is known.
+    head: Vec<u8>,
+    /// What is left of the packet being written, after its type.
+    left: usize,
+}
+
+impl<S> Counted<S> {
+    fn count(&mut self, mut bytes: &[u8]) {
+        while !bytes.is_empty() {
+            if self.left > 0 {
+                let n = self.left.min(bytes.len());
+                self.left -= n;
+                bytes = &bytes[n..];
+                continue;
+            }
+            let n = (5 - self.head.len()).min(bytes.len());
+            self.head.extend_from_slice(&bytes[..n]);
+            bytes = &bytes[n..];
+            if self.head.len() == 5 {
+                let len = u32::from_be_bytes(self.head[..4].try_into().unwrap()) as usize;
+                *self.sent.0.lock().unwrap().entry(self.head[4]).or_default() += 1;
+                self.left = len - 1;
+                self.head.clear();
+            }
+        }
+    }
+}
+
+impl<S: AsyncRead + Unpin> AsyncRead for Counted<S> {
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.get_mut().inner).poll_read(cx, buf)
+    }
+}
+
+impl<S: AsyncWrite + Unpin> AsyncWrite for Counted<S> {
+    fn poll_write(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<std::io::Result<usize>> {
+        let this = self.get_mut();
+        let written = Pin::new(&mut this.inner).poll_write(cx, buf);
+        if let Poll::Ready(Ok(n)) = written {
+            this.count(&buf[..n]);
+        }
+        written
+    }
+
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.get_mut().inner).poll_flush(cx)
+    }
+
+    fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.get_mut().inner).poll_shutdown(cx)
+    }
+}
+
+/// The requests in `sent`, by name, and how many there were per file.
+fn requests(sent: &BTreeMap<u8, u64>, files: usize) -> String {
+    let name = |t: u8| match t {
+        3 => "open",
+        4 => "close",
+        5 => "read",
+        6 => "write",
+        7 => "lstat",
+        9 => "setstat",
+        11 => "opendir",
+        12 => "readdir",
+        13 => "remove",
+        14 => "mkdir",
+        16 => "realpath",
+        17 => "stat",
+        18 => "rename",
+        19 => "readlink",
+        200 => "extended",
+        _ => "other",
+    };
+    let total: u64 = sent.values().sum();
+    let each: Vec<String> = sent
+        .iter()
+        .map(|(t, n)| format!("{} {n}", name(*t)))
+        .collect();
+    format!(
+        "{total} requests, {:.2} per file ({})",
+        total as f64 / files as f64,
+        each.join(", ")
+    )
+}
+
+/// `n` small files below `root`, in `dirs` folders with a folder each
+/// inside: what they are called (`/`-separated) and hold.
+fn small_files(root: &Path, dirs: usize, n: usize) -> Vec<(String, Vec<u8>)> {
+    (0..n)
+        .map(|i| {
+            let dir = format!("d{:02}", i % dirs);
+            let rel = if i % 2 == 0 {
+                format!("{dir}/f{i:04}.txt")
+            } else {
+                format!("{dir}/inner/f{i:04}.txt")
+            };
+            let data = pattern(100 + (i * 37) % 3000, i as u8);
+            let path = root.join(&rel);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(&path, &data).unwrap();
+            (rel, data)
+        })
+        .collect()
+}
+
+/// Whether every one of `files` is below `root` as it should be.
+fn same_files(root: &Path, files: &[(String, Vec<u8>)]) {
+    for (rel, data) in files {
+        assert_eq!(&std::fs::read(root.join(rel)).unwrap(), data, "{rel}");
     }
 }
 
@@ -159,6 +409,27 @@ async fn copy(
         },
     );
     t.wait(id).await.unwrap()
+}
+
+fn view(t: &Transfers, id: u64) -> openward_sftp::JobView {
+    t.jobs().into_iter().find(|j| j.id == id).unwrap()
+}
+
+/// Waits until job `id` has copied `files` files.
+async fn until(t: &Transfers, id: u64, files: u32) {
+    while view(t, id).files_done < files {
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+}
+
+/// The `.part` files anywhere below a local folder.
+fn local_parts(root: &Path) -> Vec<PathBuf> {
+    openward_sftp::local::walk(root)
+        .unwrap()
+        .into_iter()
+        .map(|(rel, _)| rel)
+        .filter(|rel| rel.to_string_lossy().ends_with(PART))
+        .collect()
 }
 
 fn path_str(p: &Path) -> String {
@@ -672,5 +943,456 @@ async fn a_link_without_a_session_fails_and_resumes_later() {
     t.resume(id);
     assert_eq!(t.wait(id).await.unwrap().state, JobState::Done);
     assert_eq!(s.cat("a.txt").await, b"a");
+    s.done().await;
+}
+
+/// A folder of a few hundred small files, several at once, on every
+/// server: up, again with each conflict choice, and back down.
+#[tokio::test]
+async fn many_small_files_both_ways_everywhere() {
+    let fx = servers!();
+    for port in ALL {
+        let s = server(&fx, port, "many").await;
+        let local = tempfile::tempdir().unwrap();
+        let tree = local.path().join("tree");
+        let files = small_files(&tree, 6, 300);
+        let total: u64 = files.iter().map(|(_, data)| data.len() as u64).sum();
+        let (t, l) = (transfers(), link(&s.remote));
+        let up = |on| copy(&t, &l, Direction::Upload, path_str(&tree), &s.dir, on);
+
+        let first = up(OnConflict::Replace).await;
+        assert_eq!(
+            first.state,
+            JobState::Done,
+            "port {port}: {:?}",
+            first.error
+        );
+        assert_eq!(
+            (first.files, first.files_done, first.skipped),
+            (300, 300, 0)
+        );
+        assert_eq!((first.total, first.done), (total, total));
+        assert_eq!(s.files_below("tree").await, 300);
+        assert!(s.parts_below("tree").await.is_empty());
+
+        // Again: every file is there, and each is left or replaced by the
+        // choice; "keep both" goes to a folder of its own.
+        for (on, done, skipped) in [
+            (OnConflict::Newer, 0, 300),
+            (OnConflict::Replace, 300, 0),
+            (OnConflict::KeepBoth, 300, 0),
+        ] {
+            let again = up(on).await;
+            assert_eq!(
+                (again.state, again.files_done, again.skipped),
+                (JobState::Done, done, skipped),
+                "port {port}: {on:?} {:?}",
+                again.error
+            );
+            assert_eq!(again.done, total);
+        }
+        assert_eq!(s.files_below("tree (1)").await, 300);
+        assert!(s.parts_below("").await.is_empty());
+
+        let back = tempfile::tempdir().unwrap();
+        let down = |on| {
+            copy(
+                &t,
+                &l,
+                Direction::Download,
+                join(&s.dir, "tree"),
+                path_str(back.path()),
+                on,
+            )
+        };
+        let first = down(OnConflict::Replace).await;
+        assert_eq!(
+            first.state,
+            JobState::Done,
+            "port {port}: {:?}",
+            first.error
+        );
+        assert_eq!((first.files_done, first.skipped), (300, 0));
+        assert_eq!(first.done, total);
+        same_files(&back.path().join("tree"), &files);
+        let again = down(OnConflict::Newer).await;
+        assert_eq!((again.files_done, again.skipped), (0, 300));
+        assert!(local_parts(back.path()).is_empty());
+        s.done().await;
+    }
+}
+
+/// Names that differ only in case go one after the other: here, if this
+/// machine takes them for one (a Mac does), the second is a conflict like
+/// any other.
+#[tokio::test]
+async fn names_that_differ_in_case_keep_the_conflict_choice() {
+    let fx = servers!();
+    let s = server(&fx, OPENSSH, "case").await;
+    s.sh("mkdir twins && printf upper > twins/Twin.txt && printf lower > twins/twin.txt")
+        .await;
+    let probe = tempfile::tempdir().unwrap();
+    std::fs::write(probe.path().join("A"), b"").unwrap();
+    let one_name = probe.path().join("a").exists();
+    let (t, l) = (transfers(), link(&s.remote));
+    let down = |dir: &Path, on| {
+        copy(
+            &t,
+            &l,
+            Direction::Download,
+            join(&s.dir, "twins"),
+            path_str(dir),
+            on,
+        )
+    };
+
+    let skip = tempfile::tempdir().unwrap();
+    let job = down(skip.path(), OnConflict::Skip).await;
+    assert_eq!(job.state, JobState::Done, "{:?}", job.error);
+    let got = |dir: &Path, name| std::fs::read(dir.join("twins").join(name)).unwrap();
+    if one_name {
+        // `Twin` comes first (`T` before `t`): it stays.
+        assert_eq!((job.files_done, job.skipped), (1, 1));
+        assert_eq!(got(skip.path(), "twin.txt"), b"upper");
+    } else {
+        assert_eq!((job.files_done, job.skipped), (2, 0));
+        assert_eq!(got(skip.path(), "twin.txt"), b"lower");
+    }
+    // Replacing, the second wins, as one after the other.
+    let replace = tempfile::tempdir().unwrap();
+    let job = down(replace.path(), OnConflict::Replace).await;
+    assert_eq!((job.files_done, job.skipped), (2, 0));
+    assert_eq!(got(replace.path(), "twin.txt"), b"lower");
+    assert_eq!(
+        got(replace.path(), "Twin.txt"),
+        if one_name { b"lower" } else { b"upper" }
+    );
+    s.done().await;
+}
+
+/// A folder of many small files paused in the middle and resumed, and
+/// cancelled in the middle both ways: every part under way goes, and the
+/// counts stay right. Through a far server, to have a middle.
+#[tokio::test]
+async fn pause_and_cancel_in_the_middle_of_many_files() {
+    let fx = servers!();
+    let s = server(&fx, OPENSSH, "many-pause").await;
+    let far = Far::new(OPENSSH, Duration::from_millis(5)).await;
+    let (_ssh, remote) = far.remote(&fx, &Sent::default()).await;
+    let local = tempfile::tempdir().unwrap();
+    let tree = local.path().join("tree");
+    let files = small_files(&tree, 6, 300);
+    let (t, l) = (transfers(), link(&remote));
+    let upload = |dest_dir: &str| Request {
+        direction: Direction::Upload,
+        source: path_str(&tree),
+        dest_dir: dest_dir.to_owned(),
+        on_conflict: OnConflict::Replace,
+    };
+    let settle = || tokio::time::sleep(Duration::from_millis(100));
+
+    let id = t.add(Arc::clone(&l), upload(&s.dir));
+    until(&t, id, 60).await;
+    t.pause(id);
+    let paused = view(&t, id);
+    assert_eq!(paused.state, JobState::Paused);
+    assert!(paused.files_done < 300);
+    // What was on its way lands; then nothing moves. Whole files are those
+    // counted, and perhaps some whose answer the pause did not wait for.
+    settle().await;
+    let (whole, parts) = (s.files_below("tree").await, s.parts_below("tree").await);
+    let counted = paused.files_done as usize;
+    assert!(
+        (counted..=counted + FILES_AT_ONCE).contains(&whole),
+        "{whole}"
+    );
+    assert!(parts.len() <= FILES_AT_ONCE, "{parts:?}");
+    settle().await;
+    assert_eq!(view(&t, id).files_done, paused.files_done);
+    assert_eq!(s.files_below("tree").await, whole);
+    t.resume(id);
+    let done = t.wait(id).await.unwrap();
+    assert_eq!(
+        (done.state, done.files_done, done.skipped),
+        (JobState::Done, 300, 0),
+        "{:?}",
+        done.error
+    );
+    assert_eq!(done.done, done.total);
+    assert!(s.parts_below("tree").await.is_empty());
+    let back = tempfile::tempdir().unwrap();
+    let check = copy(
+        &t,
+        &link(&s.remote),
+        Direction::Download,
+        join(&s.dir, "tree"),
+        path_str(back.path()),
+        OnConflict::Replace,
+    )
+    .await;
+    assert_eq!(check.files_done, 300);
+    same_files(&back.path().join("tree"), &files);
+
+    // Cancelled: every part under way goes, nothing more is counted.
+    let again = join(&s.dir, "again");
+    s.remote.mkdir(&again).await.unwrap();
+    let id = t.add(Arc::clone(&l), upload(&again));
+    until(&t, id, 60).await;
+    t.cancel(id);
+    assert_eq!(view(&t, id).state, JobState::Cancelled);
+    let counted = view(&t, id).files_done;
+    for _ in 0..100 {
+        if s.parts_below("again").await.is_empty() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    settle().await;
+    assert!(s.parts_below("again").await.is_empty());
+    assert_eq!(view(&t, id).files_done, counted);
+    let whole = s.files_below("again").await;
+    let counted = counted as usize;
+    assert!(
+        (counted..=counted + FILES_AT_ONCE).contains(&whole),
+        "{whole}"
+    );
+
+    // And down: the parts here go.
+    let down = tempfile::tempdir().unwrap();
+    let id = t.add(
+        Arc::clone(&l),
+        Request {
+            direction: Direction::Download,
+            source: join(&s.dir, "tree"),
+            dest_dir: path_str(down.path()),
+            on_conflict: OnConflict::Replace,
+        },
+    );
+    until(&t, id, 60).await;
+    t.cancel(id);
+    let counted = view(&t, id).files_done;
+    for _ in 0..100 {
+        if local_parts(down.path()).is_empty() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    settle().await;
+    assert!(local_parts(down.path()).is_empty());
+    assert!(counted < 300);
+    assert_eq!(view(&t, id).files_done, counted);
+    assert_eq!(t.active(), 0);
+    s.done().await;
+}
+
+/// The connection drops in the middle of a folder, up and then down: the
+/// job fails, and once the connection is back it goes on, with every file
+/// counted once.
+#[tokio::test]
+async fn a_folder_goes_on_after_the_connection_drops() {
+    let fx = servers!();
+    let s = server(&fx, OPENSSH, "many-drop").await;
+    let far = Far::new(OPENSSH, Duration::from_millis(5)).await;
+    let sent = Sent::default();
+    let (_ssh, remote) = far.remote(&fx, &sent).await;
+    let local = tempfile::tempdir().unwrap();
+    let tree = local.path().join("tree");
+    let files = small_files(&tree, 6, 300);
+    let (t, l) = (transfers(), link(&remote));
+    let back = tempfile::tempdir().unwrap();
+    let requests = [
+        Request {
+            direction: Direction::Upload,
+            source: path_str(&tree),
+            dest_dir: s.dir.clone(),
+            on_conflict: OnConflict::Replace,
+        },
+        Request {
+            direction: Direction::Download,
+            source: join(&s.dir, "tree"),
+            dest_dir: path_str(back.path()),
+            on_conflict: OnConflict::Replace,
+        },
+    ];
+    let mut connections = Vec::new();
+    for request in requests {
+        let id = t.add(Arc::clone(&l), request);
+        until(&t, id, 60).await;
+        far.cut();
+        let failed = t.wait(id).await.unwrap();
+        assert_eq!(
+            (failed.state, failed.error),
+            (JobState::Failed, Some(openward_sftp::Error::Lost))
+        );
+        assert!(failed.files_done < 300);
+        let (ssh, remote) = far.remote(&fx, &sent).await;
+        connections.push(ssh);
+        l.set(Some(remote));
+        t.resume(id);
+        let done = t.wait(id).await.unwrap();
+        assert_eq!(
+            (done.state, done.files_done, done.skipped),
+            (JobState::Done, 300, 0),
+            "{:?}",
+            done.error
+        );
+        assert_eq!(done.done, done.total);
+    }
+    assert!(s.parts_below("tree").await.is_empty());
+    assert_eq!(s.files_below("tree").await, 300);
+    same_files(&back.path().join("tree"), &files);
+    assert!(local_parts(back.path()).is_empty());
+    s.done().await;
+}
+
+/// A part left in a folder the job made itself is found when the job goes
+/// on: only the run that made a folder knows it holds nothing.
+#[tokio::test]
+async fn a_part_in_a_folder_the_job_made_resumes() {
+    let fx = servers!();
+    let s = server(&fx, OPENSSH, "made-resume").await;
+    let local = tempfile::tempdir().unwrap();
+    let tree = local.path().join("tree");
+    small_files(&tree, 2, 20);
+    let len = (RESUME_OVERLAP + (48 << 20)) as usize;
+    let big = pattern(len, 5);
+    std::fs::write(tree.join("d00/big.bin"), &big).unwrap();
+    let (t, l) = (transfers(), link(&s.remote));
+    let id = t.add(
+        Arc::clone(&l),
+        Request {
+            direction: Direction::Upload,
+            source: path_str(&tree),
+            dest_dir: s.dir.clone(),
+            on_conflict: OnConflict::Replace,
+        },
+    );
+    while view(&t, id).done < RESUME_OVERLAP + (4 << 20) {
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    t.pause(id);
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    let parts = s.parts("tree/d00").await;
+    let part = parts.iter().find(|p| p.starts_with("big.bin")).unwrap();
+    let rel = format!("tree/d00/{part}");
+    assert!(s.entry(&rel).await.unwrap().size > RESUME_OVERLAP + 1024);
+    // A marker the overlap does not reach: only a part that is gone on
+    // from keeps it.
+    s.sh(&format!(
+        "dd if=/dev/zero of='{rel}' bs=1024 count=1 conv=notrunc 2>/dev/null"
+    ))
+    .await;
+    t.resume(id);
+    let done = t.wait(id).await.unwrap();
+    assert_eq!(
+        (done.state, done.files_done, done.skipped),
+        (JobState::Done, 21, 0),
+        "{:?}",
+        done.error
+    );
+    let got = s.cat("tree/d00/big.bin").await;
+    assert_eq!(got.len(), len);
+    assert_eq!(&got[..1024], &[0u8; 1024], "went on from the part");
+    assert_eq!(&got[1024..], &big[1024..]);
+    assert!(s.parts_below("tree").await.is_empty());
+    s.done().await;
+}
+
+/// DT-7, measured: a folder of many small files on a far server, up and
+/// back down, with the requests each file costs. 500 files and 80 ms there
+/// and back unless `OW_FILES` and `OW_RTT_MS` say otherwise. It takes
+/// minutes, so it runs on its own:
+/// `cargo test -p openward-sftp --test servers -- --ignored --nocapture`.
+#[tokio::test]
+#[ignore]
+async fn measure_many_small_files_far_away() {
+    let fx = servers!();
+    let var = |name, default| {
+        std::env::var(name)
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(default)
+    };
+    let (n, rtt) = (var("OW_FILES", 500), var("OW_RTT_MS", 80));
+    let s = server(&fx, OPENSSH, "measure").await;
+    let far = Far::new(OPENSSH, Duration::from_millis(rtt as u64 / 2)).await;
+    let sent = Sent::default();
+    let (_ssh, remote) = far.remote(&fx, &sent).await;
+    let local = tempfile::tempdir().unwrap();
+    let tree = local.path().join("tree");
+    let files = small_files(&tree, 10, n);
+    let (t, l) = (transfers(), link(&remote));
+
+    sent.take();
+    let started = Instant::now();
+    let up = copy(
+        &t,
+        &l,
+        Direction::Upload,
+        path_str(&tree),
+        &s.dir,
+        OnConflict::Replace,
+    )
+    .await;
+    let (up_time, up_sent) = (started.elapsed(), sent.take());
+    assert_eq!(
+        (up.state, up.files_done),
+        (JobState::Done, n as u32),
+        "{up:?}"
+    );
+    // Again, over what is there: each name is asked about first.
+    let mut again = Vec::new();
+    for on in [OnConflict::Newer, OnConflict::Replace] {
+        let started = Instant::now();
+        let job = copy(&t, &l, Direction::Upload, path_str(&tree), &s.dir, on).await;
+        assert_eq!(job.state, JobState::Done, "{job:?}");
+        again.push((on, started.elapsed(), sent.take()));
+    }
+
+    let back = tempfile::tempdir().unwrap();
+    let started = Instant::now();
+    let down = copy(
+        &t,
+        &l,
+        Direction::Download,
+        join(&s.dir, "tree"),
+        path_str(back.path()),
+        OnConflict::Replace,
+    )
+    .await;
+    let (down_time, down_sent) = (started.elapsed(), sent.take());
+    assert_eq!(
+        (down.state, down.files_done),
+        (JobState::Done, n as u32),
+        "{down:?}"
+    );
+    same_files(&back.path().join("tree"), &files);
+
+    let mut folders: std::collections::BTreeSet<&str> = files
+        .iter()
+        .flat_map(|(rel, _)| rel.match_indices('/').map(|(k, _)| &rel[..k]))
+        .collect();
+    folders.insert("");
+    println!(
+        "DT-7: {n} files in {} folders, {rtt} ms there and back",
+        folders.len()
+    );
+    println!(
+        "  up:   {:.1} s, {}",
+        up_time.as_secs_f64(),
+        requests(&up_sent, n)
+    );
+    for (on, time, sent) in &again {
+        println!(
+            "  up again, {on:?}: {:.1} s, {}",
+            time.as_secs_f64(),
+            requests(sent, n)
+        );
+    }
+    println!(
+        "  down: {:.1} s, {}",
+        down_time.as_secs_f64(),
+        requests(&down_sent, n)
+    );
     s.done().await;
 }

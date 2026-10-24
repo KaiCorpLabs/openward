@@ -518,4 +518,13 @@ impl Remote {
             .map(|_| ())
             .map_err(|e| Error::sftp(path, e))
     }
+
+    /// Closes a file that was only read, without waiting for the answer:
+    /// nothing depends on it.
+    pub(crate) fn close_later(&self, handle: String) {
+        let raw = Arc::clone(&self.raw);
+        tokio::spawn(async move {
+            let _ = raw.close(handle).await;
+        });
+    }
 }

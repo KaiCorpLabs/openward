@@ -341,10 +341,37 @@ Los cuatro primeros cuestan menos de medio día cada uno y pueden entrar en cual
 - DS-9 lleva los valores impares a la escala de 2 px un píxel por debajo (salvo en los chips de filtro de Hosts, que con uno menos no llegaban a 28 px y van uno por encima), y los 12,5 px a 12 (13 en la barra); dos sombras cambian un poco para caber en tres niveles. Los tiempos de la app que no son de la interfaz (esperas para agrupar, sondeos) no son tokens.
 - UI-16 deja la búsqueda en Dart: la barra y Hosts ya no llaman a la del núcleo, y ordenan por dónde se encuentra la palabra.
 - UI-19: la barra de pestañas y «Abiertas» no escuchaban los paneles; lo que se reconstruía era la pestaña.
-- TM-6, TM-15, TM-16 y TM-17 esperan, por lo medido. DT-7 sí lo pide, pero cambia la reanudación, el progreso y la cancelación de cada trabajo: va en su propia tarea.
+- TM-6, TM-15, TM-16 y TM-17 esperan, por lo medido. DT-7 sí lo pide, pero cambia la reanudación, el progreso y la cancelación de cada trabajo: va en su propia tarea (hecha: ver DT-7, más abajo).
 - El paquete de Linux sale de la arquitectura de la máquina (aarch64 en un Mac con Apple silicon); el de x86_64 pide una máquina x86_64 o un contenedor emulado, mucho más lento. El runtime de Visual C++ no se ha probado en un Windows limpio.
 - uucode no trae en su paquete las licencias que nombra: el decodificador UTF-8 (MIT) se dice con su aviso, y los datos de Unicode con la licencia Unicode v3 que traen los crates.
 - De paso, las pruebas encontraron y quedan arreglados: la importación de `ssh_config` y el XML de SecureCRT eran cuadráticos (ver arriba); guardar un espacio de trabajo con una página delante tomaba como activa la pestaña de después; y en macOS, cerrar un terminal podía bloquear la app si la shell, al salir, esperaba a que se leyera su última salida.
+
+### DT-7 · Varios archivos en vuelo en el SFTP (aparte, tras R6; sin publicar)
+
+Cada archivo de una carpeta costaba sus peticiones en serie, uno detrás de otro: subir uno nuevo eran 8 idas y vueltas (mirar el destino, buscar un `.part`, abrir, escribir, cerrar, mirar el tamaño, poner fecha y permisos, renombrar). Con 80 ms de ida y vuelta, 500 archivos pequeños tardaban casi 6 minutos en subir y 3 en bajar.
+
+**Qué deja hecho** (`openward-sftp::transfer`):
+- **Varios a la vez:** cada trabajo copia hasta 8 archivos o carpetas a la vez (`FILES_AT_ONCE`), en su propia tarea: pausar o cancelar los para todos de golpe. Lo que va en una carpeta espera a que la carpeta exista. Dos nombres que solo se distinguen por mayúsculas van uno detrás de otro y preguntan, como si fueran el mismo (un Mac, un servidor Windows): «Omitir» y «Reemplazar» hacen lo mismo que antes. Los archivos grandes no se juntan mientras la velocidad medida no lo permita: entre todos no llevan en camino más que un archivo solo (su ventana, unos 2 s a la velocidad medida, 1 MiB al empezar), así que un servidor lento nunca tiene esperando más de lo que contesta antes de que venza cada petición (60 s).
+- **Menos peticiones:** en una carpeta que la misma ejecución acaba de crear no se pregunta por el nombre ni por un `.part`, porque no puede haber nada; fuera de ella, las dos preguntas van juntas, y también las del dueño del archivo y del `.part` al reemplazar. El tamaño escrito ya no se pregunta al servidor: cada escritura entre el principio y el final tuvo su respuesta (OpenSSH contesta error a una escritura incompleta). Al bajar, mirar el archivo y abrirlo van juntos, y el cierre no se espera.
+- **Reanudar, progreso y cancelar:** el trabajo guarda el primer elemento sin terminar (`next`) y los terminados después, fuera de orden (`ahead`): al reanudar no los repite ni los cuenta dos veces. El progreso suma lo de cada archivo en camino. Hay un `.part` por archivo en camino: cancelar los borra todos, cuando la tarea del trabajo ya ha parado (también después de una pausa), y un archivo que empezaba al cancelar no llega a crear el suyo; el `.part` de una descarga se crea en la tarea del trabajo, no en un hilo aparte. Una carpeta solo se da por vacía en la ejecución que la creó: el `.part` que dejó una ejecución anterior, aunque la carpeta la hiciera el mismo trabajo, se encuentra y se sigue desde él.
+- **Pruebas** (contra S2): 300 archivos en 10 carpetas, arriba y abajo en los cuatro servidores y otra vez con cada opción de conflicto; dos nombres que solo cambian en mayúsculas; pausar y seguir, y cancelar en las dos direcciones, a mitad, sin que quede un `.part` ni se cuente de más; la conexión cortada a mitad, en las dos direcciones, y vuelta a conectar; y un `.part` en una carpeta que hizo el propio trabajo. Pasan por un proxy TCP que retrasa cada sentido y corta las conexiones (`Far`), y cuentan las peticiones SFTP que salen (`Counted`). Cada uno de cuatro fallos metidos a propósito (sin la regla de las mayúsculas, toda carpeta como recién hecha, repetir los terminados, cancelar borrando un solo `.part`) hace fallar alguna de ellas.
+
+**La medida:** 500 archivos de 100 B a 3 KB en 16 carpetas, contra OpenSSH 10.0 a través del proxy, con 80 ms de ida y vuelta, en release (`measure_many_small_files_far_away`, que corre aparte con `--ignored`):
+
+| | Antes | Después |
+|---|---|---|
+| Subir la carpeta | 344,0 s, 8,07 peticiones por archivo | 28,2 s, 5,04 |
+| Subir otra vez, «solo si es más nuevo» (no se copia nada) | 43,7 s, 1,03 | 6,1 s, 2,03 |
+| Subir otra vez, «reemplazar» | 470,2 s, 11,03 | 39,1 s, 9,03 |
+| Bajar la carpeta | 181,2 s, 4,13 | 17,7 s, 4,13 |
+
+Un archivo nuevo cuesta ahora abrir, escribir, cerrar, poner fecha y permisos, y renombrar: 5 peticiones en 5 idas y vueltas. Uno bajado, las mismas 4 peticiones que antes, en 2 idas y vueltas. Y van 8 archivos a la vez. Por extrapolación, subir los 5000 archivos a 80 ms de la estimación de R6 pasa de unos 57 minutos a unos 5.
+
+**Diferencias con el plan:**
+- Recorrer la carpeta del servidor antes de bajarla sigue en serie: 4 idas y vueltas por carpeta (abrir, leer, leer el final, cerrar), unos 5 de los 17,7 s de la medida. Listar varias carpetas a la vez va aparte.
+- «Solo si es más nuevo» y «Omitir» preguntan ahora 2 cosas por archivo en vez de 1 (el `.part` va con el nombre, por si hay que copiarlo), pero en una sola ida y vuelta y 8 a la vez.
+- «Reemplazar» sigue preguntando de quién son el archivo y el `.part` antes de escribir, para no cambiarle el dueño (DT-8): 9 peticiones por archivo, en 7 idas y vueltas.
+- Las mayúsculas se comparan con `to_lowercase`, no con la normalización de Unicode de APFS: dos nombres que solo difieren en cómo se escribe un acento van a la vez.
 
 ## Qué no entra
 

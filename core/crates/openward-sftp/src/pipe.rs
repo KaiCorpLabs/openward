@@ -19,7 +19,7 @@ use crate::remote::Remote;
 use crate::{Error, Result};
 
 const MIN_WINDOW: u64 = 512 << 10;
-const START_WINDOW: u64 = 1 << 20;
+pub(crate) const START_WINDOW: u64 = 1 << 20;
 const MAX_WINDOW: u64 = 32 << 20;
 /// What the window holds: this much time at the measured speed.
 const WINDOW_TIME: f64 = 2.0;
@@ -27,7 +27,7 @@ const WINDOW_TIME: f64 = 2.0;
 const SETTLE: Duration = Duration::from_millis(250);
 
 /// The window for `bytes` answered in `elapsed`.
-fn window(bytes: u64, elapsed: Duration) -> u64 {
+pub(crate) fn window(bytes: u64, elapsed: Duration) -> u64 {
     if elapsed < SETTLE || bytes == 0 {
         return START_WINDOW;
     }
