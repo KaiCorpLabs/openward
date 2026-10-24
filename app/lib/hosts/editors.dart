@@ -9,7 +9,9 @@ import '../identities/identity_editor.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/vault.dart';
 import '../tabs/tabs.dart';
+import '../ui/confirm.dart';
 import '../ui/environment.dart';
+import '../ui/keep_focus.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 
@@ -124,6 +126,7 @@ class _SettingsForm {
       legacyHostKeys = original.legacyHostKeys,
       persistent = original.persistentSession,
       keepalive = original.keepaliveSecs,
+      connectTimeout = original.connectTimeoutSecs,
       identity = original.identity,
       identityId = original.identityId,
       envKind = original.environment,
@@ -144,6 +147,7 @@ class _SettingsForm {
         if (original.legacyHostKeys != null) 'legacy_host_keys',
         if (original.persistentSession != null) 'persistent_session',
         if (original.keepaliveSecs != null) 'keepalive_secs',
+        if (original.connectTimeoutSecs != null) 'connect_timeout_secs',
         if (original.environment != null) 'environment',
         if (original.readOsRelease != null) 'read_os_release',
       };
@@ -159,6 +163,7 @@ class _SettingsForm {
   IdentityChoice? identity;
   bool? persistent;
   int? keepalive;
+  int? connectTimeout;
 
   /// With [IdentityChoice.use].
   String identityId;
@@ -228,6 +233,8 @@ class _SettingsForm {
         persistent = inherited.persistentSession ?? false;
       case 'keepalive_secs':
         keepalive = inherited.keepaliveSecs ?? 10;
+      case 'connect_timeout_secs':
+        connectTimeout = inherited.connectTimeoutSecs ?? 15;
       case 'environment':
         envKind = inherited.environment ?? EnvironmentKind.none;
         envName = inherited.environmentName;
@@ -271,6 +278,8 @@ class _SettingsForm {
         persistent = null;
       case 'keepalive_secs':
         keepalive = null;
+      case 'connect_timeout_secs':
+        connectTimeout = null;
       case 'environment':
         envKind = null;
         envName = envShort = envColor = '';
@@ -278,6 +287,36 @@ class _SettingsForm {
         readOsRelease = null;
     }
   }
+
+  /// What the form says now, to tell whether it changed.
+  String get signature => [
+    ...(setHere.toList()..sort()),
+    user.text,
+    port.text,
+    keys.text,
+    socket.text,
+    command.text,
+    proxyHost.text,
+    proxyPort.text,
+    proxyUser.text,
+    jumpAddress.text,
+    agent,
+    route,
+    proxy,
+    policy,
+    legacyHostKeys,
+    identity,
+    identityId,
+    persistent,
+    keepalive,
+    connectTimeout,
+    envKind,
+    envName,
+    envShort,
+    envColor,
+    readOsRelease,
+    for (final j in jumps) '${j.hostId}|${j.address}|${j.user}|${j.port}',
+  ].join('\u0000');
 
   /// The mark chosen here, if one is.
   EnvironmentView? get envMark =>
@@ -359,6 +398,9 @@ class _SettingsForm {
       proxyPort: proxyServer ? int.tryParse(proxyPort.text.trim()) ?? 0 : 0,
       proxyUser: proxyServer ? proxyUser.text.trim() : '',
       keepaliveSecs: setHere.contains('keepalive_secs') ? keepalive : null,
+      connectTimeoutSecs: setHere.contains('connect_timeout_secs')
+          ? connectTimeout
+          : null,
       agentForward: original.agentForward,
       persistentSession: setHere.contains('persistent_session')
           ? persistent
@@ -424,6 +466,7 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
     'legacy_host_keys',
     'persistent_session',
     'keepalive_secs',
+    'connect_timeout_secs',
     'agent',
     if (widget.system == null) 'read_os_release',
   ];
@@ -553,6 +596,9 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
       'persistent_session' =>
         e.persistentSession ?? false ? l.persistentOn : l.persistentOff,
       'keepalive_secs' => _keepalive(l, e.keepaliveSecs ?? 10),
+      'connect_timeout_secs' => l.connectTimeoutAfter(
+        e.connectTimeoutSecs ?? 15,
+      ),
       'identity' =>
         _base.effective.identity == IdentityChoice.use
             ? _identityLabel(_base.effective.identityId)
@@ -603,6 +649,7 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
       : l.keepaliveEvery(secs, secs * 2 < 15 ? 15 : secs * 2);
 
   static const _keepalives = [5, 10, 15, 30, 60, 0];
+  static const _connectTimeouts = [5, 10, 15, 30, 60];
 
   String _policy(AppLocalizations l, KeyPolicy p) => switch (p) {
     KeyPolicy.ask => l.policyAsk,
@@ -1068,6 +1115,25 @@ class _SettingsFieldsState extends ConsumerState<_SettingsFields> {
                   DropdownMenuItem(value: k, child: Text(_keepalive(l, k))),
               ],
               onChanged: (v) => setState(() => f.keepalive = v),
+            ),
+          ),
+          _row(
+            field: 'connect_timeout_secs',
+            label: l.connectTimeoutLabel,
+            editor: DropdownButtonFormField<int>(
+              style: fieldTextStyle(context),
+              key: const ValueKey('settings.connectTimeout'),
+              autofocus: focusFor('connect_timeout_secs'),
+              initialValue: f.connectTimeout ?? 15,
+              isExpanded: true,
+              items: [
+                for (final t in {..._connectTimeouts, ?f.connectTimeout})
+                  DropdownMenuItem(
+                    value: t,
+                    child: Text(l.connectTimeoutAfter(t)),
+                  ),
+              ],
+              onChanged: (v) => setState(() => f.connectTimeout = v),
             ),
           ),
           _row(
@@ -2071,7 +2137,7 @@ class _TagsFieldState extends State<_TagsField> {
 
 /// The panel: title, the form, and the buttons that close it.
 /// An editor in a side panel: a title, what it edits, and save.
-class EditorFrame extends StatelessWidget {
+class EditorFrame extends StatefulWidget {
   const EditorFrame({
     super.key,
     required this.title,
@@ -2084,6 +2150,7 @@ class EditorFrame extends StatelessWidget {
     this.onDelete,
     this.saveLabel,
     this.saveEnabled = true,
+    this.snapshot,
   });
 
   final String title;
@@ -2101,8 +2168,44 @@ class EditorFrame extends StatelessWidget {
   final String? saveLabel;
   final bool saveEnabled;
 
+  /// What the form says now. Closing without saving after it changed asks
+  /// first: Esc, Cancel, the close button or a click outside the panel.
+  final String Function()? snapshot;
+
+  @override
+  State<EditorFrame> createState() => _EditorFrameState();
+}
+
+class _EditorFrameState extends State<EditorFrame> {
+  /// The form as it opened.
+  String? _opened;
+
+  @override
+  void initState() {
+    super.initState();
+    _opened = widget.snapshot?.call();
+  }
+
   void save() {
-    if (saveEnabled) onSave();
+    if (widget.saveEnabled) widget.onSave();
+  }
+
+  /// Closes without saving: at once if nothing changed, else if the user
+  /// says to discard the changes.
+  Future<void> _leave() async {
+    final changed = widget.snapshot != null && widget.snapshot!() != _opened;
+    if (changed) {
+      final l = context.l10n;
+      final discard = await confirmAction(
+        context,
+        title: l.discardChangesTitle,
+        body: l.discardChangesBody,
+        action: l.discardChanges,
+        danger: true,
+      );
+      if (!discard) return;
+    }
+    if (mounted) Navigator.pop(context, false);
   }
 
   @override
@@ -2111,106 +2214,130 @@ class EditorFrame extends StatelessWidget {
     final c = ow.colors;
     final l = context.l10n;
     final theme = Theme.of(context);
-    return CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.enter, meta: true): save,
-        const SingleActivator(LogicalKeyboardKey.enter, control: true): save,
-        // Also with the cursor in a field, which would keep Esc otherwise.
-        const SingleActivator(LogicalKeyboardKey.escape): () =>
-            Navigator.maybePop(context, false),
+    final EditorFrame(
+      :title,
+      :subtitle,
+      :error,
+      :onSave,
+      :onSaveAndConnect,
+      :saveAndConnectLabel,
+      :onDelete,
+      :children,
+      :saveLabel,
+      :saveEnabled,
+    ) = widget;
+    // Every way out but saving comes here (a click outside the panel
+    // too): saving pops the route itself.
+    return PopScope<bool>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _leave();
       },
-      child: FocusTraversalGroup(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              padding: const EdgeInsets.fromLTRB(24, 18, 16, 16),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: c.border)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Semantics(
-                          header: true,
-                          child: Text(
-                            title,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontSize: 17,
-                            ),
-                          ),
-                        ),
-                        if (subtitle != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(
-                              subtitle!,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: c.textMuted,
+      // A focused field that goes away (a setting back to inheriting)
+      // would leave Esc and ⌘↩ hearing nothing.
+      child: KeepFocus(
+        debugLabel: 'EditorFrame',
+        child: CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.enter, meta: true): save,
+            const SingleActivator(LogicalKeyboardKey.enter, control: true):
+                save,
+            // Also with the cursor in a field, which would keep Esc otherwise.
+            const SingleActivator(LogicalKeyboardKey.escape): _leave,
+          },
+          child: FocusTraversalGroup(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  padding: const EdgeInsets.fromLTRB(24, 18, 16, 16),
+                  decoration: BoxDecoration(
+                    border: Border(bottom: BorderSide(color: c.border)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Semantics(
+                              header: true,
+                              child: Text(
+                                title,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontSize: 17,
+                                ),
                               ),
                             ),
-                          ),
-                      ],
-                    ),
+                            if (subtitle != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  subtitle,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: c.textMuted,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: l.close,
+                        icon: const Icon(Icons.close, size: 18),
+                        onPressed: _leave,
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    tooltip: l.close,
-                    icon: const Icon(Icons.close, size: 18),
-                    onPressed: () => Navigator.pop(context, false),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 16, 16, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: children,
                 ),
-              ),
-            ),
-            if (error != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-                child: Text(error!, style: TextStyle(color: c.danger)),
-              ),
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 24, 12),
-              decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: c.border)),
-              ),
-              child: Row(
-                children: [
-                  if (onDelete != null)
-                    TextButton(
-                      onPressed: onDelete,
-                      style: TextButton.styleFrom(foregroundColor: c.danger),
-                      child: Text(l.delete),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: children,
                     ),
-                  if (onSaveAndConnect != null)
-                    TextButton(
-                      onPressed: onSaveAndConnect,
-                      child: Text(saveAndConnectLabel ?? l.saveAndConnect),
-                    ),
-                  const Spacer(),
-                  OutlinedButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: Text(l.cancel),
                   ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: saveEnabled ? onSave : null,
-                    child: Text(saveLabel ?? l.save),
+                ),
+                if (error != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                    child: Text(error, style: TextStyle(color: c.danger)),
                   ),
-                ],
-              ),
+                Container(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 24, 12),
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: c.border)),
+                  ),
+                  child: Row(
+                    children: [
+                      if (onDelete != null)
+                        TextButton(
+                          onPressed: onDelete,
+                          style: TextButton.styleFrom(
+                            foregroundColor: c.danger,
+                          ),
+                          child: Text(l.delete),
+                        ),
+                      if (onSaveAndConnect != null)
+                        TextButton(
+                          onPressed: onSaveAndConnect,
+                          child: Text(saveAndConnectLabel ?? l.saveAndConnect),
+                        ),
+                      const Spacer(),
+                      OutlinedButton(onPressed: _leave, child: Text(l.cancel)),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: saveEnabled ? onSave : null,
+                        child: Text(saveLabel ?? l.save),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -2476,6 +2603,17 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
   late String? _systemCode = _spec.systemCode;
   String? _error;
 
+  String _snapshot() => [
+    _label.text,
+    _address.text,
+    ..._tags,
+    _notes.text,
+    _group,
+    _favorite,
+    _systemCode,
+    _settings.signature,
+  ].join('\u0000');
+
   @override
   void dispose() {
     for (final c in [_label, _address, _notes]) {
@@ -2546,6 +2684,7 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
       error: _error,
       onSave: _save,
       onSaveAndConnect: () => _save(connect: true),
+      snapshot: _snapshot,
       children: [
         // One grid: the label on the left, as in the settings below.
         _Section(l.sectionGeneral),
@@ -2638,6 +2777,9 @@ class _GroupEditorState extends ConsumerState<_GroupEditor> {
   late String? _parent = _spec.parentId;
   String? _error;
 
+  String _snapshot() =>
+      [_name.text, _parent, _settings.signature].join('\u0000');
+
   @override
   void dispose() {
     _name.dispose();
@@ -2682,6 +2824,7 @@ class _GroupEditorState extends ConsumerState<_GroupEditor> {
       subtitle: _spec.name.isEmpty ? null : _spec.name,
       error: _error,
       onSave: _save,
+      snapshot: _snapshot,
       children: [
         _Section(l.sectionGeneral),
         EditorFieldRow(

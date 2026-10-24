@@ -119,6 +119,7 @@ fn options(user: &str, known: KnownHosts, host_certificates: bool) -> Options {
         known_hosts: Arc::new(Mutex::new(known)),
         host_certificates,
         legacy_host_keys: false,
+        connect_timeout: None,
         keepalive: None,
         agent_forward: None,
         on_untrusted: None,

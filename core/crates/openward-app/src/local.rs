@@ -9,6 +9,8 @@ pub struct Local {
     /// Local login name: `%u`, and the remote user when nothing sets one.
     pub user: String,
     pub ssh_dir: PathBuf,
+    /// OpenSSH's system folder, `/etc/ssh`: its `ssh_known_hosts`.
+    pub system_ssh_dir: PathBuf,
     /// The system agent: `SSH_AUTH_SOCK`, or OpenSSH's pipe on Windows.
     pub agent: Option<PathBuf>,
 }
@@ -35,8 +37,17 @@ impl Local {
         } else {
             std::env::var_os("SSH_AUTH_SOCK").map(PathBuf::from)
         };
+        let system_ssh_dir = if cfg!(windows) {
+            var(&["PROGRAMDATA"]).map_or_else(
+                || PathBuf::from(r"C:\ProgramData\ssh"),
+                |d| PathBuf::from(d).join("ssh"),
+            )
+        } else {
+            PathBuf::from("/etc/ssh")
+        };
         Self {
             ssh_dir: home.join(".ssh"),
+            system_ssh_dir,
             home,
             user,
             agent,
@@ -156,6 +167,7 @@ mod tests {
             home: PathBuf::from("/home/ana"),
             user: "ana".into(),
             ssh_dir: PathBuf::from("/home/ana/.ssh"),
+            system_ssh_dir: PathBuf::from("/etc/ssh"),
             agent: None,
         }
     }

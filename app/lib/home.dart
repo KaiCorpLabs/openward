@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +16,7 @@ import 'hosts/rail.dart';
 import 'hosts/sidebar.dart';
 import 'settings/settings_page.dart';
 import 'sftp/sftp_view.dart';
+import 'tabs/close_guard.dart' as guard;
 import 'tabs/session_view.dart';
 import 'tabs/tab_strip.dart';
 import 'tabs/tabs.dart';
@@ -28,6 +30,7 @@ import 'snippets/palette.dart';
 import 'snippets/snippets_page.dart';
 import 'tunnels/tunnels_page.dart';
 import 'ui/announcer.dart';
+import 'ui/keep_focus.dart';
 import 'welcome/whats_new.dart';
 import 'workspaces/workspaces_page.dart';
 import 'ui/tokens.dart';
@@ -63,9 +66,17 @@ class _HomeState extends ConsumerState<Home> {
 
   final FocusNode _search = FocusNode(debugLabel: 'host search');
 
+  /// ⌘Q and closing the window ask first when that cuts something off.
+  late final AppLifecycleListener _exit;
+
   @override
   void initState() {
     super.initState();
+    _exit = AppLifecycleListener(
+      onExitRequested: () async => mounted && !await guard.confirmQuit(context)
+          ? AppExitResponse.cancel
+          : AppExitResponse.exit,
+    );
     // This device's choice reaches the core now and on every change.
     ref.listenManual(
       settingsProvider.select((s) => s.readOsRelease),
@@ -79,6 +90,7 @@ class _HomeState extends ConsumerState<Home> {
 
   @override
   void dispose() {
+    _exit.dispose();
     systemsNotTold.removeListener(_offerOsRelease);
     _search.dispose();
     super.dispose();
@@ -152,7 +164,7 @@ class _HomeState extends ConsumerState<Home> {
   /// Window shortcuts. Terminal panes let these through (`isAppShortcut`).
   Map<ShortcutActivator, VoidCallback> _shortcuts() {
     final tabs = ref.read(tabsProvider.notifier);
-    void closeCurrent() => tabs.closeCurrent();
+    void closeCurrent() => guard.closeCurrent(context);
     void splitRight() => tabs.split(Axis.horizontal);
     void splitDown() => tabs.split(Axis.vertical);
     void go(AxisDirection d) => tabs.focusPane(d);
@@ -188,6 +200,8 @@ class _HomeState extends ConsumerState<Home> {
         const SingleActivator(LogicalKeyboardKey.keyN, meta: true): _newHost,
         const SingleActivator(LogicalKeyboardKey.keyW, meta: true):
             closeCurrent,
+        const SingleActivator(LogicalKeyboardKey.keyT, meta: true, shift: true):
+            tabs.reopen,
         const SingleActivator(LogicalKeyboardKey.keyK, meta: true): palette,
         const SingleActivator(LogicalKeyboardKey.keyB, meta: true): sidebar,
         const SingleActivator(LogicalKeyboardKey.keyH, meta: true, shift: true):
@@ -268,6 +282,12 @@ class _HomeState extends ConsumerState<Home> {
           control: true,
           shift: true,
         ): closeCurrent,
+        const SingleActivator(
+          LogicalKeyboardKey.keyT,
+          control: true,
+          shift: true,
+          alt: true,
+        ): tabs.reopen,
         const SingleActivator(
           LogicalKeyboardKey.keyO,
           control: true,
@@ -385,9 +405,9 @@ class _HomeState extends ConsumerState<Home> {
       bindings: _shortcuts(),
       // Shortcuts only hear keys from below them. With no field focused (at
       // start, or once the focused terminal or page is gone), the focus would
-      // fall back to the route's scope, above this widget; this scope keeps
-      // it here, so the window's shortcuts work with nothing focused too.
-      child: FocusScope(
+      // fall back to a scope above this widget; this one keeps it here, so
+      // the window's shortcuts work with nothing focused too.
+      child: KeepFocus(
         debugLabel: 'window',
         autofocus: true,
         child: Announcer(

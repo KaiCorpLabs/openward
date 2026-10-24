@@ -2,6 +2,7 @@
 
 import '../l10n/l10n.dart';
 import '../src/rust/api/session.dart';
+import '../terminal/keys.dart' show isApple;
 import '../terminal/controller.dart';
 
 String stageText(AppLocalizations l, StageView s) {
@@ -50,6 +51,12 @@ String networkReason(AppLocalizations l, String reason) {
   if (r.contains('connection lost') || r.contains('disconnected')) {
     return l.netLost;
   }
+  // On macOS, also what an app without the Local Network permission gets.
+  if (r.contains('no route to host') || r.contains('host is unreachable')) {
+    return isApple ? l.netUnreachableMac : l.netUnreachable;
+  }
+  final silent = RegExp(r'no answer for (\d+) s$').firstMatch(reason);
+  if (silent != null) return l.netNoAnswer(int.parse(silent.group(1)!));
   return reason;
 }
 

@@ -396,6 +396,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get clear => 'Quitar';
 
   @override
+  String get clearAction => 'Borrar';
+
+  @override
   String get clearFinished => 'Quitar las terminadas';
 
   @override
@@ -411,9 +414,23 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get clearHistoryBody =>
+      'Los comandos que la paleta recuerda se olvidan, en todos los hosts.';
+
+  @override
+  String get clearHistoryTitle => '¿Borrar el historial de comandos?';
+
+  @override
   String clearRecent(int count) {
     return 'Borrar ($count)';
   }
+
+  @override
+  String get clearRecentBody =>
+      'La lista de la página de inicio y de la paleta queda vacía. Los hosts guardados no cambian.';
+
+  @override
+  String get clearRecentTitle => '¿Borrar las conexiones recientes?';
 
   @override
   String get clearSelection => 'Quitar la selección';
@@ -423,6 +440,26 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get closeAction => 'Cerrar';
+
+  @override
+  String closeMarkedMany(int count) {
+    return '¿Cerrar $count sesiones conectadas?';
+  }
+
+  @override
+  String closeMarkedManyBody(String names) {
+    return 'Son de entornos marcados: $names.';
+  }
+
+  @override
+  String closeMarkedOne(String label) {
+    return '¿Cerrar «$label»?';
+  }
+
+  @override
+  String closeMarkedOneBody(String env) {
+    return 'Está conectada a un host de $env: lo que esté en marcha en ella se corta.';
+  }
 
   @override
   String get closeOtherTabs => 'Cerrar las demás';
@@ -573,6 +610,14 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get connect => 'Conectar';
+
+  @override
+  String connectTimeoutAfter(int seconds) {
+    return 'Se rinde a los $seconds s sin respuesta';
+  }
+
+  @override
+  String get connectTimeoutLabel => 'Tiempo para conectar';
 
   @override
   String connectToAddress(String address) {
@@ -777,6 +822,16 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get destination => 'Destino';
+
+  @override
+  String get discardChanges => 'Descartar';
+
+  @override
+  String get discardChangesBody =>
+      'Lo que has cambiado en este panel no se ha guardado.';
+
+  @override
+  String get discardChangesTitle => '¿Descartar los cambios?';
 
   @override
   String get dividerHint =>
@@ -2291,6 +2346,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get netLost => 'se ha perdido la conexión.';
 
   @override
+  String netNoAnswer(int seconds) {
+    return 'no responde ($seconds s sin respuesta).';
+  }
+
+  @override
   String get netNotFound => 'no se encuentra el host.';
 
   @override
@@ -2298,6 +2358,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get netTimeout => 'tiempo de espera agotado.';
+
+  @override
+  String get netUnreachable => 'no se llega al host.';
+
+  @override
+  String get netUnreachableMac =>
+      'no se llega al host. Si está en tu red local, mira que OpenWard tenga permiso en Ajustes del Sistema › Privacidad y seguridad › Red local.';
 
   @override
   String get newEllipsis => 'Nuevo…';
@@ -3248,6 +3315,50 @@ class AppLocalizationsEs extends AppLocalizations {
       'Escribe una dirección como usuario@servidor:puerto.';
 
   @override
+  String get quit => 'Salir';
+
+  @override
+  String quitBody(String what) {
+    return 'Se corta: $what.';
+  }
+
+  @override
+  String quitSessions(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sesiones abiertas',
+      one: '1 sesión abierta',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get quitTitle => '¿Salir de OpenWard?';
+
+  @override
+  String quitTransfers(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count transferencias en curso',
+      one: '1 transferencia en curso',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String quitTunnels(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count túneles abiertos',
+      one: '1 túnel abierto',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get readFailedTitle => 'No se ha podido leer';
 
   @override
@@ -3399,6 +3510,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get renameWorkspace => 'Renombrar el espacio de trabajo';
+
+  @override
+  String get reopenTab => 'Reabrir la pestaña cerrada';
 
   @override
   String get repeatPassphrase => 'Repítela';
@@ -3928,6 +4042,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get skipGuide => 'Saltar la guía';
 
   @override
+  String snippetDeleted(String name) {
+    return 'Snippet «$name» eliminado';
+  }
+
+  @override
   String get snippetEditorHint =>
       'Comandos que envías a un terminal; lo que va entre llaves se pregunta.';
 
@@ -4345,6 +4464,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get tunnelClosed => 'Detenido';
 
   @override
+  String tunnelDeleted(String name) {
+    return 'Túnel «$name» eliminado';
+  }
+
+  @override
   String tunnelDidNotOpen(String name, String why) {
     return 'No se abrió «$name» al conectar: $why';
   }
@@ -4472,6 +4596,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get uiFont => 'Fuente de la interfaz';
+
+  @override
+  String get undo => 'Deshacer';
 
   @override
   String get unknownKeyType => 'Tipo desconocido';

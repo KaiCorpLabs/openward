@@ -13,12 +13,12 @@
 //! A method the server accepts only in part ("partial success") moves on to
 //! the next one, which is how publickey + 2FA works.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use openward_ssh::client::{
-    self as ssh, Agent, Hop as Transport, HostKeyHook, HostKeyQuery, Kbd, KeyError, Options,
-    Outcome, Session, Target, UntrustedHost,
+    self as ssh, Agent, AgentRefused, Hop as Transport, HostKeyHook, HostKeyQuery, Kbd, KeyError,
+    Options, Outcome, Session, Target, UntrustedHost,
 };
 use openward_ssh::known_hosts::{KnownHosts, Unknown, Verdict};
 use openward_ssh::proxy::ProxyAuthRequired;
@@ -116,9 +116,11 @@ pub(crate) async fn learn_systems(
     for (host, read, session) in hops {
         let mut told = system::from_banner(&session.info().server_id);
         if read && told.code != "win" {
-            let out =
-                tokio::time::timeout(system::OS_RELEASE_WITHIN, session.exec(system::OS_RELEASE))
-                    .await;
+            let out = tokio::time::timeout(
+                system::OS_RELEASE_WITHIN,
+                session.exec_short(system::OS_RELEASE),
+            )
+            .await;
             if let Some(s) = out
                 .ok()
                 .and_then(Result::ok)
@@ -160,10 +162,15 @@ impl Ctx {
     }
 
     /// The vault's trusted keys, and `~/.ssh/known_hosts`.
-    fn known_hosts(&self) -> KnownTexts {
+    /// OpenWard's trusted keys, and OpenSSH's in `files`.
+    fn known_hosts(&self, files: &[PathBuf]) -> KnownTexts {
         KnownTexts {
             openward: lock(&self.vault).known_hosts_text(),
-            openssh: std::fs::read_to_string(self.local.known_hosts_file()).unwrap_or_default(),
+            openssh: files
+                .iter()
+                .filter_map(|f| std::fs::read_to_string(f).ok())
+                .collect::<Vec<_>>()
+                .join("\n"),
         }
     }
 }
@@ -206,11 +213,11 @@ pub(crate) fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 
 /// Authenticated sessions, jumps first; they must live as long as the last.
 pub(crate) async fn run(plan: &Plan, ctx: &Ctx) -> Result<Vec<Session>, Failure> {
-    let texts = ctx.known_hosts();
-    let known = texts.all();
     let mut sessions: Vec<Session> = Vec::with_capacity(plan.hops.len());
     for (i, hop) in plan.hops.iter().enumerate() {
         ctx.stage(plan, i, Stage::Connecting);
+        let texts = ctx.known_hosts(&hop.known_hosts);
+        let known = texts.all();
         let refused = Arc::new(Mutex::new(None));
         let last = i + 1 == plan.hops.len();
         let opts = Options {
@@ -218,6 +225,7 @@ pub(crate) async fn run(plan: &Plan, ctx: &Ctx) -> Result<Vec<Session>, Failure>
             known_hosts: Arc::new(Mutex::new(KnownHosts::parse(&known, Unknown::Reject))),
             host_certificates: known.contains("@cert-authority"),
             legacy_host_keys: hop.legacy_host_keys,
+            connect_timeout: hop.connect_timeout,
             keepalive: hop.keepalive,
             agent_forward: if last && plan.agent_forward {
                 hop.agent.clone()
@@ -370,6 +378,11 @@ async fn authenticate(s: &mut Session, hop: &Hop, ctx: &Ctx) -> Result<(), Failu
         Outcome::Success => return Ok(()),
         Outcome::Continue { methods, .. } => methods,
     };
+    let failed = |methods: &[MethodKind]| Failure::AuthFailed {
+        label: hop.label.clone(),
+        user: user.to_owned(),
+        methods: methods.iter().map(|m| <&str>::from(m).to_owned()).collect(),
+    };
     let mut tried = Vec::new();
     loop {
         let next = [
@@ -380,11 +393,7 @@ async fn authenticate(s: &mut Session, hop: &Hop, ctx: &Ctx) -> Result<(), Failu
         .into_iter()
         .find(|m| methods.contains(m) && !tried.contains(m));
         let Some(method) = next else {
-            return Err(Failure::AuthFailed {
-                label: hop.label.clone(),
-                user: user.to_owned(),
-                methods: methods.iter().map(|m| <&str>::from(m).to_owned()).collect(),
-            });
+            return Err(failed(&methods));
         };
         tried.push(method);
         // What stands if a method has nothing to try.
@@ -393,13 +402,19 @@ async fn authenticate(s: &mut Session, hop: &Hop, ctx: &Ctx) -> Result<(), Failu
             partial: false,
         };
         let outcome = match method {
-            MethodKind::PublicKey => public_keys(s, hop, ctx, unchanged).await?,
-            MethodKind::KeyboardInteractive => keyboard_interactive(s, hop, ctx, unchanged).await?,
-            _ => password(s, hop, ctx, unchanged).await?,
+            MethodKind::PublicKey => public_keys(s, hop, ctx, unchanged).await,
+            MethodKind::KeyboardInteractive => keyboard_interactive(s, hop, ctx, unchanged).await,
+            _ => password(s, hop, ctx, unchanged).await,
         };
         match outcome {
-            Outcome::Success => return Ok(()),
-            Outcome::Continue { methods: m, .. } => methods = m,
+            Ok(Outcome::Success) => return Ok(()),
+            // Hung up on after a rejection (`MaxAuthTries`): not the
+            // network, and trying again would offer every key again.
+            Ok(Outcome::Continue { .. }) | Err(Failure::Network { .. }) if s.gave_up() => {
+                return Err(failed(&methods));
+            }
+            Ok(Outcome::Continue { methods: m, .. }) => methods = m,
+            Err(failure) => return Err(failure),
         }
     }
 }
@@ -433,10 +448,20 @@ async fn public_keys(
             order.extend(others);
         }
         for key in order {
-            let outcome = s
-                .auth_agent(user, &mut agent, key.clone())
-                .await
-                .map_err(network(hop))?;
+            if s.is_closed() {
+                return Ok(last);
+            }
+            let outcome = match s.auth_agent(user, &mut agent, key.clone()).await {
+                Ok(outcome) => outcome,
+                Err(e) => match e.downcast_ref::<AgentRefused>() {
+                    // Not this one (a denied confirmation, a locked
+                    // agent): the next may do.
+                    Some(AgentRefused::Refused(_)) => continue,
+                    // Its answer may still come: the files are next.
+                    Some(AgentRefused::Silent(_)) => break,
+                    None => return Err(network(hop)(e)),
+                },
+            };
             offered.push(key);
             if !rejected(&outcome) {
                 return Ok(outcome);
@@ -446,6 +471,9 @@ async fn public_keys(
     }
 
     for (path, public) in files {
+        if s.is_closed() {
+            break;
+        }
         if public
             .as_ref()
             .is_some_and(|p| offered.iter().any(|o| o.key_data() == p.key_data()))
@@ -512,11 +540,7 @@ async fn load_key(path: &Path, ctx: &Ctx) -> Result<Option<PrivateKey>, Failure>
 }
 
 /// The certificate for `key`: one of `explicit`, or `<key>-cert.pub`.
-fn certificate_for(
-    key: &PrivateKey,
-    path: &Path,
-    explicit: &[std::path::PathBuf],
-) -> Option<Certificate> {
+fn certificate_for(key: &PrivateKey, path: &Path, explicit: &[PathBuf]) -> Option<Certificate> {
     let mut implicit = path.as_os_str().to_owned();
     implicit.push("-cert.pub");
     explicit

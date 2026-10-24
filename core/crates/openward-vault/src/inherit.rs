@@ -34,6 +34,7 @@ pub fn defaults() -> Settings {
         agent: Some(Agent::System),
         route: Some(Route::Direct),
         keepalive_secs: Some(10),
+        connect_timeout_secs: Some(15),
         agent_forward: Some(false),
         persistent_session: Some(false),
         term: Some("xterm-256color".into()),

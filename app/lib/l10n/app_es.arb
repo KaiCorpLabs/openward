@@ -323,6 +323,7 @@
   "chooseFile": "Elegir…",
   "cipher": "Cifrado",
   "clear": "Quitar",
+  "clearAction": "Borrar",
   "clearFinished": "Quitar las terminadas",
   "clearHistory": "{count, plural, =0{Borrar el historial} =1{Borrar 1 comando} other{Borrar {count} comandos}}",
   "@clearHistory": {
@@ -332,6 +333,8 @@
       }
     }
   },
+  "clearHistoryBody": "Los comandos que la paleta recuerda se olvidan, en todos los hosts.",
+  "clearHistoryTitle": "¿Borrar el historial de comandos?",
   "clearRecent": "Borrar ({count})",
   "@clearRecent": {
     "placeholders": {
@@ -340,9 +343,43 @@
       }
     }
   },
+  "clearRecentBody": "La lista de la página de inicio y de la paleta queda vacía. Los hosts guardados no cambian.",
+  "clearRecentTitle": "¿Borrar las conexiones recientes?",
   "clearSelection": "Quitar la selección",
   "close": "Cerrar",
   "closeAction": "Cerrar",
+  "closeMarkedMany": "¿Cerrar {count} sesiones conectadas?",
+  "@closeMarkedMany": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "closeMarkedManyBody": "Son de entornos marcados: {names}.",
+  "@closeMarkedManyBody": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "closeMarkedOne": "¿Cerrar «{label}»?",
+  "@closeMarkedOne": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "closeMarkedOneBody": "Está conectada a un host de {env}: lo que esté en marcha en ella se corta.",
+  "@closeMarkedOneBody": {
+    "placeholders": {
+      "env": {
+        "type": "String"
+      }
+    }
+  },
   "closeOtherTabs": "Cerrar las demás",
   "closePane": "Cerrar el panel",
   "closeTab": "Cerrar la pestaña",
@@ -458,6 +495,15 @@
   "conflictYours": "El tuyo",
   "conflictYoursNewer": "el tuyo es más nuevo",
   "connect": "Conectar",
+  "connectTimeoutAfter": "Se rinde a los {seconds} s sin respuesta",
+  "@connectTimeoutAfter": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "connectTimeoutLabel": "Tiempo para conectar",
   "connectToAddress": "Conectar a {address}",
   "@connectToAddress": {
     "placeholders": {
@@ -632,6 +678,9 @@
   "deletedHost": "(host eliminado)",
   "deletedIdentity": "(identidad eliminada)",
   "destination": "Destino",
+  "discardChanges": "Descartar",
+  "discardChangesBody": "Lo que has cambiado en este panel no se ha guardado.",
+  "discardChangesTitle": "¿Descartar los cambios?",
   "dividerHint": "Arrastra para cambiar el tamaño · doble clic: mitad y mitad",
   "dontTrust": "No confiar",
   "download": "Descarga",
@@ -1874,9 +1923,19 @@
     }
   },
   "netLost": "se ha perdido la conexión.",
+  "netNoAnswer": "no responde ({seconds} s sin respuesta).",
+  "@netNoAnswer": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "netNotFound": "no se encuentra el host.",
   "netRefused": "conexión rechazada.",
   "netTimeout": "tiempo de espera agotado.",
+  "netUnreachable": "no se llega al host.",
+  "netUnreachableMac": "no se llega al host. Si está en tu red local, mira que OpenWard tenga permiso en Ajustes del Sistema › Privacidad y seguridad › Red local.",
   "newEllipsis": "Nuevo…",
   "newFolder": "Nueva carpeta",
   "newGroup": "Nuevo grupo",
@@ -2488,6 +2547,40 @@
   },
   "quickConnectHint": "usuario@servidor:puerto o el nombre de un host",
   "quickConnectInvalid": "Escribe una dirección como usuario@servidor:puerto.",
+  "quit": "Salir",
+  "quitBody": "Se corta: {what}.",
+  "@quitBody": {
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "quitSessions": "{count, plural, =1{1 sesión abierta} other{{count} sesiones abiertas}}",
+  "@quitSessions": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "quitTitle": "¿Salir de OpenWard?",
+  "quitTransfers": "{count, plural, =1{1 transferencia en curso} other{{count} transferencias en curso}}",
+  "@quitTransfers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "quitTunnels": "{count, plural, =1{1 túnel abierto} other{{count} túneles abiertos}}",
+  "@quitTunnels": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "readFailedTitle": "No se ha podido leer",
   "readFormat": "Es de {program}, pero no está como se esperaba: {message}",
   "@readFormat": {
@@ -2589,6 +2682,7 @@
     }
   },
   "renameWorkspace": "Renombrar el espacio de trabajo",
+  "reopenTab": "Reabrir la pestaña cerrada",
   "repeatPassphrase": "Repítela",
   "reportCopied": "Copiado. Pégalo en tu informe.",
   "reportCore": "núcleo",
@@ -2937,6 +3031,14 @@
     }
   },
   "skipGuide": "Saltar la guía",
+  "snippetDeleted": "Snippet «{name}» eliminado",
+  "@snippetDeleted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "snippetEditorHint": "Comandos que envías a un terminal; lo que va entre llaves se pregunta.",
   "snippetNeedsCommand": "Escribe el comando.",
   "snippetNeedsName": "Ponle un nombre.",
@@ -3214,6 +3316,14 @@
   "tryAnother": "Probar otro",
   "tunnelBadAddress": "Esa dirección no existe en este equipo.",
   "tunnelClosed": "Detenido",
+  "tunnelDeleted": "Túnel «{name}» eliminado",
+  "@tunnelDeleted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "tunnelDidNotOpen": "No se abrió «{name}» al conectar: {why}",
   "@tunnelDidNotOpen": {
     "placeholders": {
@@ -3323,6 +3433,7 @@
   "typeOnly": "Solo escribe",
   "uiColors": "Colores de la interfaz",
   "uiFont": "Fuente de la interfaz",
+  "undo": "Deshacer",
   "unknownKeyType": "Tipo desconocido",
   "upOneLevel": "Subir un nivel",
   "updateWithOpenTabs": "Cambiar por las pestañas abiertas",

@@ -2,8 +2,10 @@
 //! Remote forwarding (-R) lives in the client handler, which receives the
 //! server's `forwarded-tcpip` channels.
 
+use std::future::Future;
 use std::net::{Ipv4Addr, Ipv6Addr};
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::bail;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -11,6 +13,37 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::task::JoinHandle;
 
 use crate::client::Session;
+
+/// How long a listener may fail in a row before it is given up on.
+pub const GIVE_UP: Duration = Duration::from_secs(30);
+
+/// The next connection. A failed accept is most often passing: out of
+/// descriptors while a browser opens hundreds through a SOCKS tunnel, a
+/// client gone before it was taken. It waits a little and tries again;
+/// only after failing for [`GIVE_UP`] in a row does it give up.
+pub async fn accept<T, A>(mut next: impl FnMut() -> A) -> std::io::Result<T>
+where
+    A: Future<Output = std::io::Result<T>>,
+{
+    let mut pause = Duration::from_millis(10);
+    let mut failing = None;
+    loop {
+        match next().await {
+            Ok(accepted) => return Ok(accepted),
+            Err(e) => {
+                if failing
+                    .get_or_insert_with(tokio::time::Instant::now)
+                    .elapsed()
+                    >= GIVE_UP
+                {
+                    return Err(e);
+                }
+                tokio::time::sleep(pause).await;
+                pause = (pause * 2).min(Duration::from_secs(1));
+            }
+        }
+    }
+}
 
 /// A listening forward; dropping it stops accepting.
 pub struct Forward {
@@ -30,7 +63,7 @@ pub async fn local(session: Arc<Session>, host: &str, port: u16) -> anyhow::Resu
     let local_port = listener.local_addr()?.port();
     let host = host.to_owned();
     let task = tokio::spawn(async move {
-        while let Ok((mut socket, peer)) = listener.accept().await {
+        while let Ok((mut socket, peer)) = accept(|| listener.accept()).await {
             let session = Arc::clone(&session);
             let host = host.clone();
             tokio::spawn(async move {
@@ -63,7 +96,7 @@ pub async fn dynamic(session: Arc<Session>) -> anyhow::Result<Forward> {
     let listener = TcpListener::bind("127.0.0.1:0").await?;
     let port = listener.local_addr()?.port();
     let task = tokio::spawn(async move {
-        while let Ok((socket, _)) = listener.accept().await {
+        while let Ok((socket, _)) = accept(|| listener.accept()).await {
             let session = Arc::clone(&session);
             tokio::spawn(async move {
                 let _ = socks5(socket, &session).await;
@@ -155,4 +188,33 @@ pub async fn socks5_connect(proxy_port: u16, host: &str, port: u16) -> anyhow::R
         bail!("SOCKS5 CONNECT failed ({})", answer[1]);
     }
     Ok(s)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Out of descriptors for a while: it waits and goes on. Failing for
+    /// good: it gives up, in time.
+    #[tokio::test(start_paused = true)]
+    async fn accepting_rides_out_passing_errors() {
+        let emfile = || std::io::Error::other("Too many open files");
+        let mut left = 5;
+        let accepted = accept(|| {
+            left -= 1;
+            let r = if left > 0 { Err(emfile()) } else { Ok(7) };
+            async move { r }
+        })
+        .await;
+        assert_eq!(accepted.unwrap(), 7);
+
+        let started = tokio::time::Instant::now();
+        let given_up = accept(|| async { Err::<(), _>(emfile()) }).await;
+        assert!(given_up.is_err());
+        let took = started.elapsed();
+        assert!(
+            took >= GIVE_UP && took < GIVE_UP + Duration::from_secs(2),
+            "{took:?}"
+        );
+    }
 }

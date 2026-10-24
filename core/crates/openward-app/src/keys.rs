@@ -155,6 +155,7 @@ mod tests {
             home: home.to_owned(),
             user: "ana".into(),
             ssh_dir: home.join(".ssh"),
+            system_ssh_dir: home.join("etc-ssh"),
             agent: None,
         }
     }

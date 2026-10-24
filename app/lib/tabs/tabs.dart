@@ -80,6 +80,49 @@ class TabsState {
       tabs.whereType<SessionTab>().expand((t) => t.panes.controllers);
 }
 
+/// A closed tab, to open again (⌘⇧T): where its sessions connected and
+/// how its panes were laid out, or its page or browser. Only that: what
+/// was on the screens is gone with them.
+sealed class _Closed {}
+
+final class _ClosedPage extends _Closed {
+  _ClosedPage(this.page);
+
+  final PageKind page;
+}
+
+final class _ClosedSftp extends _Closed {
+  _ClosedSftp(this.label, this.hostId, this.target);
+
+  final String label;
+  final String? hostId;
+  final QuickTarget? target;
+}
+
+/// A pane: its session's place, or none (it was asking what to open).
+final class _ClosedPane extends _Closed {
+  _ClosedPane(TerminalController? c, {required this.active})
+    : label = c?.label,
+      hostId = c?.hostId,
+      target = c?.target;
+
+  final String? label;
+  final String? hostId;
+  final QuickTarget? target;
+  final bool active;
+}
+
+final class _ClosedSplit extends _Closed {
+  _ClosedSplit(this.axis, this.first, this.second, this.ratio);
+
+  final Axis axis;
+  final _Closed first, second;
+  final double ratio;
+}
+
+/// How many closed tabs can be opened again.
+const _reopenable = 20;
+
 class TabsNotifier extends Notifier<TabsState> {
   /// Every live controller, to dispose with the notifier (`state` cannot be
   /// read while disposing).
@@ -196,11 +239,82 @@ class TabsNotifier extends Notifier<TabsState> {
     SchedulerBinding.instance.addPostFrameCallback((_) => c.dispose());
   }
 
+  /// Closed tabs, the last one last.
+  final List<_Closed> _closed = [];
+
+  void _remember(_Closed closed) {
+    _closed.add(closed);
+    if (_closed.length > _reopenable) _closed.removeAt(0);
+  }
+
+  _Closed _layout(PaneNode node, Pane active) => switch (node) {
+    Pane(:final controller) => _ClosedPane(
+      controller,
+      active: identical(node, active),
+    ),
+    PaneSplit(:final axis, :final first, :final second, :final ratio) =>
+      _ClosedSplit(
+        axis,
+        _layout(first, active),
+        _layout(second, active),
+        ratio,
+      ),
+  };
+
+  /// Whether there is a closed tab to open again.
+  bool get canReopen => _closed.isNotEmpty;
+
+  /// Opens the last closed tab (or pane) again, with new connections to
+  /// the same places, laid out as it was.
+  void reopen() {
+    if (_closed.isEmpty) return;
+    switch (_closed.removeLast()) {
+      case _ClosedPage(:final page):
+        openPage(page);
+      case _ClosedSftp(:final label, :final hostId, :final target):
+        openSftp(hostId: hostId, target: target, label: label);
+      case final layout:
+        Pane? active;
+        PaneNode build(_Closed n) => switch (n) {
+          _ClosedPane(:final label, :final hostId, :final target) => () {
+            final pane = Pane(
+              label == null
+                  ? null
+                  : _start(
+                      _controller(label: label, hostId: hostId, target: target),
+                    ),
+            );
+            if (n.active) active = pane;
+            return pane;
+          }(),
+          _ClosedSplit(
+            :final axis,
+            :final first,
+            :final second,
+            :final ratio,
+          ) =>
+            PaneSplit(axis, build(first), build(second), ratio),
+          _ClosedPage() || _ClosedSftp() => throw StateError('not a pane'),
+        };
+        final root = build(layout);
+        addTabs([SessionTab.withPanes(Panes.of(root, active: active))]);
+    }
+  }
+
   /// Closes a tab; the one after it (or before, at the end) comes to front.
   void close(int index) {
     if (index < 0 || index >= state.tabs.length) return;
     final tabs = [...state.tabs];
     final closed = tabs.removeAt(index);
+    _remember(switch (closed) {
+      SessionTab(:final panes) => _layout(panes.root, panes.active),
+      SftpTab(:final controller) => _ClosedSftp(
+        controller.label,
+        controller.hostId,
+        controller.target,
+      ),
+      PageTab(:final page) => _ClosedPage(page),
+    });
     switch (closed) {
       case SessionTab(:final panes):
         panes.controllers.forEach(_dispose);
@@ -229,6 +343,8 @@ class TabsNotifier extends Notifier<TabsState> {
   void closePane(SessionTab tab, Pane pane) {
     final c = pane.controller;
     if (!tab.panes.remove(pane)) return close(state.tabs.indexOf(tab));
+    // Opened again, it comes back in a tab of its own.
+    if (c != null) _remember(_ClosedPane(c, active: true));
     if (c != null) _dispose(c);
     _refresh();
     focusActive(tab);

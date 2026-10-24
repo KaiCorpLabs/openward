@@ -81,11 +81,16 @@ class HistoryNotifier extends Notifier<List<HistoryEntry>> {
   /// The oldest go beyond this many.
   static const limit = 2000;
 
+  /// Where it is written: read once, as `ref` cannot be read while the
+  /// app goes and [flush] writes what was waiting.
+  late File _file;
+
   @override
   List<HistoryEntry> build() {
+    _file = ref.read(historyFileProvider);
     ref.onDispose(flush);
     try {
-      final json = readJsonFile(ref.read(historyFileProvider));
+      final json = readJsonFile(_file);
       if (json is Map && json['commands'] is List) {
         return [
           for (final e in json['commands'] as List) ?HistoryEntry.fromJson(e),
@@ -141,7 +146,7 @@ class HistoryNotifier extends Notifier<List<HistoryEntry>> {
     if (_pending == null) return;
     _pending!.cancel();
     _pending = null;
-    final file = ref.read(historyFileProvider);
+    final file = _file;
     try {
       if (state.isEmpty) {
         if (file.existsSync()) file.deleteSync();

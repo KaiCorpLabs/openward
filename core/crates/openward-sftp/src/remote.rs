@@ -2,6 +2,7 @@
 //! the server has them).
 
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use russh_sftp::client::rawsession::Limits;
 use russh_sftp::client::{Config, RawSftpSession};
@@ -166,6 +167,18 @@ impl Remote {
         self.attrs(path, false).await
     }
 
+    /// The user and group ids `path` itself belongs to, when the server
+    /// says; `None` if there is nothing.
+    pub async fn owner_ids(&self, path: &str) -> Result<Option<(u32, u32)>> {
+        match self.raw.lstat(path).await {
+            Ok(a) => Ok(a.attrs.uid.zip(a.attrs.gid)),
+            Err(e) => match Error::sftp(path, e) {
+                Error::NotFound(_) => Ok(None),
+                e => Err(e),
+            },
+        }
+    }
+
     async fn attrs(&self, path: &str, follow: bool) -> Result<Option<Entry>> {
         let r = if follow {
             self.raw.stat(path).await
@@ -220,16 +233,36 @@ impl Remote {
                 _ => Err(Error::Other(format!("{to}: unexpected answer to rename"))),
             };
         }
-        if overwrite && self.lstat(to).await?.is_some() {
-            self.remove_file(to).await?;
-        } else if !overwrite && self.lstat(to).await?.is_some() {
+        let rename = |from: String, to: String| async move {
+            self.raw
+                .rename(from.clone(), to)
+                .await
+                .map(|_| ())
+                .map_err(|e| Error::sftp(&from, e))
+        };
+        if self.lstat(to).await?.is_none() {
+            return rename(from.into(), to.into()).await;
+        }
+        if !overwrite {
             return Err(Error::Exists(to.to_owned()));
         }
-        self.raw
-            .rename(from, to)
-            .await
-            .map(|_| ())
-            .map_err(|e| Error::sftp(from, e))
+        // Without `posix-rename`: the old one is set aside, not deleted,
+        // until the new one is in its place, and comes back if it cannot be.
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |d| d.as_nanos());
+        let aside = format!("{to}.ow-{nanos:x}.old");
+        rename(to.into(), aside.clone()).await?;
+        match rename(from.into(), to.into()).await {
+            Ok(()) => {
+                let _ = self.remove_file(&aside).await;
+                Ok(())
+            }
+            Err(e) => {
+                let _ = rename(aside, to.into()).await;
+                Err(e)
+            }
+        }
     }
 
     pub async fn remove_file(&self, path: &str) -> Result<()> {

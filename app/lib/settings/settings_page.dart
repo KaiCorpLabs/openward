@@ -10,6 +10,7 @@ import '../home/recent.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/app.dart';
 import '../terminal/keys.dart';
+import '../ui/confirm.dart';
 import '../ui/tokens.dart';
 import '../ui/umbral.dart';
 import '../ui/widgets.dart';
@@ -232,7 +233,17 @@ class _General extends ConsumerWidget {
                 key: const ValueKey('settings.clearRecent'),
                 onPressed: recent.isEmpty
                     ? null
-                    : () => ref.read(recentProvider.notifier).clear(),
+                    : () async {
+                        final l = context.l10n;
+                        final sure = await confirmAction(
+                          context,
+                          title: l.clearRecentTitle,
+                          body: l.clearRecentBody,
+                          action: l.clearAction,
+                          danger: true,
+                        );
+                        if (sure) ref.read(recentProvider.notifier).clear();
+                      },
                 child: Text(l.clearRecent(recent.length)),
               ),
               const SizedBox(width: 8),
@@ -493,7 +504,17 @@ class _Terminal extends ConsumerWidget {
                 key: const ValueKey('settings.clearHistory'),
                 onPressed: history.isEmpty
                     ? null
-                    : () => ref.read(historyProvider.notifier).clear(),
+                    : () async {
+                        final l = context.l10n;
+                        final sure = await confirmAction(
+                          context,
+                          title: l.clearHistoryTitle,
+                          body: l.clearHistoryBody,
+                          action: l.clearAction,
+                          danger: true,
+                        );
+                        if (sure) ref.read(historyProvider.notifier).clear();
+                      },
                 child: Text(l.clearHistory(history.length)),
               ),
               const SizedBox(width: 8),

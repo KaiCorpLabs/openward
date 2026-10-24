@@ -48,6 +48,17 @@ class _TunnelEditorState extends ConsumerState<_TunnelEditor> {
   late bool _autostart = _old?.autostart ?? false;
   String? _error;
 
+  String _snapshot() => [
+    _label.text,
+    _listen.text,
+    _dest.text,
+    _destPort.text,
+    _host,
+    _kind,
+    _lan,
+    _autostart,
+  ].join('\u0000');
+
   @override
   void dispose() {
     for (final c in [_label, _listen, _dest, _destPort]) {
@@ -113,12 +124,40 @@ class _TunnelEditorState extends ConsumerState<_TunnelEditor> {
     }
   }
 
+  /// Deletes it at once (closing it, if open); the notice that says so
+  /// can bring it back, closed.
   Future<void> _delete() async {
     final t = widget.tunnel;
     if (t == null) return;
-    await ref.read(openWardProvider).delete(id: t.id);
-    ref.read(tunnelBoardProvider).refresh();
+    final l = context.l10n;
+    final app = ref.read(openWardProvider);
+    final board = ref.read(tunnelBoardProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await app.delete(id: t.id);
+    } catch (e) {
+      return setState(() => _error = l.deleteFailed('$e'));
+    }
+    board.refresh();
     if (mounted) Navigator.pop(context, true);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(l.tunnelDeleted(t.spec.label)),
+        action: SnackBarAction(
+          label: l.undo,
+          onPressed: () async {
+            try {
+              await app.createTunnel(spec: t.spec);
+            } catch (e) {
+              messenger.showSnackBar(
+                SnackBar(content: Text(l.saveFailed('$e'))),
+              );
+            }
+            board.refresh();
+          },
+        ),
+      ),
+    );
   }
 
   @override
@@ -156,6 +195,7 @@ class _TunnelEditorState extends ConsumerState<_TunnelEditor> {
       onSaveAndConnect: () => _save(open: true),
       saveAndConnectLabel: l.saveAndOpen,
       onDelete: widget.tunnel == null ? null : _delete,
+      snapshot: _snapshot,
       children: [
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,

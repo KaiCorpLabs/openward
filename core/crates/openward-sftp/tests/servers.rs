@@ -62,6 +62,7 @@ async fn server(fx: &Path, port: u16, name: &str) -> Server {
         known_hosts: Arc::new(Mutex::new(KnownHosts::new(Unknown::Learn))),
         host_certificates: false,
         legacy_host_keys: false,
+        connect_timeout: None,
         keepalive: None,
         agent_forward: None,
         on_untrusted: None,
@@ -412,6 +413,72 @@ async fn conflicts_skip_replace_newer_or_keep_both() {
     assert_eq!(merge.files_done, 1);
     assert_eq!(s.cat("d/new.txt").await, b"n");
     assert_eq!(s.cat("d/old.txt").await, b"keep");
+    s.done().await;
+}
+
+/// Replacing through a link writes the file it leads to: the link stays.
+/// Replacing someone else's file writes over it where it is: it stays
+/// theirs (`/srv/shared/notes.txt`, `otp`'s, that `demo` may write).
+#[tokio::test]
+async fn an_upload_leaves_links_and_owners_as_they_were() {
+    let fx = servers!();
+    let s = server(&fx, OPENSSH, "owners").await;
+    let local = tempfile::tempdir().unwrap();
+    let file = local.path().join("notes.txt");
+    std::fs::write(&file, b"ours now").unwrap();
+    s.sh("mkdir real && printf old > real/notes.txt && ln -s real/notes.txt notes.txt")
+        .await;
+    let (t, l) = (transfers(), link(&s.remote));
+    let up = copy(
+        &t,
+        &l,
+        Direction::Upload,
+        path_str(&file),
+        &s.dir,
+        OnConflict::Replace,
+    )
+    .await;
+    assert_eq!((up.state, up.files_done), (JobState::Done, 1), "{up:?}");
+    assert_eq!(s.entry("notes.txt").await.unwrap().kind, Kind::Link);
+    assert_eq!(s.cat("real/notes.txt").await, b"ours now");
+
+    let shared = "/srv/shared/notes.txt";
+    let theirs = s.remote.owner_ids(shared).await.unwrap().unwrap();
+    let up = copy(
+        &t,
+        &l,
+        Direction::Upload,
+        path_str(&file),
+        "/srv/shared",
+        OnConflict::Replace,
+    )
+    .await;
+    assert_eq!((up.state, up.files_done), (JobState::Done, 1), "{up:?}");
+    let out = s.ssh.exec(&format!("cat {shared}")).await.unwrap();
+    assert_eq!(out.stdout, b"ours now");
+    assert_eq!(s.remote.owner_ids(shared).await.unwrap(), Some(theirs));
+    let left: Vec<String> = s
+        .remote
+        .list("/srv/shared")
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|e| e.name)
+        .collect();
+    assert_eq!(left, ["notes.txt"], "no part left behind");
+    s.done().await;
+}
+
+/// What the app asks a server (os-release, tmux) keeps to a short answer,
+/// whatever the server sends.
+#[tokio::test]
+async fn a_short_command_keeps_its_answer_short() {
+    let fx = servers!();
+    let s = server(&fx, OPENSSH, "short").await;
+    let out = s.ssh.exec_short("head -c 1000000 /dev/zero").await.unwrap();
+    assert_eq!(out.stdout.len(), openward_ssh::client::EXEC_OUTPUT);
+    let out = s.ssh.exec_short("echo hola").await.unwrap();
+    assert_eq!((out.text().as_str(), out.status), ("hola", Some(0)));
     s.done().await;
 }
 

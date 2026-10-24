@@ -610,6 +610,9 @@ class SettingsSpec {
   /// Optional; the password is asked for when connecting.
   final String proxyUser;
   final int? keepaliveSecs;
+
+  /// Seconds the server has to answer while connecting.
+  final int? connectTimeoutSecs;
   final bool? agentForward;
 
   /// The shell inside tmux on the server, to come back to it.
@@ -650,6 +653,7 @@ class SettingsSpec {
     this.proxyPort = 0,
     this.proxyUser = r"",
     this.keepaliveSecs,
+    this.connectTimeoutSecs = null,
     this.agentForward,
     this.persistentSession = null,
     this.term,
@@ -685,6 +689,7 @@ class SettingsSpec {
       proxyPort.hashCode ^
       proxyUser.hashCode ^
       keepaliveSecs.hashCode ^
+      connectTimeoutSecs.hashCode ^
       agentForward.hashCode ^
       persistentSession.hashCode ^
       term.hashCode ^
@@ -719,6 +724,7 @@ class SettingsSpec {
           proxyPort == other.proxyPort &&
           proxyUser == other.proxyUser &&
           keepaliveSecs == other.keepaliveSecs &&
+          connectTimeoutSecs == other.connectTimeoutSecs &&
           agentForward == other.agentForward &&
           persistentSession == other.persistentSession &&
           term == other.term &&

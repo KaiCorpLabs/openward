@@ -241,6 +241,7 @@ fn create_ssh(
         known_hosts: Arc::new(Mutex::new(KnownHosts::new(Unknown::Learn))),
         host_certificates: false,
         legacy_host_keys: false,
+        connect_timeout: None,
         keepalive: Some(Duration::from_secs(15)),
         agent_forward: None,
         on_untrusted: None,

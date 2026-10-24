@@ -16,6 +16,11 @@ RUN apt-get update \
 # without ~/.google_authenticator (demo) only get the password prompt.
 RUN sed -i 's/^@include common-auth/@include common-auth\nauth required pam_google_authenticator.so nullok/' /etc/pam.d/sshd
 
+# Another user's file that demo may write (it is the group's): an upload
+# over it must leave it theirs.
+RUN install -d -o otp -g demo -m 2775 /srv/shared \
+ && install -o otp -g demo -m 664 /dev/null /srv/shared/notes.txt
+
 COPY openward.conf /etc/ssh/sshd_config.d/openward.conf
 COPY entrypoint-openssh.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

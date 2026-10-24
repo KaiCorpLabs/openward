@@ -54,6 +54,18 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
   late bool _only = _old?.spec.identitiesOnly ?? false;
   String? _error;
 
+  String _snapshot() => [
+    _label.text,
+    _user.text,
+    _socket.text,
+    _typed.text,
+    ..._keys,
+    '',
+    ..._certs,
+    _agent,
+    _only,
+  ].join('\u0000');
+
   @override
   void dispose() {
     for (final c in [_label, _user, _socket, _typed]) {
@@ -212,6 +224,7 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
       error: _error,
       onSave: _save,
       onDelete: old == null ? null : _delete,
+      snapshot: _snapshot,
       children: [
         labelled(
           l.name,

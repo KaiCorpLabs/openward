@@ -104,7 +104,15 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - con muchos hosts (importa un `~/.ssh/config` grande si tienes uno), busca en la barra, abre Hosts y la paleta: dinos si algo tarda;
    - haz `seq 1 200000` en un terminal y busca en él (⌘F) escribiendo deprisa: la ventana no debe pararse;
    - con un shell delante, arrastra el borde entre dos paneles: el prompt no debe repetirse.
-17. **CSV** («Importar…» › CSV):
+17. **Conexiones y no perder trabajo** (0.3.2-beta.3):
+   - conéctate a una dirección que no conteste (una IP de tu red sin nadie, o un puerto que acepte y calle): a los 15 s debe decir que no responde;
+   - con un agente que pida aprobación (1Password, Secretive), recházala: debe pasar a la contraseña o a la siguiente clave;
+   - si usas ProxyCommand con `cloudflared` o `aws ssm`, abre la app desde el Finder o el Dock y conéctate; rompe el comando a propósito y mira que el error dice por qué;
+   - abre un túnel SOCKS, configura el navegador para usarlo y abre varias webs pesadas a la vez; luego cierra el túnel: debe cortar lo que estuviera cargando;
+   - edita un host, cambia algo y pulsa Esc: debe preguntar; marca un host como producción, conéctate y pulsa ⌘W: debe preguntar; ⌘⇧T debe reabrir lo último cerrado;
+   - con una transferencia en curso, ⌘Q o el botón rojo de la ventana: debe preguntar;
+   - abre neovim o tmux y desplázate deprisa: no debe parpadear; mantén pulsada la j en vim: debe repetir.
+18. **CSV** («Importar…» › CSV):
    - exporta tus hosts de una hoja de cálculo o usa la plantilla de Termius;
    - comprueba los grupos, puertos, usuarios y etiquetas, y los avisos de lo que no entra;
    - impórtalo dos veces y comprueba que no se duplica.

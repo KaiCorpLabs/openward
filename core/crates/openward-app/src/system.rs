@@ -121,11 +121,13 @@ pub(crate) fn from_os_release(text: &str) -> Option<System> {
             _ => return None,
         },
     };
+    // What a server says goes into the vault: within reason.
+    let short = |s: String, max: usize| s.chars().take(max).collect::<String>();
     Some(System {
         code: code.to_owned(),
-        name,
+        name: short(name, 64),
         source: SystemSource::OsRelease,
-        evidence,
+        evidence: short(evidence, 128),
     })
 }
 
@@ -272,6 +274,17 @@ mod tests {
             ("fed", "Fedora Linux 40", "Fedora Linux 40 (Server Edition)")
         );
         assert_eq!(s.source, SystemSource::OsRelease);
+        // What a server says goes into the vault within reason.
+        let long = format!(
+            "ID=fedora\nNAME=\"{}\"\nPRETTY_NAME=\"{}\"\n",
+            "F".repeat(500),
+            "P".repeat(5000)
+        );
+        let s = from_os_release(&long).unwrap();
+        assert_eq!(
+            (s.name.chars().count(), s.evidence.chars().count()),
+            (64, 128)
+        );
         let debian = "PRETTY_NAME=\"Debian GNU/Linux 12 (bookworm)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"12\"\nID=debian\n";
         assert_eq!(from_os_release(debian).unwrap().name, "Debian 12");
         let alpine = "NAME=\"Alpine Linux\"\nID=alpine\nVERSION_ID=3.20.3\n";

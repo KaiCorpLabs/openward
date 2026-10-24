@@ -781,6 +781,19 @@ async fn upload_item(
     {
         return Ok(true);
     }
+    // A link stays a link: what is replaced is the file it leads to.
+    let dest = match &existing {
+        Some(_)
+            if remote
+                .lstat(dest)
+                .await?
+                .is_some_and(|e| e.kind == Kind::Link) =>
+        {
+            remote.realpath(dest).await?
+        }
+        _ => dest.to_owned(),
+    };
+    let dest = dest.as_str();
     let source = local::stat(src)?.ok_or_else(|| Error::NotFound(src.display().to_string()))?;
     let size = source.size;
     let part = part_path(dest, &src.display().to_string(), size, source.modified);
@@ -798,6 +811,14 @@ async fn upload_item(
         .or(item.mode)
         .map(|m| m & 0o7777);
     let handle = remote.open_write(&part, had.is_none(), mode).await?;
+    // Someone else's file, or another group's: put in its place, ours
+    // would be ours. It is written over where it is, as `sftp` does.
+    if existing.is_some() && remote.owner_ids(dest).await? != remote.owner_ids(&part).await? {
+        remote.close(&part, handle).await?;
+        remote.remove_file(&part).await?;
+        with_job(inner, id, |j| j.part = None);
+        return upload_in_place(remote, src, dest, size, item.modified, base, progress).await;
+    }
     progress.store(base + offset, Ordering::Relaxed);
     let mut file = tokio::fs::File::open(src)
         .await
@@ -814,6 +835,34 @@ async fn upload_item(
     // something next time.
     remote.set_attrs(&part, mode, item.modified).await?;
     remote.rename(&part, dest, true).await?;
+    Ok(false)
+}
+
+/// Writes `src` over `dest` where it is, keeping its owner, group and
+/// links. Not resumable, as with `sftp`'s `put`.
+async fn upload_in_place(
+    remote: &Remote,
+    src: &Path,
+    dest: &str,
+    size: u64,
+    modified: Option<i64>,
+    base: u64,
+    progress: &AtomicU64,
+) -> Result<bool> {
+    let handle = remote.open_write(dest, true, None).await?;
+    progress.store(base, Ordering::Relaxed);
+    let mut file = tokio::fs::File::open(src)
+        .await
+        .map_err(|e| Error::local(src, &e))?;
+    let sent = pipe::upload(remote, dest, &handle, &mut file, 0, size, progress).await;
+    let closed = remote.close(dest, handle).await;
+    sent?;
+    closed?;
+    if remote.lstat(dest).await?.map(|e| e.size) != Some(size) {
+        return Err(Error::Changed(src.display().to_string()));
+    }
+    // Its date, where the server lets us set it on someone else's file.
+    let _ = remote.set_attrs(dest, None, modified).await;
     Ok(false)
 }
 

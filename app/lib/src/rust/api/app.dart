@@ -199,7 +199,7 @@ abstract class OpenWard implements RustOpaqueInterface {
   );
 
   /// As [`OpenWard::open`], with another `~/.ssh` (tests: the tester's
-  /// own keys and `known_hosts` stay out).
+  /// own keys and `known_hosts` stay out, the system's too).
   static Future<OpenWard> openWithSshDir({
     required String dataDir,
     required String sshDir,

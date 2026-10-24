@@ -2,7 +2,8 @@
 //! (`spikes/s2-ssh/servers/up.sh`). Skipped when they are not running,
 //! unless `OPENWARD_REQUIRE_SERVERS` is set (`make ci`).
 
-use std::path::PathBuf;
+use std::future::Future;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Mutex, OnceLock, Weak};
 use std::time::{Duration, Instant};
@@ -15,6 +16,7 @@ use openward_app::vault::proto::{
     SystemSource, UseIdentity,
 };
 use openward_app::{Answer, App, Event, EventSink, Failure, Local, Prompt, Terminal};
+use openward_ssh::russh::keys::{Algorithm, PrivateKey, agent};
 use zeroize::Zeroizing;
 
 const BASTION: u16 = 22100;
@@ -88,6 +90,7 @@ impl Fixture {
             home: dir.path().into(),
             user: "nobody".into(),
             ssh_dir: dir.path().join(".ssh"),
+            system_ssh_dir: dir.path().join("etc-ssh"),
             agent: None,
         };
         let app = Arc::new(App::open_as(&dir.path().join("data"), local).unwrap());
@@ -229,6 +232,9 @@ fn a_key_learns_the_host_and_runs_a_shell() {
     term.text("stty size; echo app-$((6*7))\n");
     wait_for(&term, "app-42");
     wait_for(&term, "30 100");
+    // The terminal's modes: UTF-8, and ⌫ (DEL) erases.
+    term.text("case \"$(stty -a)\" in *' iutf8'*'erase = ^?'*|*'erase = ^?'*' iutf8'*) echo modes-$((2*2));; esac\n");
+    wait_for(&term, "modes-4");
     term.text("exit 5\n");
     let closed = loop {
         if let Event::Closed { exit_code, failure } =
@@ -553,6 +559,45 @@ fn a_persistent_session_comes_back_as_it_was() {
     }
 }
 
+/// A server that takes the connection and never says a word is given up
+/// on in the time the host allows, instead of «Connecting» for ever. No S2
+/// needed: a listener here plays the silent server.
+#[test]
+fn a_silent_server_is_given_up_on_in_time() {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    std::thread::spawn(move || {
+        let mut held = Vec::new();
+        for socket in listener.incoming() {
+            held.push(socket);
+        }
+    });
+    let f = Fixture::new(PathBuf::new());
+    let host = f.host(
+        "mute",
+        "127.0.0.1",
+        port,
+        Settings {
+            user: Some("demo".into()),
+            connect_timeout_secs: Some(2),
+            ..Settings::default()
+        },
+    );
+    let started = Instant::now();
+    let (_term, rx) = f.connect(host, |_| Answer::Cancel);
+    match outcome(&rx).0 {
+        Err(Some(Failure::Network { message, .. })) => {
+            assert_eq!(message, "no answer for 2 s");
+        }
+        other => panic!("not given up on: {other:?}"),
+    }
+    let took = started.elapsed();
+    assert!(
+        took >= Duration::from_secs(2) && took < Duration::from_secs(6),
+        "{took:?}"
+    );
+}
+
 #[test]
 fn an_unknown_host_is_asked_about() {
     let f = Fixture::new(servers!());
@@ -690,6 +735,124 @@ fn passphrase_and_password_are_asked_for() {
     // Cancelling gives up.
     let (_t, rx) = f.connect(with_password, |_| Answer::Cancel);
     assert_eq!(outcome(&rx).0.unwrap_err(), Some(Failure::Cancelled));
+}
+
+/// An agent of the test's own at `socket`, holding `keys`; with `refuse`,
+/// it will not sign with them, as when its user says no.
+fn test_agent(socket: &Path, keys: Vec<PrivateKey>, refuse: bool) {
+    #[derive(Clone)]
+    struct Refuse(bool);
+    impl agent::server::Agent for Refuse {
+        fn confirm_request(
+            &self,
+            msg: agent::server::MessageType,
+        ) -> impl Future<Output = bool> + Send {
+            let refused = self.0 && matches!(msg, agent::server::MessageType::Sign);
+            async move { !refused }
+        }
+    }
+    let socket = socket.to_owned();
+    let (ready, ready_rx) = channel();
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        rt.block_on(async move {
+            let listener = tokio::net::UnixListener::bind(&socket).unwrap();
+            let incoming = futures::stream::unfold(listener, |l| async move {
+                Some((l.accept().await.map(|(s, _)| s), l))
+            });
+            tokio::spawn(agent::server::serve(Box::pin(incoming), Refuse(refuse)));
+            let mut client = agent::client::AgentClient::connect_uds(&socket)
+                .await
+                .unwrap();
+            for key in &keys {
+                client.add_identity(key, &[]).await.unwrap();
+            }
+            ready.send(()).unwrap();
+            std::future::pending::<()>().await;
+        });
+    });
+    ready_rx.recv().unwrap();
+}
+
+/// An agent that will not sign (a denied confirmation, a locked password
+/// manager) is passed over for the next method, not taken for a network
+/// failure.
+#[test]
+fn an_agent_that_will_not_sign_is_passed_over() {
+    let f = Fixture::new(servers!());
+    let socket = f._dir.path().join("agent.sock");
+    let key = PrivateKey::read_openssh_file(f.fx.join("id_ed25519")).unwrap();
+    test_agent(&socket, vec![key], true);
+    let password = f.password("demo");
+    let host = f.host(
+        "refused",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: Some(vec![]),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    {
+        let mut vault = f.app.vault();
+        let Data::Host(mut h) = vault.get(host).unwrap().body.data.clone() else {
+            unreachable!()
+        };
+        h.settings.agent = Some(Agent::Socket(socket.display().to_string()));
+        vault.update(host, 1, Data::Host(h)).unwrap();
+    }
+    let (_t, rx) = f.connect(host, move |p| match p {
+        Prompt::Password { .. } | Prompt::KeyboardInteractive { .. } => text(&password),
+        _ => Answer::Cancel,
+    });
+    let (result, prompts) = outcome(&rx);
+    result.unwrap();
+    assert_eq!(prompts.len(), 1, "{prompts:?}");
+}
+
+/// A server that hangs up after too many keys (`MaxAuthTries`) failed the
+/// login: no network failure, to be tried again offering them all.
+#[test]
+fn too_many_keys_is_a_failed_login() {
+    let f = Fixture::new(servers!());
+    let socket = f._dir.path().join("agent.sock");
+    let keys = (0..8)
+        .map(|_| PrivateKey::random(&mut rand::rng(), Algorithm::Ed25519).unwrap())
+        .collect();
+    test_agent(&socket, keys, false);
+    let host = f.host(
+        "keyring",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: Some(vec![]),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    {
+        let mut vault = f.app.vault();
+        let Data::Host(mut h) = vault.get(host).unwrap().body.data.clone() else {
+            unreachable!()
+        };
+        h.settings.agent = Some(Agent::Socket(socket.display().to_string()));
+        vault.update(host, 1, Data::Host(h)).unwrap();
+    }
+    let (_t, rx) = f.connect(host, |_| Answer::Cancel);
+    let (result, prompts) = outcome(&rx);
+    match result {
+        Err(Some(Failure::AuthFailed { methods, .. })) => {
+            assert!(methods.contains(&"publickey".to_owned()), "{methods:?}");
+        }
+        other => panic!("not a failed login: {other:?}"),
+    }
+    assert!(prompts.is_empty(), "{prompts:?}");
 }
 
 /// Dropbear has no PAM: the plain password method.
@@ -1040,9 +1203,12 @@ fn a_public_key_put_on_the_server_then_used() {
     let (_term, rx) = f.connect(with_key, |p| panic!("asked: {p:?}"));
     let logged_in = outcome(&rx).0;
 
-    // Put the server's file back before checking anything.
+    // Put the server's file back before checking anything; whole, since
+    // other tests log in with it meanwhile.
     if let Some(bytes) = &original {
-        block_on(remote.write_all(file, bytes, 0o600)).unwrap();
+        let next = format!("{file}.restore");
+        block_on(remote.write_all(&next, bytes, 0o600)).unwrap();
+        block_on(remote.rename(&next, file, true)).unwrap();
     }
     assert!(added.unwrap(), "the key went in");
     assert!(!again.unwrap(), "a key already there is not added again");
@@ -1298,6 +1464,120 @@ fn local_and_dynamic_tunnels() {
         assert!(Instant::now() < deadline, "still listening");
         std::thread::sleep(Duration::from_millis(20));
     }
+}
+
+/// A tunnel to `localhost` listens on both loopbacks; closing it cuts the
+/// connections going through it, not just new ones.
+#[test]
+fn closing_a_tunnel_cuts_its_connections() {
+    let f = Fixture::new(servers!());
+    let host = f.bastion();
+    let port = free_port();
+    let local = f.tunnel(
+        host,
+        ForwardKind::Local,
+        port,
+        Some(("127.0.0.1", 22)),
+        false,
+    );
+    outcome(&f.open_tunnel(local, |_| Answer::Cancel))
+        .0
+        .unwrap();
+    let mut s = std::net::TcpStream::connect(("::1", port)).unwrap();
+    assert!(banner(&mut s).starts_with("SSH-2.0-OpenSSH"), "over IPv6");
+    f.wait_state(local, |s| {
+        matches!(s, TunnelState::Open { connections: 1, .. })
+    });
+
+    f.app.close_tunnel(local);
+    let mut rest = [0u8; 64];
+    match s.read(&mut rest) {
+        Ok(0) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::ConnectionReset => {}
+        other => panic!("still connected: {other:?}"),
+    }
+}
+
+/// Closed while it was connecting (a question pending): it stays closed,
+/// whatever the connection does next.
+#[test]
+fn a_tunnel_closed_while_opening_stays_closed() {
+    let f = Fixture::new(servers!());
+    let password = f.password("demo");
+    let host = f.host(
+        "with password",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: Some(vec![]),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    let port = free_port();
+    let local = f.tunnel(
+        host,
+        ForwardKind::Local,
+        port,
+        Some(("127.0.0.1", 22)),
+        false,
+    );
+    let app = Arc::downgrade(&f.app);
+    let rx = f.open_tunnel(local, move |p| match p {
+        Prompt::Password { .. } | Prompt::KeyboardInteractive { .. } => {
+            app.upgrade().unwrap().close_tunnel(local);
+            text(&password)
+        }
+        _ => Answer::Cancel,
+    });
+    assert_eq!(outcome(&rx).0.unwrap_err(), None, "closed, not failed");
+    assert_eq!(f.state(local), TunnelState::Closed);
+    assert!(std::net::TcpListener::bind(("127.0.0.1", port)).is_ok());
+}
+
+/// A browser through a SOCKS tunnel opens hundreds of connections at once:
+/// the tunnel answers them all and is still there after. (To a closed port
+/// of the server: hundreds at its sshd would make it drop the other
+/// tests' connections, `MaxStartups`.)
+#[test]
+fn a_socks_tunnel_takes_a_browser_s_load() {
+    let f = Fixture::new(servers!());
+    let host = f.bastion();
+    let port = free_port();
+    let socks = f.tunnel(host, ForwardKind::Dynamic, port, None, false);
+    outcome(&f.open_tunnel(socks, |_| Answer::Cancel))
+        .0
+        .unwrap();
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let answered = rt.block_on(async {
+        let mut all = tokio::task::JoinSet::new();
+        for _ in 0..300 {
+            all.spawn(openward_ssh::forward::socks5_connect(port, "127.0.0.1", 9));
+        }
+        let mut answered = 0;
+        while let Some(done) = all.join_next().await {
+            let refused = done.unwrap().err().map(|e| e.to_string());
+            if refused.is_some_and(|e| e.starts_with("SOCKS5 CONNECT failed")) {
+                answered += 1;
+            }
+        }
+        answered
+    });
+    assert_eq!(answered, 300);
+    f.wait_state(socks, |s| {
+        matches!(s, TunnelState::Open { connections: 0, .. })
+    });
+    // Still taking connections.
+    let stream = rt
+        .block_on(openward_ssh::forward::socks5_connect(port, "127.0.0.1", 22))
+        .unwrap();
+    let mut s = stream.into_std().unwrap();
+    s.set_nonblocking(false).unwrap();
+    assert!(banner(&mut s).starts_with("SSH-2.0-OpenSSH"));
 }
 
 /// Remote (-R): the server's port leads to an echo server here.
@@ -1575,6 +1855,82 @@ fn a_revoked_host_key_is_refused() {
         }
         other => panic!("not refused as revoked: {other:?}"),
     }
+}
+
+/// A host certificate of a CA that is not trusted falls back to the plain
+/// key, as in OpenSSH: here known.
+#[test]
+fn a_certificate_of_another_ca_falls_back_to_the_known_key() {
+    let f = Fixture::new(servers!());
+    let scan = std::process::Command::new("ssh-keyscan")
+        .args(["-t", "ed25519", "-p", &BASTION.to_string(), "127.0.0.1"])
+        .output()
+        .unwrap();
+    let plain = String::from_utf8(scan.stdout).unwrap();
+    assert!(plain.contains("ssh-ed25519"), "{plain}");
+    // The users' CA: it signs no host.
+    let other_ca = f.read("user_ca.pub");
+    let ssh = f.app.local().ssh_dir.clone();
+    std::fs::create_dir_all(&ssh).unwrap();
+    std::fs::write(
+        ssh.join("known_hosts"),
+        format!("@cert-authority * {other_ca}\n{plain}"),
+    )
+    .unwrap();
+    let host = f.host(
+        "bastion",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: f.key("id_ed25519"),
+            ..Settings::default()
+        },
+    );
+    let (_term, rx) = f.connect(host, |_| Answer::Cancel);
+    let (connected, prompts) = outcome(&rx);
+    assert!(prompts.is_empty(), "asked: {prompts:?}");
+    assert_eq!(connected.unwrap().trust, Trust::Known);
+
+    // Not known by the plain key either: the certificate's fault is told.
+    std::fs::write(
+        ssh.join("known_hosts"),
+        format!("@cert-authority * {other_ca}\n"),
+    )
+    .unwrap();
+    let (_term, rx) = f.connect(host, |_| Answer::Cancel);
+    match outcome(&rx).0 {
+        Err(Some(Failure::BadCertificate { .. })) => {}
+        other => panic!("not a bad certificate: {other:?}"),
+    }
+}
+
+/// The system's `known_hosts` (`/etc/ssh/ssh_known_hosts`) is trusted as
+/// OpenSSH trusts it, `@cert-authority` lines too.
+#[test]
+fn the_system_known_hosts_is_trusted() {
+    let f = Fixture::new(servers!());
+    let system = f.app.local().system_ssh_dir.clone();
+    std::fs::create_dir_all(&system).unwrap();
+    std::fs::copy(f.fx.join("known_hosts_ca"), system.join("ssh_known_hosts")).unwrap();
+    let host = f.host(
+        "bastion",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: f.key("id_ed25519"),
+            host_key_policy: Some(HostKeyPolicy::Strict),
+            ..Settings::default()
+        },
+    );
+    let (_term, rx) = f.connect(host, |_| Answer::Cancel);
+    let (connected, prompts) = outcome(&rx);
+    assert!(prompts.is_empty(), "asked: {prompts:?}");
+    assert!(
+        matches!(connected.unwrap().trust, Trust::Certified { .. }),
+        "not by the system's CA"
+    );
 }
 
 /// A host known in `~/.ssh/known_hosts` only by its ECDSA key is checked

@@ -3,6 +3,7 @@
 use std::ffi::c_void;
 use std::mem::{MaybeUninit, size_of};
 use std::ptr;
+use std::time::{Duration, Instant};
 
 use openward_term::frame::attrs;
 use openward_term::{
@@ -39,6 +40,21 @@ struct Effects {
     dark: bool,
     /// A BEL arrived since the UI last asked.
     bell: bool,
+    /// The render state, to keep the screen as it was when a program asks
+    /// for that (synchronized output).
+    render: sys::GhosttyRenderState,
+    /// Since when a program has been drawing a frame it wants shown whole.
+    held_since: Option<Instant>,
+}
+
+/// Longest a program may keep the screen as it was, as in Ghostty: one
+/// that never lets go does not freeze it.
+const HOLD_MAX: Duration = Duration::from_secs(1);
+
+impl Effects {
+    fn holding(&self) -> bool {
+        self.held_since.is_some_and(|t| t.elapsed() < HOLD_MAX)
+    }
 }
 
 /// Theme defaults reported to OSC 10/11 queries (programs use them to pick
@@ -116,6 +132,32 @@ unsafe extern "C" fn on_bell(_terminal: sys::GhosttyTerminal, userdata: *mut c_v
     unsafe { (*userdata.cast::<Effects>()).bell = true };
 }
 
+/// Synchronized output (mode 2026) begins or ends. At the start, the
+/// screen as it is now is what stays on view until the end.
+unsafe extern "C" fn on_render_hold(
+    terminal: sys::GhosttyTerminal,
+    userdata: *mut c_void,
+    held: bool,
+) {
+    if userdata.is_null() {
+        return;
+    }
+    // SAFETY: userdata is the engine's boxed Effects, alive for as long as
+    // the terminal that calls back; this runs inside our own vt_write, so
+    // nothing else uses the render state meanwhile.
+    unsafe {
+        let effects = &mut *userdata.cast::<Effects>();
+        if held {
+            if !effects.render.is_null() {
+                let _ = sys::ghostty_render_state_update(effects.render, terminal);
+            }
+            effects.held_since = Some(Instant::now());
+        } else {
+            effects.held_since = None;
+        }
+    }
+}
+
 unsafe extern "C" fn on_write_pty(
     _terminal: sys::GhosttyTerminal,
     userdata: *mut c_void,
@@ -183,6 +225,8 @@ impl GhosttyEngine {
             cell_px: (CELL_W_PX, CELL_H_PX),
             dark: true,
             bell: false,
+            render: ptr::null_mut(),
+            held_since: None,
         });
         // SAFETY: every out-pointer is valid; option values follow the
         // documented input types (pointer values, size_t*, function pointers).
@@ -226,6 +270,8 @@ impl GhosttyEngine {
                 *mut sys::GhosttySizeReportSize,
             ) -> bool = on_size;
             let bell_fn: unsafe extern "C" fn(sys::GhosttyTerminal, *mut c_void) = on_bell;
+            let hold_fn: unsafe extern "C" fn(sys::GhosttyTerminal, *mut c_void, bool) =
+                on_render_hold;
             let scheme_fn: unsafe extern "C" fn(
                 sys::GhosttyTerminal,
                 *mut c_void,
@@ -246,6 +292,11 @@ impl GhosttyEngine {
                     sys::GHOSTTY_TERMINAL_OPT_BELL,
                     bell_fn as *const c_void,
                     "set bell",
+                ),
+                (
+                    sys::GHOSTTY_TERMINAL_OPT_RENDER_HOLD,
+                    hold_fn as *const c_void,
+                    "set render hold",
                 ),
                 (
                     sys::GHOSTTY_TERMINAL_OPT_COLOR_SCHEME,
@@ -322,6 +373,7 @@ impl GhosttyEngine {
                 sys::ghostty_render_state_new(ptr::null(), &mut render),
                 "render_state_new",
             );
+            effects.render = render;
             let mut rows: sys::GhosttyRenderStateRowIterator = ptr::null_mut();
             ok(
                 sys::ghostty_render_state_row_iterator_new(ptr::null(), &mut rows),
@@ -982,7 +1034,11 @@ impl TermEngine for GhosttyEngine {
     }
 
     fn encode_damage(&mut self, enc: &mut FrameEncoder) -> FrameStats {
-        self.update_render_state();
+        // While a program draws a frame it wants shown whole, the screen
+        // stays as it was when it began.
+        if !self.effects.holding() {
+            self.update_render_state();
+        }
         let mut dirty: sys::GhosttyRenderStateDirty = 0;
         // SAFETY: valid render state, out-pointer to a local.
         unsafe {
@@ -1185,6 +1241,40 @@ mod tests {
         let rows: Vec<u16> = f.lines.iter().map(|l| l.index).collect();
         assert!(rows.contains(&1), "row 1 changed: {rows:?}");
         assert!(rows.len() < 10, "partial frame: {rows:?}");
+    }
+
+    /// Synchronized output (mode 2026): what a program draws between its
+    /// start and end shows at once, at the end; or after a second, if it
+    /// never ends.
+    #[test]
+    fn a_synchronized_frame_shows_whole() {
+        let mut e = engine(20, 4);
+        e.feed(b"before");
+        frame(&mut e);
+        e.feed(b"\x1b[?2026h\r\x1b[2Khalf");
+        let held = frame(&mut e);
+        assert!(
+            held.lines
+                .iter()
+                .all(|l| l.spans.iter().all(|s| s.text != "half")),
+            "half-drawn frame shown"
+        );
+        e.feed(b"-done\x1b[?2026l");
+        let f = frame(&mut e);
+        assert_eq!(
+            spans_of(&f, 0),
+            vec![(0, 9, "half-done".into(), Color::Default)]
+        );
+
+        e.feed(b"\x1b[?2026h\r\x1b[2Kstuck");
+        frame(&mut e);
+        std::thread::sleep(HOLD_MAX + Duration::from_millis(50));
+        e.feed(b"!");
+        let f = frame(&mut e);
+        assert_eq!(
+            spans_of(&f, 0),
+            vec![(0, 6, "stuck!".into(), Color::Default)]
+        );
     }
 
     #[test]

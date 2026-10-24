@@ -9,8 +9,9 @@
 //! What is read: `Host`, `Match all`, `Include` (with globs, relative to
 //! `~/.ssh`, scoped to the block it appears in), `HostName`, `User`, `Port`,
 //! `IdentityFile`, `CertificateFile`, `IdentitiesOnly`, `IdentityAgent`,
-//! `ProxyJump`, `ProxyCommand`, `ServerAliveInterval`, `ForwardAgent`,
-//! `SetEnv`, `StrictHostKeyChecking`, `HostKeyAlgorithms` (only whether it
+//! `ProxyJump`, `ProxyCommand`, `ServerAliveInterval`, `ConnectTimeout`, `ForwardAgent`,
+//! `SetEnv`, `StrictHostKeyChecking`, `UserKnownHostsFile`,
+//! `GlobalKnownHostsFile`, `HostKeyAlgorithms` (only whether it
 //! lets in `ssh-rsa`, for old servers) and the TCP forwards (`LocalForward`,
 //! `RemoteForward`, `DynamicForward`), which become saved tunnels that open
 //! on connect, as `ssh` opens them. Anything else is reported once as
@@ -133,9 +134,13 @@ enum Value {
     IdentityAgent(Agent),
     Route(RouteSpec),
     KeepAlive(u32),
+    ConnectTimeout(u32),
     ForwardAgent(bool),
     SetEnv(BTreeMap<String, String>),
     Strict(HostKeyPolicy),
+    /// `none` is no file.
+    KnownHosts(Vec<String>),
+    GlobalKnownHosts(Vec<String>),
     LegacyHostKeys,
     Forward(ForwardSpec),
 }
@@ -187,9 +192,12 @@ pub struct Resolved {
     pub agent: Option<Agent>,
     pub route: Option<RouteSpec>,
     pub keepalive_secs: Option<u32>,
+    pub connect_timeout_secs: Option<u32>,
     pub agent_forward: Option<bool>,
     pub env: Option<BTreeMap<String, String>>,
     pub host_key_policy: Option<HostKeyPolicy>,
+    pub known_hosts_files: Option<Vec<String>>,
+    pub global_known_hosts_files: Option<Vec<String>>,
     /// `HostKeyAlgorithms` lets in `ssh-rsa` (SHA-1).
     pub legacy_host_keys: Option<bool>,
     /// Every forward of every matching block: they add up, as in `ssh`.
@@ -256,6 +264,9 @@ impl SshConfig {
                 Value::KeepAlive(s) => {
                     r.keepalive_secs.get_or_insert(*s);
                 }
+                Value::ConnectTimeout(s) => {
+                    r.connect_timeout_secs.get_or_insert(*s);
+                }
                 Value::ForwardAgent(b) => {
                     r.agent_forward.get_or_insert(*b);
                 }
@@ -264,6 +275,13 @@ impl SshConfig {
                 }
                 Value::Strict(p) => {
                     r.host_key_policy.get_or_insert(*p);
+                }
+                Value::KnownHosts(files) => {
+                    r.known_hosts_files.get_or_insert_with(|| files.clone());
+                }
+                Value::GlobalKnownHosts(files) => {
+                    r.global_known_hosts_files
+                        .get_or_insert_with(|| files.clone());
                 }
                 Value::LegacyHostKeys => {
                     r.legacy_host_keys.get_or_insert(true);
@@ -426,6 +444,19 @@ fn parse_value(keyword: &str, raw: &str, args: &[String]) -> Result<Option<Value
         "proxycommand" if raw.eq_ignore_ascii_case("none") => Value::Route(RouteSpec::Direct),
         "proxycommand" => Value::Route(RouteSpec::Command(raw.to_owned())),
         "serveraliveinterval" => Value::KeepAlive(first.parse().map_err(|_| ())?),
+        "connecttimeout" => Value::ConnectTimeout(first.parse().map_err(|_| ())?),
+        "userknownhostsfile" | "globalknownhostsfile" => {
+            let files = if first.eq_ignore_ascii_case("none") {
+                Vec::new()
+            } else {
+                args.to_vec()
+            };
+            if keyword == "userknownhostsfile" {
+                Value::KnownHosts(files)
+            } else {
+                Value::GlobalKnownHosts(files)
+            }
+        }
         "forwardagent" => Value::ForwardAgent(yes_no()?),
         "setenv" => Value::SetEnv(
             args.iter()
@@ -728,9 +759,12 @@ pub fn import(config: &SshConfig) -> Import {
             agent: r.agent.clone(),
             route,
             keepalive_secs: r.keepalive_secs,
+            connect_timeout_secs: r.connect_timeout_secs,
             agent_forward: r.agent_forward,
             env: r.env.clone(),
             host_key_policy: r.host_key_policy,
+            known_hosts_files: r.known_hosts_files.clone(),
+            global_known_hosts_files: r.global_known_hosts_files.clone(),
             legacy_host_keys: r.legacy_host_keys,
             ..Settings::default()
         };

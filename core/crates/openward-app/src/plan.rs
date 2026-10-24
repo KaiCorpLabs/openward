@@ -6,7 +6,7 @@
 //! along. A `ProxyCommand` only applies to the first hop; further in, a host
 //! is reached through the hop before it.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use openward_vault::proto::{Agent, HostKeyPolicy, ItemId, Jump, Proxy, Route, Settings};
@@ -39,7 +39,12 @@ pub struct Hop {
     /// Only on the first hop, never with a `proxy_command`.
     pub proxy: Option<openward_ssh::proxy::Proxy>,
     pub keepalive: Option<Duration>,
+    /// How long the server has to answer while connecting.
+    pub connect_timeout: Option<Duration>,
     pub host_key_policy: HostKeyPolicy,
+    /// OpenSSH's `known_hosts` files to trust as well: the user's, then
+    /// the system's. Missing ones read as empty.
+    pub known_hosts: Vec<PathBuf>,
     /// Accept `ssh-rsa` host key signatures (SHA-1).
     pub legacy_host_keys: bool,
     /// Read `/etc/os-release` once connected, to tell the system.
@@ -224,6 +229,20 @@ fn hop(
         Some(files) => files.iter().map(|f| local.path(f, &t)).collect(),
         None => DEFAULT_KEYS.iter().map(|k| local.ssh_dir.join(k)).collect(),
     };
+    let files = |set: &Option<Vec<String>>, dir: &Path, defaults: [&str; 2]| match set {
+        Some(files) => files.iter().map(|f| local.path(f, &t)).collect(),
+        None => defaults.iter().map(|f| dir.join(f)).collect::<Vec<_>>(),
+    };
+    let mut known_hosts = files(
+        &s.known_hosts_files,
+        &local.ssh_dir,
+        ["known_hosts", "known_hosts2"],
+    );
+    known_hosts.extend(files(
+        &s.global_known_hosts_files,
+        &local.system_ssh_dir,
+        ["ssh_known_hosts", "ssh_known_hosts2"],
+    ));
     let agent = match s.agent.as_ref().unwrap_or(&Agent::System) {
         Agent::Off => None,
         Agent::System => local.agent.clone(),
@@ -262,7 +281,11 @@ fn hop(
             .keepalive_secs
             .filter(|&k| k > 0)
             .map(|k| Duration::from_secs(u64::from(k))),
+        connect_timeout: Some(Duration::from_secs(u64::from(
+            s.connect_timeout_secs.unwrap_or(15).max(1),
+        ))),
         host_key_policy: s.host_key_policy.unwrap_or(HostKeyPolicy::Ask),
+        known_hosts,
         legacy_host_keys: s.legacy_host_keys.unwrap_or(false),
         read_os_release: s.read_os_release.unwrap_or(false),
         user,
@@ -279,6 +302,7 @@ mod tests {
             home: PathBuf::from("/home/ana"),
             user: "ana".into(),
             ssh_dir: PathBuf::from("/home/ana/.ssh"),
+            system_ssh_dir: PathBuf::from("/etc/ssh"),
             agent: Some(PathBuf::from("/tmp/agent.sock")),
         }
     }
@@ -317,6 +341,40 @@ mod tests {
 
         let bare = Plan::for_address("db", None, None, &local());
         assert_eq!((bare.hops[0].user.as_str(), bare.hops[0].port), ("ana", 22));
+    }
+
+    /// OpenSSH's `known_hosts` files: the user's and the system's, or
+    /// those the settings name instead (`none` names none).
+    #[test]
+    fn known_hosts_files_default_to_openssh_s() {
+        let mut v = Vault::open_in_memory().unwrap();
+        let plain = host(&mut v, "plain", None, Settings::default());
+        let hop = &Plan::for_host(&v, plain, &local()).unwrap().hops[0];
+        assert_eq!(
+            hop.known_hosts,
+            [
+                "/home/ana/.ssh/known_hosts",
+                "/home/ana/.ssh/known_hosts2",
+                "/etc/ssh/ssh_known_hosts",
+                "/etc/ssh/ssh_known_hosts2",
+            ]
+            .map(PathBuf::from)
+        );
+        let lab = host(
+            &mut v,
+            "lab",
+            None,
+            Settings {
+                known_hosts_files: Some(vec!["~/.ssh/known_hosts_%n".into()]),
+                global_known_hosts_files: Some(vec![]),
+                ..Settings::default()
+            },
+        );
+        let hop = &Plan::for_host(&v, lab, &local()).unwrap().hops[0];
+        assert_eq!(
+            hop.known_hosts,
+            [PathBuf::from("/home/ana/.ssh/known_hosts_lab")]
+        );
     }
 
     #[test]

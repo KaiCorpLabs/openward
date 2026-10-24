@@ -20,6 +20,7 @@ import '../ui/environment.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../window/shortcuts.dart';
+import 'close_guard.dart' as guard;
 import 'connection_motion.dart';
 import 'connection_panels.dart';
 import 'find_bar.dart';
@@ -167,7 +168,7 @@ List<PopupMenuEntry<VoidCallback>> paneMenu(
       context,
       tab.panes.isSplit ? l.closePane : l.closeTab,
       '${key}W',
-      () => tabs.closePane(tab, pane),
+      () => guard.closePane(context, tab, pane),
     ),
     menuHint(context, l.terminalMenuHint),
   ];
@@ -570,7 +571,7 @@ class _PaneHeader extends ConsumerWidget {
               item(
                 l.closePane,
                 isApple ? '⌘W' : '${key}W',
-                () => tabs.closePane(tab, pane),
+                () => guard.closePane(context, tab, pane),
               ),
             ],
           ),

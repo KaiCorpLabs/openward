@@ -65,6 +65,13 @@ class MainFlutterWindow: NSWindow {
     layoutWindowButtons()
   }
 
+  /// Closing the window quits (it is the only one), so it goes the way
+  /// ⌘Q does: through the app, which asks first when that cuts off open
+  /// sessions, transfers or tunnels.
+  override func performClose(_ sender: Any?) {
+    NSApp.terminate(sender)
+  }
+
   /// What the user set for a double click on a title bar (System
   /// Settings › Desktop & Dock): zoom unless they said otherwise.
   private func titleBarDoubleClick() {

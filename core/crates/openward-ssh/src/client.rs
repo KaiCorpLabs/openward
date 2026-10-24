@@ -6,7 +6,7 @@
 //! session), so jumps and proxies compose without special cases.
 
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -108,6 +108,10 @@ pub struct Options {
     /// older than OpenSSH 7.2 that sign no other way. OpenSSH stopped
     /// accepting them in 8.8.
     pub legacy_host_keys: bool,
+    /// How long the server has to answer: to set up the connection (up to
+    /// the host key, without the time spent asking the user about it), and
+    /// then each step of authentication. `None` waits for ever.
+    pub connect_timeout: Option<Duration>,
     pub keepalive: Option<Duration>,
     /// Local agent that forwarded agent requests are relayed to.
     pub agent_forward: Option<PathBuf>,
@@ -145,6 +149,57 @@ struct Shared {
     /// how many connections are going through it.
     remote_forwards: HashMap<u32, (String, u16, Arc<AtomicU32>)>,
     started: Instant,
+    /// The user is being asked about the host key: not the server's time.
+    asking: bool,
+    /// Time spent asking so far, still to add to the opening's limit.
+    asked: Duration,
+}
+
+/// The server did not answer in time.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NoAnswer(pub Duration);
+
+impl std::fmt::Display for NoAnswer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "no answer for {} s", self.0.as_secs())
+    }
+}
+
+impl std::error::Error for NoAnswer {}
+
+/// An agent may wait for its user (a touch, an approval): longer than a
+/// server's answer.
+const AGENT_TIMEOUT: Duration = Duration::from_secs(120);
+
+/// Opens a connection within `limit`, not counting the time spent asking
+/// the user about the host key.
+async fn within_limit<T>(
+    fut: impl Future<Output = anyhow::Result<T>>,
+    limit: Option<Duration>,
+    shared: &Mutex<Shared>,
+) -> anyhow::Result<T> {
+    let Some(limit) = limit else {
+        return fut.await;
+    };
+    tokio::pin!(fut);
+    let mut deadline = tokio::time::Instant::now() + limit;
+    loop {
+        tokio::select! {
+            out = &mut fut => return out,
+            () = tokio::time::sleep_until(deadline) => {
+                let mut s = shared.lock().unwrap();
+                if s.asking {
+                    deadline += Duration::from_secs(1);
+                    continue;
+                }
+                let asked = std::mem::take(&mut s.asked);
+                if asked.is_zero() {
+                    return Err(NoAnswer(limit).into());
+                }
+                deadline += asked;
+            }
+        }
+    }
 }
 
 pub struct Handler {
@@ -162,30 +217,59 @@ impl client::Handler for Handler {
         &mut self,
         offered: &PublicKeyOrCertificate,
     ) -> Result<bool, Self::Error> {
-        let (mut verdict, known_types) = {
-            let mut known = self.known_hosts.lock().unwrap();
-            let verdict = known.check(&self.target.host, self.target.port, offered);
-            let types = known.algorithms(&self.target.host, self.target.port);
-            (verdict, types.iter().map(ToString::to_string).collect())
-        };
         let key = match offered {
             PublicKeyOrCertificate::PublicKey { key, .. } => key.clone(),
             PublicKeyOrCertificate::Certificate(cert) => PublicKey::from(cert.public_key().clone()),
         };
+        let (host, port) = (&self.target.host, self.target.port);
+        let (mut verdict, plain, known_types) = {
+            let mut known = self.known_hosts.lock().unwrap();
+            let verdict = known.check(host, port, offered);
+            // As OpenSSH: a certificate that does not hold up falls back to
+            // its plain key.
+            let plain = match (&verdict, offered) {
+                (Verdict::BadCertificate(_), PublicKeyOrCertificate::Certificate(_)) => {
+                    let plain = PublicKeyOrCertificate::PublicKey {
+                        key: key.clone(),
+                        hash_alg: None,
+                    };
+                    Some(known.check(host, port, &plain))
+                }
+                _ => None,
+            };
+            let types = known.algorithms(host, port);
+            let types = types.iter().map(ToString::to_string).collect();
+            (verdict, plain, types)
+        };
         self.shared.lock().unwrap().info.host_key_fingerprint =
             key.fingerprint(russh::keys::HashAlg::Sha256).to_string();
-        if let (false, Some(hook), PublicKeyOrCertificate::PublicKey { key, .. }) =
-            (verdict.trusted(), &self.on_untrusted, offered)
-        {
+        // The key's own verdict: the plain key's, after a bad certificate.
+        let own = plain.clone().unwrap_or_else(|| verdict.clone());
+        if own.trusted() {
+            verdict = own.clone();
+        }
+        let plain_key =
+            plain.is_some() || matches!(offered, PublicKeyOrCertificate::PublicKey { .. });
+        if let (false, Some(hook), true) = (own.trusted(), &self.on_untrusted, plain_key) {
             let query = HostKeyQuery {
-                host: self.target.host.clone(),
-                port: self.target.port,
-                key: key.clone(),
-                verdict: verdict.clone(),
+                host: host.clone(),
+                port,
+                key,
+                verdict: own.clone(),
                 known_types,
             };
-            if hook(query).await {
+            let asked = Instant::now();
+            self.shared.lock().unwrap().asking = true;
+            let accepted = hook(query).await;
+            let mut shared = self.shared.lock().unwrap();
+            shared.asking = false;
+            shared.asked += asked.elapsed();
+            drop(shared);
+            if accepted {
                 verdict = Verdict::Learned;
+            } else if own == Verdict::Changed {
+                // A changed key outweighs the certificate's fault.
+                verdict = own;
             }
         }
         let trusted = verdict.trusted();
@@ -277,8 +361,9 @@ async fn connect_agent(
     tokio::net::windows::named_pipe::ClientOptions::new().open(path)
 }
 
-/// ProxyCommand runs through the platform shell, as OpenSSH does.
-fn shell_command(command: &str) -> Command {
+/// ProxyCommand runs through the platform shell, as OpenSSH does, with
+/// the `PATH` of a terminal.
+async fn shell_command(command: &str) -> Command {
     let mut c = if cfg!(windows) {
         let mut c = Command::new("cmd");
         c.arg("/C");
@@ -289,15 +374,118 @@ fn shell_command(command: &str) -> Command {
         c
     };
     c.arg(command);
+    if let Some(login) = login_path().await {
+        let own = std::env::var_os("PATH").unwrap_or_default();
+        if let Some(path) = merge_paths(login, &own) {
+            c.env("PATH", path);
+        }
+    }
     c
+}
+
+/// The `PATH` of the user's login shell, asked once. An app opened from
+/// the Finder gets launchd's (`/usr/bin:/bin:…`), without Homebrew's or
+/// the user's own folders, where `cloudflared` or `aws` live.
+async fn login_path() -> Option<&'static std::ffi::OsStr> {
+    static PATH: tokio::sync::OnceCell<Option<std::ffi::OsString>> =
+        tokio::sync::OnceCell::const_new();
+    if cfg!(windows) {
+        return None;
+    }
+    PATH.get_or_init(|| async {
+        const MARK: &str = "__openward_path__";
+        let shell = std::env::var_os("SHELL")?;
+        // Between marks: a profile may print things of its own.
+        let ask = Command::new(shell)
+            .args(["-l", "-c", &format!("printf '{MARK}%s{MARK}' \"$PATH\"")])
+            .stdin(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .kill_on_drop(true)
+            .output();
+        let out = tokio::time::timeout(Duration::from_secs(3), ask)
+            .await
+            .ok()?
+            .ok()?;
+        let text = String::from_utf8(out.stdout).ok()?;
+        let path = text.split(MARK).nth(1)?;
+        (!path.is_empty()).then(|| path.into())
+    })
+    .await
+    .as_deref()
+}
+
+/// The login shell's folders, then the app's own that it lacks.
+fn merge_paths(login: &std::ffi::OsStr, own: &std::ffi::OsStr) -> Option<std::ffi::OsString> {
+    let mut dirs: Vec<PathBuf> = std::env::split_paths(login).collect();
+    for dir in std::env::split_paths(own) {
+        if !dirs.contains(&dir) {
+            dirs.push(dir);
+        }
+    }
+    std::env::join_paths(dirs).ok()
+}
+
+/// Keeps the last lines a ProxyCommand writes to stderr, to tell why it
+/// failed; the rest is read and let go, so that it never blocks.
+async fn last_lines(stderr: tokio::process::ChildStderr, said: Arc<Mutex<VecDeque<String>>>) {
+    use tokio::io::AsyncBufReadExt;
+    let mut lines = tokio::io::BufReader::new(stderr).lines();
+    while let Ok(Some(line)) = lines.next_line().await {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let mut said = said.lock().unwrap();
+        if said.len() == 3 {
+            said.pop_front();
+        }
+        said.push_back(line.chars().take(300).collect());
+    }
 }
 
 pub struct Session {
     pub handle: client::Handle<Handler>,
     shared: Arc<Mutex<Shared>>,
+    /// How long the server has for each step of authentication.
+    limit: Option<Duration>,
+    /// Methods tried, `none` aside.
+    attempts: u32,
     /// The ProxyCommand process, killed with the session.
     _proxy: Option<Child>,
 }
+
+/// The most of a command's output [`Session::exec_short`] keeps.
+pub const EXEC_OUTPUT: usize = 64 * 1024;
+
+/// A terminal's modes, as OpenSSH sends its own: the usual control keys
+/// (erase is DEL, what ⌫ sends), cooked mode, and UTF-8, so that ⌫ after
+/// an «ñ» takes the whole character. The server keeps its own for the rest.
+const PTY_MODES: &[(Pty, u32)] = &[
+    (Pty::VINTR, 0x03),
+    (Pty::VQUIT, 0x1c),
+    (Pty::VERASE, 0x7f),
+    (Pty::VKILL, 0x15),
+    (Pty::VEOF, 0x04),
+    (Pty::VSUSP, 0x1a),
+    (Pty::VREPRINT, 0x12),
+    (Pty::VWERASE, 0x17),
+    (Pty::VLNEXT, 0x16),
+    (Pty::ICRNL, 1),
+    (Pty::IUTF8, 1),
+    (Pty::ISIG, 1),
+    (Pty::ICANON, 1),
+    (Pty::IEXTEN, 1),
+    (Pty::ECHO, 1),
+    (Pty::ECHOE, 1),
+    (Pty::ECHOK, 1),
+    (Pty::ECHOCTL, 1),
+    (Pty::ECHOKE, 1),
+    (Pty::OPOST, 1),
+    (Pty::ONLCR, 1),
+    (Pty::CS8, 1),
+    (Pty::TTY_OP_ISPEED, 38400),
+    (Pty::TTY_OP_OSPEED, 38400),
+];
 
 /// Host key algorithms whose certificate variants we ask for.
 const CERT_ALGORITHMS: &[Algorithm] = &[
@@ -358,6 +546,8 @@ pub async fn open(target: &Target, hop: Hop<'_>, opts: &Options) -> anyhow::Resu
         info: Info::default(),
         remote_forwards: HashMap::new(),
         started,
+        asking: false,
+        asked: Duration::ZERO,
     }));
     let handler = Handler {
         target: target.clone(),
@@ -368,40 +558,50 @@ pub async fn open(target: &Target, hop: Hop<'_>, opts: &Options) -> anyhow::Resu
     };
 
     let mut proxy = None;
-    let result = match hop {
-        Hop::Tcp => client::connect(config, (target.host.as_str(), target.port), handler).await,
-        Hop::ProxyCommand(command) => {
-            let mut child = shell_command(&command)
-                .stdin(std::process::Stdio::piped())
-                .stdout(std::process::Stdio::piped())
-                .kill_on_drop(true)
-                .spawn()
-                .with_context(|| format!("ProxyCommand {command}"))?;
-            let stream = tokio::io::join(
-                child.stdout.take().context("ProxyCommand stdout")?,
-                child.stdin.take().context("ProxyCommand stdin")?,
-            );
-            proxy = Some(child);
-            client::connect_stream(config, stream, handler).await
-        }
-        Hop::Proxy(p) => {
-            let stream = crate::proxy::connect(&p, &target.host, target.port).await?;
-            client::connect_stream(config, stream, handler).await
-        }
-        Hop::Via(jump) => {
-            let channel = jump
-                .handle
-                .channel_open_direct_tcpip(
-                    target.host.as_str(),
-                    u32::from(target.port),
-                    "127.0.0.1",
-                    0,
-                )
-                .await
-                .context("direct-tcpip through the jump host")?;
-            client::connect_stream(config, channel.into_stream(), handler).await
+    let said = Arc::new(Mutex::new(VecDeque::new()));
+    let mut reading = None;
+    let opening = async {
+        match hop {
+            Hop::Tcp => client::connect(config, (target.host.as_str(), target.port), handler).await,
+            Hop::ProxyCommand(command) => {
+                let mut child = shell_command(&command)
+                    .await
+                    .stdin(std::process::Stdio::piped())
+                    .stdout(std::process::Stdio::piped())
+                    .stderr(std::process::Stdio::piped())
+                    .kill_on_drop(true)
+                    .spawn()
+                    .with_context(|| format!("ProxyCommand {command}"))?;
+                if let Some(stderr) = child.stderr.take() {
+                    reading = Some(tokio::spawn(last_lines(stderr, Arc::clone(&said))));
+                }
+                let stream = tokio::io::join(
+                    child.stdout.take().context("ProxyCommand stdout")?,
+                    child.stdin.take().context("ProxyCommand stdin")?,
+                );
+                proxy = Some(child);
+                client::connect_stream(config, stream, handler).await
+            }
+            Hop::Proxy(p) => {
+                let stream = crate::proxy::connect(&p, &target.host, target.port).await?;
+                client::connect_stream(config, stream, handler).await
+            }
+            Hop::Via(jump) => {
+                let channel = jump
+                    .handle
+                    .channel_open_direct_tcpip(
+                        target.host.as_str(),
+                        u32::from(target.port),
+                        "127.0.0.1",
+                        0,
+                    )
+                    .await
+                    .context("direct-tcpip through the jump host")?;
+                client::connect_stream(config, channel.into_stream(), handler).await
+            }
         }
     };
+    let result = within_limit(opening, opts.connect_timeout, &shared).await;
     let handle = match result {
         Ok(handle) => handle,
         Err(e) => {
@@ -411,12 +611,23 @@ pub async fn open(target: &Target, hop: Hop<'_>, opts: &Options) -> anyhow::Resu
             {
                 return Err(UntrustedHost(v).into());
             }
+            // What the ProxyCommand said before it went: why, likely.
+            if let Some(reading) = reading {
+                let _ = tokio::time::timeout(Duration::from_millis(500), reading).await;
+            }
+            let said = said.lock().unwrap();
+            if !said.is_empty() {
+                let said: Vec<&str> = said.iter().map(String::as_str).collect();
+                return Err(e.context(format!("ProxyCommand: {}", said.join(" · "))));
+            }
             return Err(e);
         }
     };
     Ok(Session {
         handle,
         shared,
+        limit: opts.connect_timeout,
+        attempts: 0,
         _proxy: proxy,
     })
 }
@@ -622,6 +833,67 @@ impl From<KeyboardInteractiveAuthResponse> for Kbd {
     }
 }
 
+/// The agent did not sign: another key or method may still do.
+#[derive(Debug)]
+pub enum AgentRefused {
+    /// It said no (a denied confirmation, a locked agent).
+    Refused(String),
+    /// It did not answer in time (a key not touched): not to be asked
+    /// again, its answer may still come.
+    Silent(Duration),
+}
+
+impl std::fmt::Display for AgentRefused {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Refused(reason) => write!(f, "the agent did not sign: {reason}"),
+            Self::Silent(limit) => write!(f, "the agent did not sign: {}", NoAnswer(*limit)),
+        }
+    }
+}
+
+impl std::error::Error for AgentRefused {}
+
+/// The agent as russh's signer. Waiting for a signature, russh hears
+/// nothing else: when the agent does not sign, the request is left unsent
+/// and `refused` says why, so that the session takes the next one.
+struct Signing<'a> {
+    client: &'a mut AgentClient<Box<dyn AgentStream + Send + Unpin>>,
+    limit: Option<Duration>,
+    refused: Option<tokio::sync::oneshot::Sender<AgentRefused>>,
+}
+
+impl russh::Signer for Signing<'_> {
+    type Error = russh::AgentAuthError;
+
+    async fn auth_sign(
+        &mut self,
+        key: &AgentIdentity,
+        hash_alg: Option<russh::keys::HashAlg>,
+        to_sign: Vec<u8>,
+    ) -> Result<Vec<u8>, Self::Error> {
+        let sign = self.client.sign_request(key, hash_alg, to_sign.clone());
+        let refused = |e: russh::keys::Error| AgentRefused::Refused(e.to_string());
+        let signed = match self.limit {
+            Some(limit) => match tokio::time::timeout(limit, sign).await {
+                Ok(signed) => signed.map_err(refused),
+                Err(_) => Err(AgentRefused::Silent(limit)),
+            },
+            None => sign.await.map_err(refused),
+        };
+        match signed {
+            Ok(signed) => Ok(signed),
+            Err(reason) => {
+                if let Some(refused) = self.refused.take() {
+                    let _ = refused.send(reason);
+                }
+                // Unchanged: russh sends nothing.
+                Ok(to_sign)
+            }
+        }
+    }
+}
+
 /// A local ssh-agent.
 pub struct Agent {
     client: AgentClient<Box<dyn AgentStream + Send + Unpin>>,
@@ -687,29 +959,51 @@ impl Session {
         outcome
     }
 
+    /// The server's answer to a step of authentication, within the limit.
+    async fn answer<T, E: Into<anyhow::Error>>(
+        limit: Option<Duration>,
+        step: impl Future<Output = Result<T, E>>,
+    ) -> anyhow::Result<T> {
+        match limit {
+            Some(limit) => tokio::time::timeout(limit, step)
+                .await
+                .map_err(|_| NoAnswer(limit))?
+                .map_err(Into::into),
+            None => step.await.map_err(Into::into),
+        }
+    }
+
     /// The `none` method: lets in servers without authentication and
     /// otherwise lists the methods they accept.
     pub async fn auth_none(&mut self, user: &str) -> anyhow::Result<Outcome> {
-        let r = self.handle.authenticate_none(user).await?;
+        let r = Self::answer(self.limit, self.handle.authenticate_none(user)).await?;
         Ok(self.done(r.into()))
     }
 
     pub async fn auth_password(&mut self, user: &str, password: &str) -> anyhow::Result<Outcome> {
-        let r = self.handle.authenticate_password(user, password).await?;
+        self.attempts += 1;
+        let r = Self::answer(
+            self.limit,
+            self.handle.authenticate_password(user, password),
+        )
+        .await?;
         Ok(self.done(r.into()))
     }
 
     pub async fn auth_key(&mut self, user: &str, key: Arc<PrivateKey>) -> anyhow::Result<Outcome> {
+        self.attempts += 1;
         // RSA: the strongest of rsa-sha2-512/256 the server announced.
         let hash = if key.algorithm().is_rsa() {
             self.handle.best_supported_rsa_hash().await?.flatten()
         } else {
             None
         };
-        let r = self
-            .handle
-            .authenticate_publickey(user, PrivateKeyWithHashAlg::new(key, hash))
-            .await?;
+        let r = Self::answer(
+            self.limit,
+            self.handle
+                .authenticate_publickey(user, PrivateKeyWithHashAlg::new(key, hash)),
+        )
+        .await?;
         Ok(self.done(r.into()))
     }
 
@@ -720,10 +1014,12 @@ impl Session {
         key: Arc<PrivateKey>,
         cert: Certificate,
     ) -> anyhow::Result<Outcome> {
-        let r = self
-            .handle
-            .authenticate_openssh_cert(user, key, cert)
-            .await?;
+        self.attempts += 1;
+        let r = Self::answer(
+            self.limit,
+            self.handle.authenticate_openssh_cert(user, key, cert),
+        )
+        .await?;
         Ok(self.done(r.into()))
     }
 
@@ -734,31 +1030,49 @@ impl Session {
         agent: &mut Agent,
         key: PublicKey,
     ) -> anyhow::Result<Outcome> {
+        self.attempts += 1;
         let hash = if key.algorithm().is_rsa() {
             self.handle.best_supported_rsa_hash().await?.flatten()
         } else {
             None
         };
-        let r = self
-            .handle
-            .authenticate_publickey_with(user, key, hash, &mut agent.client)
-            .await?;
+        let (refused, refusal) = tokio::sync::oneshot::channel();
+        let mut signing = Signing {
+            client: &mut agent.client,
+            limit: self.limit.map(|_| AGENT_TIMEOUT),
+            refused: Some(refused),
+        };
+        let step = async {
+            tokio::select! {
+                r = self.handle.authenticate_publickey_with(user, key, hash, &mut signing) => {
+                    r.map_err(anyhow::Error::from)
+                }
+                Ok(reason) = refusal => Err(reason.into()),
+            }
+        };
+        // The agent's time, then the server's.
+        let r = Self::answer(self.limit.map(|l| AGENT_TIMEOUT + l), step).await?;
         Ok(self.done(r.into()))
     }
 
     pub async fn kbd_start(&mut self, user: &str) -> anyhow::Result<Kbd> {
-        let r = self
-            .handle
-            .authenticate_keyboard_interactive_start(user, None)
-            .await?;
+        self.attempts += 1;
+        let r = Self::answer(
+            self.limit,
+            self.handle
+                .authenticate_keyboard_interactive_start(user, None),
+        )
+        .await?;
         Ok(self.kbd_done(r.into()))
     }
 
     pub async fn kbd_respond(&mut self, answers: Vec<String>) -> anyhow::Result<Kbd> {
-        let r = self
-            .handle
-            .authenticate_keyboard_interactive_respond(answers)
-            .await?;
+        let r = Self::answer(
+            self.limit,
+            self.handle
+                .authenticate_keyboard_interactive_respond(answers),
+        )
+        .await?;
         Ok(self.kbd_done(r.into()))
     }
 
@@ -773,12 +1087,39 @@ impl Session {
         self.handle.is_closed()
     }
 
+    /// The server hung up once a method was tried: it gave up on us
+    /// (`MaxAuthTries`), which trying again would not change.
+    pub fn gave_up(&self) -> bool {
+        self.attempts > 0 && self.is_closed()
+    }
+
     /// Runs a command, optionally with agent forwarding and environment.
     pub async fn exec_with(
         &self,
         command: &str,
         agent_forward: bool,
         env: &[(&str, &str)],
+    ) -> anyhow::Result<Output> {
+        self.run(command, agent_forward, env, usize::MAX).await
+    }
+
+    pub async fn exec(&self, command: &str) -> anyhow::Result<Output> {
+        self.exec_with(command, false, &[]).await
+    }
+
+    /// A command whose answer is short (a name, a yes or no): at most
+    /// [`EXEC_OUTPUT`] of it is kept, whatever the server sends, and past
+    /// that the command is let go.
+    pub async fn exec_short(&self, command: &str) -> anyhow::Result<Output> {
+        self.run(command, false, &[], EXEC_OUTPUT).await
+    }
+
+    async fn run(
+        &self,
+        command: &str,
+        agent_forward: bool,
+        env: &[(&str, &str)],
+        max: usize,
     ) -> anyhow::Result<Output> {
         let mut channel = self.handle.channel_open_session().await?;
         if agent_forward {
@@ -794,17 +1135,20 @@ impl Session {
         };
         while let Some(msg) = channel.wait().await {
             match msg {
-                ChannelMsg::Data { data } => out.stdout.extend_from_slice(&data),
+                ChannelMsg::Data { data } => {
+                    let room = max - out.stdout.len();
+                    out.stdout.extend_from_slice(&data[..data.len().min(room)]);
+                    if data.len() > room {
+                        // Enough: the rest is not read (the channel closes).
+                        break;
+                    }
+                }
                 ChannelMsg::ExitStatus { exit_status } => out.status = Some(exit_status),
                 ChannelMsg::Close => break,
                 _ => {}
             }
         }
         Ok(out)
-    }
-
-    pub async fn exec(&self, command: &str) -> anyhow::Result<Output> {
-        self.exec_with(command, false, &[]).await
     }
 
     /// An interactive shell on a PTY.
@@ -835,9 +1179,8 @@ impl Session {
         for (k, v) in env {
             channel.set_env(false, k.as_str(), v.as_str()).await?;
         }
-        // ECHO on and the usual cooked mode; the server fills in the rest.
         channel
-            .request_pty(true, term, cols, rows, 0, 0, &[(Pty::ECHO, 1)])
+            .request_pty(true, term, cols, rows, 0, 0, PTY_MODES)
             .await?;
         channel.request_shell(true).await?;
         Ok(channel)
@@ -862,7 +1205,7 @@ impl Session {
             channel.set_env(false, k.as_str(), v.as_str()).await?;
         }
         channel
-            .request_pty(true, term, cols, rows, 0, 0, &[(Pty::ECHO, 1)])
+            .request_pty(true, term, cols, rows, 0, 0, PTY_MODES)
             .await?;
         channel.exec(true, command).await?;
         Ok(channel)
@@ -945,6 +1288,79 @@ pub async fn send(channel: &Channel<client::Msg>, data: &[u8]) -> anyhow::Result
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The limit is the server's time: what goes asking the user about the
+    /// host key is added to it.
+    #[tokio::test(start_paused = true)]
+    async fn time_asking_the_user_does_not_count() {
+        let shared = Mutex::new(Shared {
+            info: Info::default(),
+            remote_forwards: HashMap::new(),
+            started: Instant::now(),
+            asking: false,
+            asked: Duration::from_secs(2),
+        });
+        let limit = Some(Duration::from_secs(2));
+        let answer_at = |secs| async move {
+            tokio::time::sleep(Duration::from_secs(secs)).await;
+            anyhow::Ok(())
+        };
+        // At 3 s, but 2 of them were the user's.
+        assert!(within_limit(answer_at(3), limit, &shared).await.is_ok());
+        // Without asking, 2 s is all it has.
+        let err = within_limit(answer_at(3), limit, &shared)
+            .await
+            .unwrap_err();
+        assert_eq!(
+            err.downcast_ref::<NoAnswer>(),
+            Some(&NoAnswer(Duration::from_secs(2)))
+        );
+        assert_eq!(err.to_string(), "no answer for 2 s");
+    }
+
+    /// A ProxyCommand that fails says why in the error, not just that the
+    /// connection went.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_failing_proxy_command_is_heard() {
+        let opts = Options {
+            user: "demo".into(),
+            known_hosts: Arc::new(Mutex::new(KnownHosts::parse(
+                "",
+                crate::known_hosts::Unknown::Reject,
+            ))),
+            host_certificates: false,
+            legacy_host_keys: false,
+            connect_timeout: Some(Duration::from_secs(10)),
+            keepalive: None,
+            agent_forward: None,
+            on_untrusted: None,
+        };
+        let command = "echo 'starting' >&2; echo 'cloudflared: command not found' >&2; exit 127";
+        let err = open(
+            &Target::new("db.internal", 22),
+            Hop::ProxyCommand(command.into()),
+            &opts,
+        )
+        .await
+        .err()
+        .expect("no server behind it");
+        let message = format!("{err:#}");
+        assert!(
+            message.starts_with("ProxyCommand: starting · cloudflared: command not found"),
+            "{message}"
+        );
+    }
+
+    #[test]
+    fn the_login_shell_s_folders_go_first() {
+        let path = merge_paths(
+            "/opt/homebrew/bin:/usr/bin".as_ref(),
+            "/usr/bin:/bin:/usr/sbin".as_ref(),
+        )
+        .unwrap();
+        assert_eq!(path, "/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin");
+    }
 
     #[test]
     fn known_key_types_go_first_and_sha1_only_when_allowed() {

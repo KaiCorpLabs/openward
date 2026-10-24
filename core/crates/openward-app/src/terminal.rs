@@ -101,11 +101,16 @@ enum Io {
     /// Not connected (yet, or any more): input goes nowhere.
     None,
     Pty(Arc<Pty>),
-    Ssh(mpsc::UnboundedSender<SshCmd>),
+    Ssh(mpsc::Sender<SshCmd>),
 }
 
 /// Chunks of output waiting for the parse thread.
 const PARSE_QUEUE: usize = 64;
+
+/// Input, resizes and the terminal's answers waiting for the server. A
+/// server that stops reading (no window) holds them back; past this many,
+/// typing goes nowhere and the parse waits, rather than piling up.
+const SEND_QUEUE: usize = 256;
 
 pub(crate) enum SshCmd {
     Data(Vec<u8>),
@@ -291,7 +296,7 @@ impl Terminal {
         }
         match &*lock(&self.io) {
             Io::Pty(pty) => pty.write(&bytes).is_ok(),
-            Io::Ssh(tx) => tx.send(SshCmd::Data(bytes)).is_ok(),
+            Io::Ssh(tx) => tx.try_send(SshCmd::Data(bytes)).is_ok(),
             Io::None => false,
         }
     }
@@ -420,6 +425,14 @@ impl Terminal {
         }
     }
 
+    /// Scrolls the history, whatever the program wants of the wheel: for
+    /// a selection dragged past an edge, which is not the program's.
+    pub fn scroll_history(&self, lines: i32) {
+        let mut s = lock(&self.state);
+        s.engine.scroll_display(lines);
+        s.touch();
+    }
+
     pub fn focus(&self, gained: bool) {
         let bytes = lock(&self.state).engine.encode_focus(gained);
         self.send(bytes);
@@ -439,7 +452,7 @@ impl Terminal {
                 let _ = pty.resize(cols, rows);
             }
             Io::Ssh(tx) => {
-                let _ = tx.send(SshCmd::Resize(cols, rows));
+                let _ = tx.try_send(SshCmd::Resize(cols, rows));
             }
             Io::None => {}
         }
@@ -580,7 +593,7 @@ impl Pipe {
         channel: openward_ssh::russh::Channel<Msg>,
         label: &str,
     ) -> impl Future<Output = (Option<u32>, Option<Failure>)> + Send + 'static {
-        let (tx, rx) = mpsc::unbounded_channel::<SshCmd>();
+        let (tx, rx) = mpsc::channel::<SshCmd>(SEND_QUEUE);
         *lock(&self.io) = Io::Ssh(tx.clone());
         let (state, io, activity, label) = (
             Arc::clone(&self.state),
@@ -593,8 +606,8 @@ impl Pipe {
 
     async fn pump(
         channel: openward_ssh::russh::Channel<Msg>,
-        tx: mpsc::UnboundedSender<SshCmd>,
-        mut rx: mpsc::UnboundedReceiver<SshCmd>,
+        tx: mpsc::Sender<SshCmd>,
+        mut rx: mpsc::Receiver<SshCmd>,
         state: Arc<Mutex<State>>,
         io: Arc<Mutex<Io>>,
         activity: Arc<Activity>,
@@ -631,7 +644,8 @@ impl Pipe {
                 while let Some(data) = parsed.blocking_recv() {
                     let out = Terminal::output(&parser_state, &data);
                     if !out.is_empty() {
-                        let _ = replies.send(SshCmd::Data(out));
+                        // Its own thread: waiting here holds the parse back.
+                        let _ = replies.blocking_send(SshCmd::Data(out));
                     }
                 }
             });
@@ -653,7 +667,7 @@ impl Pipe {
                             feed = None;
                             let out = Terminal::output(&reader_state, &data);
                             if !out.is_empty() {
-                                let _ = tx.send(SshCmd::Data(out));
+                                let _ = tx.send(SshCmd::Data(out)).await;
                             }
                         }
                     }
@@ -699,6 +713,19 @@ impl Drop for Terminal {
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
+
+    /// A server that reads nothing holds input back up to a point; past
+    /// it, typing goes nowhere instead of piling up.
+    #[test]
+    fn input_for_a_server_that_reads_nothing_is_bounded() {
+        let term = Terminal::new(40, 4, 100);
+        let (tx, _rx) = mpsc::channel(SEND_QUEUE);
+        *lock(&term.io) = Io::Ssh(tx);
+        for _ in 0..SEND_QUEUE {
+            assert!(term.send(b"x".to_vec()));
+        }
+        assert!(!term.send(b"x".to_vec()));
+    }
 
     /// The UI hears of new output once until it looks, and nothing while
     /// nothing changes: an idle terminal costs no frames.

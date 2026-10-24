@@ -172,6 +172,9 @@ pub struct SettingsSpec {
     #[frb(default = "")]
     pub proxy_user: String,
     pub keepalive_secs: Option<u32>,
+    /// Seconds the server has to answer while connecting.
+    #[frb(default = "null")]
+    pub connect_timeout_secs: Option<u32>,
     pub agent_forward: Option<bool>,
     /// The shell inside tmux on the server, to come back to it.
     #[frb(default = "null")]
@@ -284,6 +287,7 @@ impl SettingsSpec {
             jumps,
             proxy_command,
             keepalive_secs: s.keepalive_secs,
+            connect_timeout_secs: s.connect_timeout_secs,
             agent_forward: s.agent_forward,
             persistent_session: s.persistent_session,
             term: s.term.clone(),
@@ -352,6 +356,7 @@ impl SettingsSpec {
             Some(ProxyKind::Socks5) => Some(Proxy::Socks5(server()?)),
         };
         s.keepalive_secs = self.keepalive_secs;
+        s.connect_timeout_secs = self.connect_timeout_secs;
         s.agent_forward = self.agent_forward;
         s.persistent_session = self.persistent_session;
         s.term = self.term.clone().filter(|t| !t.is_empty());

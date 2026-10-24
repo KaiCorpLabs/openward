@@ -9,6 +9,7 @@ import '../home/recent.dart';
 import '../l10n/l10n.dart';
 import '../palette/command_palette.dart' show agoText;
 import '../src/rust/api/vault.dart';
+import '../tabs/close_guard.dart' as guard;
 import '../tabs/tab_strip.dart' show pageIcon, tabTitle;
 import '../tabs/tabs.dart';
 import '../terminal/controller.dart';
@@ -724,11 +725,7 @@ class _OpenRow extends ConsumerWidget {
       tabs.select(at < 0 ? indices.first : indices[(at + 1) % indices.length]);
     }
 
-    void close() {
-      for (final i in indices.reversed) {
-        tabs.close(i);
-      }
-    }
+    void close() => guard.closeTabs(context, indices);
 
     final closeText = indices.length == 1
         ? l.closeTab

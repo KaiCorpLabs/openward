@@ -18,6 +18,7 @@ import '../ui/widgets.dart';
 import '../window/chrome.dart';
 import '../window/shortcuts.dart';
 import '../workspaces/workspaces_page.dart';
+import 'close_guard.dart' as guard;
 import 'drag.dart';
 import 'messages.dart' show viaText;
 import 'tabs.dart';
@@ -282,7 +283,7 @@ class _TabRowState extends ConsumerState<_TabRow> {
                             _before = ref.read(tabsProvider).current;
                             tabs.select(i);
                           },
-                          onClose: () => tabs.close(i),
+                          onClose: () => guard.closeTab(context, i),
                           onRename: () => widget.onRename(i),
                           onMenu: (at) => _menu(context, i, at),
                         ),
@@ -345,14 +346,21 @@ class _TabRowState extends ConsumerState<_TabRow> {
             menuItem(context, l.separatePanes, '', () => tabs.separate(index)),
           const PopupMenuDivider(),
         ],
-        menuItem(context, l.closeTab, '${key}W', () => tabs.close(index)),
+        menuItem(
+          context,
+          l.closeTab,
+          '${key}W',
+          () => guard.closeTab(context, index),
+        ),
         if (many)
           menuItem(
             context,
             l.closeOtherTabs,
             '',
-            () => tabs.closeOthers(index),
+            () => guard.closeOtherTabs(context, index),
           ),
+        if (tabs.canReopen)
+          menuItem(context, l.reopenTab, reopenKeys(l), tabs.reopen),
         const PopupMenuDivider(),
         menuItem(
           context,

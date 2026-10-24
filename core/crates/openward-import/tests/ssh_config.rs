@@ -313,6 +313,56 @@ Match all
     assert_eq!(config.resolve("b").user.as_deref(), Some("everyone"));
 }
 
+/// `UserKnownHostsFile` and `GlobalKnownHostsFile`: every file of the
+/// first line that applies; `none` is none.
+#[test]
+fn known_hosts_files_are_imported() {
+    let (_dir, paths) = home(
+        "
+Host lab
+    UserKnownHostsFile ~/.ssh/known_hosts_lab /work/known_hosts
+Host scratch
+    UserKnownHostsFile none
+    GlobalKnownHostsFile /dev/null
+Host *
+    UserKnownHostsFile ~/.ssh/known_hosts
+",
+        &[],
+    );
+    let config = load(&paths);
+    let lab = config.resolve("lab");
+    assert_eq!(
+        lab.known_hosts_files,
+        Some(vec![
+            "~/.ssh/known_hosts_lab".to_owned(),
+            "/work/known_hosts".to_owned()
+        ])
+    );
+    assert_eq!(lab.global_known_hosts_files, None);
+    let scratch = config.resolve("scratch");
+    assert_eq!(scratch.known_hosts_files, Some(vec![]));
+    assert_eq!(
+        scratch.global_known_hosts_files,
+        Some(vec!["/dev/null".to_owned()])
+    );
+    let imported = import(&config);
+    let lab = imported
+        .hosts
+        .iter()
+        .find(|(_, h)| h.label == "lab")
+        .unwrap();
+    assert_eq!(
+        lab.1.settings.known_hosts_files.as_deref(),
+        Some(
+            &[
+                "~/.ssh/known_hosts_lab".to_owned(),
+                "/work/known_hosts".to_owned()
+            ][..]
+        )
+    );
+    assert!(imported.warnings.is_empty(), "{:?}", imported.warnings);
+}
+
 /// `HostKeyAlgorithms +ssh-rsa` lets an old server in; nothing else of the
 /// list is imported.
 #[test]
@@ -325,6 +375,7 @@ Host listed
     HostKeyAlgorithms ssh-ed25519,ssh-rsa
 Host modern
     HostKeyAlgorithms ssh-ed25519
+    ConnectTimeout 5
 Host removed
     HostKeyAlgorithms -ssh-rsa
 ",
@@ -334,6 +385,7 @@ Host removed
     assert_eq!(config.resolve("old").legacy_host_keys, Some(true));
     assert_eq!(config.resolve("listed").legacy_host_keys, Some(true));
     assert_eq!(config.resolve("modern").legacy_host_keys, None);
+    assert_eq!(config.resolve("modern").connect_timeout_secs, Some(5));
     assert_eq!(config.resolve("removed").legacy_host_keys, None);
     let imported = import(&config);
     let old = imported

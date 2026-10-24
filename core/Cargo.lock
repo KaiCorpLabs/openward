@@ -1669,6 +1669,7 @@ version = "0.3.2-beta.2"
 dependencies = [
  "anyhow",
  "data-encoding",
+ "futures",
  "hmac 0.12.1",
  "openward-ghostty",
  "openward-import",

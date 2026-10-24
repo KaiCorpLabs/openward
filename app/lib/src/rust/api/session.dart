@@ -73,6 +73,10 @@ abstract class TerminalSession implements RustOpaqueInterface {
 
   String screenText();
 
+  /// Scrolls the history only (a selection dragged past an edge): the
+  /// program hears nothing.
+  void scrollHistory({required int lines});
+
   /// Looks for `needle` through the screen and the history (ASCII letters
   /// in any case); an empty needle ends the search. Matches come with the
   /// next frames.

@@ -239,7 +239,14 @@ impl App {
     pub fn open_tunnel(&self, id: ItemId, sink: Arc<dyn EventSink>) -> Result<(), PlanError> {
         let spec = self.vault().port_forward(id)?.clone();
         let plan = Plan::for_host(&self.vault(), spec.host, &self.local)?;
-        self.tunnels.set_state(id, TunnelState::Opening);
+        let Some(ticket) = self.tunnels.begin(id) else {
+            // Open or opening already: nothing to do here.
+            sink.send(Event::Closed {
+                exit_code: None,
+                failure: None,
+            });
+            return Ok(());
+        };
         let ctx = self.ctx(&sink);
         self.runtime.spawn(async move {
             let key = plan.key();
@@ -257,13 +264,8 @@ impl App {
                             live
                         }
                         Err(failure) => {
-                            ctx.tunnels.set_state(
-                                id,
-                                TunnelState::Failed {
-                                    error: TunnelError::Connection(failure.clone()),
-                                    on_connect: false,
-                                },
-                            );
+                            ctx.tunnels
+                                .fail(id, ticket, TunnelError::Connection(failure.clone()));
                             return ctx.sink.send(Event::Closed {
                                 exit_code: None,
                                 failure: Some(failure),
@@ -273,7 +275,7 @@ impl App {
                 }
             };
             ctx.tunnels
-                .open_on(id, spec, Arc::clone(&live), false)
+                .open_on(id, ticket, spec, Arc::clone(&live), false)
                 .await;
             match ctx.tunnels.states().get(&id) {
                 Some(TunnelState::Open { .. }) => {
@@ -283,7 +285,11 @@ impl App {
                     exit_code: None,
                     failure: Some(events::Failure::Other(error.to_string())),
                 }),
-                _ => {}
+                // Closed meanwhile.
+                _ => ctx.sink.send(Event::Closed {
+                    exit_code: None,
+                    failure: None,
+                }),
             }
         });
         Ok(())
@@ -588,17 +594,21 @@ fn tmux_session_name() -> String {
 }
 
 /// Whether `session` can be found again: no tmux, found or new. Through
-/// `sh`, whatever the login shell is.
+/// `sh`, whatever the login shell is. A server that does not answer in
+/// [`TMUX_CHECK`] is taken for one without tmux: an ordinary shell rather
+/// than a connection that hangs.
 async fn tmux_state(target: &openward_ssh::client::Session, session: &str) -> Persistence {
     let check = format!(
         "sh -c 'command -v tmux >/dev/null 2>&1 || exit 3; tmux has-session -t {session} 2>/dev/null'"
     );
-    match target.exec(&check).await.map(|o| o.status) {
-        Ok(Some(0)) => Persistence::Resumed,
-        Ok(Some(1)) => Persistence::New,
+    match tokio::time::timeout(TMUX_CHECK, target.exec_short(&check)).await {
+        Ok(Ok(o)) if o.status == Some(0) => Persistence::Resumed,
+        Ok(Ok(o)) if o.status == Some(1) => Persistence::New,
         _ => Persistence::NoTmux,
     }
 }
+
+const TMUX_CHECK: Duration = Duration::from_secs(5);
 
 /// tmux attaching to `session` or making it, without its status bar and
 /// with the wheel scrolling its history (those of this session only).
@@ -690,8 +700,11 @@ async fn session(
             if let Some(live) = weak.upgrade() {
                 live.runtime().clone().spawn(async move {
                     let kill = format!("tmux kill-session -t {name}");
-                    let _ = tokio::time::timeout(Duration::from_secs(3), live.target().exec(&kill))
-                        .await;
+                    let _ = tokio::time::timeout(
+                        Duration::from_secs(3),
+                        live.target().exec_short(&kill),
+                    )
+                    .await;
                 });
             }
         });

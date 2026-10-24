@@ -37,6 +37,9 @@ class SftpController extends ConnectionController {
   /// them there when they finish.
   final Map<BigInt, (Side, String)> _mine = {};
 
+  /// Those of [_mine] that stopped on the way, and were shown so.
+  final _stopped = <BigInt>{};
+
   FilePane pane(Side side) => side == Side.local ? local : remote;
   FilePane get activePane => pane(active);
   FilePane get otherPane =>
@@ -117,16 +120,26 @@ class SftpController extends ConnectionController {
     return queued;
   }
 
-  /// Shows what finished copies brought, if their folder is on view.
+  /// Shows what copies brought, if their folder is on view: when one
+  /// ends, and when one stops on the way (paused, failed) with what it
+  /// copied so far. A stopped one is still followed: it may go on.
   void _onQueue() {
     if (_mine.isEmpty) return;
-    final done = [
-      for (final j in queue.jobs)
-        if (_mine.containsKey(j.id) && (j.finished || !j.moving)) j.id,
-    ];
     final refresh = <Side>{};
-    for (final id in done) {
-      final (side, dir) = _mine.remove(id)!;
+    for (final j in queue.jobs) {
+      final mine = _mine[j.id];
+      if (mine == null) continue;
+      if (j.finished) {
+        _mine.remove(j.id);
+        _stopped.remove(j.id);
+      } else if (j.moving) {
+        _stopped.remove(j.id);
+        continue;
+      } else if (!_stopped.add(j.id)) {
+        // Stopped before, and shown then.
+        continue;
+      }
+      final (side, dir) = mine;
       if (pane(side).path == dir) refresh.add(side);
     }
     for (final side in refresh) {

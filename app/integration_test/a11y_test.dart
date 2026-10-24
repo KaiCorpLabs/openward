@@ -273,7 +273,11 @@ void main() {
     );
     await audit('another environment');
     await close();
+    // The mark chosen is a change: leaving asks first.
     await close();
+    expect(find.text('¿Descartar los cambios?'), findsOneWidget);
+    await audit('discard changes');
+    await tapText('Descartar');
     // Back to the start page.
     tabs.closeCurrent();
     await tester.pump(const Duration(milliseconds: 400));

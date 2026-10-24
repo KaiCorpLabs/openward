@@ -650,6 +650,12 @@ abstract class AppLocalizations {
   /// **'Quitar'**
   String get clear;
 
+  /// No description provided for @clearAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Borrar'**
+  String get clearAction;
+
   /// No description provided for @clearFinished.
   ///
   /// In es, this message translates to:
@@ -662,11 +668,35 @@ abstract class AppLocalizations {
   /// **'{count, plural, =0{Borrar el historial} =1{Borrar 1 comando} other{Borrar {count} comandos}}'**
   String clearHistory(int count);
 
+  /// No description provided for @clearHistoryBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Los comandos que la paleta recuerda se olvidan, en todos los hosts.'**
+  String get clearHistoryBody;
+
+  /// No description provided for @clearHistoryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Borrar el historial de comandos?'**
+  String get clearHistoryTitle;
+
   /// No description provided for @clearRecent.
   ///
   /// In es, this message translates to:
   /// **'Borrar ({count})'**
   String clearRecent(int count);
+
+  /// No description provided for @clearRecentBody.
+  ///
+  /// In es, this message translates to:
+  /// **'La lista de la página de inicio y de la paleta queda vacía. Los hosts guardados no cambian.'**
+  String get clearRecentBody;
+
+  /// No description provided for @clearRecentTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Borrar las conexiones recientes?'**
+  String get clearRecentTitle;
 
   /// No description provided for @clearSelection.
   ///
@@ -685,6 +715,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cerrar'**
   String get closeAction;
+
+  /// No description provided for @closeMarkedMany.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cerrar {count} sesiones conectadas?'**
+  String closeMarkedMany(int count);
+
+  /// No description provided for @closeMarkedManyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Son de entornos marcados: {names}.'**
+  String closeMarkedManyBody(String names);
+
+  /// No description provided for @closeMarkedOne.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cerrar «{label}»?'**
+  String closeMarkedOne(String label);
+
+  /// No description provided for @closeMarkedOneBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Está conectada a un host de {env}: lo que esté en marcha en ella se corta.'**
+  String closeMarkedOneBody(String env);
 
   /// No description provided for @closeOtherTabs.
   ///
@@ -925,6 +979,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Conectar'**
   String get connect;
+
+  /// No description provided for @connectTimeoutAfter.
+  ///
+  /// In es, this message translates to:
+  /// **'Se rinde a los {seconds} s sin respuesta'**
+  String connectTimeoutAfter(int seconds);
+
+  /// No description provided for @connectTimeoutLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Tiempo para conectar'**
+  String get connectTimeoutLabel;
 
   /// No description provided for @connectToAddress.
   ///
@@ -1237,6 +1303,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Destino'**
   String get destination;
+
+  /// No description provided for @discardChanges.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
+  String get discardChanges;
+
+  /// No description provided for @discardChangesBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que has cambiado en este panel no se ha guardado.'**
+  String get discardChangesBody;
+
+  /// No description provided for @discardChangesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descartar los cambios?'**
+  String get discardChangesTitle;
 
   /// No description provided for @dividerHint.
   ///
@@ -3446,6 +3530,12 @@ abstract class AppLocalizations {
   /// **'se ha perdido la conexión.'**
   String get netLost;
 
+  /// No description provided for @netNoAnswer.
+  ///
+  /// In es, this message translates to:
+  /// **'no responde ({seconds} s sin respuesta).'**
+  String netNoAnswer(int seconds);
+
   /// No description provided for @netNotFound.
   ///
   /// In es, this message translates to:
@@ -3463,6 +3553,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'tiempo de espera agotado.'**
   String get netTimeout;
+
+  /// No description provided for @netUnreachable.
+  ///
+  /// In es, this message translates to:
+  /// **'no se llega al host.'**
+  String get netUnreachable;
+
+  /// No description provided for @netUnreachableMac.
+  ///
+  /// In es, this message translates to:
+  /// **'no se llega al host. Si está en tu red local, mira que OpenWard tenga permiso en Ajustes del Sistema › Privacidad y seguridad › Red local.'**
+  String get netUnreachableMac;
 
   /// No description provided for @newEllipsis.
   ///
@@ -4940,6 +5042,42 @@ abstract class AppLocalizations {
   /// **'Escribe una dirección como usuario@servidor:puerto.'**
   String get quickConnectInvalid;
 
+  /// No description provided for @quit.
+  ///
+  /// In es, this message translates to:
+  /// **'Salir'**
+  String get quit;
+
+  /// No description provided for @quitBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se corta: {what}.'**
+  String quitBody(String what);
+
+  /// No description provided for @quitSessions.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 sesión abierta} other{{count} sesiones abiertas}}'**
+  String quitSessions(int count);
+
+  /// No description provided for @quitTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Salir de OpenWard?'**
+  String get quitTitle;
+
+  /// No description provided for @quitTransfers.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 transferencia en curso} other{{count} transferencias en curso}}'**
+  String quitTransfers(int count);
+
+  /// No description provided for @quitTunnels.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 túnel abierto} other{{count} túneles abiertos}}'**
+  String quitTunnels(int count);
+
   /// No description provided for @readFailedTitle.
   ///
   /// In es, this message translates to:
@@ -5197,6 +5335,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Renombrar el espacio de trabajo'**
   String get renameWorkspace;
+
+  /// No description provided for @reopenTab.
+  ///
+  /// In es, this message translates to:
+  /// **'Reabrir la pestaña cerrada'**
+  String get reopenTab;
 
   /// No description provided for @repeatPassphrase.
   ///
@@ -6038,6 +6182,12 @@ abstract class AppLocalizations {
   /// **'Saltar la guía'**
   String get skipGuide;
 
+  /// No description provided for @snippetDeleted.
+  ///
+  /// In es, this message translates to:
+  /// **'Snippet «{name}» eliminado'**
+  String snippetDeleted(String name);
+
   /// No description provided for @snippetEditorHint.
   ///
   /// In es, this message translates to:
@@ -6746,6 +6896,12 @@ abstract class AppLocalizations {
   /// **'Detenido'**
   String get tunnelClosed;
 
+  /// No description provided for @tunnelDeleted.
+  ///
+  /// In es, this message translates to:
+  /// **'Túnel «{name}» eliminado'**
+  String tunnelDeleted(String name);
+
   /// No description provided for @tunnelDidNotOpen.
   ///
   /// In es, this message translates to:
@@ -6907,6 +7063,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Fuente de la interfaz'**
   String get uiFont;
+
+  /// No description provided for @undo.
+  ///
+  /// In es, this message translates to:
+  /// **'Deshacer'**
+  String get undo;
 
   /// No description provided for @unknownKeyType.
   ///

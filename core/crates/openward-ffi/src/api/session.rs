@@ -866,6 +866,13 @@ impl TerminalSession {
         self.term.wheel(lines, x, y, mods);
     }
 
+    /// Scrolls the history only (a selection dragged past an edge): the
+    /// program hears nothing.
+    #[frb(sync)]
+    pub fn scroll_history(&self, lines: i32) {
+        self.term.scroll_history(lines);
+    }
+
     #[frb(sync)]
     pub fn focus(&self, gained: bool) {
         self.term.focus(gained);

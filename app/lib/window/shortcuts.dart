@@ -23,6 +23,11 @@ String sidebarKeys(AppLocalizations l) =>
 /// What opens the Hosts page.
 String hostsKeys(AppLocalizations l) => keysFor('⌘⇧H', '${l.ctrlShiftPrefix}H');
 
+/// What opens the last closed tab again: Ctrl+Shift+T elsewhere opens a
+/// local shell, so Alt joins it.
+String reopenKeys(AppLocalizations l, {bool? apple}) =>
+    (apple ?? isApple) ? '⌘⇧T' : '${l.ctrlShiftPrefix}Alt+T';
+
 /// One line of the sheet: what it does and the keys that do it, any of
 /// them.
 class ShortcutRow {
@@ -57,6 +62,7 @@ List<ShortcutGroup> shortcutGroups(AppLocalizations l, {bool? apple}) {
       ShortcutRow(l.saveNewHost, [w('N')]),
       ShortcutRow(l.shortcutHosts, [k('⌘⇧H', '${cs}H')]),
       ShortcutRow(l.closeTab, [w('W')]),
+      ShortcutRow(l.reopenTab, [reopenKeys(l, apple: mac)]),
       ShortcutRow(l.toggleSidebar, [k('⌘B', '${cs}L')]),
       ShortcutRow(l.settings, [c(',')]),
       ShortcutRow(l.shortcutsTitle, [w('/')]),

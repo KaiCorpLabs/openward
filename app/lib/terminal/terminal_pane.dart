@@ -877,12 +877,9 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     if (over <= 0) return;
     final lines = (1 + over / ch).clamp(1, 6).floor();
     final edge = y < 0 ? 0.0 : height - 1;
-    _session.wheel(
-      lines: y < 0 ? lines : -lines,
-      x: _dragAt.dx,
-      y: edge,
-      mods: 0,
-    );
+    // The history only: not the wheel, which a program in the alternate
+    // screen (less, man) takes as arrows, and would lose the selection.
+    _session.scrollHistory(lines: y < 0 ? lines : -lines);
     _session.selectDrag(
       x: _dragAt.dx,
       y: edge,

@@ -125,23 +125,30 @@ class _Opening extends ConnectionController {
 }
 
 /// Opens tunnel `id`, asking in a dialog whatever its connection needs.
+/// The dialog goes on the app's own navigator: the page that opened the
+/// tunnel may be gone by the time a question comes.
 Future<void> openTunnel(
   BuildContext context,
   WidgetRef ref,
   TunnelView tunnel,
 ) async {
   final board = ref.read(tunnelBoardProvider);
+  final navigator = Navigator.of(context, rootNavigator: true);
   final c = _Opening(
     tunnel.id,
     app: ref.read(openWardProvider),
     label: tunnel.hostLabel,
   );
+  // Done when it connected (and listens) or gave up.
+  final done = Completer<void>();
   var asking = false;
   void onChange() {
-    if (c.prompts.isNotEmpty && !asking && context.mounted) {
+    if (c.phase == Phase.connected || c.phase == Phase.closed) {
+      if (!done.isCompleted) done.complete();
+    } else if (c.prompts.isNotEmpty && !asking && navigator.mounted) {
       asking = true;
       showDialog<void>(
-        context: context,
+        context: navigator.context,
         barrierDismissible: false,
         builder: (context) => _AskDialog(controller: c),
       ).whenComplete(() => asking = false);
@@ -151,12 +158,7 @@ Future<void> openTunnel(
   c.addListener(onChange);
   c.start();
   board.refresh();
-  // Done when it connected (and listens) or gave up.
-  while (!c.isDisposed &&
-      c.phase != Phase.connected &&
-      c.phase != Phase.closed) {
-    await Future<void>.delayed(const Duration(milliseconds: 50));
-  }
+  await done.future;
   c.removeListener(onChange);
   board.refresh();
   // Let the dialog see the end before the controller goes.

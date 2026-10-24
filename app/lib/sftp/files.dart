@@ -207,12 +207,15 @@ class FilePane extends ChangeNotifier {
   }
 
   /// Lists `dir` and shows it. A folder that cannot be listed leaves the
-  /// one shown, with the error.
+  /// one shown, with the error. Only the latest call shows: an answer that
+  /// comes late does not take the view back.
   Future<void> open(String dir, {bool keepSelection = false}) async {
+    final asked = ++_opening;
     loading = true;
     _notify();
     try {
       final list = await fs.list(dir);
+      if (asked != _opening) return;
       final same = dir == path;
       path = dir;
       entries = list;
@@ -228,12 +231,18 @@ class FilePane extends ChangeNotifier {
         if (cursor != null && !names.contains(cursor)) cursor = null;
       }
     } on FileError catch (e) {
+      if (asked != _opening) return;
       error = e;
     } finally {
-      loading = false;
-      _notify();
+      if (asked == _opening) {
+        loading = false;
+        _notify();
+      }
     }
   }
+
+  /// The latest [open], to tell late answers.
+  int _opening = 0;
 
   Future<void> refresh() =>
       path.isEmpty ? Future.value() : open(path, keepSelection: true);

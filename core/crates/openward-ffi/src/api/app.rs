@@ -164,10 +164,12 @@ impl OpenWard {
     }
 
     /// As [`OpenWard::open`], with another `~/.ssh` (tests: the tester's
-    /// own keys and `known_hosts` stay out).
+    /// own keys and `known_hosts` stay out, the system's too).
     pub fn open_with_ssh_dir(data_dir: String, ssh_dir: String) -> anyhow::Result<OpenWard> {
+        let ssh_dir = PathBuf::from(ssh_dir);
         let local = openward_app::Local {
-            ssh_dir: PathBuf::from(ssh_dir),
+            system_ssh_dir: ssh_dir.join("system"),
+            ssh_dir,
             ..openward_app::Local::from_env()
         };
         Ok(Self {
@@ -181,6 +183,7 @@ impl OpenWard {
         let home = PathBuf::from(home);
         let local = openward_app::Local {
             ssh_dir: home.join(".ssh"),
+            system_ssh_dir: home.join("etc-ssh"),
             home,
             ..openward_app::Local::from_env()
         };

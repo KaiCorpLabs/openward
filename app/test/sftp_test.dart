@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -65,6 +67,19 @@ class FakeFiles implements FileSystem {
   }
 
   final chmods = <(String, int, bool)>[];
+}
+
+/// A server whose `/slow` answers only when told to.
+class SlowFiles extends FakeFiles {
+  SlowFiles(super.tree);
+
+  final slow = Completer<void>();
+
+  @override
+  Future<List<FileEntry>> list(String dir) async {
+    if (dir == '/slow') await slow.future;
+    return super.list(dir);
+  }
 }
 
 TransferView job({
@@ -141,6 +156,23 @@ void main() {
       expect(identical(pane.visible, shown), isFalse);
     },
   );
+
+  /// Open a slow folder, then a quick one: when the slow one answers, the
+  /// view stays on the quick one.
+  test('a folder that answers late does not take the view back', () async {
+    final files = SlowFiles({
+      '/slow': [entry('old.txt')],
+      '/quick': [entry('new.txt')],
+    });
+    final pane = FilePane(Side.remote, files);
+    final late = pane.open('/slow');
+    await pane.open('/quick');
+    files.slow.complete();
+    await late;
+    expect(pane.path, '/quick');
+    expect([for (final e in pane.visible) e.name], ['new.txt']);
+    expect(pane.loading, isFalse);
+  });
 
   group('a pane', () {
     late FilePane pane;

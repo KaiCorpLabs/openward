@@ -71,6 +71,9 @@ settings! {
     proxy: Proxy,
     /// Seconds between keepalives; 0 turns them off.
     keepalive_secs: u32,
+    /// Seconds the server has to set up the connection and to answer each
+    /// step of logging in (OpenSSH's `ConnectTimeout`).
+    connect_timeout_secs: u32,
     /// Forward the agent to the server.
     agent_forward: bool,
     /// Run the shell inside tmux on the server, to find it as it was after
@@ -81,6 +84,13 @@ settings! {
     /// Variables sent with the session (`SetEnv`).
     env: BTreeMap<String, String>,
     host_key_policy: HostKeyPolicy,
+    /// OpenSSH `known_hosts` files trusted as well, in place of
+    /// `~/.ssh/known_hosts` and `known_hosts2` (`UserKnownHostsFile`).
+    /// Expanded like an identity file.
+    known_hosts_files: Vec<String>,
+    /// The system's, in place of `/etc/ssh/ssh_known_hosts` and
+    /// `ssh_known_hosts2` (`GlobalKnownHostsFile`).
+    global_known_hosts_files: Vec<String>,
     /// Accept host keys signed with `ssh-rsa` (SHA-1), for servers older
     /// than OpenSSH 7.2 that sign no other way. Off by default, as in
     /// OpenSSH since 8.8.

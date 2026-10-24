@@ -60,6 +60,14 @@ class _SnippetEditorState extends ConsumerState<_SnippetEditor> {
   late SnippetVariables _vars = snippetVariables(script: _script.text);
   String? _error;
 
+  String _snapshot() => [
+    _label.text,
+    _script.text,
+    _enter,
+    for (final MapEntry(:key, :value) in _defaults.entries)
+      if (value.text.isNotEmpty) '$key=${value.text}',
+  ].join('\u0000');
+
   @override
   void dispose() {
     for (final c in [_label, _script, ..._defaults.values]) {
@@ -109,12 +117,39 @@ class _SnippetEditorState extends ConsumerState<_SnippetEditor> {
     }
   }
 
+  /// Deletes it at once; the notice that says so can bring it back.
   Future<void> _delete() async {
     final old = widget.snippet;
     if (old == null) return;
-    await ref.read(openWardProvider).delete(id: old.id);
-    ref.read(snippetsProvider.notifier).refresh();
+    final l = context.l10n;
+    final app = ref.read(openWardProvider);
+    final snippets = ref.read(snippetsProvider.notifier);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await app.delete(id: old.id);
+    } catch (e) {
+      return setState(() => _error = l.deleteFailed('$e'));
+    }
+    snippets.refresh();
     if (mounted) Navigator.pop(context, true);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(l.snippetDeleted(old.spec.label)),
+        action: SnackBarAction(
+          label: l.undo,
+          onPressed: () async {
+            try {
+              await app.createSnippet(spec: old.spec);
+            } catch (e) {
+              messenger.showSnackBar(
+                SnackBar(content: Text(l.saveFailed('$e'))),
+              );
+            }
+            snippets.refresh();
+          },
+        ),
+      ),
+    );
   }
 
   @override
@@ -151,6 +186,7 @@ class _SnippetEditorState extends ConsumerState<_SnippetEditor> {
       error: _error,
       onSave: _save,
       onDelete: widget.snippet == null ? null : _delete,
+      snapshot: _snapshot,
       children: [
         labelled(
           l.name,

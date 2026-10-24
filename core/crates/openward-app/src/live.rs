@@ -94,7 +94,7 @@ impl Live {
         self.runtime.spawn(async move {
             for s in me.sessions.iter().rev() {
                 // Its loop may be stuck writing to a peer that is gone.
-                let _ = tokio::time::timeout(Duration::from_secs(2), s.disconnect()).await;
+                let _ = tokio::time::timeout(DISCONNECT, s.disconnect()).await;
             }
         });
     }
@@ -104,13 +104,17 @@ impl Live {
     }
 }
 
+/// How long saying goodbye to a server may take.
+const DISCONNECT: Duration = Duration::from_secs(2);
+
 impl Drop for Live {
     fn drop(&mut self) {
         let sessions = std::mem::take(&mut self.sessions);
-        // Last hop first: each one runs inside the one before.
+        // Last hop first: each one runs inside the one before. A loop stuck
+        // on a peer that is gone lets go of the sessions all the same.
         self.runtime.spawn(async move {
             for s in sessions.iter().rev() {
-                s.disconnect().await;
+                let _ = tokio::time::timeout(DISCONNECT, s.disconnect()).await;
             }
         });
     }

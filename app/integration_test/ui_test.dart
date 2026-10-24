@@ -35,10 +35,13 @@ import 'package:openward/keys/keys.dart';
 import 'package:openward/src/rust/api/app.dart';
 import 'package:openward/src/rust/api/identities.dart';
 import 'package:openward/src/rust/api/session.dart';
+import 'package:openward/src/rust/api/sftp.dart'
+    show ConflictChoice, TransferDirection;
 import 'package:openward/src/rust/api/vault.dart';
 import 'package:openward/src/rust/frb_generated.dart';
 import 'package:openward/hosts/hosts_page.dart';
 import 'package:openward/hosts/sidebar.dart';
+import 'package:openward/tabs/close_guard.dart' show confirmQuit;
 import 'package:openward/tabs/session_view.dart';
 import 'package:openward/tabs/tab_strip.dart';
 import 'package:openward/tabs/tabs.dart';
@@ -211,6 +214,25 @@ Future<void> _shortcut(
     await tester.sendKeyDownEvent(k);
   }
   await tester.sendKeyEvent(key);
+  for (final k in mods.reversed) {
+    await tester.sendKeyUpEvent(k);
+  }
+  await tester.pump();
+}
+
+/// ⌘⇧T (Ctrl+Shift+Alt+T elsewhere): the last closed tab, again.
+Future<void> _reopen(WidgetTester tester) async {
+  final mods = isApple
+      ? [LogicalKeyboardKey.metaLeft, LogicalKeyboardKey.shiftLeft]
+      : [
+          LogicalKeyboardKey.controlLeft,
+          LogicalKeyboardKey.shiftLeft,
+          LogicalKeyboardKey.altLeft,
+        ];
+  for (final k in mods) {
+    await tester.sendKeyDownEvent(k);
+  }
+  await tester.sendKeyEvent(LogicalKeyboardKey.keyT);
   for (final k in mods.reversed) {
     await tester.sendKeyUpEvent(k);
   }
@@ -572,7 +594,17 @@ Host web-1 web-2
     await _shortcut(tester, LogicalKeyboardKey.comma);
     await _settle(tester);
     expect(container.read(tabsProvider).current, isA<PageTab>());
-    // …and ⌘W closes them, though the page took its focus with it.
+    // …and ⌘W closes them, though the page took its focus with it; ⌘⇧T
+    // opens them again.
+    await _shortcut(tester, LogicalKeyboardKey.keyW, letter: true);
+    await _settle(tester);
+    expect(container.read(tabsProvider).tabs, isEmpty);
+    await _reopen(tester);
+    await _settle(tester);
+    expect(
+      container.read(tabsProvider).current,
+      isA<PageTab>().having((t) => t.page, 'page', PageKind.settings),
+    );
     await _shortcut(tester, LogicalKeyboardKey.keyW, letter: true);
     await _settle(tester);
     expect(container.read(tabsProvider).tabs, isEmpty);
@@ -1296,8 +1328,21 @@ Host web-1 web-2
     await tester.ensureVisible(field('setting.agent'));
     await _settle(tester);
     await _shot(tester, '5b-host-editor-advanced');
-    await tester.tap(find.text('Cancelar'));
+    // A change not saved: leaving asks first, Esc too, and saves nothing.
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump(const Duration(milliseconds: 300));
     await _settle(tester);
+    expect(find.text('¿Descartar los cambios?'), findsOneWidget);
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Cancelar').last);
+    await _settle(tester);
+    expect(find.text('¿Descartar los cambios?'), findsNothing);
+    expect(field('setting.agent'), findsOneWidget, reason: 'still editing');
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Cancelar'));
+    await _settle(tester);
+    await tester.tap(find.text('Descartar'));
+    await _settle(tester);
+    expect(field('setting.agent'), findsNothing);
+    expect(app.host(id: app.hosts().single.id).spec.settings.port, 2222);
   });
 
   testWidgets('ssh: a changed host key is shown and trusted on purpose', (
@@ -2520,6 +2565,11 @@ Host db
             identityFiles: ['$fixtures/id_ed25519'],
             agent: AgentKind.off,
             hostKeyPolicy: KeyPolicy.acceptNew,
+            // Marked: closing its terminal asks first.
+            environment: EnvironmentKind.mark,
+            environmentName: 'Producción',
+            environmentShort: 'prod',
+            environmentColor: 'red',
           ),
         ),
       );
@@ -2672,7 +2722,56 @@ Host db
       await tester.pump(const Duration(milliseconds: 300));
       expect(container.read(transferQueueProvider).jobs, isEmpty);
 
-      container.read(tabsProvider.notifier)
+      // Quitting asks while the terminal is up and a copy is on its way,
+      // paused too; Cancel keeps it all.
+      final big = File('${work.path}/grande.bin');
+      big.openSync(mode: FileMode.write)
+        ..truncateSync(1 << 30)
+        ..closeSync();
+      final copy = app.transfer(
+        browser: c.browser,
+        direction: TransferDirection.upload,
+        source: big.path,
+        destDir: '/home/demo',
+        onConflict: ConflictChoice.replace,
+      );
+      app.pauseTransfer(id: copy);
+      final queue = container.read(transferQueueProvider)..poke();
+      await _until(
+        tester,
+        () => queue.jobs.any((j) => j.id == copy),
+        'the copy in the queue',
+      );
+      final quitting = confirmQuit(tester.element(find.byType(Sidebar)));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('¿Salir de OpenWard?'), findsOneWidget);
+      expect(find.textContaining('1 transferencia en curso'), findsOneWidget);
+      expect(find.textContaining('1 sesión abierta'), findsOneWidget);
+      await _shot(tester, '21b-quit');
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Cancelar'),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(await quitting, isFalse);
+      app.cancelTransfer(id: copy);
+
+      // ⌘W on the terminal of a marked host asks first; ⌘⇧T opens it again.
+      final tabs = container.read(tabsProvider.notifier)..select(0);
+      await tester.pump();
+      await _shortcut(tester, LogicalKeyboardKey.keyW, letter: true);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('¿Cerrar «bastion»?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Cerrar'));
+      await _settle(tester);
+      expect(container.read(tabsProvider).tabs, hasLength(1));
+      await _reopen(tester);
+      await _settle(tester);
+      expect(container.read(tabsProvider).currentSession?.label, 'bastion');
+
+      tabs
         ..close(1)
         ..close(0);
       await _settle(tester);
@@ -3067,6 +3166,23 @@ Host db
         'the snippet in every pane',
       );
     }
+
+    // Deleted from its editor, it comes back from the notice.
+    container.read(tabsProvider.notifier).select(1);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(field('snippet.Saludo'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('Eliminar'));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(app.snippets(), isEmpty);
+    expect(find.text('Snippet «Saludo» eliminado'), findsOneWidget);
+    await tester.tap(find.text('Deshacer'));
+    await _until(
+      tester,
+      () => app.snippets().any((s) => s.spec.label == 'Saludo'),
+      'the snippet back',
+    );
+
     container.read(tabsProvider.notifier)
       ..close(1)
       ..close(0);
@@ -3452,6 +3568,13 @@ Host db
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Borrar 2 comandos'), findsOneWidget);
     await _shot(tester, '79-settings-history');
+    // Clearing it asks first.
+    await tester.tap(field('settings.clearHistory'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('¿Borrar el historial de comandos?'), findsOneWidget);
+    await tester.tap(find.text('Cancelar'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(container.read(historyProvider), isNotEmpty);
     tabs.close(1);
     await tester.pump(const Duration(milliseconds: 300));
     // Shown again: a pane of its own.
