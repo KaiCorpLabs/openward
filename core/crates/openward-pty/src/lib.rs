@@ -448,6 +448,11 @@ mod kill_tests {
             "{:?}",
             started.elapsed()
         );
+        // The end can come a moment before the shell is reaped.
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while pty.exit_code().is_none() && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(20));
+        }
         assert_eq!(pty.exit_code(), Some(4));
         assert!(alive(job), "the job itself is left alone, as nohup wants");
         let _ = nix::sys::signal::kill(
