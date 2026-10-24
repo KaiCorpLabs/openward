@@ -557,6 +557,12 @@ Host web-1 web-2
     await tester.tap(find.text('English').last);
     await _settle(tester);
     expect(find.text('Appearance'), findsOneWidget);
+    // The menu fades out: its «English» goes a moment after the choice.
+    await _until(
+      tester,
+      () => find.text('English').evaluate().length == 1,
+      'the menu closed',
+    );
     await tester.tap(find.text('English'));
     await _settle(tester);
     await tester.tap(find.text('Español').last);
