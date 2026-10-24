@@ -142,6 +142,23 @@ class TabsNotifier extends Notifier<TabsState> {
   /// Rebuilds what watches the tabs after a change inside one.
   void _refresh() => state = TabsState(state.tabs, state.active);
 
+  /// Sessions of saved hosts go by the host's label as it is now: one
+  /// renamed while connected shows its new name, in its tab and wherever
+  /// else it is named.
+  void relabel(Library library) {
+    var changed = false;
+    for (final c in _live) {
+      final id = c.hostId;
+      final now = id == null ? null : library.host(id)?.label;
+      if (now != null && now != c.label) {
+        c.label = now;
+        c.notify();
+        changed = true;
+      }
+    }
+    if (changed) _refresh();
+  }
+
   TerminalController _start(TerminalController c) {
     _live.add(c);
     c.addListener(() => _closeOnExit(c));

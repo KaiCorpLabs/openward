@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/errors.dart';
 import '../core/providers.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/identities.dart';
@@ -61,7 +62,7 @@ class _UseIdentityState extends ConsumerState<_UseIdentity> {
       identitiesChanged(ref);
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      setState(() => _error = context.l10n.saveFailed('$e'));
+      setState(() => _error = saveErrorText(context.l10n, e));
     }
   }
 

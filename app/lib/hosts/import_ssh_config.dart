@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/errors.dart';
 import '../core/providers.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/vault.dart';
@@ -25,8 +26,11 @@ Future<void> importSshConfig(BuildContext context, WidgetRef ref) async {
     report = await app.importSshConfig(file: file, only: only);
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l.importFailed('$e'))));
+      showErrorNotice(
+        ScaffoldMessenger.of(context),
+        l.importFailed(errorReason(l, e)),
+        e,
+      );
     }
     return;
   }
@@ -67,7 +71,8 @@ String _warning(AppLocalizations l, ImportWarning w) {
     ImportWarningKind.badValue => l.warnBadValue(w.subject, at, w.detail),
     ImportWarningKind.stricter => l.warnStricter(at),
     ImportWarningKind.includeTooDeep => l.warnIncludeTooDeep(at),
-    ImportWarningKind.unreadable => l.warnUnreadable(_short(w.file), w.subject),
+    ImportWarningKind.unreadable => l.warnUnreadable(_short(w.file)),
+    ImportWarningKind.denied => l.warnDenied(_short(w.file)),
     ImportWarningKind.jumpLossy => l.warnJumpLossy(w.subject, w.detail),
   };
 }

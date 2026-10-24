@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use openward_proto::{ForwardKind, Proxy, ProxyServer, Settings};
 use yaml_rust2::{Yaml, YamlLoader};
 
-use crate::bundle::{Bundle, Group, Host, JumpRef, KeyRef, Tunnel, Warning, WarningKind};
+use crate::bundle::{Bundle, Group, Host, JumpRef, KeyRef, Missing, Tunnel, Warning, WarningKind};
 use crate::text;
 
 /// Where Tabby keeps its configuration on this system.
@@ -133,7 +133,7 @@ pub fn parse(bytes: &[u8]) -> Result<Bundle, String> {
             } else {
                 out.warnings.push(Warning::about(
                     &name,
-                    WarningKind::Unsupported("a key in Tabby's vault".into()),
+                    WarningKind::Unsupported(Missing::TabbyVaultKey),
                 ));
             }
         }
@@ -143,7 +143,7 @@ pub fn parse(bytes: &[u8]) -> Result<Bundle, String> {
         if o["x11"].as_bool() == Some(true) {
             out.warnings.push(Warning::about(
                 &name,
-                WarningKind::Unsupported("X11 forwarding".into()),
+                WarningKind::Unsupported(Missing::X11),
             ));
         }
         if let Some(cmd) = s(&o["proxyCommand"]) {
@@ -157,6 +157,7 @@ pub fn parse(bytes: &[u8]) -> Result<Bundle, String> {
                     .and_then(|p| u16::try_from(p).ok())
                     .unwrap_or(default),
                 user: None,
+                extra: Default::default(),
             })
         };
         if let Some(socks) = server("socksProxyHost", "socksProxyPort", 1080) {
@@ -214,7 +215,7 @@ pub fn parse(bytes: &[u8]) -> Result<Bundle, String> {
         if h.jumps.len() < before {
             out.warnings.push(Warning::about(
                 &h.label,
-                WarningKind::Unsupported("a jump through a profile that is not SSH".into()),
+                WarningKind::Unsupported(Missing::JumpNotSsh),
             ));
         }
     }

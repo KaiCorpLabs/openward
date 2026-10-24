@@ -229,7 +229,7 @@ pub fn parse(bytes: &[u8]) -> Result<Bundle, String> {
             out.keys.push(StoredKey {
                 id: id.clone(),
                 label: label.clone(),
-                private_key: key.to_owned(),
+                private_key: key.to_owned().into(),
                 passphrase: None,
             });
             keys.push(KeyRef::Stored(id));

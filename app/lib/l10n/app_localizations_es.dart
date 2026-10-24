@@ -324,9 +324,25 @@ class AppLocalizationsEs extends AppLocalizations {
       'Junto a la clave (-cert.pub): se usa sin añadirlo.';
 
   @override
+  String get certNoAuthority =>
+      'ninguna @cert-authority de known_hosts cubre este host';
+
+  @override
+  String get certNotForHost => 'no se emitió para este nombre';
+
+  @override
+  String get certNotHost => 'no es un certificado de host';
+
+  @override
+  String get certOutOfDate => 'ha caducado o aún no es válido';
+
+  @override
   String certUntil(String date) {
     return 'hasta el $date';
   }
+
+  @override
+  String get certUntrusted => 'no lo firma una autoridad de confianza';
 
   @override
   String get certificate => 'certificado';
@@ -824,6 +840,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get destination => 'Destino';
 
   @override
+  String get details => 'Detalles';
+
+  @override
   String get discardChanges => 'Descartar';
 
   @override
@@ -1080,6 +1099,45 @@ class AppLocalizationsEs extends AppLocalizations {
   String get equalizePanes => 'Igualar tamaños';
 
   @override
+  String get errConflict => 'ha cambiado mientras tanto';
+
+  @override
+  String get errCycle => 'un grupo no puede estar dentro de sí mismo';
+
+  @override
+  String get errFileChanged => 'el archivo ha cambiado mientras tanto';
+
+  @override
+  String get errInUse => 'otros hosts saltan por él';
+
+  @override
+  String get errInternal =>
+      'algo ha fallado dentro de OpenWard (más en «Detalles»)';
+
+  @override
+  String get errInvalid => 'lo que dice no encaja';
+
+  @override
+  String get errNewerFormat =>
+      'tus datos los escribió una versión más nueva de OpenWard';
+
+  @override
+  String get errNotFound => 'ya no existe';
+
+  @override
+  String get errOpenElsewhere => 'otro OpenWard tiene abiertos estos datos';
+
+  @override
+  String get errStorage => 'el disco no lo ha aceptado';
+
+  @override
+  String get errorDetailsHint =>
+      'En inglés, tal como lo dice el núcleo: cópialo si nos informas del problema.';
+
+  @override
+  String get errorDetailsTitle => 'Detalles del error';
+
+  @override
   String get exampleVariable => 'nombre';
 
   @override
@@ -1121,6 +1179,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get failureOther => 'Algo ha fallado (más en «Detalles»).';
+
+  @override
   String get favorite => 'Favorito';
 
   @override
@@ -1146,6 +1207,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get featureHardwareKey => 'una llave de seguridad';
+
+  @override
+  String get featureIncompleteProxy => 'un proxy sin dirección o sin puerto';
 
   @override
   String get featureJumpNotSsh => 'un salto por un perfil que no es SSH';
@@ -1203,6 +1267,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String fileNotFound(String path) {
     return 'No existe: $path';
   }
+
+  @override
+  String get fileOther => 'Algo ha fallado con el archivo (más en «Detalles»).';
 
   @override
   String get filledInEachPane => 'También se rellenan solas, en cada panel:';
@@ -1930,9 +1997,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get keyExchange => 'Intercambio';
 
   @override
-  String keyFailed(String error) {
-    return 'No se ha podido: $error';
-  }
+  String get keyFailed => 'No se ha podido (más en «Detalles»).';
 
   @override
   String get keyInKnownHosts => 'en ~/.ssh/known_hosts';
@@ -2352,6 +2417,14 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get netNotFound => 'no se encuentra el host.';
+
+  @override
+  String get netOther => 'ha fallado la red (más en «Detalles»).';
+
+  @override
+  String netProxyCommand(String said) {
+    return 'el ProxyCommand ha fallado: $said';
+  }
 
   @override
   String get netRefused => 'conexión rechazada.';
@@ -3362,8 +3435,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get readFailedTitle => 'No se ha podido leer';
 
   @override
-  String readFormat(String program, String message) {
-    return 'Es de $program, pero no está como se esperaba: $message';
+  String readFormat(String program) {
+    return 'Es de $program, pero no está como se esperaba (más en «Detalles»).';
   }
 
   @override
@@ -3410,9 +3483,8 @@ class AppLocalizationsEs extends AppLocalizations {
       'La clave del llavero no abre los datos de Termius; puede que Termius haya cambiado su formato. No se ha importado nada.';
 
   @override
-  String readUnreadable(String message) {
-    return 'No se ha podido leer: $message';
-  }
+  String get readUnreadable =>
+      'No se ha podido leer el archivo (más en «Detalles»).';
 
   @override
   String get readingFile => 'Leyendo el archivo…';
@@ -4152,6 +4224,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get starting => 'Arrancando…';
 
   @override
+  String startupElsewhereBody(String folder) {
+    return 'Otro OpenWard tiene abiertos estos datos (otra copia de la app, o una compilación de desarrollo). Ciérralo y vuelve a abrir este; no se ha cambiado nada en $folder.';
+  }
+
+  @override
   String startupErrorBody(String folder) {
     return 'Puede que los escribiera una versión más nueva de OpenWard, que la carpeta no tenga permisos o que el archivo esté dañado. No se ha borrado ni cambiado nada en $folder.';
   }
@@ -4161,6 +4238,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get startupErrorTitle => 'OpenWard no ha podido abrir sus datos';
+
+  @override
+  String startupNewerBody(String folder) {
+    return 'Tus datos los guardó una versión más nueva de OpenWard. Vuelve a abrirlos con esa versión: no se ha borrado ni cambiado nada en $folder.';
+  }
 
   @override
   String get startupQuit => 'Salir';
@@ -4604,6 +4686,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get unknownKeyType => 'Tipo desconocido';
 
   @override
+  String unreadableItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count elementos los guardó una versión más nueva de OpenWard: no se ven aquí, pero siguen en tus datos tal cual.',
+      one: 'Un elemento lo guardó una versión más nueva de OpenWard: no se ve aquí, pero sigue en tus datos tal cual.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get upOneLevel => 'Subir un nivel';
 
   @override
@@ -4707,6 +4801,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String warnDenied(String file) {
+    return 'No hay permiso para leer $file.';
+  }
+
+  @override
   String warnFeature(String host, String feature) {
     return '$host: no se ha traído $feature.';
   }
@@ -4741,8 +4840,14 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String warnPartlyUnreadable(String detail) {
-    return 'Una parte de los datos no se ha podido leer: $detail.';
+  String warnPartlyUnreadable(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count elementos de los datos no se han podido leer.',
+      one: 'Un elemento de los datos no se ha podido leer.',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -4773,8 +4878,8 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String warnUnreadable(String file, String error) {
-    return 'No se ha podido leer $file: $error.';
+  String warnUnreadable(String file) {
+    return 'No se ha podido leer $file.';
   }
 
   @override

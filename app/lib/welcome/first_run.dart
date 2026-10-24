@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/errors.dart';
 import '../core/providers.dart';
 import '../core/settings.dart';
 import '../hosts/import_ssh_config.dart';
@@ -70,8 +71,10 @@ class _FirstRunState extends ConsumerState<FirstRun> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.importFailed('$e'))),
+        showErrorNotice(
+          ScaffoldMessenger.of(context),
+          context.l10n.importFailed(errorReason(context.l10n, e)),
+          e,
         );
       }
     }

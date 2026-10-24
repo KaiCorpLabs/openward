@@ -307,6 +307,10 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   List<TunnelView> tunnels();
 
+  /// Items this version cannot read, written by a newer one: they stay
+  /// in the vault as they are, but the app does not show them.
+  int unreadableItems();
+
   Future<BigInt> updateGroup({
     required String id,
     required BigInt rev,
@@ -314,10 +318,15 @@ abstract class OpenWard implements RustOpaqueInterface {
   });
 
   /// Returns the new revision. Fails if the host changed since `rev`.
+  /// Saves `spec` over host `id` as read at `rev`. If it changed
+  /// meanwhile (connecting learned its system, another window) and
+  /// `base` is the spec as it was read, what this one changed goes over
+  /// what is there now: only a field both changed is a conflict.
   Future<BigInt> updateHost({
     required String id,
     required BigInt rev,
     required HostSpec spec,
+    HostSpec? base,
   });
 
   /// Returns the new revision. Fails if it changed since `rev`.
@@ -363,6 +372,10 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// tunnel's connections change: ask [`OpenWard::tunnels`] then. A remote
   /// tunnel's connections change without one.
   Stream<bool> watchTunnels();
+
+  /// An event each time the vault changes, whoever changed it: read
+  /// hosts, tunnels, identities, snippets and workspaces again then.
+  Stream<bool> watchVault();
 
   /// Every workspace, by name.
   List<WorkspaceView> workspaces();

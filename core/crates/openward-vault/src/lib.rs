@@ -69,6 +69,9 @@ pub struct Vault {
     /// This device's own defaults, over the built-in ones: chosen in its
     /// settings, never stored in the vault nor synced.
     device: Settings,
+    /// Told after every write, while the vault is held: it only passes the
+    /// word on (wakes the UI), never uses the vault.
+    on_change: Option<Box<dyn Fn() + Send>>,
 }
 
 fn now_ms() -> i64 {
@@ -104,11 +107,28 @@ impl Vault {
             items,
             unreadable,
             device: Settings::default(),
+            on_change: None,
         })
     }
 
     pub fn id(&self) -> ItemId {
         self.store.vault_id
+    }
+
+    /// `f` hears of every change from now on: an item created, changed or
+    /// deleted, by the UI or by the core (a system learned). It is called
+    /// with the vault held, so it must only pass the word on.
+    pub fn on_change(&mut self, f: impl Fn() + Send + 'static) {
+        self.on_change = Some(Box::new(f));
+    }
+
+    /// Writes to storage, then tells who listens.
+    fn write(&mut self, items: &[Item], deleted: &[ItemId]) -> Result<()> {
+        self.store.write(items, deleted)?;
+        if let Some(f) = &self.on_change {
+            f();
+        }
+        Ok(())
     }
 
     pub fn unreadable(&self) -> usize {
@@ -307,8 +327,42 @@ impl Vault {
                 },
             })
             .collect();
-        self.store.write(&new, &[])?;
+        self.write(&new, &[])?;
         for item in new {
+            self.items.insert(item.id, item);
+        }
+        Ok(())
+    }
+
+    /// Replaces several items' data, each from the revision its change was
+    /// made from: all in one transaction, or none.
+    pub fn update_all(&mut self, changes: Vec<(ItemId, u64, Data)>) -> Result<()> {
+        let now = now_ms();
+        let mut changed = Vec::with_capacity(changes.len());
+        for (id, rev, data) in changes {
+            let current = self.item(id)?;
+            if current.rev != rev {
+                return Err(Error::Conflict {
+                    id,
+                    expected: rev,
+                    current: current.rev,
+                });
+            }
+            if current.body.data.kind() != data.kind() {
+                return Err(wrong_type(id, current.body.data.kind(), &data));
+            }
+            self.validate(id, &data, &HashMap::new())?;
+            let mut item = current.clone();
+            item.rev += 1;
+            item.body.modified = now;
+            item.body.data = data;
+            changed.push(item);
+        }
+        if changed.is_empty() {
+            return Ok(());
+        }
+        self.write(&changed, &[])?;
+        for item in changed {
             self.items.insert(item.id, item);
         }
         Ok(())
@@ -333,7 +387,7 @@ impl Vault {
         item.rev += 1;
         item.body.modified = now_ms();
         item.body.data = data;
-        self.store.write(std::slice::from_ref(&item), &[])?;
+        self.write(std::slice::from_ref(&item), &[])?;
         let rev = item.rev;
         self.items.insert(id, item);
         Ok(rev)
@@ -396,7 +450,7 @@ impl Vault {
             }
             _ => {}
         }
-        self.store.write(&moved, &gone)?;
+        self.write(&moved, &gone)?;
         for g in &gone {
             self.items.remove(g);
         }
@@ -591,7 +645,7 @@ impl Vault {
             item.body.modified = now;
             changed.push(item);
         }
-        self.store.write(&changed, &[])?;
+        self.write(&changed, &[])?;
         let count = changed.len();
         for item in changed {
             self.items.insert(item.id, item);
@@ -712,7 +766,7 @@ impl Vault {
                 data: Data::KnownHost(known),
             },
         };
-        self.store.write(std::slice::from_ref(&item), &replaced)?;
+        self.write(std::slice::from_ref(&item), &replaced)?;
         for old in replaced {
             self.items.remove(&old);
         }

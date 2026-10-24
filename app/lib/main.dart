@@ -1,10 +1,12 @@
 import 'dart:io';
+import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'app.dart';
+import 'core/errors.dart';
 import 'core/fonts.dart';
 import 'core/providers.dart';
 import 'core/settings.dart';
@@ -26,8 +28,9 @@ Future<void> main() async {
     app = await OpenWard.open(dataDir: dir);
   } catch (e) {
     // Rather than an empty window: what happened, and where the data is.
-    return runApp(StartupErrorApp(error: '$e', dataDir: dir));
+    return runApp(StartupErrorApp(error: e, dataDir: dir));
   }
+  PlatformDispatcher.instance.onError = reportUncaught;
   runApp(
     ProviderScope(
       overrides: [

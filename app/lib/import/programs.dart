@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/errors.dart';
 import '../core/providers.dart';
 import '../l10n/l10n.dart';
 import '../snippets/snippets.dart';
@@ -51,18 +54,30 @@ Future<void> importFromProgram(
     await showReadFailure(context, read.failure!);
     return;
   }
-  final preview = app.previewProgram(data: data);
-  final choice = await showProgramPreview(context, preview);
-  if (choice == null || !context.mounted) return;
+  final ProgramPreview preview;
+  final ProgramChoice choice;
   final ProgramReport report;
+  // What it read (keys and passphrases too) goes once this is done,
+  // imported or not, instead of waiting for the collector.
   try {
-    report = await app.importProgram(data: data, choice: choice);
-  } catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l.importFailed('$e'))));
+    preview = app.previewProgram(data: data);
+    final chosen = await showProgramPreview(context, preview);
+    if (chosen == null || !context.mounted) return;
+    choice = chosen;
+    try {
+      report = await app.importProgram(data: data, choice: choice);
+    } catch (e) {
+      if (context.mounted) {
+        showErrorNotice(
+          ScaffoldMessenger.of(context),
+          l.importFailed(errorReason(l, e)),
+          e,
+        );
+      }
+      return;
     }
-    return;
+  } finally {
+    data.dispose();
   }
   container.read(libraryProvider.notifier).refresh();
   container.read(snippetsProvider.notifier).refresh();
@@ -78,21 +93,24 @@ Future<T> withProgress<T>(
   Future<T> future,
 ) async {
   final nav = Navigator.of(context, rootNavigator: true);
-  showDialog<void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => PopScope(
-      canPop: false,
-      child: AlertDialog(
-        content: Row(
-          children: [
-            const SizedBox.square(
-              dimension: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            const SizedBox(width: 16),
-            Flexible(child: Text(text)),
-          ],
+  // Open while the work runs; closed below, not awaited.
+  unawaited(
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: Row(
+            children: [
+              const SizedBox.square(
+                dimension: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 16),
+              Flexible(child: Text(text)),
+            ],
+          ),
         ),
       ),
     ),
@@ -108,8 +126,9 @@ String readFailureText(AppLocalizations l, ReadFailure f) {
   final program = f.program == null ? '' : programName(f.program!);
   return switch (f.kind) {
     ReadFailureKind.notRecognized => l.readNotRecognized,
-    ReadFailureKind.unreadable => l.readUnreadable(f.message),
-    ReadFailureKind.format => l.readFormat(program, f.message),
+    // The core's words are in «Detalles».
+    ReadFailureKind.unreadable => l.readUnreadable,
+    ReadFailureKind.format => l.readFormat(program),
     ReadFailureKind.termiusNotFound => l.readTermiusNotFound,
     ReadFailureKind.termiusKeychain => l.readTermiusKeychain,
     ReadFailureKind.termiusNoKey => l.readTermiusNoKey,
@@ -125,6 +144,9 @@ Future<void> showReadFailure(BuildContext context, ReadFailure f) {
       title: Text(l.readFailedTitle),
       content: SizedBox(width: 460, child: Text(readFailureText(l, f))),
       actions: [
+        if (f.kind == ReadFailureKind.unreadable ||
+            f.kind == ReadFailureKind.format)
+          DetailsButton(f),
         FilledButton(
           onPressed: () => Navigator.pop(context),
           child: Text(l.ok),
@@ -150,36 +172,23 @@ String protocolName(String p) => switch (p) {
   _ => p.isEmpty ? p : p[0].toUpperCase() + p.substring(1),
 };
 
-/// The core names what did not come in English; the common ones here in
-/// the user's language.
-String featureName(AppLocalizations l, String what) {
-  final known = switch (what) {
-    'X11 forwarding' => l.featureX11,
-    'SOCKS4 proxy' => l.featureSocks4,
-    'telnet proxy' => l.featureTelnetProxy,
-    'hardware key' => l.featureHardwareKey,
-    "a key in Tabby's vault" => l.featureTabbyVault,
-    "SecureCRT's global key" => l.featureSecureCrtGlobalKey,
-    'a stored MobaXterm credential' => l.featureMobaCredential,
-    'a jump through a profile that is not SSH' => l.featureJumpNotSsh,
-    _ => null,
-  };
-  if (known != null) return known;
-  const through = 'a jump through ';
-  if (what.startsWith(through)) {
-    return l.featureJumpThrough(what.substring(through.length));
-  }
-  const firewall = "SecureCRT's firewall ";
-  if (what.startsWith(firewall)) {
-    return l.featureFirewall(what.substring(firewall.length));
-  }
-  final proxy = RegExp(r'^(?:a |proxy type )?(.+?)(?: proxy)?$')
-      .firstMatch(what);
-  if (what.contains('proxy') && proxy != null) {
-    return l.featureProxy(proxy.group(1)!);
-  }
-  return what;
-}
+/// What did not come, in the user's language, by the kind the core
+/// gives it.
+String featureName(AppLocalizations l, ProgramWarning w) => switch (w.missing) {
+  MissingKind.x11 => l.featureX11,
+  MissingKind.socks4Proxy => l.featureSocks4,
+  MissingKind.telnetProxy => l.featureTelnetProxy,
+  MissingKind.proxy => l.featureProxy(w.detail),
+  MissingKind.incompleteProxy => l.featureIncompleteProxy,
+  MissingKind.hardwareKey => l.featureHardwareKey,
+  MissingKind.tabbyVaultKey => l.featureTabbyVault,
+  MissingKind.secureCrtGlobalKey => l.featureSecureCrtGlobalKey,
+  MissingKind.mobaCredential => l.featureMobaCredential,
+  MissingKind.jumpNotSsh => l.featureJumpNotSsh,
+  MissingKind.jumpThrough => l.featureJumpThrough(w.detail),
+  MissingKind.firewall => l.featureFirewall(w.detail),
+  null => w.detail,
+};
 
 String warningText(AppLocalizations l, ProgramWarning w) {
   final who = w.subject ?? '';
@@ -189,8 +198,8 @@ String warningText(AppLocalizations l, ProgramWarning w) {
     ProgramWarningKind.proxyCommand => l.warnProxyCommand(who, w.detail),
     ProgramWarningKind.unsupported =>
       who.isEmpty
-          ? l.warnFeatureGeneral(featureName(l, w.detail))
-          : l.warnFeature(who, featureName(l, w.detail)),
+          ? l.warnFeatureGeneral(featureName(l, w))
+          : l.warnFeature(who, featureName(l, w)),
     ProgramWarningKind.badValue => () {
       final i = w.detail.indexOf('=');
       return l.warnValue(
@@ -201,6 +210,8 @@ String warningText(AppLocalizations l, ProgramWarning w) {
     }(),
     ProgramWarningKind.shared => l.warnShared(int.tryParse(w.detail) ?? 0),
     ProgramWarningKind.hostChain => l.warnHostChain,
-    ProgramWarningKind.unreadable => l.warnPartlyUnreadable(w.detail),
+    ProgramWarningKind.unreadable => l.warnPartlyUnreadable(
+      int.tryParse(w.detail) ?? 0,
+    ),
   };
 }

@@ -1721,6 +1721,7 @@ dependencies = [
  "snap",
  "tempfile",
  "yaml-rust2",
+ "zeroize",
 ]
 
 [[package]]
@@ -1763,6 +1764,7 @@ dependencies = [
  "sha1 0.10.7",
  "thiserror 2.0.21",
  "tokio",
+ "zeroize",
 ]
 
 [[package]]

@@ -20,8 +20,8 @@ use super::crypto;
 use super::idb::{Idb, Key, Record};
 use super::v8::Value;
 use crate::bundle::{
-    Bundle, Group, Host, Identity, JumpRef, KeyRef, KnownHost, Snippet, StoredKey, Tunnel, Warning,
-    WarningKind,
+    Bundle, Group, Host, Identity, JumpRef, KeyRef, KnownHost, Missing, Snippet, StoredKey, Tunnel,
+    Warning, WarningKind,
 };
 
 /// A table's live records, decrypted on demand.
@@ -239,8 +239,8 @@ pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
         out.keys.push(StoredKey {
             id: both(k),
             label: k.text("label", key).unwrap_or_else(|| "Termius".into()),
-            private_key,
-            passphrase,
+            private_key: private_key.into(),
+            passphrase: passphrase.map(Into::into),
         });
     }
     let key_ref = |identity: &Row| -> Vec<KeyRef> {
@@ -337,7 +337,7 @@ pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
             if i.raw("hardware_key").is_some() {
                 warnings.push(Warning::about(
                     subject,
-                    WarningKind::Unsupported("hardware key".into()),
+                    WarningKind::Unsupported(Missing::HardwareKey),
                 ));
             }
             if visible(i) {
@@ -479,28 +479,31 @@ pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
 }
 
 /// A proxy of an SSH config: HTTP or SOCKS (any version here is 5).
-fn proxy(row: &Row, key: &[u8; 32], identities: &Table) -> Result<Proxy, String> {
+fn proxy(row: &Row, key: &[u8; 32], identities: &Table) -> Result<Proxy, Missing> {
     let kind = row
         .text("type", key)
         .unwrap_or_default()
         .to_ascii_lowercase();
-    let host = row
-        .text("hostname", key)
-        .ok_or("a proxy without an address")?;
+    let host = row.text("hostname", key).ok_or(Missing::IncompleteProxy)?;
     let port = row
         .number("port", key)
         .and_then(|p| u16::try_from(p).ok())
-        .ok_or("a proxy without a port")?;
+        .ok_or(Missing::IncompleteProxy)?;
     let user = identities
         .get(row.raw("identity"))
         .and_then(|i| i.text("username", key));
-    let server = ProxyServer { host, port, user };
+    let server = ProxyServer {
+        host,
+        port,
+        user,
+        extra: Default::default(),
+    };
     if kind.contains("socks") {
         Ok(Proxy::Socks5(server))
     } else if kind.contains("http") {
         Ok(Proxy::Http(server))
     } else {
-        Err(format!("a {kind} proxy"))
+        Err(Missing::Proxy(kind))
     }
 }
 

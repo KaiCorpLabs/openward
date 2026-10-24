@@ -8,6 +8,7 @@ use openward_app::vault::proto::{
 };
 
 use super::app::OpenWard;
+use super::vault::VaultError;
 
 /// A saved host (`host_id`), an address, or (none of them) a shell here.
 #[frb(non_opaque)]
@@ -218,7 +219,7 @@ impl OpenWard {
             .collect()
     }
 
-    pub fn create_workspace(&self, spec: WorkspaceSpec) -> anyhow::Result<String> {
+    pub fn create_workspace(&self, spec: WorkspaceSpec) -> Result<String, VaultError> {
         let mut w = Workspace::default();
         apply(&spec, &mut w)?;
         Ok(self.app.vault().create(Data::Workspace(w))?.to_string())
@@ -230,7 +231,7 @@ impl OpenWard {
         id: String,
         rev: u64,
         spec: WorkspaceSpec,
-    ) -> anyhow::Result<u64> {
+    ) -> Result<u64, VaultError> {
         let wid = super::vault::id(&id)?;
         let mut vault = self.app.vault();
         let mut w = vault.workspace(wid)?.clone();
@@ -239,7 +240,7 @@ impl OpenWard {
     }
 
     /// Renames it, leaving its tabs as they are.
-    pub fn rename_workspace(&self, id: String, rev: u64, name: String) -> anyhow::Result<u64> {
+    pub fn rename_workspace(&self, id: String, rev: u64, name: String) -> Result<u64, VaultError> {
         let wid = super::vault::id(&id)?;
         let mut vault = self.app.vault();
         let mut w = vault.workspace(wid)?.clone();

@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../core/errors.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/sftp.dart';
 import '../ui/tokens.dart';
@@ -339,6 +340,9 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
   bool _busy = false;
   String? _error;
 
+  /// Behind [_error], for «Detalles» when the core's words say more.
+  FileError? _cause;
+
   void _set(int mode) => setState(() {
     _mode = mode & 0x1ff;
     final text = octal(_mode);
@@ -354,6 +358,7 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
     setState(() {
       _busy = true;
       _error = null;
+      _cause = null;
     });
     try {
       final n = await widget.fs.chmod(
@@ -367,6 +372,7 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
       setState(() {
         _busy = false;
         _error = fileErrorText(context.l10n, e);
+        _cause = e;
       });
     }
   }
@@ -523,6 +529,11 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
             if (_error != null) ...[
               const SizedBox(height: 10),
               Text(_error!, style: TextStyle(color: c.danger)),
+              if (_cause case final e? when e.kind == FileErrorKind.other)
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: DetailsButton(e),
+                ),
             ],
           ],
         ),
@@ -678,5 +689,6 @@ String fileErrorText(AppLocalizations l, FileError e) => switch (e.kind) {
   FileErrorKind.exists => l.fileExists(e.path),
   FileErrorKind.lost => l.fileLost,
   FileErrorKind.changed => l.fileChanged(e.path),
-  FileErrorKind.other => e.message,
+  // The core's words are in «Detalles».
+  FileErrorKind.other => l.fileOther,
 };

@@ -9,3 +9,9 @@ analyzer:
     - windows/**
     - macos/**
     - linux/**
+
+linter:
+  rules:
+    # A future in an async function is awaited or marked unawaited: one
+    # that fails would otherwise go without a word.
+    - unawaited_futures

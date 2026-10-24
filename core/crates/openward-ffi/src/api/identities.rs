@@ -10,6 +10,7 @@ use openward_app::vault::proto::{Agent, Data, Identity, ItemId, UseIdentity};
 use openward_app::vault::{Origin, Vault};
 
 use super::app::OpenWard;
+use super::vault::VaultError;
 use super::vault::{AgentKind, id};
 
 /// What an identity sets. Its user and keys apply to the hosts that use
@@ -248,21 +249,26 @@ impl OpenWard {
     }
 
     #[frb(sync)]
-    pub fn identity(&self, id: String) -> anyhow::Result<IdentityView> {
+    pub fn identity(&self, id: String) -> Result<IdentityView, VaultError> {
         let iid = super::vault::id(&id)?;
         let vault = self.app.vault();
         let i = vault.identity(iid)?;
         Ok(self.identity_view(&vault, iid, i))
     }
 
-    pub fn create_identity(&self, spec: IdentitySpec) -> anyhow::Result<String> {
+    pub fn create_identity(&self, spec: IdentitySpec) -> Result<String, VaultError> {
         let mut i = Identity::default();
         apply(&spec, &mut i);
         Ok(self.app.vault().create(Data::Identity(i))?.to_string())
     }
 
     /// Returns the new revision. Fails if it changed since `rev`.
-    pub fn update_identity(&self, id: String, rev: u64, spec: IdentitySpec) -> anyhow::Result<u64> {
+    pub fn update_identity(
+        &self,
+        id: String,
+        rev: u64,
+        spec: IdentitySpec,
+    ) -> Result<u64, VaultError> {
         let iid = super::vault::id(&id)?;
         let mut vault = self.app.vault();
         let mut i = vault.identity(iid)?.clone();
@@ -284,7 +290,7 @@ impl OpenWard {
         &self,
         identity_id: String,
         choosers: Vec<String>,
-    ) -> anyhow::Result<Vec<IdentityUseRow>> {
+    ) -> Result<Vec<IdentityUseRow>, VaultError> {
         let iid = id(&identity_id)?;
         let choosers: HashSet<ItemId> = choosers.iter().map(|c| id(c)).collect::<Result<_, _>>()?;
         let vault = self.app.vault();
@@ -353,7 +359,11 @@ impl OpenWard {
     /// Makes exactly `choosers` (hosts and groups) choose `identity_id`;
     /// those that chose it and are left out go back to inheriting one.
     /// Returns how many changed.
-    pub fn use_identity(&self, identity_id: String, choosers: Vec<String>) -> anyhow::Result<u32> {
+    pub fn use_identity(
+        &self,
+        identity_id: String,
+        choosers: Vec<String>,
+    ) -> Result<u32, VaultError> {
         let iid = id(&identity_id)?;
         let choosers: HashSet<ItemId> = choosers.iter().map(|c| id(c)).collect::<Result<_, _>>()?;
         Ok(self.app.vault().use_identity(iid, &choosers)? as u32)

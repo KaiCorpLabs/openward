@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../src/rust/api/app.dart';
 import '../src/rust/api/session.dart';
+import 'errors.dart';
 import 'address.dart';
 
 /// Rises when the core changed saved hosts by itself (a connection told a
@@ -37,8 +38,9 @@ abstract class ConnectionController extends ChangeNotifier {
   /// An address that is not saved, if it is one.
   final QuickTarget? target;
 
-  /// The host's label, or the shell's name.
-  final String label;
+  /// The host's label, or the shell's name. A saved host's follows it
+  /// when it is renamed ([TabsNotifier.relabel]).
+  String label;
 
   Phase phase = Phase.connecting;
 
@@ -59,8 +61,11 @@ abstract class ConnectionController extends ChangeNotifier {
   /// The user gave up on the connection.
   bool cancelled = false;
 
-  /// An error before the session could start (a plan that cannot run).
+  /// An error before the session could start (a plan that cannot run),
+  /// as the core says it; [errorCause] is the error itself, to say it in
+  /// words.
   String? error;
+  Object? errorCause;
 
   /// Since when the server has not answered, while it may still come back.
   DateTime? stalledSince;
@@ -134,6 +139,7 @@ abstract class ConnectionController extends ChangeNotifier {
     connected = null;
     closed = null;
     error = null;
+    errorCause = null;
     reconnectAt = null;
     cancelled = false;
     prompts.clear();
@@ -142,7 +148,8 @@ abstract class ConnectionController extends ChangeNotifier {
       onEvent,
       onError: (Object e) {
         phase = Phase.closed;
-        error = '$e';
+        error = errorDetails(e);
+        errorCause = e;
         notify();
       },
     );

@@ -158,6 +158,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CellPos dco_decode_box_autoadd_cell_pos(dynamic raw);
 
   @protected
+  CertKind dco_decode_box_autoadd_cert_kind(dynamic raw);
+
+  @protected
   CertView dco_decode_box_autoadd_cert_view(dynamic raw);
 
   @protected
@@ -213,6 +216,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LinkView dco_decode_box_autoadd_link_view(dynamic raw);
+
+  @protected
+  MissingKind dco_decode_box_autoadd_missing_kind(dynamic raw);
+
+  @protected
+  NetKind dco_decode_box_autoadd_net_kind(dynamic raw);
 
   @protected
   PersistentView dco_decode_box_autoadd_persistent_view(dynamic raw);
@@ -291,6 +300,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CellPos dco_decode_cell_pos(dynamic raw);
+
+  @protected
+  CertKind dco_decode_cert_kind(dynamic raw);
 
   @protected
   CertView dco_decode_cert_view(dynamic raw);
@@ -542,6 +554,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<WorkspaceView> dco_decode_list_workspace_view(dynamic raw);
 
   @protected
+  MissingKind dco_decode_missing_kind(dynamic raw);
+
+  @protected
+  NetKind dco_decode_net_kind(dynamic raw);
+
+  @protected
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
@@ -558,6 +576,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CellPos? dco_decode_opt_box_autoadd_cell_pos(dynamic raw);
+
+  @protected
+  CertKind? dco_decode_opt_box_autoadd_cert_kind(dynamic raw);
 
   @protected
   CertView? dco_decode_opt_box_autoadd_cert_view(dynamic raw);
@@ -590,6 +611,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   HealthView? dco_decode_opt_box_autoadd_health_view(dynamic raw);
 
   @protected
+  HostSpec? dco_decode_opt_box_autoadd_host_spec(dynamic raw);
+
+  @protected
   PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw);
 
   @protected
@@ -603,6 +627,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LinkView? dco_decode_opt_box_autoadd_link_view(dynamic raw);
+
+  @protected
+  MissingKind? dco_decode_opt_box_autoadd_missing_kind(dynamic raw);
+
+  @protected
+  NetKind? dco_decode_opt_box_autoadd_net_kind(dynamic raw);
 
   @protected
   PersistentView? dco_decode_opt_box_autoadd_persistent_view(dynamic raw);
@@ -860,6 +890,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   BigInt dco_decode_usize(dynamic raw);
 
   @protected
+  VaultError dco_decode_vault_error(dynamic raw);
+
+  @protected
+  VaultErrorKind dco_decode_vault_error_kind(dynamic raw);
+
+  @protected
   WorkspacePane dco_decode_workspace_pane(dynamic raw);
 
   @protected
@@ -990,6 +1026,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CellPos sse_decode_box_autoadd_cell_pos(SseDeserializer deserializer);
 
   @protected
+  CertKind sse_decode_box_autoadd_cert_kind(SseDeserializer deserializer);
+
+  @protected
   CertView sse_decode_box_autoadd_cert_view(SseDeserializer deserializer);
 
   @protected
@@ -1059,6 +1098,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LinkView sse_decode_box_autoadd_link_view(SseDeserializer deserializer);
+
+  @protected
+  MissingKind sse_decode_box_autoadd_missing_kind(SseDeserializer deserializer);
+
+  @protected
+  NetKind sse_decode_box_autoadd_net_kind(SseDeserializer deserializer);
 
   @protected
   PersistentView sse_decode_box_autoadd_persistent_view(
@@ -1155,6 +1200,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CellPos sse_decode_cell_pos(SseDeserializer deserializer);
+
+  @protected
+  CertKind sse_decode_cert_kind(SseDeserializer deserializer);
 
   @protected
   CertView sse_decode_cert_view(SseDeserializer deserializer);
@@ -1444,6 +1492,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  MissingKind sse_decode_missing_kind(SseDeserializer deserializer);
+
+  @protected
+  NetKind sse_decode_net_kind(SseDeserializer deserializer);
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
@@ -1462,6 +1516,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CellPos? sse_decode_opt_box_autoadd_cell_pos(SseDeserializer deserializer);
+
+  @protected
+  CertKind? sse_decode_opt_box_autoadd_cert_kind(SseDeserializer deserializer);
 
   @protected
   CertView? sse_decode_opt_box_autoadd_cert_view(SseDeserializer deserializer);
@@ -1512,6 +1569,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  HostSpec? sse_decode_opt_box_autoadd_host_spec(SseDeserializer deserializer);
+
+  @protected
   PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
@@ -1531,6 +1591,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LinkView? sse_decode_opt_box_autoadd_link_view(SseDeserializer deserializer);
+
+  @protected
+  MissingKind? sse_decode_opt_box_autoadd_missing_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NetKind? sse_decode_opt_box_autoadd_net_kind(SseDeserializer deserializer);
 
   @protected
   PersistentView? sse_decode_opt_box_autoadd_persistent_view(
@@ -1826,6 +1894,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   BigInt sse_decode_usize(SseDeserializer deserializer);
 
   @protected
+  VaultError sse_decode_vault_error(SseDeserializer deserializer);
+
+  @protected
+  VaultErrorKind sse_decode_vault_error_kind(SseDeserializer deserializer);
+
+  @protected
   WorkspacePane sse_decode_workspace_pane(SseDeserializer deserializer);
 
   @protected
@@ -1977,6 +2051,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_cell_pos(CellPos self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_cert_kind(
+    CertKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_cert_view(
     CertView self,
     SseSerializer serializer,
@@ -2089,6 +2169,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     LinkView self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_box_autoadd_missing_kind(
+    MissingKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_net_kind(NetKind self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_persistent_view(
@@ -2233,6 +2322,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_cell_pos(CellPos self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_cert_kind(CertKind self, SseSerializer serializer);
 
   @protected
   void sse_encode_cert_view(CertView self, SseSerializer serializer);
@@ -2589,6 +2681,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_missing_kind(MissingKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_net_kind(NetKind self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
@@ -2610,6 +2708,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_cell_pos(
     CellPos? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_cert_kind(
+    CertKind? self,
     SseSerializer serializer,
   );
 
@@ -2674,6 +2778,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_host_spec(
+    HostSpec? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_i_64(
     PlatformInt64? self,
     SseSerializer serializer,
@@ -2700,6 +2810,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_link_view(
     LinkView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_missing_kind(
+    MissingKind? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_net_kind(
+    NetKind? self,
     SseSerializer serializer,
   );
 
@@ -3059,6 +3181,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_usize(BigInt self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_vault_error(VaultError self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_vault_error_kind(
+    VaultErrorKind self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_workspace_pane(WorkspacePane self, SseSerializer serializer);

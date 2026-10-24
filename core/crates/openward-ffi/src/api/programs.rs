@@ -9,11 +9,12 @@ use std::path::PathBuf;
 
 use flutter_rust_bridge::frb;
 use openward_app::programs::{Choice, KeyMatch, Preview, PreviewItem, Read, Report};
-use openward_import::bundle::{Program, Warning, WarningKind};
+use openward_import::bundle::{Missing, Program, Warning, WarningKind};
 use openward_import::detect;
 use openward_import::termius;
 
 use super::app::OpenWard;
+use super::vault::VaultError;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ProgramKind {
@@ -129,7 +130,8 @@ pub enum ProgramWarningKind {
     /// A `ProxyCommand` left out (it would run a program here); `detail`
     /// is the command.
     ProxyCommand,
-    /// Something OpenWard does not have; `detail` names it.
+    /// Something OpenWard does not have: `missing`; `detail` is its
+    /// name, when it has one.
     Unsupported,
     /// `detail` is `field=value`.
     BadValue,
@@ -137,8 +139,28 @@ pub enum ProgramWarningKind {
     Shared,
     /// Termius's host chains.
     HostChain,
-    /// Part of the data could not be read; `detail` says why.
+    /// Part of the data could not be read; `detail` is how many items.
     Unreadable,
+}
+
+/// With [`ProgramWarningKind::Unsupported`]: what it is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MissingKind {
+    X11,
+    Socks4Proxy,
+    TelnetProxy,
+    /// Of the type in `detail`.
+    Proxy,
+    IncompleteProxy,
+    HardwareKey,
+    TabbyVaultKey,
+    SecureCrtGlobalKey,
+    MobaCredential,
+    JumpNotSsh,
+    /// Through the session in `detail`.
+    JumpThrough,
+    /// The firewall in `detail`.
+    Firewall,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -146,25 +168,50 @@ pub struct ProgramWarning {
     pub subject: Option<String>,
     pub kind: ProgramWarningKind,
     pub detail: String,
+    pub missing: Option<MissingKind>,
 }
 
 fn warning(w: &Warning) -> ProgramWarning {
+    let mut missing = None;
     let (kind, detail) = match &w.kind {
         WarningKind::Mosh => (ProgramWarningKind::Mosh, String::new()),
         WarningKind::StartupCommand => (ProgramWarningKind::StartupCommand, String::new()),
         WarningKind::ProxyCommand(command) => (ProgramWarningKind::ProxyCommand, command.clone()),
-        WarningKind::Unsupported(what) => (ProgramWarningKind::Unsupported, what.clone()),
+        WarningKind::Unsupported(what) => {
+            let (kind, name) = match what {
+                Missing::X11 => (MissingKind::X11, None),
+                Missing::Socks4Proxy => (MissingKind::Socks4Proxy, None),
+                Missing::TelnetProxy => (MissingKind::TelnetProxy, None),
+                Missing::Proxy(kind) => (MissingKind::Proxy, Some(kind)),
+                Missing::IncompleteProxy => (MissingKind::IncompleteProxy, None),
+                Missing::HardwareKey => (MissingKind::HardwareKey, None),
+                Missing::TabbyVaultKey => (MissingKind::TabbyVaultKey, None),
+                Missing::SecureCrtGlobalKey => (MissingKind::SecureCrtGlobalKey, None),
+                Missing::MobaCredential => (MissingKind::MobaCredential, None),
+                Missing::JumpNotSsh => (MissingKind::JumpNotSsh, None),
+                Missing::JumpThrough(to) => (MissingKind::JumpThrough, Some(to)),
+                Missing::Firewall(name) => (MissingKind::Firewall, Some(name)),
+            };
+            missing = Some(kind);
+            (
+                ProgramWarningKind::Unsupported,
+                name.cloned().unwrap_or_default(),
+            )
+        }
         WarningKind::BadValue { field, value } => {
             (ProgramWarningKind::BadValue, format!("{field}={value}"))
         }
         WarningKind::Shared { count } => (ProgramWarningKind::Shared, count.to_string()),
         WarningKind::HostChain => (ProgramWarningKind::HostChain, String::new()),
-        WarningKind::Unreadable(why) => (ProgramWarningKind::Unreadable, why.clone()),
+        WarningKind::Unreadable { count, .. } => {
+            (ProgramWarningKind::Unreadable, count.to_string())
+        }
     };
     ProgramWarning {
         subject: w.subject.clone(),
         kind,
         detail,
+        missing,
     }
 }
 
@@ -353,7 +400,7 @@ impl OpenWard {
         &self,
         data: &ProgramData,
         choice: ProgramChoice,
-    ) -> anyhow::Result<ProgramReport> {
+    ) -> Result<ProgramReport, VaultError> {
         let choice = Choice {
             hosts: choice.hosts,
             group_name: choice.group_name,

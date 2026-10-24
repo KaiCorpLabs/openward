@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/address.dart';
 import '../core/connection.dart' show Phase;
+import '../core/errors.dart';
 import '../core/providers.dart';
 import '../hosts/editors.dart';
 import '../import/import_dialog.dart';
@@ -542,7 +543,10 @@ class _Favorites extends ConsumerWidget {
       final from = ids.indexOf(id);
       if (from < 0 || to < 0 || to >= ids.length || from == to) return;
       ids.insert(to, ids.removeAt(from));
-      await ref.read(openWardProvider).orderFavorites(ids: ids);
+      await runAction(
+        context,
+        () => ref.read(openWardProvider).orderFavorites(ids: ids),
+      );
       ref.read(libraryProvider.notifier).refresh();
     }
 

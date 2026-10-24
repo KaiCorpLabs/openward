@@ -112,7 +112,13 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - edita un host, cambia algo y pulsa Esc: debe preguntar; marca un host como producción, conéctate y pulsa ⌘W: debe preguntar; ⌘⇧T debe reabrir lo último cerrado;
    - con una transferencia en curso, ⌘Q o el botón rojo de la ventana: debe preguntar;
    - abre neovim o tmux y desplázate deprisa: no debe parpadear; mantén pulsada la j en vim: debe repetir.
-18. **CSV** («Importar…» › CSV):
+18. **Errores y datos** (0.3.2-beta.4):
+   - conéctate a un puerto cerrado, a un nombre que no existe y a una IP sin nadie: cada uno debe decir lo suyo en español, y «Detalles» la frase técnica;
+   - conéctate a un host cuyo sistema OpenWard aún no conozca y abre su editor enseguida, antes de que salga el logo; cámbiale el nombre y guarda cuando el logo ya esté: no debe decir que cambió mientras tanto, el logo debe quedarse y la pestaña debe llevar el nombre nuevo;
+   - borra un host por el que salten otros: el aviso debe decir por qué no se puede;
+   - importa desde PuTTY, MobaXterm o SecureCRT algo con X11 o un proxy SOCKS4: el informe debe decirlo en español;
+   - si conservas una beta anterior a esta, abre tus datos con ella después de usar esta: debe abrirlos igual.
+19. **CSV** («Importar…» › CSV):
    - exporta tus hosts de una hoja de cálculo o usa la plantilla de Termius;
    - comprueba los grupos, puertos, usuarios y etiquetas, y los avisos de lo que no entra;
    - impórtalo dos veces y comprueba que no se duplica.

@@ -13,8 +13,108 @@ use openward_app::vault::proto::{
     Settings, System, SystemSource, UseIdentity,
 };
 
+/// What went wrong with a change to the vault, for the app to say it in
+/// its own words.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VaultErrorKind {
+    /// It changed meanwhile (connecting learned the system, another
+    /// window): read it again.
+    Conflict,
+    /// It is gone.
+    NotFound,
+    /// Other hosts jump through it.
+    InUse,
+    /// A group inside itself.
+    Cycle,
+    /// What was asked does not hold together (a field missing, a wrong id).
+    Invalid,
+    /// Written by a newer version of OpenWard.
+    NewerFormat,
+    /// Another OpenWard has it open.
+    OpenElsewhere,
+    /// A file that was shown changed before the change (`known_hosts`).
+    FileChanged,
+    /// The disk would not take it.
+    Storage,
+    Other,
+}
+
+/// What went wrong with a change to the vault; thrown in Dart.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct VaultError {
+    pub kind: VaultErrorKind,
+    /// In English, for «Detalles» and for the logs.
+    pub message: String,
+}
+
+impl From<anyhow::Error> for VaultError {
+    fn from(e: anyhow::Error) -> Self {
+        use openward_app::vault::Error as E;
+        let kind = if let Some(v) = e.downcast_ref::<E>() {
+            match v {
+                E::Conflict { .. } => VaultErrorKind::Conflict,
+                E::NotFound(_) | E::WrongType { .. } => VaultErrorKind::NotFound,
+                E::InUse(..) => VaultErrorKind::InUse,
+                E::Cycle => VaultErrorKind::Cycle,
+                E::Invalid(_) => VaultErrorKind::Invalid,
+                E::NewerFormat(_) => VaultErrorKind::NewerFormat,
+                E::OpenElsewhere => VaultErrorKind::OpenElsewhere,
+                E::Sql(_) | E::Io(_) => VaultErrorKind::Storage,
+            }
+        } else if let Some(f) = e.downcast_ref::<openward_app::known::ForgetError>() {
+            match f {
+                openward_app::known::ForgetError::Changed(_) => VaultErrorKind::FileChanged,
+                openward_app::known::ForgetError::Io(_) => VaultErrorKind::Storage,
+            }
+        } else {
+            VaultErrorKind::Other
+        };
+        Self {
+            kind,
+            message: format!("{e:#}"),
+        }
+    }
+}
+
+impl From<openward_app::vault::Error> for VaultError {
+    fn from(e: openward_app::vault::Error) -> Self {
+        anyhow::Error::from(e).into()
+    }
+}
+
+/// An import that went wrong: in the vault, or saving a key to disk.
+impl From<openward_app::programs::Error> for VaultError {
+    fn from(e: openward_app::programs::Error) -> Self {
+        match e {
+            openward_app::programs::Error::Vault(v) => v.into(),
+            key => Self {
+                kind: VaultErrorKind::Storage,
+                message: key.to_string(),
+            },
+        }
+    }
+}
+
+/// A plan that cannot run: what the vault says (a host that is gone), or
+/// settings that do not hold together (jumps in a loop, a ProxyCommand
+/// that would run what a name says).
+impl From<openward_app::plan::PlanError> for VaultError {
+    fn from(e: openward_app::plan::PlanError) -> Self {
+        match e {
+            openward_app::plan::PlanError::Vault(v) => v.into(),
+            other => Self {
+                kind: VaultErrorKind::Invalid,
+                message: other.to_string(),
+            },
+        }
+    }
+}
+
 pub(crate) fn id(text: &str) -> anyhow::Result<ItemId> {
-    ItemId::from_str(text).map_err(|e| anyhow::anyhow!("bad id {text:?}: {e}"))
+    ItemId::from_str(text).map_err(|e| {
+        anyhow::Error::new(openward_app::vault::Error::Invalid("not an item id"))
+            .context(format!("bad id {text:?}: {e}"))
+    })
 }
 
 pub(crate) fn opt_id(text: &Option<String>) -> anyhow::Result<Option<ItemId>> {
@@ -236,7 +336,9 @@ impl SettingsSpec {
                             host_id: Some(id.to_string()),
                             ..JumpSpec::default()
                         },
-                        Jump::Address { host, user, port } => JumpSpec {
+                        Jump::Address {
+                            host, user, port, ..
+                        } => JumpSpec {
                             host_id: None,
                             address: Some(host.clone()),
                             user: user.clone(),
@@ -319,6 +421,33 @@ impl SettingsSpec {
             AgentKind::System => Agent::System,
             AgentKind::Socket => Agent::Socket(self.agent_socket.clone()),
         });
+        // What a newer version wrote inside them stays: in a jump to the
+        // same address, in the proxy server and in the mark.
+        let jump_extra = |host: &str| match &s.route {
+            Some(Route::Jump(jumps)) => jumps.iter().find_map(|j| match j {
+                Jump::Address { host: h, extra, .. } if h == host => Some(extra.clone()),
+                _ => None,
+            }),
+            _ => None,
+        };
+        let jump_extras: Vec<_> = self
+            .jumps
+            .iter()
+            .map(|j| {
+                j.address
+                    .as_deref()
+                    .and_then(jump_extra)
+                    .unwrap_or_default()
+            })
+            .collect();
+        let proxy_extra = match &s.proxy {
+            Some(Proxy::Http(p) | Proxy::Socks5(p)) => p.extra.clone(),
+            _ => Default::default(),
+        };
+        let mark_extra = match &s.environment {
+            Some(Environment::Mark(m)) => m.extra.clone(),
+            _ => Default::default(),
+        };
         s.route = match self.route {
             None => None,
             Some(RouteKind::Direct) => Some(Route::Direct),
@@ -326,12 +455,14 @@ impl SettingsSpec {
             Some(RouteKind::Jump) => Some(Route::Jump(
                 self.jumps
                     .iter()
-                    .map(|j| match (&j.host_id, &j.address) {
+                    .zip(jump_extras)
+                    .map(|(j, extra)| match (&j.host_id, &j.address) {
                         (Some(hid), _) => Ok(Jump::Host(id(hid)?)),
                         (None, Some(address)) => Ok(Jump::Address {
                             host: address.clone(),
                             user: j.user.clone(),
                             port: j.port,
+                            extra,
                         }),
                         (None, None) => Err(anyhow::anyhow!("a jump needs a host or an address")),
                     })
@@ -347,6 +478,7 @@ impl SettingsSpec {
                 host: host.to_owned(),
                 port: self.proxy_port,
                 user: Some(self.proxy_user.trim().to_owned()).filter(|u| !u.is_empty()),
+                extra: proxy_extra.clone(),
             })
         };
         s.proxy = match self.proxy {
@@ -384,6 +516,7 @@ impl SettingsSpec {
                     name: name.to_owned(),
                     short: if short.is_empty() { name } else { short }.to_owned(),
                     color: self.environment_color.trim().to_owned(),
+                    extra: mark_extra,
                 }))
             }
         };
@@ -446,6 +579,165 @@ pub struct HostSpec {
     /// connecting tells.
     #[frb(default = "null")]
     pub system_code: Option<String>,
+}
+
+/// Three ways: what an editor changed from what it read (`base`) goes over
+/// what is there now (`theirs`); a field both changed, each its own way,
+/// is a conflict (`None`).
+fn pick<T: PartialEq>(base: &T, mine: T, theirs: T) -> Option<T> {
+    if mine == *base || mine == theirs {
+        Some(theirs)
+    } else if theirs == *base {
+        Some(mine)
+    } else {
+        None
+    }
+}
+
+impl SettingsSpec {
+    /// [`pick`] field by field; those that go together (an agent and its
+    /// socket, a route and its jumps, a proxy and its server, an identity
+    /// and its id, a mark and its name) as one.
+    pub(crate) fn merge(base: &Self, mine: Self, theirs: Self) -> Option<Self> {
+        let b = base.clone();
+        let (agent, agent_socket) = pick(
+            &(b.agent, b.agent_socket),
+            (mine.agent, mine.agent_socket),
+            (theirs.agent, theirs.agent_socket),
+        )?;
+        let (route, jumps, proxy_command) = pick(
+            &(b.route, b.jumps, b.proxy_command),
+            (mine.route, mine.jumps, mine.proxy_command),
+            (theirs.route, theirs.jumps, theirs.proxy_command),
+        )?;
+        let (proxy, proxy_host, proxy_port, proxy_user) = pick(
+            &(b.proxy, b.proxy_host, b.proxy_port, b.proxy_user),
+            (
+                mine.proxy,
+                mine.proxy_host,
+                mine.proxy_port,
+                mine.proxy_user,
+            ),
+            (
+                theirs.proxy,
+                theirs.proxy_host,
+                theirs.proxy_port,
+                theirs.proxy_user,
+            ),
+        )?;
+        let (identity, identity_id) = pick(
+            &(b.identity, b.identity_id),
+            (mine.identity, mine.identity_id),
+            (theirs.identity, theirs.identity_id),
+        )?;
+        let (environment, environment_name, environment_short, environment_color) = pick(
+            &(
+                b.environment,
+                b.environment_name,
+                b.environment_short,
+                b.environment_color,
+            ),
+            (
+                mine.environment,
+                mine.environment_name,
+                mine.environment_short,
+                mine.environment_color,
+            ),
+            (
+                theirs.environment,
+                theirs.environment_name,
+                theirs.environment_short,
+                theirs.environment_color,
+            ),
+        )?;
+        Some(Self {
+            user: pick(&base.user, mine.user, theirs.user)?,
+            port: pick(&base.port, mine.port, theirs.port)?,
+            identity_files: pick(
+                &base.identity_files,
+                mine.identity_files,
+                theirs.identity_files,
+            )?,
+            certificate_files: pick(
+                &base.certificate_files,
+                mine.certificate_files,
+                theirs.certificate_files,
+            )?,
+            identities_only: pick(
+                &base.identities_only,
+                mine.identities_only,
+                theirs.identities_only,
+            )?,
+            agent,
+            agent_socket,
+            route,
+            jumps,
+            proxy_command,
+            proxy,
+            proxy_host,
+            proxy_port,
+            proxy_user,
+            keepalive_secs: pick(
+                &base.keepalive_secs,
+                mine.keepalive_secs,
+                theirs.keepalive_secs,
+            )?,
+            connect_timeout_secs: pick(
+                &base.connect_timeout_secs,
+                mine.connect_timeout_secs,
+                theirs.connect_timeout_secs,
+            )?,
+            agent_forward: pick(
+                &base.agent_forward,
+                mine.agent_forward,
+                theirs.agent_forward,
+            )?,
+            persistent_session: pick(
+                &base.persistent_session,
+                mine.persistent_session,
+                theirs.persistent_session,
+            )?,
+            term: pick(&base.term, mine.term, theirs.term)?,
+            env: pick(&base.env, mine.env, theirs.env)?,
+            host_key_policy: pick(
+                &base.host_key_policy,
+                mine.host_key_policy,
+                theirs.host_key_policy,
+            )?,
+            legacy_host_keys: pick(
+                &base.legacy_host_keys,
+                mine.legacy_host_keys,
+                theirs.legacy_host_keys,
+            )?,
+            identity,
+            identity_id,
+            environment,
+            environment_name,
+            environment_short,
+            environment_color,
+            read_os_release: pick(
+                &base.read_os_release,
+                mine.read_os_release,
+                theirs.read_os_release,
+            )?,
+        })
+    }
+}
+
+impl HostSpec {
+    /// [`pick`] field by field, and the settings by [`SettingsSpec::merge`].
+    pub(crate) fn merge(base: &Self, mine: Self, theirs: Self) -> Option<Self> {
+        Some(Self {
+            label: pick(&base.label, mine.label, theirs.label)?,
+            address: pick(&base.address, mine.address, theirs.address)?,
+            group_id: pick(&base.group_id, mine.group_id, theirs.group_id)?,
+            tags: pick(&base.tags, mine.tags, theirs.tags)?,
+            notes: pick(&base.notes, mine.notes, theirs.notes)?,
+            settings: SettingsSpec::merge(&base.settings, mine.settings, theirs.settings)?,
+            favorite: pick(&base.favorite, mine.favorite, theirs.favorite)?,
+            system_code: pick(&base.system_code, mine.system_code, theirs.system_code)?,
+        })
+    }
 }
 
 #[frb(non_opaque)]
@@ -539,7 +831,10 @@ pub enum ImportWarningKind {
     BadValue,
     Stricter,
     IncludeTooDeep,
+    /// A file that could not be read; `subject` says why, in English.
     Unreadable,
+    /// A file without permission to read it.
+    Denied,
     JumpLossy,
 }
 
@@ -595,6 +890,7 @@ mod tests {
                     host: "10.0.0.1".into(),
                     user: None,
                     port: Some(2222),
+                    extra: Default::default(),
                 },
             ])),
             env: Some([("LANG".to_owned(), "C".to_owned())].into()),
@@ -604,6 +900,7 @@ mod tests {
                 name: "Producción".into(),
                 short: "prod".into(),
                 color: "red".into(),
+                extra: Default::default(),
             })),
             read_os_release: Some(true),
             ..Settings::default()
@@ -612,5 +909,123 @@ mod tests {
         let mut back = Settings::default();
         spec.apply(&mut back).unwrap();
         assert_eq!(back, settings);
+    }
+
+    /// An edit over a host that changed meanwhile: what each side changed
+    /// stays; the same field changed both ways is a conflict.
+    #[test]
+    fn edits_merge_three_ways() {
+        let base = HostSpec {
+            label: "web".into(),
+            address: "web.example.com".into(),
+            settings: SettingsSpec {
+                port: Some(22),
+                ..SettingsSpec::default()
+            },
+            ..HostSpec::default()
+        };
+        let mut mine = base.clone();
+        mine.label = "web-1".into();
+        mine.settings.user = Some("ops".into());
+        let mut theirs = base.clone();
+        theirs.favorite = true;
+        theirs.settings.port = Some(2222);
+        let merged = HostSpec::merge(&base, mine.clone(), theirs.clone()).unwrap();
+        assert_eq!(merged.label, "web-1");
+        assert_eq!(merged.settings.user.as_deref(), Some("ops"));
+        assert_eq!(merged.settings.port, Some(2222));
+        assert!(merged.favorite);
+
+        theirs.label = "web-2".into();
+        assert_eq!(
+            HostSpec::merge(&base, mine, theirs),
+            None,
+            "both renamed it"
+        );
+        // A route and its jumps go as one.
+        let mut mine = base.clone();
+        mine.settings.route = Some(RouteKind::Command);
+        mine.settings.proxy_command = "nc %h %p".into();
+        let mut theirs = base.clone();
+        theirs.settings.proxy_command = "ssh -W %h:%p bastion".into();
+        assert_eq!(HostSpec::merge(&base, mine, theirs), None);
+    }
+
+    /// The core's errors reach the app by kind, with their text for
+    /// «Detalles», through the context they gathered on the way.
+    #[test]
+    fn vault_errors_go_by_kind() {
+        use openward_app::vault::Error as E;
+        let kind = |e: anyhow::Error| VaultError::from(e).kind;
+        let conflict = E::Conflict {
+            id: ItemId::new(),
+            expected: 1,
+            current: 2,
+        };
+        assert_eq!(kind(conflict.into()), VaultErrorKind::Conflict);
+        let cycle = anyhow::Error::new(E::Cycle).context("saving the group");
+        let e = VaultError::from(cycle);
+        assert_eq!(e.kind, VaultErrorKind::Cycle);
+        assert_eq!(
+            e.message,
+            "saving the group: a group cannot be inside itself"
+        );
+        assert_eq!(
+            VaultError::from(id("nope").unwrap_err()).kind,
+            VaultErrorKind::Invalid
+        );
+        assert_eq!(
+            kind(E::InUse(ItemId::new(), vec![]).into()),
+            VaultErrorKind::InUse
+        );
+        assert_eq!(kind(anyhow::anyhow!("other")), VaultErrorKind::Other);
+    }
+
+    /// Saving from the editor keeps what a newer version wrote inside a
+    /// jump, the proxy server and the mark: the editor only knows the rest.
+    #[test]
+    fn saving_keeps_what_a_newer_version_wrote_inside() {
+        let future = || {
+            let mut extra = openward_app::vault::proto::Extra::new();
+            extra.insert("future".into(), true.into());
+            extra
+        };
+        let mut settings = Settings {
+            route: Some(Route::Jump(vec![Jump::Address {
+                host: "bastion".into(),
+                user: None,
+                port: None,
+                extra: future(),
+            }])),
+            proxy: Some(Proxy::Socks5(ProxyServer {
+                host: "proxy".into(),
+                port: 1080,
+                user: None,
+                extra: future(),
+            })),
+            environment: Some(Environment::Mark(EnvironmentMark {
+                name: "Producción".into(),
+                short: "prod".into(),
+                color: "red".into(),
+                extra: future(),
+            })),
+            ..Settings::default()
+        };
+        let mut spec = SettingsSpec::from_settings(&settings);
+        spec.environment_color = "orange".into();
+        spec.proxy_port = 1081;
+        spec.apply(&mut settings).unwrap();
+        let Some(Route::Jump(jumps)) = &settings.route else {
+            panic!("no jumps")
+        };
+        assert!(matches!(&jumps[0], Jump::Address { extra, .. } if *extra == future()));
+        let Some(Proxy::Socks5(proxy)) = &settings.proxy else {
+            panic!("no proxy")
+        };
+        assert_eq!((proxy.port, &proxy.extra), (1081, &future()));
+        let Some(Environment::Mark(mark)) = &settings.environment else {
+            panic!("no mark")
+        };
+        assert_eq!((mark.color.as_str(), &mark.extra), ("orange", &future()));
     }
 }

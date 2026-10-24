@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'core/errors.dart';
 import 'core/settings.dart';
 import 'l10n/l10n.dart';
+import 'src/rust/api/vault.dart' show VaultErrorKind;
 import 'ui/themes.dart';
 import 'ui/tokens.dart';
 import 'ui/widgets.dart';
@@ -21,7 +23,9 @@ class StartupErrorApp extends StatelessWidget {
     required this.dataDir,
   });
 
-  final String error;
+  /// What opening threw: its kind picks the words, its text goes to
+  /// «Detalles».
+  final Object error;
   final String dataDir;
 
   @override
@@ -54,7 +58,7 @@ class StartupErrorApp extends StatelessWidget {
 class _StartupError extends StatelessWidget {
   const _StartupError({required this.error, required this.dataDir});
 
-  final String error;
+  final Object error;
   final String dataDir;
 
   @override
@@ -76,7 +80,11 @@ class _StartupError extends StatelessWidget {
                 Text(l.startupErrorTitle, style: theme.textTheme.titleLarge),
                 const SizedBox(height: 12),
                 Text(
-                  l.startupErrorBody(dataDir),
+                  isVaultError(error, VaultErrorKind.newerFormat)
+                      ? l.startupNewerBody(dataDir)
+                      : isVaultError(error, VaultErrorKind.openElsewhere)
+                      ? l.startupElsewhereBody(dataDir)
+                      : l.startupErrorBody(dataDir),
                   style: const TextStyle(height: 1.45),
                 ),
                 const SizedBox(height: 16),
@@ -92,7 +100,10 @@ class _StartupError extends StatelessWidget {
                     color: ow.colors.sunken,
                     borderRadius: BorderRadius.circular(ow.shape.radius),
                   ),
-                  child: SelectableText(error, style: monoStyle(context)),
+                  child: SelectableText(
+                    errorDetails(error),
+                    style: monoStyle(context),
+                  ),
                 ),
                 const SizedBox(height: 20),
                 Row(

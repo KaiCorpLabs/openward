@@ -264,13 +264,18 @@ class _PaletteState extends ConsumerState<_Palette> {
         final hb = b.where == here ? 0 : 1;
         return ha != hb ? ha - hb : b.at - a.at;
       });
+      // A saved host by its name now, if it was renamed since.
+      final library = ref.read(libraryProvider);
+      String named(HistoryEntry h) => h.where.startsWith('host:')
+          ? library.host(h.where.substring(5))?.label ?? h.label
+          : h.label;
       for (final h in history) {
         out.add(
           _Entry(
             kind: _Kind.history,
             title: h.command,
             icon: Icons.history,
-            pill: h.label,
+            pill: named(h),
             history: h,
             run: (alt) async => _send(container, h.command, typeOnly: alt),
           ),

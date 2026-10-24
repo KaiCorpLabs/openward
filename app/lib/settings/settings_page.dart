@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/providers.dart';
 import '../core/settings.dart';
 import '../core/version.dart';
 import '../history/history.dart';
@@ -417,6 +418,16 @@ class _General extends ConsumerWidget {
             ],
           ),
         ),
+        if (ref.read(openWardProvider).unreadableItems() case final n
+            when n > 0) ...[
+          const SizedBox(height: 10),
+          Callout(
+            key: const ValueKey('about.unreadable'),
+            tone: Tone.info,
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+            child: Text(l.unreadableItems(n)),
+          ),
+        ],
         const SizedBox(height: 10),
         Row(
           children: [

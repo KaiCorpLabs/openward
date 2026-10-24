@@ -9,6 +9,7 @@ use anyhow::{Context, bail};
 use data_encoding::BASE64;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
+use zeroize::Zeroizing;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ProxyKind {
@@ -16,14 +17,26 @@ pub enum ProxyKind {
     Socks5,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Proxy {
     pub kind: ProxyKind,
     pub host: String,
     pub port: u16,
     pub user: Option<String>,
-    /// Only for this attempt: never stored.
-    pub password: Option<String>,
+    /// Only for this attempt: never stored, wiped when it goes.
+    pub password: Option<Zeroizing<String>>,
+}
+
+/// Without the password.
+impl std::fmt::Debug for Proxy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Proxy")
+            .field("kind", &self.kind)
+            .field("host", &self.host)
+            .field("port", &self.port)
+            .field("user", &self.user)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Proxy {

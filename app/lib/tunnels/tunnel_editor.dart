@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/errors.dart';
 import '../core/providers.dart';
 import '../hosts/editors.dart';
 import '../l10n/l10n.dart';
@@ -47,6 +48,7 @@ class _TunnelEditorState extends ConsumerState<_TunnelEditor> {
   late bool _lan = (_old?.listenAddress ?? '').isNotEmpty;
   late bool _autostart = _old?.autostart ?? false;
   String? _error;
+  Object? _cause;
 
   String _snapshot() => [
     _label.text,
@@ -96,6 +98,7 @@ class _TunnelEditorState extends ConsumerState<_TunnelEditor> {
 
   Future<void> _save({bool open = false}) async {
     final l = context.l10n;
+    _cause = null;
     final problem = _validate(l);
     if (problem != null) {
       setState(() => _error = problem);
@@ -120,7 +123,10 @@ class _TunnelEditorState extends ConsumerState<_TunnelEditor> {
         await openTunnel(context, ref, saved);
       }
     } catch (e) {
-      setState(() => _error = l.saveFailed('$e'));
+      setState(() {
+        _error = saveErrorText(l, e);
+        _cause = e;
+      });
     }
   }
 
@@ -136,7 +142,10 @@ class _TunnelEditorState extends ConsumerState<_TunnelEditor> {
     try {
       await app.delete(id: t.id);
     } catch (e) {
-      return setState(() => _error = l.deleteFailed('$e'));
+      return setState(() {
+        _error = l.deleteFailed(errorReason(l, e));
+        _cause = e;
+      });
     }
     board.refresh();
     if (mounted) Navigator.pop(context, true);
@@ -149,9 +158,7 @@ class _TunnelEditorState extends ConsumerState<_TunnelEditor> {
             try {
               await app.createTunnel(spec: t.spec);
             } catch (e) {
-              messenger.showSnackBar(
-                SnackBar(content: Text(l.saveFailed('$e'))),
-              );
+              showErrorNotice(messenger, saveErrorText(l, e), e);
             }
             board.refresh();
           },
@@ -191,6 +198,7 @@ class _TunnelEditorState extends ConsumerState<_TunnelEditor> {
       title: widget.tunnel == null ? l.newTunnel : l.editTunnel,
       subtitle: l.tunnelEditorHint,
       error: _error,
+      errorCause: _cause,
       onSave: _save,
       onSaveAndConnect: () => _save(open: true),
       saveAndConnectLabel: l.saveAndOpen,

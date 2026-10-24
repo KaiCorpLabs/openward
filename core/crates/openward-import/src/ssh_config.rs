@@ -104,6 +104,9 @@ pub enum Warning {
     },
     Unreadable {
         file: PathBuf,
+        /// No permission to read it.
+        denied: bool,
+        /// In English, for logs.
         error: String,
     },
     /// A jump through a name that is not an imported host, or that
@@ -322,6 +325,7 @@ impl SshConfig {
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
             Err(e) => self.warnings.push(Warning::Unreadable {
                 file: path.to_owned(),
+                denied: e.kind() == std::io::ErrorKind::PermissionDenied,
                 error: e.to_string(),
             }),
         }
@@ -744,6 +748,7 @@ pub fn import(config: &SshConfig) -> Import {
                             host: jr.hostname.unwrap_or_else(|| spec.host.clone()),
                             user: spec.user.clone().or(jr.user),
                             port: spec.port.or(jr.port),
+                            extra: Default::default(),
                         }
                     })
                     .collect(),
@@ -776,6 +781,7 @@ pub fn import(config: &SshConfig) -> Import {
                 settings,
                 source: Some(Source::SshConfig {
                     alias: alias.clone(),
+                    extra: Default::default(),
                 }),
                 ..Host::default()
             },
@@ -807,6 +813,7 @@ fn tunnel(alias: &str, host: ItemId, f: &ForwardSpec) -> PortForward {
         autostart: true,
         source: Some(Source::SshConfig {
             alias: alias.to_owned(),
+            extra: Default::default(),
         }),
         imported: None,
         extra: Extra::new(),

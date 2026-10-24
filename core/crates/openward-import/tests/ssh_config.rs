@@ -188,7 +188,8 @@ Host *
     assert_eq!(
         inner.source,
         Some(Source::SshConfig {
-            alias: "inner".into()
+            alias: "inner".into(),
+            extra: Default::default(),
         })
     );
     // ProxyJump came first, so the ProxyCommand below it is ignored.
@@ -206,6 +207,7 @@ Host *
                 host: "edge.example.com".into(),
                 user: Some("ops".into()),
                 port: Some(2222),
+                extra: Default::default(),
             },
             Jump::Host(*inner_id),
         ]))
@@ -264,6 +266,7 @@ Host *.example.com
             host: "gateway.example.com".into(),
             user: Some("gw".into()),
             port: None,
+            extra: Default::default(),
         }]))
     );
     assert!(imported.warnings.iter().any(
@@ -542,6 +545,9 @@ Host *
     );
     assert_eq!(
         imported.forwards[0].source,
-        Some(Source::SshConfig { alias: "db".into() })
+        Some(Source::SshConfig {
+            alias: "db".into(),
+            extra: Default::default(),
+        })
     );
 }

@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/errors.dart';
 import '../core/providers.dart';
 import '../import/import_dialog.dart';
 import '../l10n/l10n.dart';
@@ -32,11 +33,14 @@ class HostActions {
   void sftp(HostView h) =>
       ref.read(tabsProvider.notifier).openSftp(hostId: h.id, label: h.label);
 
-  /// Stars it, or takes the star away.
+  /// Stars it, or takes the star away; says so if that fails.
   Future<void> toggleFavorite(HostView h) async {
-    await ref
-        .read(openWardProvider)
-        .setFavorite(id: h.id, favorite: h.favorite == null);
+    await runAction(
+      context,
+      () => ref
+          .read(openWardProvider)
+          .setFavorite(id: h.id, favorite: h.favorite == null),
+    );
     refresh();
   }
 
@@ -82,11 +86,12 @@ class HostActions {
       await ref.read(openWardProvider).delete(id: id);
     } catch (e) {
       if (!context.mounted) return;
-      final inUse = '$e'.contains('jump host');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(inUse ? l.hostInUse(name) : l.deleteFailed('$e')),
-        ),
+      showErrorNotice(
+        ScaffoldMessenger.of(context),
+        isVaultError(e, VaultErrorKind.inUse)
+            ? l.hostInUse(name)
+            : l.deleteFailed(errorReason(l, e)),
+        e,
       );
     }
     refresh();
@@ -112,7 +117,8 @@ class HostActions {
         text = l.systemOnNextConnection(h.label);
       }
     } catch (e) {
-      text = l.saveFailed('$e');
+      refresh();
+      return showErrorNotice(messenger, saveErrorText(l, e), e);
     }
     refresh();
     messenger.showSnackBar(SnackBar(content: Text(text)));

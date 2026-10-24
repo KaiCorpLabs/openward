@@ -134,7 +134,7 @@ fn proxy(kind: ProxyKind, port: u16, user: Option<&str>, password: Option<&str>)
         host: "127.0.0.1".into(),
         port,
         user: user.map(str::to_owned),
-        password: password.map(str::to_owned),
+        password: password.map(|p| p.to_owned().into()),
     }
 }
 
@@ -204,4 +204,16 @@ async fn socks5_by_name_and_with_a_password() {
 
     let err = proxy::connect(&p, "127.0.0.1", 1).await.unwrap_err();
     assert!(err.to_string().contains("connection refused"), "{err:#}");
+}
+
+/// Logged or shown in an error, a proxy says who and where, never its
+/// password.
+#[test]
+fn a_proxy_never_prints_its_password() {
+    let p = proxy(ProxyKind::Http, 3128, Some("ana"), Some("s3cret"));
+    let shown = format!("{p:?}");
+    assert!(
+        shown.contains("ana") && !shown.contains("s3cret"),
+        "{shown}"
+    );
 }

@@ -181,7 +181,7 @@ pub fn ssh_config(
 /// An imported tunnel's alias, kind and port: one of each comes in once.
 fn tunnel_key(f: &PortForward) -> (String, ForwardKind, u16) {
     let alias = match &f.source {
-        Some(Source::SshConfig { alias }) => alias.to_lowercase(),
+        Some(Source::SshConfig { alias, .. }) => alias.to_lowercase(),
         None => String::new(),
     };
     (alias, f.kind, f.listen_port)
@@ -203,7 +203,7 @@ fn existing_aliases(vault: &Vault) -> HashMap<String, ItemId> {
         .hosts()
         .into_iter()
         .filter_map(|(id, h)| match &h.source {
-            Some(Source::SshConfig { alias }) => Some((alias.to_lowercase(), id)),
+            Some(Source::SshConfig { alias, .. }) => Some((alias.to_lowercase(), id)),
             _ => None,
         })
         .collect()

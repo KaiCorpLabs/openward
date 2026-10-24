@@ -212,6 +212,13 @@ impl App {
         self.tunnels.set_waker(wake);
     }
 
+    /// Called (from any thread) whenever the vault changes: from the UI, an
+    /// import, or the core itself (a system learned, a key trusted). What
+    /// shows items reads them again then.
+    pub fn watch_vault(&self, wake: terminal::Waker) {
+        self.vault().on_change(move || wake());
+    }
+
     /// Every saved tunnel with its host's label and its state now, by
     /// label.
     pub fn tunnels(&self) -> Vec<TunnelInfo> {
@@ -749,10 +756,7 @@ async fn session(
         ended = pump => ended,
         silent = watching => {
             live.mark_lost();
-            let failure = Failure::Network {
-                label: target_hop.label.clone(),
-                message: no_answer(silent),
-            };
+            let failure = Failure::silent(target_hop.label.clone(), silent);
             (None, Some(failure))
         }
     };

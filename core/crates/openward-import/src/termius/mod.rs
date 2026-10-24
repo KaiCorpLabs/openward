@@ -102,9 +102,17 @@ pub fn read(data_dir: &Path, keys: Option<Vec<[u8; 32]>>) -> Result<crate::bundl
         keys[0]
     };
     let mut bundle = model::bundle(&db, &key);
-    for (why, count) in &db.unreadable {
+    if !db.unreadable.is_empty() {
+        let why: Vec<_> = db
+            .unreadable
+            .iter()
+            .map(|(why, count)| format!("{count} × {why}"))
+            .collect();
         bundle.warnings.push(crate::bundle::Warning::general(
-            crate::bundle::WarningKind::Unreadable(format!("{count} × {why}")),
+            crate::bundle::WarningKind::Unreadable {
+                count: db.unreadable.values().sum(),
+                why: why.join("; "),
+            },
         ));
     }
     Ok(bundle)

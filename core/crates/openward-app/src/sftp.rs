@@ -21,7 +21,7 @@ use crate::connect::{self, Ctx, lock};
 use crate::events::{Event, Failure, Stage};
 use crate::live::Live;
 use crate::plan::Plan;
-use crate::{RECONNECT_ATTEMPTS, no_answer, reconnect_delay};
+use crate::{RECONNECT_ATTEMPTS, reconnect_delay};
 
 pub use openward_sftp::Error as SftpError;
 
@@ -262,10 +262,7 @@ async fn session(plan: &Plan, ctx: &Ctx, link: &Link) -> (Option<Failure>, bool)
         Ok(stream) => stream,
         Err(e) if e.is::<NoSftp>() => return (Some(Failure::NoSftp { label }), false),
         Err(e) => {
-            let failure = Failure::Network {
-                label,
-                message: format!("{e:#}"),
-            };
+            let failure = Failure::network(label, &e);
             return (Some(failure), false);
         }
     };
@@ -298,13 +295,13 @@ async fn session(plan: &Plan, ctx: &Ctx, link: &Link) -> (Option<Failure>, bool)
             None => std::future::pending().await,
         }
     };
-    let message = tokio::select! {
-        () = closed => "connection lost".to_owned(),
+    let failure = tokio::select! {
+        () = closed => Failure::lost(label),
         silent = watching => {
             live.mark_lost();
-            no_answer(silent)
+            Failure::silent(label, silent)
         }
     };
     link.set(None);
-    (Some(Failure::Network { label, message }), true)
+    (Some(failure), true)
 }

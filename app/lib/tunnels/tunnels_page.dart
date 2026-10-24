@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/errors.dart';
 import '../hosts/import_ssh_config.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/tunnels.dart';
@@ -55,11 +56,20 @@ String tunnelErrorText(AppLocalizations l, TunnelView t) {
           : l.tunnelPortBusy(e.port),
     TunnelErrorKind.badAddress => l.tunnelBadAddress,
     TunnelErrorKind.connection =>
-      e.failure == null ? e.message : failureText(l, e.failure!),
+      e.failure == null ? l.failureOther : failureText(l, e.failure!),
     TunnelErrorKind.lost => l.tunnelLostBody(t.hostLabel),
-    TunnelErrorKind.other => e.message,
+    TunnelErrorKind.other => l.failureOther,
   };
 }
+
+/// The error, for «Detalles», when the core's words say more than ours.
+TunnelErrorView? _details(TunnelView t) => switch (t.error) {
+  final e?
+      when e.kind == TunnelErrorKind.connection ||
+          e.kind == TunnelErrorKind.other =>
+    e,
+  _ => null,
+};
 
 /// A clause on its own: capitalized.
 String _sentence(String text) =>
@@ -83,21 +93,25 @@ Future<void> useOtherPort(
 ) async {
   final board = ref.read(tunnelBoardProvider);
   final s = t.spec;
-  await board.app.updateTunnel(
-    id: t.id,
-    rev: t.rev,
-    spec: TunnelSpec(
-      label: s.label,
-      hostId: s.hostId,
-      kind: s.kind,
-      listenPort: port,
-      listenAddress: s.listenAddress,
-      destHost: s.destHost,
-      destPort: s.destPort,
-      autostart: s.autostart,
+  final saved = await runAction(
+    context,
+    () => board.app.updateTunnel(
+      id: t.id,
+      rev: t.rev,
+      spec: TunnelSpec(
+        label: s.label,
+        hostId: s.hostId,
+        kind: s.kind,
+        listenPort: port,
+        listenAddress: s.listenAddress,
+        destHost: s.destHost,
+        destPort: s.destPort,
+        autostart: s.autostart,
+      ),
     ),
   );
   board.refresh();
+  if (!saved) return;
   final updated = board.byId(t.id);
   if (updated != null && context.mounted) {
     await openTunnel(context, ref, updated);
@@ -451,6 +465,7 @@ class _TunnelsPageState extends ConsumerState<TunnelsPage> {
                           style: const TextStyle(fontSize: 12),
                         ),
                       ),
+                      if (_details(t) case final e?) DetailsButton(e),
                       if (suggestion != null)
                         OutlinedButton(
                           style: small,
@@ -476,18 +491,22 @@ class _TunnelsPageState extends ConsumerState<TunnelsPage> {
 
   Future<void> _setAutostart(TunnelView t, bool on) async {
     final s = t.spec;
-    await _board.app.updateTunnel(
-      id: t.id,
-      rev: t.rev,
-      spec: TunnelSpec(
-        label: s.label,
-        hostId: s.hostId,
-        kind: s.kind,
-        listenPort: s.listenPort,
-        listenAddress: s.listenAddress,
-        destHost: s.destHost,
-        destPort: s.destPort,
-        autostart: on,
+    // A failure says so, and the switch goes back with the refresh.
+    await runAction(
+      context,
+      () => _board.app.updateTunnel(
+        id: t.id,
+        rev: t.rev,
+        spec: TunnelSpec(
+          label: s.label,
+          hostId: s.hostId,
+          kind: s.kind,
+          listenPort: s.listenPort,
+          listenAddress: s.listenAddress,
+          destHost: s.destHost,
+          destPort: s.destPort,
+          autostart: on,
+        ),
       ),
     );
     _board.refresh();
@@ -723,6 +742,7 @@ class _TunnelNoticesState extends ConsumerState<TunnelNotices> {
                           style: TextStyle(color: c.text),
                         ),
                       ),
+                      if (_details(t) case final e?) DetailsButton(e),
                       if (suggestedPort(ref, t) case final port?)
                         OutlinedButton(
                           onPressed: () => useOtherPort(context, ref, t, port),

@@ -4,6 +4,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/errors.dart';
 import '../core/providers.dart';
 import '../hosts/editors.dart';
 import '../l10n/l10n.dart';
@@ -53,6 +54,7 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
   late AgentKind _agent = _old?.spec.agent ?? AgentKind.system;
   late bool _only = _old?.spec.identitiesOnly ?? false;
   String? _error;
+  Object? _cause;
 
   String _snapshot() => [
     _label.text,
@@ -120,6 +122,7 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
 
   Future<void> _save() async {
     final l = context.l10n;
+    _cause = null;
     if (_label.text.trim().isEmpty) {
       return setState(() => _error = l.identityNeedsName);
     }
@@ -140,11 +143,10 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
       widget.onSaved(id);
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      setState(
-        () => _error = '$e'.contains('changed since')
-            ? l.changedMeanwhile
-            : l.saveFailed('$e'),
-      );
+      setState(() {
+        _error = saveErrorText(l, e);
+        _cause = e;
+      });
     }
   }
 
@@ -222,6 +224,7 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
           ? l.usedByNobody
           : l.identityUsedBy(usedByText(l, old)),
       error: _error,
+      errorCause: _cause,
       onSave: _save,
       onDelete: old == null ? null : _delete,
       snapshot: _snapshot,

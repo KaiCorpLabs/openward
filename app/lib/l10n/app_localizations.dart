@@ -536,11 +536,41 @@ abstract class AppLocalizations {
   /// **'Junto a la clave (-cert.pub): se usa sin añadirlo.'**
   String get certNextToKey;
 
+  /// No description provided for @certNoAuthority.
+  ///
+  /// In es, this message translates to:
+  /// **'ninguna @cert-authority de known_hosts cubre este host'**
+  String get certNoAuthority;
+
+  /// No description provided for @certNotForHost.
+  ///
+  /// In es, this message translates to:
+  /// **'no se emitió para este nombre'**
+  String get certNotForHost;
+
+  /// No description provided for @certNotHost.
+  ///
+  /// In es, this message translates to:
+  /// **'no es un certificado de host'**
+  String get certNotHost;
+
+  /// No description provided for @certOutOfDate.
+  ///
+  /// In es, this message translates to:
+  /// **'ha caducado o aún no es válido'**
+  String get certOutOfDate;
+
   /// No description provided for @certUntil.
   ///
   /// In es, this message translates to:
   /// **'hasta el {date}'**
   String certUntil(String date);
+
+  /// No description provided for @certUntrusted.
+  ///
+  /// In es, this message translates to:
+  /// **'no lo firma una autoridad de confianza'**
+  String get certUntrusted;
 
   /// No description provided for @certificate.
   ///
@@ -1304,6 +1334,12 @@ abstract class AppLocalizations {
   /// **'Destino'**
   String get destination;
 
+  /// No description provided for @details.
+  ///
+  /// In es, this message translates to:
+  /// **'Detalles'**
+  String get details;
+
   /// No description provided for @discardChanges.
   ///
   /// In es, this message translates to:
@@ -1718,6 +1754,78 @@ abstract class AppLocalizations {
   /// **'Igualar tamaños'**
   String get equalizePanes;
 
+  /// No description provided for @errConflict.
+  ///
+  /// In es, this message translates to:
+  /// **'ha cambiado mientras tanto'**
+  String get errConflict;
+
+  /// No description provided for @errCycle.
+  ///
+  /// In es, this message translates to:
+  /// **'un grupo no puede estar dentro de sí mismo'**
+  String get errCycle;
+
+  /// No description provided for @errFileChanged.
+  ///
+  /// In es, this message translates to:
+  /// **'el archivo ha cambiado mientras tanto'**
+  String get errFileChanged;
+
+  /// No description provided for @errInUse.
+  ///
+  /// In es, this message translates to:
+  /// **'otros hosts saltan por él'**
+  String get errInUse;
+
+  /// No description provided for @errInternal.
+  ///
+  /// In es, this message translates to:
+  /// **'algo ha fallado dentro de OpenWard (más en «Detalles»)'**
+  String get errInternal;
+
+  /// No description provided for @errInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'lo que dice no encaja'**
+  String get errInvalid;
+
+  /// No description provided for @errNewerFormat.
+  ///
+  /// In es, this message translates to:
+  /// **'tus datos los escribió una versión más nueva de OpenWard'**
+  String get errNewerFormat;
+
+  /// No description provided for @errNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'ya no existe'**
+  String get errNotFound;
+
+  /// No description provided for @errOpenElsewhere.
+  ///
+  /// In es, this message translates to:
+  /// **'otro OpenWard tiene abiertos estos datos'**
+  String get errOpenElsewhere;
+
+  /// No description provided for @errStorage.
+  ///
+  /// In es, this message translates to:
+  /// **'el disco no lo ha aceptado'**
+  String get errStorage;
+
+  /// No description provided for @errorDetailsHint.
+  ///
+  /// In es, this message translates to:
+  /// **'En inglés, tal como lo dice el núcleo: cópialo si nos informas del problema.'**
+  String get errorDetailsHint;
+
+  /// No description provided for @errorDetailsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Detalles del error'**
+  String get errorDetailsTitle;
+
   /// No description provided for @exampleVariable.
   ///
   /// In es, this message translates to:
@@ -1772,6 +1880,12 @@ abstract class AppLocalizations {
   /// **'{label} no tiene SFTP: al servidor le falta sftp-server.'**
   String failureNoSftp(String label);
 
+  /// No description provided for @failureOther.
+  ///
+  /// In es, this message translates to:
+  /// **'Algo ha fallado (más en «Detalles»).'**
+  String get failureOther;
+
   /// No description provided for @favorite.
   ///
   /// In es, this message translates to:
@@ -1819,6 +1933,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'una llave de seguridad'**
   String get featureHardwareKey;
+
+  /// No description provided for @featureIncompleteProxy.
+  ///
+  /// In es, this message translates to:
+  /// **'un proxy sin dirección o sin puerto'**
+  String get featureIncompleteProxy;
 
   /// No description provided for @featureJumpNotSsh.
   ///
@@ -1909,6 +2029,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No existe: {path}'**
   String fileNotFound(String path);
+
+  /// No description provided for @fileOther.
+  ///
+  /// In es, this message translates to:
+  /// **'Algo ha fallado con el archivo (más en «Detalles»).'**
+  String get fileOther;
 
   /// No description provided for @filledInEachPane.
   ///
@@ -2963,8 +3089,8 @@ abstract class AppLocalizations {
   /// No description provided for @keyFailed.
   ///
   /// In es, this message translates to:
-  /// **'No se ha podido: {error}'**
-  String keyFailed(String error);
+  /// **'No se ha podido (más en «Detalles»).'**
+  String get keyFailed;
 
   /// No description provided for @keyInKnownHosts.
   ///
@@ -3541,6 +3667,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'no se encuentra el host.'**
   String get netNotFound;
+
+  /// No description provided for @netOther.
+  ///
+  /// In es, this message translates to:
+  /// **'ha fallado la red (más en «Detalles»).'**
+  String get netOther;
+
+  /// No description provided for @netProxyCommand.
+  ///
+  /// In es, this message translates to:
+  /// **'el ProxyCommand ha fallado: {said}'**
+  String netProxyCommand(String said);
 
   /// No description provided for @netRefused.
   ///
@@ -5087,8 +5225,8 @@ abstract class AppLocalizations {
   /// No description provided for @readFormat.
   ///
   /// In es, this message translates to:
-  /// **'Es de {program}, pero no está como se esperaba: {message}'**
-  String readFormat(String program, String message);
+  /// **'Es de {program}, pero no está como se esperaba (más en «Detalles»).'**
+  String readFormat(String program);
 
   /// No description provided for @readNotRecognized.
   ///
@@ -5165,8 +5303,8 @@ abstract class AppLocalizations {
   /// No description provided for @readUnreadable.
   ///
   /// In es, this message translates to:
-  /// **'No se ha podido leer: {message}'**
-  String readUnreadable(String message);
+  /// **'No se ha podido leer el archivo (más en «Detalles»).'**
+  String get readUnreadable;
 
   /// No description provided for @readingFile.
   ///
@@ -6350,6 +6488,12 @@ abstract class AppLocalizations {
   /// **'Arrancando…'**
   String get starting;
 
+  /// No description provided for @startupElsewhereBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Otro OpenWard tiene abiertos estos datos (otra copia de la app, o una compilación de desarrollo). Ciérralo y vuelve a abrir este; no se ha cambiado nada en {folder}.'**
+  String startupElsewhereBody(String folder);
+
   /// No description provided for @startupErrorBody.
   ///
   /// In es, this message translates to:
@@ -6367,6 +6511,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'OpenWard no ha podido abrir sus datos'**
   String get startupErrorTitle;
+
+  /// No description provided for @startupNewerBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Tus datos los guardó una versión más nueva de OpenWard. Vuelve a abrirlos con esa versión: no se ha borrado ni cambiado nada en {folder}.'**
+  String startupNewerBody(String folder);
 
   /// No description provided for @startupQuit.
   ///
@@ -7076,6 +7226,12 @@ abstract class AppLocalizations {
   /// **'Tipo desconocido'**
   String get unknownKeyType;
 
+  /// No description provided for @unreadableItems.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Un elemento lo guardó una versión más nueva de OpenWard: no se ve aquí, pero sigue en tus datos tal cual.} other{{count} elementos los guardó una versión más nueva de OpenWard: no se ven aquí, pero siguen en tus datos tal cual.}}'**
+  String unreadableItems(int count);
+
   /// No description provided for @upOneLevel.
   ///
   /// In es, this message translates to:
@@ -7220,6 +7376,12 @@ abstract class AppLocalizations {
   /// **'Valor no válido en {subject}{at}: {detail}.'**
   String warnBadValue(String subject, String at, String detail);
 
+  /// No description provided for @warnDenied.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay permiso para leer {file}.'**
+  String warnDenied(String file);
+
   /// No description provided for @warnFeature.
   ///
   /// In es, this message translates to:
@@ -7265,8 +7427,8 @@ abstract class AppLocalizations {
   /// No description provided for @warnPartlyUnreadable.
   ///
   /// In es, this message translates to:
-  /// **'Una parte de los datos no se ha podido leer: {detail}.'**
-  String warnPartlyUnreadable(String detail);
+  /// **'{count, plural, =1{Un elemento de los datos no se ha podido leer.} other{{count} elementos de los datos no se han podido leer.}}'**
+  String warnPartlyUnreadable(int count);
 
   /// No description provided for @warnProxyCommand.
   ///
@@ -7295,8 +7457,8 @@ abstract class AppLocalizations {
   /// No description provided for @warnUnreadable.
   ///
   /// In es, this message translates to:
-  /// **'No se ha podido leer {file}: {error}.'**
-  String warnUnreadable(String file, String error);
+  /// **'No se ha podido leer {file}.'**
+  String warnUnreadable(String file);
 
   /// No description provided for @warnUnsupported.
   ///

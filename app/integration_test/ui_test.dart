@@ -2771,6 +2771,30 @@ Host db
       await _settle(tester);
       expect(container.read(tabsProvider).currentSession?.label, 'bastion');
 
+      // Renamed while open: the session goes by its new name.
+      final reopened = container.read(tabsProvider).currentSession!;
+      final read = app.host(id: reopened.hostId!);
+      final spec = read.spec;
+      await app.updateHost(
+        id: reopened.hostId!,
+        rev: read.rev,
+        spec: HostSpec(
+          label: 'bastion-eu',
+          address: spec.address,
+          groupId: spec.groupId,
+          tags: spec.tags,
+          notes: spec.notes,
+          settings: spec.settings,
+          favorite: spec.favorite,
+          systemCode: spec.systemCode,
+        ),
+      );
+      await _until(
+        tester,
+        () => reopened.label == 'bastion-eu',
+        'the new name in the tab',
+      );
+
       tabs
         ..close(1)
         ..close(0);

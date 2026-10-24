@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/errors.dart';
 import '../core/providers.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/session.dart';
@@ -211,10 +212,11 @@ class _ReconnectBannerState extends ConsumerState<ReconnectBanner> {
       final left = at.difference(DateTime.now()).inMilliseconds;
       final secs = (left / 1000).ceil().clamp(0, 60);
       final f = r.reason;
-      var reason = f.kind == FailureKind.network
-          ? networkReason(l, f.reason)
-          : failureText(l, f);
-      if (reason == l.netLost) reason = '';
+      final reason = f.kind != FailureKind.network
+          ? failureText(l, f)
+          : f.net == NetKind.lost
+          ? ''
+          : networkReason(l, f);
       final why = reason.isEmpty
           ? ''
           : ' (${reason.endsWith('.') ? reason.substring(0, reason.length - 1) : reason})';
@@ -383,6 +385,10 @@ class FailureCard extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              if (s.closed?.failure ?? s.errorCause case final e?) ...[
+                DetailsButton(e),
+                const Spacer(),
+              ],
               OutlinedButton(
                 onPressed: () => _closeTab(ref),
                 child: Text(l.closeTheTab),
@@ -456,8 +462,11 @@ Future<void> showHostKeyChanged(
         .trustHostKey(host: f.host, port: f.port, key: f.key);
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l.saveKeyFailed('$e'))));
+      showErrorNotice(
+        ScaffoldMessenger.of(context),
+        l.saveKeyFailed(errorReason(l, e)),
+        e,
+      );
     }
     return;
   }

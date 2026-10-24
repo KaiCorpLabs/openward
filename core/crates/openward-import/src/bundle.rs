@@ -9,6 +9,7 @@
 use std::fmt;
 
 use openward_proto::{ForwardKind, Marker, Settings};
+use zeroize::Zeroizing;
 
 /// The programs there is an importer for.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -138,13 +139,14 @@ pub enum KeyRef {
 
 /// A private key kept inside the other program. The vault never holds it:
 /// the app looks for the same key in `~/.ssh`, or saves it there if asked.
+/// Its secrets are wiped from memory when it goes.
 #[derive(Clone, PartialEq, Eq)]
 pub struct StoredKey {
     pub id: String,
     pub label: String,
     /// In whatever text format the program kept it (OpenSSH, PEM, PPK).
-    pub private_key: String,
-    pub passphrase: Option<String>,
+    pub private_key: Zeroizing<String>,
+    pub passphrase: Option<Zeroizing<String>>,
 }
 
 impl fmt::Debug for StoredKey {
@@ -214,9 +216,8 @@ pub enum WarningKind {
     /// on the word of another program's file. The text is the command, for
     /// the user to set it by hand if they trust it.
     ProxyCommand(String),
-    /// Something OpenWard does not have, named in the program's terms
-    /// (`X11 forwarding`, `a telnet proxy`); the rest of the item came in.
-    Unsupported(String),
+    /// Something OpenWard does not have; the rest of the item came in.
+    Unsupported(Missing),
     /// A value that made no sense (`port`, `70000`); left out.
     BadValue { field: String, value: String },
     /// Items shared from a team, encrypted with a key this computer does
@@ -225,8 +226,33 @@ pub enum WarningKind {
     /// Termius's host chains, whose format is not known: the hosts come
     /// in without those jumps.
     HostChain,
-    /// Part of the file or data could not be read.
-    Unreadable(String),
+    /// Part of the data could not be read: so many items; `why` in
+    /// English, for logs.
+    Unreadable { count: usize, why: String },
+}
+
+/// What OpenWard does not have, of an item that came in without it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Missing {
+    X11,
+    Socks4Proxy,
+    TelnetProxy,
+    /// A proxy of another type, as the program names it.
+    Proxy(String),
+    /// A proxy without its address or its port.
+    IncompleteProxy,
+    HardwareKey,
+    /// A key kept in Tabby's vault.
+    TabbyVaultKey,
+    SecureCrtGlobalKey,
+    /// A password MobaXterm keeps.
+    MobaCredential,
+    /// A jump through a profile that is not SSH.
+    JumpNotSsh,
+    /// A jump through a session that is not there, by its name.
+    JumpThrough(String),
+    /// SecureCRT's firewall, by its name.
+    Firewall(String),
 }
 
 /// Whether two ids of the same program name the same item. Termius's ids

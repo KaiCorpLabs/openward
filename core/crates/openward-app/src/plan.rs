@@ -166,7 +166,9 @@ fn chain(
         for jump in jumps {
             match jump {
                 Jump::Host(jid) => chain(vault, *jid, local, visiting, hops)?,
-                Jump::Address { host, user, port } => {
+                Jump::Address {
+                    host, user, port, ..
+                } => {
                     let bare = Settings {
                         user: user.clone(),
                         port: *port,
@@ -454,6 +456,7 @@ mod tests {
                         host: "10.0.0.9".into(),
                         user: Some("ops".into()),
                         port: Some(2200),
+                        extra: Default::default(),
                     },
                 ])),
                 agent: Some(Agent::Off),
@@ -486,6 +489,7 @@ mod tests {
             host: host.into(),
             port: 3128,
             user: None,
+            extra: Default::default(),
         };
         let mut v = Vault::open_in_memory().unwrap();
         let office = v
@@ -587,6 +591,7 @@ mod tests {
                         host: "first".into(),
                         user: None,
                         port: None,
+                        extra: Default::default(),
                     },
                     Jump::Host(cmd),
                 ])),

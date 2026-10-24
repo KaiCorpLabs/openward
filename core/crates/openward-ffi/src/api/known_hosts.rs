@@ -5,6 +5,7 @@ use openward_app::known::{KnownEntry, KnownSource, Marker};
 use openward_app::vault::proto::ItemId;
 
 use super::app::OpenWard;
+use super::vault::VaultError;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum KnownSourceKind {
@@ -95,7 +96,7 @@ impl OpenWard {
 
     /// Forgets a key: OpenWard's, or the line of the file if it still reads
     /// `text` (a copy of the file goes to `known_hosts.old` first).
-    pub fn forget_known_host(&self, row: KnownHostRow) -> anyhow::Result<()> {
+    pub fn forget_known_host(&self, row: KnownHostRow) -> Result<(), VaultError> {
         let source = match row.source {
             KnownSourceKind::OpenWard => KnownSource::OpenWard {
                 id: super::vault::id(&row.id)?,
@@ -105,6 +106,6 @@ impl OpenWard {
                 line: row.line as usize,
             },
         };
-        self.app.forget_known_host(source, &row.text)
+        Ok(self.app.forget_known_host(source, &row.text)?)
     }
 }

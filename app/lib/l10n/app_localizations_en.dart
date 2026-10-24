@@ -323,9 +323,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'Next to the key (-cert.pub): used without adding it.';
 
   @override
+  String get certNoAuthority =>
+      'no @cert-authority in known_hosts covers this host';
+
+  @override
+  String get certNotForHost => 'it was not issued for this name';
+
+  @override
+  String get certNotHost => 'it is not a host certificate';
+
+  @override
+  String get certOutOfDate => 'it has expired or is not valid yet';
+
+  @override
   String certUntil(String date) {
     return 'until $date';
   }
+
+  @override
+  String get certUntrusted => 'it is not signed by a trusted authority';
 
   @override
   String get certificate => 'certificate';
@@ -823,6 +839,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get destination => 'Destination';
 
   @override
+  String get details => 'Details';
+
+  @override
   String get discardChanges => 'Discard';
 
   @override
@@ -1078,6 +1097,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String get equalizePanes => 'Equal sizes';
 
   @override
+  String get errConflict => 'it changed meanwhile';
+
+  @override
+  String get errCycle => 'a group cannot be inside itself';
+
+  @override
+  String get errFileChanged => 'the file changed meanwhile';
+
+  @override
+  String get errInUse => 'other hosts jump through it';
+
+  @override
+  String get errInternal =>
+      'something failed inside OpenWard (more in “Details”)';
+
+  @override
+  String get errInvalid => 'what it says does not fit together';
+
+  @override
+  String get errNewerFormat =>
+      'your data was written by a newer version of OpenWard';
+
+  @override
+  String get errNotFound => 'it no longer exists';
+
+  @override
+  String get errOpenElsewhere => 'another OpenWard has this data open';
+
+  @override
+  String get errStorage => 'the disk did not take it';
+
+  @override
+  String get errorDetailsHint =>
+      'As the core says it: copy it if you report the problem.';
+
+  @override
+  String get errorDetailsTitle => 'Error details';
+
+  @override
   String get exampleVariable => 'name';
 
   @override
@@ -1119,6 +1177,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get failureOther => 'Something went wrong (more in Details).';
+
+  @override
   String get favorite => 'Favorite';
 
   @override
@@ -1145,6 +1206,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get featureHardwareKey => 'a security key';
+
+  @override
+  String get featureIncompleteProxy => 'a proxy without its address or port';
 
   @override
   String get featureJumpNotSsh => 'a jump through a profile that is not SSH';
@@ -1202,6 +1266,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String fileNotFound(String path) {
     return 'Not found: $path';
   }
+
+  @override
+  String get fileOther =>
+      'Something went wrong with the file (more in Details).';
 
   @override
   String get filledInEachPane => 'Also filled in on their own, in each pane:';
@@ -1927,9 +1995,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get keyExchange => 'Key exchange';
 
   @override
-  String keyFailed(String error) {
-    return 'It could not be done: $error';
-  }
+  String get keyFailed => 'It could not be done (more in Details).';
 
   @override
   String get keyInKnownHosts => 'in ~/.ssh/known_hosts';
@@ -2347,6 +2413,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get netNotFound => 'host not found.';
+
+  @override
+  String get netOther => 'the network failed (more in Details).';
+
+  @override
+  String netProxyCommand(String said) {
+    return 'the ProxyCommand failed: $said';
+  }
 
   @override
   String get netRefused => 'connection refused.';
@@ -3348,8 +3422,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get readFailedTitle => 'Could not read it';
 
   @override
-  String readFormat(String program, String message) {
-    return 'It is $program’s, but not as expected: $message';
+  String readFormat(String program) {
+    return 'It is $program’s, but not as expected (more in Details).';
   }
 
   @override
@@ -3396,9 +3470,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'The keychain’s key does not open Termius’s data; Termius may have changed its format. Nothing was imported.';
 
   @override
-  String readUnreadable(String message) {
-    return 'Could not read it: $message';
-  }
+  String get readUnreadable => 'The file could not be read (more in Details).';
 
   @override
   String get readingFile => 'Reading the file…';
@@ -4139,6 +4211,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get starting => 'Starting…';
 
   @override
+  String startupElsewhereBody(String folder) {
+    return 'Another OpenWard has this data open (another copy of the app, or a development build). Quit it and open this one again; nothing was changed in $folder.';
+  }
+
+  @override
   String startupErrorBody(String folder) {
     return 'They may have been written by a newer version of OpenWard, the folder may lack permissions, or the file may be damaged. Nothing in $folder was deleted or changed.';
   }
@@ -4148,6 +4225,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get startupErrorTitle => 'OpenWard could not open its data';
+
+  @override
+  String startupNewerBody(String folder) {
+    return 'Your data was saved by a newer version of OpenWard. Open it with that version again: nothing was deleted or changed in $folder.';
+  }
 
   @override
   String get startupQuit => 'Quit';
@@ -4584,6 +4666,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unknownKeyType => 'Unknown type';
 
   @override
+  String unreadableItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count items were saved by a newer version of OpenWard: they do not show here, but they stay in your data as they are.',
+      one: 'One item was saved by a newer version of OpenWard: it does not show here, but it stays in your data as it is.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get upOneLevel => 'Up one level';
 
   @override
@@ -4687,6 +4781,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String warnDenied(String file) {
+    return 'There is no permission to read $file.';
+  }
+
+  @override
   String warnFeature(String host, String feature) {
     return '$host: $feature did not come along.';
   }
@@ -4721,8 +4820,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String warnPartlyUnreadable(String detail) {
-    return 'Part of the data could not be read: $detail.';
+  String warnPartlyUnreadable(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items of the data could not be read.',
+      one: 'One item of the data could not be read.',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -4752,8 +4857,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String warnUnreadable(String file, String error) {
-    return 'Could not read $file: $error.';
+  String warnUnreadable(String file) {
+    return '$file could not be read.';
   }
 
   @override

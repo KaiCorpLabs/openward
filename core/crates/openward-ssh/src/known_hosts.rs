@@ -39,9 +39,36 @@ pub enum Verdict {
     /// on its own, not even when new hosts are.
     OtherType,
     /// A certificate that does not check out.
-    BadCertificate(String),
+    BadCertificate(CertProblem),
     /// The key, or the CA that signed it, is marked `@revoked`.
     Revoked,
+}
+
+/// Why a host certificate does not check out.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CertProblem {
+    /// A user's certificate where a host's belongs.
+    NotHost,
+    /// No `@cert-authority` line covers this host.
+    NoAuthority,
+    /// Not signed by one of those authorities, or not well signed.
+    Untrusted,
+    /// Outside its validity window: expired, or not valid yet.
+    OutOfDate,
+    /// Issued for other names.
+    NotForHost,
+}
+
+impl std::fmt::Display for CertProblem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::NotHost => "not a host certificate",
+            Self::NoAuthority => "no @cert-authority for this host",
+            Self::Untrusted => "not signed by a trusted authority",
+            Self::OutOfDate => "expired or not yet valid",
+            Self::NotForHost => "this host is not in its principals",
+        })
+    }
 }
 
 impl Verdict {
@@ -263,7 +290,7 @@ impl KnownHosts {
         cert: &russh::keys::Certificate,
     ) -> Verdict {
         if cert.cert_type() != CertType::Host {
-            return Verdict::BadCertificate("not a host certificate".into());
+            return Verdict::BadCertificate(CertProblem::NotHost);
         }
         let cas: Vec<&PublicKey> = self
             .entries
@@ -272,20 +299,28 @@ impl KnownHosts {
             .map(|e| &e.key)
             .collect();
         if cas.is_empty() {
-            return Verdict::BadCertificate("no @cert-authority for this host".into());
+            return Verdict::BadCertificate(CertProblem::NoAuthority);
         }
         let fingerprints: Vec<_> = cas.iter().map(|k| k.fingerprint(HashAlg::Sha256)).collect();
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map(|d| d.as_secs())
             .unwrap_or_default();
-        // Signature by one of the CAs, and inside the validity window.
-        if let Err(e) = cert.validate_at(now, fingerprints.iter()) {
-            return Verdict::BadCertificate(format!("{e}"));
+        // Signature by one of the CAs (checked at a moment inside its
+        // window, to tell a bad signature from an old one), and inside the
+        // validity window now.
+        if cert
+            .validate_at(cert.valid_after(), fingerprints.iter())
+            .is_err()
+        {
+            return Verdict::BadCertificate(CertProblem::Untrusted);
+        }
+        if cert.validate_at(now, fingerprints.iter()).is_err() {
+            return Verdict::BadCertificate(CertProblem::OutOfDate);
         }
         let principals = cert.valid_principals();
         if !principals.is_empty() && !principals.iter().any(|p| p.eq_ignore_ascii_case(host)) {
-            return Verdict::BadCertificate(format!("host {host} not in principals"));
+            return Verdict::BadCertificate(CertProblem::NotForHost);
         }
         let ca = cas
             .iter()
@@ -369,6 +404,80 @@ mod tests {
             key: PublicKey::from_openssh(k).unwrap(),
             hash_alg: None,
         }
+    }
+
+    #[test]
+    fn a_bad_certificate_says_what_is_wrong() {
+        use russh::keys::PrivateKey;
+        use russh::keys::ssh_key::certificate::Builder;
+        use russh::keys::ssh_key::private::Ed25519Keypair;
+
+        let key = |seed| PrivateKey::from(Ed25519Keypair::from_seed(&[seed; 32]));
+        let (ca, stranger, server) = (key(1), key(2), key(3));
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let signed = |by: &PrivateKey, kind, valid: std::ops::Range<u64>, name: &str| {
+            let mut b = Builder::new(
+                [7; 16],
+                server.public_key().key_data().clone(),
+                valid.start,
+                valid.end,
+            )
+            .unwrap();
+            b.cert_type(kind).unwrap();
+            b.valid_principal(name).unwrap();
+            PublicKeyOrCertificate::Certificate(b.sign(by).unwrap())
+        };
+        let today = now - 60..now + 3600;
+        let ca_line = format!(
+            "@cert-authority *.example.org {}\n",
+            ca.public_key().to_openssh().unwrap()
+        );
+        let mut kh = KnownHosts::parse(&ca_line, Unknown::Reject);
+        let host = "db.example.org";
+        let bad = |p| Verdict::BadCertificate(p);
+        assert!(matches!(
+            kh.check(host, 22, &signed(&ca, CertType::Host, today.clone(), host)),
+            Verdict::Certified { .. }
+        ));
+        assert_eq!(
+            kh.check(host, 22, &signed(&ca, CertType::User, today.clone(), host)),
+            bad(CertProblem::NotHost)
+        );
+        assert_eq!(
+            kh.check(
+                "other.net",
+                22,
+                &signed(&ca, CertType::Host, today.clone(), host)
+            ),
+            bad(CertProblem::NoAuthority)
+        );
+        assert_eq!(
+            kh.check(
+                host,
+                22,
+                &signed(&stranger, CertType::Host, today.clone(), host)
+            ),
+            bad(CertProblem::Untrusted)
+        );
+        assert_eq!(
+            kh.check(
+                host,
+                22,
+                &signed(&ca, CertType::Host, now - 7200..now - 3600, host)
+            ),
+            bad(CertProblem::OutOfDate)
+        );
+        assert_eq!(
+            kh.check(
+                host,
+                22,
+                &signed(&ca, CertType::Host, today, "web.example.org")
+            ),
+            bad(CertProblem::NotForHost)
+        );
     }
 
     #[test]

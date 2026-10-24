@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
+pub use openward_ssh::known_hosts::CertProblem;
 use tokio::sync::oneshot;
 use zeroize::Zeroizing;
 
@@ -239,7 +240,7 @@ pub enum Failure {
     },
     BadCertificate {
         label: String,
-        reason: String,
+        problem: CertProblem,
     },
     AuthFailed {
         label: String,
@@ -255,9 +256,128 @@ pub enum Failure {
     /// Could not reach the host, or the connection broke.
     Network {
         label: String,
+        /// In English, for logs and «Detalles».
         message: String,
+        /// What it was, for the UI to say it in its words.
+        cause: NetCause,
     },
     Other(String),
+}
+
+/// What kind of network trouble a [`Failure::Network`] is.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum NetCause {
+    /// Nothing listens there: the connection was refused.
+    Refused,
+    /// Its name does not resolve.
+    NotFound,
+    /// No route to it: off, on another network, or (macOS) without the
+    /// Local Network permission.
+    Unreachable,
+    /// It did not answer in time: for so many seconds, or (0) the system
+    /// gave up on its own.
+    Silent(u32),
+    /// The connection went away.
+    Lost,
+    /// The ProxyCommand failed, and wrote these lines before it went.
+    ProxyCommand(Vec<String>),
+    Other,
+}
+
+impl NetCause {
+    /// What `e` says went wrong: by the error's type where it has one; a
+    /// name that does not resolve only says so in words.
+    pub fn of(e: &anyhow::Error) -> Self {
+        use openward_ssh::russh::Error as Ssh;
+        // Its words say more than the error it went with.
+        if let Some(said) = e.downcast_ref::<openward_ssh::client::ProxyCommandSaid>() {
+            return Self::ProxyCommand(said.0.clone());
+        }
+        for cause in e.chain() {
+            if let Some(silent) = cause.downcast_ref::<openward_ssh::client::NoAnswer>() {
+                return Self::Silent(silent.0.as_secs() as u32);
+            }
+            let io = cause.downcast_ref::<std::io::Error>();
+            // russh's own is transparent: its io error is not in the chain.
+            let io = io.or(match cause.downcast_ref::<Ssh>() {
+                Some(Ssh::IO(io)) => Some(io),
+                _ => None,
+            });
+            if let Some(kind) = io.and_then(Self::of_io) {
+                return kind;
+            }
+            match cause.downcast_ref::<Ssh>() {
+                Some(Ssh::Disconnect | Ssh::HUP | Ssh::SendError | Ssh::RecvError) => {
+                    return Self::Lost;
+                }
+                Some(
+                    Ssh::ConnectionTimeout
+                    | Ssh::KeepaliveTimeout
+                    | Ssh::InactivityTimeout
+                    | Ssh::Elapsed(_),
+                ) => return Self::Silent(0),
+                _ => {}
+            }
+        }
+        let text = format!("{e:#}").to_lowercase();
+        let says = |words: &[&str]| words.iter().any(|w| text.contains(w));
+        if says(&[
+            "failed to lookup address",
+            "nodename nor servname",
+            "name or service not known",
+            "no such host",
+        ]) {
+            Self::NotFound
+        } else if says(&["no route to host", "host is unreachable"]) {
+            Self::Unreachable
+        } else {
+            Self::Other
+        }
+    }
+
+    fn of_io(io: &std::io::Error) -> Option<Self> {
+        use std::io::ErrorKind as K;
+        Some(match io.kind() {
+            K::ConnectionRefused => Self::Refused,
+            K::TimedOut => Self::Silent(0),
+            K::HostUnreachable | K::NetworkUnreachable => Self::Unreachable,
+            K::ConnectionReset
+            | K::ConnectionAborted
+            | K::BrokenPipe
+            | K::UnexpectedEof
+            | K::NotConnected => Self::Lost,
+            _ => return None,
+        })
+    }
+}
+
+impl Failure {
+    /// The network failed `label`, as `e` says.
+    pub fn network(label: String, e: &anyhow::Error) -> Self {
+        Self::Network {
+            label,
+            message: format!("{e:#}"),
+            cause: NetCause::of(e),
+        }
+    }
+
+    /// The connection to `label` went away.
+    pub fn lost(label: String) -> Self {
+        Self::Network {
+            label,
+            message: "connection lost".into(),
+            cause: NetCause::Lost,
+        }
+    }
+
+    /// `label` stopped answering for `silent`.
+    pub fn silent(label: String, silent: std::time::Duration) -> Self {
+        Self::Network {
+            label,
+            message: crate::no_answer(silent),
+            cause: NetCause::Silent(silent.as_secs() as u32),
+        }
+    }
 }
 
 impl std::fmt::Display for Failure {
@@ -270,8 +390,8 @@ impl std::fmt::Display for Failure {
             Self::HostKeyRevoked { label, fingerprint } => {
                 write!(f, "{label}: host key {fingerprint} is revoked")
             }
-            Self::BadCertificate { label, reason } => {
-                write!(f, "{label}: bad host certificate ({reason})")
+            Self::BadCertificate { label, problem } => {
+                write!(f, "{label}: bad host certificate ({problem})")
             }
             Self::AuthFailed {
                 label,
@@ -284,7 +404,7 @@ impl std::fmt::Display for Failure {
             ),
             Self::Cancelled => write!(f, "cancelled"),
             Self::NoSftp { label } => write!(f, "{label}: the server has no SFTP"),
-            Self::Network { label, message } => write!(f, "{label}: {message}"),
+            Self::Network { label, message, .. } => write!(f, "{label}: {message}"),
             Self::Other(message) => write!(f, "{message}"),
         }
     }
@@ -327,5 +447,74 @@ impl Prompts {
             Some(tx) => tx.send(answer).is_ok(),
             None => false,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io;
+    use std::time::Duration;
+
+    use anyhow::{Context, anyhow};
+
+    use super::NetCause;
+
+    fn io(kind: io::ErrorKind) -> anyhow::Error {
+        anyhow::Error::new(io::Error::from(kind)).context("connecting to db.example:22")
+    }
+
+    #[test]
+    fn network_trouble_goes_by_type() {
+        assert_eq!(
+            NetCause::of(&io(io::ErrorKind::ConnectionRefused)),
+            NetCause::Refused
+        );
+        assert_eq!(
+            NetCause::of(&io(io::ErrorKind::TimedOut)),
+            NetCause::Silent(0)
+        );
+        assert_eq!(
+            NetCause::of(&io(io::ErrorKind::HostUnreachable)),
+            NetCause::Unreachable
+        );
+        assert_eq!(
+            NetCause::of(&io(io::ErrorKind::ConnectionReset)),
+            NetCause::Lost
+        );
+        let silent: anyhow::Error = openward_ssh::client::NoAnswer(Duration::from_secs(7)).into();
+        assert_eq!(
+            NetCause::of(&silent.context("handshake")),
+            NetCause::Silent(7)
+        );
+        let gone: anyhow::Error = openward_ssh::russh::Error::Disconnect.into();
+        assert_eq!(NetCause::of(&gone), NetCause::Lost);
+        // russh's own error hides the io one from the chain.
+        let refused =
+            openward_ssh::russh::Error::IO(io::Error::from(io::ErrorKind::ConnectionRefused));
+        let refused = anyhow::Error::new(refused).context("connecting to db.example:22");
+        assert_eq!(NetCause::of(&refused), NetCause::Refused);
+        let said = openward_ssh::client::ProxyCommandSaid(vec!["command not found".into()]);
+        let failed = io(io::ErrorKind::UnexpectedEof)
+            .context(said)
+            .context("hop db");
+        assert_eq!(
+            NetCause::of(&failed),
+            NetCause::ProxyCommand(vec!["command not found".into()])
+        );
+    }
+
+    #[test]
+    fn a_name_that_does_not_resolve_is_not_found() {
+        // What the resolver says, on macOS and on Linux.
+        for words in [
+            "failed to lookup address information: nodename nor servname provided, or not known",
+            "failed to lookup address information: Name or service not known",
+        ] {
+            let e = Err::<(), _>(anyhow!("{words}"))
+                .context("db.example")
+                .unwrap_err();
+            assert_eq!(NetCause::of(&e), NetCause::NotFound);
+        }
+        assert_eq!(NetCause::of(&anyhow!("something else")), NetCause::Other);
     }
 }

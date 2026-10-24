@@ -84,6 +84,9 @@ pub struct Body {
     pub data: Data,
 }
 
+// A host is bigger than the rest; items are few and short-lived, and
+// boxing it would box every match on them.
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Data {
@@ -161,7 +164,7 @@ pub struct Host {
 }
 
 /// The system a server runs, for its logo in the sidebar.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct System {
     /// `deb`, `ubu`, `fed`, `rhel`, `mint`… (four letters at most: a
     /// version that does not know one shows it as text), `lnx` for a Linux
@@ -175,6 +178,8 @@ pub struct System {
     /// `PRETTY_NAME`.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub evidence: String,
+    #[serde(flatten)]
+    pub extra: Extra,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -205,21 +210,55 @@ pub struct Identity {
     pub extra: Extra,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Source {
     /// A `Host` alias of an imported `~/.ssh/config`.
-    SshConfig { alias: String },
+    SshConfig {
+        alias: String,
+        #[serde(flatten)]
+        extra: Extra,
+    },
 }
 
 /// What another program called an item: the program (`termius`, `putty`,
 /// `kitty`, `mobaxterm`, `tabby`, `securecrt`) and its own id for it, so
 /// importing again leaves what came before alone. A field and not a
 /// [`Source`] variant, which would break older versions' decoding.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+///
+/// Two are the same thing when program and id are: what a newer version
+/// added (`extra`) does not make them different.
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Imported {
     pub from: String,
     pub id: String,
+    #[serde(flatten)]
+    pub extra: Extra,
+}
+
+impl Imported {
+    pub fn new(from: impl Into<String>, id: impl Into<String>) -> Self {
+        Self {
+            from: from.into(),
+            id: id.into(),
+            extra: Extra::new(),
+        }
+    }
+}
+
+impl PartialEq for Imported {
+    fn eq(&self, other: &Self) -> bool {
+        self.from == other.from && self.id == other.id
+    }
+}
+
+impl Eq for Imported {}
+
+impl std::hash::Hash for Imported {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.from.hash(state);
+        self.id.hash(state);
+    }
 }
 
 /// A saved tunnel: a port forward over the connection to a host.
@@ -508,11 +547,62 @@ mod tests {
                         host: "bastion".into(),
                         user: Some("ops".into()),
                         port: None,
+                        extra: Extra::new(),
                     }])),
                     ..Settings::default()
                 },
                 ..Host::default()
             }),
+        }
+    }
+
+    /// A host with every nested struct set.
+    fn full_host() -> Body {
+        let mut body = host();
+        let Data::Host(h) = &mut body.data else {
+            unreachable!()
+        };
+        h.settings.proxy = Some(Proxy::Socks5(ProxyServer {
+            host: "proxy".into(),
+            port: 1080,
+            user: None,
+            extra: Extra::new(),
+        }));
+        h.settings.environment = Some(Environment::Mark(EnvironmentMark {
+            name: "Producción".into(),
+            short: "prod".into(),
+            color: "red".into(),
+            extra: Extra::new(),
+        }));
+        h.source = Some(Source::SshConfig {
+            alias: "web".into(),
+            extra: Extra::new(),
+        });
+        h.imported = Some(Imported::new("termius", "42"));
+        h.system = Some(System {
+            code: "deb".into(),
+            name: "Debian 12".into(),
+            source: SystemSource::Banner,
+            evidence: String::new(),
+            extra: Extra::new(),
+        });
+        body
+    }
+
+    /// Adds `future: true` to every map of `value` that has all of `keys`.
+    fn add_future(value: &mut Value, keys: &[&str]) {
+        match value {
+            Value::Map(map) => {
+                let has = |k: &str| map.iter().any(|(m, _)| m.as_text() == Some(k));
+                if keys.iter().all(|k| has(k)) {
+                    map.push((Value::Text("future".into()), Value::Bool(true)));
+                }
+                for (_, v) in map.iter_mut() {
+                    add_future(v, keys);
+                }
+            }
+            Value::Array(items) => items.iter_mut().for_each(|v| add_future(v, keys)),
+            _ => {}
         }
     }
 
@@ -565,6 +655,7 @@ mod tests {
                 host: "proxy.example".into(),
                 port: 1080,
                 user: Some("ana".into()),
+                extra: Extra::new(),
             }));
         }
         assert_eq!(Body::from_cbor(&group.to_cbor()).unwrap(), group);
@@ -580,10 +671,7 @@ mod tests {
                 script: "sudo systemctl restart {{servicio}}".into(),
                 defaults: [("servicio".to_owned(), "nginx".to_owned())].into(),
                 type_only: true,
-                imported: Some(Imported {
-                    from: "termius".into(),
-                    id: "42".into(),
-                }),
+                imported: Some(Imported::new("termius", "42")),
                 extra: Extra::new(),
             }),
         };
@@ -699,6 +787,57 @@ mod tests {
         assert_eq!(h.label, "web-1");
         assert_eq!(h.extra["color"], Value::Text("teal".into()));
         assert_eq!(h.settings.extra["x11"], Value::Bool(true));
+    }
+
+    /// The same inside the structs a host holds: a jump's address, a
+    /// proxy, a mark, where it came from, its system.
+    #[test]
+    fn unknown_fields_inside_are_kept() {
+        let mut value: Value = ciborium::from_reader(&full_host().to_cbor()[..]).unwrap();
+        for keys in [
+            &["host", "user"][..],
+            &["host", "port"],
+            &["name", "short", "color"],
+            &["alias"],
+            &["from", "id"],
+            &["code", "source"],
+        ] {
+            add_future(&mut value, keys);
+        }
+        let mut bytes = Vec::new();
+        ciborium::into_writer(&value, &mut bytes).unwrap();
+
+        let mut body = Body::from_cbor(&bytes).unwrap();
+        let Data::Host(h) = &mut body.data else {
+            panic!("not a host")
+        };
+        h.label = "web-1".into();
+        let again = Body::from_cbor(&body.to_cbor()).unwrap();
+        let Data::Host(h) = again.data else {
+            panic!("not a host")
+        };
+        let future = Value::Bool(true);
+        let Some(Route::Jump(jumps)) = &h.settings.route else {
+            panic!("no jumps")
+        };
+        let [Jump::Address { extra, .. }] = jumps.as_slice() else {
+            panic!("not an address")
+        };
+        assert_eq!(extra["future"], future, "jump");
+        let Some(Proxy::Socks5(proxy)) = &h.settings.proxy else {
+            panic!("no proxy")
+        };
+        assert_eq!(proxy.extra["future"], future, "proxy");
+        let Some(Environment::Mark(mark)) = &h.settings.environment else {
+            panic!("no mark")
+        };
+        assert_eq!(mark.extra["future"], future, "mark");
+        let Some(Source::SshConfig { extra, .. }) = &h.source else {
+            panic!("no source")
+        };
+        assert_eq!(extra["future"], future, "source");
+        assert_eq!(h.imported.unwrap().extra["future"], future, "imported");
+        assert_eq!(h.system.unwrap().extra["future"], future, "system");
     }
 
     #[test]

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/address.dart';
+import '../core/errors.dart';
 import '../core/providers.dart';
 import '../identities/identities.dart';
 import '../identities/identity_editor.dart';
@@ -2151,6 +2152,7 @@ class EditorFrame extends StatefulWidget {
     this.saveLabel,
     this.saveEnabled = true,
     this.snapshot,
+    this.errorCause,
   });
 
   final String title;
@@ -2171,6 +2173,10 @@ class EditorFrame extends StatefulWidget {
   /// What the form says now. Closing without saving after it changed asks
   /// first: Esc, Cancel, the close button or a click outside the panel.
   final String Function()? snapshot;
+
+  /// What [error] came from, when it came from the core: «Detalles»
+  /// shows its own words.
+  final Object? errorCause;
 
   @override
   State<EditorFrame> createState() => _EditorFrameState();
@@ -2302,8 +2308,20 @@ class _EditorFrameState extends State<EditorFrame> {
                 ),
                 if (error != null)
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-                    child: Text(error, style: TextStyle(color: c.danger)),
+                    padding: const EdgeInsets.fromLTRB(24, 0, 16, 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(error, style: TextStyle(color: c.danger)),
+                        ),
+                        if (widget.errorCause case final cause?)
+                          TextButton(
+                            key: const ValueKey('editor.errorDetails'),
+                            onPressed: () => showErrorDetails(context, cause),
+                            child: Text(l.details),
+                          ),
+                      ],
+                    ),
                   ),
                 Container(
                   padding: const EdgeInsets.fromLTRB(16, 12, 24, 12),
@@ -2602,6 +2620,7 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
   /// Chosen by hand; null leaves it to what connecting tells.
   late String? _systemCode = _spec.systemCode;
   String? _error;
+  Object? _cause;
 
   String _snapshot() => [
     _label.text,
@@ -2632,6 +2651,7 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
         : address.isEmpty
         ? l.missingAddress
         : _settings.validate(l);
+    _cause = null;
     if (problem != null) return setState(() => _error = problem);
     final spec = HostSpec(
       label: label,
@@ -2650,7 +2670,9 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
       if (d == null) {
         id = await app.createHost(spec: spec);
       } else {
-        await app.updateHost(id: d.id, rev: d.rev, spec: spec);
+        // What changed meanwhile (connecting learned its system) and
+        // what was changed here go together.
+        await app.updateHost(id: d.id, rev: d.rev, spec: spec, base: _spec);
         id = d.id;
       }
       if (connect) {
@@ -2660,11 +2682,10 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
       }
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      setState(
-        () => _error = '$e'.contains('changed since')
-            ? l.changedMeanwhile
-            : l.saveFailed('$e'),
-      );
+      setState(() {
+        _error = saveErrorText(l, e);
+        _cause = e;
+      });
     }
   }
 
@@ -2682,6 +2703,7 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
         if (groupName != null) l.inGroup(groupName),
       ].join(' · ').ifEmpty,
       error: _error,
+      errorCause: _cause,
       onSave: _save,
       onSaveAndConnect: () => _save(connect: true),
       snapshot: _snapshot,
@@ -2776,6 +2798,7 @@ class _GroupEditorState extends ConsumerState<_GroupEditor> {
   late final _settings = _SettingsForm(_spec.settings);
   late String? _parent = _spec.parentId;
   String? _error;
+  Object? _cause;
 
   String _snapshot() =>
       [_name.text, _parent, _settings.signature].join('\u0000');
@@ -2791,6 +2814,7 @@ class _GroupEditorState extends ConsumerState<_GroupEditor> {
     final l = context.l10n;
     final name = _name.text.trim();
     final problem = name.isEmpty ? l.groupNeedsName : _settings.validate(l);
+    _cause = null;
     if (problem != null) return setState(() => _error = problem);
     final spec = GroupSpec(
       name: name,
@@ -2807,11 +2831,12 @@ class _GroupEditorState extends ConsumerState<_GroupEditor> {
       }
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      setState(
-        () => _error = '$e'.contains('inside itself')
+      setState(() {
+        _error = isVaultError(e, VaultErrorKind.cycle)
             ? l.groupInsideItself
-            : l.saveFailed('$e'),
-      );
+            : saveErrorText(l, e);
+        _cause = e;
+      });
     }
   }
 
@@ -2823,6 +2848,7 @@ class _GroupEditorState extends ConsumerState<_GroupEditor> {
       title: _detail == null ? l.newGroupTitle : l.editGroupTitle,
       subtitle: _spec.name.isEmpty ? null : _spec.name,
       error: _error,
+      errorCause: _cause,
       onSave: _save,
       snapshot: _snapshot,
       children: [

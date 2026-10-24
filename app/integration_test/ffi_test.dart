@@ -24,6 +24,10 @@ import 'package:openward/src/rust/api/vault.dart';
 import 'package:openward/src/rust/api/workspaces.dart';
 import 'package:openward/src/rust/frb_generated.dart';
 
+/// A [VaultError] of `kind`: the app tells errors by kind, never by text.
+Matcher isVault(VaultErrorKind kind) =>
+    isA<VaultError>().having((e) => e.kind, 'kind', kind);
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() => RustLib.init());
@@ -92,8 +96,30 @@ void main() {
         rev: detail.rev,
         spec: const HostSpec(label: 'stale', address: 'x'),
       ),
-      throwsA(anything),
+      throwsA(isVault(VaultErrorKind.conflict)),
     );
+    // With what it read, an edit made over a change of meanwhile (a star,
+    // a system learned) goes in, and keeps that change.
+    final read = app.host(id: id);
+    await app.setFavorite(id: id, favorite: true);
+    final s = read.spec;
+    await app.updateHost(
+      id: id,
+      rev: read.rev,
+      spec: HostSpec(
+        label: 'web-2',
+        address: s.address,
+        groupId: s.groupId,
+        tags: s.tags,
+        notes: s.notes,
+        settings: s.settings,
+        favorite: s.favorite,
+        systemCode: s.systemCode,
+      ),
+      base: s,
+    );
+    final merged = app.host(id: id).spec;
+    expect((merged.label, merged.favorite), ('web-2', true));
     await app.delete(id: group);
     expect(app.hosts().single.groupId, isNull);
   });
@@ -407,7 +433,10 @@ Host db
     expect(file.readAsStringSync(), '# mine\n10.0.4.21 $key db\n');
     expect(File('${file.path}.old').readAsStringSync(), contains(hashed));
     // A stale row (the file moved on) is refused.
-    await expectLater(own.forgetKnownHost(row: rows[2]), throwsA(anything));
+    await expectLater(
+      own.forgetKnownHost(row: rows[2]),
+      throwsA(isVault(VaultErrorKind.fileChanged)),
+    );
     await own.forgetKnownHost(row: rows[0]);
     expect(own.knownHosts(), isEmpty);
   });

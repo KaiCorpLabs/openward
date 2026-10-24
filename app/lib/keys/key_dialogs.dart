@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/address.dart';
+import '../core/errors.dart';
 import '../core/providers.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/keychain.dart';
@@ -54,6 +55,17 @@ class _NewKeyState extends ConsumerState<_NewKey> {
   bool _busy = false;
   String? _error;
 
+  /// The core's failure behind [_error], for «Detalles».
+  SshKeyFailure? _cause;
+
+  SshKeyFailure? get _details => switch (_cause) {
+    final f?
+        when f.kind == SshKeyFailureKind.io ||
+            f.kind == SshKeyFailureKind.make =>
+      f,
+    _ => null,
+  };
+
   @override
   void dispose() {
     _name.dispose();
@@ -70,12 +82,16 @@ class _NewKeyState extends ConsumerState<_NewKey> {
     final l = context.l10n;
     final name = _name.text.trim();
     if (_passphrase.text != _again.text) {
-      setState(() => _error = l.passphrasesDiffer);
+      setState(() {
+        _error = l.passphrasesDiffer;
+        _cause = null;
+      });
       return;
     }
     setState(() {
       _busy = true;
       _error = null;
+      _cause = null;
     });
     final r = await ref
         .read(openWardProvider)
@@ -92,6 +108,7 @@ class _NewKeyState extends ConsumerState<_NewKey> {
       setState(() {
         _busy = false;
         _error = keyFailureText(l, r.failure!, name);
+        _cause = r.failure;
       });
       return;
     }
@@ -201,6 +218,11 @@ class _NewKeyState extends ConsumerState<_NewKey> {
             if (_error != null) ...[
               const SizedBox(height: 10),
               Text(_error!, style: TextStyle(color: c.danger)),
+              if (_details case final e?)
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: DetailsButton(e),
+                ),
             ],
           ],
         ),
@@ -249,6 +271,17 @@ class _ImportKeyState extends ConsumerState<_ImportKey> {
   bool _busy = false;
   String? _error;
 
+  /// The core's failure behind [_error], for «Detalles».
+  SshKeyFailure? _cause;
+
+  SshKeyFailure? get _details => switch (_cause) {
+    final f?
+        when f.kind == SshKeyFailureKind.io ||
+            f.kind == SshKeyFailureKind.make =>
+      f,
+    _ => null,
+  };
+
   @override
   void dispose() {
     _name.dispose();
@@ -278,9 +311,13 @@ class _ImportKeyState extends ConsumerState<_ImportKey> {
           _name.text = n;
         }
         _error = null;
+        _cause = null;
       });
     } catch (_) {
-      setState(() => _error = context.l10n.keyNotReadable);
+      setState(() {
+        _error = context.l10n.keyNotReadable;
+        _cause = null;
+      });
     }
   }
 
@@ -290,6 +327,7 @@ class _ImportKeyState extends ConsumerState<_ImportKey> {
     setState(() {
       _busy = true;
       _error = null;
+      _cause = null;
     });
     final r = await ref
         .read(openWardProvider)
@@ -299,6 +337,7 @@ class _ImportKeyState extends ConsumerState<_ImportKey> {
       setState(() {
         _busy = false;
         _error = keyFailureText(l, r.failure!, name);
+        _cause = r.failure;
       });
       return;
     }
@@ -364,6 +403,11 @@ class _ImportKeyState extends ConsumerState<_ImportKey> {
             if (_error != null) ...[
               const SizedBox(height: 10),
               Text(_error!, style: TextStyle(color: c.danger)),
+              if (_details case final e?)
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: DetailsButton(e),
+                ),
             ],
           ],
         ),
@@ -628,10 +672,15 @@ class _InstallKeyState extends ConsumerState<_InstallKey> {
     final ok = install.step == InstallStep.done;
     final failure = install.closed?.failure;
     final why = install.writeError != null
-        ? l.installKeyWriteFailed(install.writeError!)
+        ? l.installKeyWriteFailed(errorReason(l, install.writeError!))
         : failure != null
         ? failureText(l, failure)
-        : install.error ?? (install.cancelled ? l.cancelled : '');
+        : install.errorCause != null
+        ? l.statusError(errorReason(l, install.errorCause!))
+        : install.cancelled
+        ? l.cancelled
+        : '';
+    final details = install.writeError ?? failure ?? install.errorCause;
     return OverlayPanel(
       width: 460,
       child: Column(
@@ -668,6 +717,10 @@ class _InstallKeyState extends ConsumerState<_InstallKey> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              if (!ok && details != null) ...[
+                DetailsButton(details),
+                const Spacer(),
+              ],
               if (!ok) ...[
                 OutlinedButton(onPressed: _again, child: Text(l.tryAnother)),
                 const SizedBox(width: 8),

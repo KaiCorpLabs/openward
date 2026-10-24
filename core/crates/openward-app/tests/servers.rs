@@ -9,7 +9,8 @@ use std::sync::{Arc, Mutex, OnceLock, Weak};
 use std::time::{Duration, Instant};
 
 use openward_app::events::{
-    ChangedKey, Connected, Health, KeySource, Persistence, PreviousKey, Trust,
+    CertProblem, ChangedKey, Connected, Health, KeySource, NetCause, Persistence, PreviousKey,
+    Trust,
 };
 use openward_app::vault::proto::{
     Agent, Data, Group, Host, HostKeyPolicy, Identity, ItemId, Jump, Route, Settings, System,
@@ -347,7 +348,16 @@ fn a_lost_connection_comes_back() {
     }
     let (attempt, reason) = reconnecting.expect("no Reconnecting event");
     assert_eq!(attempt, 1);
-    assert!(matches!(reason, Failure::Network { .. }), "{reason:?}");
+    assert!(
+        matches!(
+            reason,
+            Failure::Network {
+                cause: NetCause::Lost,
+                ..
+            }
+        ),
+        "{reason:?}"
+    );
     term.text("echo back-$((6*7))\n");
     wait_for(&term, "back-42");
 }
@@ -436,7 +446,11 @@ fn a_server_that_stops_answering_is_noticed_in_seconds() {
     );
     assert!(lost.0 <= Duration::from_secs(31), "lost after {:?}", lost.0);
     assert!(
-        matches!(&lost.1, Failure::Network { message, .. } if message == "no answer for 20 s"),
+        matches!(
+            &lost.1,
+            Failure::Network { message, cause: NetCause::Silent(20), .. }
+                if message == "no answer for 20 s"
+        ),
         "{:?}",
         lost.1
     );
@@ -586,8 +600,9 @@ fn a_silent_server_is_given_up_on_in_time() {
     let started = Instant::now();
     let (_term, rx) = f.connect(host, |_| Answer::Cancel);
     match outcome(&rx).0 {
-        Err(Some(Failure::Network { message, .. })) => {
+        Err(Some(Failure::Network { message, cause, .. })) => {
             assert_eq!(message, "no answer for 2 s");
+            assert_eq!(cause, NetCause::Silent(2));
         }
         other => panic!("not given up on: {other:?}"),
     }
@@ -596,6 +611,31 @@ fn a_silent_server_is_given_up_on_in_time() {
         took >= Duration::from_secs(2) && took < Duration::from_secs(6),
         "{took:?}"
     );
+}
+
+/// A port nobody listens on: refused, by its kind and not its words. No
+/// S2 needed.
+#[test]
+fn a_closed_port_is_refused() {
+    let port = {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.local_addr().unwrap().port()
+    };
+    let f = Fixture::new(PathBuf::new());
+    let host = f.host(
+        "closed",
+        "127.0.0.1",
+        port,
+        Settings {
+            user: Some("demo".into()),
+            ..Settings::default()
+        },
+    );
+    let (_term, rx) = f.connect(host, |_| Answer::Cancel);
+    match outcome(&rx).0 {
+        Err(Some(Failure::Network { cause, .. })) => assert_eq!(cause, NetCause::Refused),
+        other => panic!("not refused: {other:?}"),
+    }
 }
 
 #[test]
@@ -1736,6 +1776,7 @@ fn through_a_proxy_that_asks_for_a_password() {
                 host: "127.0.0.1".into(),
                 port: proxy_port,
                 user: Some("ana".into()),
+                extra: Default::default(),
             })),
             ..Settings::default()
         },
@@ -1900,7 +1941,10 @@ fn a_certificate_of_another_ca_falls_back_to_the_known_key() {
     .unwrap();
     let (_term, rx) = f.connect(host, |_| Answer::Cancel);
     match outcome(&rx).0 {
-        Err(Some(Failure::BadCertificate { .. })) => {}
+        Err(Some(Failure::BadCertificate {
+            problem: CertProblem::Untrusted,
+            ..
+        })) => {}
         other => panic!("not a bad certificate: {other:?}"),
     }
 }

@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/connection.dart';
+import '../core/errors.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/sftp.dart';
 import '../tabs/connection_panels.dart';
@@ -157,7 +158,11 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
       await op();
       return true;
     } on FileError catch (e) {
-      if (mounted) _show(fileErrorText(context.l10n, e));
+      if (!mounted) return false;
+      final text = fileErrorText(context.l10n, e);
+      e.kind == FileErrorKind.other
+          ? showErrorNotice(ScaffoldMessenger.of(context), text, e)
+          : _show(text);
       return false;
     }
   }
@@ -757,7 +762,9 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
     final pane = _pane;
     final error = pane.error;
     if (pane.path.isEmpty) {
-      if (error != null) return _message(fileErrorText(l, error), error: true);
+      if (error != null) {
+        return _message(fileErrorText(l, error), error: true, details: error);
+      }
       return pane.loading
           ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
           : const SizedBox.shrink();
@@ -784,9 +791,16 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
             padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
             child: Callout(
               tone: Tone.danger,
-              child: Text(
-                fileErrorText(l, error),
-                style: const TextStyle(fontSize: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      fileErrorText(l, error),
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                  if (error.kind == FileErrorKind.other) DetailsButton(error),
+                ],
               ),
             ),
           ),
@@ -801,15 +815,22 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
     );
   }
 
-  Widget _message(String text, {bool error = false}) {
+  Widget _message(String text, {bool error = false, FileError? details}) {
     final c = context.ow.colors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          style: TextStyle(color: error ? c.danger : c.textMuted),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              text,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: error ? c.danger : c.textMuted),
+            ),
+            if (details != null && details.kind == FileErrorKind.other)
+              DetailsButton(details),
+          ],
         ),
       ),
     );

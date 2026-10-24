@@ -1,5 +1,6 @@
 // What a session's state looks like in words, in the interface's language.
 
+import '../core/errors.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/session.dart';
 import '../terminal/keys.dart' show isApple;
@@ -26,39 +27,41 @@ String failureText(AppLocalizations l, FailureView f) {
       f.label,
       f.fingerprint,
     ),
-    FailureKind.badCertificate => l.failureBadCertificate(f.label, f.reason),
+    FailureKind.badCertificate => l.failureBadCertificate(
+      f.label,
+      switch (f.cert) {
+        CertKind.notHost => l.certNotHost,
+        CertKind.noAuthority => l.certNoAuthority,
+        CertKind.untrusted => l.certUntrusted,
+        CertKind.outOfDate => l.certOutOfDate,
+        CertKind.notForHost || null => l.certNotForHost,
+      },
+    ),
     FailureKind.authFailed =>
       f.methods.isEmpty
           ? l.failureAuth(f.user, f.label)
           : l.failureAuthMethods(f.user, f.label, f.methods.join(', ')),
     FailureKind.cancelled => l.cancelled,
     FailureKind.noSftp => l.failureNoSftp(f.label),
-    FailureKind.network => '${f.label}: ${networkReason(l, f.reason)}',
-    FailureKind.other || null => f.reason.isEmpty ? f.message : f.reason,
+    FailureKind.network => '${f.label}: ${networkReason(l, f)}',
+    // The core's words are in «Detalles».
+    FailureKind.other || null => l.failureOther,
   };
 }
 
-/// The usual network errors, in words; the rest as they come.
-String networkReason(AppLocalizations l, String reason) {
-  final r = reason.toLowerCase();
-  if (r.contains('connection refused')) return l.netRefused;
-  if (r.contains('timed out')) return l.netTimeout;
-  if (r.contains('failed to lookup') ||
-      r.contains('nodename nor servname') ||
-      r.contains('name or service not known')) {
-    return l.netNotFound;
-  }
-  if (r.contains('connection lost') || r.contains('disconnected')) {
-    return l.netLost;
-  }
+/// A network failure, in words, by the kind the core gives it; one it
+/// could not tell, with the core's words in «Detalles».
+String networkReason(AppLocalizations l, FailureView f) => switch (f.net) {
+  NetKind.refused => l.netRefused,
+  NetKind.notFound => l.netNotFound,
   // On macOS, also what an app without the Local Network permission gets.
-  if (r.contains('no route to host') || r.contains('host is unreachable')) {
-    return isApple ? l.netUnreachableMac : l.netUnreachable;
-  }
-  final silent = RegExp(r'no answer for (\d+) s$').firstMatch(reason);
-  if (silent != null) return l.netNoAnswer(int.parse(silent.group(1)!));
-  return reason;
-}
+  NetKind.unreachable => isApple ? l.netUnreachableMac : l.netUnreachable,
+  NetKind.silent => f.seconds == 0 ? l.netTimeout : l.netNoAnswer(f.seconds),
+  NetKind.lost => l.netLost,
+  // What the command wrote: its words, not the core's.
+  NetKind.proxyCommand => l.netProxyCommand(f.reason),
+  NetKind.other || null => l.netOther,
+};
 
 /// The hops before the target, for "via bastion".
 String? viaText(AppLocalizations l, ConnectionController c) {
@@ -69,7 +72,10 @@ String? viaText(AppLocalizations l, ConnectionController c) {
 /// One line about the session when it is not simply connected.
 String statusText(AppLocalizations l, ConnectionController c) {
   final error = c.error;
-  if (error != null) return l.statusError(error);
+  if (error != null) {
+    final cause = c.errorCause;
+    return l.statusError(cause == null ? error : errorReason(l, cause));
+  }
   switch (c.phase) {
     case Phase.connecting:
       final s = c.stage;

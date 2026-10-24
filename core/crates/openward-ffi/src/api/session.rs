@@ -7,7 +7,9 @@
 use std::sync::Arc;
 
 use flutter_rust_bridge::frb;
-use openward_app::events::{Connected, Health, KeySource, Persistence, Question, Stage, Trust};
+use openward_app::events::{
+    CertProblem, Connected, Health, KeySource, NetCause, Persistence, Question, Stage, Trust,
+};
 use openward_app::terminal::{self, Terminal};
 use openward_app::{Answer, Event, EventSink, Failure, Prompt};
 use zeroize::Zeroizing;
@@ -194,6 +196,31 @@ pub enum FailureKind {
     Other,
 }
 
+/// With [`FailureKind::BadCertificate`]: what is wrong with it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CertKind {
+    NotHost,
+    NoAuthority,
+    Untrusted,
+    OutOfDate,
+    NotForHost,
+}
+
+/// With [`FailureKind::Network`]: what kind of trouble.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NetKind {
+    Refused,
+    NotFound,
+    Unreachable,
+    /// It did not answer for [`FailureView::seconds`] (0: the system gave
+    /// up on its own).
+    Silent,
+    Lost,
+    /// The ProxyCommand failed; [`FailureView::reason`] is what it wrote.
+    ProxyCommand,
+    Other,
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct FailureView {
     pub kind: Option<FailureKind>,
@@ -211,6 +238,9 @@ pub struct FailureView {
     pub reason: String,
     /// With [`FailureKind::HostKeyChanged`]: what was trusted before.
     pub previous: Vec<PreviousKeyView>,
+    pub cert: Option<CertKind>,
+    pub net: Option<NetKind>,
+    pub seconds: u32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -297,10 +327,17 @@ pub(crate) fn failure_view(f: Failure) -> FailureView {
             fingerprint,
             ..v
         },
-        Failure::BadCertificate { label, reason } => FailureView {
+        Failure::BadCertificate { label, problem } => FailureView {
             kind: Some(FailureKind::BadCertificate),
             label,
-            reason,
+            reason: problem.to_string(),
+            cert: Some(match problem {
+                CertProblem::NotHost => CertKind::NotHost,
+                CertProblem::NoAuthority => CertKind::NoAuthority,
+                CertProblem::Untrusted => CertKind::Untrusted,
+                CertProblem::OutOfDate => CertKind::OutOfDate,
+                CertProblem::NotForHost => CertKind::NotForHost,
+            }),
             ..v
         },
         Failure::AuthFailed {
@@ -323,12 +360,33 @@ pub(crate) fn failure_view(f: Failure) -> FailureView {
             label,
             ..v
         },
-        Failure::Network { label, message } => FailureView {
-            kind: Some(FailureKind::Network),
+        Failure::Network {
             label,
-            reason: message,
-            ..v
-        },
+            message,
+            cause,
+        } => {
+            let mut reason = message;
+            let (net, seconds) = match cause {
+                NetCause::Refused => (NetKind::Refused, 0),
+                NetCause::NotFound => (NetKind::NotFound, 0),
+                NetCause::Unreachable => (NetKind::Unreachable, 0),
+                NetCause::Silent(s) => (NetKind::Silent, s),
+                NetCause::Lost => (NetKind::Lost, 0),
+                NetCause::ProxyCommand(said) => {
+                    reason = said.join(" · ");
+                    (NetKind::ProxyCommand, 0)
+                }
+                NetCause::Other => (NetKind::Other, 0),
+            };
+            FailureView {
+                kind: Some(FailureKind::Network),
+                label,
+                reason,
+                net: Some(net),
+                seconds,
+                ..v
+            }
+        }
         Failure::Other(reason) => FailureView {
             kind: Some(FailureKind::Other),
             reason,

@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/errors.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/sftp.dart';
 import '../ui/tokens.dart';
@@ -386,6 +387,12 @@ class _JobRow extends StatelessWidget {
             children: [
               if (j.moving)
                 _SmallButton(l.pause, onPressed: () => queue.pause(j.id)),
+              if (j.state == TransferState.failed &&
+                  j.error?.kind == FileErrorKind.other)
+                _SmallButton(
+                  l.details,
+                  onPressed: () => showErrorDetails(context, j.error!),
+                ),
               if (j.state == TransferState.paused ||
                   j.state == TransferState.failed)
                 _SmallButton(

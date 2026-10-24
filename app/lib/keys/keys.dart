@@ -31,7 +31,8 @@ String keyFailureText(AppLocalizations l, SshKeyFailure f, String name) =>
       SshKeyFailureKind.exists => l.keyNameTaken(name),
       SshKeyFailureKind.badName => l.keyNameInvalid,
       SshKeyFailureKind.notAKey => l.keyNotReadable,
-      SshKeyFailureKind.io || SshKeyFailureKind.make => l.keyFailed(f.message),
+      // The core's words are in «Detalles».
+      SshKeyFailureKind.io || SshKeyFailureKind.make => l.keyFailed,
     };
 
 /// A name for a new key of `type` that no file in `~/.ssh` has.
@@ -74,7 +75,7 @@ class KeyInstall extends ConnectionController {
   bool added = false;
 
   /// Why it failed once connected (writing the file).
-  String? writeError;
+  Object? writeError;
 
   @override
   Stream<SessionEvent> open() {
@@ -113,7 +114,7 @@ class KeyInstall extends ConnectionController {
       added = await browser.installPublicKey(line: line);
       step = InstallStep.done;
     } catch (e) {
-      writeError = '$e';
+      writeError = e;
       step = InstallStep.failed;
     }
     browser.close();

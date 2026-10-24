@@ -118,7 +118,7 @@ pub enum Agent {
     Socket(String),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Route {
     /// A TCP connection to the address.
@@ -130,7 +130,7 @@ pub enum Route {
     Command(String),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Jump {
     /// A saved host, with its own settings.
@@ -142,12 +142,14 @@ pub enum Jump {
         user: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         port: Option<u16>,
+        #[serde(flatten)]
+        extra: Extra,
     },
 }
 
 /// An HTTP or SOCKS proxy that the connection to the first hop goes
 /// through. Its password is never stored: it is asked for when needed.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Proxy {
     /// No proxy, even if a group sets one.
@@ -157,12 +159,14 @@ pub enum Proxy {
     Socks5(ProxyServer),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ProxyServer {
     pub host: String,
     pub port: u16,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub user: Option<String>,
+    #[serde(flatten)]
+    pub extra: Extra,
 }
 
 /// Which identity a group or host uses.
@@ -175,7 +179,7 @@ pub enum UseIdentity {
 }
 
 /// How a group or host is marked.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Environment {
     /// None, even if a group sets one.
@@ -183,7 +187,7 @@ pub enum Environment {
     Mark(EnvironmentMark),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct EnvironmentMark {
     /// What it is called ("Producción").
     pub name: String,
@@ -192,6 +196,8 @@ pub struct EnvironmentMark {
     /// A color of the palette by name (`red`, `orange`, `yellow`, `green`,
     /// `blue`, `violet`, `pink`, `gray`): each theme draws it its way.
     pub color: String,
+    #[serde(flatten)]
+    pub extra: Extra,
 }
 
 /// What to do with a host key that is not known yet. A key that changed is

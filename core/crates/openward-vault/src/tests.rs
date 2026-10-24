@@ -151,6 +151,7 @@ fn the_environment_is_inherited_and_can_be_turned_off() {
         name: "Producción".into(),
         short: "prod".into(),
         color: "red".into(),
+        extra: Default::default(),
     });
     let marked = Settings {
         environment: Some(prod.clone()),
@@ -233,6 +234,7 @@ fn a_hosts_system_and_favorite_persist() {
                 name: "Debian 12".into(),
                 source: SystemSource::Banner,
                 evidence: "SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3".into(),
+                extra: Default::default(),
             }),
             favorite: Some(2),
             ..Host::default()
@@ -799,4 +801,57 @@ fn a_vault_opens_in_one_place_at_a_time() {
     assert!(matches!(Vault::open(&path), Err(Error::OpenElsewhere)));
     drop(v);
     Vault::open(&path).unwrap();
+}
+
+/// Whoever writes, those who listen hear of it: once per write.
+#[test]
+fn every_write_is_told() {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let mut v = Vault::open_in_memory().unwrap();
+    let told = Arc::new(AtomicUsize::new(0));
+    let count = Arc::clone(&told);
+    v.on_change(move || {
+        count.fetch_add(1, Ordering::Relaxed);
+    });
+    let id = v
+        .create(Data::Snippet(Snippet {
+            label: "uptime".into(),
+            script: "uptime".into(),
+            ..Snippet::default()
+        }))
+        .unwrap();
+    assert_eq!(told.load(Ordering::Relaxed), 1);
+    let item = v.get(id).unwrap().clone();
+    v.update(id, item.rev, item.body.data).unwrap();
+    v.delete(id).unwrap();
+    assert_eq!(told.load(Ordering::Relaxed), 3);
+    // A refused change writes nothing, and tells nothing.
+    assert!(v.delete(id).is_err());
+    assert_eq!(told.load(Ordering::Relaxed), 3);
+}
+
+/// Several changes go in together or not at all: one that is stale
+/// leaves the others unwritten.
+#[test]
+fn several_changes_all_or_none() {
+    let mut v = Vault::open_in_memory().unwrap();
+    let a = v.create(host("a", None, Settings::default())).unwrap();
+    let b = v.create(host("b", None, Settings::default())).unwrap();
+    let star = |v: &Vault, id: ItemId, at: u32| {
+        let Data::Host(mut h) = v.get(id).unwrap().body.data.clone() else {
+            unreachable!()
+        };
+        h.favorite = Some(at);
+        (id, v.get(id).unwrap().rev, Data::Host(h))
+    };
+    let stale = (star(&v, b, 1).0, 7, star(&v, b, 1).2);
+    let refused = v.update_all(vec![star(&v, a, 0), stale]);
+    assert!(matches!(refused, Err(Error::Conflict { .. })));
+    assert_eq!(v.host(a).unwrap().favorite, None, "nothing written");
+    v.update_all(vec![star(&v, a, 0), star(&v, b, 1)]).unwrap();
+    assert_eq!(
+        (v.host(a).unwrap().favorite, v.host(b).unwrap().favorite),
+        (Some(0), Some(1))
+    );
 }

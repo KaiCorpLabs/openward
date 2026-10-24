@@ -8,6 +8,7 @@ use openward_app::{TunnelError, TunnelInfo, TunnelState};
 
 use super::app::OpenWard;
 use super::session::{DartSink, FailureView, SessionEvent, failure_view};
+use super::vault::VaultError;
 use super::vault::id;
 use crate::frb_generated::StreamSink;
 
@@ -212,12 +213,20 @@ impl OpenWard {
         }));
     }
 
+    /// An event each time the vault changes, whoever changed it: read
+    /// hosts, tunnels, identities, snippets and workspaces again then.
+    pub fn watch_vault(&self, changes: StreamSink<bool>) {
+        self.app.watch_vault(std::sync::Arc::new(move || {
+            let _ = changes.add(true);
+        }));
+    }
+
     #[frb(sync)]
     pub fn tunnels(&self) -> Vec<TunnelView> {
         self.app.tunnels().into_iter().map(view).collect()
     }
 
-    pub fn create_tunnel(&self, spec: TunnelSpec) -> anyhow::Result<String> {
+    pub fn create_tunnel(&self, spec: TunnelSpec) -> Result<String, VaultError> {
         let mut f = PortForward {
             label: String::new(),
             host: id(&spec.host_id)?,
@@ -238,7 +247,7 @@ impl OpenWard {
     /// Returns the new revision. An open tunnel whose forward changed
     /// closes, to open again as it is now; a new name or "open on connect"
     /// leaves it open.
-    pub fn update_tunnel(&self, id: String, rev: u64, spec: TunnelSpec) -> anyhow::Result<u64> {
+    pub fn update_tunnel(&self, id: String, rev: u64, spec: TunnelSpec) -> Result<u64, VaultError> {
         let tid = super::vault::id(&id)?;
         let mut f = self.app.vault().port_forward(tid)?.clone();
         let before = forward_of(&f);
@@ -253,7 +262,11 @@ impl OpenWard {
 
     /// Opens a tunnel, connecting to its host if needed. The stream is that
     /// connection's events (questions, and `connected` once it listens).
-    pub fn open_tunnel(&self, id: String, events: StreamSink<SessionEvent>) -> anyhow::Result<()> {
+    pub fn open_tunnel(
+        &self,
+        id: String,
+        events: StreamSink<SessionEvent>,
+    ) -> Result<(), VaultError> {
         self.app
             .open_tunnel(super::vault::id(&id)?, Arc::new(DartSink(events)))?;
         Ok(())
@@ -261,7 +274,7 @@ impl OpenWard {
 
     /// Closes it (and forgets an error it had).
     #[frb(sync)]
-    pub fn close_tunnel(&self, id: String) -> anyhow::Result<()> {
+    pub fn close_tunnel(&self, id: String) -> Result<(), VaultError> {
         self.app.close_tunnel(super::vault::id(&id)?);
         Ok(())
     }

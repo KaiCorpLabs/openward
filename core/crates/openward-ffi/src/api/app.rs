@@ -12,6 +12,7 @@ use openward_import::ssh_config::Warning;
 
 use super::session::{DartSink, PromptAnswer, SessionEvent, TerminalSession};
 use super::sftp::{ConflictChoice, SftpBrowser, TransferDirection, TransferView};
+use super::vault::VaultError;
 use super::vault::*;
 use crate::frb_generated::StreamSink;
 
@@ -72,6 +73,7 @@ fn apply_host(spec: &HostSpec, h: &mut Host, next_favorite: u32) -> anyhow::Resu
                     name: String::new(),
                     source: SystemSource::Manual,
                     evidence: String::new(),
+                    extra: h.system.take().map(|s| s.extra).unwrap_or_default(),
                 });
             }
         }
@@ -132,8 +134,16 @@ fn warning(w: Warning) -> ImportWarning {
             String::new(),
             String::new(),
         ),
-        Warning::Unreadable { file, error } => (
-            ImportWarningKind::Unreadable,
+        Warning::Unreadable {
+            file,
+            denied,
+            error,
+        } => (
+            if denied {
+                ImportWarningKind::Denied
+            } else {
+                ImportWarningKind::Unreadable
+            },
             (file.display().to_string(), 0),
             error,
             String::new(),
@@ -157,7 +167,7 @@ fn warning(w: Warning) -> ImportWarning {
 impl OpenWard {
     /// Opens or creates the app's data in `data_dir` (the platform's
     /// application support directory).
-    pub fn open(data_dir: String) -> anyhow::Result<OpenWard> {
+    pub fn open(data_dir: String) -> Result<OpenWard, VaultError> {
         Ok(Self {
             app: Arc::new(App::open(&PathBuf::from(data_dir))?),
         })
@@ -165,7 +175,7 @@ impl OpenWard {
 
     /// As [`OpenWard::open`], with another `~/.ssh` (tests: the tester's
     /// own keys and `known_hosts` stay out, the system's too).
-    pub fn open_with_ssh_dir(data_dir: String, ssh_dir: String) -> anyhow::Result<OpenWard> {
+    pub fn open_with_ssh_dir(data_dir: String, ssh_dir: String) -> Result<OpenWard, VaultError> {
         let ssh_dir = PathBuf::from(ssh_dir);
         let local = openward_app::Local {
             system_ssh_dir: ssh_dir.join("system"),
@@ -179,7 +189,7 @@ impl OpenWard {
 
     /// As [`OpenWard::open`], with another home folder and its `.ssh`
     /// (tests: nothing of the tester's, such as their Termius, is seen).
-    pub fn open_with_home(data_dir: String, home: String) -> anyhow::Result<OpenWard> {
+    pub fn open_with_home(data_dir: String, home: String) -> Result<OpenWard, VaultError> {
         let home = PathBuf::from(home);
         let local = openward_app::Local {
             ssh_dir: home.join(".ssh"),
@@ -190,6 +200,13 @@ impl OpenWard {
         Ok(Self {
             app: Arc::new(App::open_as(&PathBuf::from(data_dir), local)?),
         })
+    }
+
+    /// Items this version cannot read, written by a newer one: they stay
+    /// in the vault as they are, but the app does not show them.
+    #[frb(sync)]
+    pub fn unreadable_items(&self) -> u32 {
+        self.app.vault().unreadable() as u32
     }
 
     #[frb(sync)]
@@ -210,7 +227,7 @@ impl OpenWard {
                     user: settings.user.unwrap_or_else(|| local_user.clone()),
                     port: settings.port.unwrap_or(22),
                     imported_alias: match &h.source {
-                        Some(Source::SshConfig { alias }) => Some(alias.clone()),
+                        Some(Source::SshConfig { alias, .. }) => Some(alias.clone()),
                         None => None,
                     },
                     environment: EnvironmentView::of(&settings.environment),
@@ -264,7 +281,7 @@ impl OpenWard {
     }
 
     #[frb(sync)]
-    pub fn host(&self, id: String) -> anyhow::Result<HostDetail> {
+    pub fn host(&self, id: String) -> Result<HostDetail, VaultError> {
         let hid = super::vault::id(&id)?;
         let vault = self.app.vault();
         let h = vault.host(hid)?;
@@ -286,8 +303,8 @@ impl OpenWard {
     /// From now on, reads a host's `/etc/os-release` after connecting, and
     /// now over its connection if one is up. False when there is none: it
     /// is read on the next one.
-    pub async fn read_os_release(&self, id: String) -> anyhow::Result<bool> {
-        self.app.read_os_release(super::vault::id(&id)?).await
+    pub async fn read_os_release(&self, id: String) -> Result<bool, VaultError> {
+        Ok(self.app.read_os_release(super::vault::id(&id)?).await?)
     }
 
     /// Reads `/etc/os-release` after connecting to the hosts that do not
@@ -298,7 +315,7 @@ impl OpenWard {
     }
 
     /// Makes a host a favorite (the last one) or not.
-    pub fn set_favorite(&self, id: String, favorite: bool) -> anyhow::Result<()> {
+    pub fn set_favorite(&self, id: String, favorite: bool) -> Result<(), VaultError> {
         let hid = super::vault::id(&id)?;
         let mut vault = self.app.vault();
         let next = next_favorite(&vault);
@@ -314,7 +331,7 @@ impl OpenWard {
 
     /// Puts the favorites in this order; the ones left out keep theirs,
     /// after these.
-    pub fn order_favorites(&self, ids: Vec<String>) -> anyhow::Result<()> {
+    pub fn order_favorites(&self, ids: Vec<String>) -> Result<(), VaultError> {
         let mut vault = self.app.vault();
         let ids = ids
             .iter()
@@ -331,6 +348,8 @@ impl OpenWard {
             .iter()
             .copied()
             .chain(rest.into_iter().map(|(_, id)| id));
+        // All the places at once: a failure leaves the order as it was.
+        let mut changes = Vec::new();
         for (at, hid) in order.enumerate() {
             let mut h = vault.host(hid)?.clone();
             if h.favorite == Some(at as u32) {
@@ -338,8 +357,9 @@ impl OpenWard {
             }
             h.favorite = Some(at as u32);
             let rev = vault.get(hid).map_or(0, |i| i.rev);
-            vault.update(hid, rev, Data::Host(h))?;
+            changes.push((hid, rev, Data::Host(h)));
         }
+        vault.update_all(changes)?;
         Ok(())
     }
 
@@ -353,7 +373,7 @@ impl OpenWard {
         group_id: Option<String>,
         identity: Option<IdentityChoice>,
         identity_id: String,
-    ) -> anyhow::Result<InheritedView> {
+    ) -> Result<InheritedView, VaultError> {
         let vault = self.app.vault();
         let inherited =
             vault.inherited(opt_id(&group_id)?, identity_choice(identity, &identity_id)?)?;
@@ -367,7 +387,7 @@ impl OpenWard {
     }
 
     #[frb(sync)]
-    pub fn group(&self, id: String) -> anyhow::Result<GroupDetail> {
+    pub fn group(&self, id: String) -> Result<GroupDetail, VaultError> {
         let gid = super::vault::id(&id)?;
         let vault = self.app.vault();
         let g = vault.group(gid)?;
@@ -382,7 +402,7 @@ impl OpenWard {
         })
     }
 
-    pub fn create_host(&self, spec: HostSpec) -> anyhow::Result<String> {
+    pub fn create_host(&self, spec: HostSpec) -> Result<String, VaultError> {
         let mut vault = self.app.vault();
         let mut h = Host::default();
         apply_host(&spec, &mut h, next_favorite(&vault))?;
@@ -390,22 +410,46 @@ impl OpenWard {
     }
 
     /// Returns the new revision. Fails if the host changed since `rev`.
-    pub fn update_host(&self, id: String, rev: u64, spec: HostSpec) -> anyhow::Result<u64> {
+    /// Saves `spec` over host `id` as read at `rev`. If it changed
+    /// meanwhile (connecting learned its system, another window) and
+    /// `base` is the spec as it was read, what this one changed goes over
+    /// what is there now: only a field both changed is a conflict.
+    pub fn update_host(
+        &self,
+        id: String,
+        rev: u64,
+        spec: HostSpec,
+        base: Option<HostSpec>,
+    ) -> Result<u64, VaultError> {
         let hid = super::vault::id(&id)?;
         let mut vault = self.app.vault();
         let next = next_favorite(&vault);
         let mut h = vault.host(hid)?.clone();
+        let now = vault.get(hid).map_or(rev, |i| i.rev);
+        let (spec, rev) = match base {
+            Some(base) if now != rev => {
+                let merged =
+                    HostSpec::merge(&base, spec, host_spec(&h)).ok_or_else(|| VaultError {
+                        kind: super::vault::VaultErrorKind::Conflict,
+                        message: format!(
+                            "host {hid} changed since revision {rev} where this edit changed it too"
+                        ),
+                    })?;
+                (merged, now)
+            }
+            _ => (spec, rev),
+        };
         apply_host(&spec, &mut h, next)?;
         Ok(vault.update(hid, rev, Data::Host(h))?)
     }
 
-    pub fn create_group(&self, spec: GroupSpec) -> anyhow::Result<String> {
+    pub fn create_group(&self, spec: GroupSpec) -> Result<String, VaultError> {
         let mut g = Group::default();
         apply_group(&spec, &mut g)?;
         Ok(self.app.vault().create(Data::Group(g))?.to_string())
     }
 
-    pub fn update_group(&self, id: String, rev: u64, spec: GroupSpec) -> anyhow::Result<u64> {
+    pub fn update_group(&self, id: String, rev: u64, spec: GroupSpec) -> Result<u64, VaultError> {
         let gid = super::vault::id(&id)?;
         let mut vault = self.app.vault();
         let mut g = vault.group(gid)?.clone();
@@ -415,7 +459,7 @@ impl OpenWard {
 
     /// A host, group or known host. A group's contents move up to its
     /// parent; a host other hosts jump through cannot go.
-    pub fn delete(&self, id: String) -> anyhow::Result<()> {
+    pub fn delete(&self, id: String) -> Result<(), VaultError> {
         self.app.delete(super::vault::id(&id)?)?;
         Ok(())
     }
@@ -445,7 +489,7 @@ impl OpenWard {
         &self,
         file: Option<String>,
         only: Option<Vec<String>>,
-    ) -> anyhow::Result<ImportReport> {
+    ) -> Result<ImportReport, VaultError> {
         let report = self
             .app
             .import_ssh_config(file.map(PathBuf::from).as_deref(), only.as_deref())?;
@@ -481,7 +525,7 @@ impl OpenWard {
 
     /// Trusts a key the user checked, replacing the old one of its type
     /// (after a changed host key).
-    pub fn trust_host_key(&self, host: String, port: u16, key: String) -> anyhow::Result<()> {
+    pub fn trust_host_key(&self, host: String, port: u16, key: String) -> Result<(), VaultError> {
         Ok(self.app.trust_host_key(&host, port, &key)?)
     }
 
@@ -508,7 +552,7 @@ impl OpenWard {
         session: &TerminalSession,
         host_id: String,
         events: StreamSink<SessionEvent>,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), VaultError> {
         self.app.connect(
             &session.term,
             super::vault::id(&host_id)?,
@@ -526,7 +570,7 @@ impl OpenWard {
         user: Option<String>,
         port: Option<u16>,
         events: StreamSink<SessionEvent>,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), VaultError> {
         self.app.connect_address(
             &session.term,
             address,
@@ -576,7 +620,7 @@ impl OpenWard {
         browser: &SftpBrowser,
         host_id: String,
         events: StreamSink<SessionEvent>,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), VaultError> {
         self.app.connect_sftp(
             &browser.sftp,
             super::vault::id(&host_id)?,
@@ -593,7 +637,7 @@ impl OpenWard {
         user: Option<String>,
         port: Option<u16>,
         events: StreamSink<SessionEvent>,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), VaultError> {
         self.app.connect_sftp_address(
             &browser.sftp,
             address,

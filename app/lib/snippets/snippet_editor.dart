@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/errors.dart';
 import '../core/providers.dart';
 import '../hosts/editors.dart';
 import '../l10n/l10n.dart';
@@ -59,6 +60,7 @@ class _SnippetEditorState extends ConsumerState<_SnippetEditor> {
   late bool _enter = !(_old?.typeOnly ?? false);
   late SnippetVariables _vars = snippetVariables(script: _script.text);
   String? _error;
+  Object? _cause;
 
   String _snapshot() => [
     _label.text,
@@ -92,6 +94,7 @@ class _SnippetEditorState extends ConsumerState<_SnippetEditor> {
 
   Future<void> _save() async {
     final l = context.l10n;
+    _cause = null;
     if (_label.text.trim().isEmpty) {
       return setState(() => _error = l.snippetNeedsName);
     }
@@ -109,11 +112,10 @@ class _SnippetEditorState extends ConsumerState<_SnippetEditor> {
       ref.read(snippetsProvider.notifier).refresh();
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      setState(
-        () => _error = '$e'.contains('changed since')
-            ? l.changedMeanwhile
-            : l.saveFailed('$e'),
-      );
+      setState(() {
+        _error = saveErrorText(l, e);
+        _cause = e;
+      });
     }
   }
 
@@ -128,7 +130,10 @@ class _SnippetEditorState extends ConsumerState<_SnippetEditor> {
     try {
       await app.delete(id: old.id);
     } catch (e) {
-      return setState(() => _error = l.deleteFailed('$e'));
+      return setState(() {
+        _error = l.deleteFailed(errorReason(l, e));
+        _cause = e;
+      });
     }
     snippets.refresh();
     if (mounted) Navigator.pop(context, true);
@@ -141,9 +146,7 @@ class _SnippetEditorState extends ConsumerState<_SnippetEditor> {
             try {
               await app.createSnippet(spec: old.spec);
             } catch (e) {
-              messenger.showSnackBar(
-                SnackBar(content: Text(l.saveFailed('$e'))),
-              );
+              showErrorNotice(messenger, saveErrorText(l, e), e);
             }
             snippets.refresh();
           },
@@ -184,6 +187,7 @@ class _SnippetEditorState extends ConsumerState<_SnippetEditor> {
       title: widget.snippet == null ? l.newSnippet : l.editSnippet,
       subtitle: l.snippetEditorHint,
       error: _error,
+      errorCause: _cause,
       onSave: _save,
       onDelete: widget.snippet == null ? null : _delete,
       snapshot: _snapshot,

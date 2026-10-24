@@ -24,6 +24,7 @@ use openward_vault::proto::{
     Data, Group, Host, Identity, Imported, ItemId, Jump, KnownHost, PortForward, Route, Settings,
     Snippet, UseIdentity,
 };
+use zeroize::Zeroizing;
 
 use crate::keys::algorithm;
 use crate::local::Local;
@@ -63,7 +64,7 @@ pub fn read(program: Program, bundle: Bundle, local: &Local) -> Read {
         .keys
         .iter()
         .map(|k| {
-            let public = public_key(&k.private_key, k.passphrase.as_deref());
+            let public = public_key(&k.private_key, k.passphrase.as_ref().map(|p| p.as_str()));
             let found = public.as_ref().and_then(|p| {
                 mine.iter()
                     .find(|(_, q)| q.key_data() == p.key_data())
@@ -492,6 +493,7 @@ pub fn apply(
         Some(Imported {
             from: program.id().to_owned(),
             id: id.to_owned(),
+            extra: Default::default(),
         })
     };
     let mut report = Report {
@@ -696,12 +698,14 @@ pub fn apply(
                                     .map_or(t.clone(), |x| x.address.clone()),
                                 user: None,
                                 port: None,
+                                extra: Default::default(),
                             },
                         },
                         JumpRef::Address { host, user, port } => Jump::Address {
                             host: host.clone(),
                             user: user.clone(),
                             port: *port,
+                            extra: Default::default(),
                         },
                     })
                     .collect(),
@@ -828,13 +832,15 @@ fn save_key(local: &Local, shown: &str, key: &bundle::StoredKey) -> Result<Strin
     if let Some(dir) = path.parent() {
         create_private_dir(dir).map_err(fail)?;
     }
-    let mut text = key.private_key.replace("\r\n", "\n");
+    let mut text = Zeroizing::new(key.private_key.replace("\r\n", "\n"));
     if !text.ends_with('\n') {
         text.push('\n');
     }
     write_new(&path, text.as_bytes(), 0o600).map_err(fail)?;
-    if let Some(public) = public_key(&key.private_key, key.passphrase.as_deref())
-        && let Ok(line) = public.to_openssh()
+    if let Some(public) = public_key(
+        &key.private_key,
+        key.passphrase.as_ref().map(|p| p.as_str()),
+    ) && let Ok(line) = public.to_openssh()
     {
         let mut pub_path = path.clone().into_os_string();
         pub_path.push(".pub");
@@ -945,13 +951,21 @@ mod tests {
                 StoredKey {
                     id: "k1".into(),
                     label: "deploy".into(),
-                    private_key: key(1).to_openssh(LineEnding::LF).unwrap().to_string(),
+                    private_key: key(1)
+                        .to_openssh(LineEnding::LF)
+                        .unwrap()
+                        .to_string()
+                        .into(),
                     passphrase: None,
                 },
                 StoredKey {
                     id: "k2".into(),
                     label: "ci runner".into(),
-                    private_key: key(2).to_openssh(LineEnding::LF).unwrap().to_string(),
+                    private_key: key(2)
+                        .to_openssh(LineEnding::LF)
+                        .unwrap()
+                        .to_string()
+                        .into(),
                     passphrase: None,
                 },
             ],

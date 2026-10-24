@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 
 use openward_proto::{Agent, Proxy, ProxyServer, Settings};
 
-use crate::bundle::{Bundle, Group, Host, JumpRef, KeyRef, Warning, WarningKind};
+use crate::bundle::{Bundle, Group, Host, JumpRef, KeyRef, Missing, Warning, WarningKind};
 use crate::text;
 
 /// Whether the text looks like MobaXterm's sessions.
@@ -117,13 +117,13 @@ pub fn parse(bytes: &[u8]) -> Bundle {
         if field(3).starts_with('[') {
             out.warnings.push(Warning::about(
                 &name,
-                WarningKind::Unsupported("a stored MobaXterm credential".into()),
+                WarningKind::Unsupported(Missing::MobaCredential),
             ));
         }
         if on(5) {
             out.warnings.push(Warning::about(
                 &name,
-                WarningKind::Unsupported("X11 forwarding".into()),
+                WarningKind::Unsupported(Missing::X11),
             ));
         }
         if !field(7).is_empty() {
@@ -161,6 +161,7 @@ pub fn parse(bytes: &[u8]) -> Bundle {
             host: field(20).to_owned(),
             port: proxy_port,
             user: user_of(field(22)),
+            extra: Default::default(),
         };
         match field(19) {
             "" | "0" => {}
@@ -172,11 +173,11 @@ pub fn parse(bytes: &[u8]) -> Bundle {
             )),
             "1" => out.warnings.push(Warning::about(
                 &name,
-                WarningKind::Unsupported("SOCKS4 proxy".into()),
+                WarningKind::Unsupported(Missing::Socks4Proxy),
             )),
             other => out.warnings.push(Warning::about(
                 &name,
-                WarningKind::Unsupported(format!("proxy type {other}")),
+                WarningKind::Unsupported(Missing::Proxy(other.to_owned())),
             )),
         }
         if field(33) == "0" {

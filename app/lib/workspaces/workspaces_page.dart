@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/errors.dart';
 import '../core/providers.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/workspaces.dart';
@@ -22,12 +23,15 @@ Future<String?> saveWorkspaceDialog(BuildContext context, WidgetRef ref) async {
     context: context,
     builder: (_) => _SaveWorkspace(tabs: tabs),
   );
-  if (name == null || name.trim().isEmpty) return null;
-  await ref
-      .read(openWardProvider)
-      .createWorkspace(spec: captureWorkspace(state, name));
+  if (name == null || name.trim().isEmpty || !context.mounted) return null;
+  final saved = await runAction(
+    context,
+    () => ref
+        .read(openWardProvider)
+        .createWorkspace(spec: captureWorkspace(state, name)),
+  );
   ref.read(workspacesProvider.notifier).refresh();
-  return name.trim();
+  return saved ? name.trim() : null;
 }
 
 class _SaveWorkspace extends ConsumerStatefulWidget {
@@ -198,7 +202,7 @@ class _WorkspacesPageState extends ConsumerState<WorkspacesPage> {
       ref.read(workspacesProvider.notifier).refresh();
       _say(l.workspaceUpdated(w.spec.name));
     } catch (e) {
-      setState(() => _error = l.saveFailed('$e'));
+      setState(() => _error = saveErrorText(l, e));
     }
   }
 
@@ -217,7 +221,7 @@ class _WorkspacesPageState extends ConsumerState<WorkspacesPage> {
           .renameWorkspace(id: w.id, rev: w.rev, name: name);
       ref.read(workspacesProvider.notifier).refresh();
     } catch (e) {
-      setState(() => _error = l.saveFailed('$e'));
+      setState(() => _error = saveErrorText(l, e));
     }
   }
 
@@ -243,8 +247,12 @@ class _WorkspacesPageState extends ConsumerState<WorkspacesPage> {
         ],
       ),
     );
-    if (sure != true) return;
-    await ref.read(openWardProvider).delete(id: w.id);
+    if (sure != true || !mounted) return;
+    await runAction(
+      context,
+      () => ref.read(openWardProvider).delete(id: w.id),
+      failed: (l, e) => l.deleteFailed(errorReason(l, e)),
+    );
     ref.read(workspacesProvider.notifier).refresh();
   }
 

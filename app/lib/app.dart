@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/errors.dart';
 import 'core/settings.dart';
 import 'home.dart';
 import 'l10n/l10n.dart';
@@ -37,6 +38,8 @@ class OpenWardApp extends ConsumerWidget {
     final themes = ref.watch(materialThemesProvider);
     return MaterialApp(
       title: 'OpenWard',
+      scaffoldMessengerKey: appMessenger,
+      navigatorKey: appNavigator,
       debugShowCheckedModeBanner: false,
       // The themes chosen for light and for dark, with their layers.
       theme: themes.light,

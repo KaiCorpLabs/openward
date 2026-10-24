@@ -1,15 +1,21 @@
 //! The SQLite side: one table of items, keyed like the sync format.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use openward_proto::{Item, ItemId, envelope};
-use rusqlite::{Connection, OptionalExtension, params};
+use rusqlite::{Connection, OptionalExtension, Transaction, params};
 
 use crate::{Error, Result};
 
-/// `PRAGMA user_version` this code writes. Older files are migrated at
-/// open; newer ones are refused.
-const FORMAT: i64 = 1;
+/// One step of a migration: a file of one format to the next.
+type Step = fn(&Transaction) -> Result<()>;
+
+/// `STEPS[n - 1]` takes a format-n file to format n + 1, so this code
+/// writes format `STEPS.len() + 1` (`PRAGMA user_version`) and refuses a
+/// newer one. An older file is migrated at open all the way, in one
+/// transaction, after a copy of it as it was: a step that fails leaves it
+/// untouched, and going back to the version that wrote it finds it whole.
+const STEPS: &[Step] = &[];
 
 const SCHEMA: &str = "
 CREATE TABLE meta (
@@ -44,6 +50,40 @@ fn lock(path: &Path) -> Result<std::fs::File> {
     }
 }
 
+/// Where the copy of a format-`format` file goes before it is migrated:
+/// next to it, never over an earlier copy.
+fn backup_path(path: &Path, format: i64) -> PathBuf {
+    let with = |suffix: String| {
+        let mut name = path.as_os_str().to_owned();
+        name.push(suffix);
+        PathBuf::from(name)
+    };
+    let plain = with(format!(".format-{format}.bak"));
+    if !plain.exists() {
+        return plain;
+    }
+    (2..)
+        .map(|n| with(format!(".format-{format}.{n}.bak")))
+        .find(|p| !p.exists())
+        .expect("some name is free")
+}
+
+/// Takes a format-`from` file to the last format: a copy first (on disk),
+/// then every step in one transaction.
+fn migrate(conn: &mut Connection, from: i64, steps: &[Step], path: Option<&Path>) -> Result<()> {
+    if let Some(path) = path {
+        let backup = backup_path(path, from);
+        conn.execute("VACUUM INTO ?1", params![backup.to_string_lossy()])?;
+    }
+    let tx = conn.transaction()?;
+    for step in &steps[(from - 1) as usize..] {
+        step(&tx)?;
+    }
+    tx.pragma_update(None, "user_version", steps.len() as i64 + 1)?;
+    tx.commit()?;
+    Ok(())
+}
+
 pub struct Store {
     conn: Connection,
     pub vault_id: ItemId,
@@ -70,19 +110,25 @@ impl Store {
         let conn = Connection::open(path)?;
         conn.pragma_update(None, "journal_mode", "WAL")?;
         conn.pragma_update(None, "synchronous", "FULL")?;
-        let mut store = Self::init(conn)?;
+        let mut store = Self::init(conn, STEPS, Some(path))?;
         store._lock = Some(lock);
         Ok(store)
     }
 
     pub fn open_in_memory() -> Result<Self> {
-        Self::init(Connection::open_in_memory()?)
+        Self::init(Connection::open_in_memory()?, STEPS, None)
     }
 
-    fn init(mut conn: Connection) -> Result<Self> {
+    /// Opens `conn`, creating the schema in an empty file or migrating an
+    /// older one by `steps` (a copy of it next to `path` first).
+    fn init(mut conn: Connection, steps: &[Step], path: Option<&Path>) -> Result<Self> {
+        let current = steps.len() as i64 + 1;
         let format: i64 = conn.pragma_query_value(None, "user_version", |r| r.get(0))?;
-        if format > FORMAT {
+        if format > current {
             return Err(Error::NewerFormat(format));
+        }
+        if format > 0 && format < current {
+            migrate(&mut conn, format, steps, path)?;
         }
         if format == 0 {
             let tx = conn.transaction()?;
@@ -92,7 +138,7 @@ impl Store {
                 "INSERT INTO meta (key, value) VALUES ('vault_id', ?1), ('device_id', ?2)",
                 params![&id.as_bytes()[..], &ItemId::new().as_bytes()[..]],
             )?;
-            tx.pragma_update(None, "user_version", FORMAT)?;
+            tx.pragma_update(None, "user_version", current)?;
             tx.commit()?;
         }
         let vault_id = conn
@@ -159,5 +205,87 @@ impl Store {
     #[cfg(test)]
     pub fn conn(&self) -> &Connection {
         &self.conn
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A format-1 file as this version writes it, with one row.
+    fn format_1(path: &Path) {
+        let mut store = Store::init(Connection::open(path).unwrap(), &[], None).unwrap();
+        let item = Item {
+            id: ItemId::new(),
+            rev: 1,
+            body: openward_proto::Body {
+                created: 1,
+                modified: 1,
+                data: openward_proto::Data::Snippet(openward_proto::Snippet {
+                    label: "uptime".into(),
+                    script: "uptime".into(),
+                    ..Default::default()
+                }),
+            },
+        };
+        store.write(&[item], &[]).unwrap();
+    }
+
+    fn format_of(path: &Path) -> i64 {
+        Connection::open(path)
+            .unwrap()
+            .pragma_query_value(None, "user_version", |r| r.get(0))
+            .unwrap()
+    }
+
+    fn adds_a_table(tx: &Transaction) -> Result<()> {
+        tx.execute_batch("CREATE TABLE heads (item_id BLOB PRIMARY KEY) STRICT")?;
+        Ok(())
+    }
+
+    fn fails(tx: &Transaction) -> Result<()> {
+        tx.execute_batch("CREATE TABLE half (x INTEGER)")?;
+        Err(Error::Invalid("this step fails"))
+    }
+
+    /// Every step in one go, after a copy of the file as it was.
+    #[test]
+    fn a_migration_runs_once_after_a_copy() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("vault.db");
+        format_1(&path);
+        let steps: &[Step] = &[adds_a_table];
+        let store = Store::init(Connection::open(&path).unwrap(), steps, Some(&path)).unwrap();
+        assert_eq!(store.rows().unwrap().len(), 1);
+        drop(store);
+        assert_eq!(format_of(&path), 2);
+        let backup = dir.path().join("vault.db.format-1.bak");
+        assert_eq!(format_of(&backup), 1);
+        // At format 2 already: nothing more to do, no other copy.
+        Store::init(Connection::open(&path).unwrap(), steps, Some(&path)).unwrap();
+        assert!(!dir.path().join("vault.db.format-1.2.bak").exists());
+    }
+
+    /// A step that fails leaves the file as it was: all or nothing.
+    #[test]
+    fn a_migration_that_fails_changes_nothing() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("vault.db");
+        format_1(&path);
+        let steps: &[Step] = &[adds_a_table, fails];
+        let opened = Store::init(Connection::open(&path).unwrap(), steps, Some(&path));
+        assert!(matches!(opened, Err(Error::Invalid(_))));
+        assert_eq!(format_of(&path), 1);
+        let conn = Connection::open(&path).unwrap();
+        let tables: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM sqlite_master WHERE name IN ('heads', 'half')",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(tables, 0);
+        let store = Store::init(conn, &[], None).unwrap();
+        assert_eq!(store.rows().unwrap().len(), 1);
     }
 }

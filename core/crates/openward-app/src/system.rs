@@ -30,6 +30,7 @@ pub(crate) fn from_banner(banner: &str) -> System {
         name,
         source: SystemSource::Banner,
         evidence: banner.to_owned(),
+        extra: Default::default(),
     }
 }
 
@@ -128,6 +129,7 @@ pub(crate) fn from_os_release(text: &str) -> Option<System> {
         name: short(name, 64),
         source: SystemSource::OsRelease,
         evidence: short(evidence, 128),
+        extra: Default::default(),
     })
 }
 
@@ -188,8 +190,10 @@ fn family_of(like: &str) -> Option<&'static str> {
 /// What to store after connecting, if it changed: never over a system
 /// chosen by hand, and not over what os-release told when the banner says
 /// nothing new (os-release is off now, or failed this time).
-pub(crate) fn learned(stored: Option<&System>, told: System) -> Option<System> {
+pub(crate) fn learned(stored: Option<&System>, mut told: System) -> Option<System> {
     if let Some(stored) = stored {
+        // What a newer version wrote in it stays.
+        told.extra = stored.extra.clone();
         if stored.source == SystemSource::Manual || *stored == told {
             return None;
         }
@@ -378,6 +382,7 @@ mod tests {
             name: String::new(),
             source: SystemSource::Manual,
             evidence: String::new(),
+            extra: Default::default(),
         };
         assert_eq!(learned(None, deb.clone()), Some(deb.clone()));
         assert_eq!(learned(Some(&deb), deb.clone()), None);

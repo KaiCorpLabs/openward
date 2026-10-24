@@ -172,7 +172,10 @@ fn the_fixture_as_a_bundle() {
         [KeyRef::Stored("id:301|local:1".into())]
     );
     assert_eq!(b.keys.len(), 2);
-    assert_eq!(b.keys[1].passphrase.as_deref(), Some("frase"));
+    assert_eq!(
+        b.keys[1].passphrase.as_ref().map(|p| p.as_str()),
+        Some("frase")
+    );
 
     // A host's own identity is its user; it forwards the agent, sends LANG,
     // goes through a SOCKS proxy and checks host keys strictly.

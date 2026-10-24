@@ -18,7 +18,7 @@ use openward_proto::{ForwardKind, Settings};
 use quick_xml::events::Event;
 use quick_xml::{Reader, XmlVersion};
 
-use crate::bundle::{Bundle, Group, Host, JumpRef, KeyRef, Tunnel, Warning, WarningKind};
+use crate::bundle::{Bundle, Group, Host, JumpRef, KeyRef, Missing, Tunnel, Warning, WarningKind};
 use crate::text;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -279,7 +279,7 @@ fn bundle(sessions: Vec<(Vec<String>, Session)>) -> Bundle {
         if num("Use Global Public Key") == Some(1) {
             out.warnings.push(Warning::about(
                 &name,
-                WarningKind::Unsupported("SecureCRT's global key".into()),
+                WarningKind::Unsupported(Missing::SecureCrtGlobalKey),
             ));
         } else if let Some(file) =
             text("Identity Filename V2").or_else(|| text("Identity Filename"))
@@ -294,7 +294,7 @@ fn bundle(sessions: Vec<(Vec<String>, Session)>) -> Bundle {
         if num("Forward X11") == Some(1) {
             out.warnings.push(Warning::about(
                 &name,
-                WarningKind::Unsupported("X11 forwarding".into()),
+                WarningKind::Unsupported(Missing::X11),
             ));
         }
         if num("Enable Agent Forwarding") == Some(1) {
@@ -314,13 +314,13 @@ fn bundle(sessions: Vec<(Vec<String>, Session)>) -> Bundle {
                     } else {
                         out.warnings.push(Warning::about(
                             &name,
-                            WarningKind::Unsupported(format!("a jump through {target}")),
+                            WarningKind::Unsupported(Missing::JumpThrough(target.to_string())),
                         ));
                     }
                 }
                 None => out.warnings.push(Warning::about(
                     &name,
-                    WarningKind::Unsupported(format!("SecureCRT's firewall {fw}")),
+                    WarningKind::Unsupported(Missing::Firewall(fw.to_string())),
                 )),
             },
         }

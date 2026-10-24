@@ -273,6 +273,10 @@
   },
   "certForever": "sin caducidad",
   "certNextToKey": "Junto a la clave (-cert.pub): se usa sin añadirlo.",
+  "certNoAuthority": "ninguna @cert-authority de known_hosts cubre este host",
+  "certNotForHost": "no se emitió para este nombre",
+  "certNotHost": "no es un certificado de host",
+  "certOutOfDate": "ha caducado o aún no es válido",
   "certUntil": "hasta el {date}",
   "@certUntil": {
     "placeholders": {
@@ -281,6 +285,7 @@
       }
     }
   },
+  "certUntrusted": "no lo firma una autoridad de confianza",
   "certificate": "certificado",
   "certificateExpired": "certificado caducado",
   "certificateTitle": "Certificado",
@@ -678,6 +683,7 @@
   "deletedHost": "(host eliminado)",
   "deletedIdentity": "(identidad eliminada)",
   "destination": "Destino",
+  "details": "Detalles",
   "discardChanges": "Descartar",
   "discardChangesBody": "Lo que has cambiado en este panel no se ha guardado.",
   "discardChangesTitle": "¿Descartar los cambios?",
@@ -894,6 +900,18 @@
   "envUse": "Usar",
   "environment": "Entorno",
   "equalizePanes": "Igualar tamaños",
+  "errConflict": "ha cambiado mientras tanto",
+  "errCycle": "un grupo no puede estar dentro de sí mismo",
+  "errFileChanged": "el archivo ha cambiado mientras tanto",
+  "errInUse": "otros hosts saltan por él",
+  "errInternal": "algo ha fallado dentro de OpenWard (más en «Detalles»)",
+  "errInvalid": "lo que dice no encaja",
+  "errNewerFormat": "tus datos los escribió una versión más nueva de OpenWard",
+  "errNotFound": "ya no existe",
+  "errOpenElsewhere": "otro OpenWard tiene abiertos estos datos",
+  "errStorage": "el disco no lo ha aceptado",
+  "errorDetailsHint": "En inglés, tal como lo dice el núcleo: cópialo si nos informas del problema.",
+  "errorDetailsTitle": "Detalles del error",
   "exampleVariable": "nombre",
   "expand": "Desplegar",
   "failureAuth": "{user}@{label} no ha podido autenticarse.",
@@ -970,6 +988,7 @@
       }
     }
   },
+  "failureOther": "Algo ha fallado (más en «Detalles»).",
   "favorite": "Favorito",
   "favoriteLower": "favorito",
   "favoriteNote": "arriba en la barra, en el raíl y en el inicio",
@@ -985,6 +1004,7 @@
     }
   },
   "featureHardwareKey": "una llave de seguridad",
+  "featureIncompleteProxy": "un proxy sin dirección o sin puerto",
   "featureJumpNotSsh": "un salto por un perfil que no es SSH",
   "featureJumpThrough": "un salto por {target}, que no está",
   "@featureJumpThrough": {
@@ -1042,6 +1062,7 @@
       }
     }
   },
+  "fileOther": "Algo ha fallado con el archivo (más en «Detalles»).",
   "filledInEachPane": "También se rellenan solas, en cada panel:",
   "filterFolder": "Filtrar en esta carpeta",
   "filterHostsAndGroups": "Filtrar hosts y grupos",
@@ -1607,14 +1628,7 @@
   "keyCommentLabel": "Comentario",
   "keyDelete": "Supr",
   "keyExchange": "Intercambio",
-  "keyFailed": "No se ha podido: {error}",
-  "@keyFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "keyFailed": "No se ha podido (más en «Detalles»).",
   "keyInKnownHosts": "en ~/.ssh/known_hosts",
   "keyInOpenWard": "guardada en OpenWard",
   "keyMissing": "No está en este equipo",
@@ -1932,6 +1946,15 @@
     }
   },
   "netNotFound": "no se encuentra el host.",
+  "netOther": "ha fallado la red (más en «Detalles»).",
+  "netProxyCommand": "el ProxyCommand ha fallado: {said}",
+  "@netProxyCommand": {
+    "placeholders": {
+      "said": {
+        "type": "String"
+      }
+    }
+  },
   "netRefused": "conexión rechazada.",
   "netTimeout": "tiempo de espera agotado.",
   "netUnreachable": "no se llega al host.",
@@ -2582,13 +2605,10 @@
     }
   },
   "readFailedTitle": "No se ha podido leer",
-  "readFormat": "Es de {program}, pero no está como se esperaba: {message}",
+  "readFormat": "Es de {program}, pero no está como se esperaba (más en «Detalles»).",
   "@readFormat": {
     "placeholders": {
       "program": {
-        "type": "String"
-      },
-      "message": {
         "type": "String"
       }
     }
@@ -2605,14 +2625,7 @@
   "readTermiusNoKey": "La clave de Termius no está en el llavero. Abre Termius una vez en este equipo y vuelve a intentarlo.",
   "readTermiusNotFound": "No hay datos de Termius en este equipo.",
   "readTermiusWrongKey": "La clave del llavero no abre los datos de Termius; puede que Termius haya cambiado su formato. No se ha importado nada.",
-  "readUnreadable": "No se ha podido leer: {message}",
-  "@readUnreadable": {
-    "placeholders": {
-      "message": {
-        "type": "String"
-      }
-    }
-  },
+  "readUnreadable": "No se ha podido leer el archivo (más en «Detalles»).",
   "readingFile": "Leyendo el archivo…",
   "readingProgram": "Leyendo los datos de {program}…",
   "@readingProgram": {
@@ -3128,6 +3141,14 @@
   "startShortcutSearch": "buscar",
   "startTitle": "Inicio",
   "starting": "Arrancando…",
+  "startupElsewhereBody": "Otro OpenWard tiene abiertos estos datos (otra copia de la app, o una compilación de desarrollo). Ciérralo y vuelve a abrir este; no se ha cambiado nada en {folder}.",
+  "@startupElsewhereBody": {
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
   "startupErrorBody": "Puede que los escribiera una versión más nueva de OpenWard, que la carpeta no tenga permisos o que el archivo esté dañado. No se ha borrado ni cambiado nada en {folder}.",
   "@startupErrorBody": {
     "placeholders": {
@@ -3138,6 +3159,14 @@
   },
   "startupErrorDetails": "Detalles",
   "startupErrorTitle": "OpenWard no ha podido abrir sus datos",
+  "startupNewerBody": "Tus datos los guardó una versión más nueva de OpenWard. Vuelve a abrirlos con esa versión: no se ha borrado ni cambiado nada en {folder}.",
+  "@startupNewerBody": {
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
   "startupQuit": "Salir",
   "startupShowFolder": "Mostrar la carpeta de datos",
   "state": "Estado",
@@ -3435,6 +3464,14 @@
   "uiFont": "Fuente de la interfaz",
   "undo": "Deshacer",
   "unknownKeyType": "Tipo desconocido",
+  "unreadableItems": "{count, plural, =1{Un elemento lo guardó una versión más nueva de OpenWard: no se ve aquí, pero sigue en tus datos tal cual.} other{{count} elementos los guardó una versión más nueva de OpenWard: no se ven aquí, pero siguen en tus datos tal cual.}}",
+  "@unreadableItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "upOneLevel": "Subir un nivel",
   "updateWithOpenTabs": "Cambiar por las pestañas abiertas",
   "upload": "Subida",
@@ -3524,6 +3561,14 @@
       }
     }
   },
+  "warnDenied": "No hay permiso para leer {file}.",
+  "@warnDenied": {
+    "placeholders": {
+      "file": {
+        "type": "String"
+      }
+    }
+  },
   "warnFeature": "{host}: no se ha traído {feature}.",
   "@warnFeature": {
     "placeholders": {
@@ -3579,11 +3624,11 @@
       }
     }
   },
-  "warnPartlyUnreadable": "Una parte de los datos no se ha podido leer: {detail}.",
+  "warnPartlyUnreadable": "{count, plural, =1{Un elemento de los datos no se ha podido leer.} other{{count} elementos de los datos no se han podido leer.}}",
   "@warnPartlyUnreadable": {
     "placeholders": {
-      "detail": {
-        "type": "String"
+      "count": {
+        "type": "int"
       }
     }
   },
@@ -3622,13 +3667,10 @@
       }
     }
   },
-  "warnUnreadable": "No se ha podido leer {file}: {error}.",
+  "warnUnreadable": "No se ha podido leer {file}.",
   "@warnUnreadable": {
     "placeholders": {
       "file": {
-        "type": "String"
-      },
-      "error": {
         "type": "String"
       }
     }

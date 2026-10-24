@@ -8,7 +8,7 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `failure`, `item`, `key`, `read`, `warning`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<ProgramData>>
 abstract class ProgramData implements RustOpaqueInterface {
@@ -32,6 +32,28 @@ class FoundProgram {
           runtimeType == other.runtimeType &&
           program == other.program &&
           path == other.path;
+}
+
+/// With [`ProgramWarningKind::Unsupported`]: what it is.
+enum MissingKind {
+  x11,
+  socks4Proxy,
+  telnetProxy,
+
+  /// Of the type in `detail`.
+  proxy,
+  incompleteProxy,
+  hardwareKey,
+  tabbyVaultKey,
+  secureCrtGlobalKey,
+  mobaCredential,
+  jumpNotSsh,
+
+  /// Through the session in `detail`.
+  jumpThrough,
+
+  /// The firewall in `detail`.
+  firewall,
 }
 
 /// What the user picked.
@@ -325,15 +347,18 @@ class ProgramWarning {
   final String? subject;
   final ProgramWarningKind kind;
   final String detail;
+  final MissingKind? missing;
 
   const ProgramWarning({
     this.subject,
     required this.kind,
     required this.detail,
+    this.missing,
   });
 
   @override
-  int get hashCode => subject.hashCode ^ kind.hashCode ^ detail.hashCode;
+  int get hashCode =>
+      subject.hashCode ^ kind.hashCode ^ detail.hashCode ^ missing.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -342,7 +367,8 @@ class ProgramWarning {
           runtimeType == other.runtimeType &&
           subject == other.subject &&
           kind == other.kind &&
-          detail == other.detail;
+          detail == other.detail &&
+          missing == other.missing;
 }
 
 enum ProgramWarningKind {
@@ -356,7 +382,8 @@ enum ProgramWarningKind {
   /// is the command.
   proxyCommand,
 
-  /// Something OpenWard does not have; `detail` names it.
+  /// Something OpenWard does not have: `missing`; `detail` is its
+  /// name, when it has one.
   unsupported,
 
   /// `detail` is `field=value`.
@@ -368,7 +395,7 @@ enum ProgramWarningKind {
   /// Termius's host chains.
   hostChain,
 
-  /// Part of the data could not be read; `detail` says why.
+  /// Part of the data could not be read; `detail` is how many items.
   unreadable,
 }
 

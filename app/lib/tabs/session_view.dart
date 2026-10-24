@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/errors.dart';
 import '../core/providers.dart';
 import '../hosts/sidebar.dart' show tabStatus;
 import '../terminal/keys.dart';
@@ -1147,7 +1148,9 @@ class _StatusBar extends ConsumerWidget {
             TextButton(
               onPressed: () => showHostKeyChanged(context, ref, s),
               child: Text(l.reviewKey),
-            ),
+            )
+          else if ((failed ? failure ?? s.errorCause : null) case final e?)
+            DetailsButton(e),
           if (k != null && s.hostId != null)
             TunnelChip(hostId: s.hostId!, hostLabel: s.label),
           if (s.phase == Phase.connected || s.phase == Phase.running)

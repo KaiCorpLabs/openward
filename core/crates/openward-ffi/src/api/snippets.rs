@@ -7,6 +7,7 @@ use openward_app::snippets::{BUILTINS, asked, render, variables};
 use openward_app::vault::proto::{Data, Snippet};
 
 use super::app::OpenWard;
+use super::vault::VaultError;
 
 /// A value for a variable: a default, or what the user typed.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -99,14 +100,19 @@ impl OpenWard {
             .collect()
     }
 
-    pub fn create_snippet(&self, spec: SnippetSpec) -> anyhow::Result<String> {
+    pub fn create_snippet(&self, spec: SnippetSpec) -> Result<String, VaultError> {
         let mut s = Snippet::default();
         apply(&spec, &mut s);
         Ok(self.app.vault().create(Data::Snippet(s))?.to_string())
     }
 
     /// Returns the new revision. Fails if it changed since `rev`.
-    pub fn update_snippet(&self, id: String, rev: u64, spec: SnippetSpec) -> anyhow::Result<u64> {
+    pub fn update_snippet(
+        &self,
+        id: String,
+        rev: u64,
+        spec: SnippetSpec,
+    ) -> Result<u64, VaultError> {
         let sid = super::vault::id(&id)?;
         let mut vault = self.app.vault();
         let mut s = vault.snippet(sid)?.clone();

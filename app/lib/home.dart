@@ -22,16 +22,20 @@ import 'tabs/tab_strip.dart';
 import 'tabs/tabs.dart';
 import 'terminal/controller.dart';
 import 'terminal/keys.dart';
+import 'identities/identities.dart';
 import 'identities/identities_page.dart';
 import 'keys/keys_page.dart';
 import 'known_hosts/known_hosts_page.dart';
 import 'palette/command_palette.dart';
 import 'snippets/palette.dart';
+import 'snippets/snippets.dart';
 import 'snippets/snippets_page.dart';
+import 'tunnels/tunnels.dart';
 import 'tunnels/tunnels_page.dart';
 import 'ui/announcer.dart';
 import 'ui/keep_focus.dart';
 import 'welcome/whats_new.dart';
+import 'workspaces/workspaces.dart';
 import 'workspaces/workspaces_page.dart';
 import 'ui/tokens.dart';
 import 'l10n/l10n.dart';
@@ -69,6 +73,10 @@ class _HomeState extends ConsumerState<Home> {
   /// ⌘Q and closing the window ask first when that cuts something off.
   late final AppLifecycleListener _exit;
 
+  /// Every change to the vault, from here or from the core.
+  StreamSubscription<bool>? _vault;
+  Timer? _vaultRead;
+
   @override
   void initState() {
     super.initState();
@@ -77,6 +85,10 @@ class _HomeState extends ConsumerState<Home> {
           ? AppExitResponse.cancel
           : AppExitResponse.exit,
     );
+    _vault = ref.read(openWardProvider).watchVault().listen((_) {
+      // A burst of writes (an import, a drag of favorites) is read once.
+      _vaultRead ??= Timer(const Duration(milliseconds: 30), _vaultChanged);
+    });
     // This device's choice reaches the core now and on every change.
     ref.listenManual(
       settingsProvider.select((s) => s.readOsRelease),
@@ -91,9 +103,25 @@ class _HomeState extends ConsumerState<Home> {
   @override
   void dispose() {
     _exit.dispose();
+    _vault?.cancel();
+    _vaultRead?.cancel();
     systemsNotTold.removeListener(_offerOsRelease);
     _search.dispose();
     super.dispose();
+  }
+
+  /// What shows items reads them again: deleting a host takes its tunnels
+  /// with it, connecting learns a system, an import brings everything.
+  void _vaultChanged() {
+    _vaultRead = null;
+    if (!mounted) return;
+    ref.read(libraryProvider.notifier).refresh();
+    ref.read(tabsProvider.notifier).relabel(ref.read(libraryProvider));
+    ref.read(tunnelBoardProvider).refresh();
+    ref.read(snippetsProvider.notifier).refresh();
+    ref.read(identitiesProvider.notifier).refresh();
+    ref.read(workspacesProvider.notifier).refresh();
+    ref.invalidate(knownHostCountProvider);
   }
 
   /// A connection found a host that does not tell its system: one click

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/errors.dart';
 import '../core/providers.dart';
 import '../identities/identities.dart';
 import '../l10n/l10n.dart';
@@ -14,6 +15,7 @@ import '../src/rust/api/known_hosts.dart';
 import '../tabs/tabs.dart' show tabsProvider;
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
+import '../src/rust/api/vault.dart' show VaultErrorKind;
 
 /// How many host keys are trusted, for the library's counter. Asked again
 /// when a tab opens or closes (keys are trusted as connections come up) and
@@ -160,9 +162,9 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
       if (mounted) setState(() => _error = null);
     } catch (e) {
       setState(
-        () => _error = '$e'.contains('file changed')
+        () => _error = isVaultError(e, VaultErrorKind.fileChanged)
             ? l.knownHostsFileChanged
-            : l.saveFailed('$e'),
+            : saveErrorText(l, e),
       );
     }
   }

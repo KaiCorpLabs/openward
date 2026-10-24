@@ -18,7 +18,9 @@ use std::path::Path;
 
 use openward_proto::{Agent, ForwardKind, Proxy, ProxyServer, Settings};
 
-use crate::bundle::{Bundle, Group, Host, JumpRef, KeyRef, Program, Tunnel, Warning, WarningKind};
+use crate::bundle::{
+    Bundle, Group, Host, JumpRef, KeyRef, Missing, Program, Tunnel, Warning, WarningKind,
+};
 use crate::text;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -247,7 +249,7 @@ fn bundle(sessions: Vec<(String, Session)>, folders: &HashMap<String, Vec<String
         if flag("X11Forward") == Some(true) {
             out.warnings.push(Warning::about(
                 &name,
-                WarningKind::Unsupported("X11 forwarding".into()),
+                WarningKind::Unsupported(Missing::X11),
             ));
         }
         if text("RemoteCommand").is_some() {
@@ -268,6 +270,7 @@ fn bundle(sessions: Vec<(String, Session)>, folders: &HashMap<String, Vec<String
                 host,
                 port: proxy_port.unwrap_or(1080),
                 user: proxy_user.clone(),
+                extra: Default::default(),
             })
         };
         let method = match (num("ProxyMethod"), num("ProxyType")) {
@@ -309,11 +312,11 @@ fn bundle(sessions: Vec<(String, Session)>, folders: &HashMap<String, Vec<String
             }
             1 => out.warnings.push(Warning::about(
                 &name,
-                WarningKind::Unsupported("SOCKS4 proxy".into()),
+                WarningKind::Unsupported(Missing::Socks4Proxy),
             )),
             _ => out.warnings.push(Warning::about(
                 &name,
-                WarningKind::Unsupported("telnet proxy".into()),
+                WarningKind::Unsupported(Missing::TelnetProxy),
             )),
         }
 
@@ -561,5 +564,26 @@ mod tests {
         let mine = b.hosts.iter().find(|h| h.label == "my box").unwrap();
         assert_eq!(mine.settings.port, Some(2222));
         assert_eq!(b.tunnels[0].kind, ForwardKind::Dynamic);
+    }
+
+    /// What did not come is told by its kind, for the app to word it.
+    #[test]
+    fn what_did_not_come_by_its_kind() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(
+            dir.path().join("old"),
+            "HostName=old.example.com\nX11Forward=1\nProxyMethod=1\nProxyHost=socks.example.com\n",
+        )
+        .unwrap();
+        let b = from_dir(dir.path(), Program::Putty).unwrap();
+        let missing: Vec<_> = b
+            .warnings
+            .iter()
+            .filter_map(|w| match &w.kind {
+                WarningKind::Unsupported(m) => Some(m.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(missing, [Missing::X11, Missing::Socks4Proxy]);
     }
 }

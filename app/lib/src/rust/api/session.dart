@@ -9,7 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `event_view`, `failure_view`, `into_answer`, `prompt_view`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DartSink`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<TerminalSession>>
 abstract class TerminalSession implements RustOpaqueInterface {
@@ -161,6 +161,9 @@ class CellPos {
           col == other.col;
 }
 
+/// With [`FailureKind::BadCertificate`]: what is wrong with it.
+enum CertKind { notHost, noAuthority, untrusted, outOfDate, notForHost }
+
 class ClosedView {
   final int? exitCode;
 
@@ -282,6 +285,9 @@ class FailureView {
 
   /// With [`FailureKind::HostKeyChanged`]: what was trusted before.
   final List<PreviousKeyView> previous;
+  final CertKind? cert;
+  final NetKind? net;
+  final int seconds;
 
   const FailureView({
     this.kind,
@@ -296,6 +302,9 @@ class FailureView {
     required this.methods,
     required this.reason,
     required this.previous,
+    this.cert,
+    this.net,
+    required this.seconds,
   });
 
   static Future<FailureView> default_() =>
@@ -314,7 +323,10 @@ class FailureView {
       key.hashCode ^
       methods.hashCode ^
       reason.hashCode ^
-      previous.hashCode;
+      previous.hashCode ^
+      cert.hashCode ^
+      net.hashCode ^
+      seconds.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -332,7 +344,10 @@ class FailureView {
           key == other.key &&
           methods == other.methods &&
           reason == other.reason &&
-          previous == other.previous;
+          previous == other.previous &&
+          cert == other.cert &&
+          net == other.net &&
+          seconds == other.seconds;
 }
 
 /// An answer from the server (after `rtt_ms`, when it was a question's),
@@ -403,6 +418,22 @@ class LinkView {
           row == other.row &&
           start == other.start &&
           end == other.end;
+}
+
+/// With [`FailureKind::Network`]: what kind of trouble.
+enum NetKind {
+  refused,
+  notFound,
+  unreachable,
+
+  /// It did not answer for [`FailureView::seconds`] (0: the system gave
+  /// up on its own).
+  silent,
+  lost,
+
+  /// The ProxyCommand failed; [`FailureView::reason`] is what it wrote.
+  proxyCommand,
+  other,
 }
 
 enum PersistenceKind {

@@ -489,12 +489,12 @@ class _ReconnectCardState extends ConsumerState<ReconnectCard> {
 
   /// Why it was lost, in words.
   String _why(AppLocalizations l, FailureView f) {
-    final m = RegExp(r'^no answer for (\d+) s$').firstMatch(f.reason);
-    if (m != null) return l.noAnswerFor(int.parse(m.group(1)!));
-    final r = f.kind == FailureKind.network
-        ? networkReason(l, f.reason)
-        : failureText(l, f);
-    return r == l.netLost ? '' : r;
+    if (f.kind != FailureKind.network) return failureText(l, f);
+    return switch (f.net) {
+      NetKind.silent when f.seconds > 0 => l.noAnswerFor(f.seconds),
+      NetKind.lost => '',
+      _ => networkReason(l, f),
+    };
   }
 
   @override

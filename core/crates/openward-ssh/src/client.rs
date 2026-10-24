@@ -167,6 +167,17 @@ impl std::fmt::Display for NoAnswer {
 
 impl std::error::Error for NoAnswer {}
 
+/// What a ProxyCommand wrote before it went (its last lines of stderr):
+/// why it failed, likely. The context of the error it failed with.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProxyCommandSaid(pub Vec<String>);
+
+impl std::fmt::Display for ProxyCommandSaid {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ProxyCommand: {}", self.0.join(" · "))
+    }
+}
+
 /// An agent may wait for its user (a touch, an approval): longer than a
 /// server's answer.
 const AGENT_TIMEOUT: Duration = Duration::from_secs(120);
@@ -617,8 +628,7 @@ pub async fn open(target: &Target, hop: Hop<'_>, opts: &Options) -> anyhow::Resu
             }
             let said = said.lock().unwrap();
             if !said.is_empty() {
-                let said: Vec<&str> = said.iter().map(String::as_str).collect();
-                return Err(e.context(format!("ProxyCommand: {}", said.join(" · "))));
+                return Err(e.context(ProxyCommandSaid(said.iter().cloned().collect())));
             }
             return Err(e);
         }
@@ -1349,6 +1359,10 @@ mod tests {
         assert!(
             message.starts_with("ProxyCommand: starting · cloudflared: command not found"),
             "{message}"
+        );
+        assert_eq!(
+            err.downcast_ref::<ProxyCommandSaid>().map(|s| s.0.len()),
+            Some(2)
         );
     }
 

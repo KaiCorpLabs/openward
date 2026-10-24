@@ -695,10 +695,7 @@ impl Pipe {
             writer
         );
         lock(&state).touch();
-        let failure = (!ended).then(|| Failure::Network {
-            label,
-            message: "connection lost".into(),
-        });
+        let failure = (!ended).then(|| Failure::lost(label));
         (exit, failure)
     }
 }

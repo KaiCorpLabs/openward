@@ -319,7 +319,7 @@ async fn proxy_login(
     if p.user.as_deref().is_none_or(str::is_empty) {
         p.user = texts.next().map(|u| u.as_str().to_owned());
     }
-    p.password = texts.next().map(|t| t.as_str().to_owned());
+    p.password = texts.next();
     Ok(())
 }
 
@@ -331,10 +331,7 @@ fn open_failure(
 ) -> Failure {
     let label = hop.label.clone();
     let Some(UntrustedHost(verdict)) = error.downcast_ref::<UntrustedHost>() else {
-        return Failure::Network {
-            label,
-            message: format!("{error:#}"),
-        };
+        return Failure::network(label, error);
     };
     match (verdict, lock(refused).take()) {
         (Verdict::Changed, Some(q)) => Failure::HostKeyChanged(Box::new(ChangedKey {
@@ -346,9 +343,9 @@ fn open_failure(
             fingerprint: q.key.fingerprint(HashAlg::Sha256).to_string(),
             key: q.key.to_openssh().unwrap_or_default(),
         })),
-        (Verdict::BadCertificate(reason), _) => Failure::BadCertificate {
+        (Verdict::BadCertificate(problem), _) => Failure::BadCertificate {
             label,
-            reason: reason.clone(),
+            problem: *problem,
         },
         (Verdict::Revoked, q) => Failure::HostKeyRevoked {
             label,
@@ -361,10 +358,7 @@ fn open_failure(
 }
 
 fn network(hop: &Hop) -> impl Fn(anyhow::Error) -> Failure + '_ {
-    move |e| Failure::Network {
-        label: hop.label.clone(),
-        message: format!("{e:#}"),
-    }
+    move |e| Failure::network(hop.label.clone(), &e)
 }
 
 /// The method failed outright: try the next one.
