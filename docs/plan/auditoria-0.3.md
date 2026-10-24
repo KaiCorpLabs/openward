@@ -319,7 +319,7 @@ Los cuatro primeros cuestan menos de medio día cada uno y pueden entrar en cual
 - **Bajos** (CX-23, TM-19, UI-13, UI-21, UI-22): `${VÁR}` con caracteres no ASCII; el servidor SOCKS5 contesta cada error de su protocolo y da 10 s para hablar; `Effects` es un `NonNull` del motor, y lo que cambia estado de C pide `&mut self`; la búsqueda de la barra y el filtro del SFTP vuelven con lo que filtraban; renombrar una pestaña la busca después de preguntar, con el campo en un diálogo que lo posee (`askText`); y la minigráfica de la latencia avanza aunque se repita la misma.
 - **Release y dependencias** (BR-5, BR-11, BR-12, BR-13, BR-16): `tool/bump-version.sh` pone la versión en todos sus sitios y dos pruebas miran que el núcleo diga la misma; la caché de libghostty-vt se invalida con la versión de Zig, las flags y el propio script; la CI comprueba el toolchain de cargokit; los márgenes de la prueba que se queda sin respuesta salen de `Timing`, y la de túneles espera a que el terminal cierre en vez de dormir; dependabot agrupa hmac, sha1 y tokio, mira `pub` y sshprobe y deja flutter_rust_bridge a mano; hmac y sha1 pasan a las versiones de russh (adiós a una copia de `digest`).
 - **Licencias** (BR-6): `tool/licenses.sh` escribe `app/assets/licenses/core.json` con las licencias de los 234 crates que se distribuyen (`cargo-about`) y las de libghostty-vt y lo que lleva dentro (simdutf, Highway, Wuffs, uucode); la app las lista con las de las siete fuentes; NOTICE lo dice; la CI comprueba que está al día.
-- **Empezar y documentación** (BR-8, BR-15, BR-10): `make setup` instala lo que el proyecto fija y dice qué más falta; README, `app/README`, CONTRIBUTING y ARCHITECTURE (con su columna «Estado») al día; `make package-linux` construye la app de Linux en un contenedor (escrito; su imagen no llegó a hacerse aquí: la máquina de podman se quedó sin disco); el paquete de Windows lleva el runtime de Visual C++; las guías ya no prometen paquetes de la CI.
+- **Empezar y documentación** (BR-8, BR-15, BR-10): `make setup` instala lo que el proyecto fija y dice qué más falta; README, `app/README`, CONTRIBUTING y ARCHITECTURE (con su columna «Estado») al día; `make package-linux` construye la app de Linux en un contenedor (probado en la 0.3.2-beta.7: ver «Paquetes de Linux», más abajo); el paquete de Windows lleva el runtime de Visual C++; las guías ya no prometen paquetes de la CI.
 
 **La puerta, medida:**
 
@@ -346,7 +346,7 @@ Los cuatro primeros cuestan menos de medio día cada uno y pueden entrar en cual
 - uucode no trae en su paquete las licencias que nombra: el decodificador UTF-8 (MIT) se dice con su aviso, y los datos de Unicode con la licencia Unicode v3 que traen los crates.
 - De paso, las pruebas encontraron y quedan arreglados: la importación de `ssh_config` y el XML de SecureCRT eran cuadráticos (ver arriba); guardar un espacio de trabajo con una página delante tomaba como activa la pestaña de después; y en macOS, cerrar un terminal podía bloquear la app si la shell, al salir, esperaba a que se leyera su última salida.
 
-### DT-7 · Varios archivos en vuelo en el SFTP (aparte, tras R6; sin publicar)
+### DT-7 · Varios archivos en vuelo en el SFTP (0.3.2-beta.7)
 
 Cada archivo de una carpeta costaba sus peticiones en serie, uno detrás de otro: subir uno nuevo eran 8 idas y vueltas (mirar el destino, buscar un `.part`, abrir, escribir, cerrar, mirar el tamaño, poner fecha y permisos, renombrar). Con 80 ms de ida y vuelta, 500 archivos pequeños tardaban casi 6 minutos en subir y 3 en bajar.
 
@@ -373,7 +373,7 @@ Un archivo nuevo cuesta ahora abrir, escribir, cerrar, poner fecha y permisos, y
 - «Reemplazar» sigue preguntando de quién son el archivo y el `.part` antes de escribir, para no cambiarle el dueño (DT-8): 9 peticiones por archivo, en 7 idas y vueltas.
 - Las mayúsculas se comparan con `to_lowercase`, no con la normalización de Unicode de APFS: dos nombres que solo difieren en cómo se escribe un acento van a la vez.
 
-### DT-7 · Varias carpetas a la vez al recorrer el servidor (aparte, tras DT-7; sin publicar)
+### DT-7 · Varias carpetas a la vez al recorrer el servidor (0.3.2-beta.7)
 
 Antes de bajar una carpeta se lista todo lo que tiene, y cada carpeta eran 4 idas y vueltas en serie (abrir, leer, leer el final, cerrar): a 80 ms, 5,5 de los 17,4 s que tardaba en bajar la carpeta de la medida.
 
@@ -390,6 +390,14 @@ Antes de bajar una carpeta se lista todo lo que tiene, y cada carpeta eran 4 ida
 | Bajar la carpeta | 17,4 s, 4,13 peticiones por archivo | 13,3 s, 4,13 |
 
 Las mismas peticiones, pero el recorrido pasa de 64 idas y vueltas una detrás de otra a unas 16: 4 por cada altura del árbol (3), y otras 4 porque la primera tiene 10 carpetas, más de 8. Lo que queda de los 13,3 s es copiar: 500 archivos de 2 idas y vueltas, 8 a la vez.
+
+### Paquetes de Linux (0.3.2-beta.7)
+
+`make package-linux` se probó en dos máquinas Linux: una x86_64 (Ubuntu 26.04, Docker) y una aarch64 (Fedora Asahi, podman sin root, SELinux y páginas de 16 KiB). Cada una construye el paquete de su arquitectura desde el tag, y la release lleva los dos.
+
+- **Dos arreglos**, que pedía podman sin root: Flutter descomprime sus archivos sin conservar el dueño con que se crearon (`TAR_OPTIONS=--no-same-owner`), y el contenedor de la build va sin etiqueta de SELinux (`--security-opt label=disable`), que en Fedora no le dejaba leer el árbol que se le pasa.
+- **El de x86_64** arranca en Xvfb, crea sus datos y sigue en marcha 15 s sin errores; todas sus bibliotecas se encuentran en Ubuntu 26.04.
+- **El de aarch64** no se ha podido abrir: la máquina que lo construye no tiene GTK ni pantalla. Sus segmentos van alineados a 64 KiB, así que un núcleo con páginas de 16 KiB puede cargarlos.
 
 ## Qué no entra
 

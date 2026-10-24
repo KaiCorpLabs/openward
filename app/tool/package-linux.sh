@@ -51,7 +51,9 @@ fi
 # The tree as it is (tracked files with their changes, and new ones), not
 # this machine's build outputs.
 git ls-files -z --cached --others --exclude-standard | tar --null -T - -czf "$tmp/src.tgz"
-"$runtime" run --rm ${platform[@]+"${platform[@]}"} -v "$tmp:/io" \
+# SELinux (Fedora) would keep the container from reading the tree it is
+# handed: this one container goes unlabeled.
+"$runtime" run --rm ${platform[@]+"${platform[@]}"} --security-opt label=disable -v "$tmp:/io" \
   -v "openward-linux-cache-$arch:/root/.cache" \
   -v "openward-linux-cargo-$arch:/root/.cargo/registry" \
   "$image" bash -euc '

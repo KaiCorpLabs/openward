@@ -21,6 +21,9 @@ RUN arch="$(uname -m)" \
 
 RUN git clone --depth 1 --branch "$FLUTTER" https://github.com/flutter/flutter.git /opt/flutter
 ENV PATH=/opt/flutter/bin:$PATH
+# Flutter's archives carry their builders' owners, which rootless podman
+# cannot map: unpack them as the user building.
+ENV TAR_OPTIONS=--no-same-owner
 RUN git config --global --add safe.directory '*' \
     && flutter config --no-analytics --no-cli-animations \
     && flutter precache --linux

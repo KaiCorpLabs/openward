@@ -16,7 +16,7 @@ En macOS, como la 0.2 ([cómo](prueba-v0.2.md#instalar)): con Homebrew, o el `.d
 brew upgrade --cask openward
 ```
 
-Desde que la CI corre en local, las releases solo traen el `.dmg`. **Linux:** se construye con `make package-linux` (en un contenedor, con podman o docker) y sale un `.tar.gz` con la app; se descomprime y se abre `OpenWard/openward`. Necesita GTK 3. **Windows:** por ahora hay que compilarla en Windows (`fvm flutter build windows`); la compilación copia junto a la app el runtime de Visual C++, aún sin probar en un Windows recién instalado.
+**Linux:** desde la 0.3.2-beta.7 la release trae un `.tar.gz` para x86_64 y otro para arm64; se descomprime y se abre `OpenWard/openward`. Necesita GTK 3. También se construye con `make package-linux` (en un contenedor, con podman o docker). **Windows:** por ahora hay que compilarla en Windows (`fvm flutter build windows`); la compilación copia junto a la app el runtime de Visual C++, aún sin probar en un Windows recién instalado.
 
 ## Dónde guarda sus datos
 
@@ -136,7 +136,12 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - en el editor de un host, cambia su entorno: la vista previa del sistema debe cambiar al momento;
    - con un tema de esquinas rectas (Búnker o Monitor), mira la página de Hosts y la barra de estado: nada redondo;
    - abre Ajustes › Acerca de › Licencias: deben estar Ghostty, las bibliotecas de Rust y las fuentes Share Tech Mono y VT323.
-21. **CSV** («Importar…» › CSV):
+21. **SFTP con muchos archivos** (0.3.2-beta.7):
+   - sube una carpeta con cientos de archivos pequeños (un `node_modules`, un repositorio) a un servidor lejano, y bájala otra vez: debe ir varias veces más rápido que en la 0.3.2-beta.6;
+   - a mitad, pausa y sigue; en otra, cancela: no deben quedar archivos `.part` en el servidor ni en tu disco;
+   - corta la red a mitad (o duerme el portátil) y vuelve: la copia debe seguir donde iba y acabar con todos los archivos, sin duplicados;
+   - en Linux, descomprime el `.tar.gz` de la release y abre `OpenWard/openward`.
+22. **CSV** («Importar…» › CSV):
    - exporta tus hosts de una hoja de cálculo o usa la plantilla de Termius;
    - comprueba los grupos, puertos, usuarios y etiquetas, y los avisos de lo que no entra;
    - impórtalo dos veces y comprueba que no se duplica.
