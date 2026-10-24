@@ -60,7 +60,7 @@ class _SftpViewState extends State<SftpView> {
         children: [
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(OwSpace.s4),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -119,6 +119,8 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
   @override
   void initState() {
     super.initState();
+    // Back from another tab with a filter still on: it shows.
+    _filter.text = _pane.filter;
     _pane.addListener(_onPane);
     _c.addListener(_onController);
     _focus.addListener(() {
@@ -473,7 +475,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
               color: c.scrim,
               child: Center(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(OwSpace.s8),
                   child: card,
                 ),
               ),
@@ -574,7 +576,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
     final side = _remote ? Side.remote.name : Side.local.name;
     return Container(
       height: 42,
-      padding: const EdgeInsets.only(left: 12, right: 4),
+      padding: const EdgeInsets.only(left: OwSpace.s6, right: OwSpace.s2),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: c.border)),
       ),
@@ -613,10 +615,14 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
                         style: monoStyle(context, color: c.textSubtle),
                       ),
                     InkWell(
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(
+                        context.ow.shape.radiusSmall,
+                      ),
                       onTap: () => pane.open(crumbs[i].$2),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: OwSpace.s1,
+                        ),
                         child: Text(
                           crumbs[i].$1,
                           style: monoStyle(
@@ -664,7 +670,12 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
     final c = context.ow.colors;
     final l = context.l10n;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 2),
+      padding: const EdgeInsets.fromLTRB(
+        OwSpace.s4,
+        OwSpace.s4,
+        OwSpace.s4,
+        OwSpace.s1,
+      ),
       child: SizedBox(
         height: heightForText(context, 30),
         child: TextField(
@@ -673,21 +684,21 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
           focusNode: _filterFocus,
           onChanged: _pane.setFilter,
           onSubmitted: (_) => _focus.requestFocus(),
-          style: const TextStyle(fontSize: 12),
+          style: const TextStyle(fontSize: OwText.small),
           decoration: InputDecoration(
             isDense: true,
             hintText: l.filterFolder,
             prefixIcon: Icon(Icons.search, size: 15, color: c.textSubtle),
             prefixIconConstraints: const BoxConstraints(minWidth: 32),
             suffixIcon: Padding(
-              padding: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.only(right: OwSpace.s4),
               child: Text(
                 isApple ? '⌘F' : 'Ctrl+F',
                 style: monoStyle(context, size: 12, color: c.textSubtle),
               ),
             ),
             suffixIconConstraints: const BoxConstraints(minHeight: 0),
-            contentPadding: const EdgeInsets.symmetric(vertical: 6),
+            contentPadding: const EdgeInsets.symmetric(vertical: OwSpace.s3),
           ),
         ),
       ),
@@ -708,13 +719,18 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
     final c = context.ow.colors;
     final pane = _pane;
     final style = TextStyle(
-      fontSize: 12,
+      fontSize: OwText.small,
       fontWeight: FontWeight.w600,
       letterSpacing: 0.5,
       color: c.textSubtle,
     );
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 6, 20, 2),
+      padding: const EdgeInsets.fromLTRB(
+        OwSpace.s10,
+        OwSpace.s3,
+        OwSpace.s10,
+        OwSpace.s1,
+      ),
       child: Row(
         children: [
           for (final (name, by, width) in _cols)
@@ -754,7 +770,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
   Widget _cell(double? width, Widget child) => width == null
       ? Expanded(child: child)
       : Padding(
-          padding: const EdgeInsets.only(left: 12),
+          padding: const EdgeInsets.only(left: OwSpace.s6),
           child: SizedBox(width: width, child: child),
         );
 
@@ -779,7 +795,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
     } else {
       list = ListView.builder(
         controller: _scroll,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: OwSpace.s4),
         itemExtent: _rowHeightIn(context),
         itemCount: rows.length,
         itemBuilder: (context, i) => _row(rows[i]),
@@ -789,7 +805,12 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
       children: [
         if (error != null)
           Padding(
-            padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+            padding: const EdgeInsets.fromLTRB(
+              OwSpace.s4,
+              OwSpace.s2,
+              OwSpace.s4,
+              OwSpace.s2,
+            ),
             child: Callout(
               tone: Tone.danger,
               child: Row(
@@ -797,7 +818,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
                   Expanded(
                     child: Text(
                       fileErrorText(l, error),
-                      style: const TextStyle(fontSize: 12),
+                      style: const TextStyle(fontSize: OwText.small),
                     ),
                   ),
                   if (error.kind == FileErrorKind.other) DetailsButton(error),
@@ -820,7 +841,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
     final c = context.ow.colors;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(OwSpace.s12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -851,14 +872,14 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
       FileKind.file => Icons.insert_drive_file_outlined,
     };
     final iconColor = e.isDir ? c.info : c.textMuted;
-    final muted = TextStyle(fontSize: 12, color: c.textMuted);
+    final muted = TextStyle(fontSize: OwText.small, color: c.textMuted);
     final row = Container(
       decoration: BoxDecoration(
         color: selected ? c.selected : null,
         borderRadius: BorderRadius.circular(ow.shape.radius),
         border: cursor ? Border.all(color: c.accent) : null,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: OwSpace.s6),
       child: Row(
         children: [
           _cell(
@@ -950,7 +971,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
     final count = l.itemCount(pane.visible.length);
     return Container(
       height: 42,
-      padding: const EdgeInsets.only(left: 12, right: 8),
+      padding: const EdgeInsets.only(left: OwSpace.s6, right: OwSpace.s4),
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: c.border)),
       ),
@@ -977,7 +998,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12, color: c.textMuted),
+              style: TextStyle(fontSize: OwText.small, color: c.textMuted),
             ),
           ),
           OutlinedButton(
@@ -1004,7 +1025,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
     final where = _remote ? '${_c.label}:${_pane.path}' : _pane.path;
     return IgnorePointer(
       child: Container(
-        margin: const EdgeInsets.all(4),
+        margin: const EdgeInsets.all(OwSpace.s2),
         decoration: BoxDecoration(
           color: c.accentSoft.withValues(alpha: 0.85),
           borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
@@ -1019,7 +1040,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
               Text(
                 _remote ? l.dropToUpload : l.dropToDownload,
                 style: const TextStyle(
-                  fontSize: 16,
+                  fontSize: OwText.heading,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -1028,7 +1049,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
               const SizedBox(height: 6),
               Text(
                 l.dropAskFirst,
-                style: TextStyle(fontSize: 12, color: c.textMuted),
+                style: TextStyle(fontSize: OwText.small, color: c.textMuted),
               ),
             ],
           ),
@@ -1052,18 +1073,15 @@ class _DragBadge extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(
+          horizontal: OwSpace.s5,
+          vertical: OwSpace.s3,
+        ),
         decoration: BoxDecoration(
           color: c.raised,
           border: Border.all(color: c.control),
           borderRadius: BorderRadius.circular(ow.shape.radius),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x40000000),
-              blurRadius: 16,
-              offset: Offset(0, 6),
-            ),
-          ],
+          boxShadow: OwElevation.raised,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1076,7 +1094,7 @@ class _DragBadge extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               count == 1 ? name : l.itemCount(count),
-              style: TextStyle(fontSize: 12, color: c.text),
+              style: TextStyle(fontSize: OwText.small, color: c.text),
             ),
           ],
         ),
@@ -1102,10 +1120,10 @@ class _SftpStatusBar extends StatelessWidget {
         final k = s.phase == Phase.connected ? s.connected : null;
         final pq = k?.postQuantum ?? false;
         final failed = s.phase == Phase.closed && s.closed?.failure != null;
-        final hint = TextStyle(fontSize: 12, color: c.textSubtle);
+        final hint = TextStyle(fontSize: OwText.small, color: c.textSubtle);
         return Container(
           height: heightForText(context, 30),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: OwSpace.s6),
           decoration: BoxDecoration(
             color: c.sunken,
             border: Border(top: BorderSide(color: c.border)),
@@ -1138,7 +1156,7 @@ class _SftpStatusBar extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: OwText.small,
                     color: failed ? c.danger : c.textMuted,
                   ),
                 ),

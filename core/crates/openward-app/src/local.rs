@@ -125,11 +125,12 @@ impl Local {
                     }
                 },
                 '$' if env && chars.peek() == Some(&'{') => {
-                    let rest: String = chars.clone().skip(1).collect();
-                    if let Some(end) = rest.find('}') {
-                        let name = &rest[..end];
-                        out.push_str(&std::env::var(name).unwrap_or_default());
-                        for _ in 0..end + 2 {
+                    // Counted in characters: a name may not be ASCII.
+                    let name: String = chars.clone().skip(1).take_while(|&c| c != '}').collect();
+                    let closed = chars.clone().nth(1 + name.chars().count()) == Some('}');
+                    if closed {
+                        out.push_str(&std::env::var(&name).unwrap_or_default());
+                        for _ in 0..name.chars().count() + 2 {
                             chars.next();
                         }
                     } else {
@@ -200,6 +201,29 @@ mod tests {
             l.path("${OPENWARD_TEST_UNSET_VAR}/k", &T),
             PathBuf::from("/k")
         );
+    }
+
+    #[test]
+    fn expansion() {
+        let l = local();
+        let path = |text| l.expand(text, &T, true);
+        // A name that is not ASCII keeps what follows it.
+        assert_eq!(path("/a${OPENWARD_TEST_VÁR}/b"), "/a/b");
+        assert_eq!(path("${OPENWARD_TEST_ÑÑ}x"), "x");
+        // Unclosed, empty or without the brace, it stays as written.
+        assert_eq!(path("/a${HOME"), "/a${HOME");
+        assert_eq!(path("/a${}b"), "/ab");
+        assert_eq!(path("$HOME/x"), "$HOME/x");
+        assert_eq!(
+            path("${HOME}/k"),
+            format!("{}/k", std::env::var("HOME").unwrap_or_default())
+        );
+        // A `%` at the end, or before an unknown letter, stays.
+        assert_eq!(path("100%"), "100%");
+        assert_eq!(path("%q%h"), "%qdb.example.com");
+        assert_eq!(path("%u@%h:%p"), "ana@db.example.com:2222");
+        // Without `env` (a command), `${…}` is the shell's.
+        assert_eq!(l.expand("${HOME}", &T, false), "${HOME}");
     }
 
     #[test]

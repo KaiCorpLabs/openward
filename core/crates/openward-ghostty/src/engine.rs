@@ -2,7 +2,7 @@
 
 use std::ffi::c_void;
 use std::mem::{MaybeUninit, size_of};
-use std::ptr;
+use std::ptr::{self, NonNull};
 use std::time::{Duration, Instant};
 
 use openward_term::frame::attrs;
@@ -200,8 +200,11 @@ pub struct GhosttyEngine {
     render: sys::GhosttyRenderState,
     rows: sys::GhosttyRenderStateRowIterator,
     cells: sys::GhosttyRenderStateRowCells,
-    // Boxed so its address stays fixed while libghostty-vt holds it.
-    effects: Box<Effects>,
+    // Leaked from a box, so its address stays fixed while libghostty-vt
+    // holds it, and kept as the raw pointer C was given: no `Box` of ours
+    // asserts unique ownership while callbacks write through it. Freed in
+    // `drop`, after the terminal.
+    effects: NonNull<Effects>,
     size: Size,
     force_full: bool,
     graphemes: Vec<u32>,
@@ -227,14 +230,25 @@ pub struct ProgramColors {
     pub palette: Vec<(u8, [u8; 3])>,
 }
 
-// SAFETY: the handles are only touched through `&mut self` or, for the
-// read-only queries, `&self` without concurrent mutation; libghostty-vt has no
-// thread affinity.
+// SAFETY: what changes C state goes through `&mut self`, and `&self` only
+// reads; libghostty-vt has no thread affinity. `effects` is owned by the
+// engine and only reached through it or from callbacks inside its calls.
 unsafe impl Send for GhosttyEngine {}
 
 impl GhosttyEngine {
+    fn effects(&self) -> &Effects {
+        // SAFETY: alive until `drop`; callbacks only run inside our calls
+        // into C, which take `&mut self`, so none runs while this is held.
+        unsafe { self.effects.as_ref() }
+    }
+
+    fn effects_mut(&mut self) -> &mut Effects {
+        // SAFETY: as in `effects`, and `&mut self` makes this the only one.
+        unsafe { self.effects.as_mut() }
+    }
+
     pub fn new(size: Size, scrollback_lines: usize) -> Self {
-        let mut effects = Box::new(Effects {
+        let effects = NonNull::from(Box::leak(Box::new(Effects {
             host_writes: Vec::new(),
             size,
             cell_px: (CELL_W_PX, CELL_H_PX),
@@ -242,7 +256,7 @@ impl GhosttyEngine {
             bell: false,
             render: ptr::null_mut(),
             held_since: None,
-        });
+        })));
         // SAFETY: every out-pointer is valid; option values follow the
         // documented input types (pointer values, size_t*, function pointers).
         unsafe {
@@ -255,7 +269,7 @@ impl GhosttyEngine {
                 sys::ghostty_terminal_set(
                     term,
                     sys::GHOSTTY_TERMINAL_OPT_USERDATA,
-                    (&mut *effects as *mut Effects).cast::<c_void>(),
+                    effects.as_ptr().cast::<c_void>(),
                 ),
                 "set userdata",
             );
@@ -388,7 +402,7 @@ impl GhosttyEngine {
                 sys::ghostty_render_state_new(ptr::null(), &mut render),
                 "render_state_new",
             );
-            effects.render = render;
+            (*effects.as_ptr()).render = render;
             let mut rows: sys::GhosttyRenderStateRowIterator = ptr::null_mut();
             ok(
                 sys::ghostty_render_state_row_iterator_new(ptr::null(), &mut rows),
@@ -464,7 +478,7 @@ impl GhosttyEngine {
         let actual = Size::new(cols, rows);
         if cols > 0 && rows > 0 && actual != self.size {
             self.size = actual;
-            self.effects.size = actual;
+            self.effects_mut().size = actual;
             self.force_full = true;
         }
     }
@@ -481,7 +495,7 @@ impl GhosttyEngine {
         cursor: [u8; 3],
         palette: &[[u8; 3]; 256],
     ) {
-        self.effects.dark = dark;
+        self.effects_mut().dark = dark;
         let palette: Vec<sys::GhosttyColorRgb> = palette
             .iter()
             .map(|&[r, g, b]| sys::GhosttyColorRgb { r, g, b })
@@ -651,7 +665,7 @@ impl GhosttyEngine {
 
     /// Whether a BEL arrived since the last call.
     pub fn take_bell(&mut self) -> bool {
-        std::mem::take(&mut self.effects.bell)
+        std::mem::take(&mut self.effects_mut().bell)
     }
 
     /// The cursor programs get until they set their own (and after they
@@ -764,7 +778,7 @@ impl GhosttyEngine {
         }
     }
 
-    fn update_render_state(&self) {
+    fn update_render_state(&mut self) {
         // SAFETY: valid handles.
         unsafe {
             ok(
@@ -775,7 +789,7 @@ impl GhosttyEngine {
     }
 
     /// Point the row iterator at the current render state.
-    fn reset_rows(&self) {
+    fn reset_rows(&mut self) {
         let mut rows = self.rows;
         // SAFETY: the iterator handle is filled in place by libghostty-vt.
         unsafe {
@@ -791,7 +805,7 @@ impl GhosttyEngine {
     }
 
     /// Point the cell iterator at the row the row iterator is on.
-    fn load_cells(&self) {
+    fn load_cells(&mut self) {
         let mut cells = self.cells;
         // SAFETY: the cells handle is filled in place by libghostty-vt.
         unsafe {
@@ -948,7 +962,7 @@ impl GhosttyEngine {
     /// The screen cell by cell: each row has one string per column, the
     /// cell's text, `" "` when empty and `""` for the second half of a wide
     /// character.
-    fn screen_cells(&self) -> Vec<Vec<String>> {
+    fn screen_cells(&mut self) -> Vec<Vec<String>> {
         // From the engine's own render state: updating any render state
         // clears the terminal's dirty rows, so a separate one would hide
         // them from the next frame. Only `encode_damage` cleans this one.
@@ -1032,7 +1046,7 @@ impl GhosttyEngine {
     }
 
     /// The cursor's cell (row, column) while the live screen is on view.
-    pub fn cursor_cell(&self) -> Option<(u16, u16)> {
+    pub fn cursor_cell(&mut self) -> Option<(u16, u16)> {
         self.update_render_state();
         let c = self.raw_cursor();
         (c.viewport_has_value && self.display_offset() == 0).then_some((c.viewport_y, c.viewport_x))
@@ -1042,7 +1056,7 @@ impl GhosttyEngine {
     /// screen from there to the cursor, rows run together, and what follows
     /// the cursor on its row. None when the cursor is not on the live
     /// screen, or is before `start`.
-    pub fn typed_since(&self, start: (u16, u16)) -> Option<(String, String)> {
+    pub fn typed_since(&mut self, start: (u16, u16)) -> Option<(String, String)> {
         let (row, col) = self.cursor_cell()?;
         if (row, col) < start {
             return None;
@@ -1135,7 +1149,7 @@ impl TermEngine for GhosttyEngine {
             );
         }
         self.size = size;
-        self.effects.size = size;
+        self.effects_mut().size = size;
         self.force_full = true;
     }
 
@@ -1162,7 +1176,7 @@ impl TermEngine for GhosttyEngine {
     fn encode_damage(&mut self, enc: &mut FrameEncoder) -> FrameStats {
         // While a program draws a frame it wants shown whole, the screen
         // stays as it was when it began.
-        if !self.effects.holding() {
+        if !self.effects().holding() {
             self.update_render_state();
         }
         // A program that changed its colors changes how the whole screen
@@ -1263,7 +1277,7 @@ impl TermEngine for GhosttyEngine {
     }
 
     fn take_host_writes(&mut self) -> Vec<u8> {
-        std::mem::take(&mut self.effects.host_writes)
+        std::mem::take(&mut self.effects_mut().host_writes)
     }
 
     fn title(&self) -> Option<String> {
@@ -1287,7 +1301,7 @@ impl TermEngine for GhosttyEngine {
         }
     }
 
-    fn screen_text(&self) -> String {
+    fn screen_text(&mut self) -> String {
         self.screen_cells()
             .iter()
             .map(|row| row.concat().trim_end().to_owned())
@@ -1299,7 +1313,7 @@ impl TermEngine for GhosttyEngine {
 impl Drop for GhosttyEngine {
     fn drop(&mut self) {
         // SAFETY: handles created in `new`, freed once; the terminal goes
-        // before `effects` (dropped after this) so no callback outlives it.
+        // before `effects`, so no callback outlives it.
         unsafe {
             if !self.search.is_null() {
                 sys::ghostty_search_free(self.search);
@@ -1309,6 +1323,8 @@ impl Drop for GhosttyEngine {
             sys::ghostty_render_state_row_iterator_free(self.rows);
             sys::ghostty_render_state_free(self.render);
             sys::ghostty_terminal_free(self.term);
+            // The terminal that called back is gone.
+            drop(Box::from_raw(self.effects.as_ptr()));
         }
     }
 }

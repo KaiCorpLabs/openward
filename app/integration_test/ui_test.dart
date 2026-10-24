@@ -690,6 +690,14 @@ Host web-1 web-2
     expect(find.byType(Sidebar), findsOneWidget);
     expect(container.read(settingsProvider).sidebar, SidebarMode.open);
 
+    // A search still on when it folds is there when it comes back.
+    final search = find.descendant(
+      of: find.byType(Sidebar),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(search.first, 'web');
+    await wait();
+
     // Hidden: the tab bar has a button for it, and ⌘B brings it back.
     container.read(sidebarProvider.notifier).chose(SidebarMode.hidden);
     await wait();
@@ -703,6 +711,10 @@ Host web-1 web-2
     }
     await wait();
     expect(find.byType(Sidebar), findsOneWidget);
+    expect(tester.widget<TextField>(search.first).controller!.text, 'web');
+    expect(container.read(searchProvider), 'web');
+    await tester.enterText(search.first, '');
+    await wait();
 
     // Folding by itself with a terminal in front; open on a page.
     container
@@ -2773,6 +2785,18 @@ Host db
       await tester.pump(const Duration(milliseconds: 300));
       expect(await quitting, isFalse);
       app.cancelTransfer(id: copy);
+
+      // A filter still on when the tab is left is there when it comes back.
+      final filter = find.byKey(const ValueKey('remote.filter'));
+      await tester.enterText(filter, 'hola');
+      await tester.pump();
+      container.read(tabsProvider.notifier).select(0);
+      await tester.pump(const Duration(milliseconds: 100));
+      container.read(tabsProvider.notifier).select(1);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tester.widget<TextField>(filter).controller!.text, 'hola');
+      await tester.enterText(filter, '');
+      await tester.pump();
 
       // ⌘W on the terminal of a marked host asks first; ⌘⇧T opens it again.
       final tabs = container.read(tabsProvider.notifier)..select(0);

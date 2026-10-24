@@ -11,7 +11,7 @@ publish = false
 [workspace]
 
 [dependencies]
-openward-ssh = { path = "../../../core/crates/openward-ssh" }
+openward-ssh = { path = "../../../core/crates/openward-ssh", features = ["test-auth"] }
 tokio = { version = "1", features = ["full"] }
 anyhow = "1"
 serde_json = "1"

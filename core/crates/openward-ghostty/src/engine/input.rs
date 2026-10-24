@@ -235,7 +235,7 @@ impl GhosttyEngine {
     pub fn set_cell_pixels(&mut self, width: f32, height: f32) {
         self.input.cell_w = width.max(1.0);
         self.input.cell_h = height.max(1.0);
-        self.effects.cell_px = (
+        self.effects_mut().cell_px = (
             self.input.cell_w.round() as u32,
             self.input.cell_h.round() as u32,
         );
@@ -541,12 +541,12 @@ impl GhosttyEngine {
         };
         // The terminal streams the encoded text through write_pty, after
         // whatever replies are already queued there; take only the new part.
-        let start = self.effects.host_writes.len();
+        let start = self.effects().host_writes.len();
         let mut written = false;
         // SAFETY: valid terminal; `paste`, `mimes` and `data` outlive the call.
         let result = unsafe { sys::ghostty_terminal_paste(self.term, &paste, &mut written) };
         match result {
-            sys::GHOSTTY_SUCCESS => Paste::Bytes(self.effects.host_writes.split_off(start)),
+            sys::GHOSTTY_SUCCESS => Paste::Bytes(self.effects_mut().host_writes.split_off(start)),
             sys::GHOSTTY_REJECTED => Paste::Unsafe,
             other => {
                 debug_assert!(false, "libghostty-vt: paste failed ({other})");

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/address.dart';
 import '../core/connection.dart' show Phase;
 import '../core/errors.dart';
+import '../core/match.dart';
 import '../core/providers.dart';
 import '../hosts/editors.dart';
 import '../import/import_dialog.dart';
@@ -124,16 +125,11 @@ class _StartPageState extends ConsumerState<StartPage> {
       for (final (i, r) in recent.indexed)
         if (r.hostId != null) r.hostId!: i,
     };
-    final hosts = <(HostView, int)>[];
-    for (final h in ref.read(libraryProvider).hosts) {
-      final score = [
-        matchScore(h.label, q),
-        matchScore(_hostAddress(h), q),
-      ].nonNulls;
-      if (score.isNotEmpty) {
-        hosts.add((h, score.reduce((a, b) => a < b ? a : b)));
-      }
-    }
+    final matcher = HostMatcher(q, ref.read(libraryProvider));
+    final hosts = <(HostView, int)>[
+      for (final h in matcher.library.hosts)
+        if (matcher.score(h) case final s?) (h, s),
+    ];
     hosts.sort((a, b) {
       final s = a.$2 - b.$2;
       if (s != 0) return s;
@@ -181,7 +177,12 @@ class _StartPageState extends ConsumerState<StartPage> {
     return ColoredBox(
       color: c.surface,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 36, 24, 24),
+        padding: const EdgeInsets.fromLTRB(
+          OwSpace.s12,
+          OwSpace.s18,
+          OwSpace.s12,
+          OwSpace.s12,
+        ),
         child: Center(
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: favorites ? 980 : 760),
@@ -276,8 +277,8 @@ class _StartPageState extends ConsumerState<StartPage> {
                           minWidth: 36,
                         ),
                         contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
+                          horizontal: OwSpace.s6,
+                          vertical: OwSpace.s6,
                         ),
                       ),
                       onChanged: (_) {
@@ -349,7 +350,7 @@ class _StartPageState extends ConsumerState<StartPage> {
                 DateTime.fromMillisecondsSinceEpoch(r.at),
               ),
             ),
-            style: TextStyle(fontSize: 12, color: c.textMuted),
+            style: TextStyle(fontSize: OwText.small, color: c.textMuted),
           ),
           if (length != null)
             Text(
@@ -373,7 +374,7 @@ class _StartPageState extends ConsumerState<StartPage> {
           onTap: f,
           child: Container(
             height: 46,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
+            padding: const EdgeInsets.symmetric(horizontal: OwSpace.s7),
             child: Row(
               children: [
                 Icon(icon, size: 16, color: c.textMuted),
@@ -438,7 +439,7 @@ class _StartPageState extends ConsumerState<StartPage> {
         _Heading(l.paletteRecent),
         const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(OwSpace.s8),
           decoration: BoxDecoration(
             border: Border.all(color: c.control),
             borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
@@ -488,7 +489,10 @@ class _StartPageState extends ConsumerState<StartPage> {
       children: [
         KeyCap(keys),
         const SizedBox(width: 6),
-        Text(text, style: TextStyle(fontSize: 12, color: c.textMuted)),
+        Text(
+          text,
+          style: TextStyle(fontSize: OwText.small, color: c.textMuted),
+        ),
       ],
     );
     return Wrap(
@@ -509,7 +513,10 @@ class _StartPageState extends ConsumerState<StartPage> {
           child: Container(
             constraints: const BoxConstraints(minHeight: 28),
             alignment: Alignment.centerLeft,
-            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+            padding: const EdgeInsets.symmetric(
+              horizontal: OwSpace.s1,
+              vertical: OwSpace.s1,
+            ),
             child: item('$key/', l.shortcutAll),
           ),
         ),
@@ -561,7 +568,7 @@ class _Favorites extends ConsumerWidget {
             if (favorites.length > 1)
               Text(
                 l.dragToOrder,
-                style: TextStyle(fontSize: 12, color: c.textSubtle),
+                style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
               ),
           ],
         ),
@@ -569,7 +576,7 @@ class _Favorites extends ConsumerWidget {
         if (favorites.isEmpty)
           Container(
             key: const ValueKey('start.favorites.empty'),
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(OwSpace.s7),
             decoration: BoxDecoration(
               border: Border.all(color: c.control),
               borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
@@ -668,7 +675,12 @@ class _FavoriteCard extends StatelessWidget {
               color: env == null ? c.border : envColors(c, env.color).fg,
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              padding: const EdgeInsets.fromLTRB(
+                OwSpace.s6,
+                OwSpace.s5,
+                OwSpace.s6,
+                OwSpace.s6,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -703,7 +715,10 @@ class _FavoriteCard extends StatelessWidget {
                   else
                     Text(
                       l.envNoneNote,
-                      style: TextStyle(fontSize: 12, color: c.textSubtle),
+                      style: TextStyle(
+                        fontSize: OwText.small,
+                        color: c.textSubtle,
+                      ),
                     ),
                 ],
               ),
@@ -786,7 +801,10 @@ class _Row extends StatelessWidget {
           borderRadius: BorderRadius.circular(ow.shape.radius + 2),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: OwSpace.s5,
+              vertical: OwSpace.s4,
+            ),
             child: Row(
               children: [
                 leading,
@@ -903,7 +921,10 @@ class _Suggestions extends StatelessWidget {
           borderRadius: BorderRadius.circular(ow.shape.radius),
           onTap: () => onSelect(s),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            padding: const EdgeInsets.symmetric(
+              horizontal: OwSpace.s5,
+              vertical: OwSpace.s3,
+            ),
             child: Row(
               children: [
                 lead,
@@ -946,7 +967,7 @@ class _Suggestions extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.only(top: OwSpace.s3),
       child: Material(
         color: c.raised,
         elevation: 12,
@@ -959,7 +980,7 @@ class _Suggestions extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxHeight: 360),
             child: ListView(
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.all(OwSpace.s3),
               shrinkWrap: true,
               children: [for (final (i, s) in options.indexed) row(i, s)],
             ),
@@ -988,7 +1009,7 @@ class _OpenTunnels extends ConsumerWidget {
         ];
         if (open.isEmpty) return const SizedBox.shrink();
         return Padding(
-          padding: const EdgeInsets.only(top: 24),
+          padding: const EdgeInsets.only(top: OwSpace.s12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

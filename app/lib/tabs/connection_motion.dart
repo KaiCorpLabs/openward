@@ -60,7 +60,7 @@ class _RouteGraphicState extends State<RouteGraphic>
     with SingleTickerProviderStateMixin {
   late final AnimationController _t = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1400),
+    duration: OwMotion.pulse,
   );
 
   @override
@@ -150,7 +150,7 @@ class _RouteGraphicState extends State<RouteGraphic>
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: OwText.small,
                 fontWeight: FontWeight.w600,
                 color: dim ? c.textMuted : c.text,
               ),
@@ -178,7 +178,7 @@ class _RouteGraphicState extends State<RouteGraphic>
         children.add(
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 30),
+              padding: const EdgeInsets.only(bottom: OwSpace.s15),
               child: SizedBox(
                 height: 52,
                 child: AnimatedBuilder(
@@ -370,18 +370,15 @@ class _StalledNoticeState extends State<StalledNotice> {
       liveRegion: true,
       child: Container(
         key: const ValueKey('pane.stalled'),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding: const EdgeInsets.symmetric(
+          horizontal: OwSpace.s6,
+          vertical: OwSpace.s3,
+        ),
         decoration: BoxDecoration(
           color: c.warnSoft,
           border: Border.all(color: c.warnLine),
-          borderRadius: BorderRadius.circular(999),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x33000000),
-              blurRadius: 18,
-              offset: Offset(0, 6),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(context.ow.shape.round),
+          boxShadow: OwElevation.raised,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -398,12 +395,12 @@ class _StalledNoticeState extends State<StalledNotice> {
                   TextSpan(text: ' · ${l.sinceSeconds(secs)}'),
                 ],
               ),
-              style: TextStyle(fontSize: 12, color: c.text),
+              style: TextStyle(fontSize: OwText.small, color: c.text),
             ),
             const SizedBox(width: 10),
             Text(
               l.checking,
-              style: TextStyle(fontSize: 12, color: c.textMuted),
+              style: TextStyle(fontSize: OwText.small, color: c.textMuted),
             ),
           ],
         ),
@@ -423,7 +420,7 @@ class _Blink extends StatefulWidget {
 class _BlinkState extends State<_Blink> with SingleTickerProviderStateMixin {
   late final AnimationController _t = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1200),
+    duration: OwMotion.blink,
   );
 
   @override
@@ -597,7 +594,12 @@ class _ReconnectCardState extends ConsumerState<ReconnectCard> {
             graphic,
             const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              padding: const EdgeInsets.fromLTRB(
+                OwSpace.s6,
+                OwSpace.s5,
+                OwSpace.s6,
+                OwSpace.s5,
+              ),
               decoration: BoxDecoration(
                 color: c.warnSoft,
                 border: Border.all(color: c.warnLine),
@@ -608,7 +610,7 @@ class _ReconnectCardState extends ConsumerState<ReconnectCard> {
             const SizedBox(height: 12),
             Text(
               kept ? l.lostKeptInTmux(s.label) : l.lostNewShell(s.label),
-              style: TextStyle(fontSize: 12, color: c.textMuted),
+              style: TextStyle(fontSize: OwText.small, color: c.textMuted),
             ),
             const SizedBox(height: 14),
             Row(
@@ -697,7 +699,7 @@ class _BackToastState extends State<BackToast> {
     return IgnorePointer(
       child: AnimatedOpacity(
         opacity: visible ? 1 : 0,
-        duration: const Duration(milliseconds: 250),
+        duration: OwMotion.slow,
         child: !visible
             ? const SizedBox.shrink()
             : Semantics(
@@ -705,20 +707,14 @@ class _BackToastState extends State<BackToast> {
                 child: Container(
                   key: const ValueKey('pane.back'),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 9,
+                    horizontal: OwSpace.s7,
+                    vertical: OwSpace.s4,
                   ),
                   decoration: BoxDecoration(
                     color: c.raised,
                     border: Border.all(color: c.accent),
                     borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x33000000),
-                        blurRadius: 18,
-                        offset: Offset(0, 6),
-                      ),
-                    ],
+                    boxShadow: OwElevation.raised,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -745,7 +741,7 @@ class _BackToastState extends State<BackToast> {
                             ),
                           ],
                         ),
-                        style: TextStyle(fontSize: 12, color: c.text),
+                        style: TextStyle(fontSize: OwText.small, color: c.text),
                       ),
                     ],
                   ),
@@ -792,9 +788,12 @@ Widget tmuxPill(BuildContext context, PersistentView p) {
   return Tooltip(
     message: missing ? l.tmuxMissingTip : l.tmuxTip,
     child: Padding(
-      padding: const EdgeInsets.only(left: 8),
+      padding: const EdgeInsets.only(left: OwSpace.s4),
       child: missing
-          ? Text(l.tmuxMissing, style: TextStyle(fontSize: 12, color: c.warn))
+          ? Text(
+              l.tmuxMissing,
+              style: TextStyle(fontSize: OwText.small, color: c.warn),
+            )
           : const Pill('tmux'),
     ),
   );

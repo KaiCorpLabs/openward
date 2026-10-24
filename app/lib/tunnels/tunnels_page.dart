@@ -235,7 +235,10 @@ class _TunnelsPageState extends ConsumerState<TunnelsPage> {
                     Expanded(
                       child: Text(
                         l.tunnelsKeepConnection,
-                        style: TextStyle(fontSize: 12, color: c.textSubtle),
+                        style: TextStyle(
+                          fontSize: OwText.small,
+                          color: c.textSubtle,
+                        ),
                       ),
                     ),
                   ],
@@ -289,7 +292,10 @@ class _TunnelsPageState extends ConsumerState<TunnelsPage> {
       child: InkWell(
         onTap: () => showTunnelEditor(context, ref, tunnel: t),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(
+            horizontal: OwSpace.s8,
+            vertical: OwSpace.s5,
+          ),
           decoration: BoxDecoration(
             border: Border(top: BorderSide(color: c.border)),
           ),
@@ -309,7 +315,10 @@ class _TunnelsPageState extends ConsumerState<TunnelsPage> {
                     if (t.imported)
                       Text(
                         l.fromSshConfig,
-                        style: TextStyle(fontSize: 12, color: c.textSubtle),
+                        style: TextStyle(
+                          fontSize: OwText.small,
+                          color: c.textSubtle,
+                        ),
                       ),
                   ],
                 ),
@@ -351,13 +360,18 @@ class _TunnelsPageState extends ConsumerState<TunnelsPage> {
                 const SizedBox(height: 8),
                 Callout(
                   tone: Tone.danger,
-                  padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+                  padding: const EdgeInsets.fromLTRB(
+                    OwSpace.s6,
+                    OwSpace.s3,
+                    OwSpace.s3,
+                    OwSpace.s3,
+                  ),
                   child: Row(
                     children: [
                       Expanded(
                         child: Text(
                           _sentence(tunnelErrorText(l, t)),
-                          style: const TextStyle(fontSize: 12),
+                          style: const TextStyle(fontSize: OwText.small),
                         ),
                       ),
                       if (_details(t) case final e?) DetailsButton(e),
@@ -462,7 +476,7 @@ class _TunnelChipState extends ConsumerState<TunnelChip> {
         if (mine.isEmpty) return const SizedBox.shrink();
         final open = mine.where((t) => t.state == TunnelStateKind.open).length;
         return Padding(
-          padding: const EdgeInsets.only(left: 8),
+          padding: const EdgeInsets.only(left: OwSpace.s4),
           child: OutlinedButton.icon(
             key: const ValueKey('status.tunnels'),
             onPressed: _popover,
@@ -475,7 +489,7 @@ class _TunnelChipState extends ConsumerState<TunnelChip> {
                   line: open > 0 ? c.accent : c.border,
                 ).copyWith(
                   padding: const WidgetStatePropertyAll(
-                    EdgeInsets.symmetric(horizontal: 8),
+                    EdgeInsets.symmetric(horizontal: OwSpace.s4),
                   ),
                 ),
             icon: const Icon(Icons.swap_horiz, size: 14),
@@ -515,7 +529,12 @@ class _TunnelPopover extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(14, 10, 6, 4),
+                padding: const EdgeInsets.fromLTRB(
+                  OwSpace.s7,
+                  OwSpace.s5,
+                  OwSpace.s3,
+                  OwSpace.s2,
+                ),
                 child: Row(
                   children: [
                     Icon(Icons.swap_horiz, size: 16, color: c.accentText),
@@ -566,7 +585,7 @@ class _TunnelPopover extends ConsumerWidget {
                       : Text(
                           stateText(l, t),
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: OwText.small,
                             color: t.state == TunnelStateKind.failed
                                 ? c.danger
                                 : c.textMuted,
@@ -574,13 +593,18 @@ class _TunnelPopover extends ConsumerWidget {
                         ),
                 ),
               Container(
-                padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
+                padding: const EdgeInsets.fromLTRB(
+                  OwSpace.s7,
+                  OwSpace.s4,
+                  OwSpace.s7,
+                  OwSpace.s5,
+                ),
                 decoration: BoxDecoration(
                   border: Border(top: BorderSide(color: c.border)),
                 ),
                 child: Text(
                   l.tunnelsStayOpen,
-                  style: TextStyle(fontSize: 12, color: c.textSubtle),
+                  style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
                 ),
               ),
             ],
@@ -620,10 +644,20 @@ class _TunnelNoticesState extends ConsumerState<TunnelNotices> {
           children: [
             for (final t in failed)
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                padding: const EdgeInsets.fromLTRB(
+                  OwSpace.s6,
+                  OwSpace.s4,
+                  OwSpace.s6,
+                  0,
+                ),
                 child: Callout(
                   tone: Tone.warn,
-                  padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+                  padding: const EdgeInsets.fromLTRB(
+                    OwSpace.s6,
+                    OwSpace.s3,
+                    OwSpace.s3,
+                    OwSpace.s3,
+                  ),
                   child: Row(
                     children: [
                       Icon(

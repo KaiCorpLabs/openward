@@ -1,13 +1,32 @@
 version: 2
 updates:
   - package-ecosystem: cargo
-    directories: ["/core", "/spikes/s1-terminal/termbench"]
+    directories:
+      - "/core"
+      - "/spikes/s1-terminal/termbench"
+      - "/spikes/s2-ssh/sshprobe"
     schedule:
       interval: weekly
-    # Engines are pinned on purpose (ADR-002): bump them by hand after
-    # re-running the spike benchmarks.
+    groups:
+      # Hmac<Sha1> needs both on the same digest: one without the other
+      # does not build.
+      rustcrypto:
+        patterns: ["hmac", "sha1", "sha2", "digest"]
+      tokio:
+        patterns: ["tokio", "tokio-*"]
     ignore:
+      # Engines are pinned on purpose (ADR-002): bump them by hand after
+      # re-running the spike benchmarks.
       - dependency-name: alacritty_terminal
+      # The bridge's Rust crate, its Dart package and the generated code
+      # move together, by hand (see app/README.md).
+      - dependency-name: flutter_rust_bridge
+  - package-ecosystem: pub
+    directory: "/app"
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: flutter_rust_bridge
   - package-ecosystem: github-actions
     directory: "/"
     schedule:

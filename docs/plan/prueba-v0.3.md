@@ -10,11 +10,13 @@ Lo que trae está en las [notas de la versión](../notas/v0.3.md).
 
 ## Instalar
 
-Como la 0.2 ([cómo](prueba-v0.2.md#instalar)). Con Homebrew, la beta nueva llega con:
+En macOS, como la 0.2 ([cómo](prueba-v0.2.md#instalar)): con Homebrew, o el `.dmg` de la release. La beta nueva llega con:
 
 ```bash
 brew upgrade --cask openward
 ```
+
+Desde que la CI corre en local, las releases solo traen el `.dmg`. **Linux:** se construye con `make package-linux` (en un contenedor, con podman o docker) y sale un `.tar.gz` con la app; se descomprime y se abre `OpenWard/openward`. Necesita GTK 3. **Windows:** por ahora hay que compilarla en Windows (`fvm flutter build windows`); la compilación copia junto a la app el runtime de Visual C++, aún sin probar en un Windows recién instalado.
 
 ## Dónde guarda sus datos
 
@@ -126,7 +128,15 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - duplica un host y arrástralo a otro grupo en la página de Hosts;
    - abre vim con un tema de colores o tmux con su barra de color: deben verse; prueba «Limpiar el búfer» en el menú del terminal;
    - en un terminal, `printf 'ls \342\200\256txt.exe' | pbcopy` copia un texto con un carácter que le da la vuelta; al pegarlo, la vista previa debe marcarlo en ámbar antes de enviarlo.
-20. **CSV** («Importar…» › CSV):
+20. **Por dentro** (0.3.2-beta.6):
+   - busca «web prod» (o dos palabras tuyas) en la barra, en Hosts, en ⌘K y en el inicio: deben salir los mismos hosts;
+   - importa tu `~/.ssh/config` y, si tienes, una exportación grande de otro programa: debe ir rápido y sin colgarse;
+   - en un terminal local, abre `top` y cierra la pestaña: `top` no debe quedar corriendo (`ps`); deja algo con `nohup sleep 60 &`, escribe `exit`: la pestaña debe cerrarse;
+   - descarga por SFTP un archivo con permisos 600: debe quedar 600 en tu disco;
+   - en el editor de un host, cambia su entorno: la vista previa del sistema debe cambiar al momento;
+   - con un tema de esquinas rectas (Búnker o Monitor), mira la página de Hosts y la barra de estado: nada redondo;
+   - abre Ajustes › Acerca de › Licencias: deben estar Ghostty, las bibliotecas de Rust y las fuentes Share Tech Mono y VT323.
+21. **CSV** («Importar…» › CSV):
    - exporta tus hosts de una hoja de cálculo o usa la plantilla de Termius;
    - comprueba los grupos, puertos, usuarios y etiquetas, y los avisos de lo que no entra;
    - impórtalo dos veces y comprueba que no se duplica.

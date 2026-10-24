@@ -41,7 +41,7 @@ class SidebarRail extends ConsumerWidget {
     final current = state.current;
     bool here(PageKind kind) => current is PageTab && current.page == kind;
     Widget divider() => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: OwSpace.s3),
       child: SizedBox(width: 24, child: Divider(height: 1, color: c.border)),
     );
     final open = [
@@ -188,7 +188,7 @@ class _FavoriteButton extends StatelessWidget {
                     right: -3,
                     bottom: -3,
                     child: Container(
-                      padding: const EdgeInsets.all(2),
+                      padding: const EdgeInsets.all(OwSpace.s1),
                       decoration: BoxDecoration(
                         color: context.ow.colors.window,
                         shape: BoxShape.circle,
@@ -414,11 +414,11 @@ class _RailButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final ow = context.ow;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: OwSpace.s1),
       child: Tooltip(
         message: tooltip,
         preferBelow: false,
-        waitDuration: const Duration(milliseconds: 300),
+        waitDuration: OwMotion.hintSoon,
         child: Semantics(
           button: true,
           selected: selected,

@@ -371,8 +371,13 @@ impl OpenWard {
         self.read(path, None)
     }
 
-    /// As [`Self::read_program`], with Termius's key given (tests).
+    /// As [`Self::read_program`], with Termius's key given (tests). A
+    /// release build does not take it (see `for_tests`): there it is
+    /// [`Self::read_program`].
     pub fn read_program_with_key(&self, path: String, termius_key: Vec<u8>) -> ProgramRead {
+        if crate::api::app::for_tests("read_program_with_key").is_err() {
+            return self.read_program(path);
+        }
         let key: Option<[u8; 32]> = termius_key.try_into().ok();
         self.read(path, Some(key.into_iter().collect()))
     }

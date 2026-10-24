@@ -84,9 +84,11 @@ List<WorkspaceTabSpec> captureTabs(TabsState state) {
 int capturedActive(TabsState state) {
   var index = -1;
   for (final (i, tab) in state.tabs.indexed) {
+    // Past the front tab: a page in front is not kept, and the one after
+    // it is not the one that was in front.
+    if (i > state.active) break;
     if (tab is PageTab) continue;
     index++;
-    if (i >= state.active) break;
   }
   return index < 0 ? 0 : index;
 }

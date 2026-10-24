@@ -10,7 +10,6 @@
 //! own and not read. Forwards open on connect, as in SecureCRT.
 
 use std::collections::BTreeMap;
-use std::fs;
 use std::io;
 use std::path::Path;
 
@@ -35,6 +34,9 @@ pub fn sniff_xml(text: &str) -> bool {
     text.contains("<VanDyke")
 }
 
+/// How deep `<key>`s may nest: folders of folders of sessions.
+const MAX_KEY_DEPTH: usize = 64;
+
 /// Sessions from the XML export.
 pub fn from_xml(bytes: &[u8]) -> Result<Bundle, String> {
     let xml = text::decode(bytes);
@@ -47,26 +49,32 @@ pub fn from_xml(bytes: &[u8]) -> Result<Bundle, String> {
     // The value being read: its element, name and text (or list items).
     let mut value: Option<(String, String, String)> = None;
     let mut list: Option<(String, Vec<String>)> = None;
-    let mut in_sessions = false;
     loop {
         match reader.read_event().map_err(|e| e.to_string())? {
             Event::Start(e) | Event::Empty(e) if e.name().as_ref() == "key" => {
+                // Folders inside folders, far deeper than anyone keeps
+                // sessions: not an export.
+                if path.len() >= MAX_KEY_DEPTH {
+                    return Err("keys nested too deep".into());
+                }
                 path.push(attr(&e, "name"));
                 values.push(Session::new());
-                in_sessions = path.first().is_some_and(|p| p == "Sessions")
-                    || path.get(1).is_some_and(|p| p == "Sessions");
             }
             Event::End(e) if e.name().as_ref() == "key" => {
                 let s = values.pop().unwrap_or_default();
-                let p = path.clone();
-                path.pop();
+                let in_sessions = path.first().is_some_and(|p| p == "Sessions")
+                    || path.get(1).is_some_and(|p| p == "Sessions");
                 let is_session = matches!(s.get("Is Session"), Some(Val::Number(1)))
                     || s.contains_key("Hostname");
                 if in_sessions && is_session {
                     // The path inside `Sessions`.
-                    let start = p.iter().position(|x| x == "Sessions").map_or(0, |i| i + 1);
-                    sessions.push((p[start..].to_vec(), s));
+                    let start = path
+                        .iter()
+                        .position(|x| x == "Sessions")
+                        .map_or(0, |i| i + 1);
+                    sessions.push((path[start..].to_vec(), s));
                 }
+                path.pop();
             }
             Event::Start(e) if matches!(e.name().as_ref(), "string" | "dword") => {
                 let tag = e.name().as_ref().to_owned();
@@ -153,29 +161,29 @@ fn attr(e: &quick_xml::events::BytesStart, name: &str) -> String {
 /// Sessions from a `Sessions` folder of `.ini` files.
 pub fn from_dir(dir: &Path) -> io::Result<Bundle> {
     let mut sessions = Vec::new();
-    walk(dir, &mut Vec::new(), &mut sessions)?;
+    walk(dir, &mut Vec::new(), &mut 0, &mut sessions)?;
     Ok(bundle(sessions))
 }
 
 fn walk(
     dir: &Path,
     path: &mut Vec<String>,
+    seen: &mut usize,
     out: &mut Vec<(Vec<String>, Session)>,
 ) -> io::Result<()> {
-    let mut entries: Vec<_> = fs::read_dir(dir)?.flatten().collect();
-    entries.sort_by_key(|e| e.file_name());
-    for entry in entries {
-        let p = entry.path();
-        let name = entry.file_name().to_string_lossy().into_owned();
-        if p.is_dir() {
-            path.push(name);
-            walk(&p, path, out)?;
-            path.pop();
+    for entry in crate::files::entries(dir, seen)? {
+        let name = entry.name;
+        if entry.dir {
+            if path.len() < crate::files::MAX_DEPTH {
+                path.push(name);
+                walk(&entry.path, path, seen, out)?;
+                path.pop();
+            }
         } else if let Some(stem) = name.strip_suffix(".ini") {
             if stem == "__FolderData__" {
                 continue;
             }
-            let s = parse_ini(&text::decode(&fs::read(&p)?));
+            let s = parse_ini(&text::decode(&crate::files::read(&entry.path)?));
             let mut full = path.clone();
             full.push(stem.to_owned());
             out.push((full, s));
@@ -386,6 +394,7 @@ fn forward(entry: &str, kind: ForwardKind, host: &str) -> Option<Tunnel> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
 
     const XML: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 <VanDyke version="3.0">

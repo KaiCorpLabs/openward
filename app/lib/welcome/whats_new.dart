@@ -149,7 +149,12 @@ class _WhatsNew extends StatelessWidget {
       ),
     ];
     return AlertDialog(
-      titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+      titlePadding: const EdgeInsets.fromLTRB(
+        OwSpace.s12,
+        OwSpace.s10,
+        OwSpace.s12,
+        0,
+      ),
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -160,7 +165,7 @@ class _WhatsNew extends StatelessWidget {
               Text(
                 'OpenWard $appVersion',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: OwText.small,
                   fontWeight: FontWeight.w600,
                   color: c.accentText,
                 ),
@@ -182,7 +187,7 @@ class _WhatsNew extends StatelessWidget {
               const SizedBox(height: 8),
               for (final (icon, title, body, fresh) in items)
                 Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  padding: const EdgeInsets.symmetric(vertical: OwSpace.s5),
                   decoration: BoxDecoration(
                     border: Border(top: BorderSide(color: c.border)),
                   ),
@@ -223,7 +228,7 @@ class _WhatsNew extends StatelessWidget {
                             Text(
                               body,
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: OwText.small,
                                 color: c.textMuted,
                               ),
                             ),
@@ -234,13 +239,13 @@ class _WhatsNew extends StatelessWidget {
                   ),
                 ),
               Container(
-                padding: const EdgeInsets.only(top: 10),
+                padding: const EdgeInsets.only(top: OwSpace.s5),
                 decoration: BoxDecoration(
                   border: Border(top: BorderSide(color: c.border)),
                 ),
                 child: Text(
                   l.whatsNewReport,
-                  style: TextStyle(fontSize: 12, color: c.textSubtle),
+                  style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
                 ),
               ),
             ],

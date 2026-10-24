@@ -99,7 +99,7 @@ class _SmallButton extends StatelessWidget {
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(0, 28),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        padding: const EdgeInsets.symmetric(horizontal: OwSpace.s5),
         textStyle: smallButtonText(context),
         foregroundColor: accent ? c.accentText : null,
         backgroundColor: accent ? c.accentSoft : null,
@@ -149,8 +149,8 @@ class _QueueStrip extends StatelessWidget {
     final progress = queue.progress;
     return Container(
       height: 44,
-      margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-      padding: const EdgeInsets.fromLTRB(12, 0, 8, 0),
+      margin: const EdgeInsets.fromLTRB(OwSpace.s4, 0, OwSpace.s4, OwSpace.s4),
+      padding: const EdgeInsets.fromLTRB(OwSpace.s6, 0, OwSpace.s4, 0),
       decoration: BoxDecoration(
         color: c.surface,
         border: Border.all(color: c.border),
@@ -183,7 +183,9 @@ class _QueueStrip extends StatelessWidget {
                   SizedBox(
                     width: 200,
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(3),
+                      borderRadius: BorderRadius.circular(
+                        context.ow.shape.radiusSmall,
+                      ),
                       child: LinearProgressIndicator(
                         value: progress,
                         minHeight: 6,
@@ -236,7 +238,7 @@ class QueuePanel extends StatelessWidget {
     final l = context.l10n;
     return Container(
       height: 280,
-      margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+      margin: const EdgeInsets.fromLTRB(OwSpace.s4, 0, OwSpace.s4, OwSpace.s4),
       decoration: BoxDecoration(
         color: c.surface,
         border: Border.all(color: c.border),
@@ -246,7 +248,12 @@ class QueuePanel extends StatelessWidget {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+            padding: const EdgeInsets.fromLTRB(
+              OwSpace.s6,
+              OwSpace.s4,
+              OwSpace.s4,
+              OwSpace.s4,
+            ),
             child: Row(
               children: [
                 Icon(Icons.swap_vert, size: 16, color: c.accentText),
@@ -316,7 +323,12 @@ class _JobRow extends StatelessWidget {
         ? j.done / j.total
         : null;
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+      padding: const EdgeInsets.fromLTRB(
+        OwSpace.s6,
+        OwSpace.s4,
+        OwSpace.s4,
+        OwSpace.s4,
+      ),
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: c.border)),
       ),
@@ -362,15 +374,17 @@ class _JobRow extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: OwText.small,
                     color: j.state == TransferState.failed ? c.danger : c.text,
                   ),
                 ),
                 if (progress != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 6),
+                    padding: const EdgeInsets.only(top: OwSpace.s3),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(
+                        context.ow.shape.radiusSmall,
+                      ),
                       child: LinearProgressIndicator(
                         value: progress,
                         minHeight: 4,
@@ -435,7 +449,7 @@ class TransferIndicator extends ConsumerWidget {
                   .format((progress * 100).floor() / 100)
             : '${queue.active}';
         return Padding(
-          padding: const EdgeInsets.only(right: 8, bottom: 5),
+          padding: const EdgeInsets.only(right: OwSpace.s4, bottom: OwSpace.s2),
           child: Tooltip(
             message: '${l.transfers}: ${queueSummary(l, queue.jobs)}',
             child: OutlinedButton.icon(
@@ -448,7 +462,7 @@ class TransferIndicator extends ConsumerWidget {
               ),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(0, 28),
-                padding: const EdgeInsets.symmetric(horizontal: 10),
+                padding: const EdgeInsets.symmetric(horizontal: OwSpace.s5),
                 foregroundColor: failed ? c.danger : c.accentText,
                 backgroundColor: failed ? c.dangerSoft : c.accentSoft,
                 side: BorderSide(color: failed ? c.dangerLine : c.accent),

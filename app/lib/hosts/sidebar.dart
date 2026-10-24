@@ -52,7 +52,9 @@ class Sidebar extends ConsumerStatefulWidget {
 }
 
 class _SidebarState extends ConsumerState<Sidebar> {
-  final _search = TextEditingController();
+  // From what is still searched: the sidebar comes back (folded and
+  // opened, a rail) with the filter it left on.
+  late final _search = TextEditingController(text: ref.read(searchProvider));
   String? _selected;
 
   /// Each section opened or folded by hand; until then the open tabs show,
@@ -120,7 +122,12 @@ class _SidebarState extends ConsumerState<Sidebar> {
     } else if (results != null && results.isEmpty) {
       final target = _typed(_search.text);
       body = Padding(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+        padding: const EdgeInsets.fromLTRB(
+          OwSpace.s4,
+          OwSpace.s4,
+          OwSpace.s4,
+          OwSpace.s4,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -135,7 +142,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
               )
             else
               Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(OwSpace.s6),
                 child: Text(
                   l.noResults,
                   textAlign: TextAlign.center,
@@ -149,12 +156,22 @@ class _SidebarState extends ConsumerState<Sidebar> {
       body = results != null
           // A search can find hundreds: rows are made as they show.
           ? ListView.builder(
-              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              padding: const EdgeInsets.fromLTRB(
+                OwSpace.s4,
+                0,
+                OwSpace.s4,
+                OwSpace.s4,
+              ),
               itemCount: results.length,
               itemBuilder: (context, i) => _hostRow(results[i], sessions),
             )
           : ListView(
-              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              padding: const EdgeInsets.fromLTRB(
+                OwSpace.s4,
+                0,
+                OwSpace.s4,
+                OwSpace.s4,
+              ),
               children: [
                 _OpenTabs(
                   shown: _openShown ?? true,
@@ -172,7 +189,12 @@ class _SidebarState extends ConsumerState<Sidebar> {
         children: [
           if (!widget.overWindow) const WindowButtonsSpace(),
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+            padding: const EdgeInsets.fromLTRB(
+              OwSpace.s6,
+              OwSpace.s2,
+              OwSpace.s6,
+              OwSpace.s4,
+            ),
             child: _SearchField(
               controller: _search,
               focusNode: widget.searchFocus,
@@ -183,7 +205,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
           if (!empty) const _HostsEntry(),
           const _Library(),
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(OwSpace.s6),
             decoration: BoxDecoration(
               border: Border(top: BorderSide(color: ow.colors.border)),
             ),
@@ -266,10 +288,18 @@ class _SidebarState extends ConsumerState<Sidebar> {
       ),
       if (shown && favorites.isEmpty)
         Padding(
-          padding: const EdgeInsets.fromLTRB(8, 2, 8, 6),
+          padding: const EdgeInsets.fromLTRB(
+            OwSpace.s4,
+            OwSpace.s1,
+            OwSpace.s4,
+            OwSpace.s3,
+          ),
           child: Text(
             l.favoritesEmptyShort,
-            style: TextStyle(fontSize: 12, color: ow.colors.textSubtle),
+            style: TextStyle(
+              fontSize: OwText.small,
+              color: ow.colors.textSubtle,
+            ),
           ),
         ),
       if (shown)
@@ -328,7 +358,10 @@ class _SidebarState extends ConsumerState<Sidebar> {
       context.l10n,
       DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(at)),
     ),
-    style: TextStyle(fontSize: 12, color: context.ow.colors.textMuted),
+    style: TextStyle(
+      fontSize: OwText.small,
+      color: context.ow.colors.textMuted,
+    ),
   );
 
   /// An address connected to without saving it: a double click or Enter
@@ -356,7 +389,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
         actions.item(l.saveAsHost, () => _saveAddress(t)),
       ]),
       child: Padding(
-        padding: const EdgeInsets.only(bottom: 2),
+        padding: const EdgeInsets.only(bottom: OwSpace.s1),
         child: CallbackShortcuts(
           bindings: {
             const SingleActivator(LogicalKeyboardKey.enter): connect,
@@ -384,8 +417,8 @@ class _SidebarState extends ConsumerState<Sidebar> {
                     onDoubleTap: clearAfter ? null : connect,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 7,
+                        horizontal: OwSpace.s4,
+                        vertical: OwSpace.s3,
                       ),
                       child: Row(
                         children: [
@@ -450,7 +483,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
           actions.menu(d.globalPosition, actions.hostMenu(h));
         },
         child: Padding(
-          padding: const EdgeInsets.only(bottom: 2),
+          padding: const EdgeInsets.only(bottom: OwSpace.s1),
           child: Material(
             color: selected ? ow.colors.selected : Colors.transparent,
             shadowColor: Colors.black26,
@@ -511,7 +544,10 @@ class _SidebarState extends ConsumerState<Sidebar> {
           actions.connect(h);
         },
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+          padding: const EdgeInsets.symmetric(
+            horizontal: OwSpace.s4,
+            vertical: OwSpace.s3,
+          ),
           child: Row(
             children: [
               SystemBadge(code: system?.code, env: env),
@@ -582,12 +618,12 @@ class _SidebarState extends ConsumerState<Sidebar> {
                 )
               else if (mine.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(left: 8),
+                  padding: const EdgeInsets.only(left: OwSpace.s4),
                   child: _HostStatus(sessions: mine),
                 )
               else if (at != null)
                 Padding(
-                  padding: const EdgeInsets.only(left: 8),
+                  padding: const EdgeInsets.only(left: OwSpace.s4),
                   child: _ago(at),
                 ),
             ],
@@ -627,7 +663,12 @@ class _SectionHeader extends StatelessWidget {
           borderRadius: BorderRadius.circular(ow.shape.radius),
           onTap: onToggle,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 12, 8, 6),
+            padding: const EdgeInsets.fromLTRB(
+              OwSpace.s4,
+              OwSpace.s6,
+              OwSpace.s4,
+              OwSpace.s3,
+            ),
             child: Row(
               children: [
                 if (lead != null) ...[lead!, const SizedBox(width: 6)],
@@ -762,7 +803,7 @@ class _OpenRow extends ConsumerWidget {
         action?.call();
       },
       child: Padding(
-        padding: const EdgeInsets.only(bottom: 1),
+        padding: const EdgeInsets.only(bottom: OwSpace.hair),
         child: FocusOutline(
           child: Material(
             color: selected ? c.selected : Colors.transparent,
@@ -787,7 +828,7 @@ class _OpenRow extends ConsumerWidget {
                 child: SizedBox(
                   height: 32,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: OwSpace.s4),
                     child: Row(
                       children: [
                         lead,
@@ -817,7 +858,7 @@ class _OpenRow extends ConsumerWidget {
                         const SizedBox(width: 8),
                         if (indices.length > 1)
                           Padding(
-                            padding: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.only(right: OwSpace.s4),
                             child: Text(
                               '× ${indices.length}',
                               style: monoStyle(context, size: 12),
@@ -902,10 +943,15 @@ class _HostsEntry extends ConsumerWidget {
     final summary = l.hostsSummary(library.hosts.length, library.groups.length);
     final radius = BorderRadius.circular(ow.shape.radiusLarge);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+      padding: const EdgeInsets.fromLTRB(
+        OwSpace.s4,
+        OwSpace.s3,
+        OwSpace.s4,
+        OwSpace.s3,
+      ),
       child: Tooltip(
         message: withKeys(l.shortcutHosts, hostsKeys(l)),
-        waitDuration: const Duration(milliseconds: 500),
+        waitDuration: OwMotion.hint,
         child: Semantics(
           button: true,
           selected: here,
@@ -927,8 +973,8 @@ class _HostsEntry extends ConsumerWidget {
                     ref.read(tabsProvider.notifier).openPage(PageKind.hosts),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 9,
+                    horizontal: OwSpace.s5,
+                    vertical: OwSpace.s4,
                   ),
                   child: Row(
                     children: [
@@ -944,7 +990,10 @@ class _HostsEntry extends ConsumerWidget {
                           summary,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 12, color: c.textMuted),
+                          style: TextStyle(
+                            fontSize: OwText.small,
+                            color: c.textMuted,
+                          ),
                         ),
                       ),
                       KeyCap(hostsKeys(l)),
@@ -1061,12 +1110,12 @@ class _SearchField extends StatelessWidget {
           controller: controller,
           focusNode: focusNode,
           onChanged: ref.read(searchProvider.notifier).set,
-          style: const TextStyle(fontSize: 13),
+          style: const TextStyle(fontSize: OwText.body),
           decoration: InputDecoration(
             hintText: l.sidebarSearchHint,
             prefixIcon: const Icon(Icons.search, size: 16),
             prefixIconConstraints: const BoxConstraints(minWidth: 34),
-            contentPadding: const EdgeInsets.symmetric(vertical: 9),
+            contentPadding: const EdgeInsets.symmetric(vertical: OwSpace.s4),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(ow.shape.control),
               borderSide: BorderSide(color: ow.colors.control),
@@ -1098,7 +1147,7 @@ class _Empty extends StatelessWidget {
     final l = context.l10n;
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(OwSpace.s12),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -1213,7 +1262,12 @@ class _Library extends ConsumerWidget {
     final current = ref.watch(tabsProvider.select((s) => s.current));
     bool here(PageKind page) => current is PageTab && current.page == page;
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
+      padding: const EdgeInsets.fromLTRB(
+        OwSpace.s4,
+        OwSpace.s2,
+        OwSpace.s4,
+        OwSpace.s3,
+      ),
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: c.border)),
       ),
@@ -1221,7 +1275,12 @@ class _Library extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
+            padding: const EdgeInsets.fromLTRB(
+              OwSpace.s4,
+              OwSpace.s3,
+              OwSpace.s4,
+              OwSpace.s2,
+            ),
             child: SectionLabel(l.library),
           ),
           // Again as tunnels open and close. Two columns, each with its
@@ -1282,7 +1341,7 @@ class _LibraryButton extends StatelessWidget {
     final radius = BorderRadius.circular(ow.shape.radius + 2);
     return Tooltip(
       message: text,
-      waitDuration: const Duration(milliseconds: 300),
+      waitDuration: OwMotion.hintSoon,
       child: Semantics(
         button: true,
         selected: selected,
@@ -1301,7 +1360,7 @@ class _LibraryButton extends StatelessWidget {
               child: SizedBox(
                 height: heightForText(context, 30),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: OwSpace.s4),
                   child: Row(
                     children: [
                       Stack(
@@ -1331,7 +1390,7 @@ class _LibraryButton extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 12.5,
+                            fontSize: OwText.body,
                             color: selected ? c.text : c.textMuted,
                             fontWeight: selected
                                 ? FontWeight.w600

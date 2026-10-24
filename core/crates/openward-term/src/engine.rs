@@ -89,5 +89,5 @@ pub trait TermEngine: Send {
 
     /// Visible screen as plain text, one line per row with trailing spaces
     /// trimmed. Meant for tests and golden comparisons, not for rendering.
-    fn screen_text(&self) -> String;
+    fn screen_text(&mut self) -> String;
 }

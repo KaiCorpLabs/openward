@@ -93,7 +93,7 @@ class _SaveWorkspaceState extends ConsumerState<_SaveWorkspace> {
             const SizedBox(height: 14),
             Text(
               workspaceSummary(l, widget.tabs.length, sessions),
-              style: TextStyle(fontSize: 12, color: c.textMuted),
+              style: TextStyle(fontSize: OwText.small, color: c.textMuted),
             ),
             const SizedBox(height: 6),
             _TabChips(tabs: widget.tabs),
@@ -132,7 +132,10 @@ class _TabChips extends ConsumerWidget {
       children: [
         for (final t in tabs)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+              horizontal: OwSpace.s4,
+              vertical: OwSpace.s2,
+            ),
             decoration: BoxDecoration(
               color: c.sunken,
               border: Border.all(color: c.border),
@@ -156,7 +159,7 @@ class _TabChips extends ConsumerWidget {
                       tabTargets(t)
                           .map((x) => targetLabel(l, ref, x))
                           .join(' · '),
-                  style: const TextStyle(fontSize: 12),
+                  style: const TextStyle(fontSize: OwText.small),
                 ),
               ],
             ),
@@ -271,10 +274,13 @@ class _WorkspacesPageState extends ConsumerState<WorkspacesPage> {
                 ),
                 if (open.isEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(top: 6),
+                    padding: const EdgeInsets.only(top: OwSpace.s3),
                     child: Text(
                       l.saveTabsNeedsTabs,
-                      style: TextStyle(fontSize: 12, color: c.textMuted),
+                      style: TextStyle(
+                        fontSize: OwText.small,
+                        color: c.textMuted,
+                      ),
                     ),
                   ),
               ],
@@ -282,7 +288,7 @@ class _WorkspacesPageState extends ConsumerState<WorkspacesPage> {
           ),
           if (_note != null || _error != null)
             Padding(
-              padding: const EdgeInsets.only(top: 10),
+              padding: const EdgeInsets.only(top: OwSpace.s5),
               child: Text(
                 _error ?? _note!,
                 style: TextStyle(
@@ -314,8 +320,13 @@ class _WorkspacesPageState extends ConsumerState<WorkspacesPage> {
     final l = context.l10n;
     return Container(
       key: ValueKey('workspace.${w.spec.name}'),
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
+      margin: const EdgeInsets.only(bottom: OwSpace.s5),
+      padding: const EdgeInsets.fromLTRB(
+        OwSpace.s8,
+        OwSpace.s6,
+        OwSpace.s5,
+        OwSpace.s6,
+      ),
       decoration: BoxDecoration(
         color: c.raised,
         border: Border.all(color: c.border),
@@ -334,7 +345,7 @@ class _WorkspacesPageState extends ConsumerState<WorkspacesPage> {
                 const SizedBox(height: 2),
                 Text(
                   workspaceSummary(l, w.spec.tabs.length, w.sessions),
-                  style: TextStyle(fontSize: 12, color: c.textMuted),
+                  style: TextStyle(fontSize: OwText.small, color: c.textMuted),
                 ),
                 const SizedBox(height: 8),
                 _TabChips(tabs: w.spec.tabs),

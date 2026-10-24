@@ -104,7 +104,7 @@ class _SnippetsPageState extends ConsumerState<SnippetsPage> {
               Expanded(
                 child: Text(
                   l.snippetsHowToRun(shortcut),
-                  style: TextStyle(fontSize: 12, color: c.textSubtle),
+                  style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
                 ),
               ),
             ],
@@ -144,7 +144,7 @@ class _SnippetsPageState extends ConsumerState<SnippetsPage> {
             if (lines.length > 1)
               Text(
                 l.linesCount(lines.length),
-                style: TextStyle(fontSize: 12, color: c.textSubtle),
+                style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
               ),
           ],
         ),
@@ -166,7 +166,7 @@ class _SnippetsPageState extends ConsumerState<SnippetsPage> {
             ],
             child: Container(
               height: 28,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: const EdgeInsets.symmetric(horizontal: OwSpace.s5),
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 border: Border.all(color: c.control),
@@ -175,7 +175,7 @@ class _SnippetsPageState extends ConsumerState<SnippetsPage> {
               child: Text(
                 l.runEllipsis,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: OwText.small,
                   color: terminals.isEmpty ? c.textSubtle : c.accentText,
                 ),
               ),

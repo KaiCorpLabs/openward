@@ -2,7 +2,7 @@
 //! Authenticator and most 2FA PAM modules use. The test servers' secret
 //! comes from the fixtures; a product would ask the user instead.
 
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use sha1::Sha1;
 
 pub fn code(secret_base32: &str, unix_time: u64) -> anyhow::Result<String> {

@@ -209,7 +209,12 @@ class _ShortcutsSheetState extends State<ShortcutsSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 8, 8),
+                padding: const EdgeInsets.fromLTRB(
+                  OwSpace.s10,
+                  OwSpace.s7,
+                  OwSpace.s4,
+                  OwSpace.s4,
+                ),
                 child: Row(
                   children: [
                     Icon(Icons.keyboard_outlined, size: 18, color: c.textMuted),
@@ -218,7 +223,7 @@ class _ShortcutsSheetState extends State<ShortcutsSheet> {
                       child: Text(
                         l.shortcutsTitle,
                         style: const TextStyle(
-                          fontSize: 15,
+                          fontSize: OwText.title,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -232,7 +237,7 @@ class _ShortcutsSheetState extends State<ShortcutsSheet> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: OwSpace.s10),
                 child: TextField(
                   key: const ValueKey('shortcuts.search'),
                   controller: _query,
@@ -254,7 +259,7 @@ class _ShortcutsSheetState extends State<ShortcutsSheet> {
               Flexible(
                 child: groups.isEmpty
                     ? Padding(
-                        padding: const EdgeInsets.all(28),
+                        padding: const EdgeInsets.all(OwSpace.s14),
                         child: Text(
                           l.shortcutsNone(_query.text.trim()),
                           textAlign: TextAlign.center,
@@ -263,7 +268,12 @@ class _ShortcutsSheetState extends State<ShortcutsSheet> {
                       )
                     : LayoutBuilder(
                         builder: (context, box) => SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                          padding: const EdgeInsets.fromLTRB(
+                            OwSpace.s10,
+                            OwSpace.s4,
+                            OwSpace.s10,
+                            OwSpace.s10,
+                          ),
                           child: box.maxWidth >= 640 && split > 0
                               ? Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -296,7 +306,7 @@ class _Group extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 14),
+    padding: const EdgeInsets.only(top: OwSpace.s7),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -309,11 +319,14 @@ class _Group extends StatelessWidget {
             excludeSemantics: true,
             child: Padding(
               key: ValueKey('shortcut.${r.title}'),
-              padding: const EdgeInsets.symmetric(vertical: 4),
+              padding: const EdgeInsets.symmetric(vertical: OwSpace.s2),
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(r.title, style: const TextStyle(fontSize: 13)),
+                    child: Text(
+                      r.title,
+                      style: const TextStyle(fontSize: OwText.body),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Wrap(

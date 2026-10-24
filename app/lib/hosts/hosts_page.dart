@@ -7,6 +7,7 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/match.dart';
 import '../core/providers.dart';
 import '../home/recent.dart';
 import '../l10n/l10n.dart';
@@ -121,13 +122,11 @@ class _HostsPageState extends ConsumerState<HostsPage> {
       if (r.hostId case final id?) last.putIfAbsent(id, () => r.at);
     }
     final q = _query.text.trim();
-    final found = q.isEmpty
-        ? null
-        : ref.read(openWardProvider).search(query: q).toSet();
+    final matcher = HostMatcher(q, ref.read(libraryProvider));
     final lower = q.toLowerCase();
     bool keep(HostView h) {
-      if (found != null &&
-          !found.contains(h.id) &&
+      if (!matcher.isEmpty &&
+          !matcher.matches(h) &&
           !(h.system != null &&
               (h.system!.code == lower ||
                   systemText(context, h).toLowerCase().contains(lower)))) {
@@ -176,7 +175,12 @@ class _HostsPageState extends ConsumerState<HostsPage> {
     return ColoredBox(
       color: c.surface,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(28, 22, 28, 12),
+        padding: const EdgeInsets.fromLTRB(
+          OwSpace.s14,
+          OwSpace.s11,
+          OwSpace.s14,
+          OwSpace.s6,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -292,13 +296,15 @@ class _HostsPageState extends ConsumerState<HostsPage> {
               controller: _query,
               autofocus: true,
               onChanged: (_) => setState(() {}),
-              style: const TextStyle(fontSize: 13),
+              style: const TextStyle(fontSize: OwText.body),
               decoration: InputDecoration(
                 isDense: true,
                 hintText: l.hostsSearchHint,
                 prefixIcon: Icon(Icons.search, size: 16, color: c.textSubtle),
                 prefixIconConstraints: const BoxConstraints(minWidth: 36),
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: OwSpace.s5,
+                ),
               ),
             ),
           ),
@@ -363,7 +369,7 @@ class _HostsPageState extends ConsumerState<HostsPage> {
     Widget gap() => Container(
       width: 1,
       height: 20,
-      margin: const EdgeInsets.symmetric(horizontal: 4),
+      margin: const EdgeInsets.symmetric(horizontal: OwSpace.s2),
       color: c.border,
     );
     return Semantics(
@@ -489,7 +495,12 @@ class _HostsPageState extends ConsumerState<HostsPage> {
         if (s.group != null || showLoose) () => head(s),
         if (_cards && s.hosts.isNotEmpty)
           () => Padding(
-            padding: EdgeInsets.fromLTRB(s.depth * 16.0, 4, 0, 8),
+            padding: EdgeInsets.fromLTRB(
+              s.depth * 16.0,
+              OwSpace.s2,
+              0,
+              OwSpace.s4,
+            ),
             child: LayoutBuilder(
               builder: (context, box) {
                 final n = ((box.maxWidth + 10) / 250).floor().clamp(1, 6);
@@ -534,7 +545,7 @@ class _HostsPageState extends ConsumerState<HostsPage> {
       ],
     ];
     return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: OwSpace.s6),
       itemCount: items.length,
       itemBuilder: (context, i) => items[i](),
     );
@@ -602,7 +613,7 @@ class _HostsPageState extends ConsumerState<HostsPage> {
   Widget _hints(BuildContext context) {
     final l = context.l10n;
     final c = context.ow.colors;
-    final style = TextStyle(fontSize: 12, color: c.textMuted);
+    final style = TextStyle(fontSize: OwText.small, color: c.textMuted);
     Widget hint(String keys, String text) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -659,7 +670,7 @@ class _FilterChip extends StatelessWidget {
               ? (tint.fg, tint.soft, tint.line)
               : (c.onPrimary, c.primary, c.primary)
         : (c.text, Colors.transparent, c.control);
-    final style = TextStyle(fontSize: 12.5, color: fg);
+    final style = TextStyle(fontSize: OwText.small, color: fg);
     return Semantics(
       button: true,
       selected: on,
@@ -675,7 +686,10 @@ class _FilterChip extends StatelessWidget {
             customBorder: const StadiumBorder(),
             onTap: onTap,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              padding: const EdgeInsets.symmetric(
+                horizontal: OwSpace.s5,
+                vertical: OwSpace.s3,
+              ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -685,7 +699,9 @@ class _FilterChip extends StatelessWidget {
                       height: 8,
                       decoration: BoxDecoration(
                         color: tint.fg,
-                        borderRadius: BorderRadius.circular(2),
+                        borderRadius: BorderRadius.circular(
+                          context.ow.shape.radiusSmall,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -728,12 +744,20 @@ class _ColumnTitles extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = context.l10n;
     final c = context.ow.colors;
-    final style = Theme.of(context).textTheme.labelSmall
-        ?.copyWith(color: c.textSubtle, fontSize: 12, letterSpacing: 0.6);
+    final style = Theme.of(context).textTheme.labelSmall?.copyWith(
+      color: c.textSubtle,
+      fontSize: OwText.small,
+      letterSpacing: 0.6,
+    );
     Text t(String s) => Text(s.toUpperCase(), style: style, maxLines: 1);
     return ExcludeSemantics(
       child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+        padding: const EdgeInsets.fromLTRB(
+          OwSpace.s6,
+          0,
+          OwSpace.s6,
+          OwSpace.s3,
+        ),
         decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: c.border)),
         ),
@@ -863,7 +887,12 @@ class _GroupHeader extends StatelessWidget {
     final c = ow.colors;
     final l = context.l10n;
     final row = Padding(
-      padding: EdgeInsets.fromLTRB(8.0 + depth * 16, 14, 8, 6),
+      padding: EdgeInsets.fromLTRB(
+        8.0 + depth * 16,
+        OwSpace.s7,
+        OwSpace.s4,
+        OwSpace.s3,
+      ),
       child: Row(
         children: [
           Icon(
@@ -1009,7 +1038,7 @@ class _HostItemState extends State<_HostItem> {
             child: FocusOutline(
               radius: radius,
               child: Padding(
-                padding: EdgeInsets.only(bottom: widget.card ? 0 : 2),
+                padding: EdgeInsets.only(bottom: widget.card ? 0 : OwSpace.s1),
                 child: Material(
                   color: widget.selected
                       ? c.selected
@@ -1109,7 +1138,7 @@ class _HostItemState extends State<_HostItem> {
             onPressed: () => a.connect(h),
             style: FilledButton.styleFrom(
               minimumSize: const Size(0, 28),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: OwSpace.s6),
               visualDensity: VisualDensity.compact,
             ),
             child: Text(l.connect),
@@ -1147,7 +1176,7 @@ class _HostItemState extends State<_HostItem> {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.right,
-          style: TextStyle(fontSize: 12, color: c.textMuted),
+          style: TextStyle(fontSize: OwText.small, color: c.textMuted),
         );
       },
     );
@@ -1168,7 +1197,7 @@ class _HostItemState extends State<_HostItem> {
     return SizedBox(
       height: 44,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: OwSpace.s6),
         child: _cells(
           widget.cols,
           indent: widget.depth * 16.0,
@@ -1186,7 +1215,7 @@ class _HostItemState extends State<_HostItem> {
               ),
               for (final t in h.tags.take(2))
                 Padding(
-                  padding: const EdgeInsets.only(left: 6),
+                  padding: const EdgeInsets.only(left: OwSpace.s3),
                   child: Pill.tag(t),
                 ),
             ],
@@ -1201,7 +1230,7 @@ class _HostItemState extends State<_HostItem> {
             _HostsPageState.systemText(context, h),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 12.5, color: c.textMuted),
+            style: TextStyle(fontSize: OwText.small, color: c.textMuted),
           ),
           env: Align(
             alignment: Alignment.centerLeft,
@@ -1235,7 +1264,12 @@ class _HostItemState extends State<_HostItem> {
           color: env == null ? c.border : envColors(c, env.color).fg,
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+          padding: const EdgeInsets.fromLTRB(
+            OwSpace.s6,
+            OwSpace.s5,
+            OwSpace.s4,
+            OwSpace.s5,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1275,7 +1309,10 @@ class _HostItemState extends State<_HostItem> {
                     else
                       Text(
                         l.envNoneNote,
-                        style: TextStyle(fontSize: 12, color: c.textSubtle),
+                        style: TextStyle(
+                          fontSize: OwText.small,
+                          color: c.textSubtle,
+                        ),
                       ),
                     const SizedBox(width: 8),
                     Expanded(

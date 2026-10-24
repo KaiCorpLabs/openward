@@ -97,7 +97,7 @@ class _PaletteState extends ConsumerState<_Palette> {
     final shown = _shown();
     final mono = monoStyle(context, size: 12);
     Widget hint(String keys, String text) => Padding(
-      padding: const EdgeInsets.only(right: 14),
+      padding: const EdgeInsets.only(right: OwSpace.s7),
       child: Text.rich(
         TextSpan(
           children: [
@@ -105,7 +105,7 @@ class _PaletteState extends ConsumerState<_Palette> {
             TextSpan(text: ' $text'),
           ],
         ),
-        style: TextStyle(fontSize: 12, color: c.textSubtle),
+        style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
       ),
     );
     final alt = isApple ? '⌥↩' : 'Alt+↩';
@@ -121,7 +121,7 @@ class _PaletteState extends ConsumerState<_Palette> {
         child: SizedBox(
           width: 560,
           child: Padding(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(OwSpace.s3),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -145,7 +145,10 @@ class _PaletteState extends ConsumerState<_Palette> {
                         color: c.accentText,
                       ),
                       suffixText: l.inWhere(widget.where),
-                      suffixStyle: TextStyle(fontSize: 12, color: c.textSubtle),
+                      suffixStyle: TextStyle(
+                        fontSize: OwText.small,
+                        color: c.textSubtle,
+                      ),
                     ),
                   ),
                 ),
@@ -153,7 +156,7 @@ class _PaletteState extends ConsumerState<_Palette> {
                 const SizedBox(height: 4),
                 if (shown.isEmpty)
                   Padding(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(OwSpace.s7),
                     child: Text(
                       ref.read(snippetsProvider).isEmpty
                           ? l.noSnippetsYet
@@ -178,7 +181,12 @@ class _PaletteState extends ConsumerState<_Palette> {
                 const SizedBox(height: 4),
                 Divider(height: 1, color: c.border),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 8, 6, 4),
+                  padding: const EdgeInsets.fromLTRB(
+                    OwSpace.s5,
+                    OwSpace.s4,
+                    OwSpace.s3,
+                    OwSpace.s2,
+                  ),
                   child: Row(
                     children: [
                       // With large text, the hints go on to a second line.
@@ -229,7 +237,10 @@ class _PaletteState extends ConsumerState<_Palette> {
         borderRadius: BorderRadius.circular(ow.shape.radius),
         onTap: () => Navigator.pop(context, (s, false)),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: OwSpace.s5,
+            vertical: OwSpace.s4,
+          ),
           child: Row(
             children: [
               Expanded(
@@ -252,12 +263,12 @@ class _PaletteState extends ConsumerState<_Palette> {
               const SizedBox(width: 8),
               for (final v in s.variables.asked)
                 Padding(
-                  padding: const EdgeInsets.only(left: 4),
+                  padding: const EdgeInsets.only(left: OwSpace.s2),
                   child: Pill(v, tone: PillTone.warm),
                 ),
               if (selected)
                 Padding(
-                  padding: const EdgeInsets.only(left: 8),
+                  padding: const EdgeInsets.only(left: OwSpace.s4),
                   child: Text('↩', style: TextStyle(color: c.textSubtle)),
                 ),
             ],

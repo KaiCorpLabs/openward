@@ -5,6 +5,7 @@
 
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../core/connection.dart';
@@ -35,11 +36,11 @@ class LatencyChip extends StatelessWidget {
         color: ow.colors.raised,
         border: Border.all(color: ow.colors.control),
         borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
-        boxShadow: const [BoxShadow(color: Color(0x55000000), blurRadius: 24)],
+        boxShadow: OwElevation.overlay,
       ),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(OwSpace.s7),
       preferBelow: false,
-      waitDuration: const Duration(milliseconds: 300),
+      waitDuration: OwMotion.hintSoon,
       child: Semantics(
         button: true,
         label: c.rttHigh ? l.latencyHighLabel(rtt) : l.latencyLabel(rtt),
@@ -49,14 +50,17 @@ class LatencyChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(ow.shape.radius),
           onTap: () => showConnectionInfo(context, c),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            padding: const EdgeInsets.symmetric(
+              horizontal: OwSpace.s3,
+              vertical: OwSpace.s1,
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 // High: more than its color says it.
                 if (c.rttHigh)
                   Padding(
-                    padding: const EdgeInsets.only(right: 3),
+                    padding: const EdgeInsets.only(right: OwSpace.s1),
                     child: Icon(Icons.arrow_drop_up, size: 16, color: color),
                   ),
                 Text(
@@ -117,7 +121,9 @@ class Sparkline extends StatelessWidget {
     height: height,
     child: CustomPaint(
       painter: _SparkPainter(
-        values,
+        // A copy: the connection's history is one list that shifts in
+        // place, and the next frame compares against this one.
+        List.of(values),
         color,
         top(values),
         grid,
@@ -203,9 +209,11 @@ class _SparkPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SparkPainter old) =>
-      old.values.length != values.length ||
-      old.values.lastOrNull != values.lastOrNull ||
+      !listEquals(old.values, values) ||
+      !listEquals(old.grid, grid) ||
+      old.threshold != threshold ||
       old.color != color ||
+      old.gridColor != gridColor ||
       old.top != top;
 }
 
@@ -237,12 +245,12 @@ class LatencyCard extends StatelessWidget {
     final color = high ? colors.warn : colors.accent;
     final top = Sparkline.top(c.rttHistory);
     final ticks = latencyTicks(top);
-    final small = TextStyle(fontSize: 12, color: colors.textMuted);
+    final small = TextStyle(fontSize: OwText.small, color: colors.textMuted);
     const chartHeight = 64.0;
     // Where a value falls on the chart, as Sparkline draws it.
     double y(int v) => chartHeight - 2 - v / top * (chartHeight - 4);
     Widget row(String name, Widget value) => Padding(
-      padding: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.only(top: OwSpace.s3),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -254,7 +262,7 @@ class LatencyCard extends StatelessWidget {
     Text mono(String text) =>
         Text(text, style: monoStyle(context, size: 12, color: colors.text));
     return DefaultTextStyle(
-      style: TextStyle(fontSize: 13, color: colors.text),
+      style: TextStyle(fontSize: OwText.body, color: colors.text),
       child: SizedBox(
         width: 360,
         child: Column(
@@ -275,7 +283,7 @@ class LatencyCard extends StatelessWidget {
                       ),
                       if (usual != null)
                         Padding(
-                          padding: const EdgeInsets.only(top: 2),
+                          padding: const EdgeInsets.only(top: OwSpace.s1),
                           child: Text(l.latencyUsual(usual), style: small),
                         ),
                     ],
@@ -297,8 +305,8 @@ class LatencyCard extends StatelessWidget {
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
+                  horizontal: OwSpace.s5,
+                  vertical: OwSpace.s3,
                 ),
                 decoration: BoxDecoration(
                   color: colors.warnSoft,
@@ -307,7 +315,7 @@ class LatencyCard extends StatelessWidget {
                 ),
                 child: Text(
                   l.latencyHigh(rtt, (rtt / usual).round()),
-                  style: TextStyle(fontSize: 12, color: colors.warn),
+                  style: TextStyle(fontSize: OwText.small, color: colors.warn),
                 ),
               ),
             ],

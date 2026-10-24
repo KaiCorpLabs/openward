@@ -4,9 +4,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use flutter_rust_bridge::frb;
-use openward_app::vault::proto::{
-    Data, Group, Host, Marker, Settings, Source, System, SystemSource,
-};
+use openward_app::vault::proto::{Data, Group, Host, Settings, Source, System, SystemSource};
 use openward_app::{App, DEFAULT_SCROLLBACK, RECONNECT_ATTEMPTS};
 use openward_import::ssh_config::Warning;
 
@@ -164,6 +162,20 @@ fn warning(w: Warning) -> ImportWarning {
     }
 }
 
+/// What only the tests may ask for (another home, a Termius key handed
+/// in): the generated bindings reach every function, so these cannot be
+/// left out of a release build; there they refuse.
+pub(crate) fn for_tests(what: &str) -> Result<(), VaultError> {
+    if cfg!(debug_assertions) {
+        Ok(())
+    } else {
+        Err(VaultError {
+            kind: VaultErrorKind::Invalid,
+            message: format!("{what} is only for tests"),
+        })
+    }
+}
+
 impl OpenWard {
     /// Opens or creates the app's data in `data_dir` (the platform's
     /// application support directory).
@@ -174,8 +186,10 @@ impl OpenWard {
     }
 
     /// As [`OpenWard::open`], with another `~/.ssh` (tests: the tester's
-    /// own keys and `known_hosts` stay out, the system's too).
+    /// own keys and `known_hosts` stay out, the system's too). Debug
+    /// builds only: see [`for_tests`].
     pub fn open_with_ssh_dir(data_dir: String, ssh_dir: String) -> Result<OpenWard, VaultError> {
+        for_tests("open_with_ssh_dir")?;
         let ssh_dir = PathBuf::from(ssh_dir);
         let local = openward_app::Local {
             system_ssh_dir: ssh_dir.join("system"),
@@ -189,7 +203,9 @@ impl OpenWard {
 
     /// As [`OpenWard::open`], with another home folder and its `.ssh`
     /// (tests: nothing of the tester's, such as their Termius, is seen).
+    /// Debug builds only: see [`for_tests`].
     pub fn open_with_home(data_dir: String, home: String) -> Result<OpenWard, VaultError> {
+        for_tests("open_with_home")?;
         let home = PathBuf::from(home);
         let local = openward_app::Local {
             ssh_dir: home.join(".ssh"),
@@ -500,27 +516,6 @@ impl OpenWard {
             tunnels: report.tunnels as u32,
             warnings: report.warnings.into_iter().map(warning).collect(),
         })
-    }
-
-    #[frb(sync)]
-    pub fn known_hosts(&self) -> Vec<KnownHostView> {
-        self.app
-            .vault()
-            .known_hosts()
-            .into_iter()
-            .map(|(id, k)| KnownHostView {
-                id: id.to_string(),
-                hosts: k.hosts.clone(),
-                algorithm: k
-                    .key
-                    .split_whitespace()
-                    .next()
-                    .unwrap_or_default()
-                    .to_owned(),
-                key: k.key.clone(),
-                cert_authority: k.marker == Some(Marker::CertAuthority),
-            })
-            .collect()
     }
 
     /// Trusts a key the user checked, replacing the old one of its type

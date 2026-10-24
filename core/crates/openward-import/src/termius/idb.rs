@@ -9,7 +9,6 @@
 //! an object store's records, index 1.
 
 use std::collections::{BTreeMap, HashMap};
-use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -292,7 +291,8 @@ fn unwrap_blink(
                     .join(format!("{db:x}"))
                     .join(format!("{:02x}", number >> 8))
                     .join(format!("{number:x}"));
-                let raw = fs::read(&path).map_err(|e| format!("blob {}: {e}", path.display()))?;
+                let raw = crate::files::read(&path)
+                    .map_err(|e| format!("blob {}: {e}", path.display()))?;
                 unwrap_blink(&raw, db, None, blobs, depth + 1)
             }
             other => Err(format!("unknown value wrapping {other}")),
@@ -337,6 +337,18 @@ fn blob_number(list: &[u8], index: usize) -> Result<u64, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    proptest::proptest! {
+        /// IndexedDB keys and records that make no sense are refused.
+        #[test]
+        fn any_bytes_are_read_or_refused(bytes in proptest::collection::vec(proptest::prelude::any::<u8>(), 0..2048)) {
+            let _ = Prefix::parse(&bytes);
+            let _ = database_name(&bytes);
+            let _ = idb_key(&bytes);
+            let _ = record_value(&bytes, 1, None, None);
+            let _ = record_value(&bytes, 1, Some(&bytes), None);
+        }
+    }
 
     #[test]
     fn a_prefix_with_wider_ids() {

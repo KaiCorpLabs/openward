@@ -521,17 +521,20 @@ pub fn apply(
     }
     chosen.retain(|id| by_id[id].unsupported.is_none());
 
-    // Keys: the same in ~/.ssh, or saved there if asked.
+    // Keys: the same in ~/.ssh, or saved there if asked. Written aside
+    // now and put in place once the vault has what uses them: a vault that
+    // fails leaves no keys behind.
     let mut key_paths: HashMap<&str, String> = HashMap::new();
+    let mut staged = Vec::new();
     for m in &read.keys {
         if let Some(found) = &m.found {
             key_paths.insert(&m.id, found.clone());
         } else if choice.save_keys.contains(&m.id)
             && let Some(stored) = b.keys.iter().find(|k| k.id == m.id)
         {
-            let path = save_key(local, &m.save_as, stored)?;
-            report.saved_keys.push(path.clone());
-            key_paths.insert(&m.id, path);
+            let key = stage_key(local, &m.save_as, stored)?;
+            key_paths.insert(&m.id, key.shown.clone());
+            staged.push(key);
         }
     }
     let files = |keys: &[KeyRef], label: &str, without: &mut Vec<String>| -> Vec<String> {
@@ -814,13 +817,22 @@ pub fn apply(
     if !items.is_empty() {
         vault.create_all(items)?;
     }
+    for key in staged {
+        report.saved_keys.push(key.place()?);
+    }
     Ok(report)
 }
 
-/// Writes a stored key to `~/.ssh` as the other program kept it, readable
-/// only by the user, with its `.pub` when it can be read. Never replaces a
-/// file.
-fn save_key(local: &Local, shown: &str, key: &bundle::StoredKey) -> Result<String, Error> {
+/// A stored key written to `~/.ssh` as the other program kept it,
+/// readable only by the user, with its `.pub` when it can be read. Until
+/// [`place`](Self::place)d it is under a hidden temporary name, synced to
+/// disk; dropped before that, it is deleted.
+struct StagedKey {
+    shown: String,
+    files: Vec<(PathBuf, PathBuf)>,
+}
+
+fn stage_key(local: &Local, shown: &str, key: &bundle::StoredKey) -> Result<StagedKey, Error> {
     let path = match shown.strip_prefix("~/") {
         Some(rest) => local.home.join(rest),
         None => PathBuf::from(shown),
@@ -832,22 +844,66 @@ fn save_key(local: &Local, shown: &str, key: &bundle::StoredKey) -> Result<Strin
     if let Some(dir) = path.parent() {
         create_private_dir(dir).map_err(fail)?;
     }
+    let mut staged = StagedKey {
+        shown: shown.to_owned(),
+        files: Vec::new(),
+    };
     let mut text = Zeroizing::new(key.private_key.replace("\r\n", "\n"));
     if !text.ends_with('\n') {
         text.push('\n');
     }
-    write_new(&path, text.as_bytes(), 0o600).map_err(fail)?;
+    let tmp = write_aside(&path, text.as_bytes(), 0o600).map_err(fail)?;
+    staged.files.push((tmp, path.clone()));
     if let Some(public) = public_key(
         &key.private_key,
         key.passphrase.as_ref().map(|p| p.as_str()),
     ) && let Ok(line) = public.to_openssh()
     {
-        let mut pub_path = path.clone().into_os_string();
+        let mut pub_path = path.into_os_string();
         pub_path.push(".pub");
+        let pub_path = PathBuf::from(pub_path);
         // A missing `.pub` only means the type is shown later as unknown.
-        let _ = write_new(Path::new(&pub_path), format!("{line}\n").as_bytes(), 0o644);
+        if let Ok(tmp) = write_aside(&pub_path, format!("{line}\n").as_bytes(), 0o644) {
+            staged.files.push((tmp, pub_path));
+        }
     }
-    Ok(shown.to_owned())
+    Ok(staged)
+}
+
+impl StagedKey {
+    /// Gives the files their names, never replacing one: the key as
+    /// `~/.ssh/…`.
+    fn place(mut self) -> Result<String, Error> {
+        let files = std::mem::take(&mut self.files);
+        for (i, (tmp, path)) in files.iter().enumerate() {
+            let placed = fs::hard_link(tmp, path).and_then(|()| fs::remove_file(tmp));
+            if let Err(error) = placed {
+                for (tmp, _) in &files[i..] {
+                    let _ = fs::remove_file(tmp);
+                }
+                // Only the key itself counts; its `.pub` is a nicety.
+                if i == 0 {
+                    return Err(Error::Key {
+                        path: self.shown.clone(),
+                        error,
+                    });
+                }
+                break;
+            }
+        }
+        if let Some(dir) = files.first().and_then(|(_, p)| p.parent()) {
+            sync_dir(dir);
+        }
+        Ok(std::mem::take(&mut self.shown))
+    }
+}
+
+impl Drop for StagedKey {
+    fn drop(&mut self) {
+        for (tmp, _) in &self.files {
+            let _ = fs::remove_file(tmp);
+        }
+    }
 }
 
 fn create_private_dir(dir: &Path) -> std::io::Result<()> {
@@ -864,7 +920,11 @@ fn create_private_dir(dir: &Path) -> std::io::Result<()> {
     b.create(dir)
 }
 
-fn write_new(path: &Path, bytes: &[u8], mode: u32) -> std::io::Result<()> {
+/// Writes `bytes` next to `path`, under a hidden name of its own created
+/// with `mode`, and syncs it; the name it got.
+fn write_aside(path: &Path, bytes: &[u8], mode: u32) -> std::io::Result<PathBuf> {
+    let name = path.file_name().unwrap_or_default().to_string_lossy();
+    let tmp = path.with_file_name(format!(".{name}.openward-{}", std::process::id()));
     let mut o = fs::OpenOptions::new();
     o.write(true).create_new(true);
     #[cfg(unix)]
@@ -874,7 +934,25 @@ fn write_new(path: &Path, bytes: &[u8], mode: u32) -> std::io::Result<()> {
     }
     #[cfg(not(unix))]
     let _ = mode;
-    o.open(path)?.write_all(bytes)
+    let mut file = o.open(&tmp)?;
+    let written = file.write_all(bytes).and_then(|()| file.sync_all());
+    if let Err(e) = written {
+        drop(file);
+        let _ = fs::remove_file(&tmp);
+        return Err(e);
+    }
+    Ok(tmp)
+}
+
+/// Makes a new name in `dir` last through a power cut, where the system
+/// lets a folder be synced.
+fn sync_dir(dir: &Path) {
+    #[cfg(unix)]
+    if let Ok(d) = fs::File::open(dir) {
+        let _ = d.sync_all();
+    }
+    #[cfg(not(unix))]
+    let _ = dir;
 }
 
 #[cfg(test)]
@@ -1134,5 +1212,50 @@ mod tests {
         assert!(!local.ssh_dir.exists());
         let (_, group) = vault.groups()[0];
         assert_eq!(group.name, "Termius");
+    }
+    /// A key is written aside and only takes its name at the end: dropped
+    /// first (the vault failed) it leaves nothing; placed over a file that
+    /// appeared meanwhile, it fails and replaces nothing.
+    #[test]
+    fn saved_keys_are_written_aside_and_never_replace_a_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let local = local(dir.path());
+        let b = bundle();
+        let stored = &b.keys[0];
+        let names = |d: &Path| -> Vec<String> {
+            let mut n: Vec<_> = fs::read_dir(d)
+                .unwrap()
+                .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+                .collect();
+            n.sort();
+            n
+        };
+
+        let staged = stage_key(&local, "~/.ssh/termius-deploy", stored).unwrap();
+        assert_eq!(
+            names(&local.ssh_dir).len(),
+            2,
+            "the key and its .pub, hidden"
+        );
+        assert!(names(&local.ssh_dir).iter().all(|n| n.starts_with('.')));
+        drop(staged);
+        assert!(names(&local.ssh_dir).is_empty());
+
+        let staged = stage_key(&local, "~/.ssh/termius-deploy", stored).unwrap();
+        fs::write(local.ssh_dir.join("termius-deploy"), "mine").unwrap();
+        assert!(matches!(staged.place(), Err(Error::Key { .. })));
+        assert_eq!(names(&local.ssh_dir), ["termius-deploy"]);
+        assert_eq!(
+            fs::read_to_string(local.ssh_dir.join("termius-deploy")).unwrap(),
+            "mine"
+        );
+
+        fs::remove_file(local.ssh_dir.join("termius-deploy")).unwrap();
+        let staged = stage_key(&local, "~/.ssh/termius-deploy", stored).unwrap();
+        assert_eq!(staged.place().unwrap(), "~/.ssh/termius-deploy");
+        assert_eq!(
+            names(&local.ssh_dir),
+            ["termius-deploy", "termius-deploy.pub"]
+        );
     }
 }

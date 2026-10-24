@@ -1,36 +1,27 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/errors.dart';
 import '../core/providers.dart';
-import '../hosts/sidebar.dart' show tabStatus;
 import '../terminal/keys.dart';
 import '../terminal/palette.dart';
 
 import '../l10n/l10n.dart';
-import '../src/rust/api/session.dart';
-import '../src/rust/api/vault.dart' show EnvironmentView, HostView;
 import '../terminal/controller.dart';
 import '../terminal/terminal_pane.dart';
-import '../snippets/palette.dart';
 import '../tunnels/tunnels_page.dart';
 import '../ui/environment.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
-import '../window/shortcuts.dart';
 import 'close_guard.dart' as guard;
 import 'connection_motion.dart';
 import 'connection_panels.dart';
 import 'find_bar.dart';
-import 'latency.dart';
-import 'messages.dart';
 import 'drag.dart';
 import 'prompt_card.dart';
-import 'tab_strip.dart' show menuHint, menuItem, tabTitle;
+import 'tab_strip.dart' show menuHint, menuItem;
 import 'tabs.dart';
+import 'pane_header.dart';
+import 'status_bar.dart';
 
 /// A session tab: its panes (or the one maximized), a banner while
 /// broadcasting, and the status line of the active pane.
@@ -61,7 +52,7 @@ class TabView extends ConsumerWidget {
                 child: alone is Pane && !panes.isSplit
                     ? _Single(tab: tab, pane: alone)
                     : Padding(
-                        padding: const EdgeInsets.all(6),
+                        padding: const EdgeInsets.all(OwSpace.s3),
                         child: alone is Pane
                             ? _PaneFrame(tab: tab, pane: alone)
                             : _Layout(tab: tab, node: panes.root),
@@ -71,7 +62,7 @@ class TabView extends ConsumerWidget {
                 ListenableBuilder(
                   listenable: active,
                   builder: (context, _) =>
-                      _StatusBar(controller: active, panes: panes),
+                      StatusBar(controller: active, panes: panes),
                 ),
             ],
           ),
@@ -95,7 +86,7 @@ class _Single extends StatelessWidget {
       tab: tab,
       pane: pane,
       child: c == null
-          ? _PanePicker(tab: tab, pane: pane)
+          ? PanePicker(tab: tab, pane: pane)
           : PaneContent(
               controller: c,
               active: true,
@@ -189,7 +180,8 @@ class _Layout extends ConsumerWidget {
     final split = n as PaneSplit;
     const gap = 8.0;
     final across = split.axis == Axis.horizontal;
-    return LayoutBuilder(
+    // Made again when the share changes: the same widget would not be.
+    Widget layout() => LayoutBuilder(
       builder: (context, box) {
         final total = (across ? box.maxWidth : box.maxHeight) - gap;
         final first = total * split.ratio;
@@ -214,6 +206,10 @@ class _Layout extends ConsumerWidget {
           ],
         );
       },
+    );
+    return ListenableBuilder(
+      listenable: tab.panes.sizes,
+      builder: (context, _) => layout(),
     );
   }
 }
@@ -247,7 +243,7 @@ class _DividerState extends State<_Divider> {
     final lit = _hover || widget.panes.resizing;
     return Tooltip(
       message: context.l10n.dividerHint,
-      waitDuration: const Duration(milliseconds: 600),
+      waitDuration: OwMotion.hint,
       child: MouseRegion(
         cursor: across
             ? SystemMouseCursors.resizeColumn
@@ -278,7 +274,9 @@ class _DividerState extends State<_Divider> {
                         height: across ? null : 2,
                         decoration: BoxDecoration(
                           color: c.accent,
-                          borderRadius: BorderRadius.circular(1),
+                          borderRadius: BorderRadius.circular(
+                            context.ow.shape.radiusSmall,
+                          ),
                         ),
                       ),
                       Container(
@@ -286,7 +284,9 @@ class _DividerState extends State<_Divider> {
                         height: across ? 34 : widget.thickness,
                         decoration: BoxDecoration(
                           color: c.accent,
-                          borderRadius: BorderRadius.circular(5),
+                          borderRadius: BorderRadius.circular(
+                            context.ow.shape.radiusSmall,
+                          ),
                         ),
                       ),
                     ],
@@ -314,11 +314,14 @@ class _GridSize extends StatelessWidget {
         child: ValueListenableBuilder(
           valueListenable: controller.grid,
           builder: (context, grid, _) => Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            padding: const EdgeInsets.symmetric(
+              horizontal: OwSpace.s5,
+              vertical: OwSpace.s1,
+            ),
             decoration: BoxDecoration(
               color: c.raised,
               border: Border.all(color: c.control),
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(context.ow.shape.round),
             ),
             child: Text(
               '${grid.$1} × ${grid.$2}',
@@ -372,7 +375,7 @@ class _PaneFrame extends ConsumerWidget {
               pane,
               controller?.displayTitle ?? context.l10n.newPane,
             ),
-            child: _PaneHeader(tab: tab, pane: pane, active: active),
+            child: PaneHeader(tab: tab, pane: pane, active: active),
           ),
           Expanded(
             // A click in the terminal gives it the keyboard; the header's
@@ -381,7 +384,7 @@ class _PaneFrame extends ConsumerWidget {
               onPointerDown: (_) =>
                   ref.read(tabsProvider.notifier).focusPaneOf(tab, pane),
               child: controller == null
-                  ? _PanePicker(tab: tab, pane: pane)
+                  ? PanePicker(tab: tab, pane: pane)
                   : Stack(
                       children: [
                         Positioned.fill(
@@ -404,418 +407,6 @@ class _PaneFrame extends ConsumerWidget {
       ),
     );
     return PaneDropTarget(tab: tab, pane: pane, child: frame);
-  }
-}
-
-class _PaneHeader extends ConsumerWidget {
-  const _PaneHeader({
-    required this.tab,
-    required this.pane,
-    required this.active,
-  });
-
-  final SessionTab tab;
-  final Pane pane;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final ow = context.ow;
-    final c = ow.colors;
-    final l = context.l10n;
-    final panes = tab.panes;
-    final tabs = ref.read(tabsProvider.notifier);
-    final receives = panes.receives(pane);
-    final controller = pane.controller;
-    final key = isApple ? '⌘' : l.ctrlShiftPrefix;
-    PopupMenuItem<VoidCallback> item(
-      String text,
-      String keys,
-      VoidCallback f,
-    ) => PopupMenuItem(
-      value: f,
-      height: 34,
-      child: Row(
-        children: [
-          Expanded(child: Text(text)),
-          const SizedBox(width: 16),
-          Text(keys, style: monoStyle(context, size: 12)),
-        ],
-      ),
-    );
-    // Numbered where two are alike: «Local 1», «Local 2».
-    final names = paneNames(panes, (p) => paneTitle(context, p));
-    final partner = panes.swapPartner(pane);
-    Widget title(TerminalController? s) => Row(
-      children: [
-        // The header drags the pane: the grip says so.
-        Tooltip(
-          message: l.dragPaneHint,
-          child: Icon(Icons.drag_indicator, size: 14, color: c.textSubtle),
-        ),
-        const SizedBox(width: 4),
-        if (s != null) ...[
-          StatusDot(tabStatus(s), size: 7),
-          const SizedBox(width: 8),
-        ],
-        Flexible(
-          child: Text(
-            names[pane] ?? l.newPane,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: active ? c.text : c.textMuted,
-            ),
-          ),
-        ),
-      ],
-    );
-    // 28 inside its line, for the controls in it.
-    return Container(
-      height: 29,
-      padding: const EdgeInsets.only(left: 4, right: 2),
-      decoration: BoxDecoration(
-        color: receives
-            ? c.warnSoft
-            : active
-            ? c.raised
-            : c.sunken,
-        border: Border(
-          bottom: BorderSide(color: receives ? c.warnLine : c.border),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: controller == null
-                ? title(null)
-                : ListenableBuilder(
-                    listenable: controller,
-                    builder: (context, _) => title(controller),
-                  ),
-          ),
-          // The box and its word, one target: a click on either.
-          if (panes.broadcast && controller != null)
-            MergeSemantics(
-              child: InkWell(
-                key: const ValueKey('pane.receives'),
-                borderRadius: BorderRadius.circular(context.ow.shape.radius),
-                onTap: () {
-                  panes.setReceives(pane, !receives);
-                  tabs.focusActive(tab);
-                },
-                child: SizedBox(
-                  height: 28,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox.square(
-                        dimension: 28,
-                        child: Checkbox(
-                          value: receives,
-                          visualDensity: VisualDensity.compact,
-                          onChanged: (v) {
-                            panes.setReceives(pane, v ?? false);
-                            tabs.focusActive(tab);
-                          },
-                        ),
-                      ),
-                      Text(
-                        l.receives,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: receives ? c.warn : c.textMuted,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          PopupMenuButton<VoidCallback>(
-            tooltip: l.paneOptions,
-            iconSize: 16,
-            padding: EdgeInsets.zero,
-            icon: Icon(Icons.more_horiz, size: 16, color: c.textMuted),
-            onSelected: (f) {
-              f();
-              tabs.focusActive(tab);
-            },
-            onCanceled: () => tabs.focusActive(tab),
-            itemBuilder: (_) => [
-              if (panes.isSplit) ...[
-                item(l.moveToNewTab, '', () => tabs.moveToNewTab(tab, pane)),
-                if (partner != null)
-                  item(
-                    l.swapWith(names[partner] ?? ''),
-                    '',
-                    () => tabs.swapPane(tab, pane),
-                  ),
-              ],
-              if (controller != null)
-                item(l.openOtherHere, '', () => tabs.openOtherHere(tab, pane)),
-              if (panes.isSplit || controller != null) const PopupMenuDivider(),
-              item(l.splitRight, isApple ? '⌘D' : '${key}D', () {
-                panes.focus(pane);
-                tabs.split(Axis.horizontal);
-              }),
-              item(l.splitDown, isApple ? '⌘⇧D' : '${key}E', () {
-                panes.focus(pane);
-                tabs.split(Axis.vertical);
-              }),
-              if (panes.isSplit) ...[
-                item(l.equalizePanes, isApple ? '⌘⌥=' : '', panes.equalize),
-                item(
-                  panes.maximized == null ? l.maximizePane : l.restorePanes,
-                  isApple ? '⌘⇧↩' : '$key↩',
-                  () {
-                    panes.focus(pane);
-                    tabs.toggleMaximize();
-                  },
-                ),
-              ],
-              const PopupMenuDivider(),
-              if (panes.isSplit)
-                item(
-                  panes.broadcast ? l.broadcastOff : l.broadcastOn,
-                  isApple ? '⌘⇧B' : '${key}B',
-                  tabs.toggleBroadcast,
-                ),
-              item(
-                l.closePane,
-                isApple ? '⌘W' : '${key}W',
-                () => guard.closePane(context, tab, pane),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// A new pane: what to open in it. Enter takes the highlighted choice,
-/// the arrows move, Esc closes the pane.
-/// One thing a new pane can open.
-class _Choice {
-  const _Choice({
-    required this.section,
-    required this.title,
-    required this.lead,
-    required this.open,
-    this.detail,
-    this.env,
-  });
-
-  final String section;
-  final String title;
-  final String? detail;
-  final Widget lead;
-  final EnvironmentView? env;
-  final VoidCallback open;
-}
-
-class _PanePicker extends ConsumerStatefulWidget {
-  const _PanePicker({required this.tab, required this.pane});
-
-  final SessionTab tab;
-  final Pane pane;
-
-  @override
-  ConsumerState<_PanePicker> createState() => _PanePickerState();
-}
-
-class _PanePickerState extends ConsumerState<_PanePicker> {
-  final _query = TextEditingController();
-  int _at = 0;
-
-  @override
-  void dispose() {
-    _query.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ow = context.ow;
-    final c = ow.colors;
-    final l = context.l10n;
-    final tabs = ref.read(tabsProvider.notifier);
-    final library = ref.watch(libraryProvider);
-    final from = widget.pane.from;
-    final q = _query.text.trim().toLowerCase();
-    bool matches(String text) => q.isEmpty || text.toLowerCase().contains(q);
-    final state = ref.watch(tabsProvider);
-    HostView? hostOf(String? id) => id == null ? null : library.host(id);
-    Widget badgeOf(HostView? h) => h == null
-        ? SizedBox(
-            width: 28,
-            child: Icon(Icons.terminal, size: 15, color: c.textMuted),
-          )
-        : SystemBadge(code: h.system?.code, env: h.environment, size: 22);
-    // Tabs already open first: they move into this pane.
-    final open = [
-      for (final t in state.tabs)
-        if (t is SessionTab &&
-            !identical(t, widget.tab) &&
-            matches(tabTitle(context, t)))
-          t,
-    ];
-    final fromHost = hostOf(from?.hostId);
-    final choices = <_Choice>[
-      for (final t in open)
-        _Choice(
-          section: l.paneOpenTabs,
-          title: tabTitle(context, t),
-          lead: badgeOf(hostOf(t.panes.active.controller?.hostId)),
-          env: hostOf(t.panes.active.controller?.hostId)?.environment,
-          open: () => tabs.bringTab(t, widget.tab, widget.pane),
-        ),
-      if (from != null && q.isEmpty)
-        _Choice(
-          section: l.paletteHosts,
-          title: from.label,
-          detail: l.sameHost,
-          lead: badgeOf(fromHost),
-          env: fromHost?.environment,
-          open: () => tabs.fillSame(widget.tab, widget.pane),
-        ),
-      for (final h in library.hosts)
-        if (q.isEmpty
-            ? h.id != from?.hostId
-            : h.label.toLowerCase().contains(q) ||
-                  h.address.toLowerCase().contains(q))
-          _Choice(
-            section: l.paletteHosts,
-            title: h.label,
-            lead: badgeOf(h),
-            env: h.environment,
-            open: () => tabs.fillPane(widget.tab, widget.pane, host: h),
-          ),
-      if (matches(l.localTerminal))
-        _Choice(
-          section: l.thisComputer,
-          title: l.localTerminal,
-          lead: badgeOf(null),
-          open: () => tabs.fillPane(widget.tab, widget.pane),
-        ),
-    ];
-    final at = choices.isEmpty ? 0 : _at.clamp(0, choices.length - 1);
-    return ColoredBox(
-      color: c.surface,
-      child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(12),
-          child: CallbackShortcuts(
-            bindings: {
-              const SingleActivator(LogicalKeyboardKey.escape): () =>
-                  tabs.closePane(widget.tab, widget.pane),
-              const SingleActivator(LogicalKeyboardKey.enter): () {
-                if (choices.isNotEmpty) choices[at].open();
-              },
-              const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
-                  setState(() => _at = (at + 1).clamp(0, choices.length - 1)),
-              const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
-                  setState(() => _at = (at - 1).clamp(0, choices.length - 1)),
-            },
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 380),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: c.raised,
-                border: Border.all(color: c.control),
-                borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    l.paneWhat,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    key: const ValueKey('pane.search'),
-                    controller: _query,
-                    autofocus: true,
-                    style: fieldTextStyle(context),
-                    decoration: InputDecoration(hintText: l.paneSearch),
-                    onChanged: (_) => setState(() => _at = 0),
-                  ),
-                  const SizedBox(height: 6),
-                  for (var i = 0; i < choices.length && i < 10; i++) ...[
-                    if (i == 0 || choices[i].section != choices[i - 1].section)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
-                        child: Row(
-                          children: [
-                            Expanded(child: SectionLabel(choices[i].section)),
-                            if (choices[i].section == l.paneOpenTabs)
-                              Text(
-                                l.paneOpenTabsNote,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: c.textSubtle,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    Material(
-                      color: i == at ? c.selected : Colors.transparent,
-                      borderRadius: BorderRadius.circular(ow.shape.radius),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(ow.shape.radius),
-                        key: ValueKey('pane.choice.${choices[i].title}'),
-                        onTap: choices[i].open,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 7,
-                          ),
-                          child: Row(
-                            children: [
-                              choices[i].lead,
-                              const SizedBox(width: 10),
-                              Flexible(
-                                child: Text.rich(
-                                  TextSpan(
-                                    text: choices[i].title,
-                                    children: [
-                                      if (choices[i].detail != null)
-                                        TextSpan(
-                                          text: ' · ${choices[i].detail}',
-                                          style: TextStyle(color: c.textMuted),
-                                        ),
-                                    ],
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (choices[i].env case final env?) ...[
-                                const SizedBox(width: 8),
-                                EnvChip(env),
-                              ],
-                              const Spacer(),
-                              if (i == at) const KeyCap('↩'),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
 
@@ -845,8 +436,18 @@ class _BroadcastBanner extends ConsumerWidget {
     return Semantics(
       liveRegion: true,
       child: Container(
-        margin: const EdgeInsets.fromLTRB(6, 6, 6, 0),
-        padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+        margin: const EdgeInsets.fromLTRB(
+          OwSpace.s3,
+          OwSpace.s3,
+          OwSpace.s3,
+          0,
+        ),
+        padding: const EdgeInsets.fromLTRB(
+          OwSpace.s6,
+          OwSpace.s3,
+          OwSpace.s3,
+          OwSpace.s3,
+        ),
         decoration: BoxDecoration(
           color: c.warn,
           borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
@@ -995,16 +596,16 @@ class PaneContent extends ConsumerWidget {
               Positioned.fill(
                 // A quick connection (a few ms on a local network) never
                 // shows its card: only past 400 ms.
-                child: _Delayed(
+                child: Delayed(
                   key: ObjectKey((c, card.runtimeType)),
                   delay: card is ConnectingCard
-                      ? const Duration(milliseconds: 400)
+                      ? OwMotion.showAfter
                       : Duration.zero,
                   child: ColoredBox(
                     color: ow.colors.scrim,
                     child: Center(
                       child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(OwSpace.s8),
                         child: card,
                       ),
                     ),
@@ -1016,20 +617,24 @@ class PaneContent extends ConsumerWidget {
         if (inset && ow.shape.insetTerminal) {
           // A card on the page, with room around the text.
           terminal = Container(
-            margin: const EdgeInsets.fromLTRB(4, 6, 12, 0),
-            padding: const EdgeInsets.fromLTRB(12, 10, 6, 6),
+            margin: const EdgeInsets.fromLTRB(
+              OwSpace.s2,
+              OwSpace.s3,
+              OwSpace.s6,
+              0,
+            ),
+            padding: const EdgeInsets.fromLTRB(
+              OwSpace.s6,
+              OwSpace.s5,
+              OwSpace.s3,
+              OwSpace.s3,
+            ),
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: ow.terminal.background,
               borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
               border: Border.all(color: ow.colors.border),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x14281E0A),
-                  blurRadius: 24,
-                  offset: Offset(0, 8),
-                ),
-              ],
+              boxShadow: OwElevation.card,
             ),
             child: terminal,
           );
@@ -1038,276 +643,4 @@ class PaneContent extends ConsumerWidget {
       },
     );
   }
-}
-
-class _StatusBar extends ConsumerWidget {
-  const _StatusBar({required this.controller, this.panes});
-
-  final TerminalController controller;
-  final Panes? panes;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final ow = context.ow;
-    final c = ow.colors;
-    final l = context.l10n;
-    final s = controller;
-    final failure = s.closed?.failure;
-    final failed =
-        s.phase == Phase.closed && (failure != null || s.error != null);
-    final stalled = s.stalledSince != null && s.phase == Phase.connected;
-    final k = s.phase == Phase.connected && !stalled ? s.connected : null;
-    final pq = k?.postQuantum ?? false;
-    final color = failed ? c.danger : c.textMuted;
-    final small = TextStyle(fontSize: 12, color: color);
-    final Widget line;
-    if (k != null) {
-      // The algorithms and the route are in the latency's card and in the
-      // connection's details: here, how it is doing.
-      final via = viaText(l, s);
-      line = Row(
-        children: [
-          Icon(
-            pq ? Icons.verified_user_outlined : Icons.lock_outline,
-            size: 14,
-            color: pq ? c.accent : c.textMuted,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            l.statusConnected,
-            style: TextStyle(
-              fontSize: 12,
-              color: c.text,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          if (pq) ...[const SizedBox(width: 8), Pill(l.postQuantum)],
-          if (s.persistent case final p?) tmuxPill(context, p),
-          const SizedBox(width: 6),
-          LatencyChip(controller: s),
-          if (via != null)
-            Flexible(
-              child: Padding(
-                padding: const EdgeInsets.only(left: 4),
-                child: Text(
-                  via,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: c.textMuted),
-                ),
-              ),
-            ),
-        ],
-      );
-    } else {
-      line = Row(
-        children: [
-          Icon(
-            stalled
-                ? Icons.wifi_tethering_error
-                : switch (s.phase) {
-                    Phase.connecting => Icons.hourglass_empty,
-                    Phase.reconnecting => Icons.sync,
-                    Phase.connected => Icons.lock_outline,
-                    Phase.running => Icons.computer,
-                    Phase.closed =>
-                      failed ? Icons.error_outline : Icons.link_off,
-                  },
-            size: 14,
-            color: stalled ? c.warn : color,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              stalled ? l.statusStalled : statusText(l, s),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: stalled ? small.copyWith(color: c.warn) : small,
-            ),
-          ),
-        ],
-      );
-    }
-    final inset = ow.shape.insetTerminal;
-    return LayoutBuilder(
-      // Narrow (a small window, a pane of a split), the actions as icons:
-      // their names stay in the tooltips, nothing is cut without a word.
-      builder: (context, box) {
-        final narrow = box.maxWidth < 640;
-        return Container(
-          height: heightForText(context, 30),
-          padding: EdgeInsets.symmetric(horizontal: inset ? 16 : 12),
-          decoration: BoxDecoration(
-            color: inset ? c.window : c.sunken,
-            border: inset ? null : Border(top: BorderSide(color: c.border)),
-          ),
-          child: Row(
-            children: [
-              if (panes?.broadcast ?? false)
-                Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: Text(
-                    l.broadcastStatus(panes!.receiving),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: c.warn,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              // Connected, the line opens the connection's details.
-              Expanded(
-                child: k != null
-                    ? InkWell(
-                        onTap: () => showConnectionInfo(context, s),
-                        child: line,
-                      )
-                    : line,
-              ),
-              if (failure?.kind == FailureKind.hostKeyChanged)
-                TextButton(
-                  onPressed: () => showHostKeyChanged(context, ref, s),
-                  child: Text(l.reviewKey),
-                )
-              else if ((failed ? failure ?? s.errorCause : null) case final e?)
-                DetailsButton(e),
-              if (k != null && s.hostId != null)
-                TunnelChip(hostId: s.hostId!, hostLabel: s.label),
-              if (s.phase == Phase.connected || s.phase == Phase.running)
-                _StatusAction(
-                  key: const ValueKey('status.snippets'),
-                  narrow: narrow,
-                  icon: Icons.text_snippet_outlined,
-                  label: l.snippets,
-                  keys: keysFor('⌘⇧S', '${l.ctrlShiftPrefix}S'),
-                  onPressed: () => showSnippetPalette(context),
-                ),
-              if (k != null)
-                _StatusAction(
-                  key: const ValueKey('status.sftp'),
-                  narrow: narrow,
-                  icon: Icons.folder_outlined,
-                  label: l.openSftp,
-                  keys: keysFor('⌘⇧O', '${l.ctrlShiftPrefix}O'),
-                  onPressed: () => ref
-                      .read(tabsProvider.notifier)
-                      .openSftp(
-                        hostId: s.hostId,
-                        target: s.target,
-                        label: s.label,
-                      ),
-                ),
-              if (s.phase == Phase.closed)
-                _StatusAction(
-                  narrow: narrow,
-                  icon: Icons.refresh,
-                  label: s.isLocal ? l.restart : l.reconnect,
-                  onPressed: s.start,
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// An action of the status bar: its icon and name, with its shortcut;
-/// only the icon when narrow, the rest in its tooltip.
-class _StatusAction extends StatelessWidget {
-  const _StatusAction({
-    super.key,
-    required this.narrow,
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-    this.keys,
-  });
-
-  final bool narrow;
-  final IconData icon;
-  final String label;
-  final String? keys;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.ow.colors;
-    if (narrow) {
-      return IconButton(
-        tooltip: keys == null ? label : '$label  $keys',
-        onPressed: onPressed,
-        iconSize: 14,
-        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-        padding: EdgeInsets.zero,
-        icon: Icon(icon, color: c.textMuted),
-      );
-    }
-    return TextButton.icon(
-      style: TextButton.styleFrom(foregroundColor: c.textMuted),
-      onPressed: onPressed,
-      icon: Icon(icon, size: 14),
-      label: keys == null ? Text(label) : _Keyed(label, keys!),
-    );
-  }
-}
-
-/// An action's name and its shortcut, the shortcut quieter.
-class _Keyed extends StatelessWidget {
-  const _Keyed(this.text, this.keys);
-
-  final String text;
-  final String keys;
-
-  @override
-  Widget build(BuildContext context) => Text.rich(
-    TextSpan(
-      children: [
-        TextSpan(text: '$text '),
-        TextSpan(
-          text: keys,
-          style: monoStyle(
-            context,
-            size: 12,
-            color: context.ow.colors.textSubtle,
-          ),
-        ),
-      ],
-    ),
-    style: const TextStyle(fontSize: 12),
-  );
-}
-
-/// Shows [child] once [delay] has passed since it was first built.
-class _Delayed extends StatefulWidget {
-  const _Delayed({super.key, required this.delay, required this.child});
-
-  final Duration delay;
-  final Widget child;
-
-  @override
-  State<_Delayed> createState() => _DelayedState();
-}
-
-class _DelayedState extends State<_Delayed> {
-  Timer? _timer;
-  late bool _shown = widget.delay == Duration.zero;
-
-  @override
-  void initState() {
-    super.initState();
-    if (!_shown) {
-      _timer = Timer(widget.delay, () => setState(() => _shown = true));
-    }
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) =>
-      _shown ? widget.child : const SizedBox.shrink();
 }

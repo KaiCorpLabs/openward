@@ -2,17 +2,11 @@
 
 La app de Flutter de OpenWard. Por ahora solo hay escritorio (macOS, Linux y Windows); las demás plataformas llegan en fases posteriores. Habla con el núcleo de Rust (`core/crates/openward-ffi`) mediante flutter_rust_bridge, y lo compila y empaqueta cargokit (`rust_builder/`).
 
-> **Estado:** alfa de escritorio 0.1.0 ([plan](../docs/plan/alfa-escritorio.md), [guía de prueba](../docs/plan/alfa-prueba.md)). La app permite:
-> - guardar hosts y grupos e importar `~/.ssh/config`;
-> - abrir pestañas con terminal SSH o local;
-> - responder a las preguntas de conexión y reconectar;
-> - seleccionar y copiar;
-> - elegir los ajustes.
+> **Estado:** beta de escritorio 0.3 ([plan](../docs/plan/v0.3.md), [notas](../docs/notas/v0.3.md), [guía de prueba](../docs/plan/prueba-v0.3.md)).
 
 ## Requisitos
 
-- Flutter con [FVM](https://fvm.app/): la versión está en `/.fvmrc`.
-- Rust y Zig, como en `core/`. La primera compilación construye `libghostty-vt` (`core/crates/openward-ghostty/build-libghostty.sh`).
+- Lo que instala o pide `make setup`, en la raíz: Rust, Flutter con [FVM](https://fvm.app/) (la versión de `/.fvmrc`), Zig y `libghostty-vt`.
 
 ## Uso
 
@@ -20,10 +14,11 @@ La app de Flutter de OpenWard. Por ahora solo hay escritorio (macOS, Linux y Win
 fvm flutter run -d macos
 ```
 
-**Pruebas.** Hay tres conjuntos:
-- `test/`: el decodificador de frames y el dibujo de cajas, sin Rust.
+**Pruebas.** Hay cuatro conjuntos:
+- `test/`: Dart sin Rust. Lo que habla con el núcleo (pestañas, conexiones, la cola de transferencias, los espacios de trabajo, la paleta) usa el `FakeOpenWard` de `test/fakes.dart`.
 - `integration_test/ffi_test.dart`: el núcleo a través de los bindings.
 - `integration_test/ui_test.dart`: la ventana entera. Guarda capturas en `$TMPDIR/openward-shots`.
+- `integration_test/a11y_test.dart` y `gallery_test.dart`: accesibilidad (contraste, tamaños, foco) y la galería de temas.
 
 Las partes de SSH solo se ejecutan si los servidores de prueba están arriba (`spikes/s2-ssh/servers/up.sh`).
 
@@ -62,6 +57,8 @@ dart run tool/system_logos.dart
 ```bash
 PATH="$HOME/fvm/versions/$(jq -r .flutter ../.fvmrc)/bin:$PATH" flutter_rust_bridge_codegen generate
 ```
+
+**Subir flutter_rust_bridge** es a mano y de una vez: la versión exacta en `core/crates/openward-ffi/Cargo.toml` y en `pubspec.yaml`, el generador (`cargo install flutter_rust_bridge_codegen --version …`) y los bindings regenerados, en el mismo commit. Dependabot lo ignora para que no suba solo una mitad.
 
 ## Notas
 

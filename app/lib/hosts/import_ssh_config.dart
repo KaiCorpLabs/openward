@@ -275,10 +275,10 @@ class _ImportPickerState extends State<ImportPicker> {
             ),
             if (note != null)
               Padding(
-                padding: const EdgeInsets.only(left: 8),
+                padding: const EdgeInsets.only(left: OwSpace.s4),
                 child: Text(
                   note,
-                  style: TextStyle(fontSize: 12, color: c.textSubtle),
+                  style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
                 ),
               ),
           ],
@@ -330,7 +330,7 @@ class _PickDialogState extends State<_PickDialog> {
               const SizedBox(height: 10),
               Text(
                 l.importIntoGroup,
-                style: TextStyle(fontSize: 12, color: c.textSubtle),
+                style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
               ),
             ],
           ],
@@ -380,7 +380,7 @@ class _ReportDialog extends StatelessWidget {
                 children: [
                   for (final w in report.warnings)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.only(bottom: OwSpace.s3),
                       child: Text(
                         '• ${_warning(l, w)}',
                         style: theme.textTheme.bodySmall,

@@ -15,7 +15,7 @@ tokio = { version = "1", features = ["rt", "sync", "time", "fs", "io-util", "mac
 thiserror = "2"
 
 [dev-dependencies]
-openward-ssh = { path = "../openward-ssh" }
+openward-ssh = { path = "../openward-ssh", features = ["test-auth"] }
 tempfile = "3"
 tokio = { version = "1", features = ["full"] }
 

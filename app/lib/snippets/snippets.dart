@@ -162,7 +162,10 @@ class _RunDialogState extends State<_RunDialog> {
     Widget preview(TerminalController t) {
       final text = renderFor(ref, widget.snippet, t, values);
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(
+          horizontal: OwSpace.s5,
+          vertical: OwSpace.s3,
+        ),
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: c.border)),
         ),
@@ -175,7 +178,7 @@ class _RunDialogState extends State<_RunDialog> {
                 child: Text(
                   t.displayTitle,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: c.textMuted),
+                  style: TextStyle(fontSize: OwText.small, color: c.textMuted),
                 ),
               ),
             Expanded(
@@ -207,12 +210,15 @@ class _RunDialogState extends State<_RunDialog> {
                 if (names.isNotEmpty) ...[
                   Text(
                     l.runSnippetHint,
-                    style: TextStyle(fontSize: 12, color: c.textMuted),
+                    style: TextStyle(
+                      fontSize: OwText.small,
+                      color: c.textMuted,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   for (final (i, name) in names.indexed)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.only(bottom: OwSpace.s5),
                       child: TextField(
                         key: ValueKey('snippet.var.$name'),
                         controller: _fields[name],
@@ -246,7 +252,7 @@ class _RunDialogState extends State<_RunDialog> {
                             ? l.runSnippetBroadcast(widget.targets.length)
                             : l.runSnippetIn(widget.targets.first.displayTitle),
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: OwText.small,
                           fontWeight: FontWeight.w600,
                           color: many ? c.warn : c.textMuted,
                         ),
@@ -270,7 +276,7 @@ class _RunDialogState extends State<_RunDialog> {
                 const SizedBox(height: 8),
                 Text(
                   widget.typeOnly ? l.snippetTypeOnlyNote : l.snippetWithEnter,
-                  style: TextStyle(fontSize: 12, color: c.textSubtle),
+                  style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
                 ),
               ],
             ),

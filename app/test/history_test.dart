@@ -4,10 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openward/core/address.dart';
 import 'package:openward/core/connection.dart';
+import 'package:openward/core/match.dart';
 import 'package:openward/core/settings.dart';
 import 'package:openward/history/history.dart';
 import 'package:openward/history/line_tracker.dart';
-import 'package:openward/palette/command_palette.dart';
 import 'package:openward/terminal/keys.dart';
 
 /// A screen of one prompt row: the prompt, what the shell echoed, and

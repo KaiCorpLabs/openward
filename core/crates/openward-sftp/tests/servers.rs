@@ -210,6 +210,17 @@ async fn lists_and_changes_files() {
     assert!(!filelink.link_dir);
     assert_eq!(filelink.size, 4, "a link to a file has the file's size");
 
+    // Many links, more than are asked about at once: all of them answered.
+    s.sh("mkdir many && for i in $(seq 1 100); do ln -s ../a.txt many/l$i; done")
+        .await;
+    let many = s.remote.list(&join(&s.dir, "many")).await.unwrap();
+    assert_eq!(many.len(), 100);
+    assert!(
+        many.iter()
+            .all(|e| e.link_target.as_deref() == Some("../a.txt") && e.size == 4)
+    );
+    s.sh("rm -r many").await;
+
     // Folders, renames and what already exists.
     let p = |rel: &str| join(&s.dir, rel);
     assert_eq!(
@@ -316,6 +327,9 @@ async fn copies_a_folder_both_ways_everywhere() {
             assert_eq!(s.entry("site/big.bin").await.unwrap().mode, Some(0o640));
         }
 
+        // Private on the server, private here.
+        s.sh("chmod 600 site/empty").await;
+
         let back = tempfile::tempdir().unwrap();
         let down = copy(
             &t,
@@ -336,11 +350,15 @@ async fn copies_a_folder_both_ways_everywhere() {
         );
         assert_eq!(std::fs::read(got.join("empty")).unwrap(), b"");
         #[cfg(unix)]
-        assert_eq!(
-            mode_of(&got.join("deploy.sh")) & 0o100,
-            0o100,
-            "stays runnable"
-        );
+        {
+            assert_eq!(
+                mode_of(&got.join("deploy.sh")) & 0o100,
+                0o100,
+                "stays runnable"
+            );
+            assert_eq!(mode_of(&got.join("big.bin")) & 0o007, 0, "0640 there");
+            assert_eq!(mode_of(&got.join("empty")), 0o600, "0600 there");
+        }
         s.done().await;
     }
 }

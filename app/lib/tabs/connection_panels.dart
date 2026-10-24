@@ -20,6 +20,9 @@ import 'connection_motion.dart';
 import 'messages.dart';
 import 'tabs.dart';
 
+/// The labels of a connection's details, and what lines up under them.
+const double _labelColumn = 140;
+
 /// A card over the terminal, in the theme's raised color.
 class OverlayPanel extends StatelessWidget {
   const OverlayPanel({super.key, required this.child, this.width = 440});
@@ -32,18 +35,17 @@ class OverlayPanel extends StatelessWidget {
     final ow = context.ow;
     return Container(
       constraints: BoxConstraints(maxWidth: width),
-      padding: const EdgeInsets.fromLTRB(22, 20, 22, 16),
+      padding: const EdgeInsets.fromLTRB(
+        OwSpace.s11,
+        OwSpace.s10,
+        OwSpace.s11,
+        OwSpace.s8,
+      ),
       decoration: BoxDecoration(
         color: ow.colors.raised,
         borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
         border: Border.all(color: ow.colors.control),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 32,
-            offset: Offset(0, 12),
-          ),
-        ],
+        boxShadow: OwElevation.overlay,
       ),
       child: child,
     );
@@ -73,7 +75,7 @@ class _RouteSteps extends StatelessWidget {
       bool dim = false,
       bool now = false,
     }) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: OwSpace.s2),
       child: Row(
         children: [
           SizedBox(width: 18, height: 18, child: Center(child: icon)),
@@ -89,7 +91,10 @@ class _RouteSteps extends StatelessWidget {
           ),
           if (detail != null) ...[
             const SizedBox(width: 8),
-            Text(detail, style: TextStyle(fontSize: 12, color: c.textMuted)),
+            Text(
+              detail,
+              style: TextStyle(fontSize: OwText.small, color: c.textMuted),
+            ),
           ],
         ],
       ),
@@ -232,12 +237,22 @@ class _ReconnectBannerState extends ConsumerState<ReconnectBanner> {
           : l.reconnectingStage(stageText(l, stage));
     }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 2),
+      padding: const EdgeInsets.fromLTRB(
+        OwSpace.s6,
+        OwSpace.s5,
+        OwSpace.s6,
+        OwSpace.s1,
+      ),
       child: Semantics(
         liveRegion: true,
         child: Callout(
           tone: Tone.warn,
-          padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+          padding: const EdgeInsets.fromLTRB(
+            OwSpace.s6,
+            OwSpace.s3,
+            OwSpace.s3,
+            OwSpace.s3,
+          ),
           child: Row(
             children: [
               Icon(Icons.sync, size: 16, color: c.warn),
@@ -322,7 +337,7 @@ class FailureCard extends ConsumerWidget {
               Text(l.keyChangedBody, style: const TextStyle(height: 1.45)),
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(OwSpace.s5),
                 decoration: BoxDecoration(
                   color: c.sunken,
                   borderRadius: BorderRadius.circular(ow.shape.radius),
@@ -419,7 +434,7 @@ class _KeyLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.ow.colors;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: OwSpace.s1),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -427,7 +442,7 @@ class _KeyLine extends StatelessWidget {
             width: 76,
             child: Text(
               label,
-              style: TextStyle(fontSize: 12, color: c.textMuted),
+              style: TextStyle(fontSize: OwText.small, color: c.textMuted),
             ),
           ),
           Expanded(
@@ -512,7 +527,7 @@ class _HostKeyChangedDialogState extends State<_HostKeyChangedDialog> {
             Text(l.keyBefore, style: theme.textTheme.titleSmall),
             for (final p in f.previous)
               Padding(
-                padding: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.only(top: OwSpace.s2),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -524,7 +539,10 @@ class _HostKeyChangedDialogState extends State<_HostKeyChangedDialog> {
                       p.source == KeySourceKind.openWard
                           ? l.keyInOpenWard
                           : l.keyInKnownHosts,
-                      style: TextStyle(fontSize: 12, color: c.textMuted),
+                      style: TextStyle(
+                        fontSize: OwText.small,
+                        color: c.textMuted,
+                      ),
                     ),
                   ],
                 ),
@@ -542,7 +560,7 @@ class _HostKeyChangedDialogState extends State<_HostKeyChangedDialog> {
                 l.openSshStillWarns(
                   'ssh-keygen -R ${f.port == 22 ? f.host : '"[${f.host}]:${f.port}"'}',
                 ),
-                style: TextStyle(fontSize: 12, color: c.textMuted),
+                style: TextStyle(fontSize: OwText.small, color: c.textMuted),
               ),
             ],
             const SizedBox(height: 12),
@@ -587,12 +605,12 @@ Future<void> showConnectionInfo(BuildContext context, ConnectionController c) {
     builder: (context) {
       final ow = context.ow;
       Widget row(String name, String value, {bool mono = false}) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: OwSpace.s2),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              width: 140,
+              width: _labelColumn,
               child: Text(name, style: TextStyle(color: ow.colors.textMuted)),
             ),
             Expanded(
@@ -622,10 +640,16 @@ Future<void> showConnectionInfo(BuildContext context, ConnectionController c) {
               ),
               if (!k.postQuantum)
                 Padding(
-                  padding: const EdgeInsets.only(left: 140, bottom: 4),
+                  padding: const EdgeInsets.only(
+                    left: _labelColumn,
+                    bottom: OwSpace.s2,
+                  ),
                   child: Text(
                     l.noPostQuantumNote,
-                    style: TextStyle(fontSize: 12, color: ow.colors.textMuted),
+                    style: TextStyle(
+                      fontSize: OwText.small,
+                      color: ow.colors.textMuted,
+                    ),
                   ),
                 ),
               row(l.cipher, k.cipher, mono: true),

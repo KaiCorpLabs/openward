@@ -40,7 +40,7 @@ Lo siguiente es y seguirá siendo open source y gratuito. Esta lista solo puede 
 | Ruta | Contenido | Licencia |
 |---|---|---|
 | [`core/`](core/) | Núcleo Rust: terminal, SSH, vault, sync | Apache-2.0 |
-| `app/` | App Flutter (a partir de la fase 1) | Apache-2.0 |
+| [`app/`](app/) | App Flutter de escritorio | Apache-2.0 |
 | `server/` | Servidor de sincronización en Go (a partir de la fase 2) | AGPL-3.0 |
 | [`spec/`](spec/) | Formato del vault, protocolo de sync y API | CC-BY-4.0 |
 | [`spikes/`](spikes/) | Prototipos de la fase 0; no es código de producto | Apache-2.0 |
@@ -50,17 +50,22 @@ Más detalles en [LICENSING.md](LICENSING.md).
 
 ## Desarrollo
 
-Requisitos:
+Desde un clon recién hecho, `make setup` instala lo que el proyecto fija y dice qué más falta en la máquina:
 
-- **Rust:** la versión se fija en [`core/rust-toolchain.toml`](core/rust-toolchain.toml) y `rustup` la instala sola.
-- **Flutter:** la versión se fija en [`.fvmrc`](.fvmrc). Con [FVM](https://fvm.app) (`brew install fvm`), ejecuta `fvm install` y usa `fvm flutter …`.
-- **Zig 0.16.0** (solo para el motor `libghostty-vt` del spike S1): `brew install zig@0.16`.
+- **Rust:** la versión de [`core/rust-toolchain.toml`](core/rust-toolchain.toml), con `rustup`.
+- **Flutter:** la versión de [`.fvmrc`](.fvmrc), con [FVM](https://fvm.app) (`brew install fvm`); se usa como `fvm flutter …`.
+- **Zig 0.16.0**, para el motor del terminal (`libghostty-vt`), que `make setup` compila la primera vez: `brew install zig@0.16`.
+- **jq**, **podman** (o docker, para los servidores SSH de prueba) y, en macOS, **Xcode**.
+- `cargo-deny`, `cargo-about` y `flutter_rust_bridge_codegen`, que instala `make setup` en sus versiones.
 
 ```bash
+make setup    # las herramientas y libghostty-vt
 make test     # pruebas del núcleo
 make lint     # rustfmt + clippy en modo estricto
-make bench    # smoke test del banco de pruebas del terminal
+make ci       # todo lo que mira la CI, aquí, como antes de subir a main
 ```
+
+La app y sus pruebas, en [`app/README.md`](app/README.md).
 
 ## Contribuir y seguridad
 

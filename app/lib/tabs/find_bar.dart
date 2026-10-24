@@ -81,18 +81,17 @@ class _FindBarState extends State<FindBar> {
       },
       child: Container(
         width: 380,
-        padding: const EdgeInsets.fromLTRB(10, 4, 4, 4),
+        padding: const EdgeInsets.fromLTRB(
+          OwSpace.s5,
+          OwSpace.s2,
+          OwSpace.s2,
+          OwSpace.s2,
+        ),
         decoration: BoxDecoration(
           color: c.raised,
           borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
           border: Border.all(color: c.control),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x33000000),
-              blurRadius: 16,
-              offset: Offset(0, 6),
-            ),
-          ],
+          boxShadow: OwElevation.raised,
         ),
         child: Row(
           children: [
@@ -105,7 +104,7 @@ class _FindBarState extends State<FindBar> {
                 focusNode: _focus,
                 autofocus: true,
                 onChanged: _changed,
-                style: const TextStyle(fontSize: 13),
+                style: const TextStyle(fontSize: OwText.body),
                 decoration: InputDecoration(
                   hintText: l.findHint,
                   filled: false,
@@ -113,7 +112,9 @@ class _FindBarState extends State<FindBar> {
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: OwSpace.s4,
+                  ),
                 ),
               ),
             ),
@@ -121,7 +122,7 @@ class _FindBarState extends State<FindBar> {
               liveRegion: true,
               child: Text(
                 count,
-                style: TextStyle(fontSize: 12, color: c.textMuted),
+                style: TextStyle(fontSize: OwText.small, color: c.textMuted),
               ),
             ),
             // Older output is further up.
@@ -189,7 +190,7 @@ class _BellFlashState extends ConsumerState<BellFlash> {
     return IgnorePointer(
       child: AnimatedOpacity(
         opacity: _on ? 1 : 0,
-        duration: still ? Duration.zero : const Duration(milliseconds: 120),
+        duration: still ? Duration.zero : OwMotion.fast,
         child: Container(
           decoration: BoxDecoration(
             color: still

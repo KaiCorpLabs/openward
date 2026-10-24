@@ -174,6 +174,10 @@ class OwShape {
 
   /// For buttons.
   double get control => pills ? 999 : radius;
+
+  /// Fully round (dots, pills, bars' ends), except where the theme's
+  /// corners are square.
+  double get round => radiusSmall == 0 ? 0 : 999;
 }
 
 /// The platform's monospace font.
@@ -278,4 +282,95 @@ class OwTheme extends ThemeExtension<OwTheme> {
 
 extension OwContext on BuildContext {
   OwTheme get ow => Theme.of(this).extension<OwTheme>()!;
+}
+
+/// Space: padding and margins on a grid of 2 px, a step each; [hair] is
+/// for optical nudges. Widgets take space from here, never as literals.
+abstract final class OwSpace {
+  static const double hair = 1;
+  static const double s1 = 2;
+  static const double s2 = 4;
+  static const double s3 = 6;
+  static const double s4 = 8;
+  static const double s5 = 10;
+  static const double s6 = 12;
+  static const double s7 = 14;
+  static const double s8 = 16;
+  static const double s9 = 18;
+  static const double s10 = 20;
+  static const double s11 = 22;
+  static const double s12 = 24;
+  static const double s14 = 28;
+  static const double s15 = 30;
+  static const double s16 = 32;
+  static const double s18 = 36;
+  static const double s24 = 48;
+}
+
+/// Text sizes by role, as the theme's text styles have them: a
+/// `TextStyle` of its own takes its size from here.
+abstract final class OwText {
+  /// Notes, hints, captions, table cells (`bodySmall`, `labelMedium`).
+  static const double small = 12;
+
+  /// Body text and controls (`bodyMedium`, `labelLarge`).
+  static const double body = 13;
+
+  /// Titles of sections and dialogs (`titleMedium`).
+  static const double title = 15;
+
+  /// What a whole surface says first: a drop target, an editor's title.
+  static const double heading = 17;
+}
+
+/// Time: how long the interface takes to move, and to answer a pointer.
+/// What a timer of the app's own waits for (debounces, polls) is not here.
+abstract final class OwMotion {
+  /// A bar that comes and goes (find).
+  static const fast = Duration(milliseconds: 120);
+
+  /// A panel sliding in.
+  static const normal = Duration(milliseconds: 160);
+
+  /// A notice fading in or out.
+  static const slow = Duration(milliseconds: 250);
+
+  /// A tooltip.
+  static const hint = Duration(milliseconds: 600);
+
+  /// A card that answers hovering (the latency, the rail's sections).
+  static const hintSoon = Duration(milliseconds: 300);
+
+  /// Hovering this long opens what peeks (the sidebar over the window).
+  static const hoverIntent = Duration(milliseconds: 150);
+
+  /// Leaving for this long closes it again.
+  static const hoverLeave = Duration(milliseconds: 300);
+
+  /// What appears only if it lasts (connecting), not as a flash.
+  static const showAfter = Duration(milliseconds: 400);
+
+  /// A slow pulse while something waits (connecting).
+  static const pulse = Duration(milliseconds: 1400);
+
+  /// A blink that draws the eye.
+  static const blink = Duration(milliseconds: 1200);
+}
+
+/// Shadows, by how far above the window a surface floats.
+abstract final class OwElevation {
+  /// A card resting on the page.
+  static const card = [
+    BoxShadow(color: Color(0x14281E0A), blurRadius: 24, offset: Offset(0, 8)),
+  ];
+
+  /// A bar or chip above the content (find, a dragged tab, a drop).
+  static const raised = [
+    BoxShadow(color: Color(0x33000000), blurRadius: 16, offset: Offset(0, 6)),
+  ];
+
+  /// A panel or card over the window (a connection's details, a question).
+  static const overlay = [
+    BoxShadow(color: Color(0x33000000), blurRadius: 32, offset: Offset(0, 12)),
+  ];
 }

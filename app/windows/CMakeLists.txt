@@ -87,6 +87,13 @@ if(PLUGIN_BUNDLED_LIBRARIES)
     COMPONENT Runtime)
 endif()
 
+# The Visual C++ runtime next to the app (msvcp140, vcruntime140): the
+# runner and the Rust core use it, and a fresh Windows does not always have
+# it. The Universal CRT is part of Windows 10 and 11.
+set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION "${INSTALL_BUNDLE_LIB_DIR}")
+set(CMAKE_INSTALL_UCRT_LIBRARIES FALSE)
+include(InstallRequiredSystemLibraries)
+
 # Copy the native assets provided by the build.dart from all packages.
 set(NATIVE_ASSETS_DIR "${PROJECT_BUILD_DIR}native_assets/windows/")
 install(DIRECTORY "${NATIVE_ASSETS_DIR}"

@@ -98,7 +98,7 @@ class _Report extends StatelessWidget {
               const SizedBox(height: 10),
               for (final (icon, line) in _lines(l))
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.symmetric(vertical: OwSpace.s2),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -112,7 +112,7 @@ class _Report extends StatelessWidget {
                 const SizedBox(height: 12),
                 Callout(
                   tone: Tone.warn,
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(OwSpace.s6),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -123,10 +123,10 @@ class _Report extends StatelessWidget {
                       const SizedBox(height: 4),
                       for (final check in checks)
                         Padding(
-                          padding: const EdgeInsets.only(top: 3),
+                          padding: const EdgeInsets.only(top: OwSpace.s1),
                           child: Text(
                             '• $check',
-                            style: const TextStyle(fontSize: 12),
+                            style: const TextStyle(fontSize: OwText.small),
                           ),
                         ),
                     ],
@@ -136,10 +136,10 @@ class _Report extends StatelessWidget {
               const SizedBox(height: 8),
               Callout(
                 tone: Tone.info,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(OwSpace.s6),
                 child: Text(
                   l.reimportNote,
-                  style: const TextStyle(fontSize: 12),
+                  style: const TextStyle(fontSize: OwText.small),
                 ),
               ),
             ],

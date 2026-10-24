@@ -10,6 +10,7 @@ import '../l10n/l10n.dart';
 import '../terminal/palette.dart';
 import '../terminal/scheme_import.dart';
 import '../terminal/schemes.dart';
+import '../ui/confirm.dart';
 import '../ui/themes.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
@@ -255,7 +256,7 @@ class _FamilyCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
         child: Container(
           width: 134,
-          padding: const EdgeInsets.all(6),
+          padding: const EdgeInsets.all(OwSpace.s3),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
             border: Border.all(color: current ? c.accent : c.control, width: 2),
@@ -273,7 +274,7 @@ class _FamilyCard extends StatelessWidget {
                 Text(
                   badge.isEmpty ? kinds : badge,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: OwText.small,
                     color: badge.isEmpty ? c.textSubtle : c.accentText,
                   ),
                 ),
@@ -317,8 +318,10 @@ class MiniWindow extends StatelessWidget {
             const SizedBox(width: 26),
             Expanded(
               child: Container(
-                margin: inset ? const EdgeInsets.all(5) : EdgeInsets.zero,
-                padding: const EdgeInsets.all(7),
+                margin: inset
+                    ? const EdgeInsets.all(OwSpace.s2)
+                    : EdgeInsets.zero,
+                padding: const EdgeInsets.all(OwSpace.s3),
                 decoration: BoxDecoration(
                   color: t.background,
                   borderRadius: BorderRadius.circular(inset ? 4 : 0),
@@ -436,10 +439,10 @@ class _Layers extends ConsumerWidget {
           ],
         ),
         Padding(
-          padding: const EdgeInsets.only(top: 4, bottom: 12),
+          padding: const EdgeInsets.only(top: OwSpace.s2, bottom: OwSpace.s6),
           child: Text(
             l.customizeHint,
-            style: TextStyle(fontSize: 12, color: c.textMuted),
+            style: TextStyle(fontSize: OwText.small, color: c.textMuted),
           ),
         ),
         Wrap(
@@ -565,33 +568,12 @@ class _Layers extends ConsumerWidget {
   /// An installed font, by name.
   Future<String?> _askFont(BuildContext context) async {
     final l = context.l10n;
-    final field = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l.fontOtherTitle),
-        content: SizedBox(
-          width: 360,
-          child: TextField(
-            controller: field,
-            autofocus: true,
-            decoration: InputDecoration(hintText: l.fontOtherHint),
-            onSubmitted: (v) => Navigator.pop(context, v),
-          ),
-        ),
-        actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, field.text),
-            child: Text(l.ok),
-          ),
-        ],
-      ),
+    final name = await askText(
+      context,
+      title: l.fontOtherTitle,
+      action: l.ok,
+      hint: l.fontOtherHint,
     );
-    field.dispose();
     final trimmed = name?.trim();
     return trimmed == null || trimmed.isEmpty ? null : trimmed;
   }
@@ -660,10 +642,10 @@ class _ContrastWarning extends StatelessWidget {
     ].reduce((a, b) => a < b ? a : b);
     if (worst >= 4.5) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.only(top: OwSpace.s6),
       child: Callout(
         tone: Tone.warn,
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(OwSpace.s6),
         child: Text(context.l10n.contrastWarning(_ratio(context.l10n, worst))),
       ),
     );
@@ -681,7 +663,7 @@ class _Accessibility extends ConsumerWidget {
     final c = context.ow.colors;
     final style = fieldTextStyle(context);
     Widget row(String label, Widget control, {String? help}) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: OwSpace.s4),
       child: Row(
         children: [
           Expanded(
@@ -692,7 +674,10 @@ class _Accessibility extends ConsumerWidget {
                 if (help != null)
                   Text(
                     help,
-                    style: TextStyle(fontSize: 12, color: c.textMuted),
+                    style: TextStyle(
+                      fontSize: OwText.small,
+                      color: c.textMuted,
+                    ),
                   ),
               ],
             ),
@@ -858,7 +843,7 @@ class _Preview extends ConsumerWidget {
         // The palette as it is, its contrast said below.
         Container(
           key: const ValueKey('appearance.terminalSample'),
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(OwSpace.s7),
           decoration: BoxDecoration(
             color: t.background,
             border: Border.all(color: c.border),
@@ -899,7 +884,7 @@ class _Preview extends ConsumerWidget {
                 passes
                     ? l.contrastPasses(_ratio(l, contrast))
                     : l.contrastFails(_ratio(l, contrast)),
-                style: TextStyle(fontSize: 12, color: c.textMuted),
+                style: TextStyle(fontSize: OwText.small, color: c.textMuted),
               ),
             ),
           ],
@@ -907,7 +892,7 @@ class _Preview extends ConsumerWidget {
         const SizedBox(height: 6),
         Text(
           l.previewLive,
-          style: TextStyle(fontSize: 12, color: c.textSubtle),
+          style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
         ),
       ],
     );

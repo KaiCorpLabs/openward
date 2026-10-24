@@ -36,8 +36,10 @@ flutter:
   uses-material-design: true
   # Texts in lib/l10n/*.arb; `flutter gen-l10n` writes the Dart next to them.
   generate: true
-  # The fonts' licenses, shown with the others (lib/core/fonts.dart).
+  # The fonts' licenses and the core's (tool/licenses.sh), shown with the
+  # others (lib/core/fonts.dart).
   assets:
+    - assets/licenses/core.json
     - assets/fonts/jetbrains-mono/OFL.txt
     - assets/fonts/ibm-plex/OFL.txt
     - assets/fonts/instrument/OFL-InstrumentSans.txt

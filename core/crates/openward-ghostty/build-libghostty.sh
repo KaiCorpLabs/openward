@@ -60,14 +60,21 @@ else
   target_flag=("-Dtarget=$target")
 fi
 out="$cache/ghostty/build/${commit:0:8}/$name"
-# Already built for this commit and target (CI restores it from its cache).
-if ! $bindings && compgen -G "$out/lib/*ghostty-vt*" >/dev/null; then
+# ${a[@]+"${a[@]}"}: an empty array under `set -u` in macOS's bash 3.2.
+flags=(-Demit-lib-vt=true -Doptimize=ReleaseFast ${target_flag[@]+"${target_flag[@]}"})
+# What else makes the build: another Zig, other flags or another script
+# make another library, though the commit and target are the same.
+key="$({ echo "zig $zig_version"; echo "${flags[*]}"; cat "$0"; } | shasum -a 256 | cut -d' ' -f1)"
+# Already built so for this commit and target.
+if ! $bindings && compgen -G "$out/lib/*ghostty-vt*" >/dev/null &&
+  [[ "$(cat "$out/.build-key" 2>/dev/null)" == "$key" ]]; then
   echo "libghostty-vt: $out (cached)"
   exit 0
 fi
 
-# ${a[@]+"${a[@]}"}: an empty array under `set -u` in macOS's bash 3.2.
-(cd "$src" && zig build -Demit-lib-vt=true -Doptimize=ReleaseFast ${target_flag[@]+"${target_flag[@]}"} --prefix "$out")
+rm -rf "$out"
+(cd "$src" && zig build "${flags[@]}" --prefix "$out")
+echo "$key" > "$out/.build-key"
 echo "libghostty-vt: $out"
 
 if $bindings; then

@@ -12,7 +12,6 @@
 //! Port forwards open whenever the session connects, as in PuTTY.
 
 use std::collections::{BTreeMap, HashMap};
-use std::fs;
 use std::io;
 use std::path::Path;
 
@@ -126,31 +125,33 @@ pub fn from_reg(bytes: &[u8]) -> Result<(Program, Bundle), String> {
 pub fn from_dir(dir: &Path, _program: Program) -> io::Result<Bundle> {
     let mut sessions = Vec::new();
     let mut folders: HashMap<String, Vec<String>> = HashMap::new();
-    walk(dir, &mut Vec::new(), &mut sessions, &mut folders)?;
+    walk(dir, &mut Vec::new(), &mut 0, &mut sessions, &mut folders)?;
     Ok(bundle(sessions, &folders))
 }
 
 fn walk(
     dir: &Path,
     path: &mut Vec<String>,
+    seen: &mut usize,
     sessions: &mut Vec<(String, Session)>,
     folders: &mut HashMap<String, Vec<String>>,
 ) -> io::Result<()> {
-    let mut entries: Vec<_> = fs::read_dir(dir)?.flatten().collect();
-    entries.sort_by_key(|e| e.file_name());
-    for entry in entries {
-        let name = entry.file_name().to_string_lossy().into_owned();
+    for entry in crate::files::entries(dir, seen)? {
+        let name = entry.name;
         if name.starts_with('.') {
             continue;
         }
-        let p = entry.path();
-        if p.is_dir() {
-            path.push(unescape(&name));
-            walk(&p, path, sessions, folders)?;
-            path.pop();
+        if entry.dir {
+            if path.len() < crate::files::MAX_DEPTH {
+                path.push(unescape(&name));
+                walk(&entry.path, path, seen, sessions, folders)?;
+                path.pop();
+            }
             continue;
         }
-        let Ok(bytes) = fs::read(&p) else { continue };
+        let Ok(bytes) = crate::files::read(&entry.path) else {
+            continue;
+        };
         let name = unescape(name.strip_suffix(".ktx").unwrap_or(&name));
         let mut session = Session::new();
         for line in text::decode(&bytes).lines() {
@@ -437,6 +438,7 @@ fn port_forwardings(spec: &str) -> Vec<Tunnel> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
 
     const REG: &str = r#"Windows Registry Editor Version 5.00
 

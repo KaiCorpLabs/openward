@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/address.dart';
+import '../core/match.dart';
 import '../core/providers.dart';
 import '../core/settings.dart';
 import '../history/history.dart';
@@ -44,6 +45,7 @@ class _Entry {
     this.keys,
     this.pill,
     this.history,
+    this.host,
     this.id,
     this.rank = 0,
     this.favorite = false,
@@ -75,30 +77,12 @@ class _Entry {
   final String? pill;
   final HistoryEntry? history;
 
+  /// A saved host: found by [HostMatcher], as everywhere.
+  final HostView? host;
+
   /// `alt`: ⌥↩, type a command without running it.
   final Future<void> Function(bool alt) run;
 }
-
-/// How well `text` matches `q` (lowercase): lower is better, null is no
-/// match. The start, the start of a word, anywhere, then the letters in
-/// order.
-int? matchScore(String text, String q) {
-  if (q.isEmpty) return 0;
-  final t = text.toLowerCase();
-  if (t.startsWith(q)) return 0;
-  final at = t.indexOf(q);
-  if (at > 0) {
-    return _wordStart.hasMatch(t[at - 1]) ? 1 : 2;
-  }
-  if (q.length < 2) return null;
-  var i = 0;
-  for (var j = 0; j < t.length; j++) {
-    if (t.codeUnitAt(j) == q.codeUnitAt(i) && ++i == q.length) return 3;
-  }
-  return null;
-}
-
-final _wordStart = RegExp(r'[\s/._@:-]');
 
 /// Opens the palette over the window whose `context` and `ref` are given:
 /// what it picks runs there, once the palette is gone.
@@ -438,6 +422,7 @@ class _PaletteState extends ConsumerState<_Palette> {
       out.add(
         _Entry(
           kind: _Kind.host,
+          host: h,
           title: h.label,
           subtitle: hostAddress(h),
           icon: favorite == null
@@ -580,7 +565,12 @@ class _PaletteState extends ConsumerState<_Palette> {
       );
     }
     final scored = <(_Entry, int)>[];
+    final hosts = HostMatcher(q, ref.read(libraryProvider));
     for (final e in all) {
+      if (e.host case final h?) {
+        if (hosts.score(h) case final s?) scored.add((e, s));
+        continue;
+      }
       final s = [
         matchScore(e.title, q),
         if (e.subtitle != null) matchScore(e.subtitle!, q).let((v) => v + 1),
@@ -688,7 +678,7 @@ class _PaletteState extends ConsumerState<_Palette> {
     final selected = shown.isEmpty ? -1 : _selected.clamp(0, shown.length - 1);
     final mono = monoStyle(context, size: 12);
     Widget hint(String keys, String text) => Padding(
-      padding: const EdgeInsets.only(right: 14),
+      padding: const EdgeInsets.only(right: OwSpace.s7),
       child: Text.rich(
         TextSpan(
           children: [
@@ -696,7 +686,7 @@ class _PaletteState extends ConsumerState<_Palette> {
             TextSpan(text: ' $text'),
           ],
         ),
-        style: TextStyle(fontSize: 12, color: c.textSubtle),
+        style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
       ),
     );
     final rows = <Widget>[];
@@ -706,7 +696,12 @@ class _PaletteState extends ConsumerState<_Palette> {
         last = e.kind;
         rows.add(
           Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
+            padding: const EdgeInsets.fromLTRB(
+              OwSpace.s5,
+              OwSpace.s4,
+              OwSpace.s5,
+              OwSpace.s2,
+            ),
             child: SectionLabel(_heading(l, e.kind)),
           ),
         );
@@ -726,7 +721,7 @@ class _PaletteState extends ConsumerState<_Palette> {
         child: SizedBox(
           width: 620,
           child: Padding(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(OwSpace.s3),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -755,7 +750,7 @@ class _PaletteState extends ConsumerState<_Palette> {
                 Divider(height: 1, color: c.border),
                 if (shown.isEmpty)
                   Padding(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(OwSpace.s7),
                     child: Text(
                       l.paletteNothing,
                       style: TextStyle(color: c.textMuted),
@@ -767,13 +762,18 @@ class _PaletteState extends ConsumerState<_Palette> {
                     child: ListView(
                       controller: _scroll,
                       shrinkWrap: true,
-                      padding: const EdgeInsets.only(bottom: 4),
+                      padding: const EdgeInsets.only(bottom: OwSpace.s2),
                       children: rows,
                     ),
                   ),
                 Divider(height: 1, color: c.border),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 8, 6, 6),
+                  padding: const EdgeInsets.fromLTRB(
+                    OwSpace.s5,
+                    OwSpace.s4,
+                    OwSpace.s3,
+                    OwSpace.s3,
+                  ),
                   child: Wrap(
                     children: [
                       hint('↑↓', l.paletteChoose),
@@ -828,7 +828,7 @@ class _PaletteState extends ConsumerState<_Palette> {
           borderRadius: BorderRadius.circular(ow.shape.radius),
           onTap: () => Navigator.pop(context, (e, false)),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            padding: const EdgeInsets.symmetric(horizontal: OwSpace.s5),
             child: Row(
               children: [
                 Icon(e.icon, size: 15, color: c.textMuted),
@@ -866,12 +866,12 @@ class _PaletteState extends ConsumerState<_Palette> {
                 ),
                 if (e.pill != null)
                   Padding(
-                    padding: const EdgeInsets.only(left: 8),
+                    padding: const EdgeInsets.only(left: OwSpace.s4),
                     child: Pill(e.pill!, tone: PillTone.neutral),
                   ),
                 if (e.keys != null)
                   Padding(
-                    padding: const EdgeInsets.only(left: 8),
+                    padding: const EdgeInsets.only(left: OwSpace.s4),
                     child: KeyCap(e.keys!),
                   ),
               ],

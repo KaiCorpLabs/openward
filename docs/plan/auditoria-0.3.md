@@ -292,7 +292,7 @@ Los cuatro primeros cuestan menos de medio día cada uno y pueden entrar en cual
 - De paso, cargo-deny dio con RUSTSEC-2026-0387, publicado durante R5: operaciones de `crypto-bigint` (por `rsa`, de russh) que debían tardar lo mismo y no siempre lo hacían; pasa a la 0.7.6, que lo arregla. El `Cargo.lock` del spike de SSH sigue como estaba: no se distribuye ni lo revisa cargo-deny.
 - De paso, la prueba encontró y quedan arreglados: Esc no cerraba la paleta de snippets con el cursor en su búsqueda; la página de Apariencia fallaba si los ajustes nombraban una variante de un tema (`contraste-oscuro`) en vez de su familia; el nombre corto del entorno elegido no se leía sobre su fondo; el pie de la paleta de snippets se desbordaba al 150 %; y a 760×480 se desbordaban el filtro de Túneles, Identidades y Snippets, los botones de las filas de Claves y Hosts conocidos y el diálogo de clave nueva, que ahora se desplaza.
 
-### R6 · Deuda, pruebas, documentación y bajos (continuo, ~3 semanas repartidas)
+### R6 · Deuda, pruebas, documentación y bajos (0.3.2-beta.6, ~3 semanas repartidas)
 
 - **Archivos grandes:** `hosts/editors.dart` en seis archivos, con el formulario puro y probado (UI-17, que además arregla una vista previa desfasada); `terminal_pane.dart` y `session_view.dart` (TM-25); una sola búsqueda de hosts (UI-16); tokens de espacio, texto, sombra y tiempo, con una prueba que prohíba literales fuera de `ui/` (DS-9).
 - **Superficie:** las funciones de la FFI que solo usan las pruebas, bajo una feature (DT-20); la API de los spikes, fuera de `openward-ssh` (CX-22).
@@ -302,6 +302,49 @@ Los cuatro primeros cuestan menos de medio día cada uno y pueden entrar en cual
 - **Release:** `tool/bump-version.sh` y una prueba de que `coreVersion()` coincide con pubspec (BR-11); la caché de libghostty por versión de Zig y flags (BR-12); el toolchain de cargokit, comprobado (BR-16); paquetes de Linux en un contenedor y el runtime de VC++ en Windows (BR-10).
 - **Rendimiento que puede esperar a que la medida lo pida:** el atlas compartido (TM-6); varios archivos en vuelo por trabajo en el SFTP (DT-7); un notificador por división en los paneles (UI-19); TM-15 a TM-17.
 - **Resto de bajos:** CX-23, DT-14 a DT-18, TM-19, UI-13, UI-21, UI-22.
+
+**Qué deja hecho:**
+- **El editor de hosts y grupos** (UI-17): `hosts/editors.dart` (3044 líneas) pasa a seis archivos: los editores y sus paneles, y en `hosts/editor/` el formulario, los campos de la conexión, el entorno, las filas y el marco. El formulario es un `ChangeNotifier` sin widgets, con sus pruebas (heredar y fijar, validar, lo que guarda, los avisos), y la vista previa del sistema lo escucha: cambiar el entorno ya se ve en ella al momento.
+- **El terminal y la vista de la sesión** (TM-25): los dos diálogos de pegado, que repetían la vista previa y el aviso de lo invisible, son uno (`terminal/paste.dart`); los enlaces, en `terminal/links.dart`; la cabecera de un panel y su selector, y la barra de estado, salen de `session_view.dart` (1313 líneas, ahora 620).
+- **Una sola búsqueda de hosts** (UI-16): `HostMatcher`, en la barra, Hosts, ⌘K, el inicio, el panel que pregunta qué abrir y la instalación de una clave: cada palabra en la etiqueta, la dirección, el usuario, las etiquetas o los grupos (como la del núcleo), y antes lo que empieza por ella. «web prod» da lo mismo en todas partes.
+- **Tokens** (DS-9): `OwSpace` (una escala de 2 px), `OwText` (los tamaños por papel, los del tema), `OwMotion` (lo que tarda la interfaz en moverse y en responder al puntero), `OwElevation` (tres sombras) y `OwShape.round`; los 557 valores de márgenes, los 218 tamaños de texto, los 19 radios, las 8 sombras y los 15 tiempos que había fuera de `ui/` los usan, y `design_tokens_test` no deja entrar un literal más. En los temas de esquinas rectas, puntos, píldoras y barras ya son rectos.
+- **La superficie** (DT-20, CX-22): `open_with_ssh_dir`, `open_with_home` y la clave de Termius dada a mano solo valen en una build de depuración (la de las pruebas); `known_hosts()`, que repetía `known_host_rows`, se va. `connect` con un método y sus secretos, la respuesta a cada pregunta por su texto y los códigos TOTP quedan detrás de la feature `test-auth` de `openward-ssh`, que solo piden los spikes y las pruebas.
+- **Pruebas en Dart sin Rust** (UI-18): un `FakeOpenWard` (`test/fakes.dart`) para las pestañas, la conexión (de «Conectando» a la shell, la latencia, sin respuesta, perdida y de vuelta), la cola de transferencias, los espacios de trabajo, el formulario y la paleta.
+- **El terminal, probado** (TM-24): el renderer pintado píxel a píxel (fondos, inverso, oculto, un glifo del atlas, el cursor); el atlas (un hueco por glifo, que no se mueve al crecer, y lleno, lo dice); `keys.dart`; y un tramo tan largo como permite su longitud de 16 bits, y uno que miente sobre ella.
+- **Datos hostiles** (DT-13): `proptest` en cada importador (bytes al azar y texto con su forma), en los decodificadores de Termius (LevelDB, V8, IndexedDB) y en `known_hosts`; anidamientos de 100 000 niveles; un archivo de configuración de 10 000 hosts; y un vault que abre otro proceso, que se niega mientras lo tiene y se abre cuando muere.
+- **Importadores** (DT-14): se lee un archivo normal de hasta 64 MiB (`/dev/zero`, una carpeta o un disco no), las carpetas sin seguir enlaces a carpetas, con 16 niveles y 20 000 entradas como mucho; el YAML de Tabby se cuenta con sus alias expandidos antes de cargarlo (un millón de nodos como mucho); y una longitud del archivo nunca reserva más de lo que el archivo tiene.
+- **SFTP** (DT-15, DT-16): los enlaces de un listado se preguntan de 16 en 16, y borrar o cambiar permisos ya no pregunta por ellos; una descarga nace tan privada como el original (0600 sigue 0600, no solo al final).
+- **El terminal local** (DT-17): cerrar manda el cuelgue al grupo de la shell y al del programa en primer plano; la salida acaba cuando acaba la shell, aunque un `nohup` siga con el terminal; y `LANG`, si falta, es el idioma del sistema (`AppleLocale` en macOS).
+- **Claves de Termius** (DT-18): se escriben aparte, ocultas y en disco (`sync_all`), y toman su nombre (sin sustituir nada) cuando el vault ya tiene lo que las usa: si el vault falla, no queda ninguna.
+- **Bajos** (CX-23, TM-19, UI-13, UI-21, UI-22): `${VÁR}` con caracteres no ASCII; el servidor SOCKS5 contesta cada error de su protocolo y da 10 s para hablar; `Effects` es un `NonNull` del motor, y lo que cambia estado de C pide `&mut self`; la búsqueda de la barra y el filtro del SFTP vuelven con lo que filtraban; renombrar una pestaña la busca después de preguntar, con el campo en un diálogo que lo posee (`askText`); y la minigráfica de la latencia avanza aunque se repita la misma.
+- **Release y dependencias** (BR-5, BR-11, BR-12, BR-13, BR-16): `tool/bump-version.sh` pone la versión en todos sus sitios y dos pruebas miran que el núcleo diga la misma; la caché de libghostty-vt se invalida con la versión de Zig, las flags y el propio script; la CI comprueba el toolchain de cargokit; los márgenes de la prueba que se queda sin respuesta salen de `Timing`, y la de túneles espera a que el terminal cierre en vez de dormir; dependabot agrupa hmac, sha1 y tokio, mira `pub` y sshprobe y deja flutter_rust_bridge a mano; hmac y sha1 pasan a las versiones de russh (adiós a una copia de `digest`).
+- **Licencias** (BR-6): `tool/licenses.sh` escribe `app/assets/licenses/core.json` con las licencias de los 234 crates que se distribuyen (`cargo-about`) y las de libghostty-vt y lo que lleva dentro (simdutf, Highway, Wuffs, uucode); la app las lista con las de las siete fuentes; NOTICE lo dice; la CI comprueba que está al día.
+- **Empezar y documentación** (BR-8, BR-15, BR-10): `make setup` instala lo que el proyecto fija y dice qué más falta; README, `app/README`, CONTRIBUTING y ARCHITECTURE (con su columna «Estado») al día; `make package-linux` construye la app de Linux en un contenedor (escrito; su imagen no llegó a hacerse aquí: la máquina de podman se quedó sin disco); el paquete de Windows lleva el runtime de Visual C++; las guías ya no prometen paquetes de la CI.
+
+**La puerta, medida:**
+
+| Medida | Resultado | Decisión |
+|---|---|---|
+| Frame completo del motor, cada celda de otro color (release) | 80×24: 0,17 ms; 200×60: 0,67 ms; 400×120: 1,5 ms | TM-16 espera |
+| Intro: leer la pantalla hasta el cursor (release) | 0,1 ms a 80×24, 1 ms a 400×120, cada vez | TM-15 espera |
+| Renderer, 160×50, con un ✓, un icono de Nerd Font o un emoji por fila | 0,8–1,9 ms por el camino de `Paragraph`, contra 2,5 ms por el del atlas (en la prueba, no en la GPU) | TM-17 espera |
+| Atlas por pestaña | ~1 MiB con lo de un shell; 8 MiB con 2000 glifos distintos, 51 ms el primer frame y 3–4 ms después | TM-6 espera |
+| Subir un archivo nuevo por SFTP | 8 peticiones en serie: 5000 archivos a 80 ms, unos 53 min | DT-7, aparte |
+| Arrastrar un divisor | se reconstruía la pestaña entera en cada píxel | UI-19 hecho |
+| Importar `ssh_config` de 20 000 hosts (release) | 147 s → 28 ms | arreglado de paso |
+| SecureCRT con 100 000 `<key>` anidadas | 2 min → se rechaza en 1,5 ms | arreglado de paso |
+
+**Diferencias con el plan:**
+- DT-20 no es una feature de cargo: los bindings generados llaman a cada función por su número, así que no se pueden dejar fuera; en una build de release se niegan.
+- DT-13 usa `proptest`, no `cargo-fuzz`: corre con las demás pruebas, sin toolchain nocturno.
+- TM-25 saca los diálogos de pegado (que dejan de estar repetidos), los enlaces, la cabecera y la barra de estado; el teclado, el método de entrada y el ratón siguen en el estado del panel, que comparten.
+- DS-9 lleva los valores impares a la escala de 2 px un píxel por debajo (salvo en los chips de filtro de Hosts, que con uno menos no llegaban a 28 px y van uno por encima), y los 12,5 px a 12 (13 en la barra); dos sombras cambian un poco para caber en tres niveles. Los tiempos de la app que no son de la interfaz (esperas para agrupar, sondeos) no son tokens.
+- UI-16 deja la búsqueda en Dart: la barra y Hosts ya no llaman a la del núcleo, y ordenan por dónde se encuentra la palabra.
+- UI-19: la barra de pestañas y «Abiertas» no escuchaban los paneles; lo que se reconstruía era la pestaña.
+- TM-6, TM-15, TM-16 y TM-17 esperan, por lo medido. DT-7 sí lo pide, pero cambia la reanudación, el progreso y la cancelación de cada trabajo: va en su propia tarea.
+- El paquete de Linux sale de la arquitectura de la máquina (aarch64 en un Mac con Apple silicon); el de x86_64 pide una máquina x86_64 o un contenedor emulado, mucho más lento. El runtime de Visual C++ no se ha probado en un Windows limpio.
+- uucode no trae en su paquete las licencias que nombra: el decodificador UTF-8 (MIT) se dice con su aviso, y los datos de Unicode con la licencia Unicode v3 que traen los crates.
+- De paso, las pruebas encontraron y quedan arreglados: la importación de `ssh_config` y el XML de SecureCRT eran cuadráticos (ver arriba); guardar un espacio de trabajo con una página delante tomaba como activa la pestaña de después; y en macOS, cerrar un terminal podía bloquear la app si la shell, al salir, esperaba a que se leyera su última salida.
 
 ## Qué no entra
 

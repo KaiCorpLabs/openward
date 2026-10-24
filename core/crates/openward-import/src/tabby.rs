@@ -10,6 +10,8 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use openward_proto::{ForwardKind, Proxy, ProxyServer, Settings};
+use yaml_rust2::parser::{Event, MarkedEventReceiver, Parser};
+use yaml_rust2::scanner::Marker;
 use yaml_rust2::{Yaml, YamlLoader};
 
 use crate::bundle::{Bundle, Group, Host, JumpRef, KeyRef, Missing, Tunnel, Warning, WarningKind};
@@ -35,8 +37,60 @@ pub fn sniff(text: &str) -> bool {
         && (text.contains("type: ssh") || text.contains("version:"))
 }
 
+/// The most nodes a configuration may have, aliases expanded.
+const MAX_NODES: u64 = 1_000_000;
+
+/// How many nodes the YAML loader would build. It copies what an alias
+/// points to, so a few lines of aliases of aliases can stand for billions:
+/// counted from the events first, in one pass.
+fn expanded_nodes(text: &str) -> Result<u64, String> {
+    #[derive(Default)]
+    struct Count {
+        nodes: u64,
+        open: Vec<(usize, u64)>,
+        anchored: HashMap<usize, u64>,
+    }
+    impl MarkedEventReceiver for Count {
+        fn on_event(&mut self, ev: Event, _: Marker) {
+            match ev {
+                Event::Scalar(_, _, anchor, _) => {
+                    self.nodes += 1;
+                    if anchor > 0 {
+                        self.anchored.insert(anchor, 1);
+                    }
+                }
+                Event::SequenceStart(anchor, _) | Event::MappingStart(anchor, _) => {
+                    self.open.push((anchor, self.nodes));
+                    self.nodes += 1;
+                }
+                Event::SequenceEnd | Event::MappingEnd => {
+                    if let Some((anchor, start)) = self.open.pop()
+                        && anchor > 0
+                    {
+                        self.anchored.insert(anchor, self.nodes - start);
+                    }
+                }
+                Event::Alias(id) => {
+                    let size = self.anchored.get(&id).copied().unwrap_or(1);
+                    self.nodes = self.nodes.saturating_add(size);
+                }
+                _ => {}
+            }
+        }
+    }
+    let mut count = Count::default();
+    Parser::new_from_str(text)
+        .load(&mut count, true)
+        .map_err(|e| e.to_string())?;
+    Ok(count.nodes)
+}
+
 pub fn parse(bytes: &[u8]) -> Result<Bundle, String> {
-    let docs = YamlLoader::load_from_str(&text::decode(bytes)).map_err(|e| e.to_string())?;
+    let text = text::decode(bytes);
+    if expanded_nodes(&text)? > MAX_NODES {
+        return Err("too many nodes once its aliases are expanded".into());
+    }
+    let docs = YamlLoader::load_from_str(&text).map_err(|e| e.to_string())?;
     let doc = docs.first().ok_or("an empty file")?;
     if doc["encrypted"].as_bool() == Some(true) {
         return Err(
@@ -225,6 +279,28 @@ pub fn parse(bytes: &[u8]) -> Result<Bundle, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Aliases of aliases (the «billion laughs») fail before they are
+    /// expanded; a few, as anyone writes them, pass.
+    #[test]
+    fn alias_bombs_are_refused() {
+        let mut bomb = String::from("a: &a [x, x, x, x, x, x, x, x, x, x]\n");
+        for (prev, name) in ["a", "b", "c", "d", "e", "f", "g", "h"]
+            .iter()
+            .zip(["b", "c", "d", "e", "f", "g", "h", "i"])
+        {
+            let refs = vec![format!("*{prev}"); 10].join(", ");
+            bomb.push_str(&format!("{name}: &{name} [{refs}]\n"));
+        }
+        bomb.push_str("profiles: []\nversion: 1\n");
+        assert!(expanded_nodes(&bomb).unwrap() > MAX_NODES);
+        let err = parse(bomb.as_bytes()).unwrap_err();
+        assert!(err.contains("aliases"), "{err}");
+
+        let fine = "base: &base {type: ssh}\nprofiles:\n  - <<: *base\n    name: a\n  - name: b\n    options: *base\nversion: 1\n";
+        assert!(expanded_nodes(fine).unwrap() < 40);
+        assert!(parse(fine.as_bytes()).is_ok());
+    }
 
     const CONFIG: &str = r#"version: 8
 groups:

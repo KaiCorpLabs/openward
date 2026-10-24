@@ -132,7 +132,7 @@ class _KeysPageState extends ConsumerState<KeysPage> {
           ),
           if (_note != null)
             Padding(
-              padding: const EdgeInsets.only(top: 10),
+              padding: const EdgeInsets.only(top: OwSpace.s5),
               child: Text(_note!, style: TextStyle(color: c.textMuted)),
             ),
           const SizedBox(height: 12),
@@ -188,11 +188,11 @@ class _KeysPageState extends ConsumerState<KeysPage> {
               Text(
                 k.comment!,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12, color: c.textSubtle),
+                style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
               ),
             if (k.certificate)
               Padding(
-                padding: const EdgeInsets.only(top: 3),
+                padding: const EdgeInsets.only(top: OwSpace.s1),
                 child: Pill(l.withCertificate, tone: PillTone.accent),
               ),
           ],

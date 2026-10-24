@@ -14,7 +14,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use anyhow::{Context, bail};
+use anyhow::Context;
 use russh::client::{self, AuthResult, KeyboardInteractiveAuthResponse};
 use russh::keys::agent::AgentIdentity;
 use russh::keys::agent::client::AgentClient;
@@ -28,6 +28,7 @@ use tokio::io::AsyncWriteExt;
 use tokio::process::{Child, Command};
 
 use crate::known_hosts::{KnownHosts, Verdict};
+#[cfg(feature = "test-auth")]
 use crate::totp;
 
 #[derive(Clone, Debug)]
@@ -58,6 +59,8 @@ pub enum Hop<'a> {
     Proxy(crate::proxy::Proxy),
 }
 
+/// One way to authenticate, its secrets at hand (spikes and tests).
+#[cfg(feature = "test-auth")]
 #[derive(Clone, Debug)]
 pub enum Auth {
     Password(String),
@@ -667,6 +670,7 @@ impl std::fmt::Display for NoSftp {
 impl std::error::Error for NoSftp {}
 
 /// Opens and authenticates with one method whose secrets are all at hand.
+#[cfg(feature = "test-auth")]
 pub async fn connect(
     target: &Target,
     hop: Hop<'_>,
@@ -678,6 +682,7 @@ pub async fn connect(
     Ok(session)
 }
 
+#[cfg(feature = "test-auth")]
 async fn authenticate(session: &mut Session, user: &str, auth: &Auth) -> anyhow::Result<()> {
     let ok = match auth {
         Auth::Password(password) => session.auth_password(user, password).await?.success(),
@@ -716,7 +721,7 @@ async fn authenticate(session: &mut Session, user: &str, auth: &Auth) -> anyhow:
                     Kbd::Questions { prompts, .. } => {
                         rounds += 1;
                         if rounds > 5 {
-                            bail!("keyboard-interactive: too many rounds");
+                            anyhow::bail!("keyboard-interactive: too many rounds");
                         }
                         let mut answers = Vec::with_capacity(prompts.len());
                         for (prompt, _echo) in &prompts {
@@ -742,7 +747,7 @@ async fn authenticate(session: &mut Session, user: &str, auth: &Auth) -> anyhow:
         }
     };
     if !ok {
-        bail!("authentication failed ({})", auth_name(auth));
+        anyhow::bail!("authentication failed ({})", auth_name(auth));
     }
     Ok(())
 }
@@ -934,6 +939,7 @@ impl Agent {
     }
 }
 
+#[cfg(feature = "test-auth")]
 pub fn auth_name(auth: &Auth) -> &'static str {
     match auth {
         Auth::Password(_) => "password",

@@ -13,5 +13,13 @@ publish.workspace = true
 portable-pty = "=0.9.0"
 anyhow = "1"
 
-[lints]
-workspace = true
+[target.'cfg(unix)'.dependencies]
+# Signals to process groups, and a reader that notices the shell is gone.
+nix = { version = "0.31", features = ["signal", "poll"] }
+
+[lints.rust]
+# One `unsafe` block: borrowing the PTY's descriptor, to duplicate it.
+unsafe_code = "deny"
+
+[lints.clippy]
+all = "warn"

@@ -13,6 +13,11 @@ use tokio::task::JoinSet;
 use crate::entry::{Entry, Kind, kind};
 use crate::{Error, Result, is_name, join};
 
+/// How many links of a listing are asked about at once: a directory of
+/// thousands of them (`/usr/lib`, `node_modules/.bin`) no longer queues
+/// thousands of requests on the channel.
+const LINKS_AT_ONCE: usize = 16;
+
 /// The most a request reads or writes: what OpenSSH's `sftp-server` takes
 /// (its `limits@openssh.com` says 255 KiB), within russh-sftp's 256 KiB
 /// packets.
@@ -99,6 +104,14 @@ impl Remote {
     /// is a path (`a/b`, `../x`) is left out too: only a hostile server
     /// sends one.
     pub async fn list(&self, dir: &str) -> Result<Vec<Entry>> {
+        let mut out = self.read_dir(dir).await?;
+        self.follow_links(dir, &mut out, true).await;
+        Ok(out)
+    }
+
+    /// [`list`](Self::list) without asking where links point: what
+    /// removing or changing modes needs, which never follows them.
+    async fn read_dir(&self, dir: &str) -> Result<Vec<Entry>> {
         let err = |e| Error::sftp(dir, e);
         let handle = self.raw.opendir(dir).await.map_err(err)?.handle;
         let mut out = Vec::new();
@@ -123,34 +136,46 @@ impl Remote {
         };
         let _ = self.raw.close(handle).await;
         result?;
-        self.follow_links(dir, &mut out).await;
         Ok(out)
     }
 
-    /// Fills in where links point, asking about all of them at once.
-    async fn follow_links(&self, dir: &str, entries: &mut [Entry]) {
+    /// Fills in what links point to, [`LINKS_AT_ONCE`] at a time, and with
+    /// `target` where (a `readlink` more each).
+    async fn follow_links(&self, dir: &str, entries: &mut [Entry], target: bool) {
+        let mut links = entries
+            .iter()
+            .enumerate()
+            .filter(|(_, e)| e.kind == Kind::Link)
+            .map(|(i, e)| (i, join(dir, &e.name)))
+            .collect::<Vec<_>>()
+            .into_iter();
         let mut asks = JoinSet::new();
-        for (i, e) in entries.iter().enumerate() {
-            if e.kind != Kind::Link {
-                continue;
+        loop {
+            while asks.len() < LINKS_AT_ONCE
+                && let Some((i, path)) = links.next()
+            {
+                let raw = Arc::clone(&self.raw);
+                asks.spawn(async move {
+                    let to = if target {
+                        raw.readlink(path.as_str())
+                            .await
+                            .ok()
+                            .and_then(|n| n.files.into_iter().next())
+                            .map(|f| f.filename)
+                    } else {
+                        None
+                    };
+                    let attrs = raw.stat(path.as_str()).await.ok().map(|a| a.attrs);
+                    (i, to, attrs)
+                });
             }
-            let raw = Arc::clone(&self.raw);
-            let path = join(dir, &e.name);
-            asks.spawn(async move {
-                let target = raw
-                    .readlink(path.as_str())
-                    .await
-                    .ok()
-                    .and_then(|n| n.files.into_iter().next())
-                    .map(|f| f.filename);
-                let to = raw.stat(path.as_str()).await.ok().map(|a| a.attrs);
-                (i, target, to)
-            });
-        }
-        while let Some(Ok((i, target, to))) = asks.join_next().await {
+            let Some(done) = asks.join_next().await else {
+                break;
+            };
+            let Ok((i, to, attrs)) = done else { continue };
             let e = &mut entries[i];
-            e.link_target = target;
-            if let Some(attrs) = to {
+            e.link_target = to;
+            if let Some(attrs) = attrs {
                 e.link_dir = kind(&attrs) == Kind::Dir;
                 e.size = attrs.size.unwrap_or(0);
             }
@@ -279,7 +304,7 @@ impl Remote {
         match self.lstat(path).await? {
             None => Ok(()),
             Some(e) if e.kind == Kind::Dir => {
-                for child in self.list(path).await? {
+                for child in self.read_dir(path).await? {
                     Box::pin(self.remove(&join(path, &child.name))).await?;
                 }
                 self.raw
@@ -309,7 +334,7 @@ impl Remote {
 
     async fn chmod_inside(&self, dir: &str, mode: u32) -> Result<u64> {
         let mut changed = 0;
-        for e in self.list(dir).await? {
+        for e in self.read_dir(dir).await? {
             let path = join(dir, &e.name);
             match e.kind {
                 Kind::Dir => {
@@ -382,7 +407,9 @@ impl Remote {
             } else {
                 join(dir, &rel)
             };
-            let mut entries = self.list(&abs).await?;
+            // Whether a link is to a directory, not where it points.
+            let mut entries = self.read_dir(&abs).await?;
+            self.follow_links(&abs, &mut entries, false).await;
             entries.sort_by(|a, b| a.name.cmp(&b.name));
             for e in entries {
                 let r = join(&rel, &e.name);

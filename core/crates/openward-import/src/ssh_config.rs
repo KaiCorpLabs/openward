@@ -17,7 +17,7 @@
 //! on connect, as `ssh` opens them. Anything else is reported once as
 //! a [`Warning`], as are the other `Match` blocks, whose lines are skipped.
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use openward_proto::{
@@ -212,8 +212,25 @@ pub struct SshConfig {
     conds: Vec<Cond>,
     lines: Vec<Line>,
     aliases: Vec<String>,
+    /// The aliases, lowercased: one each.
+    seen: HashSet<String>,
     pub warnings: Vec<Warning>,
     unsupported: HashSet<String>,
+    index: Index,
+}
+
+/// Where to look for an alias's lines, so resolving every alias of a big
+/// file does not test every line against each: blocks whose patterns are
+/// all plain names, by name, and the rest (wildcards, `!`, `Match`), to
+/// test. Built once parsing is done.
+#[derive(Debug, Default)]
+struct Index {
+    by_name: HashMap<String, Vec<usize>>,
+    others: Vec<usize>,
+    /// Each block's lines (by the innermost condition), in file order.
+    lines_of: Vec<Vec<usize>>,
+    /// Lines outside any block.
+    global: Vec<usize>,
 }
 
 impl SshConfig {
@@ -221,6 +238,7 @@ impl SshConfig {
     pub fn load(path: &Path, paths: &Paths) -> Self {
         let mut config = Self::default();
         config.read_file(path, &[], 0, paths);
+        config.build_index();
         config
     }
 
@@ -228,7 +246,36 @@ impl SshConfig {
     pub fn parse(text: &str, file: &Path, paths: &Paths) -> Self {
         let mut config = Self::default();
         config.parse_text(text, file, &[], 0, paths);
+        config.build_index();
         config
+    }
+
+    fn build_index(&mut self) {
+        let mut index = Index {
+            lines_of: vec![Vec::new(); self.conds.len()],
+            ..Index::default()
+        };
+        for (i, cond) in self.conds.iter().enumerate() {
+            match cond {
+                Cond::Host(patterns)
+                    if patterns
+                        .iter()
+                        .all(|p| !p.starts_with('!') && !p.contains(['*', '?'])) =>
+                {
+                    for p in patterns {
+                        index.by_name.entry(p.clone()).or_default().push(i);
+                    }
+                }
+                _ => index.others.push(i),
+            }
+        }
+        for (i, line) in self.lines.iter().enumerate() {
+            match line.conds.last() {
+                Some(&c) => index.lines_of[c].push(i),
+                None => index.global.push(i),
+            }
+        }
+        self.index = index;
     }
 
     /// The concrete `Host` aliases, in file order.
@@ -239,8 +286,21 @@ impl SshConfig {
     pub fn resolve(&self, alias: &str) -> Resolved {
         let name = alias.to_lowercase();
         let mut r = Resolved::default();
-        for line in &self.lines {
-            if !line.conds.iter().all(|&c| self.matches(c, &name)) {
+        // The lines whose innermost block could be this alias's, in file
+        // order; each block tested once.
+        let mut known: HashMap<usize, bool> = HashMap::new();
+        let mut holds = |c: usize| *known.entry(c).or_insert_with(|| self.matches(c, &name));
+        let mut candidates = self.index.global.clone();
+        let blocks = self.index.by_name.get(&name).into_iter().flatten();
+        for &c in blocks.chain(&self.index.others) {
+            if holds(c) {
+                candidates.extend(&self.index.lines_of[c]);
+            }
+        }
+        candidates.sort_unstable();
+        candidates.dedup();
+        for line in candidates.into_iter().map(|i| &self.lines[i]) {
+            if !line.conds.iter().all(|&c| holds(c)) {
                 continue;
             }
             match &line.value {
@@ -320,7 +380,7 @@ impl SshConfig {
     }
 
     fn read_file(&mut self, path: &Path, prefix: &[usize], depth: usize, paths: &Paths) {
-        match std::fs::read_to_string(path) {
+        match crate::files::read_to_string(path) {
             Ok(text) => self.parse_text(&text, path, prefix, depth, paths),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
             Err(e) => self.warnings.push(Warning::Unreadable {
@@ -359,7 +419,7 @@ impl SshConfig {
                         let lower = alias.to_lowercase();
                         if concrete
                             && prefix.iter().all(|&c| self.matches(c, &lower))
-                            && !self.aliases.iter().any(|a| a.to_lowercase() == lower)
+                            && self.seen.insert(lower)
                         {
                             self.aliases.push(alias.clone());
                         }
@@ -711,6 +771,12 @@ pub fn import(config: &SshConfig) -> Import {
         .iter()
         .map(|a| (a.clone(), ItemId::new(), config.resolve(a)))
         .collect();
+    let by_alias: HashMap<String, usize> = aliases
+        .iter()
+        .enumerate()
+        .map(|(i, (a, ..))| (a.to_lowercase(), i))
+        .rev()
+        .collect();
     let mut warnings = config.warnings.clone();
     let mut hosts = Vec::new();
     let mut forwards = Vec::new();
@@ -725,9 +791,9 @@ pub fn import(config: &SshConfig) -> Import {
                 specs
                     .iter()
                     .map(|spec| {
-                        let target = aliases
-                            .iter()
-                            .find(|(a, ..)| a.eq_ignore_ascii_case(&spec.host));
+                        let target = by_alias
+                            .get(&spec.host.to_lowercase())
+                            .map(|&i| &aliases[i]);
                         if let Some((_, target, tr)) = target
                             && (spec.user.is_none() || spec.user == tr.user)
                             && (spec.port.is_none() || spec.port == Some(tr.port.unwrap_or(22)))

@@ -31,14 +31,14 @@ pub fn read(dir: &Path) -> io::Result<Vec<Entry>> {
         }
     };
     for table in &files.tables {
-        let bytes = fs::read(table)?;
+        let bytes = crate::files::read(table)?;
         for (internal, value) in table_entries(&bytes).map_err(|e| bad(table, e))? {
             let (key, seq, kind) = split_internal(&internal).map_err(|e| bad(table, e))?;
             keep(key.to_vec(), seq, (kind == VALUE).then_some(value));
         }
     }
     for log in &files.logs {
-        let bytes = fs::read(log)?;
+        let bytes = crate::files::read(log)?;
         for record in log_records(&bytes).map_err(|e| bad(log, e))? {
             for (key, seq, value) in batch_entries(&record).map_err(|e| bad(log, e))? {
                 keep(key, seq, value);
@@ -98,9 +98,9 @@ fn live_files(dir: &Path) -> io::Result<Files> {
     tables.sort();
     logs.sort();
     let current = dir.join("CURRENT");
-    if let Ok(name) = fs::read_to_string(&current) {
+    if let Ok(name) = crate::files::read_to_string(&current) {
         let manifest = dir.join(name.trim());
-        let bytes = fs::read(&manifest)?;
+        let bytes = crate::files::read(&manifest)?;
         let version = manifest_version(&bytes).map_err(|e| bad(&manifest, e))?;
         tables.retain(|(n, _)| version.files.contains(n));
         let from = match version.prev_log {
@@ -224,9 +224,17 @@ fn block(file: &[u8], (offset, size): (u64, u64)) -> Result<Vec<u8>, String> {
     let data = file.get(start..end).ok_or("block out of the file")?;
     match file.get(end) {
         Some(0) => Ok(data.to_vec()),
-        Some(1) => snap::raw::Decoder::new()
-            .decompress_vec(data)
-            .map_err(|e| format!("snappy: {e}")),
+        Some(1) => {
+            // The length it says it unpacks to, from the file: bounded
+            // before anything is reserved.
+            let len = snap::raw::decompress_len(data).map_err(|e| format!("snappy: {e}"))?;
+            if len as u64 > crate::files::MAX_FILE {
+                return Err("block too large".into());
+            }
+            snap::raw::Decoder::new()
+                .decompress_vec(data)
+                .map_err(|e| format!("snappy: {e}"))
+        }
         Some(other) => Err(format!("unknown block compression {other}")),
         None => Err("block trailer missing".into()),
     }
@@ -309,7 +317,9 @@ fn batch_entries(batch: &[u8]) -> Result<Vec<Change>, String> {
     let mut r = Reader::new(batch);
     let seq = r.u64_le()?;
     let count = r.u32_le()?;
-    let mut out = Vec::with_capacity(count as usize);
+    // Each entry takes three bytes or more: the count, read from the
+    // file, never reserves more than that.
+    let mut out = Vec::with_capacity((count as usize).min(r.rest().len() / 3));
     for i in 0..u64::from(count) {
         let kind = r.byte()?;
         let key = r.slice()?.to_vec();
@@ -373,6 +383,19 @@ fn manifest_version(file: &[u8]) -> Result<Version, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    proptest::proptest! {
+        /// A damaged or hostile LevelDB file is an error, never a panic.
+        #[test]
+        fn any_bytes_are_read_or_refused(bytes in proptest::collection::vec(proptest::prelude::any::<u8>(), 0..4096)) {
+            let _ = table_entries(&bytes);
+            let _ = log_records(&bytes);
+            let _ = batch_entries(&bytes);
+            let _ = manifest_version(&bytes);
+            let _ = block_entries(&bytes);
+            let _ = split_internal(&bytes);
+        }
+    }
 
     fn record(kind: u8, data: &[u8]) -> Vec<u8> {
         let mut out = vec![0, 0, 0, 0];

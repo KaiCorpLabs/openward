@@ -207,7 +207,7 @@ pub fn forget_line(file: &Path, number: usize, text: &str) -> Result<(), ForgetE
 
 #[cfg(test)]
 mod tests {
-    use hmac::{Hmac, Mac};
+    use hmac::{Hmac, KeyInit, Mac};
     use openward_vault::proto::{Data, Host, Settings};
     use sha1::Sha1;
 

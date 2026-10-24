@@ -18,7 +18,7 @@ import 'tunnels.dart';
 import 'vault.dart';
 import 'workspaces.dart';
 
-// These functions are ignored because they are not marked as `pub`: `apply_group`, `apply_host`, `host_spec`, `next_favorite`, `warning`
+// These functions are ignored because they are not marked as `pub`: `apply_group`, `apply_host`, `for_tests`, `host_spec`, `next_favorite`, `warning`
 
 /// The core's version, for «Acerca de» and problem reports.
 String coreVersion() => RustLib.instance.api.crateApiAppCoreVersion();
@@ -185,8 +185,6 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// the file and works out which hashed names are saved hosts.
   Future<List<KnownHostRow>> knownHostRows({required String query});
 
-  List<KnownHostView> knownHosts();
-
   /// The `known_hosts` file OpenWard reads, as the UI names it.
   String knownHostsFile();
 
@@ -205,6 +203,7 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   /// As [`OpenWard::open`], with another home folder and its `.ssh`
   /// (tests: nothing of the tester's, such as their Termius, is seen).
+  /// Debug builds only: see [`for_tests`].
   static Future<OpenWard> openWithHome({
     required String dataDir,
     required String home,
@@ -214,7 +213,8 @@ abstract class OpenWard implements RustOpaqueInterface {
   );
 
   /// As [`OpenWard::open`], with another `~/.ssh` (tests: the tester's
-  /// own keys and `known_hosts` stay out, the system's too).
+  /// own keys and `known_hosts` stay out, the system's too). Debug
+  /// builds only: see [`for_tests`].
   static Future<OpenWard> openWithSshDir({
     required String dataDir,
     required String sshDir,
@@ -251,7 +251,9 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// OpenWard use Termius's key from the keychain.
   Future<ProgramRead> readProgram({required String path});
 
-  /// As [`Self::read_program`], with Termius's key given (tests).
+  /// As [`Self::read_program`], with Termius's key given (tests). A
+  /// release build does not take it (see `for_tests`): there it is
+  /// [`Self::read_program`].
   Future<ProgramRead> readProgramWithKey({
     required String path,
     required List<int> termiusKey,

@@ -12,6 +12,7 @@
 pub mod bundle;
 pub mod csv;
 pub mod detect;
+mod files;
 pub mod mobaxterm;
 pub mod putty;
 pub mod securecrt;

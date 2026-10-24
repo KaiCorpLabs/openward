@@ -145,7 +145,7 @@ pub fn read(path: &Path, termius_keys: Option<Vec<[u8; 32]>>) -> Result<(Program
         };
         return read_sessions_dir(&sessions);
     }
-    let bytes = fs::read(path).map_err(Error::Io)?;
+    let bytes = crate::files::read(path).map_err(Error::Io)?;
     let text = crate::text::decode(&bytes);
     let format = |program: Program| move |error: String| Error::Format { program, error };
     if let Some(program) = putty::sniff_reg(&text) {
@@ -176,7 +176,7 @@ pub fn read(path: &Path, termius_keys: Option<Vec<[u8; 32]>>) -> Result<(Program
 /// portable KiTTY's) one file per session.
 fn read_sessions_dir(dir: &Path) -> Result<(Program, Bundle), Error> {
     let mut files = Vec::new();
-    collect(dir, &mut files);
+    collect(dir, 0, &mut 0, &mut files);
     if files.is_empty() {
         return Err(Error::NotRecognized);
     }
@@ -188,7 +188,7 @@ fn read_sessions_dir(dir: &Path) -> Result<(Program, Bundle), Error> {
             .map(|b| (Program::SecureCrt, b))
             .map_err(Error::Io);
     }
-    let sample = fs::read(&files[0])
+    let sample = crate::files::read(&files[0])
         .map(|b| crate::text::decode(&b))
         .unwrap_or_default();
     let program = if sample.lines().any(|l| l.starts_with("HostName\\")) {
@@ -206,16 +206,18 @@ fn read_sessions_dir(dir: &Path) -> Result<(Program, Bundle), Error> {
         .map_err(Error::Io)
 }
 
-fn collect(dir: &Path, out: &mut Vec<PathBuf>) {
-    let Ok(entries) = fs::read_dir(dir) else {
+fn collect(dir: &Path, depth: usize, seen: &mut usize, out: &mut Vec<PathBuf>) {
+    if depth > crate::files::MAX_DEPTH {
+        return;
+    }
+    let Ok(entries) = crate::files::entries(dir, seen) else {
         return;
     };
-    for e in entries.flatten() {
-        let p = e.path();
-        if p.is_dir() {
-            collect(&p, out);
-        } else if !e.file_name().to_string_lossy().starts_with('.') {
-            out.push(p);
+    for e in entries {
+        if e.dir {
+            collect(&e.path, depth + 1, seen, out);
+        } else if !e.name.starts_with('.') {
+            out.push(e.path);
         }
     }
     out.sort();

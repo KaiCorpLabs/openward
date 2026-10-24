@@ -11,7 +11,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../core/settings.dart';
 import '../history/history.dart';
@@ -20,10 +19,11 @@ import '../l10n/l10n.dart';
 import '../snippets/palette.dart' show showSnippetPalette;
 import '../src/rust/api/session.dart';
 import '../tabs/connection_motion.dart' show comebackWords;
-import '../ui/confirm.dart';
 import '../ui/tokens.dart';
 import 'controller.dart';
 import 'keys.dart';
+import 'links.dart';
+import 'paste.dart';
 import 'renderer.dart';
 import 'visible_text.dart';
 
@@ -490,82 +490,16 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     if (!hasHidden(text) && _session.paste(text: text, allowUnsafe: false)) {
       return _c.line.text(text, _screen);
     }
-    final preview = text.length > 400 ? '${text.substring(0, 400)}…' : text;
-    final lines = '\n'.allMatches(text.trimRight()).length + 1;
-    final l = context.l10n;
-    final ow = context.ow;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        // On one line it asks only for what does not show.
-        title: Text(
-          lines > 1 || !hasHidden(text)
-              ? l.pasteMultiTitle
-              : l.pasteHiddenTitle,
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (lines > 1 || !hasHidden(text)) Text(l.pasteMultiBody),
-              const SizedBox(height: 12),
-              _pastePreview(preview),
-              if (hasHidden(text)) ...[
-                const SizedBox(height: 8),
-                Text(
-                  l.pasteHasHidden,
-                  style: TextStyle(fontSize: 12, color: ow.colors.warn),
-                ),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l.cancel),
-          ),
-          // It was pasted on purpose: Enter goes ahead.
-          FilledButton(
-            autofocus: true,
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l.paste),
-          ),
-        ],
-      ),
+    final ok = await confirmPaste(
+      context,
+      text,
+      fontFamily: _renderer?.metrics.fontFamily,
     );
-    if (ok == true) {
+    if (ok) {
       _session.paste(text: text, allowUnsafe: true);
       _c.line.text(text, _screen);
     }
     focusNode.requestFocus();
-  }
-
-  /// What is pasted, in the terminal's font and colors, with what would
-  /// not show marked.
-  Widget _pastePreview(String text, {double? fontSize}) {
-    final ow = context.ow;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: ow.terminal.background,
-        border: Border.all(color: ow.colors.border),
-        borderRadius: BorderRadius.circular(ow.shape.radius),
-      ),
-      child: Text.rich(
-        visibleText(
-          text,
-          style: TextStyle(
-            fontFamily: _renderer?.metrics.fontFamily,
-            fontSize: fontSize,
-            color: ow.terminal.foreground,
-          ),
-          mark: TextStyle(color: ow.colors.warn, fontWeight: FontWeight.w700),
-        ),
-      ),
-    );
   }
 
   /// With broadcast, a paste always asks first: where it goes, and what.
@@ -573,67 +507,12 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     String text,
     List<TerminalController> also,
   ) async {
-    final l = context.l10n;
-    final ow = context.ow;
-    final c = ow.colors;
-    final names = [_c, ...also].map((s) => s.displayTitle).toList();
-    final lines = text.split('\n').where((x) => x.isNotEmpty).length;
-    final preview = text.length > 600 ? '${text.substring(0, 600)}…' : text;
-    final choice = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        icon: Icon(Icons.podcasts, color: c.warn),
-        title: Text(l.broadcastPasteTitle(names.length)),
-        content: SizedBox(
-          width: 520,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l.broadcastPasteBody(lines, names.join(', ')),
-                style: const TextStyle(height: 1.45),
-              ),
-              const SizedBox(height: 12),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 220),
-                child: SingleChildScrollView(
-                  child: _pastePreview(preview, fontSize: 12),
-                ),
-              ),
-              if (hasHidden(text)) ...[
-                const SizedBox(height: 8),
-                Text(
-                  l.pasteHasHidden,
-                  style: TextStyle(fontSize: 12, color: c.warn),
-                ),
-              ],
-              const SizedBox(height: 10),
-              Text(
-                l.broadcastPasteAlways,
-                style: TextStyle(fontSize: 12, color: c.textMuted),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l.cancel),
-          ),
-          // The safe one of the two that paste: Enter does that.
-          OutlinedButton(
-            autofocus: true,
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l.pasteOnlyHere(_c.displayTitle)),
-          ),
-          FilledButton(
-            style: warnButtonStyle(c),
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l.pasteInPanes(names.length)),
-          ),
-        ],
-      ),
+    final choice = await confirmBroadcastPaste(
+      context,
+      text,
+      here: _c.displayTitle,
+      names: [_c, ...also].map((s) => s.displayTitle).toList(),
+      fontFamily: _renderer?.metrics.fontFamily,
     );
     if (choice == null) return focusNode.requestFocus();
     final targets = choice
@@ -857,20 +736,6 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     }
   }
 
-  /// Web and mail links open in their apps; others are not opened from a
-  /// terminal, where anyone's output can carry them.
-  Future<void> _openLink(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri == null) return;
-    if (!const {'http', 'https', 'mailto', 'ftp'}.contains(uri.scheme)) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(content: Text(context.l10n.linkNotOpened(uri.scheme))),
-      );
-      return;
-    }
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-
   void _onPointerDown(PointerDownEvent e) {
     focusNode.requestFocus();
     _scrollPixels = 0;
@@ -879,7 +744,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     _buttons = e.buttons;
     final link = _linkUrl;
     if (link != null && pressed & kPrimaryMouseButton != 0 && _linkModifier) {
-      _openLink(link);
+      openTerminalLink(context, link);
       return;
     }
     if (!_toProgram) {
@@ -1049,7 +914,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
                           Positioned(
                             left: 0,
                             bottom: 0,
-                            child: _LinkTarget(link: link),
+                            child: LinkTarget(link: link),
                           ),
                         if (_composing.isNotEmpty && cursor != null)
                           Positioned(
@@ -1067,54 +932,6 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
               ),
             );
           },
-        ),
-      ),
-    );
-  }
-}
-
-/// Whether a link's `text` reads as an address of another host than the
-/// `url` it opens (an OSC 8 link's text is anything the program wrote).
-bool linkMisleads(String text, String url) {
-  final shown = text.trim();
-  if (shown == url || !shown.contains('.') || shown.contains(' ')) {
-    return false;
-  }
-  final said = Uri.tryParse(shown.contains('://') ? shown : 'https://$shown');
-  final real = Uri.tryParse(url);
-  if (said == null || real == null || said.host.isEmpty) return false;
-  return said.host.toLowerCase() != real.host.toLowerCase();
-}
-
-/// Where the link under the pointer leads, as a browser says it: an OSC 8
-/// link's text can name another site than the one it opens.
-class _LinkTarget extends StatelessWidget {
-  const _LinkTarget({required this.link});
-
-  final LinkView link;
-
-  @override
-  Widget build(BuildContext context) {
-    final ow = context.ow;
-    final warn = linkMisleads(link.text, link.url);
-    return Semantics(
-      liveRegion: true,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 560),
-        margin: const EdgeInsets.all(4),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: warn ? ow.colors.warnSoft : ow.colors.raised,
-          borderRadius: BorderRadius.circular(ow.shape.radius),
-          border: Border.all(
-            color: warn ? ow.colors.warnLine : ow.colors.control,
-          ),
-        ),
-        child: Text(
-          warn ? context.l10n.linkLeadsElsewhere(link.url) : link.url,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 12, color: ow.colors.text),
         ),
       ),
     );

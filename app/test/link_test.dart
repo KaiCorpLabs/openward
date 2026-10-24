@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openward/terminal/terminal_pane.dart';
+import 'package:openward/terminal/links.dart';
 
 void main() {
   test('a link whose text names another site misleads', () {

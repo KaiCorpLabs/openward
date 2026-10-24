@@ -91,7 +91,7 @@ class _PromptCardState extends State<PromptCard> {
           const SizedBox(height: 12),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(OwSpace.s5),
             decoration: BoxDecoration(
               color: ow.colors.sunken,
               borderRadius: BorderRadius.circular(ow.shape.radius),
@@ -101,7 +101,10 @@ class _PromptCardState extends State<PromptCard> {
               children: [
                 Text(
                   _p.algorithm,
-                  style: TextStyle(fontSize: 12, color: ow.colors.textMuted),
+                  style: TextStyle(
+                    fontSize: OwText.small,
+                    color: ow.colors.textMuted,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 SelectableText(
@@ -164,7 +167,7 @@ class _PromptCardState extends State<PromptCard> {
   }
 
   Widget _retry(BuildContext context, String text) => Padding(
-    padding: const EdgeInsets.only(top: 8),
+    padding: const EdgeInsets.only(top: OwSpace.s4),
     child: Text(text, style: TextStyle(color: context.ow.colors.danger)),
   );
 
@@ -195,7 +198,12 @@ class _PromptCardState extends State<PromptCard> {
         autofocus: hostKey,
         child: Container(
           constraints: const BoxConstraints(maxWidth: 460),
-          padding: const EdgeInsets.fromLTRB(22, 20, 22, 16),
+          padding: const EdgeInsets.fromLTRB(
+            OwSpace.s11,
+            OwSpace.s10,
+            OwSpace.s11,
+            OwSpace.s8,
+          ),
           decoration: BoxDecoration(
             color: _otherType
                 ? ow.colors.warnSoft
@@ -210,13 +218,7 @@ class _PromptCardState extends State<PromptCard> {
                   ? ow.colors.infoLine
                   : ow.colors.control,
             ),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x33000000),
-                blurRadius: 32,
-                offset: Offset(0, 12),
-              ),
-            ],
+            boxShadow: OwElevation.overlay,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

@@ -12,6 +12,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:openward/core/version.dart';
 import 'package:openward/src/rust/api/app.dart';
 import 'package:openward/src/rust/api/identities.dart';
 import 'package:openward/src/rust/api/keychain.dart';
@@ -48,6 +49,12 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 20));
     }
   }
+
+  /// The core built into the app is the version the app says it is: a
+  /// stale library would not be.
+  test('the core built in is the app\'s version', () {
+    expect(coreVersion(), appVersion);
+  });
 
   test('hosts, groups, inheritance and conflicts', () async {
     final group = await app.createGroup(
@@ -349,7 +356,11 @@ Host db
     expect(connected.connected!.trust, TrustKind.new_);
     expect(connected.connected!.postQuantum, isTrue);
     expect(events.where((e) => e.kind == SessionEventKind.prompt).length, 1);
-    expect(app.knownHosts(), hasLength(1));
+    expect(
+      (await app.knownHostRows(query: ''))
+          .where((r) => r.source == KnownSourceKind.openWard),
+      hasLength(1),
+    );
 
     session.text(text: 'echo ssh-\$((6*7))\n');
     await until(() => session.screenText().contains('ssh-42'), 'the echo');
@@ -438,7 +449,11 @@ Host db
       throwsA(isVault(VaultErrorKind.fileChanged)),
     );
     await own.forgetKnownHost(row: rows[0]);
-    expect(own.knownHosts(), isEmpty);
+    expect(
+      (await own.knownHostRows(query: ''))
+          .where((r) => r.source == KnownSourceKind.openWard),
+      isEmpty,
+    );
   });
 
   test('hosts from a CSV file, and again without repeating them', () async {

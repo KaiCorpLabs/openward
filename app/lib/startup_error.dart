@@ -69,7 +69,7 @@ class _StartupError extends StatelessWidget {
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.all(OwSpace.s16),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
             child: Column(
@@ -90,12 +90,15 @@ class _StartupError extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   l.startupErrorDetails,
-                  style: TextStyle(fontSize: 12, color: ow.colors.textMuted),
+                  style: TextStyle(
+                    fontSize: OwText.small,
+                    color: ow.colors.textMuted,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(OwSpace.s5),
                   decoration: BoxDecoration(
                     color: ow.colors.sunken,
                     borderRadius: BorderRadius.circular(ow.shape.radius),

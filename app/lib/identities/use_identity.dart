@@ -90,7 +90,12 @@ class _UseIdentityState extends ConsumerState<_UseIdentity> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 18, 22, 12),
+              padding: const EdgeInsets.fromLTRB(
+                OwSpace.s11,
+                OwSpace.s9,
+                OwSpace.s11,
+                OwSpace.s6,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -99,13 +104,16 @@ class _UseIdentityState extends ConsumerState<_UseIdentity> {
                     child: Text(
                       l.useIdentityOn(widget.identity.spec.label),
                       style: Theme.of(context).textTheme.titleMedium
-                          ?.copyWith(fontSize: 17),
+                          ?.copyWith(fontSize: OwText.heading),
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     l.useIdentityHint,
-                    style: TextStyle(fontSize: 12, color: c.textMuted),
+                    style: TextStyle(
+                      fontSize: OwText.small,
+                      color: c.textMuted,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
@@ -113,7 +121,7 @@ class _UseIdentityState extends ConsumerState<_UseIdentity> {
                     child: TextField(
                       controller: _filter,
                       onChanged: (_) => setState(() {}),
-                      style: const TextStyle(fontSize: 13),
+                      style: const TextStyle(fontSize: OwText.body),
                       decoration: InputDecoration(
                         isDense: true,
                         hintText: l.filterHostsAndGroups,
@@ -130,7 +138,7 @@ class _UseIdentityState extends ConsumerState<_UseIdentity> {
             ),
             Flexible(
               child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 22),
+                margin: const EdgeInsets.symmetric(horizontal: OwSpace.s11),
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
                   border: Border.all(color: c.border),
@@ -153,12 +161,22 @@ class _UseIdentityState extends ConsumerState<_UseIdentity> {
             ),
             if (_error != null)
               Padding(
-                padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
+                padding: const EdgeInsets.fromLTRB(
+                  OwSpace.s11,
+                  OwSpace.s4,
+                  OwSpace.s11,
+                  0,
+                ),
                 child: Text(_error!, style: TextStyle(color: c.danger)),
               ),
             Container(
-              margin: const EdgeInsets.only(top: 12),
-              padding: const EdgeInsets.fromLTRB(22, 12, 22, 14),
+              margin: const EdgeInsets.only(top: OwSpace.s6),
+              padding: const EdgeInsets.fromLTRB(
+                OwSpace.s11,
+                OwSpace.s6,
+                OwSpace.s11,
+                OwSpace.s7,
+              ),
               decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: c.border)),
               ),
@@ -167,7 +185,10 @@ class _UseIdentityState extends ConsumerState<_UseIdentity> {
                   Expanded(
                     child: Text(
                       l.useIdentitySummary(changed, using),
-                      style: TextStyle(fontSize: 12, color: c.textMuted),
+                      style: TextStyle(
+                        fontSize: OwText.small,
+                        color: c.textMuted,
+                      ),
                     ),
                   ),
                   OutlinedButton(
@@ -193,11 +214,14 @@ class _UseIdentityState extends ConsumerState<_UseIdentity> {
     final c = context.ow.colors;
     return Container(
       color: c.sunken,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: OwSpace.s6,
+        vertical: OwSpace.s4,
+      ),
       child: Text(
         text.toUpperCase(),
         style: TextStyle(
-          fontSize: 12,
+          fontSize: OwText.small,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.6,
           color: c.textSubtle,
@@ -293,7 +317,12 @@ class _Pick extends StatelessWidget {
       child: InkWell(
         onTap: enabled ? () => onChanged!(!checked) : null,
         child: Container(
-          padding: const EdgeInsets.fromLTRB(6, 4, 12, 6),
+          padding: const EdgeInsets.fromLTRB(
+            OwSpace.s3,
+            OwSpace.s2,
+            OwSpace.s6,
+            OwSpace.s3,
+          ),
           decoration: BoxDecoration(
             border: Border(top: BorderSide(color: c.border)),
           ),
@@ -306,12 +335,15 @@ class _Pick extends StatelessWidget {
               ),
               if (icon != null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 12, right: 8),
+                  padding: const EdgeInsets.only(
+                    top: OwSpace.s6,
+                    right: OwSpace.s4,
+                  ),
                   child: Icon(icon, size: 15, color: c.textMuted),
                 ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.only(top: OwSpace.s4),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -324,12 +356,18 @@ class _Pick extends StatelessWidget {
                       ),
                       Text(
                         detail,
-                        style: TextStyle(fontSize: 12, color: c.textSubtle),
+                        style: TextStyle(
+                          fontSize: OwText.small,
+                          color: c.textSubtle,
+                        ),
                       ),
                       if (warning != null)
                         Text(
                           warning!,
-                          style: TextStyle(fontSize: 12, color: warnColor),
+                          style: TextStyle(
+                            fontSize: OwText.small,
+                            color: warnColor,
+                          ),
                         ),
                     ],
                   ),
@@ -337,7 +375,10 @@ class _Pick extends StatelessWidget {
               ),
               if (badge != null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 10, left: 8),
+                  padding: const EdgeInsets.only(
+                    top: OwSpace.s5,
+                    left: OwSpace.s4,
+                  ),
                   child: Pill(badge!),
                 ),
             ],

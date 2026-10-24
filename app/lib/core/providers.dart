@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../src/rust/api/app.dart';
 import '../src/rust/api/vault.dart';
 import 'connection.dart' show hostsChanged;
+import 'match.dart';
 
 /// The core, opened in `main` (or by a test) and injected with an override.
 final openWardProvider = Provider<OpenWard>(
@@ -108,6 +109,5 @@ final searchResultsProvider = Provider<List<HostView>?>((ref) {
   final query = ref.watch(searchProvider).trim();
   final library = ref.watch(libraryProvider);
   if (query.isEmpty) return null;
-  final ids = ref.read(openWardProvider).search(query: query);
-  return [for (final id in ids) ?library.host(id)];
+  return HostMatcher(query, library).filter(library.hosts);
 });

@@ -8,7 +8,7 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use russh::keys::ssh_key::certificate::CertType;
 use russh::keys::{Algorithm, HashAlg, PublicKey, PublicKeyOrCertificate};
 use sha1::Sha1;
@@ -393,6 +393,37 @@ pub fn lines(text: &str) -> Vec<Line> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    mod hostile {
+        use super::*;
+        use proptest::collection::vec;
+        use proptest::prelude::*;
+        use proptest::sample::select;
+
+        proptest! {
+            /// Any text as `known_hosts` (hashed names, markers, patterns,
+            /// keys that do not decode): read line by line, never a panic.
+            #[test]
+            fn any_text_is_read(text in vec(
+                prop_oneof![
+                    select(&[
+                        "|1|", "@cert-authority ", "@revoked ", "*", "?", "!", ",", "[", "]:2222",
+                        " ssh-ed25519 ", " ssh-rsa ", "AAAAC3NzaC1lZDI1NTE5AAAAI", "=", "\n", " ",
+                    ][..]).prop_map(str::to_owned),
+                    "[ -~]{0,16}",
+                    "[\\u{0}-\\u{ffff}]{0,3}",
+                ],
+                0..48,
+            ).prop_map(|p| p.concat())) {
+                let _ = lines(&text);
+                let known = KnownHosts::parse(&text, Unknown::Reject);
+                for (host, port) in [("db.example.com", 22), ("10.0.0.1", 2222), ("", 0)] {
+                    let _ = known.listed(host, port);
+                    let _ = known.algorithms(host, port);
+                }
+            }
+        }
+    }
 
     const KEY: &str =
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILg+ccEU+buKk8f5ORMPyzCAzWM04Omv+MOaI8CvGd7f";

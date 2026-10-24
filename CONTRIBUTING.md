@@ -1,6 +1,6 @@
 # Contribuir a OpenWard
 
-Gracias por tu interés. OpenWard está en fase 0: el diseño todavía cambia, así que **abre un issue antes de un pull request grande**.
+Gracias por tu interés. OpenWard está en fase 1, con una beta de escritorio: el diseño todavía cambia, así que **abre un issue antes de un pull request grande**.
 
 ## Antes de empezar
 
@@ -10,6 +10,8 @@ Gracias por tu interés. OpenWard está en fase 0: el diseño todavía cambia, a
 
 ## Comprobaciones
 
+Desde un clon recién hecho, `make setup` deja las herramientas listas (ver el [README](README.md#desarrollo)).
+
 ```bash
 make lint     # rustfmt + clippy con -D warnings
 make test
@@ -18,7 +20,7 @@ make deny     # licencias y avisos de seguridad de las dependencias
 
 Todo lo que hace la CI, aquí (núcleo, destinos móviles, spikes, dependencias, la app y sus pruebas de ventana, con los servidores SSH de prueba): `make ci`. Sin las pruebas de ventana, `make ci-quick`. Nada llega a `main` sin `make ci` en verde.
 
-El núcleo prohíbe `unsafe` (`unsafe_code = "forbid"`). Las únicas excepciones son crates de FFI aislados y revisados (bindings de Flutter, firmantes de plataforma, motores en C).
+El núcleo prohíbe `unsafe` (`unsafe_code = "forbid"`). Las únicas excepciones son crates de FFI aislados y revisados (bindings de Flutter, firmantes de plataforma, motores en C) y un préstamo del descriptor del terminal local en `openward-pty`.
 
 ## Datos de prueba
 

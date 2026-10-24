@@ -267,6 +267,18 @@ impl Deserializer<'_> {
 mod tests {
     use super::*;
 
+    proptest::proptest! {
+        /// What V8 would never write is an error, never a panic, a loop or
+        /// a reservation the size of a number in the data.
+        #[test]
+        fn any_bytes_are_read_or_refused(bytes in proptest::collection::vec(proptest::prelude::any::<u8>(), 0..2048)) {
+            let _ = deserialize(&bytes);
+            let mut versioned = vec![0xFF, 0x0F];
+            versioned.extend_from_slice(&bytes);
+            let _ = deserialize(&versioned);
+        }
+    }
+
     fn obj(pairs: &[(&str, Value)]) -> Value {
         Value::Object(
             pairs

@@ -105,7 +105,7 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
           children: [
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(OwSpace.s5),
               decoration: BoxDecoration(
                 color: c.sunken,
                 border: Border.all(color: c.border),
@@ -121,7 +121,10 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
                       if (r.hosts == null && r.revealed != null)
                         l.matchesHost(r.revealed!),
                     ].join(' · '),
-                    style: TextStyle(fontSize: 12, color: c.textMuted),
+                    style: TextStyle(
+                      fontSize: OwText.small,
+                      color: c.textMuted,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -136,7 +139,7 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
             const SizedBox(height: 8),
             Text(
               l.forgetKeyThen,
-              style: TextStyle(fontSize: 12, color: c.textMuted),
+              style: TextStyle(fontSize: OwText.small, color: c.textMuted),
             ),
           ],
         ),
@@ -212,13 +215,13 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
               if (query.isNotEmpty)
                 Text(
                   l.matchCount(rows.length),
-                  style: TextStyle(fontSize: 12, color: c.textMuted),
+                  style: TextStyle(fontSize: OwText.small, color: c.textMuted),
                 ),
             ],
           ),
           if (_error != null)
             Padding(
-              padding: const EdgeInsets.only(top: 10),
+              padding: const EdgeInsets.only(top: OwSpace.s5),
               child: Text(_error!, style: TextStyle(color: c.danger)),
             ),
           const SizedBox(height: 12),
@@ -279,14 +282,17 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
             if (r.hosts == null && r.revealed != null)
               Text(
                 l.matchesHost(r.revealed!),
-                style: TextStyle(fontSize: 12, color: c.accentText),
+                style: TextStyle(fontSize: OwText.small, color: c.accentText),
               ),
             if (marker != null)
-              Text(marker, style: TextStyle(fontSize: 12, color: tone)),
+              Text(
+                marker,
+                style: TextStyle(fontSize: OwText.small, color: tone),
+              ),
             if (r.comment != null)
               Text(
                 r.comment!,
-                style: TextStyle(fontSize: 12, color: c.textSubtle),
+                style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
               ),
           ],
         ),
@@ -326,7 +332,7 @@ class _KnownHostsPageState extends ConsumerState<KnownHostsPage> {
               ours
                   ? (r.addedMs == null ? '' : l.trustedOn(_date(l, r.addedMs!)))
                   : l.lineNumber(r.line),
-              style: TextStyle(fontSize: 12, color: c.textSubtle),
+              style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
             ),
           ],
         ),

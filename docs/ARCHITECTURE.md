@@ -1,6 +1,6 @@
 # Arquitectura y stack de OpenWard
 
-**Estado:** propuesta v0.1 · **Fecha:** 2026-10-08 · [ADRs](adr/)
+**Estado:** documento vivo: lo hecho y lo que falta van marcados donde importa (la columna «Estado» de los crates, las listas de seguridad y distribución) · **Revisado:** 2026-10-24 (0.3.2) · [ADRs](adr/)
 
 OpenWard es un cliente SSH open-core para Windows, macOS, Linux, iOS y Android. Es local-first y su vault de hosts y credenciales tiene formato abierto. La sincronización está cifrada de extremo a extremo (E2EE) y funciona con el almacenamiento del usuario, con un relay autoalojado o con el servicio alojado de pago. El dinero sale de servicios con coste real en el servidor: sincronización alojada, equipos y funciones enterprise. El cliente es 100 % open source y nunca tiene funciones capadas.
 
@@ -114,28 +114,28 @@ flowchart TB
 
 ### 3.2 Crates del núcleo (`core/crates/`)
 
-| Crate | Responsabilidad | Dependencias clave |
-|---|---|---|
-| `openward-proto` | Tipos de datos del vault, esquemas CBOR versionados, sobres y formato de registros (también es la especificación de `spec/`) | `serde`, `ciborium` |
-| `openward-crypto` | AEAD, HPKE, firmas, KDF, jerarquía de claves, kit de recuperación | RustCrypto (`chacha20poly1305`, `ed25519-dalek`, `argon2`, `hpke`, `ml-kem`), `zeroize` |
-| `openward-vault` | Almacén local SQLite, CRUD de ítems, índice en memoria, herencia de configuración, bloqueo | `rusqlite` |
-| `openward-sync` | Motor de sync (registros por dispositivo, merge y compactación) y backends | `object_store` (S3/R2/local), WebDAV, `gix` (Git), cliente del relay |
-| `openward-ssh` | Sesiones, autenticación, trait `Signer`, cadenas de saltos, proxy, ProxyCommand, servidor SOCKS5 propio para forwarding dinámico, known hosts, keepalive, reconexión | `russh`, `ssh-key`, `tokio-socks` |
-| `openward-sftp` | Navegador remoto, transferencias con cola, reanudación y permisos | `russh-sftp` |
-| `openward-term` | Trait `TermEngine` y formato de frames (*damage* por filas) entre el motor y la UI | — |
-| `openward-ghostty` | El motor: estado VT, scrollback comprimible, búsqueda, codificación de entrada y respuestas. Único crate con `unsafe` (FFI) | `libghostty-vt` (commit fijado, Zig 0.16, bindings con `bindgen`) |
-| `openward-pty` | Terminal local en escritorio | `portable-pty` 0.9.0 fijado (probado en S1.5; sin versión desde febrero de 2025, fork si hace falta) |
-| `openward-serial` | Puertos serie en escritorio (Android con USB en una fase posterior; iOS no tiene) | `serialport` (MPL-2.0; busca mantenedores) |
-| `openward-mosh` | Cliente Mosh clean-room (fase 4) | — |
-| `openward-import` | Importar ssh_config, Termius (sus datos del equipo: IndexedDB de Chromium sobre LevelDB, campos cifrados con secretbox y la clave del llavero), PuTTY y KiTTY (.reg y carpetas de sesiones), MobaXterm (.mxtsessions), Tabby (config.yaml), SecureCRT (XML y .ini) y CSV (la plantilla de Termius o columnas reconocidas por la cabecera) | — |
-| `openward-integrations` | Tailscale, Vault/OpenBao, step-ca, Teleport, Cloudflare, inventario cloud | `reqwest` |
-| `openward-ai` | Proveedores BYOK y locales, redacción de secretos, servidor MCP | `rmcp` |
-| `openward-agent` | Agente SSH (socket Unix o named pipe) respaldado por el vault | `ssh-agent-lib` |
-| `openward-app` | Orquestación, casos de uso, políticas y ciclo de vida (el equivalente de `arveil-app`) | — |
-| `openward-ffi` | Superficie para Flutter | `flutter_rust_bridge` |
-| `openward-cli` | Binario `ow`: conectar, listar, agente, MCP, importar y exportar, pruebas sin UI | `clap` |
+| Crate | Responsabilidad | Dependencias clave | Estado |
+|---|---|---|---|
+| `openward-proto` | Tipos de datos del vault, esquemas CBOR versionados, sobres y formato de registros (también es la especificación de `spec/`) | `serde`, `ciborium` | Hecho |
+| `openward-crypto` | AEAD, HPKE, firmas, KDF, jerarquía de claves, kit de recuperación | RustCrypto (`chacha20poly1305`, `ed25519-dalek`, `argon2`, `hpke`, `ml-kem`), `zeroize` | Fase 2 |
+| `openward-vault` | Almacén local SQLite, CRUD de ítems, índice en memoria, herencia de configuración, bloqueo | `rusqlite` | Hecho (sin cifrar hasta la fase 2) |
+| `openward-sync` | Motor de sync (registros por dispositivo, merge y compactación) y backends | `object_store` (S3/R2/local), WebDAV, `gix` (Git), cliente del relay | Fase 2 |
+| `openward-ssh` | Sesiones, autenticación, trait `Signer`, cadenas de saltos, proxy, ProxyCommand, servidor SOCKS5 propio para forwarding dinámico, known hosts, keepalive, reconexión | `russh`, `ssh-key` | Hecho |
+| `openward-sftp` | Navegador remoto, transferencias con cola, reanudación y permisos | `russh-sftp` | Hecho |
+| `openward-term` | Trait `TermEngine` y formato de frames (*damage* por filas) entre el motor y la UI | — | Hecho |
+| `openward-ghostty` | El motor: estado VT, scrollback comprimible, búsqueda, codificación de entrada y respuestas. Único crate con `unsafe` (FFI) | `libghostty-vt` (commit fijado, Zig 0.16, bindings con `bindgen`) | Hecho |
+| `openward-pty` | Terminal local en escritorio | `portable-pty` 0.9.0 fijado (probado en S1.5; sin versión desde febrero de 2025, fork si hace falta) | Hecho |
+| `openward-serial` | Puertos serie en escritorio (Android con USB en una fase posterior; iOS no tiene) | `serialport` (MPL-2.0; busca mantenedores) | Pendiente |
+| `openward-mosh` | Cliente Mosh clean-room (fase 4) | — | Fase 4 |
+| `openward-import` | Importar ssh_config, Termius (sus datos del equipo: IndexedDB de Chromium sobre LevelDB, campos cifrados con secretbox y la clave del llavero), PuTTY y KiTTY (.reg y carpetas de sesiones), MobaXterm (.mxtsessions), Tabby (config.yaml), SecureCRT (XML y .ini) y CSV (la plantilla de Termius o columnas reconocidas por la cabecera) | — | Hecho |
+| `openward-integrations` | Tailscale, Vault/OpenBao, step-ca, Teleport, Cloudflare, inventario cloud | `reqwest` | Pendiente |
+| `openward-ai` | Proveedores BYOK y locales, redacción de secretos, servidor MCP | `rmcp` | Fase 3 |
+| `openward-agent` | Agente SSH (socket Unix o named pipe) respaldado por el vault | `ssh-agent-lib` | Pendiente |
+| `openward-app` | Orquestación, casos de uso, políticas y ciclo de vida (el equivalente de `arveil-app`) | — | Hecho |
+| `openward-ffi` | Superficie para Flutter | `flutter_rust_bridge` | Hecho |
+| `openward-cli` | Binario `ow`: conectar, listar, agente, MCP, importar y exportar, pruebas sin UI | `clap` | Pendiente |
 
-Reglas heredadas de Arveil: `unsafe_code = "forbid"` salvo en `openward-ghostty`, `openward-ffi` y los firmantes de plataforma (auditados aparte), lockfiles fijados, `cargo-deny` y `cargo-audit` en CI.
+Reglas heredadas de Arveil: `unsafe_code = "forbid"` salvo en `openward-ghostty`, `openward-ffi`, `openward-pty` (un préstamo del descriptor del PTY) y los firmantes de plataforma (auditados aparte), lockfiles fijados y `cargo-deny` (licencias y avisos de seguridad, lo que haría `cargo-audit`) en la CI, que se ejecuta en local (`tool/ci.sh`). Las licencias de lo que se distribuye las escribe `tool/licenses.sh` para la app.
 
 ### 3.3 Contrato FFI
 
@@ -396,16 +396,16 @@ Hay que ser honestos con el cliente: la grabación hecha en el cliente es una at
 - **Modelo de amenazas** (documento aparte, `THREAT_MODEL.md`):
   - Atacantes considerados: el servidor (comprometido o curioso), la red, otro miembro del equipo malicioso, el robo del dispositivo (bloqueado o desbloqueado), las dependencias y builds troyanizadas (instaladores falsos de clientes SSH distribuidos con anuncios patrocinados) y los agentes de IA.
   - Fuera de alcance: un dispositivo comprometido mientras está desbloqueado.
-- **En código:**
+- **En código** (hecho, salvo lo marcado):
   - `zeroize` para los secretos;
-  - bloqueo automático y portapapeles con caducidad;
-  - fuzzing (`cargo-fuzz`) en los parsers de CBOR, de importación y de VT;
-  - vectores de prueba criptográficos;
-  - interoperabilidad en CI contra OpenSSH (varias versiones), Dropbear, Windows OpenSSH, Tailscale SSH y Teleport en contenedores.
-- **En builds:**
+  - bloqueo automático y portapapeles con caducidad (pendientes: llegan con el vault cifrado);
+  - pruebas de propiedades (`proptest`) en los importadores, `known_hosts` y los decodificadores de Termius; `cargo-fuzz` en CBOR y VT, pendiente;
+  - vectores de prueba criptográficos (fase 2, con `openward-crypto`);
+  - interoperabilidad en la CI contra OpenSSH, Dropbear y otros servidores en contenedores (S2); Windows OpenSSH, Tailscale SSH y Teleport, pendientes.
+- **En builds** (todo pendiente; la firma y la notarización, al final de la fase 1):
   - firma en todas las plataformas;
   - notarización en macOS;
-  - SBOM (CycloneDX) y procedencia SLSA con GitHub Actions;
+  - SBOM (CycloneDX) y procedencia SLSA;
   - firmas Sigstore de los artefactos;
   - builds reproducibles del núcleo;
   - feed de actualizaciones firmado con Ed25519.
@@ -435,14 +435,14 @@ openward/
 
 ## 13. Distribución y actualizaciones
 
-| Plataforma | Canales | Actualización |
-|---|---|---|
-| macOS | DMG notarizado, cask de Homebrew | Sparkle (feed firmado) |
-| Windows | MSIX/MSI firmados, winget, Scoop | WinSparkle o MSIX App Installer |
-| Linux | Flatpak (Flathub), AppImage, .deb y .rpm | Del propio gestor de paquetes / AppImageUpdate |
-| iOS | App Store, TestFlight | App Store |
-| Android | Google Play, F-Droid y APK en GitHub | Tienda / F-Droid |
-| Servidor | Imagen OCI, binario único, paquetes de systemd; Helm en el futuro | Migraciones automáticas con copia de seguridad previa |
+| Plataforma | Canales | Actualización | Estado |
+|---|---|---|---|
+| macOS | DMG notarizado, cask de Homebrew | Sparkle (feed firmado) | DMG sin firmar y cask de Homebrew (tap propio); notarización y Sparkle, pendientes |
+| Windows | MSIX/MSI firmados, winget, Scoop | WinSparkle o MSIX App Installer | Un zip sin firmar, cuando se empaqueta; lo demás, pendiente |
+| Linux | Flatpak (Flathub), AppImage, .deb y .rpm | Del propio gestor de paquetes / AppImageUpdate | Un tar.gz (`make package-linux`); lo demás, pendiente |
+| iOS | App Store, TestFlight | App Store | Pendiente |
+| Android | Google Play, F-Droid y APK en GitHub | Tienda / F-Droid | Pendiente |
+| Servidor | Imagen OCI, binario único, paquetes de systemd; Helm en el futuro | Migraciones automáticas con copia de seguridad previa | Pendiente |
 
 Se reutilizan los documentos de Arveil `CLIENT_RELEASES.md`, `CLIENT_UPDATES.md` y ADR-010.
 

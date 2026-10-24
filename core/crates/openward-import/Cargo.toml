@@ -28,6 +28,8 @@ keyring = { version = "3", features = ["windows-native"] }
 [dev-dependencies]
 openward-vault = { path = "../openward-vault" }
 tempfile = "3"
+# Hostile input: files from other programs, shared or not.
+proptest = { version = "1", default-features = false, features = ["std"] }
 
 [lints]
 workspace = true

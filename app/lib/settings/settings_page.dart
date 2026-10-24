@@ -46,7 +46,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+            padding: const EdgeInsets.fromLTRB(
+              OwSpace.s12,
+              OwSpace.s5,
+              OwSpace.s12,
+              0,
+            ),
             decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: c.border)),
             ),
@@ -67,7 +72,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+              padding: const EdgeInsets.fromLTRB(
+                OwSpace.s12,
+                OwSpace.s10,
+                OwSpace.s12,
+                OwSpace.s12,
+              ),
               child: Align(
                 alignment: Alignment.topLeft,
                 child: ConstrainedBox(
@@ -109,7 +119,10 @@ class _NavItem extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+          padding: const EdgeInsets.symmetric(
+            horizontal: OwSpace.s5,
+            vertical: OwSpace.s4,
+          ),
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
@@ -146,7 +159,7 @@ class _Row extends StatelessWidget {
     // The switch or menu is named by the label and help next to it.
     return MergeSemantics(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: OwSpace.s5),
         child: Row(
           children: [
             Expanded(
@@ -156,11 +169,11 @@ class _Row extends StatelessWidget {
                   Text(label),
                   if (help != null)
                     Padding(
-                      padding: const EdgeInsets.only(top: 2),
+                      padding: const EdgeInsets.only(top: OwSpace.s1),
                       child: Text(
                         help!,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: OwText.small,
                           color: c.textMuted,
                           height: 1.4,
                         ),
@@ -385,7 +398,12 @@ class _General extends ConsumerWidget {
         SectionLabel(l.about),
         const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+          padding: const EdgeInsets.fromLTRB(
+            OwSpace.s7,
+            OwSpace.s5,
+            OwSpace.s4,
+            OwSpace.s5,
+          ),
           decoration: BoxDecoration(
             color: c.sunken,
             border: Border.all(color: c.border),
@@ -405,7 +423,10 @@ class _General extends ConsumerWidget {
                     ),
                     Text(
                       '${Platform.operatingSystem} · ${l.reportCore} ${coreVersion()}',
-                      style: TextStyle(fontSize: 12, color: c.textSubtle),
+                      style: TextStyle(
+                        fontSize: OwText.small,
+                        color: c.textSubtle,
+                      ),
                     ),
                   ],
                 ),
@@ -421,7 +442,7 @@ class _General extends ConsumerWidget {
                   applicationName: 'OpenWard',
                   applicationVersion: appVersion,
                   applicationIcon: const Padding(
-                    padding: EdgeInsets.all(8),
+                    padding: EdgeInsets.all(OwSpace.s4),
                     child: UmbralMark(size: 48),
                   ),
                 ),
@@ -436,7 +457,12 @@ class _General extends ConsumerWidget {
           Callout(
             key: const ValueKey('about.unreadable'),
             tone: Tone.info,
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+            padding: const EdgeInsets.fromLTRB(
+              OwSpace.s7,
+              OwSpace.s5,
+              OwSpace.s7,
+              OwSpace.s5,
+            ),
             child: Text(l.unreadableItems(n)),
           ),
         ],
@@ -453,7 +479,7 @@ class _General extends ConsumerWidget {
             Expanded(
               child: Text(
                 l.reportProblemHint,
-                style: TextStyle(fontSize: 12, color: c.textSubtle),
+                style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
               ),
             ),
           ],
@@ -553,7 +579,10 @@ class _Terminal extends ConsumerWidget {
         const SizedBox(height: 12),
         Text(
           l.terminalShortcuts(isApple ? '⌘' : l.ctrlShiftPrefix),
-          style: TextStyle(fontSize: 12, color: context.ow.colors.textMuted),
+          style: TextStyle(
+            fontSize: OwText.small,
+            color: context.ow.colors.textMuted,
+          ),
         ),
       ],
     );

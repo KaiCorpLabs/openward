@@ -12,4 +12,15 @@ void main() {
     ).firstMatch(pubspec)!.group(1);
     expect(appVersion, version);
   });
+
+  /// The core's version is the workspace's (`coreVersion()` reads it from
+  /// the build): the same as the app's.
+  test("the core's version matches the app's", () {
+    final cargo = File('../core/Cargo.toml').readAsStringSync();
+    final core = RegExp(
+      r'^version = "([^"]+)"',
+      multiLine: true,
+    ).firstMatch(cargo)!.group(1);
+    expect(core, appVersion);
+  });
 }

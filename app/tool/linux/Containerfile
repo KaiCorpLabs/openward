@@ -1,0 +1,26 @@
+# What building OpenWard for Linux needs, at the versions the repository
+# pins (passed by package-linux.sh): Flutter's Linux toolchain and GTK 3,
+# Rust, and Zig for libghostty-vt.
+FROM docker.io/library/ubuntu:24.04
+
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      ca-certificates curl git unzip xz-utils zip file jq \
+      clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+ARG RUST
+ARG ZIG
+ARG FLUTTER
+
+RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain "$RUST"
+ENV PATH=/root/.cargo/bin:$PATH
+
+RUN arch="$(uname -m)" \
+    && curl -sSfL "https://ziglang.org/download/$ZIG/zig-$arch-linux-$ZIG.tar.xz" | tar -xJ -C /opt \
+    && ln -s "/opt/zig-$arch-linux-$ZIG/zig" /usr/local/bin/zig
+
+RUN git clone --depth 1 --branch "$FLUTTER" https://github.com/flutter/flutter.git /opt/flutter
+ENV PATH=/opt/flutter/bin:$PATH
+RUN git config --global --add safe.directory '*' \
+    && flutter config --no-analytics --no-cli-animations \
+    && flutter precache --linux

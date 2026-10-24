@@ -815,15 +815,6 @@ pub struct GroupDetail {
     pub spec: GroupSpec,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct KnownHostView {
-    pub id: String,
-    pub hosts: String,
-    pub algorithm: String,
-    pub key: String,
-    pub cert_authority: bool,
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ImportWarningKind {
     Unsupported,

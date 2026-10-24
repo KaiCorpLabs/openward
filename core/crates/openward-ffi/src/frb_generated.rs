@@ -43,7 +43,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1261432216;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 413454368;
 
 // Section: executor
 
@@ -2068,53 +2068,6 @@ fn wire__crate__api__app__OpenWard_known_host_rows_impl(
                     std::result::Result::Ok(output_ok)
                 })())
             }
-        },
-    )
-}
-fn wire__crate__api__app__OpenWard_known_hosts_impl(
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "OpenWard_known_hosts",
-            port: None,
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_that = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<OpenWard>,
-            >>::sse_decode(&mut deserializer);
-            deserializer.end();
-            transform_result_sse::<_, ()>((move || {
-                let mut api_that_guard = None;
-                let decode_indices_ =
-                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
-                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                            &api_that, 0, false,
-                        ),
-                    ]);
-                for i in decode_indices_ {
-                    match i {
-                        0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
-                        _ => unreachable!(),
-                    }
-                }
-                let api_that_guard = api_that_guard.unwrap();
-                let output_ok =
-                    Ok::<_, ()>(crate::api::app::OpenWard::known_hosts(&*api_that_guard))?;
-                std::result::Result::Ok(output_ok)
-            })())
         },
     )
 }
@@ -8194,24 +8147,6 @@ impl SseDecode for crate::api::known_hosts::KnownHostRow {
     }
 }
 
-impl SseDecode for crate::api::vault::KnownHostView {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_id = <String>::sse_decode(deserializer);
-        let mut var_hosts = <String>::sse_decode(deserializer);
-        let mut var_algorithm = <String>::sse_decode(deserializer);
-        let mut var_key = <String>::sse_decode(deserializer);
-        let mut var_certAuthority = <bool>::sse_decode(deserializer);
-        return crate::api::vault::KnownHostView {
-            id: var_id,
-            hosts: var_hosts,
-            algorithm: var_algorithm,
-            key: var_key,
-            cert_authority: var_certAuthority,
-        };
-    }
-}
-
 impl SseDecode for crate::api::known_hosts::KnownMarkerKind {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -8437,18 +8372,6 @@ impl SseDecode for Vec<crate::api::known_hosts::KnownHostRow> {
             ans_.push(<crate::api::known_hosts::KnownHostRow>::sse_decode(
                 deserializer,
             ));
-        }
-        return ans_;
-    }
-}
-
-impl SseDecode for Vec<crate::api::vault::KnownHostView> {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut len_ = <i32>::sse_decode(deserializer);
-        let mut ans_ = Vec::with_capacity(len_ as usize);
-        for idx_ in 0..len_ {
-            ans_.push(<crate::api::vault::KnownHostView>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -10571,101 +10494,101 @@ fn pde_ffi_dispatcher_primary_impl(
         38 => {
             wire__crate__api__app__OpenWard_known_host_rows_impl(port, ptr, rust_vec_len, data_len)
         }
-        41 => wire__crate__api__app__OpenWard_open_impl(port, ptr, rust_vec_len, data_len),
-        42 => wire__crate__api__app__OpenWard_open_local_impl(port, ptr, rust_vec_len, data_len),
-        43 => wire__crate__api__app__OpenWard_open_tunnel_impl(port, ptr, rust_vec_len, data_len),
-        44 => {
+        40 => wire__crate__api__app__OpenWard_open_impl(port, ptr, rust_vec_len, data_len),
+        41 => wire__crate__api__app__OpenWard_open_local_impl(port, ptr, rust_vec_len, data_len),
+        42 => wire__crate__api__app__OpenWard_open_tunnel_impl(port, ptr, rust_vec_len, data_len),
+        43 => {
             wire__crate__api__app__OpenWard_open_with_home_impl(port, ptr, rust_vec_len, data_len)
         }
-        45 => wire__crate__api__app__OpenWard_open_with_ssh_dir_impl(
+        44 => wire__crate__api__app__OpenWard_open_with_ssh_dir_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        46 => {
+        45 => {
             wire__crate__api__app__OpenWard_order_favorites_impl(port, ptr, rust_vec_len, data_len)
         }
-        50 => wire__crate__api__app__OpenWard_preview_ssh_config_impl(
+        49 => wire__crate__api__app__OpenWard_preview_ssh_config_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        52 => {
+        51 => {
             wire__crate__api__app__OpenWard_read_os_release_impl(port, ptr, rust_vec_len, data_len)
         }
-        53 => wire__crate__api__app__OpenWard_read_program_impl(port, ptr, rust_vec_len, data_len),
-        54 => wire__crate__api__app__OpenWard_read_program_with_key_impl(
+        52 => wire__crate__api__app__OpenWard_read_program_impl(port, ptr, rust_vec_len, data_len),
+        53 => wire__crate__api__app__OpenWard_read_program_with_key_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        57 => wire__crate__api__app__OpenWard_rename_key_impl(port, ptr, rust_vec_len, data_len),
-        58 => {
+        56 => wire__crate__api__app__OpenWard_rename_key_impl(port, ptr, rust_vec_len, data_len),
+        57 => {
             wire__crate__api__app__OpenWard_rename_workspace_impl(port, ptr, rust_vec_len, data_len)
         }
-        61 => wire__crate__api__app__OpenWard_set_favorite_impl(port, ptr, rust_vec_len, data_len),
-        69 => {
+        60 => wire__crate__api__app__OpenWard_set_favorite_impl(port, ptr, rust_vec_len, data_len),
+        68 => {
             wire__crate__api__app__OpenWard_trust_host_key_impl(port, ptr, rust_vec_len, data_len)
         }
-        72 => wire__crate__api__app__OpenWard_update_group_impl(port, ptr, rust_vec_len, data_len),
-        73 => wire__crate__api__app__OpenWard_update_host_impl(port, ptr, rust_vec_len, data_len),
-        74 => {
+        71 => wire__crate__api__app__OpenWard_update_group_impl(port, ptr, rust_vec_len, data_len),
+        72 => wire__crate__api__app__OpenWard_update_host_impl(port, ptr, rust_vec_len, data_len),
+        73 => {
             wire__crate__api__app__OpenWard_update_identity_impl(port, ptr, rust_vec_len, data_len)
         }
-        75 => {
+        74 => {
             wire__crate__api__app__OpenWard_update_snippet_impl(port, ptr, rust_vec_len, data_len)
         }
-        76 => wire__crate__api__app__OpenWard_update_tunnel_impl(port, ptr, rust_vec_len, data_len),
-        77 => {
+        75 => wire__crate__api__app__OpenWard_update_tunnel_impl(port, ptr, rust_vec_len, data_len),
+        76 => {
             wire__crate__api__app__OpenWard_update_workspace_impl(port, ptr, rust_vec_len, data_len)
         }
-        78 => wire__crate__api__app__OpenWard_use_identity_impl(port, ptr, rust_vec_len, data_len),
-        79 => wire__crate__api__app__OpenWard_watch_tunnels_impl(port, ptr, rust_vec_len, data_len),
-        80 => wire__crate__api__app__OpenWard_watch_vault_impl(port, ptr, rust_vec_len, data_len),
-        83 => wire__crate__api__sftp__SftpBrowser_chmod_impl(port, ptr, rust_vec_len, data_len),
-        85 => wire__crate__api__sftp__SftpBrowser_conflicts_impl(port, ptr, rust_vec_len, data_len),
-        86 => wire__crate__api__sftp__SftpBrowser_home_impl(port, ptr, rust_vec_len, data_len),
-        87 => wire__crate__api__sftp__SftpBrowser_install_public_key_impl(
+        77 => wire__crate__api__app__OpenWard_use_identity_impl(port, ptr, rust_vec_len, data_len),
+        78 => wire__crate__api__app__OpenWard_watch_tunnels_impl(port, ptr, rust_vec_len, data_len),
+        79 => wire__crate__api__app__OpenWard_watch_vault_impl(port, ptr, rust_vec_len, data_len),
+        82 => wire__crate__api__sftp__SftpBrowser_chmod_impl(port, ptr, rust_vec_len, data_len),
+        84 => wire__crate__api__sftp__SftpBrowser_conflicts_impl(port, ptr, rust_vec_len, data_len),
+        85 => wire__crate__api__sftp__SftpBrowser_home_impl(port, ptr, rust_vec_len, data_len),
+        86 => wire__crate__api__sftp__SftpBrowser_install_public_key_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        88 => wire__crate__api__sftp__SftpBrowser_list_impl(port, ptr, rust_vec_len, data_len),
-        89 => wire__crate__api__sftp__SftpBrowser_mkdir_impl(port, ptr, rust_vec_len, data_len),
-        90 => wire__crate__api__sftp__SftpBrowser_realpath_impl(port, ptr, rust_vec_len, data_len),
-        91 => wire__crate__api__sftp__SftpBrowser_remove_impl(port, ptr, rust_vec_len, data_len),
-        92 => wire__crate__api__sftp__SftpBrowser_rename_impl(port, ptr, rust_vec_len, data_len),
-        93 => wire__crate__api__sftp__SftpBrowser_stat_impl(port, ptr, rust_vec_len, data_len),
-        97 => wire__crate__api__session__TerminalSession_compress_history_impl(
+        87 => wire__crate__api__sftp__SftpBrowser_list_impl(port, ptr, rust_vec_len, data_len),
+        88 => wire__crate__api__sftp__SftpBrowser_mkdir_impl(port, ptr, rust_vec_len, data_len),
+        89 => wire__crate__api__sftp__SftpBrowser_realpath_impl(port, ptr, rust_vec_len, data_len),
+        90 => wire__crate__api__sftp__SftpBrowser_remove_impl(port, ptr, rust_vec_len, data_len),
+        91 => wire__crate__api__sftp__SftpBrowser_rename_impl(port, ptr, rust_vec_len, data_len),
+        92 => wire__crate__api__sftp__SftpBrowser_stat_impl(port, ptr, rust_vec_len, data_len),
+        96 => wire__crate__api__session__TerminalSession_compress_history_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        125 => {
+        124 => {
             wire__crate__api__session__TerminalSession_watch_impl(port, ptr, rust_vec_len, data_len)
         }
-        128 => {
+        127 => {
             wire__crate__api__session__failure_view_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        129 => wire__crate__api__vault__group_spec_default_impl(port, ptr, rust_vec_len, data_len),
-        130 => wire__crate__api__vault__host_spec_default_impl(port, ptr, rust_vec_len, data_len),
-        131 => wire__crate__api__app__init_app_impl(port, ptr, rust_vec_len, data_len),
-        132 => wire__crate__api__vault__jump_spec_default_impl(port, ptr, rust_vec_len, data_len),
-        133 => wire__crate__api__sftp__local_chmod_impl(port, ptr, rust_vec_len, data_len),
-        135 => wire__crate__api__sftp__local_list_impl(port, ptr, rust_vec_len, data_len),
-        136 => wire__crate__api__sftp__local_mkdir_impl(port, ptr, rust_vec_len, data_len),
-        137 => wire__crate__api__sftp__local_remove_impl(port, ptr, rust_vec_len, data_len),
-        138 => wire__crate__api__sftp__local_rename_impl(port, ptr, rust_vec_len, data_len),
-        139 => wire__crate__api__sftp__local_stat_impl(port, ptr, rust_vec_len, data_len),
-        140 => {
+        128 => wire__crate__api__vault__group_spec_default_impl(port, ptr, rust_vec_len, data_len),
+        129 => wire__crate__api__vault__host_spec_default_impl(port, ptr, rust_vec_len, data_len),
+        130 => wire__crate__api__app__init_app_impl(port, ptr, rust_vec_len, data_len),
+        131 => wire__crate__api__vault__jump_spec_default_impl(port, ptr, rust_vec_len, data_len),
+        132 => wire__crate__api__sftp__local_chmod_impl(port, ptr, rust_vec_len, data_len),
+        134 => wire__crate__api__sftp__local_list_impl(port, ptr, rust_vec_len, data_len),
+        135 => wire__crate__api__sftp__local_mkdir_impl(port, ptr, rust_vec_len, data_len),
+        136 => wire__crate__api__sftp__local_remove_impl(port, ptr, rust_vec_len, data_len),
+        137 => wire__crate__api__sftp__local_rename_impl(port, ptr, rust_vec_len, data_len),
+        138 => wire__crate__api__sftp__local_stat_impl(port, ptr, rust_vec_len, data_len),
+        139 => {
             wire__crate__api__session__prompt_view_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        142 => {
+        141 => {
             wire__crate__api__vault__settings_spec_default_impl(port, ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -10701,119 +10624,118 @@ fn pde_ffi_dispatcher_sync_impl(
         34 => wire__crate__api__app__OpenWard_key_file_path_impl(ptr, rust_vec_len, data_len),
         35 => wire__crate__api__app__OpenWard_key_info_impl(ptr, rust_vec_len, data_len),
         36 => wire__crate__api__app__OpenWard_keys_impl(ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__app__OpenWard_known_hosts_impl(ptr, rust_vec_len, data_len),
-        40 => wire__crate__api__app__OpenWard_known_hosts_file_impl(ptr, rust_vec_len, data_len),
-        47 => wire__crate__api__app__OpenWard_pause_transfer_impl(ptr, rust_vec_len, data_len),
-        48 => wire__crate__api__app__OpenWard_pause_transfers_impl(ptr, rust_vec_len, data_len),
-        49 => wire__crate__api__app__OpenWard_preview_program_impl(ptr, rust_vec_len, data_len),
-        51 => wire__crate__api__app__OpenWard_public_key_line_impl(ptr, rust_vec_len, data_len),
-        55 => wire__crate__api__app__OpenWard_reconnect_attempts_impl(ptr, rust_vec_len, data_len),
-        56 => wire__crate__api__app__OpenWard_remove_transfer_impl(ptr, rust_vec_len, data_len),
-        59 => wire__crate__api__app__OpenWard_resume_transfer_impl(ptr, rust_vec_len, data_len),
-        60 => wire__crate__api__app__OpenWard_search_impl(ptr, rust_vec_len, data_len),
-        62 => wire__crate__api__app__OpenWard_set_read_os_release_everywhere_impl(
+        39 => wire__crate__api__app__OpenWard_known_hosts_file_impl(ptr, rust_vec_len, data_len),
+        46 => wire__crate__api__app__OpenWard_pause_transfer_impl(ptr, rust_vec_len, data_len),
+        47 => wire__crate__api__app__OpenWard_pause_transfers_impl(ptr, rust_vec_len, data_len),
+        48 => wire__crate__api__app__OpenWard_preview_program_impl(ptr, rust_vec_len, data_len),
+        50 => wire__crate__api__app__OpenWard_public_key_line_impl(ptr, rust_vec_len, data_len),
+        54 => wire__crate__api__app__OpenWard_reconnect_attempts_impl(ptr, rust_vec_len, data_len),
+        55 => wire__crate__api__app__OpenWard_remove_transfer_impl(ptr, rust_vec_len, data_len),
+        58 => wire__crate__api__app__OpenWard_resume_transfer_impl(ptr, rust_vec_len, data_len),
+        59 => wire__crate__api__app__OpenWard_search_impl(ptr, rust_vec_len, data_len),
+        61 => wire__crate__api__app__OpenWard_set_read_os_release_everywhere_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        63 => wire__crate__api__app__OpenWard_sftp_impl(ptr, rust_vec_len, data_len),
-        64 => wire__crate__api__app__OpenWard_snippets_impl(ptr, rust_vec_len, data_len),
-        65 => wire__crate__api__app__OpenWard_tags_impl(ptr, rust_vec_len, data_len),
-        66 => wire__crate__api__app__OpenWard_terminal_impl(ptr, rust_vec_len, data_len),
-        67 => wire__crate__api__app__OpenWard_transfer_impl(ptr, rust_vec_len, data_len),
-        68 => wire__crate__api__app__OpenWard_transfers_impl(ptr, rust_vec_len, data_len),
-        70 => wire__crate__api__app__OpenWard_tunnels_impl(ptr, rust_vec_len, data_len),
-        71 => wire__crate__api__app__OpenWard_unreadable_items_impl(ptr, rust_vec_len, data_len),
-        81 => wire__crate__api__app__OpenWard_workspaces_impl(ptr, rust_vec_len, data_len),
-        82 => wire__crate__api__programs__ProgramData_program_impl(ptr, rust_vec_len, data_len),
-        84 => wire__crate__api__sftp__SftpBrowser_close_impl(ptr, rust_vec_len, data_len),
-        94 => wire__crate__api__session__TerminalSession_clear_history_impl(
+        62 => wire__crate__api__app__OpenWard_sftp_impl(ptr, rust_vec_len, data_len),
+        63 => wire__crate__api__app__OpenWard_snippets_impl(ptr, rust_vec_len, data_len),
+        64 => wire__crate__api__app__OpenWard_tags_impl(ptr, rust_vec_len, data_len),
+        65 => wire__crate__api__app__OpenWard_terminal_impl(ptr, rust_vec_len, data_len),
+        66 => wire__crate__api__app__OpenWard_transfer_impl(ptr, rust_vec_len, data_len),
+        67 => wire__crate__api__app__OpenWard_transfers_impl(ptr, rust_vec_len, data_len),
+        69 => wire__crate__api__app__OpenWard_tunnels_impl(ptr, rust_vec_len, data_len),
+        70 => wire__crate__api__app__OpenWard_unreadable_items_impl(ptr, rust_vec_len, data_len),
+        80 => wire__crate__api__app__OpenWard_workspaces_impl(ptr, rust_vec_len, data_len),
+        81 => wire__crate__api__programs__ProgramData_program_impl(ptr, rust_vec_len, data_len),
+        83 => wire__crate__api__sftp__SftpBrowser_close_impl(ptr, rust_vec_len, data_len),
+        93 => wire__crate__api__session__TerminalSession_clear_history_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        95 => wire__crate__api__session__TerminalSession_clear_selection_impl(
+        94 => wire__crate__api__session__TerminalSession_clear_selection_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        96 => wire__crate__api__session__TerminalSession_close_impl(ptr, rust_vec_len, data_len),
-        98 => {
+        95 => wire__crate__api__session__TerminalSession_close_impl(ptr, rust_vec_len, data_len),
+        97 => {
             wire__crate__api__session__TerminalSession_cursor_cell_impl(ptr, rust_vec_len, data_len)
         }
-        99 => {
+        98 => {
             wire__crate__api__session__TerminalSession_end_search_impl(ptr, rust_vec_len, data_len)
         }
-        100 => wire__crate__api__session__TerminalSession_focus_impl(ptr, rust_vec_len, data_len),
-        101 => wire__crate__api__session__TerminalSession_key_impl(ptr, rust_vec_len, data_len),
-        102 => wire__crate__api__session__TerminalSession_link_at_impl(ptr, rust_vec_len, data_len),
-        103 => wire__crate__api__session__TerminalSession_note_impl(ptr, rust_vec_len, data_len),
-        104 => wire__crate__api__session__TerminalSession_paste_impl(ptr, rust_vec_len, data_len),
-        105 => wire__crate__api__session__TerminalSession_pointer_impl(ptr, rust_vec_len, data_len),
-        106 => wire__crate__api__session__TerminalSession_poll_impl(ptr, rust_vec_len, data_len),
-        107 => {
+        99 => wire__crate__api__session__TerminalSession_focus_impl(ptr, rust_vec_len, data_len),
+        100 => wire__crate__api__session__TerminalSession_key_impl(ptr, rust_vec_len, data_len),
+        101 => wire__crate__api__session__TerminalSession_link_at_impl(ptr, rust_vec_len, data_len),
+        102 => wire__crate__api__session__TerminalSession_note_impl(ptr, rust_vec_len, data_len),
+        103 => wire__crate__api__session__TerminalSession_paste_impl(ptr, rust_vec_len, data_len),
+        104 => wire__crate__api__session__TerminalSession_pointer_impl(ptr, rust_vec_len, data_len),
+        105 => wire__crate__api__session__TerminalSession_poll_impl(ptr, rust_vec_len, data_len),
+        106 => {
             wire__crate__api__session__TerminalSession_poll_meta_impl(ptr, rust_vec_len, data_len)
         }
-        108 => wire__crate__api__session__TerminalSession_redraw_impl(ptr, rust_vec_len, data_len),
-        109 => wire__crate__api__session__TerminalSession_resize_impl(ptr, rust_vec_len, data_len),
-        110 => {
+        107 => wire__crate__api__session__TerminalSession_redraw_impl(ptr, rust_vec_len, data_len),
+        108 => wire__crate__api__session__TerminalSession_resize_impl(ptr, rust_vec_len, data_len),
+        109 => {
             wire__crate__api__session__TerminalSession_screen_text_impl(ptr, rust_vec_len, data_len)
         }
-        111 => wire__crate__api__session__TerminalSession_scroll_history_impl(
+        110 => wire__crate__api__session__TerminalSession_scroll_history_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        112 => wire__crate__api__session__TerminalSession_search_impl(ptr, rust_vec_len, data_len),
-        113 => {
+        111 => wire__crate__api__session__TerminalSession_search_impl(ptr, rust_vec_len, data_len),
+        112 => {
             wire__crate__api__session__TerminalSession_search_step_impl(ptr, rust_vec_len, data_len)
         }
-        114 => {
+        113 => {
             wire__crate__api__session__TerminalSession_select_all_impl(ptr, rust_vec_len, data_len)
         }
-        115 => {
+        114 => {
             wire__crate__api__session__TerminalSession_select_drag_impl(ptr, rust_vec_len, data_len)
         }
-        116 => wire__crate__api__session__TerminalSession_select_press_impl(
+        115 => wire__crate__api__session__TerminalSession_select_press_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        117 => wire__crate__api__session__TerminalSession_select_release_impl(
+        116 => wire__crate__api__session__TerminalSession_select_release_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        118 => wire__crate__api__session__TerminalSession_selection_text_impl(
+        117 => wire__crate__api__session__TerminalSession_selection_text_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        119 => wire__crate__api__session__TerminalSession_set_cell_pixels_impl(
+        118 => wire__crate__api__session__TerminalSession_set_cell_pixels_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        120 => {
+        119 => {
             wire__crate__api__session__TerminalSession_set_cursor_impl(ptr, rust_vec_len, data_len)
         }
-        121 => wire__crate__api__session__TerminalSession_set_option_as_alt_impl(
+        120 => wire__crate__api__session__TerminalSession_set_option_as_alt_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        122 => {
+        121 => {
             wire__crate__api__session__TerminalSession_set_theme_impl(ptr, rust_vec_len, data_len)
         }
-        123 => wire__crate__api__session__TerminalSession_text_impl(ptr, rust_vec_len, data_len),
-        124 => {
+        122 => wire__crate__api__session__TerminalSession_text_impl(ptr, rust_vec_len, data_len),
+        123 => {
             wire__crate__api__session__TerminalSession_typed_since_impl(ptr, rust_vec_len, data_len)
         }
-        126 => wire__crate__api__session__TerminalSession_wheel_impl(ptr, rust_vec_len, data_len),
-        127 => wire__crate__api__app__core_version_impl(ptr, rust_vec_len, data_len),
-        134 => wire__crate__api__sftp__local_home_impl(ptr, rust_vec_len, data_len),
-        141 => wire__crate__api__snippets__render_snippet_impl(ptr, rust_vec_len, data_len),
-        143 => wire__crate__api__snippets__snippet_variables_impl(ptr, rust_vec_len, data_len),
+        125 => wire__crate__api__session__TerminalSession_wheel_impl(ptr, rust_vec_len, data_len),
+        126 => wire__crate__api__app__core_version_impl(ptr, rust_vec_len, data_len),
+        133 => wire__crate__api__sftp__local_home_impl(ptr, rust_vec_len, data_len),
+        140 => wire__crate__api__snippets__render_snippet_impl(ptr, rust_vec_len, data_len),
+        142 => wire__crate__api__snippets__snippet_variables_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -11893,30 +11815,6 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::known_hosts::KnownHostRow>
     for crate::api::known_hosts::KnownHostRow
 {
     fn into_into_dart(self) -> crate::api::known_hosts::KnownHostRow {
-        self
-    }
-}
-// Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::api::vault::KnownHostView {
-    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [
-            self.id.into_into_dart().into_dart(),
-            self.hosts.into_into_dart().into_dart(),
-            self.algorithm.into_into_dart().into_dart(),
-            self.key.into_into_dart().into_dart(),
-            self.cert_authority.into_into_dart().into_dart(),
-        ]
-        .into_dart()
-    }
-}
-impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for crate::api::vault::KnownHostView
-{
-}
-impl flutter_rust_bridge::IntoIntoDart<crate::api::vault::KnownHostView>
-    for crate::api::vault::KnownHostView
-{
-    fn into_into_dart(self) -> crate::api::vault::KnownHostView {
         self
     }
 }
@@ -14370,17 +14268,6 @@ impl SseEncode for crate::api::known_hosts::KnownHostRow {
     }
 }
 
-impl SseEncode for crate::api::vault::KnownHostView {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <String>::sse_encode(self.id, serializer);
-        <String>::sse_encode(self.hosts, serializer);
-        <String>::sse_encode(self.algorithm, serializer);
-        <String>::sse_encode(self.key, serializer);
-        <bool>::sse_encode(self.cert_authority, serializer);
-    }
-}
-
 impl SseEncode for crate::api::known_hosts::KnownMarkerKind {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -14570,16 +14457,6 @@ impl SseEncode for Vec<crate::api::known_hosts::KnownHostRow> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::known_hosts::KnownHostRow>::sse_encode(item, serializer);
-        }
-    }
-}
-
-impl SseEncode for Vec<crate::api::vault::KnownHostView> {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <i32>::sse_encode(self.len() as _, serializer);
-        for item in self {
-            <crate::api::vault::KnownHostView>::sse_encode(item, serializer);
         }
     }
 }

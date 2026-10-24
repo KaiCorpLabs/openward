@@ -173,7 +173,7 @@ class _SnippetEditorState extends ConsumerState<_SnippetEditor> {
               Expanded(
                 child: Text(
                   hint,
-                  style: TextStyle(fontSize: 12, color: c.textSubtle),
+                  style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
                 ),
               ),
             ],
@@ -223,7 +223,7 @@ class _SnippetEditorState extends ConsumerState<_SnippetEditor> {
           l.askedWhenRun,
           hint: l.askedWhenRunHint,
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(OwSpace.s6),
             decoration: BoxDecoration(
               color: c.sunken,
               border: Border.all(color: c.border),
@@ -232,13 +232,18 @@ class _SnippetEditorState extends ConsumerState<_SnippetEditor> {
             child: _vars.asked.isEmpty
                 ? Text(
                     l.asksNothing('{{${l.exampleVariable}}}'),
-                    style: TextStyle(fontSize: 12, color: c.textMuted),
+                    style: TextStyle(
+                      fontSize: OwText.small,
+                      color: c.textMuted,
+                    ),
                   )
                 : Column(
                     children: [
                       for (final name in _vars.asked)
                         Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: OwSpace.s2,
+                          ),
                           child: Row(
                             children: [
                               SizedBox(
@@ -274,7 +279,7 @@ class _SnippetEditorState extends ConsumerState<_SnippetEditor> {
           children: [
             Text(
               l.filledInEachPane,
-              style: TextStyle(fontSize: 12, color: c.textSubtle),
+              style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
             ),
             for (final b in const ['host', 'address', 'user', 'port'])
               Pill(b, tone: PillTone.neutral),
@@ -295,14 +300,19 @@ class _SnippetEditorState extends ConsumerState<_SnippetEditor> {
             title: Text(l.pressEnterAtTheEnd),
             subtitle: Text(
               l.pressEnterAtTheEndNote,
-              style: TextStyle(fontSize: 12, color: c.textMuted),
+              style: TextStyle(fontSize: OwText.small, color: c.textMuted),
             ),
           ),
         ),
         const SizedBox(height: 16),
         Callout(
           tone: Tone.info,
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          padding: const EdgeInsets.fromLTRB(
+            OwSpace.s6,
+            OwSpace.s5,
+            OwSpace.s6,
+            OwSpace.s5,
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -311,7 +321,7 @@ class _SnippetEditorState extends ConsumerState<_SnippetEditor> {
               Expanded(
                 child: Text(
                   l.snippetNoSecrets,
-                  style: TextStyle(fontSize: 12, color: c.textMuted),
+                  style: TextStyle(fontSize: OwText.small, color: c.textMuted),
                 ),
               ),
             ],

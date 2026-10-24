@@ -117,7 +117,10 @@ class DragGhost extends StatelessWidget {
         elevation: 8,
         borderRadius: BorderRadius.circular(ow.shape.radius),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          padding: const EdgeInsets.symmetric(
+            horizontal: OwSpace.s6,
+            vertical: OwSpace.s3,
+          ),
           decoration: BoxDecoration(
             border: Border.all(color: c.control),
             borderRadius: BorderRadius.circular(ow.shape.radius),
@@ -131,7 +134,7 @@ class DragGhost extends StatelessWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.w500,
                   color: c.text,
-                  fontSize: 13,
+                  fontSize: OwText.body,
                 ),
               ),
               if (subtitle != null)
@@ -139,7 +142,7 @@ class DragGhost extends StatelessWidget {
                   subtitle!,
                   style: TextStyle(
                     fontFamily: ow.fonts.mono,
-                    fontSize: 12,
+                    fontSize: OwText.small,
                     color: c.textMuted,
                   ),
                 ),
@@ -319,7 +322,7 @@ class DropZone extends StatelessWidget {
       widthFactor: horizontal ? 0.5 : 1,
       heightFactor: horizontal ? 1 : 0.5,
       child: Padding(
-        padding: const EdgeInsets.all(6),
+        padding: const EdgeInsets.all(OwSpace.s3),
         child: Container(
           alignment: Alignment.center,
           decoration: BoxDecoration(
@@ -328,17 +331,20 @@ class DropZone extends StatelessWidget {
             borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
           ),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(
+              horizontal: OwSpace.s6,
+              vertical: OwSpace.s3,
+            ),
             decoration: BoxDecoration(
               color: c.raised,
               border: Border.all(color: c.accent),
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(context.ow.shape.round),
             ),
             child: Text(
               label,
               style: TextStyle(
                 color: c.accentText,
-                fontSize: 12,
+                fontSize: OwText.small,
                 fontWeight: FontWeight.w600,
               ),
             ),

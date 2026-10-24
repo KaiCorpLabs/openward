@@ -78,14 +78,14 @@ Future<void> showErrorDetails(BuildContext context, Object e) {
             Text(
               l.errorDetailsHint,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: OwText.small,
                 color: context.ow.colors.textMuted,
               ),
             ),
             const SizedBox(height: 10),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(OwSpace.s5),
               decoration: BoxDecoration(
                 color: context.ow.colors.sunken,
                 borderRadius: BorderRadius.circular(context.ow.shape.radius),

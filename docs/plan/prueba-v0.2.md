@@ -4,7 +4,7 @@ La puerta de salida de la [v0.2](v0.2.md) es esta: el equipo usa OpenWard dos se
 
 ## Instalar
 
-Los paquetes salen de la CI, y el de macOS también de Homebrew:
+Los paquetes salen de la CI, y el de macOS también de Homebrew. (Desde la 0.3 la CI corre en local y las releases solo traen el de macOS: lo de Linux y Windows está en la [guía de la 0.3](prueba-v0.3.md#instalar).)
 - **Con Homebrew (macOS):** el cask `openward` de `kaicorplabs/tap`, que también trae las betas siguientes. Lo explica la sección de macOS.
 - **De una release:** en GitHub, **Releases**, el borrador o la beta `v0.2.0-beta.N`, con los tres paquetes.
 - **De una ejecución:** **Actions → CI**, la semanal o una lanzada con «Run workflow». Baja el artefacto `OpenWard-macOS`, `OpenWard-Linux` u `OpenWard-Windows`. El de Linux sale en cada push.

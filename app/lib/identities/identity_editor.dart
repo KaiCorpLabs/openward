@@ -190,7 +190,10 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
                     const SizedBox(height: 4),
                     Text(
                       hint,
-                      style: TextStyle(fontSize: 12, color: c.textSubtle),
+                      style: TextStyle(
+                        fontSize: OwText.small,
+                        color: c.textSubtle,
+                      ),
                     ),
                   ],
                 ),
@@ -198,7 +201,10 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
         );
     // Past the labels, under the fields.
     Widget under(Widget child) => Padding(
-      padding: const EdgeInsets.only(left: editorLabelWidth, bottom: 10),
+      padding: const EdgeInsets.only(
+        left: editorLabelWidth,
+        bottom: OwSpace.s5,
+      ),
       child: child,
     );
     return EditorFrame(
@@ -236,7 +242,7 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
           hint: _keys.length > 1 ? l.keysInOrder : null,
           _keys.isEmpty
               ? Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(OwSpace.s6),
                   decoration: BoxDecoration(
                     color: c.sunken,
                     border: Border.all(color: c.control),
@@ -244,7 +250,10 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
                   ),
                   child: Text(
                     l.noKeysYet,
-                    style: TextStyle(fontSize: 12, color: c.textMuted),
+                    style: TextStyle(
+                      fontSize: OwText.small,
+                      color: c.textMuted,
+                    ),
                   ),
                 )
               : Container(
@@ -300,7 +309,7 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
                           .textTheme
                           .bodyMedium
                           ?.fontFamily,
-                      fontSize: 12,
+                      fontSize: OwText.small,
                       color: c.textSubtle,
                     ),
                     suffixIcon: IconButton(
@@ -359,14 +368,19 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
             title: Text(l.offerOnlyTheseKeys),
             subtitle: Text(
               l.offerOnlyTheseKeysNote,
-              style: TextStyle(fontSize: 12, color: c.textMuted),
+              style: TextStyle(fontSize: OwText.small, color: c.textMuted),
             ),
           ),
         ),
         const SizedBox(height: 16),
         Callout(
           tone: Tone.info,
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          padding: const EdgeInsets.fromLTRB(
+            OwSpace.s6,
+            OwSpace.s5,
+            OwSpace.s6,
+            OwSpace.s5,
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -377,7 +391,7 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
                   old != null && old.hostCount > 0
                       ? l.identitySaveChanges(old.hostCount)
                       : l.identityNewNote,
-                  style: TextStyle(fontSize: 12, color: c.textMuted),
+                  style: TextStyle(fontSize: OwText.small, color: c.textMuted),
                 ),
               ),
             ],
@@ -418,7 +432,12 @@ class _KeyItem extends StatelessWidget {
         color: c.sunken,
         border: index == 0 ? null : Border(top: BorderSide(color: c.border)),
       ),
-      padding: const EdgeInsets.fromLTRB(6, 8, 6, 8),
+      padding: const EdgeInsets.fromLTRB(
+        OwSpace.s3,
+        OwSpace.s4,
+        OwSpace.s3,
+        OwSpace.s4,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -429,7 +448,7 @@ class _KeyItem extends StatelessWidget {
                 child: MouseRegion(
                   cursor: SystemMouseCursors.grab,
                   child: Padding(
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(OwSpace.s2),
                     child: Icon(
                       Icons.drag_indicator,
                       size: 16,
@@ -455,7 +474,7 @@ class _KeyItem extends StatelessWidget {
                     Text(
                       keyDetail(l, info),
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: OwText.small,
                         color: missing ? c.warn : c.textSubtle,
                       ),
                     ),
@@ -473,8 +492,18 @@ class _KeyItem extends StatelessWidget {
           ),
           if (cert != null)
             Container(
-              margin: const EdgeInsets.fromLTRB(30, 6, 4, 0),
-              padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
+              margin: const EdgeInsets.fromLTRB(
+                OwSpace.s15,
+                OwSpace.s3,
+                OwSpace.s2,
+                0,
+              ),
+              padding: const EdgeInsets.fromLTRB(
+                OwSpace.s4,
+                OwSpace.s2,
+                OwSpace.s2,
+                OwSpace.s2,
+              ),
               decoration: BoxDecoration(
                 color: c.raised,
                 borderRadius: BorderRadius.circular(ow.shape.radiusSmall),
@@ -489,7 +518,10 @@ class _KeyItem extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     l.certificateTitle,
-                    style: TextStyle(fontSize: 12, color: c.textMuted),
+                    style: TextStyle(
+                      fontSize: OwText.small,
+                      color: c.textMuted,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -506,13 +538,16 @@ class _KeyItem extends StatelessWidget {
                         ? l.certForever
                         : l.certUntil(certDate(l, cert)),
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: OwText.small,
                       color: cert.expired ? c.warn : c.accentText,
                     ),
                   ),
                   if (cert.implicit)
                     Padding(
-                      padding: const EdgeInsets.only(left: 6, right: 6),
+                      padding: const EdgeInsets.only(
+                        left: OwSpace.s3,
+                        right: OwSpace.s3,
+                      ),
                       child: Tooltip(
                         message: l.certNextToKey,
                         child: Icon(Icons.link, size: 14, color: c.textSubtle),
@@ -531,7 +566,7 @@ class _KeyItem extends StatelessWidget {
             )
           else if (info.state == KeyStateKind.found)
             Padding(
-              padding: const EdgeInsets.only(left: 26),
+              padding: const EdgeInsets.only(left: OwSpace.s12),
               child: TextButton(
                 onPressed: onAddCert,
                 style: TextButton.styleFrom(

@@ -30,10 +30,10 @@ zeroize = "1"
 rand = { version = "0.10", features = ["thread_rng"] }
 # Hashed known_hosts names in tests.
 data-encoding = "2"
-hmac = "0.12"
-sha1 = "0.10"
+hmac = "0.13"
+sha1 = "0.11"
 # Integration tests answer 2FA prompts with codes.
-openward-ssh = { path = "../openward-ssh" }
+openward-ssh = { path = "../openward-ssh", features = ["test-auth"] }
 # Paused time for the connection watcher's tests; agents of the tests' own.
 tokio = { version = "1", features = ["test-util", "net"] }
 futures = "0.3"

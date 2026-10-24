@@ -89,7 +89,7 @@ class _ConflictDialogState extends State<_ConflictDialog> {
     final c = ow.colors;
     final l = context.l10n;
     final rest = widget.total - widget.conflicts.length;
-    final small = TextStyle(fontSize: 12, color: c.textMuted);
+    final small = TextStyle(fontSize: OwText.small, color: c.textMuted);
     String side(FileEntry e) => e.isDir
         ? l.conflictFolder
         : '${formatSize(l, e.size)} · ${formatDate(l, e.modified)}';
@@ -107,7 +107,7 @@ class _ConflictDialogState extends State<_ConflictDialog> {
     Widget header(String text) => Text(
       text.toUpperCase(),
       style: TextStyle(
-        fontSize: 12,
+        fontSize: OwText.small,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.5,
         color: c.textSubtle,
@@ -168,7 +168,12 @@ class _ConflictDialogState extends State<_ConflictDialog> {
                         l.conflictWhat,
                       ])
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+                          padding: const EdgeInsets.fromLTRB(
+                            OwSpace.s6,
+                            OwSpace.s4,
+                            OwSpace.s4,
+                            OwSpace.s4,
+                          ),
                           child: header(h),
                         ),
                     ],
@@ -180,7 +185,12 @@ class _ConflictDialogState extends State<_ConflictDialog> {
                       ),
                       children: [
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+                          padding: const EdgeInsets.fromLTRB(
+                            OwSpace.s6,
+                            OwSpace.s4,
+                            OwSpace.s4,
+                            OwSpace.s4,
+                          ),
                           child: Row(
                             children: [
                               Icon(
@@ -205,27 +215,33 @@ class _ConflictDialogState extends State<_ConflictDialog> {
                         ),
                         Text(
                           side(v.ours),
-                          style: TextStyle(fontSize: 12, color: c.text),
+                          style: TextStyle(
+                            fontSize: OwText.small,
+                            color: c.text,
+                          ),
                         ),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               side(v.theirs),
-                              style: TextStyle(fontSize: 12, color: c.text),
+                              style: TextStyle(
+                                fontSize: OwText.small,
+                                color: c.text,
+                              ),
                             ),
                             if (verdict(v).$1.isNotEmpty)
                               Text(
                                 verdict(v).$1,
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: OwText.small,
                                   color: verdict(v).$2,
                                 ),
                               ),
                           ],
                         ),
                         Padding(
-                          padding: const EdgeInsets.all(6),
+                          padding: const EdgeInsets.all(OwSpace.s3),
                           child: DropdownButtonFormField<ConflictChoice>(
                             key: ValueKey('conflict.${v.ours.name}'),
                             initialValue: _choices[v.source],
@@ -234,8 +250,8 @@ class _ConflictDialogState extends State<_ConflictDialog> {
                             decoration: const InputDecoration(
                               isDense: true,
                               contentPadding: EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 8,
+                                horizontal: OwSpace.s5,
+                                vertical: OwSpace.s4,
                               ),
                             ),
                             items: [
@@ -248,7 +264,9 @@ class _ConflictDialogState extends State<_ConflictDialog> {
                                       _label(l, choice),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontSize: 13),
+                                      style: const TextStyle(
+                                        fontSize: OwText.body,
+                                      ),
                                     ),
                                   ),
                             ],
@@ -273,7 +291,9 @@ class _ConflictDialogState extends State<_ConflictDialog> {
                     onPressed: () => _all(choice),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(0, 30),
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: OwSpace.s5,
+                      ),
                     ),
                     child: Text(_label(l, choice)),
                   ),
@@ -284,7 +304,7 @@ class _ConflictDialogState extends State<_ConflictDialog> {
               tone: Tone.info,
               child: Text(
                 l.partNote,
-                style: const TextStyle(fontSize: 12, height: 1.45),
+                style: const TextStyle(fontSize: OwText.small, height: 1.45),
               ),
             ),
           ],
@@ -402,7 +422,12 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
       ),
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 6, 8, 6),
+          padding: const EdgeInsets.fromLTRB(
+            OwSpace.s7,
+            OwSpace.s3,
+            OwSpace.s4,
+            OwSpace.s3,
+          ),
           child: Text.rich(
             TextSpan(
               children: [
@@ -424,7 +449,7 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
       ],
     );
     final head = TextStyle(
-      fontSize: 12,
+      fontSize: OwText.small,
       fontWeight: FontWeight.w600,
       letterSpacing: 0.5,
       color: c.textSubtle,
@@ -465,7 +490,9 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
                         dir ? l.permEnter : l.permExecute,
                       ])
                         Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: OwSpace.s4,
+                          ),
                           child: Text(
                             h.toUpperCase(),
                             textAlign: TextAlign.center,
@@ -507,7 +534,10 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
                 if (e.mode != null)
                   Text(
                     l.permBefore(octal(before)),
-                    style: TextStyle(fontSize: 12, color: c.textSubtle),
+                    style: TextStyle(
+                      fontSize: OwText.small,
+                      color: c.textSubtle,
+                    ),
                   ),
               ],
             ),
@@ -525,7 +555,7 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
             const SizedBox(height: 8),
             Text(
               l.permOwnerNote,
-              style: TextStyle(fontSize: 12, color: c.textSubtle),
+              style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
             ),
             if (_error != null) ...[
               const SizedBox(height: 10),

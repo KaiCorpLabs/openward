@@ -61,7 +61,7 @@ Future<void> showReport(BuildContext context, WidgetRef ref) {
               Text(l.reportWhat, style: TextStyle(color: c.textMuted)),
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(OwSpace.s6),
                 decoration: BoxDecoration(
                   color: c.sunken,
                   border: Border.all(color: c.border),
@@ -75,7 +75,7 @@ Future<void> showReport(BuildContext context, WidgetRef ref) {
               const SizedBox(height: 10),
               Text(
                 l.reportHow,
-                style: TextStyle(fontSize: 12, color: c.textSubtle),
+                style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
               ),
             ],
           ),

@@ -58,6 +58,11 @@ class Panes extends ChangeNotifier {
   }
 
   PaneNode root;
+
+  /// Told when a split's share of the room changes (a divider dragged),
+  /// instead of everyone that shows the panes: only the layout redraws,
+  /// pixel by pixel, not the headers, the status bar or the banner.
+  final sizes = ValueNotifier<int>(0);
   late Pane active;
 
   /// Shown alone, filling the tab.
@@ -244,7 +249,7 @@ class Panes extends ChangeNotifier {
 
   void resize(PaneSplit split, double ratio) {
     split.ratio = ratio.clamp(0.15, 0.85);
-    notifyListeners();
+    sizes.value++;
   }
 
   /// Turns broadcast on (every pane receives) or off. Needs two panes.

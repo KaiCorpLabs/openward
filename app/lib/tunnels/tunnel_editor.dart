@@ -188,7 +188,10 @@ class _TunnelEditorState extends ConsumerState<_TunnelEditor> {
     Widget labelled(String text, Widget field) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(text, style: TextStyle(color: c.textMuted, fontSize: 12)),
+        Text(
+          text,
+          style: TextStyle(color: c.textMuted, fontSize: OwText.small),
+        ),
         const SizedBox(height: 6),
         field,
       ],
@@ -347,10 +350,10 @@ class _TunnelEditorState extends ConsumerState<_TunnelEditor> {
         ),
         if (_lan)
           Padding(
-            padding: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.only(top: OwSpace.s4),
             child: Text(
               remote ? l.lanRemoteNote : l.lanLocalNote,
-              style: TextStyle(fontSize: 12, color: c.warn),
+              style: TextStyle(fontSize: OwText.small, color: c.warn),
             ),
           ),
         const SizedBox(height: 16),
@@ -414,7 +417,10 @@ class TunnelDiagram extends StatelessWidget {
             title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+            style: const TextStyle(
+              fontSize: OwText.small,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           Text(
             sub,
@@ -427,10 +433,13 @@ class TunnelDiagram extends StatelessWidget {
     );
     Widget arrow(String text) => Expanded(
       child: Padding(
-        padding: const EdgeInsets.only(bottom: 30),
+        padding: const EdgeInsets.only(bottom: OwSpace.s15),
         child: Column(
           children: [
-            Text(text, style: TextStyle(fontSize: 12, color: c.textMuted)),
+            Text(
+              text,
+              style: TextStyle(fontSize: OwText.small, color: c.textMuted),
+            ),
             const SizedBox(height: 4),
             Row(
               children: [
@@ -476,7 +485,12 @@ class TunnelDiagram extends StatelessWidget {
       ),
     };
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
+      padding: const EdgeInsets.fromLTRB(
+        OwSpace.s7,
+        OwSpace.s8,
+        OwSpace.s7,
+        OwSpace.s6,
+      ),
       decoration: BoxDecoration(
         color: c.sunken,
         border: Border.all(color: c.border),
@@ -489,7 +503,11 @@ class TunnelDiagram extends StatelessWidget {
           Text(
             sentence,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: c.textMuted, height: 1.4),
+            style: TextStyle(
+              fontSize: OwText.small,
+              color: c.textMuted,
+              height: 1.4,
+            ),
           ),
         ],
       ),

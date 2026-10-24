@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/address.dart';
 import '../core/errors.dart';
+import '../core/match.dart';
 import '../core/providers.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/keychain.dart';
@@ -156,7 +157,7 @@ class _NewKeyState extends ConsumerState<_NewKey> {
               SshKeyType.ed25519 => l.keyTypeEd25519,
               SshKeyType.ecdsa => l.keyTypeEcdsa,
               SshKeyType.rsa => l.keyTypeRsa,
-            }, style: TextStyle(fontSize: 12, color: c.textMuted)),
+            }, style: TextStyle(fontSize: OwText.small, color: c.textMuted)),
             const SizedBox(height: 16),
             _labelled(
               context,
@@ -215,7 +216,7 @@ class _NewKeyState extends ConsumerState<_NewKey> {
             const SizedBox(height: 12),
             Text(
               l.newKeyWhere('~/.ssh/$name', '~/.ssh/$name.pub'),
-              style: TextStyle(fontSize: 12, color: c.textMuted),
+              style: TextStyle(fontSize: OwText.small, color: c.textMuted),
             ),
             if (_error != null) ...[
               const SizedBox(height: 10),
@@ -471,15 +472,9 @@ class _InstallKeyState extends ConsumerState<_InstallKey> {
   }
 
   List<HostView> _hosts() {
-    final q = _query.text.trim().toLowerCase();
-    final all = ref.read(libraryProvider).hosts;
-    if (q.isEmpty) return all;
-    return [
-      for (final h in all)
-        if (h.label.toLowerCase().contains(q) ||
-            h.address.toLowerCase().contains(q))
-          h,
-    ];
+    final library = ref.read(libraryProvider);
+    final matcher = HostMatcher(_query.text, library);
+    return matcher.isEmpty ? library.hosts : matcher.filter(library.hosts);
   }
 
   void _start({HostView? host, QuickTarget? target}) {
@@ -600,8 +595,8 @@ class _InstallKeyState extends ConsumerState<_InstallKey> {
                         onTap: () => _start(host: h),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 7,
+                            horizontal: OwSpace.s5,
+                            vertical: OwSpace.s3,
                           ),
                           child: Row(
                             children: [
@@ -629,7 +624,7 @@ class _InstallKeyState extends ConsumerState<_InstallKey> {
                     ),
                   if (hosts.isEmpty && typed == null)
                     Padding(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(OwSpace.s5),
                       child: Text(
                         l.installKeyNoHosts,
                         style: TextStyle(color: c.textMuted),

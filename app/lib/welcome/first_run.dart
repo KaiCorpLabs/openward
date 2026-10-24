@@ -103,7 +103,7 @@ class _FirstRunState extends ConsumerState<FirstRun> {
               children: [
                 const Expanded(child: WindowDragArea()),
                 Padding(
-                  padding: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.only(right: OwSpace.s6),
                   child: TextButton(
                     onPressed: _done,
                     style: TextButton.styleFrom(foregroundColor: c.textMuted),
@@ -116,7 +116,12 @@ class _FirstRunState extends ConsumerState<FirstRun> {
           Expanded(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 48),
+                padding: const EdgeInsets.fromLTRB(
+                  OwSpace.s12,
+                  OwSpace.s4,
+                  OwSpace.s12,
+                  OwSpace.s24,
+                ),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 620),
                   child: Column(
@@ -177,7 +182,7 @@ class _FirstRunState extends ConsumerState<FirstRun> {
         const SizedBox(height: 10),
         Text(
           l.importIntoGroup,
-          style: TextStyle(fontSize: 12, color: c.textSubtle),
+          style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
         ),
       ],
       const SizedBox(height: 18),
@@ -188,7 +193,7 @@ class _FirstRunState extends ConsumerState<FirstRun> {
           Expanded(
             child: Text(
               found ? l.importLater : '',
-              style: TextStyle(fontSize: 12, color: c.textSubtle),
+              style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
             ),
           ),
           if (found) ...[
@@ -220,7 +225,12 @@ class _FirstRunState extends ConsumerState<FirstRun> {
     final ow = context.ow;
     final c = ow.colors;
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+      padding: const EdgeInsets.fromLTRB(
+        OwSpace.s7,
+        OwSpace.s5,
+        OwSpace.s7,
+        OwSpace.s3,
+      ),
       decoration: BoxDecoration(
         border: Border.all(color: c.border),
         borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
@@ -232,7 +242,7 @@ class _FirstRunState extends ConsumerState<FirstRun> {
             SectionLabel(l.alsoOnThisComputer),
             for (final f in _found)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: OwSpace.s4),
                 child: Row(
                   children: [
                     ProgramTile(programInitial(f.program)),
@@ -247,7 +257,10 @@ class _FirstRunState extends ConsumerState<FirstRun> {
                           ),
                           Text(
                             foundText(l, f),
-                            style: TextStyle(fontSize: 12, color: c.textMuted),
+                            style: TextStyle(
+                              fontSize: OwText.small,
+                              color: c.textMuted,
+                            ),
                           ),
                         ],
                       ),
@@ -270,13 +283,13 @@ class _FirstRunState extends ConsumerState<FirstRun> {
             Divider(height: 1, color: c.border),
           ],
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
+            padding: const EdgeInsets.symmetric(vertical: OwSpace.s2),
             child: Wrap(
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Text(
                   l.comingFromOther,
-                  style: TextStyle(fontSize: 12, color: c.textMuted),
+                  style: TextStyle(fontSize: OwText.small, color: c.textMuted),
                 ),
                 TextButton(
                   onPressed: () => showImport(context, ref, sshConfig: false),
@@ -353,7 +366,7 @@ class _FirstRunState extends ConsumerState<FirstRun> {
     final c = context.ow.colors;
     final key = isApple ? '⌘' : l.ctrlShiftPrefix;
     Widget shortcut(String keys, String text) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: OwSpace.s3),
       child: Row(
         children: [
           SizedBox(
@@ -409,10 +422,13 @@ class _Stepper extends StatelessWidget {
             selected: i == current,
             child: Container(
               height: 26,
-              padding: const EdgeInsets.only(left: 4, right: 10),
+              padding: const EdgeInsets.only(
+                left: OwSpace.s2,
+                right: OwSpace.s5,
+              ),
               decoration: BoxDecoration(
                 color: i == current ? c.accentSoft : Colors.transparent,
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(context.ow.shape.round),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -433,7 +449,7 @@ class _Stepper extends StatelessWidget {
                         : Text(
                             '${i + 1}',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: OwText.small,
                               color: i == current ? c.onPrimary : c.textMuted,
                             ),
                           ),
@@ -442,7 +458,7 @@ class _Stepper extends StatelessWidget {
                   Text(
                     steps[i],
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: OwText.small,
                       color: i == current ? c.accentText : c.textMuted,
                       fontWeight: i == current
                           ? FontWeight.w600
@@ -484,7 +500,7 @@ class _ThemeCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
         child: Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(OwSpace.s4),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(ow.shape.radiusLarge),
             border: Border.all(
@@ -545,9 +561,9 @@ class _MiniWindow extends StatelessWidget {
             Expanded(
               child: Container(
                 margin: theme.shape.insetTerminal
-                    ? const EdgeInsets.all(5)
+                    ? const EdgeInsets.all(OwSpace.s2)
                     : EdgeInsets.zero,
-                padding: const EdgeInsets.all(7),
+                padding: const EdgeInsets.all(OwSpace.s3),
                 decoration: BoxDecoration(
                   color: t.background,
                   borderRadius: BorderRadius.circular(

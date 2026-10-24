@@ -83,6 +83,12 @@ step "libghostty-vt"
 core/crates/openward-ghostty/build-libghostty.sh
 
 step "Rust: format and lints"
+# The Flutter builds (cargokit) use the toolchain the core pins.
+toolchain="$(sed -n 's/^channel = "\(.*\)"/\1/p' core/rust-toolchain.toml)"
+if grep -n 'toolchain:' core/crates/openward-ffi/cargokit.yaml | grep -v "\"$toolchain\""; then
+  echo "error: cargokit.yaml does not use Rust $toolchain (core/rust-toolchain.toml)" >&2
+  exit 1
+fi
 (cd core && cargo fmt --all -- --check)
 (cd core && cargo clippy --workspace --all-targets -- -D warnings)
 (cd core && cargo clippy -p openward-term --features alacritty --all-targets -- -D warnings)
@@ -100,6 +106,8 @@ done
 
 step "Rust: dependencies"
 (cd core && cargo deny check)
+# What the app lists as the core's licenses is what it ships.
+tool/licenses.sh --check
 
 step "Spikes: lints"
 (cd spikes/s1-terminal/termbench && cargo fmt -- --check && cargo clippy --all-targets -- -D warnings)

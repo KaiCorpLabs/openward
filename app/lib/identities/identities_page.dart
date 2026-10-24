@@ -106,7 +106,7 @@ class _IdentitiesPageState extends ConsumerState<IdentitiesPage> {
               Expanded(
                 child: Text(
                   l.identitiesNoSecrets,
-                  style: TextStyle(fontSize: 12, color: c.textSubtle),
+                  style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
                 ),
               ),
             ],
@@ -130,7 +130,10 @@ class _IdentitiesPageState extends ConsumerState<IdentitiesPage> {
         key: ValueKey('identity.${i.spec.label}'),
         onTap: () => showIdentityEditor(context, ref, id: i.id),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: OwSpace.s8,
+            vertical: OwSpace.s6,
+          ),
           decoration: BoxDecoration(
             border: Border(top: BorderSide(color: c.border)),
           ),
@@ -152,7 +155,9 @@ class _IdentitiesPageState extends ConsumerState<IdentitiesPage> {
                       Text(l.usualKeys, style: TextStyle(color: c.textMuted)),
                     for (final k in i.keys)
                       Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: OwSpace.hair,
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -181,7 +186,7 @@ class _IdentitiesPageState extends ConsumerState<IdentitiesPage> {
                             Text(
                               keyDetail(l, k),
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: OwText.small,
                                 color: c.textSubtle,
                               ),
                             ),
@@ -212,10 +217,15 @@ class _IdentitiesPageState extends ConsumerState<IdentitiesPage> {
               ]),
               for (final k in missing)
                 Padding(
-                  padding: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.only(top: OwSpace.s4),
                   child: Callout(
                     tone: Tone.warn,
-                    padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+                    padding: const EdgeInsets.fromLTRB(
+                      OwSpace.s6,
+                      OwSpace.s3,
+                      OwSpace.s3,
+                      OwSpace.s3,
+                    ),
                     child: Row(
                       children: [
                         Icon(
@@ -227,7 +237,10 @@ class _IdentitiesPageState extends ConsumerState<IdentitiesPage> {
                         Expanded(
                           child: Text(
                             l.keyMissingWarning(k.path, i.hostCount),
-                            style: TextStyle(fontSize: 12, color: c.warn),
+                            style: TextStyle(
+                              fontSize: OwText.small,
+                              color: c.warn,
+                            ),
                           ),
                         ),
                         TextButton(

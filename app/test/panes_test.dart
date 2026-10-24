@@ -133,4 +133,15 @@ void main() {
     panes.remove(b);
     expect(panes.broadcast, isFalse);
   });
+
+  test('dragging a divider tells only the layout', () {
+    final panes = Panes(null)..split(Axis.horizontal);
+    var everyone = 0, layout = 0;
+    panes.addListener(() => everyone++);
+    panes.sizes.addListener(() => layout++);
+    panes.resize(panes.root as PaneSplit, 0.7);
+    panes.resize(panes.root as PaneSplit, 0.99);
+    expect((everyone, layout), (0, 2));
+    expect((panes.root as PaneSplit).ratio, 0.85, reason: 'kept in bounds');
+  });
 }

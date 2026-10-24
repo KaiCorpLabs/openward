@@ -206,7 +206,7 @@ impl TermEngine for AlacrittyEngine {
         self.listener.with(|p| p.title.clone())
     }
 
-    fn screen_text(&self) -> String {
+    fn screen_text(&mut self) -> String {
         let mut out = Vec::with_capacity(usize::from(self.size.rows));
         for row in 0..self.size.rows {
             let line = &self.term.grid()[self.viewport_line(row)];

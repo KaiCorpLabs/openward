@@ -18,7 +18,7 @@ import 'ui/focus_ring.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   KeyboardMode.watch();
-  registerFontLicenses();
+  registerLicenses();
   // OPENWARD_DATA: another data directory, to try things without touching
   // the real one.
   final dir =

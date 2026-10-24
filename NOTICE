@@ -2,8 +2,17 @@ OpenWard
 Copyright 2026 los autores de OpenWard
 
 Este producto incluye software y recursos de terceros con licencias
-propias. El código de las dependencias aparece en la lista de licencias
-de la app (Ajustes) y en core/deny.toml.
+propias. Sus textos van en la lista de licencias de la app (Ajustes →
+Acerca de): los paquetes de Dart, que lista Flutter, y los del núcleo, en
+app/assets/licenses/core.json, que escribe tool/licenses.sh. Las licencias
+que se aceptan están en core/deny.toml.
+
+El núcleo enlaza libghostty-vt, del proyecto Ghostty (licencia MIT,
+Copyright (c) 2024 Mitchell Hashimoto, Ghostty contributors,
+https://github.com/ghostty-org/ghostty), con lo que lleva dentro: simdutf
+(MIT o Apache-2.0), Highway (Apache-2.0 o BSD-3-Clause), Wuffs (MIT o
+Apache-2.0) y uucode (MIT, con datos de Unicode bajo la licencia Unicode
+v3).
 
 Fuentes incluidas en app/assets/fonts, todas con licencia SIL Open Font
 License 1.1 (el texto de cada una va junto a sus ficheros):

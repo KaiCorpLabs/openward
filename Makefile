@@ -1,7 +1,16 @@
-.PHONY: test lint fmt deny ci ci-quick ci-check bench corpus conformance conformance-record ssh ssh-down clean
+.PHONY: setup package-linux test lint fmt deny ci ci-quick ci-check bench corpus conformance conformance-record ssh ssh-down clean
 
 TERMBENCH := spikes/s1-terminal/termbench
 CORPUS := spikes/s1-terminal/corpus/synthetic
+
+# From a fresh clone: the pinned toolchains and tools, and libghostty-vt
+# (tool/setup.sh says what else the machine needs).
+setup:
+	tool/setup.sh
+
+# A Linux build in a container, from the working tree (app/tool/package-linux.sh).
+package-linux:
+	app/tool/package-linux.sh
 
 # Without the S2 servers the connection tests pass without testing anything.
 test:

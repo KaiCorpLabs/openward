@@ -72,4 +72,50 @@ void main() {
     )..[0] = 9;
     expect(() => decodeFrame(bytes), throwsA(isA<FrameFormatException>()));
   });
+
+  /// The span's text at the longest its u16 length allows (TM-2), and one
+  /// whose length says less than it has: the rest is refused, not read as
+  /// more spans.
+  test('a span as long as its length allows, and one that lies', () {
+    Uint8List frame(String text, {int? claimed}) {
+      final b = BytesBuilder();
+      void u8(int v) => b.addByte(v);
+      void u16(int v) => b.add([v & 0xFF, v >> 8]);
+      void u32(int v) =>
+          b.add([for (var i = 0; i < 4; i++) v >> (8 * i) & 0xFF]);
+      final bytes = utf8.encode(text);
+      u8(kFrameVersion);
+      u8(1); // full
+      u16(300); // cols
+      u16(1); // rows
+      u16(0); // cursor row
+      u16(0); // cursor col
+      u8(0); // block
+      u8(1); // visible
+      u32(0); // display offset
+      u16(1); // one row
+      u16(0); // its index
+      u16(1); // one span
+      u16(0); // col
+      u16(300); // width
+      u32(0); // fg
+      u32(0); // bg
+      u16(0); // attrs
+      u16(claimed ?? bytes.length);
+      b.add(bytes);
+      return b.takeBytes();
+    }
+
+    // Cells of an `e` and 64 marks of 4 bytes each (257 bytes), and as
+    // many `x` as make 65535 bytes.
+    final long = 'e${'\u{E0100}' * 64}' * 254 + 'x' * (65535 - 254 * 257);
+    expect(utf8.encode(long).length, 65535);
+    final decoded = decodeFrame(frame(long));
+    expect(decoded.lines.single.spans.single.text, long);
+
+    expect(
+      () => decodeFrame(frame(long, claimed: (65535 + 1) & 0xFFFF)),
+      throwsA(isA<FrameFormatException>()),
+    );
+  });
 }

@@ -171,7 +171,7 @@ class _HomeState extends ConsumerState<Home> {
           const SizedBox(width: 6),
         if (mode == SidebarMode.hidden)
           Padding(
-            padding: const EdgeInsets.only(right: 4),
+            padding: const EdgeInsets.only(right: OwSpace.s2),
             child: IconButton(
               key: const ValueKey('tabs.showSidebar'),
               tooltip: withKeys(l.showSidebar, sidebarKeys(l)),
@@ -598,7 +598,7 @@ class _PeekEdgeState extends ConsumerState<_PeekEdge> {
   @override
   Widget build(BuildContext context) => MouseRegion(
     onEnter: (_) => _wait = Timer(
-      const Duration(milliseconds: 150),
+      OwMotion.hoverIntent,
       () => ref.read(sidebarProvider.notifier).setPeek(true),
     ),
     onExit: (_) => _wait?.cancel(),
@@ -632,7 +632,7 @@ class _PeekState extends ConsumerState<_Peek> {
     return MouseRegion(
       onEnter: (_) => _leave?.cancel(),
       onExit: (_) => _leave = Timer(
-        const Duration(milliseconds: 300),
+        OwMotion.hoverLeave,
         () => ref.read(sidebarProvider.notifier).setPeek(false),
       ),
       child: CallbackShortcuts(

@@ -907,13 +907,13 @@ async fn download_item(
         .filter(|&s| s <= size)
         .unwrap_or(0);
     let local_err = |e: std::io::Error| Error::local(&part, &e);
-    let mut file = tokio::fs::OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(false)
-        .open(&part)
-        .await
-        .map_err(local_err)?;
+    let mut open = tokio::fs::OpenOptions::new();
+    open.create(true).write(true).truncate(false);
+    // Born as private as the server's copy: a key is never readable by
+    // others here, not even while it downloads.
+    #[cfg(unix)]
+    open.mode(item.mode.map_or(0o666, |m| 0o600 | (m & 0o066)));
+    let mut file = open.open(&part).await.map_err(local_err)?;
     file.set_len(offset).await.map_err(local_err)?;
     tokio::io::AsyncSeekExt::seek(&mut file, std::io::SeekFrom::Start(offset))
         .await
@@ -948,18 +948,23 @@ async fn download_item(
     Ok(false)
 }
 
-/// A downloaded program stays runnable: execute goes wherever reading is,
-/// when the server's copy had it. The rest is left to the local umask.
+/// The local umask, narrowed to what the server's copy lets group and
+/// others do (a `.part` resumed from before keeps what it was born with);
+/// and a program stays runnable: execute goes wherever reading is, when
+/// the server's copy had it.
 #[cfg(unix)]
 fn set_local_mode(path: &Path, remote_mode: Option<u32>) {
     use std::os::unix::fs::PermissionsExt;
-    if remote_mode.unwrap_or(0) & 0o100 == 0 {
-        return;
-    }
+    let Some(remote) = remote_mode else { return };
     if let Ok(meta) = std::fs::metadata(path) {
-        let mode = meta.permissions().mode();
-        let mode = mode | ((mode & 0o444) >> 2);
-        let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode));
+        let had = meta.permissions().mode() & 0o777;
+        let mut mode = had & (0o700 | (remote & 0o077));
+        if remote & 0o100 != 0 {
+            mode |= (mode & 0o444) >> 2;
+        }
+        if mode != had {
+            let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode));
+        }
     }
 }
 

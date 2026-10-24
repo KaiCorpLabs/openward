@@ -154,7 +154,7 @@ class _RenameKeyState extends ConsumerState<_RenameKey> {
             const SizedBox(height: 10),
             Text(
               l.keyRenameNote,
-              style: TextStyle(fontSize: 12, color: c.textMuted),
+              style: TextStyle(fontSize: OwText.small, color: c.textMuted),
             ),
           ],
         ),
@@ -268,7 +268,7 @@ class _PassphraseState extends ConsumerState<_Passphrase> {
             const SizedBox(height: 10),
             Text(
               l.keyPassphraseEmpty,
-              style: TextStyle(fontSize: 12, color: c.textMuted),
+              style: TextStyle(fontSize: OwText.small, color: c.textMuted),
             ),
             if (_error case final e?) ...[
               const SizedBox(height: 10),

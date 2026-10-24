@@ -29,12 +29,12 @@ class _TermiusConsent extends StatelessWidget {
             const SizedBox(height: 6),
             for (final item in items)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
+                padding: const EdgeInsets.symmetric(vertical: OwSpace.s1),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.only(top: 2),
+                      padding: const EdgeInsets.only(top: OwSpace.s1),
                       child: Icon(
                         brings ? Icons.check : Icons.close,
                         size: 14,
@@ -92,13 +92,13 @@ class _TermiusConsent extends StatelessWidget {
               const SizedBox(height: 16),
               Callout(
                 tone: Tone.info,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(OwSpace.s6),
                 child: Text(l.termiusReadOnly),
               ),
               const SizedBox(height: 8),
               Callout(
                 tone: Tone.warn,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(OwSpace.s6),
                 child: Text(l.termiusUnofficial),
               ),
             ],

@@ -12,6 +12,7 @@ import '../sftp/queue_view.dart';
 import '../terminal/controller.dart';
 import '../terminal/keys.dart';
 import '../src/rust/api/vault.dart' show EnvironmentView;
+import '../ui/confirm.dart';
 import '../ui/environment.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
@@ -66,7 +67,9 @@ class TabStrip extends ConsumerWidget {
               ? null
               : Border(bottom: BorderSide(color: ow.colors.border)),
         ),
-        padding: EdgeInsets.only(left: style == TabStyle.block ? 0 : 6),
+        padding: EdgeInsets.only(
+          left: style == TabStyle.block ? 0 : OwSpace.s3,
+        ),
         child: Row(
           crossAxisAlignment: align,
           children: [
@@ -93,9 +96,9 @@ class TabStrip extends ConsumerWidget {
                     ),
                     Padding(
                       padding: EdgeInsets.only(
-                        left: 2,
-                        bottom: style == TabStyle.folder ? 3 : 0,
-                        top: style == TabStyle.block ? 4 : 0,
+                        left: OwSpace.s1,
+                        bottom: style == TabStyle.folder ? OwSpace.s1 : 0,
+                        top: style == TabStyle.block ? OwSpace.s2 : 0,
                       ),
                       child: IconButton(
                         tooltip: withKeys(
@@ -134,36 +137,18 @@ class TabStrip extends ConsumerWidget {
     final tab = ref.read(tabsProvider).tabs[index];
     if (tab is! SessionTab) return;
     final l = context.l10n;
-    final field = TextEditingController(
-      text: tab.controller?.displayTitle ?? '',
+    final name = await askText(
+      context,
+      title: l.renameTabTitle,
+      action: l.rename,
+      initial: tab.controller?.displayTitle ?? '',
+      help: l.renameTabHelp,
     );
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l.renameTabTitle),
-        content: SizedBox(
-          width: 360,
-          child: TextField(
-            controller: field,
-            autofocus: true,
-            decoration: InputDecoration(helperText: l.renameTabHelp),
-            onSubmitted: (v) => Navigator.pop(context, v),
-          ),
-        ),
-        actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, field.text),
-            child: Text(l.rename),
-          ),
-        ],
-      ),
-    );
-    field.dispose();
-    if (name != null) ref.read(tabsProvider.notifier).rename(index, name);
+    // Where the tab is now: others may have closed or moved meanwhile.
+    final at = ref.read(tabsProvider).tabs.indexOf(tab);
+    if (name != null && at >= 0) {
+      ref.read(tabsProvider.notifier).rename(at, name);
+    }
   }
 }
 
@@ -311,7 +296,9 @@ class _TabRowState extends ConsumerState<_TabRow> {
                             width: 3,
                             decoration: BoxDecoration(
                               color: c.accent,
-                              borderRadius: BorderRadius.circular(2),
+                              borderRadius: BorderRadius.circular(
+                                context.ow.shape.radiusSmall,
+                              ),
                             ),
                           ),
                         ),
@@ -432,9 +419,16 @@ class _NewTabDrop extends ConsumerWidget {
                     : IgnorePointer(
                         child: Container(
                           key: const ValueKey('tabs.newTabDrop'),
-                          margin: const EdgeInsets.fromLTRB(6, 5, 6, 5),
+                          margin: const EdgeInsets.fromLTRB(
+                            OwSpace.s3,
+                            OwSpace.s2,
+                            OwSpace.s3,
+                            OwSpace.s2,
+                          ),
                           alignment: Alignment.center,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: OwSpace.s4,
+                          ),
                           decoration: BoxDecoration(
                             color: c.accentSoft.withValues(alpha: 0.6),
                             border: Border.all(color: c.accent, width: 1.5),
@@ -452,7 +446,7 @@ class _NewTabDrop extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: c.accentText,
-                              fontSize: 12,
+                              fontSize: OwText.small,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -541,14 +535,18 @@ PopupMenuItem<VoidCallback> menuHint(BuildContext context, String text) {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 1),
+            padding: const EdgeInsets.only(top: OwSpace.hair),
             child: Icon(Icons.open_with, size: 13, color: c.textSubtle),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
-              style: TextStyle(fontSize: 12, color: c.textSubtle, height: 1.35),
+              style: TextStyle(
+                fontSize: OwText.small,
+                color: c.textSubtle,
+                height: 1.35,
+              ),
             ),
           ),
         ],
@@ -702,7 +700,7 @@ class _Tab extends ConsumerWidget {
     final decoration = switch (style) {
       TabStyle.pill => BoxDecoration(
         color: active ? c.primary : c.raised,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(context.ow.shape.round),
         border: active ? null : Border.all(color: c.border),
       ),
       TabStyle.block => BoxDecoration(
@@ -746,7 +744,10 @@ class _Tab extends ConsumerWidget {
             onDoubleTap: onRename,
             child: Container(
               constraints: const BoxConstraints(minWidth: 96, maxWidth: 220),
-              padding: const EdgeInsets.only(left: 12, right: 2),
+              padding: const EdgeInsets.only(
+                left: OwSpace.s6,
+                right: OwSpace.s1,
+              ),
               decoration: decoration,
               child: IconTheme.merge(
                 data: IconThemeData(color: fg),
@@ -757,7 +758,7 @@ class _Tab extends ConsumerWidget {
                     const SizedBox(width: 8),
                     if (bell)
                       Padding(
-                        padding: const EdgeInsets.only(right: 4),
+                        padding: const EdgeInsets.only(right: OwSpace.s2),
                         child: Tooltip(
                           message: l.bellRang,
                           child: Icon(
@@ -769,7 +770,7 @@ class _Tab extends ConsumerWidget {
                       ),
                     if (waiting)
                       Padding(
-                        padding: const EdgeInsets.only(right: 4),
+                        padding: const EdgeInsets.only(right: OwSpace.s2),
                         child: Tooltip(
                           message: l.waitingForYou,
                           child: Icon(
@@ -786,7 +787,7 @@ class _Tab extends ConsumerWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: OwText.body,
                             color: fg,
                             fontWeight: active
                                 ? FontWeight.w500
@@ -797,7 +798,7 @@ class _Tab extends ConsumerWidget {
                     ),
                     if (env != null)
                       Padding(
-                        padding: const EdgeInsets.only(left: 6),
+                        padding: const EdgeInsets.only(left: OwSpace.s3),
                         child: ExcludeSemantics(child: EnvChip(env)),
                       ),
                     // On the active tab, and on the others under the pointer;
@@ -847,11 +848,7 @@ class _Tab extends ConsumerWidget {
       );
     }
     if (hint == null) return tab;
-    return Tooltip(
-      message: hint,
-      waitDuration: const Duration(milliseconds: 700),
-      child: tab,
-    );
+    return Tooltip(message: hint, waitDuration: OwMotion.hint, child: tab);
   }
 }
 

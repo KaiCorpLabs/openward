@@ -206,6 +206,48 @@ async fn socks5_by_name_and_with_a_password() {
     assert!(err.to_string().contains("connection refused"), "{err:#}");
 }
 
+/// A proxy that answers `script` to whatever it hears, then hangs up.
+async fn scripted_proxy(script: &'static [u8]) -> u16 {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    tokio::spawn(async move {
+        while let Ok((mut s, _)) = listener.accept().await {
+            tokio::spawn(async move {
+                let _ = s.write_all(script).await;
+                let _ = s.shutdown().await;
+                let _ = tokio::io::copy(&mut s, &mut tokio::io::sink()).await;
+            });
+        }
+    });
+    port
+}
+
+/// A SOCKS5 proxy that says something else, or stops halfway, is an
+/// error with its address, not a hang or a panic.
+#[tokio::test]
+async fn malformed_socks5_replies_fail() {
+    let cases: &[(&[u8], &str)] = &[
+        (b"", "early eof"),
+        (&[4, 0], "not SOCKS5"),
+        (&[5, 0, 5, 9, 0, 1, 0, 0, 0, 0, 0, 0], "general failure"),
+        (&[5, 0, 5, 0, 0, 9, 0, 0], "bad reply"),
+        (&[5, 0, 5, 0, 0, 1, 127, 0], "early eof"),
+        (&[5, 0, 5, 0, 0, 3, 200, b'a'], "early eof"),
+    ];
+    for (script, said) in cases {
+        let p = proxy(ProxyKind::Socks5, scripted_proxy(script).await, None, None);
+        let err = proxy::connect(&p, "echo.test", 22).await.unwrap_err();
+        assert!(format!("{err:#}").contains(said), "{script:?}: {err:#}");
+    }
+    // A way to authenticate we did not offer, or user/password without one.
+    for script in [&[5u8, 0x80][..], &[5, 2]] {
+        let p = proxy(ProxyKind::Socks5, scripted_proxy(script).await, None, None);
+        assert!(auth_required(
+            &proxy::connect(&p, "echo.test", 22).await.unwrap_err()
+        ));
+    }
+}
+
 /// Logged or shown in an error, a proxy says who and where, never its
 /// password.
 #[test]

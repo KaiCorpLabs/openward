@@ -253,7 +253,12 @@ class _PreviewState extends State<_Preview> {
           _box(context, [
             Container(
               color: c.sunken,
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+              padding: const EdgeInsets.fromLTRB(
+                OwSpace.s6,
+                OwSpace.s4,
+                OwSpace.s6,
+                OwSpace.s4,
+              ),
               child: SectionLabel(l.previewKeys),
             ),
             for (final k in _p.keys) _key(context, k),
@@ -263,7 +268,7 @@ class _PreviewState extends State<_Preview> {
           const SizedBox(height: 16),
           Callout(
             tone: Tone.info,
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(OwSpace.s6),
             child: Text(l.previewNoPasswords(_p.passwords + _p.passphrases)),
           ),
         ],
@@ -353,7 +358,7 @@ class _PreviewState extends State<_Preview> {
         color: header ? c.sunken : null,
         border: header ? null : Border(top: BorderSide(color: c.border)),
       ),
-      padding: EdgeInsets.only(left: 4.0 + depth * 22, right: 12),
+      padding: EdgeInsets.only(left: 4.0 + depth * 22, right: OwSpace.s6),
       constraints: const BoxConstraints(minHeight: 36),
       child: Row(
         children: [
@@ -375,7 +380,7 @@ class _PreviewState extends State<_Preview> {
           ),
           if (group)
             Padding(
-              padding: const EdgeInsets.only(right: 6),
+              padding: const EdgeInsets.only(right: OwSpace.s3),
               child: Icon(Icons.folder_outlined, size: 15, color: c.textSubtle),
             ),
           Flexible(
@@ -399,19 +404,19 @@ class _PreviewState extends State<_Preview> {
                 overflow: TextOverflow.ellipsis,
                 style: mono
                     ? monoStyle(context, size: 12)
-                    : TextStyle(fontSize: 12, color: c.textSubtle),
+                    : TextStyle(fontSize: OwText.small, color: c.textSubtle),
               ),
             ),
           ] else
             const Spacer(),
           for (final b in badges)
             Padding(
-              padding: const EdgeInsets.only(left: 6),
+              padding: const EdgeInsets.only(left: OwSpace.s3),
               child: Pill(b, tone: PillTone.neutral),
             ),
           if (trailing != null)
             Padding(
-              padding: const EdgeInsets.only(left: 8),
+              padding: const EdgeInsets.only(left: OwSpace.s4),
               child: Text(trailing, style: monoStyle(context, size: 12)),
             ),
         ],
@@ -428,12 +433,17 @@ class _PreviewState extends State<_Preview> {
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: c.border)),
       ),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      padding: const EdgeInsets.fromLTRB(
+        OwSpace.s6,
+        OwSpace.s5,
+        OwSpace.s6,
+        OwSpace.s5,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.only(top: OwSpace.s1),
             child: Icon(
               found != null ? Icons.check : Icons.warning_amber_rounded,
               size: 15,
@@ -465,11 +475,11 @@ class _PreviewState extends State<_Preview> {
                   found != null
                       ? l.previewKeyFound(found)
                       : l.previewKeyMissing(k.usedBy),
-                  style: TextStyle(fontSize: 12, color: c.textMuted),
+                  style: TextStyle(fontSize: OwText.small, color: c.textMuted),
                 ),
                 if (found == null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.only(top: OwSpace.s2),
                     child: CheckboxListTile(
                       dense: true,
                       contentPadding: EdgeInsets.zero,
@@ -482,7 +492,7 @@ class _PreviewState extends State<_Preview> {
                       ),
                       title: Text(
                         l.previewSaveKey(k.saveAs),
-                        style: const TextStyle(fontSize: 12),
+                        style: const TextStyle(fontSize: OwText.small),
                       ),
                     ),
                   ),

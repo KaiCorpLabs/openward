@@ -8,6 +8,7 @@ use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Mutex, OnceLock, Weak};
 use std::time::{Duration, Instant};
 
+use openward_app::alive::Timing;
 use openward_app::events::{
     CertProblem, ChangedKey, Connected, Health, KeySource, NetCause, Persistence, PreviousKey,
     Trust,
@@ -427,11 +428,15 @@ fn a_server_that_stops_answering_is_noticed_in_seconds() {
     term.text("echo ready-$((6*7))\n");
     wait_for(&term, "ready-42");
     let paused = Paused::new("s2-freeze");
+    // The host's keepalive is the default: the bounds follow from it, with
+    // room for a machine busy with the other tests.
+    let t = Timing::from_keepalive(Some(Duration::from_secs(10))).unwrap();
+    let slack = Duration::from_secs(5);
     let start = Instant::now();
     let mut stalled = None;
     let lost = loop {
-        let left = Duration::from_secs(40).saturating_sub(start.elapsed());
-        match rx.recv_timeout(left).expect("not given up in 40 s") {
+        let left = (t.every + t.lost_after + slack * 2).saturating_sub(start.elapsed());
+        match rx.recv_timeout(left).expect("not given up in time") {
             Event::Health(Health::Stalled { .. }) => stalled = Some(start.elapsed()),
             Event::Reconnecting { reason, .. } => break (start.elapsed(), reason),
             Event::Closed { failure, .. } => panic!("gave up: {failure:?}"),
@@ -441,15 +446,20 @@ fn a_server_that_stops_answering_is_noticed_in_seconds() {
     let stalled = stalled.expect("never said it did not respond");
     // A question every 10 s; no answer for 5 s: stalled; for 20 s: lost.
     assert!(
-        stalled <= Duration::from_secs(16),
+        stalled <= t.every + t.stalled_after + slack,
         "stalled after {stalled:?}"
     );
-    assert!(lost.0 <= Duration::from_secs(31), "lost after {:?}", lost.0);
+    assert!(
+        lost.0 <= t.every + t.lost_after + slack,
+        "lost after {:?}",
+        lost.0
+    );
+    let silent = t.lost_after.as_secs() as u32;
     assert!(
         matches!(
             &lost.1,
-            Failure::Network { message, cause: NetCause::Silent(20), .. }
-                if message == "no answer for 20 s"
+            Failure::Network { message, cause: NetCause::Silent(s), .. }
+                if *s == silent && *message == format!("no answer for {silent} s")
         ),
         "{:?}",
         lost.1
@@ -1711,13 +1721,21 @@ fn tunnels_open_with_the_terminal() {
     assert_eq!(f.state(manual), TunnelState::Closed);
 
     // Opened by hand while the terminal is up: no password again.
-    let rx = f.open_tunnel(manual, |p| panic!("asked again: {p:?}"));
-    outcome(&rx).0.unwrap();
+    let opened = f.open_tunnel(manual, |p| panic!("asked again: {p:?}"));
+    outcome(&opened).0.unwrap();
 
-    // The terminal goes; the tunnels keep the connection.
+    // The terminal goes (its shell, then the terminal itself); the tunnels
+    // keep the connection.
     term.text("exit\n");
+    let deadline = Instant::now() + Duration::from_secs(15);
+    loop {
+        let left = deadline.saturating_duration_since(Instant::now());
+        if let Event::Closed { .. } = rx.recv_timeout(left).expect("the shell did not end") {
+            break;
+        }
+    }
     drop(term);
-    std::thread::sleep(Duration::from_millis(300));
+    assert!(matches!(f.state(auto), TunnelState::Open { .. }));
     let mut s = std::net::TcpStream::connect(("127.0.0.1", port)).unwrap();
     assert!(banner(&mut s).starts_with("SSH-2.0-OpenSSH"));
     drop(taken);

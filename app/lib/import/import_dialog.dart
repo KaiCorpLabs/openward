@@ -154,7 +154,7 @@ class _OriginState extends State<_Origin> {
     final ssh = widget.sshConfig;
     final existing = ssh.where((p) => p.existing).length;
     Widget row(Widget tile, String title, String sub, Widget action) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: OwSpace.s4),
       child: Row(
         children: [
           tile,
@@ -168,7 +168,10 @@ class _OriginState extends State<_Origin> {
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
-                Text(sub, style: TextStyle(fontSize: 12, color: c.textMuted)),
+                Text(
+                  sub,
+                  style: TextStyle(fontSize: OwText.small, color: c.textMuted),
+                ),
               ],
             ),
           ),
@@ -293,7 +296,7 @@ class _OriginState extends State<_Origin> {
                 const SizedBox(width: 8),
                 Text(
                   l.dropToImport,
-                  style: TextStyle(fontSize: 12, color: c.textSubtle),
+                  style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
                 ),
               ],
             ),
@@ -315,7 +318,7 @@ class _OriginState extends State<_Origin> {
             Expanded(
               child: Text(
                 l.passwordsNever,
-                style: TextStyle(fontSize: 12, color: c.textSubtle),
+                style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
               ),
             ),
             const SizedBox(width: 12),
