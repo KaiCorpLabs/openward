@@ -42,6 +42,7 @@ pub fn defaults() -> Settings {
         legacy_host_keys: Some(false),
         environment: Some(Environment::None),
         read_os_release: Some(false),
+        session_log: Some(false),
         ..Settings::default()
     }
 }

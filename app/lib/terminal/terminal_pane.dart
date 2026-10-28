@@ -297,7 +297,8 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   /// The screen as the command line tracker reads it.
   late final LineScreen _screen = _SessionScreen(_session);
 
-  /// Follows the command line, and at Enter keeps what ran in the history.
+  /// Follows the command line, and at Enter keeps what ran in the history
+  /// and marks it in the session's recording.
   void _track(int hid, int mods, String text) {
     final line = _c.line;
     final held = mods & (Mods.shift | Mods.ctrl | Mods.alt | Mods.superKey);
@@ -306,7 +307,9 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
       return;
     }
     final command = line.enter(_screen, altScreen: _c.altScreen);
-    if (command != null && ref.read(settingsProvider).commandHistory) {
+    if (command == null) return;
+    _session.logCommand(command: command);
+    if (ref.read(settingsProvider).commandHistory) {
       ref.read(historyProvider.notifier).add(command, _c);
     }
   }

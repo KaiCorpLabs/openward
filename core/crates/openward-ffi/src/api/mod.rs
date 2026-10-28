@@ -4,6 +4,7 @@ pub mod app;
 pub mod identities;
 pub mod keychain;
 pub mod known_hosts;
+pub mod logs;
 pub mod programs;
 pub mod session;
 pub mod sftp;

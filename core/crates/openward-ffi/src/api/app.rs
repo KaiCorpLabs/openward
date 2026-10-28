@@ -330,6 +330,14 @@ impl OpenWard {
         self.app.set_read_os_release_everywhere(enabled);
     }
 
+    /// Records the session log of the hosts that do not say otherwise, and
+    /// of addresses typed by hand, on this device; from Ajustes, at start
+    /// and on change.
+    #[frb(sync)]
+    pub fn set_session_log_everywhere(&self, enabled: bool) {
+        self.app.set_session_log_everywhere(enabled);
+    }
+
     /// Makes a host a favorite (the last one) or not.
     pub fn set_favorite(&self, id: String, favorite: bool) -> Result<(), VaultError> {
         let hid = super::vault::id(&id)?;

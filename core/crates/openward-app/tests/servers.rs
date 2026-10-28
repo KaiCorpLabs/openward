@@ -2065,3 +2065,155 @@ fn keys_of_another_type_are_asked_about_even_with_accept_new() {
     );
     assert!(f.app.vault().known_hosts().is_empty(), "not trusted");
 }
+
+/// Waits for the session to end, as the shell's exit ends it.
+fn closed(rx: &Receiver<Event>) -> (Option<u32>, Option<Failure>) {
+    loop {
+        if let Event::Closed { exit_code, failure } = rx
+            .recv_timeout(Duration::from_secs(10))
+            .expect("no end in 10 s")
+        {
+            return (exit_code, failure);
+        }
+    }
+}
+
+fn recorded_output(logs: &openward_app::Logs, id: &str) -> String {
+    logs.read(id)
+        .unwrap()
+        .events
+        .into_iter()
+        .filter_map(|(_, e)| match e {
+            openward_app::logs::cast::Event::Output(s) => Some(s),
+            _ => None,
+        })
+        .collect()
+}
+
+/// What came out is in the session log, and a password typed with the
+/// echo off (as `sudo` and `read -s` ask for them) never is.
+#[test]
+fn a_session_log_keeps_what_was_seen_never_a_hidden_password() {
+    let f = Fixture::new(servers!());
+    let host = f.host(
+        "bastion",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: f.key("id_ed25519"),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            session_log: Some(true),
+            ..Settings::default()
+        },
+    );
+    let (term, rx) = f.connect(host, |_| Answer::Cancel);
+    outcome(&rx).0.unwrap();
+    let state = term.log_state().expect("a log from the start");
+    assert!(state.recording && !state.paused);
+
+    term.log_command("echo visible-$((6*7))");
+    term.text("echo visible-$((6*7))\n");
+    wait_for(&term, "visible-42");
+    term.text("stty -echo; echo ready-$((1+1)); read -r s; stty echo; echo got-${#s}\n");
+    wait_for(&term, "ready-2");
+    term.text("hunter2-secret\n");
+    wait_for(&term, "got-14");
+    term.text("exit\n");
+    assert_eq!(closed(&rx), (Some(0), None));
+    assert!(term.log_state().is_none());
+
+    let logs = f.app.logs();
+    let [entry] = logs.list().try_into().unwrap();
+    assert_eq!(entry.id, state.id);
+    assert_eq!(entry.end, openward_app::logs::End::Closed);
+    assert_eq!(entry.label, "bastion");
+    assert_eq!(entry.address, format!("demo@127.0.0.1:{BASTION}"));
+    assert_eq!(entry.commands, 1);
+    assert!(entry.recorded && entry.bytes > 0);
+    let out = recorded_output(logs, &entry.id);
+    assert!(
+        out.contains("visible-42") && out.contains("got-14"),
+        "{out}"
+    );
+    assert!(!out.contains("hunter2"), "the hidden password was recorded");
+    let text: Vec<String> = logs
+        .text(&entry.id)
+        .unwrap()
+        .into_iter()
+        .map(|(_, l)| l)
+        .collect();
+    assert!(text.iter().any(|l| l == "visible-42"), "{text:?}");
+    assert!(!text.iter().any(|l| l.contains("hunter2")));
+}
+
+/// Hosts record when they or their defaults say so: by default only the
+/// entry is kept; «everywhere» on this device turns it on, and a host
+/// that says no keeps saying no.
+#[test]
+fn a_host_records_when_its_settings_say_so() {
+    let f = Fixture::new(servers!());
+    let plain = bastion_host(&f, None);
+    let never = f.host(
+        "never",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: f.key("id_ed25519"),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            session_log: Some(false),
+            ..Settings::default()
+        },
+    );
+    let session = |host| {
+        let (term, rx) = f.connect(host, |_| Answer::Cancel);
+        outcome(&rx).0.unwrap();
+        let id = term.log_state().unwrap().id;
+        term.text("echo hola-$((2+3)); exit\n");
+        assert_eq!(closed(&rx).1, None);
+        f.app.logs().entry(&id).unwrap()
+    };
+    assert!(!session(plain).recorded);
+    f.app.set_read_os_release_everywhere(true);
+    f.app.set_session_log_everywhere(true);
+    let entry = session(plain);
+    assert!(entry.recorded);
+    assert!(recorded_output(f.app.logs(), &entry.id).contains("hola-5"));
+    assert!(!session(never).recorded);
+    // The other device default stays.
+    assert_eq!(f.app.vault().device_defaults().read_os_release, Some(true));
+    assert_eq!(f.app.logs().list().len(), 3);
+}
+
+/// A local terminal is recorded only when this device asks for it.
+#[test]
+fn a_local_shell_is_recorded_when_asked() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = App::open_as(&dir.path().join("data"), Local::from_env()).unwrap();
+    let run = |echo: &str| {
+        let (tx, rx) = channel();
+        let ui = Arc::new(Ui {
+            app: OnceLock::new(),
+            tx: Mutex::new(tx),
+            reply: Box::new(|_| Answer::Cancel),
+        });
+        let term = app.terminal(80, 24, 1000);
+        app.open_local(&term, Some("/bin/sh".into()), ui).unwrap();
+        let id = term.log_state().unwrap().id;
+        term.text(&format!("echo {echo}-$((40+2)); exit 3\n"));
+        assert_eq!(closed(&rx), (Some(3), None));
+        app.logs().entry(&id).unwrap()
+    };
+    let entry = run("off");
+    assert_eq!(entry.place, openward_app::logs::Place::Local);
+    assert!(!entry.recorded);
+    app.logs().set_config(openward_app::logs::Config {
+        record_local: true,
+        ..app.logs().config()
+    });
+    let entry = run("on");
+    assert!(entry.recorded);
+    assert_eq!(entry.end, openward_app::logs::End::Closed);
+    assert!(recorded_output(app.logs(), &entry.id).contains("on-42"));
+}

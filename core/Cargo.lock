@@ -1659,6 +1659,7 @@ version = "0.3.2-beta.7"
 dependencies = [
  "anyhow",
  "data-encoding",
+ "flate2",
  "futures",
  "hmac",
  "openward-ghostty",
@@ -1669,6 +1670,8 @@ dependencies = [
  "openward-term",
  "openward-vault",
  "rand",
+ "serde",
+ "serde_json",
  "sha1",
  "ssh-key",
  "tempfile",

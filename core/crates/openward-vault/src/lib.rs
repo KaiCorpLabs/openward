@@ -480,11 +480,15 @@ impl Vault {
         users
     }
 
-    /// This device's defaults (only `read_os_release` so far): they go over
-    /// the built-in ones, and groups, identities and hosts over them. Their
-    /// origin is [`Origin::Default`].
+    /// This device's defaults (`read_os_release` and `session_log` so far):
+    /// they go over the built-in ones, and groups, identities and hosts
+    /// over them. Their origin is [`Origin::Default`].
     pub fn set_device_defaults(&mut self, device: Settings) {
         self.device = device;
+    }
+
+    pub fn device_defaults(&self) -> &Settings {
+        &self.device
     }
 
     /// The settings a connection to `host` uses, and where each came from.

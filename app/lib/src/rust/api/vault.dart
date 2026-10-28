@@ -607,6 +607,9 @@ class SettingsSpec {
   /// Read `/etc/os-release` after connecting (it runs a command).
   final bool? readOsRelease;
 
+  /// Record what comes out on the screen in the session log.
+  final bool? sessionLog;
+
   const SettingsSpec({
     this.user,
     this.port,
@@ -637,6 +640,7 @@ class SettingsSpec {
     this.environmentShort = r"",
     this.environmentColor = r"",
     this.readOsRelease = null,
+    this.sessionLog = null,
   });
 
   static Future<SettingsSpec> default_() =>
@@ -672,7 +676,8 @@ class SettingsSpec {
       environmentName.hashCode ^
       environmentShort.hashCode ^
       environmentColor.hashCode ^
-      readOsRelease.hashCode;
+      readOsRelease.hashCode ^
+      sessionLog.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -707,7 +712,8 @@ class SettingsSpec {
           environmentName == other.environmentName &&
           environmentShort == other.environmentShort &&
           environmentColor == other.environmentColor &&
-          readOsRelease == other.readOsRelease;
+          readOsRelease == other.readOsRelease &&
+          sessionLog == other.sessionLog;
 }
 
 enum SystemKind {

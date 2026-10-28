@@ -17,6 +17,10 @@ openward-ssh = { path = "../openward-ssh" }
 openward-term = { path = "../openward-term" }
 openward-vault = { path = "../openward-vault" }
 anyhow = "1"
+# Session logs: gzip for the recordings, JSON for asciicast and their notes.
+flate2 = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 # Makes keys (the keychain); the same versions russh uses, with RSA.
 rand = { version = "0.10", features = ["thread_rng"] }
 ssh-key = { version = "=0.7.0-rc.11", features = ["rsa", "rand_core", "encryption"] }

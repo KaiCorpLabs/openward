@@ -7,6 +7,7 @@ import '../frb_generated.dart';
 import 'identities.dart';
 import 'keychain.dart';
 import 'known_hosts.dart';
+import 'logs.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
@@ -93,9 +94,21 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// parent; a host other hosts jump through cannot go.
   Future<void> delete({required String id});
 
+  /// Every session but those going on, saved ones too; how many went.
+  Future<int> deleteAllLogs();
+
   /// Deletes a key of `~/.ssh` and its `.pub` and certificate; None if
   /// it went.
   Future<SshKeyFailure?> deleteKey({required String path});
+
+  /// False for a session still going on.
+  Future<bool> deleteLog({required String id});
+
+  Future<void> exportLog({
+    required String id,
+    required String path,
+    required LogFormat format,
+  });
 
   /// Forgets a key: OpenWard's, or the line of the file if it still reads
   /// `text` (a copy of the file goes to `known_hosts.old` first).
@@ -188,6 +201,22 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// The `known_hosts` file OpenWard reads, as the UI names it.
   String knownHostsFile();
 
+  LogEntry? log({required String id});
+
+  /// The `index`th command (from 0) of a recording, with what came out
+  /// of it, as text.
+  Future<String> logCommandText({required String id, required int index});
+
+  /// Every session, the newest first.
+  List<LogEntry> logs();
+
+  LogsConfig logsConfig();
+
+  /// The folder the logs are in, to show it.
+  String logsDir();
+
+  LogsUsage logsUsage();
+
   /// Opens or creates the app's data in `data_dir` (the platform's
   /// application support directory).
   static Future<OpenWard> open({required String dataDir}) =>
@@ -196,6 +225,9 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// Runs the user's shell on this machine in `session`. In Dart this
   /// returns the stream of its events (the end, with its exit code).
   Stream<SessionEvent> openLocal({required TerminalSession session});
+
+  /// A player for a recording, at its start.
+  Future<LogPlayer> openLog({required String id, required int scrollback});
 
   /// Opens a tunnel, connecting to its host if needed. The stream is that
   /// connection's events (questions, and `connected` once it listens).
@@ -277,15 +309,31 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   void resumeTransfer({required BigInt id});
 
+  /// Keeps a session for good with a note, or changes its note.
+  Future<void> saveLog({required String id, required String note});
+
   /// Ids of the hosts matching every word, sorted by label.
   List<String> search({required String query});
+
+  /// Looks for `query` (ignoring case) in what was seen, the newest
+  /// sessions first; each one with matches comes on the stream as it is
+  /// found, and the stream ends with the search.
+  Stream<LogFound> searchLogs({required String query});
 
   /// Makes a host a favorite (the last one) or not.
   Future<void> setFavorite({required String id, required bool favorite});
 
+  /// From Ajustes, at start and on change; the limits apply at once.
+  void setLogsConfig({required LogsConfig config});
+
   /// Reads `/etc/os-release` after connecting to the hosts that do not
   /// say otherwise, on this device; from Ajustes, at start and on change.
   void setReadOsReleaseEverywhere({required bool enabled});
+
+  /// Records the session log of the hosts that do not say otherwise, and
+  /// of addresses typed by hand, on this device; from Ajustes, at start
+  /// and on change.
+  void setSessionLogEverywhere({required bool enabled});
 
   /// A new SFTP browser, not connected yet.
   SftpBrowser sftp();
@@ -330,6 +378,9 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// Items this version cannot read, written by a newer one: they stay
   /// in the vault as they are, but the app does not show them.
   int unreadableItems();
+
+  /// Lets the limits delete it again.
+  Future<void> unsaveLog({required String id});
 
   Future<BigInt> updateGroup({
     required String id,
@@ -386,6 +437,10 @@ abstract class OpenWard implements RustOpaqueInterface {
     required String identityId,
     required List<String> choosers,
   });
+
+  /// An event each time sessions begin, end, change or go: read them
+  /// again then.
+  Stream<bool> watchLogs();
 
   /// Every saved tunnel with its state now, by name.
   /// An event each time a tunnel opens, closes or fails, or a local

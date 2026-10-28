@@ -1035,6 +1035,42 @@ impl TerminalSession {
     pub fn close(&self) {
         self.term.close();
     }
+
+    /// A command ran (the UI saw it at Enter): a marker in the session's
+    /// recording, to jump to it.
+    #[frb(sync)]
+    pub fn log_command(&self, command: String) {
+        self.term.log_command(&command);
+    }
+
+    /// Stops recording what comes out, or starts again. False when there
+    /// is no recording, or it already was so.
+    #[frb(sync)]
+    pub fn pause_log(&self, paused: bool) -> bool {
+        self.term.pause_log(paused)
+    }
+
+    /// The session log kept now, if any.
+    #[frb(sync)]
+    pub fn log_state(&self) -> Option<LogStateView> {
+        self.term.log_state().map(|s| LogStateView {
+            id: s.id,
+            recording: s.recording,
+            paused: s.paused,
+            failed: s.failed,
+        })
+    }
+}
+
+/// A terminal's session log, as its pane shows it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LogStateView {
+    pub id: String,
+    /// What comes out is recorded, not only the entry.
+    pub recording: bool,
+    pub paused: bool,
+    /// Writing failed (in English, for «Detalles»): nothing more is kept.
+    pub failed: Option<String>,
 }
 
 /// `0xRRGGBB`.

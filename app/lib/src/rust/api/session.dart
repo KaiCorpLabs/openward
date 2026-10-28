@@ -9,7 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `event_view`, `failure_view`, `into_answer`, `packed`, `prompt_view`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DartSink`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<TerminalSession>>
 abstract class TerminalSession implements RustOpaqueInterface {
@@ -45,6 +45,13 @@ abstract class TerminalSession implements RustOpaqueInterface {
   /// The link under a point, in the logical pixels of [`Self::pointer`].
   LinkView? linkAt({required double x, required double y});
 
+  /// A command ran (the UI saw it at Enter): a marker in the session's
+  /// recording, to jump to it.
+  void logCommand({required String command});
+
+  /// The session log kept now, if any.
+  LogStateView? logState();
+
   /// A line of OpenWard's own on the screen (escape sequences allowed),
   /// never sent to the program: where a new shell starts after a cut.
   void note({required String text});
@@ -52,6 +59,10 @@ abstract class TerminalSession implements RustOpaqueInterface {
   /// False, sending nothing, if the text could run commands: confirm and
   /// call again with `allow_unsafe`.
   bool paste({required String text, required bool allowUnsafe});
+
+  /// Stops recording what comes out, or starts again. False when there
+  /// is no recording, or it already was so.
+  bool pauseLog({required bool paused});
 
   void pointer({
     required PointerAction action,
@@ -423,6 +434,39 @@ class LinkView {
           row == other.row &&
           start == other.start &&
           end == other.end;
+}
+
+/// A terminal's session log, as its pane shows it.
+class LogStateView {
+  final String id;
+
+  /// What comes out is recorded, not only the entry.
+  final bool recording;
+  final bool paused;
+
+  /// Writing failed (in English, for «Detalles»): nothing more is kept.
+  final String? failed;
+
+  const LogStateView({
+    required this.id,
+    required this.recording,
+    required this.paused,
+    this.failed,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^ recording.hashCode ^ paused.hashCode ^ failed.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LogStateView &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          recording == other.recording &&
+          paused == other.paused &&
+          failed == other.failed;
 }
 
 /// With [`FailureKind::Network`]: what kind of trouble.

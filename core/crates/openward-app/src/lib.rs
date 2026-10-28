@@ -14,6 +14,7 @@ pub mod keychain;
 pub mod keys;
 pub mod known;
 pub mod local;
+pub mod logs;
 pub mod plan;
 pub mod programs;
 pub mod sftp;
@@ -36,11 +37,12 @@ use openward_vault::proto::ItemId;
 
 pub use events::{Answer, Event, EventSink, Failure, Prompt};
 pub use local::Local;
+pub use logs::Logs;
 pub use openward_sftp as files;
 pub use openward_vault as vault;
 pub use plan::{Plan, PlanError};
 pub use sftp::Sftp;
-pub use terminal::Terminal;
+pub use terminal::{LogState, Terminal};
 pub use tunnels::{TunnelError, TunnelState};
 
 use alive::Timing;
@@ -61,6 +63,7 @@ pub struct App {
     links: sftp::Links,
     transfers: Transfers,
     tunnels: Arc<Tunnels>,
+    logs: Arc<Logs>,
     runtime: tokio::runtime::Runtime,
 }
 
@@ -74,6 +77,7 @@ impl App {
     pub fn open_as(data_dir: &Path, local: Local) -> anyhow::Result<Self> {
         create_private_dir(data_dir)?;
         let vault = Vault::open(&data_dir.join("vault.db"))?;
+        let logs = Logs::open(&data_dir.join("logs"), logs::Config::default())?;
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
             .thread_name("openward-net")
@@ -87,8 +91,14 @@ impl App {
             links: sftp::Links::default(),
             transfers: Transfers::new(runtime.handle().clone()),
             tunnels: Arc::new(Tunnels::new(runtime.handle().clone())),
+            logs,
             runtime,
         })
+    }
+
+    /// The session logs.
+    pub fn logs(&self) -> &Arc<Logs> {
+        &self.logs
     }
 
     /// The vault, locked while the guard lives: keep it short.
@@ -149,10 +159,13 @@ impl App {
         sink: Arc<dyn EventSink>,
     ) -> Result<(), PlanError> {
         // Checked now so that a plan that cannot run fails at once.
-        target.plan(&self.vault(), &self.local)?;
+        let plan = target.plan(&self.vault(), &self.local)?;
         // A reconnection (by hand, too) leaves the tmux session there to
-        // find it again under the same name.
+        // find it again under the same name. Its log is a new one.
+        terminal.end_log(logs::End::Closed);
         terminal.detach();
+        let begin = self.log_begin(&target, &plan);
+        let sink: Arc<dyn EventSink> = logs::LogSink::new(sink, &self.logs, terminal, begin);
         let ctx = self.ctx(&sink);
         let term = Arc::downgrade(terminal);
         let tmux = terminal.tmux_name(tmux_session_name);
@@ -354,10 +367,72 @@ impl App {
     /// Reads `/etc/os-release` after connecting to the hosts that do not
     /// say otherwise (their own setting, a group's), on this device only.
     pub fn set_read_os_release_everywhere(&self, on: bool) {
-        self.vault().set_device_defaults(vault::proto::Settings {
-            read_os_release: on.then_some(true),
-            ..Default::default()
-        });
+        let mut vault = self.vault();
+        let mut device = vault.device_defaults().clone();
+        device.read_os_release = on.then_some(true);
+        vault.set_device_defaults(device);
+    }
+
+    /// Records the session log of the hosts that do not say otherwise
+    /// (their own setting, a group's) and of addresses typed by hand, on
+    /// this device only.
+    pub fn set_session_log_everywhere(&self, on: bool) {
+        let mut vault = self.vault();
+        let mut device = vault.device_defaults().clone();
+        device.session_log = on.then_some(true);
+        vault.set_device_defaults(device);
+    }
+
+    /// What the log of a connection to `target` begins as.
+    fn log_begin(&self, target: &Target, plan: &Plan) -> logs::Begin {
+        let hop = plan.hops.last().expect("a plan ends with its target");
+        let address = if hop.port == 22 {
+            format!("{}@{}", hop.user, hop.address)
+        } else {
+            format!("{}@{}:{}", hop.user, hop.address, hop.port)
+        };
+        let vault = self.vault();
+        let (place, marking, system, record) = match target {
+            Target::Host(id) => {
+                let settings = vault.effective(*id).map(|e| e.settings).unwrap_or_default();
+                let marking = match settings.environment {
+                    Some(vault::proto::Environment::Mark(m)) => Some(logs::Marking {
+                        name: m.name,
+                        short: m.short,
+                        color: m.color,
+                    }),
+                    _ => None,
+                };
+                let system = vault
+                    .host(*id)
+                    .ok()
+                    .and_then(|h| h.system.as_ref().map(|s| s.code.clone()));
+                (
+                    logs::Place::Host(id.to_string()),
+                    marking,
+                    system,
+                    settings.session_log.unwrap_or(false),
+                )
+            }
+            Target::Address { .. } => (
+                logs::Place::Address(address.clone()),
+                None,
+                None,
+                vault.device_defaults().session_log.unwrap_or(false),
+            ),
+        };
+        logs::Begin {
+            place,
+            label: hop.label.clone(),
+            address,
+            marking,
+            system,
+            tmux: false,
+            record,
+            cols: 0,
+            rows: 0,
+            term: plan.term.clone(),
+        }
     }
 
     /// Closes a tunnel; its connection goes too unless something else uses
@@ -445,6 +520,19 @@ impl App {
     ) -> anyhow::Result<()> {
         terminal.close();
         let size = terminal.size();
+        let begin = logs::Begin {
+            place: logs::Place::Local,
+            label: program.clone().unwrap_or_default(),
+            address: "~".into(),
+            marking: None,
+            system: None,
+            tmux: false,
+            record: self.logs.config().record_local,
+            cols: size.cols,
+            rows: size.rows,
+            term: "xterm-256color".into(),
+        };
+        let sink = logs::LogSink::new(sink, &self.logs, terminal, begin);
         terminal.attach_pty(
             Spawn {
                 program,
@@ -790,5 +878,24 @@ mod tests {
     fn reconnect_delays_grow_to_half_a_minute() {
         let secs: Vec<u64> = (1..=8).map(|a| reconnect_delay(a).as_secs()).collect();
         assert_eq!(secs, [1, 2, 4, 8, 16, 30, 30, 30]);
+    }
+
+    /// Each of this device's defaults is set on its own: turning one on
+    /// or off leaves the other as it was.
+    #[test]
+    fn device_defaults_are_set_one_by_one() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = App::open_as(&dir.path().join("data"), Local::from_env()).unwrap();
+        app.set_session_log_everywhere(true);
+        app.set_read_os_release_everywhere(true);
+        app.set_session_log_everywhere(false);
+        let device = app.vault().device_defaults().clone();
+        assert_eq!(device.read_os_release, Some(true));
+        assert_eq!(device.session_log, None);
+        app.set_session_log_everywhere(true);
+        app.set_read_os_release_everywhere(false);
+        let device = app.vault().device_defaults().clone();
+        assert_eq!(device.read_os_release, None);
+        assert_eq!(device.session_log, Some(true));
     }
 }

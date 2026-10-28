@@ -28,6 +28,7 @@ use tokio::task::JoinHandle;
 
 use crate::alive::Activity;
 use crate::events::{Event, EventSink, Failure};
+use crate::logs::{self, End};
 
 #[derive(Clone, Copy, Debug)]
 pub enum KeyKind {
@@ -82,6 +83,17 @@ pub struct Frame {
 /// Called when the screen changes after the UI last looked.
 pub type Waker = Arc<dyn Fn() + Send + Sync>;
 
+/// A terminal's session log, as its pane shows it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LogState {
+    pub id: String,
+    /// What comes out is recorded (not only the entry).
+    pub recording: bool,
+    pub paused: bool,
+    /// Writing failed, and why: nothing more is recorded.
+    pub failed: Option<String>,
+}
+
 struct State {
     engine: GhosttyEngine,
     enc: FrameEncoder,
@@ -90,6 +102,8 @@ struct State {
     /// look, however much output comes in between.
     notified: bool,
     waker: Option<Waker>,
+    /// The session log of the connection going on, if one is kept.
+    log: Option<Arc<logs::Session>>,
 }
 
 impl State {
@@ -154,6 +168,7 @@ impl Terminal {
                 dirty: true,
                 notified: false,
                 waker: None,
+                log: None,
             })),
             io: Arc::new(Mutex::new(Io::None)),
             task: Mutex::new(None),
@@ -188,8 +203,83 @@ impl Terminal {
     fn output(state: &Mutex<State>, bytes: &[u8]) -> Vec<u8> {
         let mut s = lock(state);
         s.engine.feed(bytes);
+        if let Some(log) = &s.log {
+            log.output(bytes);
+        }
         s.touch();
         s.engine.take_host_writes()
+    }
+
+    /// Output that no program sent: a recording played back. Replies to
+    /// its queries go nowhere.
+    pub(crate) fn feed(&self, bytes: &[u8]) {
+        Self::output(&self.state, bytes);
+    }
+
+    /// A blank screen of this size, with no history, as a new terminal
+    /// starts: where a recording plays again from the start.
+    pub(crate) fn reset(&self, cols: u16, rows: u16) {
+        Self::output(&self.state, b"\x1bc");
+        let mut s = lock(&self.state);
+        s.engine.clear_history();
+        if s.engine.size() != Size::new(cols, rows) {
+            s.engine.resize(Size::new(cols, rows));
+        }
+        s.engine.redraw();
+        s.touch();
+    }
+
+    /// Starts keeping the session log of a connection that is up; one that
+    /// was kept before ends.
+    pub(crate) fn attach_log(&self, log: Arc<logs::Session>) {
+        let old = lock(&self.state).log.replace(log);
+        if let Some(old) = old {
+            old.finish(End::Closed);
+        }
+    }
+
+    /// Ends the session log, if one is kept, saying how.
+    pub(crate) fn end_log(&self, end: End) {
+        // Outside the lock: finishing waits for the last write.
+        let log = lock(&self.state).log.take();
+        if let Some(log) = log {
+            log.finish(end);
+        }
+    }
+
+    /// Stops feeding `log`, if it is the one kept, without ending it.
+    pub(crate) fn release_log(&self, log: &Arc<logs::Session>) {
+        let mut s = lock(&self.state);
+        if s.log.as_ref().is_some_and(|kept| Arc::ptr_eq(kept, log)) {
+            s.log = None;
+        }
+    }
+
+    fn log(&self) -> Option<Arc<logs::Session>> {
+        lock(&self.state).log.clone()
+    }
+
+    /// A command ran (the UI saw it at Enter): a marker in the recording.
+    pub fn log_command(&self, command: &str) {
+        if let Some(log) = self.log() {
+            log.command(command);
+        }
+    }
+
+    /// Stops keeping what comes out in the recording, or starts again.
+    /// False if there is no recording, or it already was so.
+    pub fn pause_log(&self, paused: bool) -> bool {
+        self.log().is_some_and(|log| log.pause(paused))
+    }
+
+    /// The session log kept now, if any.
+    pub fn log_state(&self) -> Option<LogState> {
+        self.log().map(|log| LogState {
+            id: log.id(),
+            recording: log.recording(),
+            paused: log.paused(),
+            failed: log.failed(),
+        })
     }
 
     /// Starts a local program and pipes it in.
@@ -270,6 +360,7 @@ impl Terminal {
     /// Ends the connection or the local program for good, a persistent
     /// session on the server too. The screen stays.
     pub fn close(&self) {
+        self.end_log(End::Closed);
         if let Some(closer) = lock(&self.closer).take() {
             closer();
         }
@@ -464,6 +555,9 @@ impl Terminal {
                 return;
             }
             s.engine.resize(Size::new(cols, rows));
+            if let Some(log) = &s.log {
+                log.resize(cols, rows);
+            }
             s.touch();
         }
         match &*lock(&self.io) {

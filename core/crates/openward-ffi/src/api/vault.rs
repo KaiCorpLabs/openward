@@ -301,6 +301,9 @@ pub struct SettingsSpec {
     /// Read `/etc/os-release` after connecting (it runs a command).
     #[frb(default = "null")]
     pub read_os_release: Option<bool>,
+    /// Record what comes out on the screen in the session log.
+    #[frb(default = "null")]
+    pub session_log: Option<bool>,
 }
 
 /// The `identity` setting of a spec.
@@ -373,6 +376,7 @@ impl SettingsSpec {
             environment_short: mark.map(|m| m.short.clone()).unwrap_or_default(),
             environment_color: mark.map(|m| m.color.clone()).unwrap_or_default(),
             read_os_release: s.read_os_release,
+            session_log: s.session_log,
             legacy_host_keys: s.legacy_host_keys,
             proxy,
             proxy_host: server.map(|s| s.host.clone()).unwrap_or_default(),
@@ -521,6 +525,7 @@ impl SettingsSpec {
             }
         };
         s.read_os_release = self.read_os_release;
+        s.session_log = self.session_log;
         s.legacy_host_keys = self.legacy_host_keys;
         Ok(())
     }
@@ -720,6 +725,7 @@ impl SettingsSpec {
                 mine.read_os_release,
                 theirs.read_os_release,
             )?,
+            session_log: pick(&base.session_log, mine.session_log, theirs.session_log)?,
         })
     }
 }
@@ -894,6 +900,7 @@ mod tests {
                 extra: Default::default(),
             })),
             read_os_release: Some(true),
+            session_log: Some(true),
             ..Settings::default()
         };
         let spec = SettingsSpec::from_settings(&settings);

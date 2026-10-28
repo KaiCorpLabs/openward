@@ -7,6 +7,7 @@ import 'api/app.dart';
 import 'api/identities.dart';
 import 'api/keychain.dart';
 import 'api/known_hosts.dart';
+import 'api/logs.dart';
 import 'api/programs.dart';
 import 'api/session.dart';
 import 'api/sftp.dart';
@@ -32,6 +33,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   });
 
   CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_LogPlayerPtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayerPtr;
+
+  CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_OpenWardPtr => wire
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWardPtr;
 
@@ -49,6 +54,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw);
+
+  @protected
+  LogPlayer
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayer(
+    dynamic raw,
+  );
 
   @protected
   OpenWard
@@ -75,6 +86,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  LogPlayer
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayer(
+    dynamic raw,
+  );
+
+  @protected
   OpenWard
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
     dynamic raw,
@@ -95,6 +112,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   TerminalSession
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
+    dynamic raw,
+  );
+
+  @protected
+  LogPlayer
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayer(
     dynamic raw,
   );
 
@@ -124,6 +147,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RustStreamSink<bool> dco_decode_StreamSink_bool_Sse(dynamic raw);
+
+  @protected
+  RustStreamSink<LogFound> dco_decode_StreamSink_log_found_Sse(dynamic raw);
 
   @protected
   RustStreamSink<SessionEvent> dco_decode_StreamSink_session_event_Sse(
@@ -216,6 +242,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LinkView dco_decode_box_autoadd_link_view(dynamic raw);
+
+  @protected
+  LogEntry dco_decode_box_autoadd_log_entry(dynamic raw);
+
+  @protected
+  LogMarking dco_decode_box_autoadd_log_marking(dynamic raw);
+
+  @protected
+  LogStateView dco_decode_box_autoadd_log_state_view(dynamic raw);
+
+  @protected
+  LogsConfig dco_decode_box_autoadd_logs_config(dynamic raw);
 
   @protected
   MissingKind dco_decode_box_autoadd_missing_kind(dynamic raw);
@@ -491,6 +529,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<KnownHostRow> dco_decode_list_known_host_row(dynamic raw);
 
   @protected
+  List<LogEntry> dco_decode_list_log_entry(dynamic raw);
+
+  @protected
+  List<LogHit> dco_decode_list_log_hit(dynamic raw);
+
+  @protected
+  List<LogMarker> dco_decode_list_log_marker(dynamic raw);
+
+  @protected
   List<int?> dco_decode_list_opt_box_autoadd_u_32(dynamic raw);
 
   @protected
@@ -552,6 +599,42 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<WorkspaceView> dco_decode_list_workspace_view(dynamic raw);
+
+  @protected
+  LogEnd dco_decode_log_end(dynamic raw);
+
+  @protected
+  LogEntry dco_decode_log_entry(dynamic raw);
+
+  @protected
+  LogFormat dco_decode_log_format(dynamic raw);
+
+  @protected
+  LogFound dco_decode_log_found(dynamic raw);
+
+  @protected
+  LogHit dco_decode_log_hit(dynamic raw);
+
+  @protected
+  LogMarker dco_decode_log_marker(dynamic raw);
+
+  @protected
+  LogMarkerKind dco_decode_log_marker_kind(dynamic raw);
+
+  @protected
+  LogMarking dco_decode_log_marking(dynamic raw);
+
+  @protected
+  LogPlace dco_decode_log_place(dynamic raw);
+
+  @protected
+  LogStateView dco_decode_log_state_view(dynamic raw);
+
+  @protected
+  LogsConfig dco_decode_logs_config(dynamic raw);
+
+  @protected
+  LogsUsage dco_decode_logs_usage(dynamic raw);
 
   @protected
   MissingKind dco_decode_missing_kind(dynamic raw);
@@ -627,6 +710,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LinkView? dco_decode_opt_box_autoadd_link_view(dynamic raw);
+
+  @protected
+  LogEntry? dco_decode_opt_box_autoadd_log_entry(dynamic raw);
+
+  @protected
+  LogMarking? dco_decode_opt_box_autoadd_log_marking(dynamic raw);
+
+  @protected
+  LogStateView? dco_decode_opt_box_autoadd_log_state_view(dynamic raw);
 
   @protected
   MissingKind? dco_decode_opt_box_autoadd_missing_kind(dynamic raw);
@@ -920,6 +1012,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
 
   @protected
+  LogPlayer
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayer(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   OpenWard
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
     SseDeserializer deserializer,
@@ -944,6 +1042,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  LogPlayer
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayer(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   OpenWard
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
     SseDeserializer deserializer,
@@ -964,6 +1068,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   TerminalSession
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  LogPlayer
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayer(
     SseDeserializer deserializer,
   );
 
@@ -993,6 +1103,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RustStreamSink<bool> sse_decode_StreamSink_bool_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RustStreamSink<LogFound> sse_decode_StreamSink_log_found_Sse(
     SseDeserializer deserializer,
   );
 
@@ -1101,6 +1216,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LinkView sse_decode_box_autoadd_link_view(SseDeserializer deserializer);
+
+  @protected
+  LogEntry sse_decode_box_autoadd_log_entry(SseDeserializer deserializer);
+
+  @protected
+  LogMarking sse_decode_box_autoadd_log_marking(SseDeserializer deserializer);
+
+  @protected
+  LogStateView sse_decode_box_autoadd_log_state_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  LogsConfig sse_decode_box_autoadd_logs_config(SseDeserializer deserializer);
 
   @protected
   MissingKind sse_decode_box_autoadd_missing_kind(SseDeserializer deserializer);
@@ -1410,6 +1539,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<LogEntry> sse_decode_list_log_entry(SseDeserializer deserializer);
+
+  @protected
+  List<LogHit> sse_decode_list_log_hit(SseDeserializer deserializer);
+
+  @protected
+  List<LogMarker> sse_decode_list_log_marker(SseDeserializer deserializer);
+
+  @protected
   List<int?> sse_decode_list_opt_box_autoadd_u_32(SseDeserializer deserializer);
 
   @protected
@@ -1491,6 +1629,42 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<WorkspaceView> sse_decode_list_workspace_view(
     SseDeserializer deserializer,
   );
+
+  @protected
+  LogEnd sse_decode_log_end(SseDeserializer deserializer);
+
+  @protected
+  LogEntry sse_decode_log_entry(SseDeserializer deserializer);
+
+  @protected
+  LogFormat sse_decode_log_format(SseDeserializer deserializer);
+
+  @protected
+  LogFound sse_decode_log_found(SseDeserializer deserializer);
+
+  @protected
+  LogHit sse_decode_log_hit(SseDeserializer deserializer);
+
+  @protected
+  LogMarker sse_decode_log_marker(SseDeserializer deserializer);
+
+  @protected
+  LogMarkerKind sse_decode_log_marker_kind(SseDeserializer deserializer);
+
+  @protected
+  LogMarking sse_decode_log_marking(SseDeserializer deserializer);
+
+  @protected
+  LogPlace sse_decode_log_place(SseDeserializer deserializer);
+
+  @protected
+  LogStateView sse_decode_log_state_view(SseDeserializer deserializer);
+
+  @protected
+  LogsConfig sse_decode_logs_config(SseDeserializer deserializer);
+
+  @protected
+  LogsUsage sse_decode_logs_usage(SseDeserializer deserializer);
 
   @protected
   MissingKind sse_decode_missing_kind(SseDeserializer deserializer);
@@ -1592,6 +1766,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LinkView? sse_decode_opt_box_autoadd_link_view(SseDeserializer deserializer);
+
+  @protected
+  LogEntry? sse_decode_opt_box_autoadd_log_entry(SseDeserializer deserializer);
+
+  @protected
+  LogMarking? sse_decode_opt_box_autoadd_log_marking(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  LogStateView? sse_decode_opt_box_autoadd_log_state_view(
+    SseDeserializer deserializer,
+  );
 
   @protected
   MissingKind? sse_decode_opt_box_autoadd_missing_kind(
@@ -1929,6 +2116,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayer(
+    LogPlayer self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
     OpenWard self,
     SseSerializer serializer,
@@ -1957,6 +2151,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayer(
+    LogPlayer self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
     OpenWard self,
     SseSerializer serializer,
@@ -1980,6 +2181,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTerminalSession(
     TerminalSession self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayer(
+    LogPlayer self,
     SseSerializer serializer,
   );
 
@@ -2014,6 +2222,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_StreamSink_bool_Sse(
     RustStreamSink<bool> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_StreamSink_log_found_Sse(
+    RustStreamSink<LogFound> self,
     SseSerializer serializer,
   );
 
@@ -2171,6 +2385,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_link_view(
     LinkView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_log_entry(
+    LogEntry self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_log_marking(
+    LogMarking self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_log_state_view(
+    LogStateView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_logs_config(
+    LogsConfig self,
     SseSerializer serializer,
   );
 
@@ -2571,6 +2809,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_log_entry(List<LogEntry> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_log_hit(List<LogHit> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_log_marker(
+    List<LogMarker> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_opt_box_autoadd_u_32(
     List<int?> self,
     SseSerializer serializer,
@@ -2686,6 +2936,42 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     List<WorkspaceView> self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_log_end(LogEnd self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_log_entry(LogEntry self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_log_format(LogFormat self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_log_found(LogFound self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_log_hit(LogHit self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_log_marker(LogMarker self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_log_marker_kind(LogMarkerKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_log_marking(LogMarking self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_log_place(LogPlace self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_log_state_view(LogStateView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_logs_config(LogsConfig self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_logs_usage(LogsUsage self, SseSerializer serializer);
 
   @protected
   void sse_encode_missing_kind(MissingKind self, SseSerializer serializer);
@@ -2817,6 +3103,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_link_view(
     LinkView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_log_entry(
+    LogEntry? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_log_marking(
+    LogMarking? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_log_state_view(
+    LogStateView? self,
     SseSerializer serializer,
   );
 
@@ -3242,6 +3546,40 @@ class RustLibWire implements BaseWire {
   /// The symbols are looked up in [dynamicLibrary].
   RustLibWire(ffi.DynamicLibrary dynamicLibrary)
     : _lookup = dynamicLibrary.lookup;
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayer(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayer(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayerPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_openward_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayer',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayer =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayerPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayer(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayer(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayerPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_openward_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayer',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayer =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerLogPlayerPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void
   rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(

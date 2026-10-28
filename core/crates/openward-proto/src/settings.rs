@@ -104,6 +104,9 @@ settings! {
     /// Read `/etc/os-release` after connecting, to tell the system better
     /// than the server's banner does. It runs a command on the server.
     read_os_release: bool,
+    /// Record what comes out on the screen (never what is typed) in the
+    /// session log, to watch it again, search it and export it.
+    session_log: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
