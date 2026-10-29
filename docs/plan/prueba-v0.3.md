@@ -64,6 +64,7 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - cierra todas las pestañas y conéctate desde el inicio: escribe parte del nombre de un host, una dirección a la que ya fuiste y una nueva (⌥Intro la abre tal cual; «Guardar como host…» la guarda);
    - con el texto al 150 % (Ajustes › Apariencia) y en tu tema, mira que «Conectar» se lee en una sola línea (0.3.1-beta.9);
    - después de unos días, mira si los recientes del inicio (cuándo, cuánto duró, tmux) te sirven para volver;
+   - con la ventana a tu tamaño de siempre, en grande y pequeña, mira que el inicio aprovecha el espacio: favoritos en fila, recientes en columnas y los atajos abajo (0.3.3-beta.2);
    - con un túnel abierto y sin pestañas, detenlo desde el inicio;
    - abre la hoja de atajos con ⌘/ (en un teclado español, ⌘⇧7) y busca alguno por su nombre y por su tecla;
    - con un host detrás de un bastion, pasa el ratón por la latencia y comprueba que dice la del bastion y la del destino.
