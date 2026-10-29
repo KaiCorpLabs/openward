@@ -1,6 +1,6 @@
 # Registros de sesión
 
-- **Estado:** maquetas aprobadas el 2026-10-28 (fila «Registros» del lienzo). Va en la 0.3.3, con los valores por defecto propuestos. L1 (el núcleo) publicado en main el 2026-10-28; L2 (la página y el visor) y L3 (en la sesión y en Ajustes), el 2026-10-29. L4 (pruebas de ventana, notas, guía y beta) hecho el 2026-10-29, sin publicar.
+- **Estado:** maquetas aprobadas el 2026-10-28 (fila «Registros» del lienzo). Va en la 0.3.3, con los valores por defecto propuestos. L1 (el núcleo) publicado en main el 2026-10-28; L2 (la página y el visor) y L3 (en la sesión y en Ajustes), el 2026-10-29. L4 (pruebas de ventana, notas, guía y beta), el mismo día, publicado como 0.3.3-beta.1.
 - **Fecha:** 2026-10-28.
 - **Base:** [ARCHITECTURE §10](../ARCHITECTURE.md#10-registros-auditoría-y-grabación), que ya prevé un historial de sesiones local con reproducción en asciicast, gratis y en el cliente. Fase 1, antes de la v0.4 (el vault cifrado).
 - **Duración estimada:** unas 2,5 semanas de trabajo.
@@ -129,7 +129,7 @@ No es un control de cumplimiento: la grabación hecha en el cliente se puede evi
 | L1 | Núcleo: grabador asciicast, entradas, retención, texto para buscar, reproductor y FFI | 1 | Publicado |
 | L2 | Página Registros y visor: comandos, buscar, línea de tiempo, guardar y exportar | 1 | Publicado |
 | L3 | En la sesión y en Ajustes: cabecera del panel, pausa, tarjeta de corte, ajuste heredado, editor y Ajustes › Registros | 0,5 | Publicado |
-| L4 | Pruebas de ventana, notas, guía de prueba y beta | — | Hecho, sin publicar |
+| L4 | Pruebas de ventana, notas, guía de prueba y beta | — | Publicado (0.3.3-beta.1) |
 
 **Qué deja L1 hecho:**
 - **Núcleo (`openward-app::logs`):**
