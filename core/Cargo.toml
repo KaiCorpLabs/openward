@@ -20,7 +20,7 @@ version = "0.3.3-beta.2"
 edition = "2024"
 rust-version = "1.99"
 license = "Apache-2.0"
-repository = "https://github.com/Ulzuhan/openward"
+repository = "https://github.com/KaiCorpLabs/openward"
 # Not on crates.io: the app and the CLI ship as binaries.
 publish = false
 
