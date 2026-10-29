@@ -737,6 +737,7 @@
   "logDeleteBody": "What was seen in this session and its entry are deleted. This cannot be undone.",
   "logDeleteTitle": "Delete this log?",
   "logEditNote": "Edit the note",
+  "logEndedTooltip": "This connection's log",
   "logExportCast": "Asciicast (.cast)",
   "logExportCastHelp": "With timing and colors; plays in asciinema.",
   "logExportText": "Text (.txt)",
@@ -749,17 +750,41 @@
       }
     }
   },
+  "logFailed": "The log stopped: {reason}",
+  "@logFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "logIncomplete": "It stops before the end: OpenWard closed suddenly.",
   "logMarkBack": "Connection back",
   "logMarkFull": "Log full",
   "logMarkLost": "Connection lost",
   "logMarkOmitted": "Output left out",
   "logMarkPause": "Paused",
+  "logMenuEnded": "This connection's log",
+  "logMenuNeverTyped": "never what you type",
+  "logMenuPaused": "Paused",
+  "logMenuPausedSub": "What appears now is not kept",
+  "logMenuSince": "Since {time}",
+  "@logMenuSince": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "logMenuTitle": "What appears on screen is kept",
   "logMoreActions": "More actions",
   "logNeverExpires": "Never expires",
   "logNoteHelp": "It never expires: it is kept until you remove it.",
   "logNoteHint": "Why you keep it (optional)",
   "logNoteTitle": "Keep this log",
+  "logOpenThis": "Open this session's log",
+  "logPause": "Pause the log",
+  "logPauseHelp": "What appears meanwhile is not kept",
   "logPausePlayback": "Pause",
   "logPausedFor": "Paused · {duration}",
   "@logPausedFor": {
@@ -780,7 +805,11 @@
   "logPlay": "Play",
   "logPosition": "Moment in the session",
   "logReadOnly": "Read only",
+  "logRecordingTooltip": "What appears on screen is kept",
+  "logResume": "Resume the log",
+  "logResumeHelp": "The log keeps a gap as long as the pause",
   "logSaved": "Saved",
+  "logSeeIt": "See the log",
   "logSpeed": "Speed: {speed}",
   "@logSpeed": {
     "placeholders": {
@@ -789,6 +818,24 @@
       }
     }
   },
+  "logStopEverywhere": "Turned on for every host; changed in Settings",
+  "logStopFromGroup": "Inherited from {group}; changed in its editor",
+  "@logStopFromGroup": {
+    "placeholders": {
+      "group": {
+        "type": "String"
+      }
+    }
+  },
+  "logStopHost": "Stop logging {host}…",
+  "@logStopHost": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "logStopOwn": "Turned on for this host; changed in its editor",
   "logTab": "Log",
   "logTabTitle": "{label} · {when}",
   "@logTabTitle": {
@@ -805,6 +852,7 @@
   "logViewerEmpty": "Open a log from the Session logs page.",
   "logs": "Session logs",
   "logsAll": "All",
+  "logsAlsoHere": "Also on this device",
   "logsAppQuit": "App closed",
   "logsAppQuitAt": "OpenWard closed at {time} without ending the session. This is the last that was kept.",
   "@logsAppQuitAt": {
@@ -823,6 +871,14 @@
     }
   },
   "logsConnectAgain": "Connect again",
+  "logsCount": "{count, plural, =1{1 log} other{{count} logs}}",
+  "@logsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "logsCut": "Cut off",
   "logsCutAt": "The connection was cut at {time}. This is the last that was seen.",
   "@logsCutAt": {
@@ -832,8 +888,28 @@
       }
     }
   },
+  "logsDeleteAll": "Delete every log",
+  "logsDeleteAllAction": "Delete all",
+  "logsDeleteAllEllipsis": "Delete all…",
+  "logsDeleteAllHelp": "{count} and {size}, saved ones too. It cannot be undone.",
+  "@logsDeleteAllHelp": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "logsDeleteAllTitle": "Delete every log?",
   "logsEmptyBody": "Each connection leaves here when it was and how long it lasted. To keep what was seen too, turn on the session log in a host, a group or Settings.",
   "logsEmptyTitle": "No sessions yet",
+  "logsEverywhere": "Keep the log on every host",
+  "logsEverywhereHelp": "What appears on screen, with its timing, to watch again, search and export. Never what you type: a password that is not shown is not kept; a cat .env is. On this device only.",
+  "logsExceptIn": "Turned off in:",
+  "logsFolder": "Folder",
+  "logsGroup": "group",
   "logsHitAt": "{time} into the session",
   "@logsHitAt": {
     "placeholders": {
@@ -858,9 +934,23 @@
       }
     }
   },
+  "logsHost": "host",
+  "logsKeep": "Delete past logs",
+  "logsKeepAlways": "Never",
+  "logsKeepDays": "{days, plural, =1{After a day} other{After {days} days}}",
+  "@logsKeepDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "logsKeepHelp": "Saved ones never expire.",
   "logsLastCommands": "Last commands",
   "logsLive": "Recording",
   "logsLocal": "Local",
+  "logsLocalHelp": "Your own computer. Off by default.",
+  "logsLocalTerminals": "Local terminals too",
   "logsMoreHits": "{count, plural, =1{and 1 more} other{and {count} more}}",
   "@logsMoreHits": {
     "placeholders": {
@@ -869,22 +959,39 @@
       }
     }
   },
+  "logsNoLimit": "No limit",
   "logsNoRecording": "This session has no log: only when it was and how long it lasted.",
+  "logsNoneOff": "No host or group turns it off.",
+  "logsNoneOn": "No host or group turns it on by itself.",
   "logsNotRecorded": "Not recorded",
   "logsNothing": "No session with these filters.",
   "logsNow": "now",
+  "logsOnlyIn": "Turned on only in:",
   "logsOpen": "Open the log",
   "logsOpenEntry": "Open",
   "logsOpenHere": "Open here",
   "logsPick": "Pick a session to see the last that was seen.",
   "logsRecorded": "Recorded",
   "logsSaved": "Saved",
+  "logsSavedCount": "{count, plural, =1{1 saved} other{{count} saved}}",
+  "@logsSavedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "logsSearchHint": "Search what was seen: commands and output",
   "logsSearchNone": "Nothing in the recordings.",
   "logsSearchNote": "Only what was recorded is searched. Sessions without a log keep only when they were and how long they lasted.",
   "logsSearching": "Searching…",
+  "logsSessionTitle": "Session logs",
   "logsSettings": "Log settings",
+  "logsSettingsEllipsis": "Log settings…",
+  "logsSpace": "Most space",
+  "logsSpaceHelp": "Once reached, the oldest unsaved ones go first.",
   "logsToday": "Today",
+  "logsUnencrypted": "For now they are kept unencrypted, in a folder only your user can read, like the command history. Once the vault is encrypted, the logs will be encrypted with it and this note will go.",
   "logsUsage": "{size} of {max} · kept {days} days",
   "@logsUsage": {
     "placeholders": {
@@ -899,7 +1006,9 @@
       }
     }
   },
+  "logsWhereNote": "In each host's or group's editor, «Session log» under Advanced: inherited like the rest, from the groups to the host.",
   "logsYesterday": "Yesterday",
+  "lostInLog": "What was seen so far is in its log, even if you close this tab.",
   "lostKeptInTmux": "Your session goes on in tmux on {host}: you will find it as it was when it is back. What you type now is not sent.",
   "@lostKeptInTmux": {
     "placeholders": {
@@ -1388,6 +1497,10 @@
   "separatePanes": "Split the panes into tabs",
   "sessionClosed": "Session closed.",
   "sessionClosedCode": "Session closed (code {code}).",
+  "sessionLog": "Session log",
+  "sessionLogNote": "Never what you type. Watched and searched in Session logs.",
+  "sessionLogOff": "No",
+  "sessionLogOn": "Yes, what appears on screen",
   "sessionResumed": "tmux session found again",
   "setHereHint": "A click sets it here only",
   "setHereIdentitySays": "Set here; the identity says {value}",
@@ -1395,6 +1508,7 @@
   "settings": "Settings",
   "settingsAppearance": "Appearance",
   "settingsGeneral": "General",
+  "settingsLogs": "Logs",
   "settingsTerminal": "Terminal",
   "settingsWindow": "Window",
   "sftpConnected": "SFTP on {label}",

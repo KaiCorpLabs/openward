@@ -3626,6 +3626,12 @@ abstract class AppLocalizations {
   /// **'Editar la nota'**
   String get logEditNote;
 
+  /// No description provided for @logEndedTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'El registro de esta conexión'**
+  String get logEndedTooltip;
+
   /// No description provided for @logExportCast.
   ///
   /// In es, this message translates to:
@@ -3655,6 +3661,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Guardado en {path}.'**
   String logExported(String path);
+
+  /// No description provided for @logFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'El registro se detuvo: {reason}'**
+  String logFailed(String reason);
 
   /// No description provided for @logIncomplete.
   ///
@@ -3692,6 +3704,42 @@ abstract class AppLocalizations {
   /// **'En pausa'**
   String get logMarkPause;
 
+  /// No description provided for @logMenuEnded.
+  ///
+  /// In es, this message translates to:
+  /// **'El registro de esta conexión'**
+  String get logMenuEnded;
+
+  /// No description provided for @logMenuNeverTyped.
+  ///
+  /// In es, this message translates to:
+  /// **'nunca lo que escribes'**
+  String get logMenuNeverTyped;
+
+  /// No description provided for @logMenuPaused.
+  ///
+  /// In es, this message translates to:
+  /// **'En pausa'**
+  String get logMenuPaused;
+
+  /// No description provided for @logMenuPausedSub.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que sale ahora no se guarda'**
+  String get logMenuPausedSub;
+
+  /// No description provided for @logMenuSince.
+  ///
+  /// In es, this message translates to:
+  /// **'Desde las {time}'**
+  String logMenuSince(String time);
+
+  /// No description provided for @logMenuTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Se guarda lo que sale en pantalla'**
+  String get logMenuTitle;
+
   /// No description provided for @logMoreActions.
   ///
   /// In es, this message translates to:
@@ -3721,6 +3769,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Guardar este registro'**
   String get logNoteTitle;
+
+  /// No description provided for @logOpenThis.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir el registro de esta sesión'**
+  String get logOpenThis;
+
+  /// No description provided for @logPause.
+  ///
+  /// In es, this message translates to:
+  /// **'Pausar el registro'**
+  String get logPause;
+
+  /// No description provided for @logPauseHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que salga mientras, no se guarda'**
+  String get logPauseHelp;
 
   /// No description provided for @logPausePlayback.
   ///
@@ -3758,17 +3824,65 @@ abstract class AppLocalizations {
   /// **'Solo lectura'**
   String get logReadOnly;
 
+  /// No description provided for @logRecordingTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Se guarda lo que sale en pantalla'**
+  String get logRecordingTooltip;
+
+  /// No description provided for @logResume.
+  ///
+  /// In es, this message translates to:
+  /// **'Seguir grabando'**
+  String get logResume;
+
+  /// No description provided for @logResumeHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'El registro guarda un hueco con lo que duró la pausa'**
+  String get logResumeHelp;
+
   /// No description provided for @logSaved.
   ///
   /// In es, this message translates to:
   /// **'Guardado'**
   String get logSaved;
 
+  /// No description provided for @logSeeIt.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver el registro'**
+  String get logSeeIt;
+
   /// No description provided for @logSpeed.
   ///
   /// In es, this message translates to:
   /// **'Velocidad: {speed}'**
   String logSpeed(String speed);
+
+  /// No description provided for @logStopEverywhere.
+  ///
+  /// In es, this message translates to:
+  /// **'Activado en todos los hosts; se cambia en Ajustes'**
+  String get logStopEverywhere;
+
+  /// No description provided for @logStopFromGroup.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo hereda de {group}; se cambia en su editor'**
+  String logStopFromGroup(String group);
+
+  /// No description provided for @logStopHost.
+  ///
+  /// In es, this message translates to:
+  /// **'No guardar registros de {host}…'**
+  String logStopHost(String host);
+
+  /// No description provided for @logStopOwn.
+  ///
+  /// In es, this message translates to:
+  /// **'Activado en este host; se cambia en su editor'**
+  String get logStopOwn;
 
   /// No description provided for @logTab.
   ///
@@ -3806,6 +3920,12 @@ abstract class AppLocalizations {
   /// **'Todas'**
   String get logsAll;
 
+  /// No description provided for @logsAlsoHere.
+  ///
+  /// In es, this message translates to:
+  /// **'También en este equipo'**
+  String get logsAlsoHere;
+
   /// No description provided for @logsAppQuit.
   ///
   /// In es, this message translates to:
@@ -3830,6 +3950,12 @@ abstract class AppLocalizations {
   /// **'Conectar otra vez'**
   String get logsConnectAgain;
 
+  /// No description provided for @logsCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 registro} other{{count} registros}}'**
+  String logsCount(int count);
+
   /// No description provided for @logsCut.
   ///
   /// In es, this message translates to:
@@ -3842,6 +3968,36 @@ abstract class AppLocalizations {
   /// **'La conexión se cortó a las {time}. Esto es lo último que se vio.'**
   String logsCutAt(String time);
 
+  /// No description provided for @logsDeleteAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Borrar todos los registros'**
+  String get logsDeleteAll;
+
+  /// No description provided for @logsDeleteAllAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Borrar todos'**
+  String get logsDeleteAllAction;
+
+  /// No description provided for @logsDeleteAllEllipsis.
+  ///
+  /// In es, this message translates to:
+  /// **'Borrar todos…'**
+  String get logsDeleteAllEllipsis;
+
+  /// No description provided for @logsDeleteAllHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} y {size}, también los guardados. No se puede deshacer.'**
+  String logsDeleteAllHelp(String count, String size);
+
+  /// No description provided for @logsDeleteAllTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Borrar todos los registros?'**
+  String get logsDeleteAllTitle;
+
   /// No description provided for @logsEmptyBody.
   ///
   /// In es, this message translates to:
@@ -3853,6 +4009,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Aún no hay sesiones'**
   String get logsEmptyTitle;
+
+  /// No description provided for @logsEverywhere.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar el registro en todos los hosts'**
+  String get logsEverywhere;
+
+  /// No description provided for @logsEverywhereHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que sale en pantalla, con sus tiempos, para volver a verlo, buscar en él y exportarlo. Nunca lo que escribes: una contraseña que no se ve no queda; un cat .env, sí. Solo en este equipo.'**
+  String get logsEverywhereHelp;
+
+  /// No description provided for @logsExceptIn.
+  ///
+  /// In es, this message translates to:
+  /// **'Desactivado en:'**
+  String get logsExceptIn;
+
+  /// No description provided for @logsFolder.
+  ///
+  /// In es, this message translates to:
+  /// **'Carpeta'**
+  String get logsFolder;
+
+  /// No description provided for @logsGroup.
+  ///
+  /// In es, this message translates to:
+  /// **'grupo'**
+  String get logsGroup;
 
   /// No description provided for @logsHitAt.
   ///
@@ -3872,6 +4058,36 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{en 1 registro} other{en {count} registros}}'**
   String logsHitsIn(int count);
 
+  /// No description provided for @logsHost.
+  ///
+  /// In es, this message translates to:
+  /// **'host'**
+  String get logsHost;
+
+  /// No description provided for @logsKeep.
+  ///
+  /// In es, this message translates to:
+  /// **'Borrar los registros pasados'**
+  String get logsKeep;
+
+  /// No description provided for @logsKeepAlways.
+  ///
+  /// In es, this message translates to:
+  /// **'Nunca'**
+  String get logsKeepAlways;
+
+  /// No description provided for @logsKeepDays.
+  ///
+  /// In es, this message translates to:
+  /// **'{days, plural, =1{Al día} other{A los {days} días}}'**
+  String logsKeepDays(int days);
+
+  /// No description provided for @logsKeepHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Los guardados no caducan nunca.'**
+  String get logsKeepHelp;
+
   /// No description provided for @logsLastCommands.
   ///
   /// In es, this message translates to:
@@ -3890,17 +4106,47 @@ abstract class AppLocalizations {
   /// **'Locales'**
   String get logsLocal;
 
+  /// No description provided for @logsLocalHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu propio equipo. Por defecto no.'**
+  String get logsLocalHelp;
+
+  /// No description provided for @logsLocalTerminals.
+  ///
+  /// In es, this message translates to:
+  /// **'También los terminales locales'**
+  String get logsLocalTerminals;
+
   /// No description provided for @logsMoreHits.
   ///
   /// In es, this message translates to:
   /// **'{count, plural, =1{y 1 más} other{y {count} más}}'**
   String logsMoreHits(int count);
 
+  /// No description provided for @logsNoLimit.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin límite'**
+  String get logsNoLimit;
+
   /// No description provided for @logsNoRecording.
   ///
   /// In es, this message translates to:
   /// **'Esta sesión no tiene registro: solo cuándo y cuánto duró.'**
   String get logsNoRecording;
+
+  /// No description provided for @logsNoneOff.
+  ///
+  /// In es, this message translates to:
+  /// **'Ningún host ni grupo lo desactiva.'**
+  String get logsNoneOff;
+
+  /// No description provided for @logsNoneOn.
+  ///
+  /// In es, this message translates to:
+  /// **'Ningún host ni grupo lo activa por su cuenta.'**
+  String get logsNoneOn;
 
   /// No description provided for @logsNotRecorded.
   ///
@@ -3919,6 +4165,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'ahora'**
   String get logsNow;
+
+  /// No description provided for @logsOnlyIn.
+  ///
+  /// In es, this message translates to:
+  /// **'Activado solo en:'**
+  String get logsOnlyIn;
 
   /// No description provided for @logsOpen.
   ///
@@ -3956,6 +4208,12 @@ abstract class AppLocalizations {
   /// **'Guardadas'**
   String get logsSaved;
 
+  /// No description provided for @logsSavedCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 guardado} other{{count} guardados}}'**
+  String logsSavedCount(int count);
+
   /// No description provided for @logsSearchHint.
   ///
   /// In es, this message translates to:
@@ -3980,11 +4238,35 @@ abstract class AppLocalizations {
   /// **'Buscando…'**
   String get logsSearching;
 
+  /// No description provided for @logsSessionTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Registros de sesión'**
+  String get logsSessionTitle;
+
   /// No description provided for @logsSettings.
   ///
   /// In es, this message translates to:
   /// **'Ajustes de registros'**
   String get logsSettings;
+
+  /// No description provided for @logsSettingsEllipsis.
+  ///
+  /// In es, this message translates to:
+  /// **'Ajustes de registros…'**
+  String get logsSettingsEllipsis;
+
+  /// No description provided for @logsSpace.
+  ///
+  /// In es, this message translates to:
+  /// **'Espacio máximo'**
+  String get logsSpace;
+
+  /// No description provided for @logsSpaceHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Al llegar, se borran primero los más antiguos sin guardar.'**
+  String get logsSpaceHelp;
 
   /// No description provided for @logsToday.
   ///
@@ -3992,17 +4274,35 @@ abstract class AppLocalizations {
   /// **'Hoy'**
   String get logsToday;
 
+  /// No description provided for @logsUnencrypted.
+  ///
+  /// In es, this message translates to:
+  /// **'De momento se guardan sin cifrar, en una carpeta que solo puede leer tu usuario, igual que el historial de comandos. Cuando el vault vaya cifrado, los registros irán cifrados con él y esta nota desaparecerá.'**
+  String get logsUnencrypted;
+
   /// No description provided for @logsUsage.
   ///
   /// In es, this message translates to:
   /// **'{size} de {max} · se guardan {days} días'**
   String logsUsage(String size, String max, int days);
 
+  /// No description provided for @logsWhereNote.
+  ///
+  /// In es, this message translates to:
+  /// **'En el editor de cada host o grupo, «Registro de sesión» › Avanzado: se hereda como el resto, de los grupos al host.'**
+  String get logsWhereNote;
+
   /// No description provided for @logsYesterday.
   ///
   /// In es, this message translates to:
   /// **'Ayer'**
   String get logsYesterday;
+
+  /// No description provided for @lostInLog.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que se vio hasta ahora está en su registro, aunque cierres esta pestaña.'**
+  String get lostInLog;
 
   /// No description provided for @lostKeptInTmux.
   ///
@@ -6584,6 +6884,30 @@ abstract class AppLocalizations {
   /// **'Sesión cerrada (código {code}).'**
   String sessionClosedCode(int code);
 
+  /// No description provided for @sessionLog.
+  ///
+  /// In es, this message translates to:
+  /// **'Registro de sesión'**
+  String get sessionLog;
+
+  /// No description provided for @sessionLogNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Nunca lo que escribes. Se ve y se busca en Registros.'**
+  String get sessionLogNote;
+
+  /// No description provided for @sessionLogOff.
+  ///
+  /// In es, this message translates to:
+  /// **'No'**
+  String get sessionLogOff;
+
+  /// No description provided for @sessionLogOn.
+  ///
+  /// In es, this message translates to:
+  /// **'Sí, lo que sale en pantalla'**
+  String get sessionLogOn;
+
   /// No description provided for @sessionResumed.
   ///
   /// In es, this message translates to:
@@ -6625,6 +6949,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'General'**
   String get settingsGeneral;
+
+  /// No description provided for @settingsLogs.
+  ///
+  /// In es, this message translates to:
+  /// **'Registros'**
+  String get settingsLogs;
 
   /// No description provided for @settingsTerminal.
   ///

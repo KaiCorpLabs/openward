@@ -41,6 +41,7 @@ class SettingsForm extends ChangeNotifier {
       policy = original.hostKeyPolicy,
       legacyHostKeys = original.legacyHostKeys,
       persistent = original.persistentSession,
+      sessionLog = original.sessionLog,
       keepalive = original.keepaliveSecs,
       connectTimeout = original.connectTimeoutSecs,
       identity = original.identity,
@@ -62,6 +63,7 @@ class SettingsForm extends ChangeNotifier {
         if (original.hostKeyPolicy != null) 'host_key_policy',
         if (original.legacyHostKeys != null) 'legacy_host_keys',
         if (original.persistentSession != null) 'persistent_session',
+        if (original.sessionLog != null) 'session_log',
         if (original.keepaliveSecs != null) 'keepalive_secs',
         if (original.connectTimeoutSecs != null) 'connect_timeout_secs',
         if (original.environment != null) 'environment',
@@ -78,6 +80,7 @@ class SettingsForm extends ChangeNotifier {
   bool? legacyHostKeys;
   IdentityChoice? identity;
   bool? persistent;
+  bool? sessionLog;
   int? keepalive;
   int? connectTimeout;
 
@@ -178,6 +181,8 @@ class SettingsForm extends ChangeNotifier {
         identityId = inherited.identityId;
       case 'persistent_session':
         persistent = inherited.persistentSession ?? false;
+      case 'session_log':
+        sessionLog = inherited.sessionLog ?? false;
       case 'keepalive_secs':
         keepalive = inherited.keepaliveSecs ?? 10;
       case 'connect_timeout_secs':
@@ -224,6 +229,8 @@ class SettingsForm extends ChangeNotifier {
         identityId = '';
       case 'persistent_session':
         persistent = null;
+      case 'session_log':
+        sessionLog = null;
       case 'keepalive_secs':
         keepalive = null;
       case 'connect_timeout_secs':
@@ -257,6 +264,7 @@ class SettingsForm extends ChangeNotifier {
     identity,
     identityId,
     persistent,
+    sessionLog,
     keepalive,
     connectTimeout,
     envKind,
@@ -360,6 +368,7 @@ class SettingsForm extends ChangeNotifier {
       persistentSession: setHere.contains('persistent_session')
           ? persistent
           : null,
+      sessionLog: setHere.contains('session_log') ? sessionLog : null,
       term: original.term,
       env: original.env,
       hostKeyPolicy: setHere.contains('host_key_policy') ? policy : null,

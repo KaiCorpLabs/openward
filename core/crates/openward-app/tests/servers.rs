@@ -294,28 +294,12 @@ fn runtime() -> String {
     std::env::var("S2_RUNTIME").unwrap_or_else(|_| "podman".into())
 }
 
-/// A connection that drops is made again, on the same screen.
-#[test]
-fn a_lost_connection_comes_back() {
-    let f = Fixture::new(servers!());
-    let host = f.host(
-        "bastion",
-        "127.0.0.1",
-        BASTION,
-        Settings {
-            user: Some("demo".into()),
-            identity_files: f.key("id_ed25519"),
-            host_key_policy: Some(HostKeyPolicy::AcceptNew),
-            ..Settings::default()
-        },
-    );
-    let (term, rx) = f.connect(host, |_| Answer::Cancel);
-    outcome(&rx).0.unwrap();
-    // The shell's parent is this connection's sshd: killing it drops the
-    // connection without a goodbye, like a network that goes away.
+/// Drops a bastion connection without a goodbye, like a network that
+/// goes away: the shell's parent is this connection's sshd, killed.
+fn cut_bastion(term: &Terminal) {
     term.text("echo ppid-$PPID-end\n");
     // The output line, not the echo of the command (which has `-end` too).
-    wait_for(&term, "\nppid-");
+    wait_for(term, "\nppid-");
     let deadline = Instant::now() + Duration::from_secs(10);
     let pid = loop {
         let screen = term.screen_text();
@@ -333,6 +317,26 @@ fn a_lost_connection_comes_back() {
         .status()
         .unwrap();
     assert!(killed.success());
+}
+
+/// A connection that drops is made again, on the same screen.
+#[test]
+fn a_lost_connection_comes_back() {
+    let f = Fixture::new(servers!());
+    let host = f.host(
+        "bastion",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: f.key("id_ed25519"),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    let (term, rx) = f.connect(host, |_| Answer::Cancel);
+    outcome(&rx).0.unwrap();
+    cut_bastion(&term);
 
     let deadline = Instant::now() + Duration::from_secs(20);
     let mut reconnecting = None;
@@ -2184,6 +2188,76 @@ fn a_host_records_when_its_settings_say_so() {
     // The other device default stays.
     assert_eq!(f.app.vault().device_defaults().read_os_release, Some(true));
     assert_eq!(f.app.logs().list().len(), 3);
+}
+
+/// A host records because its group says so; a cut leaves its one log
+/// whole on both sides, marked where it was lost and where it came back.
+#[test]
+fn a_cut_keeps_the_log_whole_on_both_sides() {
+    let f = Fixture::new(servers!());
+    let group = f
+        .app
+        .vault()
+        .create(Data::Group(Group {
+            name: "prod".into(),
+            settings: Settings {
+                session_log: Some(true),
+                ..Settings::default()
+            },
+            ..Group::default()
+        }))
+        .unwrap();
+    let host = bastion_host(&f, None);
+    {
+        let mut vault = f.app.vault();
+        let mut h = vault.host(host).unwrap().clone();
+        h.group = Some(group);
+        let rev = vault.get(host).map_or(0, |i| i.rev);
+        vault.update(host, rev, Data::Host(h)).unwrap();
+    }
+    let (term, rx) = f.connect(host, |_| Answer::Cancel);
+    outcome(&rx).0.unwrap();
+    let state = term.log_state().expect("a log, from the group");
+    assert!(state.recording);
+    term.text("echo before-$((6*7))\n");
+    wait_for(&term, "\nbefore-42");
+    cut_bastion(&term);
+    let deadline = Instant::now() + Duration::from_secs(20);
+    loop {
+        let left = deadline.saturating_duration_since(Instant::now());
+        match rx.recv_timeout(left).expect("no reconnection") {
+            Event::Connected(_) => break,
+            Event::Closed { failure, .. } => panic!("gave up: {failure:?}"),
+            _ => {}
+        }
+    }
+    assert_eq!(term.log_state().unwrap().id, state.id, "the same log");
+    term.text("echo after-$((2*2))\n");
+    wait_for(&term, "\nafter-4");
+    term.text("exit\n");
+    assert_eq!(closed(&rx).1, None);
+
+    let logs = f.app.logs();
+    let [entry] = logs.list().try_into().unwrap();
+    assert_eq!(entry.id, state.id);
+    assert!(entry.recorded);
+    assert_eq!(entry.end, openward_app::logs::End::Closed);
+    let out = recorded_output(logs, &entry.id);
+    assert!(
+        out.contains("before-42") && out.contains("after-4"),
+        "{out}"
+    );
+    let marks: Vec<String> = logs
+        .read(&entry.id)
+        .unwrap()
+        .events
+        .into_iter()
+        .filter_map(|(_, e)| match e {
+            openward_app::logs::cast::Event::Marker(m) if !m.starts_with('$') => Some(m),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(marks, ["lost", "back"]);
 }
 
 /// A local terminal is recorded only when this device asks for it.

@@ -17,6 +17,7 @@ import '../hosts/editors.dart';
 import '../import/import_dialog.dart';
 import '../keys/key_dialogs.dart';
 import '../l10n/l10n.dart';
+import '../logs/log_viewer.dart' show openLogById;
 import '../snippets/palette.dart';
 import '../snippets/snippets.dart';
 import '../src/rust/api/vault.dart' show HostView;
@@ -349,6 +350,28 @@ class _PaletteState extends ConsumerState<_Palette> {
             Icons.folder_outlined,
             tabs.openSftpHere,
             keys: isApple ? '⌘⇧O' : '${key}O',
+          ),
+        if (session.log case final log?
+            when log.recording && log.failed == null)
+          log.paused
+              ? action(
+                  'log.resume',
+                  l.logResume,
+                  Icons.fiber_manual_record,
+                  () => session.pauseLog(false),
+                )
+              : action(
+                  'log.pause',
+                  l.logPause,
+                  Icons.pause,
+                  () => session.pauseLog(true),
+                ),
+        if (session.logId case final id?)
+          action(
+            'log.open',
+            l.logOpenThis,
+            Icons.subject,
+            () => openLogById(window, home, id),
           ),
       ],
       if (captureTabs(state).isNotEmpty)

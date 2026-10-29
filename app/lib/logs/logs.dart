@@ -44,6 +44,39 @@ final logsProvider = NotifierProvider<LogsNotifier, List<LogEntry>>(
   LogsNotifier.new,
 );
 
+/// This device's choices for the logs, kept by the core beside them.
+class LogsConfigNotifier extends Notifier<LogsConfig> {
+  @override
+  LogsConfig build() => ref.read(openWardProvider).logsConfig();
+
+  /// Changes what is given; the limits apply at once.
+  void set({bool? recordLocal, int? keepDays, int? maxBytes}) {
+    final next = LogsConfig(
+      recordLocal: recordLocal ?? state.recordLocal,
+      keepDays: keepDays ?? state.keepDays,
+      maxBytes: maxBytes == null ? state.maxBytes : BigInt.from(maxBytes),
+    );
+    ref.read(openWardProvider).setLogsConfig(config: next);
+    state = next;
+  }
+}
+
+final logsConfigProvider = NotifierProvider<LogsConfigNotifier, LogsConfig>(
+  LogsConfigNotifier.new,
+);
+
+/// The newest recorded session of a place, as the recent connections
+/// name it (`host:<id>`, `address:<label>`, `local`).
+LogEntry? latestLog(List<LogEntry> entries, String where) {
+  bool at(LogEntry e) => switch (e.place) {
+    LogPlace.host => where == 'host:${e.hostId}',
+    LogPlace.address =>
+      where == 'address:${e.label}' || where == 'address:${e.address}',
+    LogPlace.local => where == 'local',
+  };
+  return entries.where((e) => e.recorded && at(e)).firstOrNull;
+}
+
 DateTime started(LogEntry e) =>
     DateTime.fromMillisecondsSinceEpoch(e.startedMs.toInt());
 

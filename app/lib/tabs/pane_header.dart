@@ -11,6 +11,7 @@ import '../hosts/sidebar.dart' show tabStatus;
 import '../terminal/keys.dart';
 
 import '../l10n/l10n.dart';
+import '../logs/log_chip.dart';
 import '../src/rust/api/vault.dart' show EnvironmentView, HostView;
 import '../terminal/controller.dart';
 import '../ui/environment.dart';
@@ -147,6 +148,17 @@ class PaneHeader extends ConsumerWidget {
                       const SizedBox(width: 6),
                     ],
                   ),
+                ),
+              ),
+            ),
+          if (controller != null)
+            ListenableBuilder(
+              listenable: controller,
+              builder: (context, _) => Padding(
+                padding: const EdgeInsets.only(left: OwSpace.s3),
+                child: LogChip(
+                  controller: controller,
+                  onDone: () => tabs.focusActive(tab),
                 ),
               ),
             ),

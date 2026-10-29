@@ -159,6 +159,15 @@ pub struct LogsConfig {
     pub max_bytes: u64,
 }
 
+/// A group or a host that turns the session log on or off itself.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LogSetIn {
+    /// A group; a host otherwise.
+    pub group: bool,
+    pub id: String,
+    pub enabled: bool,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LogFormat {
     /// asciicast v2, what asciinema plays.
@@ -269,7 +278,8 @@ impl OpenWard {
         }
     }
 
-    /// From Ajustes, at start and on change; the limits apply at once.
+    /// From Ajustes; the limits apply at once and are kept for the next
+    /// start.
     #[frb(sync)]
     pub fn set_logs_config(&self, config: LogsConfig) {
         self.app.logs().set_config(logs::Config {
@@ -283,6 +293,28 @@ impl OpenWard {
     #[frb(sync)]
     pub fn logs_dir(&self) -> String {
         self.app.logs().dir().to_string_lossy().into_owned()
+    }
+
+    /// The groups, then the hosts, that set the session log themselves
+    /// (by name): what Ajustes lists beside «on every host».
+    #[frb(sync)]
+    pub fn logs_set_in(&self) -> Vec<LogSetIn> {
+        let vault = self.app.vault();
+        let groups = vault.groups().into_iter().filter_map(|(id, g)| {
+            g.settings.session_log.map(|enabled| LogSetIn {
+                group: true,
+                id: id.to_string(),
+                enabled,
+            })
+        });
+        let hosts = vault.hosts().into_iter().filter_map(|(id, h)| {
+            h.settings.session_log.map(|enabled| LogSetIn {
+                group: false,
+                id: id.to_string(),
+                enabled,
+            })
+        });
+        groups.chain(hosts).collect()
     }
 
     /// Looks for `query` (ignoring case) in what was seen, the newest

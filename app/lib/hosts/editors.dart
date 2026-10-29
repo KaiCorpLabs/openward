@@ -23,16 +23,18 @@ export 'editor/rows.dart' show EditorFieldRow, editorLabelWidth;
 
 /// Creates (no `id`) or edits a host, in a panel on the right of the
 /// window. True if something was saved. A new host may start from a
-/// `draft` (an address typed in the quick connection, say).
+/// `draft` (an address typed in the quick connection, say). `field`, a
+/// setting by its vault name, opens it in view.
 Future<bool> showHostEditor(
   BuildContext context,
   WidgetRef ref, {
   String? id,
   String? groupId,
   HostSpec? draft,
+  String? field,
 }) => showSidePanel(
   context,
-  (_) => _HostEditor(id: id, groupId: groupId, draft: draft),
+  (_) => _HostEditor(id: id, groupId: groupId, draft: draft, field: field),
 );
 
 /// Creates (no `id`) or edits a group. True if something was saved.
@@ -41,7 +43,11 @@ Future<bool> showGroupEditor(
   WidgetRef ref, {
   String? id,
   String? parentId,
-}) => showSidePanel(context, (_) => _GroupEditor(id: id, parentId: parentId));
+  String? field,
+}) => showSidePanel(
+  context,
+  (_) => _GroupEditor(id: id, parentId: parentId, field: field),
+);
 
 /// A panel on the right of the window, as editors open. True if it
 /// closed saying something was saved.
@@ -109,11 +115,12 @@ List<(String, String)> _groupChoices(Library library, {String? excluding}) {
 }
 
 class _HostEditor extends ConsumerStatefulWidget {
-  const _HostEditor({this.id, this.groupId, this.draft});
+  const _HostEditor({this.id, this.groupId, this.draft, this.field});
 
   final String? id;
   final String? groupId;
   final HostSpec? draft;
+  final String? field;
 
   @override
   ConsumerState<_HostEditor> createState() => _HostEditorState();
@@ -302,6 +309,7 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
           ],
           groupId: _group,
           connectionTitle: l.sectionConnection,
+          show: widget.field,
           // Told by the form: the mark chosen there shows here at once.
           system: ListenableBuilder(
             listenable: _settings,
@@ -330,10 +338,11 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
 }
 
 class _GroupEditor extends ConsumerStatefulWidget {
-  const _GroupEditor({this.id, this.parentId});
+  const _GroupEditor({this.id, this.parentId, this.field});
 
   final String? id;
   final String? parentId;
+  final String? field;
 
   @override
   ConsumerState<_GroupEditor> createState() => _GroupEditorState();
@@ -449,6 +458,7 @@ class _GroupEditorState extends ConsumerState<_GroupEditor> {
           hosts: [for (final h in library.hosts) (h.id, h.label)],
           groupId: _parent,
           connectionTitle: l.groupSettingsSection,
+          show: widget.field,
           inheritors: widget.id == null ? null : library.countUnder(widget.id!),
         ),
       ],

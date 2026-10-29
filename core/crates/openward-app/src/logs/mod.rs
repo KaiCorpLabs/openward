@@ -127,8 +127,10 @@ pub struct Begin {
     pub term: String,
 }
 
-/// This device's choices.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// This device's choices, kept beside the logs (`config.json`): the
+/// limits apply when the store opens, before anyone could pass them.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Config {
     /// Record local terminals too.
     pub record_local: bool,
@@ -186,6 +188,9 @@ pub struct Preview {
 /// Matches shown per session; the rest are counted.
 const HITS_SHOWN: usize = 20;
 
+/// Where [`Config`] is kept, in the logs' folder.
+const CONFIG_FILE: &str = "config.json";
+
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
     m.lock().unwrap_or_else(|e| e.into_inner())
 }
@@ -223,9 +228,14 @@ struct Inner {
 
 impl Logs {
     /// Opens `dir`, making it if needed; sessions left open by a sudden
-    /// exit are closed as such, and what is past the limits goes.
+    /// exit are closed as such, and what is past the limits goes. The
+    /// limits are the ones kept there, or `config` the first time.
     pub fn open(dir: &Path, config: Config) -> std::io::Result<Arc<Self>> {
         crate::create_private_dir(dir)?;
+        let config = fs::read(dir.join(CONFIG_FILE))
+            .ok()
+            .and_then(|b| serde_json::from_slice(&b).ok())
+            .unwrap_or(config);
         let mut entries = BTreeMap::new();
         for file in fs::read_dir(dir)? {
             let path = file?.path();
@@ -292,9 +302,11 @@ impl Logs {
         lock(&self.inner).config
     }
 
-    /// New limits apply at once.
+    /// New limits apply at once, and from the next start. Kept for this
+    /// run even if they cannot be saved.
     pub fn set_config(&self, config: Config) {
         lock(&self.inner).config = config;
+        let _ = write_json(&self.dir, CONFIG_FILE, &config);
         self.prune();
     }
 
@@ -727,12 +739,16 @@ impl Logs {
 }
 
 fn write_entry(dir: &Path, entry: &Entry) -> std::io::Result<()> {
-    let path = dir.join(format!("{}.json", entry.id));
-    let tmp = dir.join(format!("{}.json.tmp", entry.id));
+    write_json(dir, &format!("{}.json", entry.id), entry)
+}
+
+/// `value` in `dir/name`, whole or not at all.
+fn write_json(dir: &Path, name: &str, value: &impl Serialize) -> std::io::Result<()> {
+    let tmp = dir.join(format!("{name}.tmp"));
     let mut file = create(&tmp)?;
-    file.write_all(&serde_json::to_vec_pretty(entry).map_err(std::io::Error::other)?)?;
+    file.write_all(&serde_json::to_vec_pretty(value).map_err(std::io::Error::other)?)?;
     file.sync_all()?;
-    fs::rename(tmp, path)
+    fs::rename(tmp, dir.join(name))
 }
 
 fn files_size(dir: &Path, id: &str) -> u64 {
@@ -799,14 +815,15 @@ impl Session {
         }
     }
 
-    /// A command that ran: a marker to jump to.
+    /// A command that ran: a marker to jump to. Not while paused.
     pub(crate) fn command(&self, command: &str) {
         let command = command.trim();
         if command.is_empty() {
             return;
         }
-        if let Some(r) = &self.recorder {
-            r.marker(cast::command_label(command));
+        if let Some(r) = &self.recorder
+            && r.command(cast::command_label(command))
+        {
             lock(&self.entry).commands += 1;
         }
     }

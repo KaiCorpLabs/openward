@@ -230,6 +230,10 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// The folder the logs are in, to show it.
   String logsDir();
 
+  /// The groups, then the hosts, that set the session log themselves
+  /// (by name): what Ajustes lists beside «on every host».
+  List<LogSetIn> logsSetIn();
+
   LogsUsage logsUsage();
 
   /// Opens or creates the app's data in `data_dir` (the platform's
@@ -338,7 +342,8 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// Makes a host a favorite (the last one) or not.
   Future<void> setFavorite({required String id, required bool favorite});
 
-  /// From Ajustes, at start and on change; the limits apply at once.
+  /// From Ajustes; the limits apply at once and are kept for the next
+  /// start.
   void setLogsConfig({required LogsConfig config});
 
   /// Reads `/etc/os-release` after connecting to the hosts that do not

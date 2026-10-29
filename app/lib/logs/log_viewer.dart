@@ -92,11 +92,11 @@ class LogViewer extends ChangeNotifier {
   }
 
   /// The moment just before the next command: the screen with what this
-  /// one answered.
-  double _endOf(int i) {
-    final next = i + 1 < commands.length ? commands[i + 1].at : duration;
-    return math.max(commands[i].at, next - 1e-3);
-  }
+  /// one answered. The last one's goes on to the end, its answer often the
+  /// last thing recorded.
+  double _endOf(int i) => i + 1 < commands.length
+      ? math.max(commands[i].at, commands[i + 1].at - 1e-3)
+      : duration;
 
   Future<void> seek(double at) async {
     final resume = playing;
@@ -231,6 +231,14 @@ class LogViewerNotifier extends Notifier<LogViewer?> {
 final logViewerProvider = NotifierProvider<LogViewerNotifier, LogViewer?>(
   LogViewerNotifier.new,
 );
+
+/// Opens a session's recording by its id (from its pane, a recent
+/// connection), at its end.
+Future<void> openLogById(BuildContext context, WidgetRef ref, String id) async {
+  final e = ref.read(openWardProvider).log(id: id);
+  if (e == null || !e.recorded) return;
+  await runAction(context, () => ref.read(logViewerProvider.notifier).open(e));
+}
 
 /// Connects again to where a session went.
 void connectAgain(WidgetRef ref, LogEntry e) {

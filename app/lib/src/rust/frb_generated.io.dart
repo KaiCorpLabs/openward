@@ -541,6 +541,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<LogMarker> dco_decode_list_log_marker(dynamic raw);
 
   @protected
+  List<LogSetIn> dco_decode_list_log_set_in(dynamic raw);
+
+  @protected
   List<int?> dco_decode_list_opt_box_autoadd_u_32(dynamic raw);
 
   @protected
@@ -635,6 +638,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LogPreview dco_decode_log_preview(dynamic raw);
+
+  @protected
+  LogSetIn dco_decode_log_set_in(dynamic raw);
 
   @protected
   LogStateView dco_decode_log_state_view(dynamic raw);
@@ -1560,6 +1566,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<LogMarker> sse_decode_list_log_marker(SseDeserializer deserializer);
 
   @protected
+  List<LogSetIn> sse_decode_list_log_set_in(SseDeserializer deserializer);
+
+  @protected
   List<int?> sse_decode_list_opt_box_autoadd_u_32(SseDeserializer deserializer);
 
   @protected
@@ -1674,6 +1683,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LogPreview sse_decode_log_preview(SseDeserializer deserializer);
+
+  @protected
+  LogSetIn sse_decode_log_set_in(SseDeserializer deserializer);
 
   @protected
   LogStateView sse_decode_log_state_view(SseDeserializer deserializer);
@@ -2842,6 +2854,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_log_set_in(
+    List<LogSetIn> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_opt_box_autoadd_u_32(
     List<int?> self,
     SseSerializer serializer,
@@ -2990,6 +3008,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_log_preview(LogPreview self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_log_set_in(LogSetIn self, SseSerializer serializer);
 
   @protected
   void sse_encode_log_state_view(LogStateView self, SseSerializer serializer);

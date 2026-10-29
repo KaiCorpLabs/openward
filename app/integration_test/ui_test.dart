@@ -9,6 +9,7 @@
 @Timeout(Duration(minutes: 3))
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -3671,11 +3672,11 @@ Host db
     );
     expect(container.read(historyProvider).first.count, 2);
 
-    // Its row in Ajustes › Terminal.
+    // Its row in Ajustes › Registros.
     final tabs = container.read(tabsProvider.notifier);
     tabs.openPage(PageKind.settings);
     await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.text('Terminal').last);
+    await tester.tap(field('settings.section.logs'));
     await tester.pump(const Duration(milliseconds: 300));
     await tester.ensureVisible(field('settings.commandHistory'));
     await tester.pump(const Duration(milliseconds: 300));
@@ -3878,5 +3879,128 @@ Host db
           .any((t) => t is PageTab && t.page == PageKind.log),
       isFalse,
     );
+  });
+
+  testWidgets('logs: turned on in Ajustes, paused and opened from the pane, '
+      'and a group that records', (tester) async {
+    final group = await app.createGroup(
+      spec: const GroupSpec(
+        name: 'prod',
+        settings: SettingsSpec(sessionLog: true),
+      ),
+    );
+    final container = await launch(tester);
+    final tabs = container.read(tabsProvider.notifier);
+
+    // Ajustes › Registros: the group that turns it on by itself, local
+    // terminals too, kept 90 days.
+    tabs.openPage(PageKind.settings);
+    await _settle(tester);
+    await tester.tap(field('settings.section.logs'));
+    await _settle(tester);
+    expect(field('settings.logSetIn.$group'), findsOneWidget);
+    expect(find.text('Activado solo en:'), findsOneWidget);
+    await tester.tap(field('settings.logLocal'));
+    await _settle(tester);
+    expect(app.logsConfig().recordLocal, isTrue);
+    await tester.tap(field('settings.logDays'));
+    await _settle(tester);
+    await tester.tap(find.text('A los 90 días').last);
+    await _settle(tester);
+    expect(app.logsConfig().keepDays, 90);
+    await _shot(tester, '103-settings-logs');
+
+    // Its chip opens the group's editor at «Registro de sesión».
+    await tester.tap(field('settings.logSetIn.$group'));
+    await _settle(tester);
+    expect(field('settings.sessionLog'), findsOneWidget);
+    expect(find.text('Sí, lo que sale en pantalla'), findsWidgets);
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Cancelar'));
+    await _settle(tester);
+    expect(field('settings.sessionLog'), findsNothing);
+
+    // A local terminal now records: «Registro» under it.
+    tabs.openLocal();
+    await tester.pump();
+    final a = container.read(tabsProvider).currentSession!;
+    await _until(tester, () => a.phase == Phase.running, 'the shell');
+    await _until(
+      tester,
+      () => field('log.chip').evaluate().isNotEmpty,
+      'the log chip',
+    );
+    final pane = tester.state<TerminalPaneState>(find.byType(TerminalPane));
+
+    Future<void> run(String command, String shows) async {
+      pane.updateEditingValue(
+        TextEditingValue(
+          text: '  $command',
+          selection: TextSelection.collapsed(offset: command.length + 2),
+        ),
+      );
+      await _until(
+        tester,
+        () => a.session.screenText().contains(command),
+        'the echo of $command',
+      );
+      pane.performAction(TextInputAction.newline);
+      await _until(
+        tester,
+        () => a.session.screenText().contains('$shows\n'),
+        'what $command shows',
+      );
+    }
+
+    await run(r'echo before-$((40+2))', 'before-42');
+
+    // Paused from its menu: what comes out meanwhile is not kept.
+    await tester.tap(field('log.chip'));
+    await _settle(tester);
+    await tester.tap(field('log.pause'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(a.log!.paused, isTrue);
+    expect(find.textContaining('En pausa · 0:0'), findsOneWidget);
+    await _shot(tester, '104-log-paused');
+    await run(r'echo hidden-$((3*3))', 'hidden-9');
+    await tester.tap(field('log.chip'));
+    await _settle(tester);
+    await tester.tap(field('log.resume'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(a.log!.paused, isFalse);
+    await run(r'echo after-$((2*2))', 'after-4');
+    // Written every 2 s.
+    var written = '';
+    unawaited(
+      Future.doWhile(() async {
+        written = await app.logText(id: a.logId!);
+        return !written.contains('after-4');
+      }),
+    );
+    await _until(tester, () => written.contains('after-4'), 'the log written');
+
+    // Opened from the pane, while it goes on.
+    await tester.tap(field('log.chip'));
+    await _settle(tester);
+    await tester.tap(field('log.openThis'));
+    await _until(
+      tester,
+      () => container.read(logViewerProvider) != null,
+      'the viewer',
+    );
+    final v = container.read(logViewerProvider)!;
+    final seen = v.terminal.session.screenText();
+    expect(seen, contains('before-42'));
+    expect(seen, contains('after-4'));
+    expect(seen, isNot(contains('hidden-9')));
+    expect(v.pauses, isNotEmpty);
+
+    // Deleting all leaves the session going on.
+    tabs.openPage(PageKind.settings);
+    await _settle(tester);
+    await tester.tap(field('settings.logDeleteAll'));
+    await _settle(tester);
+    await tester.tap(field('settings.logDeleteAll.confirm'));
+    await _settle(tester);
+    expect(container.read(logsProvider).single.id, a.logId);
   });
 }

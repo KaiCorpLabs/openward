@@ -13,10 +13,10 @@ import '../core/errors.dart';
 import '../core/providers.dart';
 import '../hosts/hosts_page.dart' show FilterPill;
 import '../l10n/l10n.dart';
+import '../settings/settings_page.dart' show SettingsSection, openSettings;
 import '../sftp/format.dart' show formatSize;
 import '../src/rust/api/logs.dart';
 import '../src/rust/api/vault.dart' show EnvironmentView;
-import '../tabs/tabs.dart';
 import '../ui/environment.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
@@ -186,7 +186,7 @@ class _LogsPageState extends ConsumerState<LogsPage> {
     final c = context.ow.colors;
     final app = ref.read(openWardProvider);
     final usage = app.logsUsage();
-    final config = app.logsConfig();
+    final config = ref.watch(logsConfigProvider);
     final size = formatSize(l, usage.bytes.toInt());
     final limits = config.maxBytes > BigInt.zero && config.keepDays > 0
         ? l.logsUsage(
@@ -217,8 +217,7 @@ class _LogsPageState extends ConsumerState<LogsPage> {
         const Spacer(),
         OutlinedButton.icon(
           key: const ValueKey('logs.settings'),
-          onPressed: () =>
-              ref.read(tabsProvider.notifier).openPage(PageKind.settings),
+          onPressed: () => openSettings(ref, SettingsSection.logs),
           icon: const Icon(Icons.settings_outlined, size: 16),
           label: Text(l.logsSettings),
         ),

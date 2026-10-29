@@ -78,6 +78,17 @@ class TerminalController extends ConnectionController {
   /// Extra font size for this tab only (⌘+ and ⌘−).
   double zoom = 0;
 
+  /// The session log of the connection going on, as last read; null
+  /// when none is kept now.
+  LogStateView? log;
+
+  /// The last recording this tab kept: still there to open once its
+  /// connection ended.
+  String? logId;
+
+  /// When the recording was paused here.
+  DateTime? logPausedAt;
+
   /// BELs so far, for the flash; and one rang while the tab was hidden.
   int bells = 0;
   bool bellUnseen = false;
@@ -177,6 +188,9 @@ class TerminalController extends ConnectionController {
     final down = phase == Phase.reconnecting;
     final since = stalledSince ?? reconnectingSince;
     super.onEvent(e);
+    // The core begins and ends the log as the events go by, before
+    // they come here.
+    _readLog();
     // About to open a new shell after a cut: the old one is gone. Not in
     // tmux, which draws the session as it was (or a new one) itself.
     final inTmux = switch (persistent?.state) {
@@ -250,6 +264,26 @@ class TerminalController extends ConnectionController {
       devicePixelRatio: devicePixelRatio,
       minimumContrast: minimumContrast,
     );
+  }
+
+  // ------------------------------------------------------------------- log
+
+  void _readLog() {
+    if (isDisposed) return;
+    final state = session.logState();
+    log = state;
+    if (state != null && state.recording) logId = state.id;
+    if (state == null || !state.paused) logPausedAt = null;
+  }
+
+  /// Stops keeping what comes out in the log, or starts again: the log
+  /// keeps a gap as long as the pause.
+  void pauseLog(bool paused) {
+    if (session.pauseLog(paused: paused)) {
+      logPausedAt = paused ? DateTime.now() : null;
+    }
+    _readLog();
+    _notify();
   }
 
   // ------------------------------------------------------------------ find

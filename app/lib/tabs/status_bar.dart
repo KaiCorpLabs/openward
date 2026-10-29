@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/errors.dart';
 
 import '../l10n/l10n.dart';
+import '../logs/log_chip.dart';
 import '../src/rust/api/session.dart';
 import '../terminal/controller.dart';
 import '../snippets/palette.dart';
@@ -157,6 +158,15 @@ class StatusBar extends ConsumerWidget {
                 DetailsButton(e),
               if (k != null && s.hostId != null)
                 TunnelChip(hostId: s.hostId!, hostLabel: s.label),
+              // Split, each pane says it in its header.
+              if (!(panes?.isSplit ?? false) && s.logId != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: OwSpace.s3),
+                  child: LogChip(
+                    controller: s,
+                    onDone: () => s.focusTerminal?.call(),
+                  ),
+                ),
               if (s.phase == Phase.connected || s.phase == Phase.running)
                 _StatusAction(
                   key: const ValueKey('status.snippets'),

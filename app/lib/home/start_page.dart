@@ -11,6 +11,8 @@ import '../core/providers.dart';
 import '../hosts/editors.dart';
 import '../import/import_dialog.dart';
 import '../l10n/l10n.dart';
+import '../logs/log_viewer.dart' show openLogById;
+import '../logs/logs.dart' show latestLog, logsProvider;
 import '../palette/command_palette.dart';
 import '../src/rust/api/tunnels.dart' show TunnelStateKind;
 import '../src/rust/api/vault.dart';
@@ -330,6 +332,26 @@ class _StartPageState extends ConsumerState<StartPage> {
     if (host == null && target == null) return null;
     final tabs = ref.read(tabsProvider.notifier);
     final length = r.length;
+    final log = latestLog(ref.watch(logsProvider), r.where);
+    final when = Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          agoText(
+            l,
+            DateTime.now().difference(
+              DateTime.fromMillisecondsSinceEpoch(r.at),
+            ),
+          ),
+          style: TextStyle(fontSize: OwText.small, color: c.textMuted),
+        ),
+        if (length != null)
+          Text(
+            [durationText(l, length), if (r.tmux) 'tmux'].join(' · '),
+            style: monoStyle(context, size: 12, color: c.textSubtle),
+          ),
+      ],
+    );
     return _Row(
       key: ValueKey('recent.${r.where}'),
       // An address not saved has no system to tell.
@@ -340,25 +362,22 @@ class _StartPageState extends ConsumerState<StartPage> {
       env: host?.environment,
       title: host?.label ?? target!.label,
       subtitle: host != null ? _hostAddress(host) : l.notSaved,
-      trailing: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            agoText(
-              l,
-              DateTime.now().difference(
-                DateTime.fromMillisecondsSinceEpoch(r.at),
-              ),
+      trailing: log == null
+          ? when
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  key: ValueKey('recent.log.${r.where}'),
+                  tooltip: l.logSeeIt,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => openLogById(context, ref, log.id),
+                  icon: Icon(Icons.subject, size: 16, color: c.textMuted),
+                ),
+                const SizedBox(width: OwSpace.s2),
+                when,
+              ],
             ),
-            style: TextStyle(fontSize: OwText.small, color: c.textMuted),
-          ),
-          if (length != null)
-            Text(
-              [durationText(l, length), if (r.tmux) 'tmux'].join(' · '),
-              style: monoStyle(context, size: 12, color: c.textSubtle),
-            ),
-        ],
-      ),
       onTap: () =>
           host != null ? tabs.openHost(host) : tabs.openAddress(target!),
     );

@@ -2345,6 +2345,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logEditNote => 'Edit the note';
 
   @override
+  String get logEndedTooltip => 'This connection\'s log';
+
+  @override
   String get logExportCast => 'Asciicast (.cast)';
 
   @override
@@ -2359,6 +2362,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String logExported(String path) {
     return 'Saved to $path.';
+  }
+
+  @override
+  String logFailed(String reason) {
+    return 'The log stopped: $reason';
   }
 
   @override
@@ -2381,6 +2389,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logMarkPause => 'Paused';
 
   @override
+  String get logMenuEnded => 'This connection\'s log';
+
+  @override
+  String get logMenuNeverTyped => 'never what you type';
+
+  @override
+  String get logMenuPaused => 'Paused';
+
+  @override
+  String get logMenuPausedSub => 'What appears now is not kept';
+
+  @override
+  String logMenuSince(String time) {
+    return 'Since $time';
+  }
+
+  @override
+  String get logMenuTitle => 'What appears on screen is kept';
+
+  @override
   String get logMoreActions => 'More actions';
 
   @override
@@ -2394,6 +2422,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get logNoteTitle => 'Keep this log';
+
+  @override
+  String get logOpenThis => 'Open this session\'s log';
+
+  @override
+  String get logPause => 'Pause the log';
+
+  @override
+  String get logPauseHelp => 'What appears meanwhile is not kept';
 
   @override
   String get logPausePlayback => 'Pause';
@@ -2418,12 +2455,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logReadOnly => 'Read only';
 
   @override
+  String get logRecordingTooltip => 'What appears on screen is kept';
+
+  @override
+  String get logResume => 'Resume the log';
+
+  @override
+  String get logResumeHelp => 'The log keeps a gap as long as the pause';
+
+  @override
   String get logSaved => 'Saved';
+
+  @override
+  String get logSeeIt => 'See the log';
 
   @override
   String logSpeed(String speed) {
     return 'Speed: $speed';
   }
+
+  @override
+  String get logStopEverywhere =>
+      'Turned on for every host; changed in Settings';
+
+  @override
+  String logStopFromGroup(String group) {
+    return 'Inherited from $group; changed in its editor';
+  }
+
+  @override
+  String logStopHost(String host) {
+    return 'Stop logging $host…';
+  }
+
+  @override
+  String get logStopOwn => 'Turned on for this host; changed in its editor';
 
   @override
   String get logTab => 'Log';
@@ -2444,6 +2510,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get logsAll => 'All';
+
+  @override
+  String get logsAlsoHere => 'Also on this device';
 
   @override
   String get logsAppQuit => 'App closed';
@@ -2468,6 +2537,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logsConnectAgain => 'Connect again';
 
   @override
+  String logsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count logs',
+      one: '1 log',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get logsCut => 'Cut off';
 
   @override
@@ -2476,11 +2556,44 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get logsDeleteAll => 'Delete every log';
+
+  @override
+  String get logsDeleteAllAction => 'Delete all';
+
+  @override
+  String get logsDeleteAllEllipsis => 'Delete all…';
+
+  @override
+  String logsDeleteAllHelp(String count, String size) {
+    return '$count and $size, saved ones too. It cannot be undone.';
+  }
+
+  @override
+  String get logsDeleteAllTitle => 'Delete every log?';
+
+  @override
   String get logsEmptyBody =>
       'Each connection leaves here when it was and how long it lasted. To keep what was seen too, turn on the session log in a host, a group or Settings.';
 
   @override
   String get logsEmptyTitle => 'No sessions yet';
+
+  @override
+  String get logsEverywhere => 'Keep the log on every host';
+
+  @override
+  String get logsEverywhereHelp =>
+      'What appears on screen, with its timing, to watch again, search and export. Never what you type: a password that is not shown is not kept; a cat .env is. On this device only.';
+
+  @override
+  String get logsExceptIn => 'Turned off in:';
+
+  @override
+  String get logsFolder => 'Folder';
+
+  @override
+  String get logsGroup => 'group';
 
   @override
   String logsHitAt(String time) {
@@ -2510,6 +2623,29 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get logsHost => 'host';
+
+  @override
+  String get logsKeep => 'Delete past logs';
+
+  @override
+  String get logsKeepAlways => 'Never';
+
+  @override
+  String logsKeepDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'After $days days',
+      one: 'After a day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get logsKeepHelp => 'Saved ones never expire.';
+
+  @override
   String get logsLastCommands => 'Last commands';
 
   @override
@@ -2517,6 +2653,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get logsLocal => 'Local';
+
+  @override
+  String get logsLocalHelp => 'Your own computer. Off by default.';
+
+  @override
+  String get logsLocalTerminals => 'Local terminals too';
 
   @override
   String logsMoreHits(int count) {
@@ -2530,8 +2672,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get logsNoLimit => 'No limit';
+
+  @override
   String get logsNoRecording =>
       'This session has no log: only when it was and how long it lasted.';
+
+  @override
+  String get logsNoneOff => 'No host or group turns it off.';
+
+  @override
+  String get logsNoneOn => 'No host or group turns it on by itself.';
 
   @override
   String get logsNotRecorded => 'Not recorded';
@@ -2541,6 +2692,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get logsNow => 'now';
+
+  @override
+  String get logsOnlyIn => 'Turned on only in:';
 
   @override
   String get logsOpen => 'Open the log';
@@ -2561,6 +2715,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logsSaved => 'Saved';
 
   @override
+  String logsSavedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count saved',
+      one: '1 saved',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get logsSearchHint => 'Search what was seen: commands and output';
 
   @override
@@ -2574,10 +2739,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logsSearching => 'Searching…';
 
   @override
+  String get logsSessionTitle => 'Session logs';
+
+  @override
   String get logsSettings => 'Log settings';
 
   @override
+  String get logsSettingsEllipsis => 'Log settings…';
+
+  @override
+  String get logsSpace => 'Most space';
+
+  @override
+  String get logsSpaceHelp => 'Once reached, the oldest unsaved ones go first.';
+
+  @override
   String get logsToday => 'Today';
+
+  @override
+  String get logsUnencrypted =>
+      'For now they are kept unencrypted, in a folder only your user can read, like the command history. Once the vault is encrypted, the logs will be encrypted with it and this note will go.';
 
   @override
   String logsUsage(String size, String max, int days) {
@@ -2585,7 +2766,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get logsWhereNote =>
+      'In each host\'s or group\'s editor, «Session log» under Advanced: inherited like the rest, from the groups to the host.';
+
+  @override
   String get logsYesterday => 'Yesterday';
+
+  @override
+  String get lostInLog =>
+      'What was seen so far is in its log, even if you close this tab.';
 
   @override
   String lostKeptInTmux(String host) {
@@ -4290,6 +4479,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get sessionLog => 'Session log';
+
+  @override
+  String get sessionLogNote =>
+      'Never what you type. Watched and searched in Session logs.';
+
+  @override
+  String get sessionLogOff => 'No';
+
+  @override
+  String get sessionLogOn => 'Yes, what appears on screen';
+
+  @override
   String get sessionResumed => 'tmux session found again';
 
   @override
@@ -4313,6 +4515,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsGeneral => 'General';
+
+  @override
+  String get settingsLogs => 'Logs';
 
   @override
   String get settingsTerminal => 'Terminal';

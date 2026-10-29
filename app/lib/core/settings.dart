@@ -159,6 +159,7 @@ class Settings {
     this.terminalPadding = 12,
     this.recentConnections = true,
     this.readOsRelease = false,
+    this.sessionLog = false,
   });
 
   /// Terminal font size, in logical pixels.
@@ -230,6 +231,10 @@ class Settings {
   /// say otherwise, to tell their system; on this device only.
   final bool readOsRelease;
 
+  /// The session log is kept for the hosts that do not say otherwise, and
+  /// for addresses typed by hand; on this device only.
+  final bool sessionLog;
+
   static const defaultSidebarWidth = 272.0;
   static const minSidebarWidth = 220.0;
   static const maxSidebarWidth = 420.0;
@@ -276,6 +281,7 @@ class Settings {
     double? terminalPadding,
     bool? recentConnections,
     bool? readOsRelease,
+    bool? sessionLog,
   }) => Settings(
     fontSize: fontSize ?? this.fontSize,
     theme: theme ?? this.theme,
@@ -303,6 +309,7 @@ class Settings {
     terminalPadding: terminalPadding ?? this.terminalPadding,
     recentConnections: recentConnections ?? this.recentConnections,
     readOsRelease: readOsRelease ?? this.readOsRelease,
+    sessionLog: sessionLog ?? this.sessionLog,
   );
 
   /// The same settings with one theme's layers changed (or reset).
@@ -352,6 +359,7 @@ class Settings {
     'terminal_padding': terminalPadding,
     'recent_connections': recentConnections,
     'read_os_release': readOsRelease,
+    'session_log': sessionLog,
   };
 
   /// Unknown or broken values fall back to the defaults, one by one.
@@ -421,6 +429,7 @@ class Settings {
       terminalPadding: number('terminal_padding', 0, 24, d.terminalPadding),
       recentConnections: flag('recent_connections', d.recentConnections),
       readOsRelease: flag('read_os_release', d.readOsRelease),
+      sessionLog: flag('session_log', d.sessionLog),
     );
   }
 

@@ -99,6 +99,12 @@ class _HomeState extends ConsumerState<Home> {
           .setReadOsReleaseEverywhere(enabled: enabled),
       fireImmediately: true,
     );
+    ref.listenManual(
+      settingsProvider.select((s) => s.sessionLog),
+      (_, enabled) =>
+          ref.read(openWardProvider).setSessionLogEverywhere(enabled: enabled),
+      fireImmediately: true,
+    );
     systemsNotTold.addListener(_offerOsRelease);
   }
 

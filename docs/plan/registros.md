@@ -1,6 +1,6 @@
 # Registros de sesión
 
-- **Estado:** maquetas aprobadas el 2026-10-28 (fila «Registros» del lienzo). Va en la 0.3.3, con los valores por defecto propuestos. L1 (el núcleo) publicado en main el 2026-10-28; L2 (la página y el visor) hecho el mismo día, sin publicar; L3 y L4, pendientes.
+- **Estado:** maquetas aprobadas el 2026-10-28 (fila «Registros» del lienzo). Va en la 0.3.3, con los valores por defecto propuestos. L1 (el núcleo) publicado en main el 2026-10-28 y L2 (la página y el visor) el 2026-10-29; L3 (en la sesión y en Ajustes) hecho el 2026-10-29, sin publicar; L4, pendiente.
 - **Fecha:** 2026-10-28.
 - **Base:** [ARCHITECTURE §10](../ARCHITECTURE.md#10-registros-auditoría-y-grabación), que ya prevé un historial de sesiones local con reproducción en asciicast, gratis y en el cliente. Fase 1, antes de la v0.4 (el vault cifrado).
 - **Duración estimada:** unas 2,5 semanas de trabajo.
@@ -126,9 +126,9 @@ No es un control de cumplimiento: la grabación hecha en el cliente se puede evi
 
 | # | Hito | Semanas | Estado |
 |---|---|---|---|
-| L1 | Núcleo: grabador asciicast, entradas, retención, texto para buscar, reproductor y FFI | 1 | Hecho, sin publicar |
-| L2 | Página Registros y visor: comandos, buscar, línea de tiempo, guardar y exportar | 1 | Hecho, sin publicar |
-| L3 | En la sesión y en Ajustes: cabecera del panel, pausa, tarjeta de corte, ajuste heredado, editor y Ajustes › Registros | 0,5 | Propuesto |
+| L1 | Núcleo: grabador asciicast, entradas, retención, texto para buscar, reproductor y FFI | 1 | Publicado |
+| L2 | Página Registros y visor: comandos, buscar, línea de tiempo, guardar y exportar | 1 | Publicado |
+| L3 | En la sesión y en Ajustes: cabecera del panel, pausa, tarjeta de corte, ajuste heredado, editor y Ajustes › Registros | 0,5 | Hecho, sin publicar |
 | L4 | Pruebas de ventana, notas, guía de prueba y beta | — | Propuesto |
 
 **Qué deja L1 hecho:**
@@ -186,6 +186,37 @@ No es un control de cumplimiento: la grabación hecha en el cliente se puede evi
   - una de ventana nueva en `ui_test`: una terminal local grabada se busca, se abre en la coincidencia, salta a un comando, se guarda con nota, se reproduce hasta el final y se borra;
   - la prueba del núcleo para la vista previa;
   - `flutter test`, con 241 pruebas, y la de los tokens de diseño.
+
+**Qué deja L3 hecho:**
+- **En la sesión:**
+  - «Registro» en la cabecera de cada panel, y en la barra de estado cuando la pestaña tiene un solo panel: el punto verde mientras graba, «En pausa · m:ss» en pausa, gris cuando la conexión acabó (el registro sigue a un clic);
+  - su menú: lo que se guarda y desde cuándo, pausar o seguir, abrir el registro de esta sesión, «No guardar registros de web-1…» (con de dónde lo hereda; lleva al editor del host, o a Ajustes si está en todos) y «Ajustes de registros…»;
+  - pausar y seguir, y abrir el registro, también desde la paleta;
+  - la tarjeta de conexión perdida dice que lo visto está en el registro y ofrece «Ver el registro»;
+  - los recientes del inicio con registro tienen un botón para abrir el último.
+- **En el editor de hosts y grupos:** la fila «Registro de sesión» en «Avanzado», heredada como el resto. Los editores se pueden abrir en un campo (`field`): con «Avanzado» abierto y el campo a la vista.
+- **Ajustes › Registros:**
+  - «Guardar el registro en todos los hosts» (va al núcleo al arrancar y en cada cambio, como os-release), y debajo los grupos y hosts que dicen otra cosa, cada uno un enlace a su editor;
+  - los terminales locales, los días, el espacio con lo que se usa, la carpeta, la nota mientras vayan sin cifrar y «Borrar todos…» (deja los registros en curso);
+  - «Historial de comandos» y «Conexiones recientes», que se mudan desde Terminal y General;
+  - Ajustes se puede abrir en una sección (`openSettings`): el botón de la página Registros y el menú del chip llevan a esta.
+- **Núcleo y FFI:**
+  - los límites se guardan junto a los registros (`logs/config.json`, `0600`) y se leen al abrir el almacén;
+  - `logs_set_in`: los grupos y hosts que activan o desactivan el registro por su cuenta.
+- **Arreglos de L1 y L2 que salieron aquí:**
+  - el núcleo podaba al arrancar con los límites por defecto, antes de que la app pasara los suyos: con «90 días», cada arranque habría borrado lo de más de 30;
+  - en pausa se seguía grabando el marcador de cada comando, con su texto: ahora lo que se ejecuta en una pausa no queda, ni su nombre;
+  - el editor dejaba heredado `session_log` al guardar;
+  - el visor saltaba un milisegundo antes del final del último comando, y en una sesión abierta su respuesta quedaba fuera.
+- **Cambios respecto a las maquetas:**
+  - los límites no van en `settings.json` sino en `logs/config.json`, del núcleo: así se aplican desde que abre el almacén;
+  - con un solo panel no hay cabecera: el chip va en la barra de estado;
+  - el atajo junto a «Abrir el registro de esta sesión» no se pone: ⌘⇧R sigue abriendo la página.
+- **Pruebas:**
+  - del núcleo: los límites elegidos valen en el siguiente arranque, y en pausa no queda el comando;
+  - con S2: un host graba porque lo dice su grupo, y un corte deja su único registro entero a los dos lados, con las marcas de la pérdida y la vuelta (38 de servidores);
+  - de ventana: Ajustes › Registros con el grupo que lo activa y su enlace al editor, una terminal local que graba, pausada y seguida desde el chip, su registro abierto desde el panel mientras sigue y sin lo de la pausa, y «Borrar todos» que deja la sesión en curso;
+  - la de accesibilidad recorre Ajustes › Registros.
 
 **Pruebas que pide cada hito:**
 - **L1:**

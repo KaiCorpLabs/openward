@@ -28,9 +28,13 @@ class SettingsFields extends ConsumerStatefulWidget {
     required this.connectionTitle,
     this.system,
     this.inheritors,
+    this.show,
   });
 
   final SettingsForm form;
+
+  /// A field to open in view (under «Advanced», opened for it).
+  final String? show;
 
   /// The title over the connection settings.
   final String connectionTitle;
@@ -53,13 +57,26 @@ class SettingsFields extends ConsumerStatefulWidget {
 }
 
 class _SettingsFieldsState extends ConsumerState<SettingsFields> {
-  late bool _more = _advanced.any(widget.form.setHere.contains);
+  late bool _more =
+      _advanced.any(widget.form.setHere.contains) ||
+      _advanced.contains(widget.show);
+
+  /// The row of [SettingsFields.show], to bring it into view.
+  final _shown = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     widget.form.problem.addListener(_onProblem);
     widget.form.addListener(_onForm);
+    if (widget.show != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final row = _shown.currentContext;
+        if (mounted && row != null) {
+          Scrollable.ensureVisible(row, alignment: 0.3);
+        }
+      });
+    }
   }
 
   @override
@@ -92,6 +109,7 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
     'host_key_policy',
     'legacy_host_keys',
     'persistent_session',
+    'session_log',
     'keepalive_secs',
     'connect_timeout_secs',
     'agent',
@@ -222,6 +240,7 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
         e.legacyHostKeys ?? false ? l.legacyHostKeysOn : l.legacyHostKeysOff,
       'persistent_session' =>
         e.persistentSession ?? false ? l.persistentOn : l.persistentOff,
+      'session_log' => e.sessionLog ?? false ? l.sessionLogOn : l.sessionLogOff,
       'keepalive_secs' => _keepalive(l, e.keepaliveSecs ?? 10),
       'connect_timeout_secs' => l.connectTimeoutAfter(
         e.connectTimeoutSecs ?? 15,
@@ -301,6 +320,7 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
     final set = f.setHere.contains(field);
     final fromIdentity = _originOf(field)?.origin == OriginKind.identity;
     return SettingRow(
+      key: field == widget.show ? _shown : null,
       field: field,
       label: label,
       isSet: set,
@@ -754,6 +774,38 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
                 DropdownMenuItem(value: false, child: Text(l.persistentOff)),
               ],
               onChanged: (v) => f.update(() => f.persistent = v),
+            ),
+          ),
+          _row(
+            field: 'session_log',
+            label: l.sessionLog,
+            editor: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<bool>(
+                  style: fieldTextStyle(context),
+                  key: const ValueKey('settings.sessionLog'),
+                  autofocus: focusFor('session_log'),
+                  initialValue: f.sessionLog ?? false,
+                  isExpanded: true,
+                  items: [
+                    DropdownMenuItem(value: true, child: Text(l.sessionLogOn)),
+                    DropdownMenuItem(
+                      value: false,
+                      child: Text(l.sessionLogOff),
+                    ),
+                  ],
+                  onChanged: (v) => f.update(() => f.sessionLog = v),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l.sessionLogNote,
+                  style: TextStyle(
+                    fontSize: OwText.small,
+                    color: ow.colors.textMuted,
+                  ),
+                ),
+              ],
             ),
           ),
           _row(

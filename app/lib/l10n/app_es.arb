@@ -1908,6 +1908,7 @@
   "logDeleteBody": "Se borra lo que se vio en esta sesión y su entrada. No se puede deshacer.",
   "logDeleteTitle": "¿Borrar este registro?",
   "logEditNote": "Editar la nota",
+  "logEndedTooltip": "El registro de esta conexión",
   "logExportCast": "Asciicast (.cast)",
   "logExportCastHelp": "Con tiempos y colores; se reproduce con asciinema.",
   "logExportText": "Texto (.txt)",
@@ -1920,17 +1921,41 @@
       }
     }
   },
+  "logFailed": "El registro se detuvo: {reason}",
+  "@logFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "logIncomplete": "Se corta antes del final: OpenWard se cerró de golpe.",
   "logMarkBack": "Volvió la conexión",
   "logMarkFull": "Registro lleno",
   "logMarkLost": "Se cortó la conexión",
   "logMarkOmitted": "Salida omitida",
   "logMarkPause": "En pausa",
+  "logMenuEnded": "El registro de esta conexión",
+  "logMenuNeverTyped": "nunca lo que escribes",
+  "logMenuPaused": "En pausa",
+  "logMenuPausedSub": "Lo que sale ahora no se guarda",
+  "logMenuSince": "Desde las {time}",
+  "@logMenuSince": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "logMenuTitle": "Se guarda lo que sale en pantalla",
   "logMoreActions": "Más acciones",
   "logNeverExpires": "No caduca",
   "logNoteHelp": "No caduca: se guarda hasta que lo quites.",
   "logNoteHint": "Por qué lo guardas (opcional)",
   "logNoteTitle": "Guardar este registro",
+  "logOpenThis": "Abrir el registro de esta sesión",
+  "logPause": "Pausar el registro",
+  "logPauseHelp": "Lo que salga mientras, no se guarda",
   "logPausePlayback": "Pausar",
   "logPausedFor": "En pausa · {duration}",
   "@logPausedFor": {
@@ -1951,7 +1976,11 @@
   "logPlay": "Reproducir",
   "logPosition": "Momento de la sesión",
   "logReadOnly": "Solo lectura",
+  "logRecordingTooltip": "Se guarda lo que sale en pantalla",
+  "logResume": "Seguir grabando",
+  "logResumeHelp": "El registro guarda un hueco con lo que duró la pausa",
   "logSaved": "Guardado",
+  "logSeeIt": "Ver el registro",
   "logSpeed": "Velocidad: {speed}",
   "@logSpeed": {
     "placeholders": {
@@ -1960,6 +1989,24 @@
       }
     }
   },
+  "logStopEverywhere": "Activado en todos los hosts; se cambia en Ajustes",
+  "logStopFromGroup": "Lo hereda de {group}; se cambia en su editor",
+  "@logStopFromGroup": {
+    "placeholders": {
+      "group": {
+        "type": "String"
+      }
+    }
+  },
+  "logStopHost": "No guardar registros de {host}…",
+  "@logStopHost": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "logStopOwn": "Activado en este host; se cambia en su editor",
   "logTab": "Registro",
   "logTabTitle": "{label} · {when}",
   "@logTabTitle": {
@@ -1976,6 +2023,7 @@
   "logViewerEmpty": "Abre un registro desde la página Registros.",
   "logs": "Registros",
   "logsAll": "Todas",
+  "logsAlsoHere": "También en este equipo",
   "logsAppQuit": "Se cerró la app",
   "logsAppQuitAt": "OpenWard se cerró a las {time} sin acabar la sesión. Esto es lo último que se guardó.",
   "@logsAppQuitAt": {
@@ -1994,6 +2042,14 @@
     }
   },
   "logsConnectAgain": "Conectar otra vez",
+  "logsCount": "{count, plural, =1{1 registro} other{{count} registros}}",
+  "@logsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "logsCut": "Se cortó",
   "logsCutAt": "La conexión se cortó a las {time}. Esto es lo último que se vio.",
   "@logsCutAt": {
@@ -2003,8 +2059,28 @@
       }
     }
   },
+  "logsDeleteAll": "Borrar todos los registros",
+  "logsDeleteAllAction": "Borrar todos",
+  "logsDeleteAllEllipsis": "Borrar todos…",
+  "logsDeleteAllHelp": "{count} y {size}, también los guardados. No se puede deshacer.",
+  "@logsDeleteAllHelp": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "logsDeleteAllTitle": "¿Borrar todos los registros?",
   "logsEmptyBody": "Cada conexión deja aquí cuándo fue y cuánto duró. Para guardar también lo que se vio, activa el registro de sesión en un host, en un grupo o en Ajustes.",
   "logsEmptyTitle": "Aún no hay sesiones",
+  "logsEverywhere": "Guardar el registro en todos los hosts",
+  "logsEverywhereHelp": "Lo que sale en pantalla, con sus tiempos, para volver a verlo, buscar en él y exportarlo. Nunca lo que escribes: una contraseña que no se ve no queda; un cat .env, sí. Solo en este equipo.",
+  "logsExceptIn": "Desactivado en:",
+  "logsFolder": "Carpeta",
+  "logsGroup": "grupo",
   "logsHitAt": "A los {time} de la sesión",
   "@logsHitAt": {
     "placeholders": {
@@ -2029,9 +2105,23 @@
       }
     }
   },
+  "logsHost": "host",
+  "logsKeep": "Borrar los registros pasados",
+  "logsKeepAlways": "Nunca",
+  "logsKeepDays": "{days, plural, =1{Al día} other{A los {days} días}}",
+  "@logsKeepDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "logsKeepHelp": "Los guardados no caducan nunca.",
   "logsLastCommands": "Últimos comandos",
   "logsLive": "Grabando",
   "logsLocal": "Locales",
+  "logsLocalHelp": "Tu propio equipo. Por defecto no.",
+  "logsLocalTerminals": "También los terminales locales",
   "logsMoreHits": "{count, plural, =1{y 1 más} other{y {count} más}}",
   "@logsMoreHits": {
     "placeholders": {
@@ -2040,22 +2130,39 @@
       }
     }
   },
+  "logsNoLimit": "Sin límite",
   "logsNoRecording": "Esta sesión no tiene registro: solo cuándo y cuánto duró.",
+  "logsNoneOff": "Ningún host ni grupo lo desactiva.",
+  "logsNoneOn": "Ningún host ni grupo lo activa por su cuenta.",
   "logsNotRecorded": "Sin registro",
   "logsNothing": "Ninguna sesión con estos filtros.",
   "logsNow": "ahora",
+  "logsOnlyIn": "Activado solo en:",
   "logsOpen": "Abrir el registro",
   "logsOpenEntry": "Abierta",
   "logsOpenHere": "Abrir aquí",
   "logsPick": "Elige una sesión para ver lo último que se vio.",
   "logsRecorded": "Con registro",
   "logsSaved": "Guardadas",
+  "logsSavedCount": "{count, plural, =1{1 guardado} other{{count} guardados}}",
+  "@logsSavedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "logsSearchHint": "Busca en lo que se vio: comandos y salida",
   "logsSearchNone": "Nada en lo grabado.",
   "logsSearchNote": "Se busca en lo que quedó grabado. Las sesiones sin registro solo guardan cuándo y cuánto duraron.",
   "logsSearching": "Buscando…",
+  "logsSessionTitle": "Registros de sesión",
   "logsSettings": "Ajustes de registros",
+  "logsSettingsEllipsis": "Ajustes de registros…",
+  "logsSpace": "Espacio máximo",
+  "logsSpaceHelp": "Al llegar, se borran primero los más antiguos sin guardar.",
   "logsToday": "Hoy",
+  "logsUnencrypted": "De momento se guardan sin cifrar, en una carpeta que solo puede leer tu usuario, igual que el historial de comandos. Cuando el vault vaya cifrado, los registros irán cifrados con él y esta nota desaparecerá.",
   "logsUsage": "{size} de {max} · se guardan {days} días",
   "@logsUsage": {
     "placeholders": {
@@ -2070,7 +2177,9 @@
       }
     }
   },
+  "logsWhereNote": "En el editor de cada host o grupo, «Registro de sesión» › Avanzado: se hereda como el resto, de los grupos al host.",
   "logsYesterday": "Ayer",
+  "lostInLog": "Lo que se vio hasta ahora está en su registro, aunque cierres esta pestaña.",
   "lostKeptInTmux": "Tu sesión sigue en tmux en {host}: al volver la encontrarás como estaba. Lo que escribas ahora no se envía.",
   "@lostKeptInTmux": {
     "placeholders": {
@@ -3229,6 +3338,10 @@
       }
     }
   },
+  "sessionLog": "Registro de sesión",
+  "sessionLogNote": "Nunca lo que escribes. Se ve y se busca en Registros.",
+  "sessionLogOff": "No",
+  "sessionLogOn": "Sí, lo que sale en pantalla",
   "sessionResumed": "sesión de tmux recuperada",
   "setHereHint": "Un clic lo cambia solo aquí",
   "setHereIdentitySays": "Cambiado aquí; la identidad dice {value}",
@@ -3250,6 +3363,7 @@
   "settings": "Ajustes",
   "settingsAppearance": "Apariencia",
   "settingsGeneral": "General",
+  "settingsLogs": "Registros",
   "settingsTerminal": "Terminal",
   "settingsWindow": "Ventana",
   "sftpConnected": "SFTP en {label}",

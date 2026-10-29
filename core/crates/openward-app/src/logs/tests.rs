@@ -142,14 +142,21 @@ fn what_comes_out_while_paused_is_not_kept() {
     assert!(session.pause(true));
     assert!(!session.pause(true), "already paused");
     assert!(session.paused());
+    // Not even the command run in the pause.
+    session.command("cat .env");
     session.output(b"TOKEN=s3cr3t\r\n");
     assert!(session.pause(false));
+    session.command("ls");
     session.output(b"despues\r\n");
     session.finish(End::Closed);
     let id = session.id();
     let rec = logs.read(&id).unwrap();
     assert_eq!(outputs(&rec), "antes\r\ndespues\r\n");
-    assert_eq!(markers(&rec), [Mark::Pause.label(), Mark::Resume.label()]);
+    assert_eq!(
+        markers(&rec),
+        [Mark::Pause.label(), Mark::Resume.label(), "$ ls"]
+    );
+    assert_eq!(logs.entry(&id).unwrap().commands, 1);
     let text: Vec<String> = logs
         .text(&id)
         .unwrap()
@@ -255,18 +262,46 @@ fn old_and_oversized_entries_go_saved_ones_stay() {
     assert_eq!(ids, ["d", "b-old-saved"]);
     logs.unsave("d").unwrap();
     assert_eq!(logs.list().len(), 1);
-    // No limits: nothing goes.
+    // No limits: nothing goes, at the next start either.
+    logs.set_config(Config {
+        keep_days: 0,
+        max_bytes: 0,
+        ..Config::default()
+    });
     fake(dir.path(), "f", 400, 10, false);
-    let logs = Logs::open(
-        dir.path(),
-        Config {
-            keep_days: 0,
-            max_bytes: 0,
-            ..Config::default()
-        },
-    )
-    .unwrap();
+    let logs = open(dir.path());
     assert_eq!(logs.list().len(), 2);
+}
+
+/// The limits chosen are the ones a start prunes with: kept beside the
+/// logs, not the defaults the app opens with.
+#[test]
+fn the_limits_chosen_hold_at_the_next_start() {
+    let dir = tempfile::tempdir().unwrap();
+    let logs = open(dir.path());
+    let chosen = Config {
+        record_local: true,
+        keep_days: 90,
+        max_bytes: 5 * 1024 * 1024 * 1024,
+    };
+    logs.set_config(chosen);
+    drop(logs);
+    fake(dir.path(), "sixty-days", 60, 10, false);
+    let logs = open(dir.path());
+    assert_eq!(logs.config(), chosen);
+    assert_eq!(logs.list().len(), 1, "kept 90 days, not 30");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = fs::metadata(dir.path().join(CONFIG_FILE))
+            .unwrap()
+            .permissions()
+            .mode();
+        assert_eq!(mode & 0o777, 0o600);
+    }
+    // A file not ours to read: the defaults.
+    fs::write(dir.path().join(CONFIG_FILE), "{ no").unwrap();
+    assert_eq!(open(dir.path()).config(), Config::default());
 }
 
 #[test]

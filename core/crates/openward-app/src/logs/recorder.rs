@@ -163,6 +163,18 @@ impl Recorder {
         }
     }
 
+    /// A command's marker, unless paused: what runs in a pause is not
+    /// kept, not even its name. False if it was left out.
+    pub(crate) fn command(&self, label: String) -> bool {
+        let t = self.now();
+        let mut q = lock(&self.shared.queue);
+        if q.paused || q.done || q.full {
+            return false;
+        }
+        q.events.push(Pending::Marker(t, label));
+        true
+    }
+
     /// Stops keeping output, or starts again; a marker notes each. False
     /// if it already was so.
     pub(crate) fn pause(&self, paused: bool) -> bool {

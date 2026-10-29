@@ -28,6 +28,10 @@ class FakeSession extends Fake implements TerminalSession {
   @override
   void note({required String text}) => notes.add(text);
 
+  /// No session log is kept.
+  @override
+  LogStateView? logState() => null;
+
   @override
   void close() => closed = true;
 

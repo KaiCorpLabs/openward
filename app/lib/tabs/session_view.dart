@@ -532,7 +532,10 @@ class PaneContent extends ConsumerWidget {
         final Widget? card = prompt != null
             ? PromptCard(key: ObjectKey(prompt), controller: c, prompt: prompt)
             : c.phase == Phase.reconnecting
-            ? ReconnectCard(controller: c)
+            ? ReconnectCard(
+                controller: c,
+                logId: (c.log?.recording ?? false) ? c.log!.id : null,
+              )
             : c.everConnected
             ? null
             : c.phase == Phase.connecting && !c.isLocal

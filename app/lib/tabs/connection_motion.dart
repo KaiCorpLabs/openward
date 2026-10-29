@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/providers.dart';
 import '../l10n/l10n.dart';
+import '../logs/log_viewer.dart' show openLogById;
 import '../src/rust/api/session.dart';
 import '../terminal/controller.dart';
 import '../ui/tokens.dart';
@@ -455,11 +456,15 @@ class _BlinkState extends State<_Blink> with SingleTickerProviderStateMixin {
 }
 
 /// Over a terminal whose connection was lost: the way broken, the next try
-/// and when, and what is kept (a tmux session) or not (an ordinary shell).
+/// and when, and what is kept (a tmux session) or not (an ordinary shell),
+/// and its session log if one is recorded.
 class ReconnectCard extends ConsumerStatefulWidget {
-  const ReconnectCard({super.key, required this.controller});
+  const ReconnectCard({super.key, required this.controller, this.logId});
 
   final ConnectionController controller;
+
+  /// The recording of this connection, to see what was seen before.
+  final String? logId;
 
   @override
   ConsumerState<ReconnectCard> createState() => _ReconnectCardState();
@@ -609,13 +614,25 @@ class _ReconnectCardState extends ConsumerState<ReconnectCard> {
             ),
             const SizedBox(height: 12),
             Text(
-              kept ? l.lostKeptInTmux(s.label) : l.lostNewShell(s.label),
+              [
+                kept ? l.lostKeptInTmux(s.label) : l.lostNewShell(s.label),
+                if (widget.logId != null) l.lostInLog,
+              ].join(' '),
               style: TextStyle(fontSize: OwText.small, color: c.textMuted),
             ),
             const SizedBox(height: 14),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
+                if (widget.logId case final id?) ...[
+                  TextButton.icon(
+                    key: const ValueKey('reconnect.log'),
+                    onPressed: () => openLogById(context, ref, id),
+                    icon: const Icon(Icons.subject, size: 16),
+                    label: Text(l.logSeeIt),
+                  ),
+                  const Spacer(),
+                ],
                 OutlinedButton(
                   key: const ValueKey('reconnect.close'),
                   onPressed: () =>
