@@ -729,6 +729,177 @@
   "localShell": "Local",
   "localTerminal": "Local terminal",
   "localUser": "your local user",
+  "logCommands": "Commands",
+  "logCopied": "Copied.",
+  "logCopyCommand": "Copy the chosen command and its output",
+  "logCopyText": "Copy as text",
+  "logDelete": "Delete the log…",
+  "logDeleteBody": "What was seen in this session and its entry are deleted. This cannot be undone.",
+  "logDeleteTitle": "Delete this log?",
+  "logEditNote": "Edit the note",
+  "logExportCast": "Asciicast (.cast)",
+  "logExportCastHelp": "With timing and colors; plays in asciinema.",
+  "logExportText": "Text (.txt)",
+  "logExportTextHelp": "What was seen, without colors or timing.",
+  "logExported": "Saved to {path}.",
+  "@logExported": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "logIncomplete": "It stops before the end: OpenWard closed suddenly.",
+  "logMarkBack": "Connection back",
+  "logMarkFull": "Log full",
+  "logMarkLost": "Connection lost",
+  "logMarkOmitted": "Output left out",
+  "logMarkPause": "Paused",
+  "logMoreActions": "More actions",
+  "logNeverExpires": "Never expires",
+  "logNoteHelp": "It never expires: it is kept until you remove it.",
+  "logNoteHint": "Why you keep it (optional)",
+  "logNoteTitle": "Keep this log",
+  "logPausePlayback": "Pause",
+  "logPausedFor": "Paused · {duration}",
+  "@logPausedFor": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "logPausedTotal": "{duration} paused",
+  "@logPausedTotal": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "logPlay": "Play",
+  "logPosition": "Moment in the session",
+  "logReadOnly": "Read only",
+  "logSaved": "Saved",
+  "logSpeed": "Speed: {speed}",
+  "@logSpeed": {
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "logTab": "Log",
+  "logTabTitle": "{label} · {when}",
+  "@logTabTitle": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "logUnsave": "Stop keeping",
+  "logViewerEmpty": "Open a log from the Session logs page.",
+  "logs": "Session logs",
+  "logsAll": "All",
+  "logsAppQuit": "App closed",
+  "logsAppQuitAt": "OpenWard closed at {time} without ending the session. This is the last that was kept.",
+  "@logsAppQuitAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "logsCommands": "{count, plural, =1{1 command} other{{count} commands}}",
+  "@logsCommands": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logsConnectAgain": "Connect again",
+  "logsCut": "Cut off",
+  "logsCutAt": "The connection was cut at {time}. This is the last that was seen.",
+  "@logsCutAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "logsEmptyBody": "Each connection leaves here when it was and how long it lasted. To keep what was seen too, turn on the session log in a host, a group or Settings.",
+  "logsEmptyTitle": "No sessions yet",
+  "logsHitAt": "{time} into the session",
+  "@logsHitAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "logsHits": "{count, plural, =1{1 match} other{{count} matches}}",
+  "@logsHits": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logsHitsIn": "{count, plural, =1{in 1 log} other{in {count} logs}}",
+  "@logsHitsIn": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logsLastCommands": "Last commands",
+  "logsLive": "Recording",
+  "logsLocal": "Local",
+  "logsMoreHits": "{count, plural, =1{and 1 more} other{and {count} more}}",
+  "@logsMoreHits": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logsNoRecording": "This session has no log: only when it was and how long it lasted.",
+  "logsNotRecorded": "Not recorded",
+  "logsNothing": "No session with these filters.",
+  "logsNow": "now",
+  "logsOpen": "Open the log",
+  "logsOpenEntry": "Open",
+  "logsOpenHere": "Open here",
+  "logsPick": "Pick a session to see the last that was seen.",
+  "logsRecorded": "Recorded",
+  "logsSaved": "Saved",
+  "logsSearchHint": "Search what was seen: commands and output",
+  "logsSearchNone": "Nothing in the recordings.",
+  "logsSearchNote": "Only what was recorded is searched. Sessions without a log keep only when they were and how long they lasted.",
+  "logsSearching": "Searching…",
+  "logsSettings": "Log settings",
+  "logsToday": "Today",
+  "logsUsage": "{size} of {max} · kept {days} days",
+  "@logsUsage": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "logsYesterday": "Yesterday",
   "lostKeptInTmux": "Your session goes on in tmux on {host}: you will find it as it was when it is back. What you type now is not sent.",
   "@lostKeptInTmux": {
     "placeholders": {

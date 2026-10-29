@@ -1,6 +1,6 @@
 # Registros de sesión
 
-- **Estado:** maquetas aprobadas el 2026-10-28 (fila «Registros» del lienzo). Va en la 0.3.3, con los valores por defecto propuestos. L1 (el núcleo) hecho el 2026-10-28; L2 a L4, pendientes.
+- **Estado:** maquetas aprobadas el 2026-10-28 (fila «Registros» del lienzo). Va en la 0.3.3, con los valores por defecto propuestos. L1 (el núcleo) publicado en main el 2026-10-28; L2 (la página y el visor) hecho el mismo día, sin publicar; L3 y L4, pendientes.
 - **Fecha:** 2026-10-28.
 - **Base:** [ARCHITECTURE §10](../ARCHITECTURE.md#10-registros-auditoría-y-grabación), que ya prevé un historial de sesiones local con reproducción en asciicast, gratis y en el cliente. Fase 1, antes de la v0.4 (el vault cifrado).
 - **Duración estimada:** unas 2,5 semanas de trabajo.
@@ -127,7 +127,7 @@ No es un control de cumplimiento: la grabación hecha en el cliente se puede evi
 | # | Hito | Semanas | Estado |
 |---|---|---|---|
 | L1 | Núcleo: grabador asciicast, entradas, retención, texto para buscar, reproductor y FFI | 1 | Hecho, sin publicar |
-| L2 | Página Registros y visor: comandos, buscar, línea de tiempo, guardar y exportar | 1 | Propuesto |
+| L2 | Página Registros y visor: comandos, buscar, línea de tiempo, guardar y exportar | 1 | Hecho, sin publicar |
 | L3 | En la sesión y en Ajustes: cabecera del panel, pausa, tarjeta de corte, ajuste heredado, editor y Ajustes › Registros | 0,5 | Propuesto |
 | L4 | Pruebas de ventana, notas, guía de prueba y beta | — | Propuesto |
 
@@ -159,6 +159,33 @@ No es un control de cumplimiento: la grabación hecha en el cliente se puede evi
   - 20 de unidad del módulo;
   - 3 de integración nuevas: con S2, la contraseña sin eco no queda, y la grabación sigue al host y al valor del equipo; sin S2, la terminal local;
   - las 37 de servidores, con S2.
+
+**Qué deja L2 hecho:**
+- **Núcleo y FFI:**
+  - `Logs::preview` con las últimas líneas y los marcadores, sin reproducir la sesión;
+  - `lines_around`, con el texto alrededor de una coincidencia;
+  - `plain_text`, para copiarlo todo.
+- **Página Registros** (`PageKind.logs`):
+  - se abre con ⌘⇧R (Ctrl+Mayús+R fuera de macOS), desde la Biblioteca o desde la paleta;
+  - las sesiones por día, con su tramo horario, duración, tamaño y estado (grabando, se cortó, sin registro, N comandos);
+  - el espacio usado y los límites;
+  - la búsqueda en lo grabado, con las tres primeras líneas de cada sesión y cuántas más hay;
+  - filtros: todas, con registro, guardadas, por entorno y locales;
+  - la vista previa con las últimas líneas y los últimos comandos, o las líneas alrededor de la coincidencia elegida, con «Abrir el registro» o «Abrir aquí» y «Conectar otra vez».
+- **Visor** (`PageKind.log`):
+  - el panel de terminal en modo de solo lectura (`TerminalPane.readOnly`): ni teclas, ni pegar, ni método de entrada; el ratón solo selecciona, la rueda solo mueve el historial y el tamaño es el de la grabación;
+  - `TerminalController.playback` sobre el terminal del reproductor;
+  - la columna de comandos, que salta al final de cada uno, con las pausas y los cortes;
+  - ⌘F para buscar, espacio para reproducir y las flechas para pasar de un comando a otro;
+  - la línea de tiempo con las marcas de los comandos y de las pausas, y velocidades 1×, 2× y 8×;
+  - Guardar con nota, Exportar (`.cast`, `.txt`, copiar todo o el comando elegido con su salida), Conectar otra vez, Dejar de guardar y Borrar.
+- **Cambios respecto a las maquetas:**
+  - el visor es una página con un registro cada vez, no un tipo de pestaña nuevo: así no hace falta tocar el resto de sitios que conocen las pestañas, y la pestaña lleva igualmente el nombre y la hora del registro;
+  - «Solo el comando elegido» es una entrada del menú Exportar («Copiar el comando elegido y su salida»), no una casilla.
+- **Pruebas:**
+  - una de ventana nueva en `ui_test`: una terminal local grabada se busca, se abre en la coincidencia, salta a un comando, se guarda con nota, se reproduce hasta el final y se borra;
+  - la prueba del núcleo para la vista previa;
+  - `flutter test`, con 241 pruebas, y la de los tokens de diseño.
 
 **Pruebas que pide cada hito:**
 - **L1:**

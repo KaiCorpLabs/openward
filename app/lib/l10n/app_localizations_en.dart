@@ -2320,6 +2320,274 @@ class AppLocalizationsEn extends AppLocalizations {
   String get localUser => 'your local user';
 
   @override
+  String get logCommands => 'Commands';
+
+  @override
+  String get logCopied => 'Copied.';
+
+  @override
+  String get logCopyCommand => 'Copy the chosen command and its output';
+
+  @override
+  String get logCopyText => 'Copy as text';
+
+  @override
+  String get logDelete => 'Delete the log…';
+
+  @override
+  String get logDeleteBody =>
+      'What was seen in this session and its entry are deleted. This cannot be undone.';
+
+  @override
+  String get logDeleteTitle => 'Delete this log?';
+
+  @override
+  String get logEditNote => 'Edit the note';
+
+  @override
+  String get logExportCast => 'Asciicast (.cast)';
+
+  @override
+  String get logExportCastHelp => 'With timing and colors; plays in asciinema.';
+
+  @override
+  String get logExportText => 'Text (.txt)';
+
+  @override
+  String get logExportTextHelp => 'What was seen, without colors or timing.';
+
+  @override
+  String logExported(String path) {
+    return 'Saved to $path.';
+  }
+
+  @override
+  String get logIncomplete =>
+      'It stops before the end: OpenWard closed suddenly.';
+
+  @override
+  String get logMarkBack => 'Connection back';
+
+  @override
+  String get logMarkFull => 'Log full';
+
+  @override
+  String get logMarkLost => 'Connection lost';
+
+  @override
+  String get logMarkOmitted => 'Output left out';
+
+  @override
+  String get logMarkPause => 'Paused';
+
+  @override
+  String get logMoreActions => 'More actions';
+
+  @override
+  String get logNeverExpires => 'Never expires';
+
+  @override
+  String get logNoteHelp => 'It never expires: it is kept until you remove it.';
+
+  @override
+  String get logNoteHint => 'Why you keep it (optional)';
+
+  @override
+  String get logNoteTitle => 'Keep this log';
+
+  @override
+  String get logPausePlayback => 'Pause';
+
+  @override
+  String logPausedFor(String duration) {
+    return 'Paused · $duration';
+  }
+
+  @override
+  String logPausedTotal(String duration) {
+    return '$duration paused';
+  }
+
+  @override
+  String get logPlay => 'Play';
+
+  @override
+  String get logPosition => 'Moment in the session';
+
+  @override
+  String get logReadOnly => 'Read only';
+
+  @override
+  String get logSaved => 'Saved';
+
+  @override
+  String logSpeed(String speed) {
+    return 'Speed: $speed';
+  }
+
+  @override
+  String get logTab => 'Log';
+
+  @override
+  String logTabTitle(String label, String when) {
+    return '$label · $when';
+  }
+
+  @override
+  String get logUnsave => 'Stop keeping';
+
+  @override
+  String get logViewerEmpty => 'Open a log from the Session logs page.';
+
+  @override
+  String get logs => 'Session logs';
+
+  @override
+  String get logsAll => 'All';
+
+  @override
+  String get logsAppQuit => 'App closed';
+
+  @override
+  String logsAppQuitAt(String time) {
+    return 'OpenWard closed at $time without ending the session. This is the last that was kept.';
+  }
+
+  @override
+  String logsCommands(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count commands',
+      one: '1 command',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get logsConnectAgain => 'Connect again';
+
+  @override
+  String get logsCut => 'Cut off';
+
+  @override
+  String logsCutAt(String time) {
+    return 'The connection was cut at $time. This is the last that was seen.';
+  }
+
+  @override
+  String get logsEmptyBody =>
+      'Each connection leaves here when it was and how long it lasted. To keep what was seen too, turn on the session log in a host, a group or Settings.';
+
+  @override
+  String get logsEmptyTitle => 'No sessions yet';
+
+  @override
+  String logsHitAt(String time) {
+    return '$time into the session';
+  }
+
+  @override
+  String logsHits(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count matches',
+      one: '1 match',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String logsHitsIn(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'in $count logs',
+      one: 'in 1 log',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get logsLastCommands => 'Last commands';
+
+  @override
+  String get logsLive => 'Recording';
+
+  @override
+  String get logsLocal => 'Local';
+
+  @override
+  String logsMoreHits(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'and $count more',
+      one: 'and 1 more',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get logsNoRecording =>
+      'This session has no log: only when it was and how long it lasted.';
+
+  @override
+  String get logsNotRecorded => 'Not recorded';
+
+  @override
+  String get logsNothing => 'No session with these filters.';
+
+  @override
+  String get logsNow => 'now';
+
+  @override
+  String get logsOpen => 'Open the log';
+
+  @override
+  String get logsOpenEntry => 'Open';
+
+  @override
+  String get logsOpenHere => 'Open here';
+
+  @override
+  String get logsPick => 'Pick a session to see the last that was seen.';
+
+  @override
+  String get logsRecorded => 'Recorded';
+
+  @override
+  String get logsSaved => 'Saved';
+
+  @override
+  String get logsSearchHint => 'Search what was seen: commands and output';
+
+  @override
+  String get logsSearchNone => 'Nothing in the recordings.';
+
+  @override
+  String get logsSearchNote =>
+      'Only what was recorded is searched. Sessions without a log keep only when they were and how long they lasted.';
+
+  @override
+  String get logsSearching => 'Searching…';
+
+  @override
+  String get logsSettings => 'Log settings';
+
+  @override
+  String get logsToday => 'Today';
+
+  @override
+  String logsUsage(String size, String max, int days) {
+    return '$size of $max · kept $days days';
+  }
+
+  @override
+  String get logsYesterday => 'Yesterday';
+
+  @override
   String lostKeptInTmux(String host) {
     return 'Your session goes on in tmux on $host: you will find it as it was when it is back. What you type now is not sent.';
   }

@@ -3578,6 +3578,432 @@ abstract class AppLocalizations {
   /// **'tu usuario local'**
   String get localUser;
 
+  /// No description provided for @logCommands.
+  ///
+  /// In es, this message translates to:
+  /// **'Comandos'**
+  String get logCommands;
+
+  /// No description provided for @logCopied.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiado.'**
+  String get logCopied;
+
+  /// No description provided for @logCopyCommand.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar el comando elegido y su salida'**
+  String get logCopyCommand;
+
+  /// No description provided for @logCopyText.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar como texto'**
+  String get logCopyText;
+
+  /// No description provided for @logDelete.
+  ///
+  /// In es, this message translates to:
+  /// **'Borrar el registro…'**
+  String get logDelete;
+
+  /// No description provided for @logDeleteBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se borra lo que se vio en esta sesión y su entrada. No se puede deshacer.'**
+  String get logDeleteBody;
+
+  /// No description provided for @logDeleteTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Borrar este registro?'**
+  String get logDeleteTitle;
+
+  /// No description provided for @logEditNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar la nota'**
+  String get logEditNote;
+
+  /// No description provided for @logExportCast.
+  ///
+  /// In es, this message translates to:
+  /// **'Asciicast (.cast)'**
+  String get logExportCast;
+
+  /// No description provided for @logExportCastHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Con tiempos y colores; se reproduce con asciinema.'**
+  String get logExportCastHelp;
+
+  /// No description provided for @logExportText.
+  ///
+  /// In es, this message translates to:
+  /// **'Texto (.txt)'**
+  String get logExportText;
+
+  /// No description provided for @logExportTextHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que se vio, sin colores ni tiempos.'**
+  String get logExportTextHelp;
+
+  /// No description provided for @logExported.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardado en {path}.'**
+  String logExported(String path);
+
+  /// No description provided for @logIncomplete.
+  ///
+  /// In es, this message translates to:
+  /// **'Se corta antes del final: OpenWard se cerró de golpe.'**
+  String get logIncomplete;
+
+  /// No description provided for @logMarkBack.
+  ///
+  /// In es, this message translates to:
+  /// **'Volvió la conexión'**
+  String get logMarkBack;
+
+  /// No description provided for @logMarkFull.
+  ///
+  /// In es, this message translates to:
+  /// **'Registro lleno'**
+  String get logMarkFull;
+
+  /// No description provided for @logMarkLost.
+  ///
+  /// In es, this message translates to:
+  /// **'Se cortó la conexión'**
+  String get logMarkLost;
+
+  /// No description provided for @logMarkOmitted.
+  ///
+  /// In es, this message translates to:
+  /// **'Salida omitida'**
+  String get logMarkOmitted;
+
+  /// No description provided for @logMarkPause.
+  ///
+  /// In es, this message translates to:
+  /// **'En pausa'**
+  String get logMarkPause;
+
+  /// No description provided for @logMoreActions.
+  ///
+  /// In es, this message translates to:
+  /// **'Más acciones'**
+  String get logMoreActions;
+
+  /// No description provided for @logNeverExpires.
+  ///
+  /// In es, this message translates to:
+  /// **'No caduca'**
+  String get logNeverExpires;
+
+  /// No description provided for @logNoteHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'No caduca: se guarda hasta que lo quites.'**
+  String get logNoteHelp;
+
+  /// No description provided for @logNoteHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Por qué lo guardas (opcional)'**
+  String get logNoteHint;
+
+  /// No description provided for @logNoteTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar este registro'**
+  String get logNoteTitle;
+
+  /// No description provided for @logPausePlayback.
+  ///
+  /// In es, this message translates to:
+  /// **'Pausar'**
+  String get logPausePlayback;
+
+  /// No description provided for @logPausedFor.
+  ///
+  /// In es, this message translates to:
+  /// **'En pausa · {duration}'**
+  String logPausedFor(String duration);
+
+  /// No description provided for @logPausedTotal.
+  ///
+  /// In es, this message translates to:
+  /// **'{duration} en pausa'**
+  String logPausedTotal(String duration);
+
+  /// No description provided for @logPlay.
+  ///
+  /// In es, this message translates to:
+  /// **'Reproducir'**
+  String get logPlay;
+
+  /// No description provided for @logPosition.
+  ///
+  /// In es, this message translates to:
+  /// **'Momento de la sesión'**
+  String get logPosition;
+
+  /// No description provided for @logReadOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo lectura'**
+  String get logReadOnly;
+
+  /// No description provided for @logSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardado'**
+  String get logSaved;
+
+  /// No description provided for @logSpeed.
+  ///
+  /// In es, this message translates to:
+  /// **'Velocidad: {speed}'**
+  String logSpeed(String speed);
+
+  /// No description provided for @logTab.
+  ///
+  /// In es, this message translates to:
+  /// **'Registro'**
+  String get logTab;
+
+  /// No description provided for @logTabTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'{label} · {when}'**
+  String logTabTitle(String label, String when);
+
+  /// No description provided for @logUnsave.
+  ///
+  /// In es, this message translates to:
+  /// **'Dejar de guardar'**
+  String get logUnsave;
+
+  /// No description provided for @logViewerEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Abre un registro desde la página Registros.'**
+  String get logViewerEmpty;
+
+  /// No description provided for @logs.
+  ///
+  /// In es, this message translates to:
+  /// **'Registros'**
+  String get logs;
+
+  /// No description provided for @logsAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Todas'**
+  String get logsAll;
+
+  /// No description provided for @logsAppQuit.
+  ///
+  /// In es, this message translates to:
+  /// **'Se cerró la app'**
+  String get logsAppQuit;
+
+  /// No description provided for @logsAppQuitAt.
+  ///
+  /// In es, this message translates to:
+  /// **'OpenWard se cerró a las {time} sin acabar la sesión. Esto es lo último que se guardó.'**
+  String logsAppQuitAt(String time);
+
+  /// No description provided for @logsCommands.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 comando} other{{count} comandos}}'**
+  String logsCommands(int count);
+
+  /// No description provided for @logsConnectAgain.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectar otra vez'**
+  String get logsConnectAgain;
+
+  /// No description provided for @logsCut.
+  ///
+  /// In es, this message translates to:
+  /// **'Se cortó'**
+  String get logsCut;
+
+  /// No description provided for @logsCutAt.
+  ///
+  /// In es, this message translates to:
+  /// **'La conexión se cortó a las {time}. Esto es lo último que se vio.'**
+  String logsCutAt(String time);
+
+  /// No description provided for @logsEmptyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Cada conexión deja aquí cuándo fue y cuánto duró. Para guardar también lo que se vio, activa el registro de sesión en un host, en un grupo o en Ajustes.'**
+  String get logsEmptyBody;
+
+  /// No description provided for @logsEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay sesiones'**
+  String get logsEmptyTitle;
+
+  /// No description provided for @logsHitAt.
+  ///
+  /// In es, this message translates to:
+  /// **'A los {time} de la sesión'**
+  String logsHitAt(String time);
+
+  /// No description provided for @logsHits.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 coincidencia} other{{count} coincidencias}}'**
+  String logsHits(int count);
+
+  /// No description provided for @logsHitsIn.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{en 1 registro} other{en {count} registros}}'**
+  String logsHitsIn(int count);
+
+  /// No description provided for @logsLastCommands.
+  ///
+  /// In es, this message translates to:
+  /// **'Últimos comandos'**
+  String get logsLastCommands;
+
+  /// No description provided for @logsLive.
+  ///
+  /// In es, this message translates to:
+  /// **'Grabando'**
+  String get logsLive;
+
+  /// No description provided for @logsLocal.
+  ///
+  /// In es, this message translates to:
+  /// **'Locales'**
+  String get logsLocal;
+
+  /// No description provided for @logsMoreHits.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{y 1 más} other{y {count} más}}'**
+  String logsMoreHits(int count);
+
+  /// No description provided for @logsNoRecording.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta sesión no tiene registro: solo cuándo y cuánto duró.'**
+  String get logsNoRecording;
+
+  /// No description provided for @logsNotRecorded.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin registro'**
+  String get logsNotRecorded;
+
+  /// No description provided for @logsNothing.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguna sesión con estos filtros.'**
+  String get logsNothing;
+
+  /// No description provided for @logsNow.
+  ///
+  /// In es, this message translates to:
+  /// **'ahora'**
+  String get logsNow;
+
+  /// No description provided for @logsOpen.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir el registro'**
+  String get logsOpen;
+
+  /// No description provided for @logsOpenEntry.
+  ///
+  /// In es, this message translates to:
+  /// **'Abierta'**
+  String get logsOpenEntry;
+
+  /// No description provided for @logsOpenHere.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir aquí'**
+  String get logsOpenHere;
+
+  /// No description provided for @logsPick.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige una sesión para ver lo último que se vio.'**
+  String get logsPick;
+
+  /// No description provided for @logsRecorded.
+  ///
+  /// In es, this message translates to:
+  /// **'Con registro'**
+  String get logsRecorded;
+
+  /// No description provided for @logsSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardadas'**
+  String get logsSaved;
+
+  /// No description provided for @logsSearchHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Busca en lo que se vio: comandos y salida'**
+  String get logsSearchHint;
+
+  /// No description provided for @logsSearchNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Nada en lo grabado.'**
+  String get logsSearchNone;
+
+  /// No description provided for @logsSearchNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Se busca en lo que quedó grabado. Las sesiones sin registro solo guardan cuándo y cuánto duraron.'**
+  String get logsSearchNote;
+
+  /// No description provided for @logsSearching.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscando…'**
+  String get logsSearching;
+
+  /// No description provided for @logsSettings.
+  ///
+  /// In es, this message translates to:
+  /// **'Ajustes de registros'**
+  String get logsSettings;
+
+  /// No description provided for @logsToday.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy'**
+  String get logsToday;
+
+  /// No description provided for @logsUsage.
+  ///
+  /// In es, this message translates to:
+  /// **'{size} de {max} · se guardan {days} días'**
+  String logsUsage(String size, String max, int days);
+
+  /// No description provided for @logsYesterday.
+  ///
+  /// In es, this message translates to:
+  /// **'Ayer'**
+  String get logsYesterday;
+
   /// No description provided for @lostKeptInTmux.
   ///
   /// In es, this message translates to:

@@ -34,10 +34,15 @@ class TerminalPane extends ConsumerStatefulWidget {
     this.autofocus = true,
     this.mirrors,
     this.paneMenu,
+    this.readOnly = false,
   });
 
   final TerminalController controller;
   final bool autofocus;
+
+  /// A recording played back: it is drawn, selected, searched and copied,
+  /// never typed into, and keeps its own size.
+  final bool readOnly;
 
   /// What the right-click menu adds for the pane it is in: splitting,
   /// closing, and that things can be dropped on it.
@@ -59,6 +64,10 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
 
   TerminalController get _c => widget.controller;
   TerminalSession get _session => widget.controller.session;
+
+  /// The program follows the mouse: never in a recording, whose program is
+  /// not there.
+  bool get _programMouse => !widget.readOnly && _c.mouseTracking;
   TerminalRenderer? _renderer;
 
   int _cols = 0;
@@ -251,7 +260,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     _cols = cols;
     _rows = rows;
     void apply() {
-      if (!mounted) return;
+      if (!mounted || widget.readOnly) return;
       _session.resize(cols: cols, rows: rows);
       _updateImeRects();
     }
@@ -346,7 +355,9 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
 
     final mods = hardwareMods();
     _renderer?.setCursorOn(true);
-    if (event is KeyDownEvent && _isPasteShortcut(event, mods)) {
+    if (event is KeyDownEvent &&
+        !widget.readOnly &&
+        _isPasteShortcut(event, mods)) {
       _paste();
       return KeyEventResult.handled;
     }
@@ -363,6 +374,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     }
     // Tabs, search and the like: the window's.
     if (isAppShortcut(event, mods)) return KeyEventResult.ignored;
+    if (widget.readOnly) return KeyEventResult.ignored;
 
     final char = event.character ?? '';
     final printable = char.isNotEmpty && !isControlText(char);
@@ -431,29 +443,32 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
           height: 34,
           child: _MenuRow(l.copy, '${key}C'),
         ),
-        PopupMenuItem(
-          value: _paste,
-          height: 34,
-          child: _MenuRow(l.paste, '${key}V'),
-        ),
+        if (!widget.readOnly)
+          PopupMenuItem(
+            value: _paste,
+            height: 34,
+            child: _MenuRow(l.paste, '${key}V'),
+          ),
         const PopupMenuDivider(),
         PopupMenuItem(
           value: _c.openFind,
           height: 34,
           child: _MenuRow(l.findEllipsis, '${key}F'),
         ),
-        PopupMenuItem(
-          value: () => showSnippetPalette(context),
-          height: 34,
-          child: _MenuRow(l.snippetsEllipsis, isApple ? '⌘⇧S' : '${key}S'),
-        ),
-        // What scrolled away, forgotten here; the program is not told.
-        PopupMenuItem(
-          key: const ValueKey('terminal.clearScrollback'),
-          value: _session.clearHistory,
-          height: 34,
-          child: _MenuRow(l.clearScrollback, ''),
-        ),
+        if (!widget.readOnly) ...[
+          PopupMenuItem(
+            value: () => showSnippetPalette(context),
+            height: 34,
+            child: _MenuRow(l.snippetsEllipsis, isApple ? '⌘⇧S' : '${key}S'),
+          ),
+          // What scrolled away, forgotten here; the program is not told.
+          PopupMenuItem(
+            key: const ValueKey('terminal.clearScrollback'),
+            value: _session.clearHistory,
+            height: 34,
+            child: _MenuRow(l.clearScrollback, ''),
+          ),
+        ],
         const PopupMenuDivider(),
         PopupMenuItem(
           value: _session.selectAll,
@@ -534,7 +549,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     final has = focusNode.hasFocus;
     if (!_c.isDisposed) _session.focus(gained: has);
     _renderer?.setFocused(has);
-    if (has) {
+    if (has && !widget.readOnly) {
       _openInput();
     } else {
       _input?.close();
@@ -722,7 +737,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   /// Mouse input goes to the program when it asks for it, unless Shift is
   /// held: then, as everywhere else, it selects text.
   bool get _toProgram =>
-      _c.mouseTracking && !HardwareKeyboard.instance.isShiftPressed;
+      _programMouse && !HardwareKeyboard.instance.isShiftPressed;
 
   /// ⌘ on Apple platforms, Ctrl elsewhere: what makes links clickable.
   bool get _linkModifier => isApple
@@ -790,7 +805,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
       return;
     }
     _updateLink(e.localPosition);
-    if (_c.mouseTracking) {
+    if (_programMouse) {
       _pointer(PointerAction.move, PointerButton.none, e.localPosition);
     }
   }
@@ -828,13 +843,13 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
       _session.selectRelease(x: e.localPosition.dx, y: e.localPosition.dy);
       return;
     }
-    if (!_c.mouseTracking || released == 0) return;
+    if (!_programMouse || released == 0) return;
     _pointer(PointerAction.up, _button(released), e.localPosition);
   }
 
   void _onHover(PointerHoverEvent e) {
     _updateLink(e.localPosition);
-    if (_c.mouseTracking) {
+    if (_programMouse) {
       _pointer(PointerAction.move, PointerButton.none, e.localPosition);
     }
   }
@@ -857,7 +872,11 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     final lines = (_scrollPixels / h).truncate();
     if (lines == 0) return;
     _scrollPixels -= lines * h;
-    _session.wheel(lines: lines, x: at.dx, y: at.dy, mods: hardwareMods());
+    if (widget.readOnly) {
+      _session.scrollHistory(lines: lines);
+    } else {
+      _session.wheel(lines: lines, x: at.dx, y: at.dy, mods: hardwareMods());
+    }
   }
 
   // ------------------------------------------------------------------- build
@@ -892,7 +911,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
               child: MouseRegion(
                 cursor: _linkUrl != null
                     ? SystemMouseCursors.click
-                    : _c.mouseTracking
+                    : _programMouse
                     ? SystemMouseCursors.basic
                     : SystemMouseCursors.text,
                 child: Listener(

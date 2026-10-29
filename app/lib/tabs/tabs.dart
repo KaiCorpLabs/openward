@@ -50,6 +50,12 @@ enum PageKind {
   snippets,
   workspaces,
   knownHosts,
+
+  /// Every session, and what was seen in those recorded.
+  logs,
+
+  /// One recording, read only.
+  log,
 }
 
 final class PageTab extends OpenTab {

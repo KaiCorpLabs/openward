@@ -26,6 +26,16 @@ class TerminalController extends ConnectionController {
     _wakes = session.watch().listen((_) => _onWake());
   }
 
+  /// A recording played back into `session` (its player's): drawn like
+  /// any terminal, never connected nor typed into.
+  TerminalController.playback({
+    required super.app,
+    required super.label,
+    required this.session,
+  }) {
+    _wakes = session.watch().listen((_) => _onWake());
+  }
+
   /// Set by the user (rename); wins over [label] and the program's title.
   String? customTitle;
 

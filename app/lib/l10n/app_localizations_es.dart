@@ -2323,6 +2323,275 @@ class AppLocalizationsEs extends AppLocalizations {
   String get localUser => 'tu usuario local';
 
   @override
+  String get logCommands => 'Comandos';
+
+  @override
+  String get logCopied => 'Copiado.';
+
+  @override
+  String get logCopyCommand => 'Copiar el comando elegido y su salida';
+
+  @override
+  String get logCopyText => 'Copiar como texto';
+
+  @override
+  String get logDelete => 'Borrar el registro…';
+
+  @override
+  String get logDeleteBody =>
+      'Se borra lo que se vio en esta sesión y su entrada. No se puede deshacer.';
+
+  @override
+  String get logDeleteTitle => '¿Borrar este registro?';
+
+  @override
+  String get logEditNote => 'Editar la nota';
+
+  @override
+  String get logExportCast => 'Asciicast (.cast)';
+
+  @override
+  String get logExportCastHelp =>
+      'Con tiempos y colores; se reproduce con asciinema.';
+
+  @override
+  String get logExportText => 'Texto (.txt)';
+
+  @override
+  String get logExportTextHelp => 'Lo que se vio, sin colores ni tiempos.';
+
+  @override
+  String logExported(String path) {
+    return 'Guardado en $path.';
+  }
+
+  @override
+  String get logIncomplete =>
+      'Se corta antes del final: OpenWard se cerró de golpe.';
+
+  @override
+  String get logMarkBack => 'Volvió la conexión';
+
+  @override
+  String get logMarkFull => 'Registro lleno';
+
+  @override
+  String get logMarkLost => 'Se cortó la conexión';
+
+  @override
+  String get logMarkOmitted => 'Salida omitida';
+
+  @override
+  String get logMarkPause => 'En pausa';
+
+  @override
+  String get logMoreActions => 'Más acciones';
+
+  @override
+  String get logNeverExpires => 'No caduca';
+
+  @override
+  String get logNoteHelp => 'No caduca: se guarda hasta que lo quites.';
+
+  @override
+  String get logNoteHint => 'Por qué lo guardas (opcional)';
+
+  @override
+  String get logNoteTitle => 'Guardar este registro';
+
+  @override
+  String get logPausePlayback => 'Pausar';
+
+  @override
+  String logPausedFor(String duration) {
+    return 'En pausa · $duration';
+  }
+
+  @override
+  String logPausedTotal(String duration) {
+    return '$duration en pausa';
+  }
+
+  @override
+  String get logPlay => 'Reproducir';
+
+  @override
+  String get logPosition => 'Momento de la sesión';
+
+  @override
+  String get logReadOnly => 'Solo lectura';
+
+  @override
+  String get logSaved => 'Guardado';
+
+  @override
+  String logSpeed(String speed) {
+    return 'Velocidad: $speed';
+  }
+
+  @override
+  String get logTab => 'Registro';
+
+  @override
+  String logTabTitle(String label, String when) {
+    return '$label · $when';
+  }
+
+  @override
+  String get logUnsave => 'Dejar de guardar';
+
+  @override
+  String get logViewerEmpty => 'Abre un registro desde la página Registros.';
+
+  @override
+  String get logs => 'Registros';
+
+  @override
+  String get logsAll => 'Todas';
+
+  @override
+  String get logsAppQuit => 'Se cerró la app';
+
+  @override
+  String logsAppQuitAt(String time) {
+    return 'OpenWard se cerró a las $time sin acabar la sesión. Esto es lo último que se guardó.';
+  }
+
+  @override
+  String logsCommands(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count comandos',
+      one: '1 comando',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get logsConnectAgain => 'Conectar otra vez';
+
+  @override
+  String get logsCut => 'Se cortó';
+
+  @override
+  String logsCutAt(String time) {
+    return 'La conexión se cortó a las $time. Esto es lo último que se vio.';
+  }
+
+  @override
+  String get logsEmptyBody =>
+      'Cada conexión deja aquí cuándo fue y cuánto duró. Para guardar también lo que se vio, activa el registro de sesión en un host, en un grupo o en Ajustes.';
+
+  @override
+  String get logsEmptyTitle => 'Aún no hay sesiones';
+
+  @override
+  String logsHitAt(String time) {
+    return 'A los $time de la sesión';
+  }
+
+  @override
+  String logsHits(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count coincidencias',
+      one: '1 coincidencia',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String logsHitsIn(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'en $count registros',
+      one: 'en 1 registro',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get logsLastCommands => 'Últimos comandos';
+
+  @override
+  String get logsLive => 'Grabando';
+
+  @override
+  String get logsLocal => 'Locales';
+
+  @override
+  String logsMoreHits(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'y $count más',
+      one: 'y 1 más',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get logsNoRecording =>
+      'Esta sesión no tiene registro: solo cuándo y cuánto duró.';
+
+  @override
+  String get logsNotRecorded => 'Sin registro';
+
+  @override
+  String get logsNothing => 'Ninguna sesión con estos filtros.';
+
+  @override
+  String get logsNow => 'ahora';
+
+  @override
+  String get logsOpen => 'Abrir el registro';
+
+  @override
+  String get logsOpenEntry => 'Abierta';
+
+  @override
+  String get logsOpenHere => 'Abrir aquí';
+
+  @override
+  String get logsPick => 'Elige una sesión para ver lo último que se vio.';
+
+  @override
+  String get logsRecorded => 'Con registro';
+
+  @override
+  String get logsSaved => 'Guardadas';
+
+  @override
+  String get logsSearchHint => 'Busca en lo que se vio: comandos y salida';
+
+  @override
+  String get logsSearchNone => 'Nada en lo grabado.';
+
+  @override
+  String get logsSearchNote =>
+      'Se busca en lo que quedó grabado. Las sesiones sin registro solo guardan cuándo y cuánto duraron.';
+
+  @override
+  String get logsSearching => 'Buscando…';
+
+  @override
+  String get logsSettings => 'Ajustes de registros';
+
+  @override
+  String get logsToday => 'Hoy';
+
+  @override
+  String logsUsage(String size, String max, int days) {
+    return '$size de $max · se guardan $days días';
+  }
+
+  @override
+  String get logsYesterday => 'Ayer';
+
+  @override
   String lostKeptInTmux(String host) {
     return 'Tu sesión sigue en tmux en $host: al volver la encontrarás como estaba. Lo que escribas ahora no se envía.';
   }

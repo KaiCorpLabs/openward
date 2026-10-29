@@ -381,6 +381,13 @@ class _PaletteState extends ConsumerState<_Palette> {
         () => tabs.openPage(PageKind.hosts),
         keys: isApple ? '⌘⇧H' : '${key}H',
       ),
+      action(
+        'page.logs',
+        l.goToPage(l.logs),
+        Icons.history,
+        () => tabs.openPage(PageKind.logs),
+        keys: isApple ? '⌘⇧R' : '${key}R',
+      ),
       for (final (page, title, icon) in [
         (PageKind.keys, l.keys, Icons.key_outlined),
         (PageKind.workspaces, l.workspaces, Icons.dashboard_outlined),

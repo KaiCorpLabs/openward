@@ -207,6 +207,21 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// of it, as text.
   Future<String> logCommandText({required String id, required int index});
 
+  /// The lines around a moment (a search's match): `before` lines that
+  /// began earlier and `after` from it on.
+  Future<List<LogLine>> logLinesAround({
+    required String id,
+    required double at,
+    required int before,
+    required int after,
+  });
+
+  /// The last `lines` lines of a recording and its markers.
+  Future<LogPreview> logPreview({required String id, required int lines});
+
+  /// What was seen as plain text, to copy.
+  Future<String> logText({required String id});
+
   /// Every session, the newest first.
   List<LogEntry> logs();
 

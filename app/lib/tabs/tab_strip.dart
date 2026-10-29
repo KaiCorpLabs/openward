@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/providers.dart';
 import '../hosts/sidebar.dart' show tabStatus;
 import '../l10n/l10n.dart';
+import '../logs/log_viewer.dart';
+import '../logs/logs.dart' show logLabel, whenText;
 import '../sftp/queue_view.dart';
 import '../terminal/controller.dart';
 import '../terminal/keys.dart';
@@ -472,6 +474,8 @@ IconData pageIcon(PageKind page) => switch (page) {
   PageKind.snippets => Icons.text_snippet_outlined,
   PageKind.workspaces => Icons.dashboard_outlined,
   PageKind.knownHosts => Icons.fingerprint,
+  PageKind.logs => Icons.history,
+  PageKind.log => Icons.subject,
 };
 
 /// A tab's name, as its label says.
@@ -501,6 +505,15 @@ String tabTitle(BuildContext context, OpenTab tab) {
       PageKind.snippets => l.snippets,
       PageKind.workspaces => l.workspaces,
       PageKind.knownHosts => l.knownHosts,
+      PageKind.logs => l.logs,
+      // The recording it shows: «web-1 · ayer, 18:10».
+      PageKind.log => switch (ProviderScope.containerOf(
+        context,
+        listen: false,
+      ).read(logViewerProvider)) {
+        final v? => l.logTabTitle(logLabel(l, v.entry), whenText(l, v.entry)),
+        null => l.logTab,
+      },
     },
   };
 }
@@ -575,6 +588,8 @@ class _Tab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final library = ref.watch(libraryProvider);
+    // Its title is the recording's.
+    if (tab case PageTab(page: PageKind.log)) ref.watch(logViewerProvider);
     EnvironmentView? env(String? hostId) =>
         hostId == null ? null : library.host(hostId)?.environment;
     return switch (tab) {

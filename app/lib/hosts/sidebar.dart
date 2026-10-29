@@ -16,6 +16,8 @@ import '../terminal/controller.dart';
 import '../identities/identities.dart';
 import '../keys/keys.dart';
 import '../known_hosts/known_hosts_page.dart' show knownHostCountProvider;
+import '../logs/logs.dart' show logsProvider;
+import '../src/rust/api/logs.dart' show LogEnd;
 import '../snippets/snippets.dart';
 import '../tunnels/tunnels.dart';
 import '../ui/environment.dart';
@@ -1194,6 +1196,7 @@ List<LibraryEntry> libraryEntries(BuildContext context, WidgetRef ref) {
   final l = context.l10n;
   final board = ref.watch(tunnelBoardProvider);
   final known = ref.watch(knownHostCountProvider).value ?? 0;
+  final logs = ref.watch(logsProvider);
   return [
     (
       page: PageKind.tunnels,
@@ -1236,6 +1239,13 @@ List<LibraryEntry> libraryEntries(BuildContext context, WidgetRef ref) {
       label: l.knownHosts,
       count: known,
       open: 0,
+    ),
+    (
+      page: PageKind.logs,
+      icon: pageIcon(PageKind.logs),
+      label: l.logs,
+      count: logs.length,
+      open: logs.where((e) => e.end == LogEnd.open && e.recorded).length,
     ),
   ];
 }

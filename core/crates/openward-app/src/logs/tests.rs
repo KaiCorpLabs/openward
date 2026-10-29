@@ -660,3 +660,51 @@ fn writer_stages() {
         rate(name, t);
     }
 }
+
+#[test]
+fn a_preview_has_the_last_lines_and_the_markers() {
+    let dir = tempfile::tempdir().unwrap();
+    let logs = open(dir.path());
+    let s = logs.begin(begin(true)).unwrap();
+    for i in 0..10 {
+        s.output(format!("línea {i}\r\n").as_bytes());
+    }
+    s.command("df -h");
+    s.output(b"/dev/sdb1 95% \"lleno\"\r\n");
+    assert!(s.pause(true));
+    s.finish(End::Lost);
+    let id = s.id();
+
+    let p = logs.preview(&id, 3).unwrap();
+    let lines: Vec<&str> = p.lines.iter().map(|(_, l)| l.as_str()).collect();
+    assert_eq!(lines, ["línea 8", "línea 9", "/dev/sdb1 95% \"lleno\""]);
+    let labels: Vec<&str> = p.markers.iter().map(|(_, l)| l.as_str()).collect();
+    assert_eq!(labels, ["$ df -h", "pause"]);
+    assert_eq!(logs.markers(&id).unwrap(), p.markers);
+
+    assert!(
+        logs.plain_text(&id)
+            .unwrap()
+            .starts_with("línea 0\nlínea 1\n")
+    );
+
+    // Around a moment: the lines before it and from it on.
+    let s = logs.begin(begin(true)).unwrap();
+    s.output(b"uno\r\ndos\r\n");
+    std::thread::sleep(Duration::from_millis(50));
+    s.output(b"tres\r\ncuatro\r\ncinco\r\n");
+    s.finish(End::Closed);
+    let text = logs.text(&s.id()).unwrap();
+    let around: Vec<String> = logs
+        .lines_around(&s.id(), text[2].0, 1, 2)
+        .unwrap()
+        .into_iter()
+        .map(|(_, l)| l)
+        .collect();
+    assert_eq!(around, ["dos", "tres", "cuatro"]);
+
+    // An entry alone has nothing to show.
+    let alone = logs.begin(begin(false)).unwrap();
+    alone.finish(End::Closed);
+    assert!(logs.preview(&alone.id(), 3).is_err());
+}

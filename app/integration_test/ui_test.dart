@@ -41,6 +41,9 @@ import 'package:openward/src/rust/api/vault.dart';
 import 'package:openward/src/rust/frb_generated.dart';
 import 'package:openward/hosts/hosts_page.dart';
 import 'package:openward/hosts/sidebar.dart';
+import 'package:openward/logs/log_viewer.dart';
+import 'package:openward/logs/logs.dart';
+import 'package:openward/src/rust/api/logs.dart';
 import 'package:openward/tabs/close_guard.dart' show confirmQuit;
 import 'package:openward/tabs/session_view.dart';
 import 'package:openward/tabs/tab_strip.dart';
@@ -3701,5 +3704,179 @@ Host db
 
     container.read(tabsProvider.notifier).close(0);
     await _settle(tester);
+  });
+
+  testWidgets('logs: a local session recorded, found, watched, kept and '
+      'deleted', (tester) async {
+    app.setLogsConfig(
+      config: LogsConfig(
+        recordLocal: true,
+        keepDays: 30,
+        maxBytes: BigInt.from(1 << 30),
+      ),
+    );
+    final container = await launch(tester);
+    await tester.tap(find.text('Abrir un terminal local'));
+    await tester.pump();
+    final a = container.read(tabsProvider).currentSession!;
+    await _until(tester, () => a.phase == Phase.running, 'the shell');
+    await tester.pump(const Duration(milliseconds: 500));
+    final pane = tester.state<TerminalPaneState>(find.byType(TerminalPane));
+    expect(a.session.logState()!.recording, isTrue);
+
+    Future<void> run(String command, String shows) async {
+      pane.updateEditingValue(
+        TextEditingValue(
+          text: '  $command',
+          selection: TextSelection.collapsed(offset: command.length + 2),
+        ),
+      );
+      await _until(
+        tester,
+        () => a.session.screenText().contains(command),
+        'the echo of $command',
+      );
+      pane.performAction(TextInputAction.newline);
+      await _until(
+        tester,
+        () => a.session.screenText().contains('$shows\n'),
+        'what $command shows',
+      );
+    }
+
+    await run(r'echo logged-$((40+2))', 'logged-42');
+    await tester.pump(const Duration(milliseconds: 300));
+    await run(r'echo second-$((1+1))', 'second-2');
+    pane.updateEditingValue(
+      const TextEditingValue(
+        text: '  exit',
+        selection: TextSelection.collapsed(offset: 6),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    pane.performAction(TextInputAction.newline);
+    await _until(
+      tester,
+      () => container.read(logsProvider).firstOrNull?.end == LogEnd.closed,
+      'the session to end',
+    );
+    final entry = container.read(logsProvider).single;
+    expect(entry.recorded, isTrue);
+    expect(entry.commands, 3);
+
+    // The page, with ⌘⇧R.
+    await cmdShift(tester, LogicalKeyboardKey.keyR);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(field('logs.row.${entry.id}'), findsOneWidget);
+    await _until(
+      tester,
+      () => tester
+          .widgetList<Text>(find.byKey(const ValueKey('logs.preview.lines')))
+          .any((t) => t.data!.contains('second-2')),
+      'the last lines in the preview',
+    );
+    await _shot(tester, '100-logs');
+
+    // Searched, ignoring case: the line and the moment.
+    await tester.enterText(field('logs.search'), 'LOGGED-42');
+    await _until(
+      tester,
+      () => find.text('1 coincidencia en 1 registro').evaluate().isNotEmpty,
+      'the search',
+    );
+    await tester.tap(find.text('logged-42').first);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Abrir aquí'), findsOneWidget);
+    await _shot(tester, '101-logs-search');
+
+    // Opened there: the terminal as it was.
+    await tester.tap(field('logs.open'));
+    await _until(
+      tester,
+      () => container.read(logViewerProvider) != null,
+      'the viewer',
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+    final v = container.read(logViewerProvider)!;
+    expect(v.commands.map((m) => m.command), [
+      r'echo logged-$((40+2))',
+      r'echo second-$((1+1))',
+      'exit',
+    ]);
+    expect(v.terminal.session.screenText(), contains('logged-42'));
+    expect(find.text('Solo lectura'), findsOneWidget);
+
+    // A command: what it answered, and nothing after.
+    await tester.tap(field('log.command.0'));
+    await _until(
+      tester,
+      () =>
+          v.currentCommand == 0 &&
+          v.terminal.session.screenText().contains('logged-42\n'),
+      'the first command',
+    );
+    expect(v.terminal.session.screenText(), isNot(contains('second-2')));
+
+    // Kept, with a note.
+    await tester.tap(field('log.save'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
+      ),
+      'el arreglo del 502',
+    );
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('Guardar'),
+      ),
+    );
+    await _until(
+      tester,
+      () => field('log.note').evaluate().isNotEmpty,
+      'the note',
+    );
+    expect(
+      find.descendant(
+        of: field('log.note'),
+        matching: find.text('el arreglo del 502'),
+      ),
+      findsOneWidget,
+    );
+    expect(container.read(logsProvider).single.saved, isTrue);
+    await tester.pump(const Duration(milliseconds: 500));
+    await _shot(tester, '102-log-viewer');
+
+    // Played to the end, fast.
+    await tester.tap(field('log.speed'));
+    await tester.tap(field('log.speed'));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(field('log.play'));
+    await tester.pump(const Duration(milliseconds: 100));
+    await _until(tester, () => !v.playing, 'the end of the recording');
+    expect(v.position, v.duration);
+    expect(v.terminal.session.screenText(), contains('second-2'));
+
+    // Deleted: the tab closes and the page is empty.
+    await tester.tap(field('log.more'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(field('log.delete'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(field('log.delete.confirm'));
+    await _until(
+      tester,
+      () => container.read(logsProvider).isEmpty,
+      'the log deleted',
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(
+      container
+          .read(tabsProvider)
+          .tabs
+          .any((t) => t is PageTab && t.page == PageKind.log),
+      isFalse,
+    );
   });
 }

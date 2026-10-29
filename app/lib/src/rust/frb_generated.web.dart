@@ -537,6 +537,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<LogHit> dco_decode_list_log_hit(dynamic raw);
 
   @protected
+  List<LogLine> dco_decode_list_log_line(dynamic raw);
+
+  @protected
   List<LogMarker> dco_decode_list_log_marker(dynamic raw);
 
   @protected
@@ -618,6 +621,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   LogHit dco_decode_log_hit(dynamic raw);
 
   @protected
+  LogLine dco_decode_log_line(dynamic raw);
+
+  @protected
   LogMarker dco_decode_log_marker(dynamic raw);
 
   @protected
@@ -628,6 +634,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LogPlace dco_decode_log_place(dynamic raw);
+
+  @protected
+  LogPreview dco_decode_log_preview(dynamic raw);
 
   @protected
   LogStateView dco_decode_log_state_view(dynamic raw);
@@ -1547,6 +1556,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<LogHit> sse_decode_list_log_hit(SseDeserializer deserializer);
 
   @protected
+  List<LogLine> sse_decode_list_log_line(SseDeserializer deserializer);
+
+  @protected
   List<LogMarker> sse_decode_list_log_marker(SseDeserializer deserializer);
 
   @protected
@@ -1648,6 +1660,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   LogHit sse_decode_log_hit(SseDeserializer deserializer);
 
   @protected
+  LogLine sse_decode_log_line(SseDeserializer deserializer);
+
+  @protected
   LogMarker sse_decode_log_marker(SseDeserializer deserializer);
 
   @protected
@@ -1658,6 +1673,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LogPlace sse_decode_log_place(SseDeserializer deserializer);
+
+  @protected
+  LogPreview sse_decode_log_preview(SseDeserializer deserializer);
 
   @protected
   LogStateView sse_decode_log_state_view(SseDeserializer deserializer);
@@ -2817,6 +2835,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_log_hit(List<LogHit> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_log_line(List<LogLine> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_log_marker(
     List<LogMarker> self,
     SseSerializer serializer,
@@ -2955,6 +2976,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_log_hit(LogHit self, SseSerializer serializer);
 
   @protected
+  void sse_encode_log_line(LogLine self, SseSerializer serializer);
+
+  @protected
   void sse_encode_log_marker(LogMarker self, SseSerializer serializer);
 
   @protected
@@ -2965,6 +2989,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_log_place(LogPlace self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_log_preview(LogPreview self, SseSerializer serializer);
 
   @protected
   void sse_encode_log_state_view(LogStateView self, SseSerializer serializer);

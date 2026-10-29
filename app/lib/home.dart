@@ -26,6 +26,8 @@ import 'identities/identities.dart';
 import 'identities/identities_page.dart';
 import 'keys/keys_page.dart';
 import 'known_hosts/known_hosts_page.dart';
+import 'logs/log_viewer.dart';
+import 'logs/logs_page.dart';
 import 'palette/command_palette.dart';
 import 'snippets/palette.dart';
 import 'snippets/snippets.dart';
@@ -198,6 +200,7 @@ class _HomeState extends ConsumerState<Home> {
     void go(AxisDirection d) => tabs.focusPane(d);
     void settings() => tabs.openPage(PageKind.settings);
     void hosts() => tabs.openPage(PageKind.hosts);
+    void logs() => tabs.openPage(PageKind.logs);
     void last() => tabs.select(ref.read(tabsProvider).tabs.length - 1);
     TerminalController? session() => ref.read(tabsProvider).currentSession;
     void find() => session()?.openFind();
@@ -234,6 +237,8 @@ class _HomeState extends ConsumerState<Home> {
         const SingleActivator(LogicalKeyboardKey.keyB, meta: true): sidebar,
         const SingleActivator(LogicalKeyboardKey.keyH, meta: true, shift: true):
             hosts,
+        const SingleActivator(LogicalKeyboardKey.keyR, meta: true, shift: true):
+            logs,
         // ⌘/ wherever the layout has the slash (⌘⇧7 on a Spanish one).
         const SingleActivator(LogicalKeyboardKey.slash, meta: true): shortcuts,
         const CharacterActivator('/', meta: true): shortcuts,
@@ -349,6 +354,11 @@ class _HomeState extends ConsumerState<Home> {
           control: true,
           shift: true,
         ): hosts,
+        const SingleActivator(
+          LogicalKeyboardKey.keyR,
+          control: true,
+          shift: true,
+        ): logs,
         const SingleActivator(
           LogicalKeyboardKey.slash,
           control: true,
@@ -504,6 +514,10 @@ class _HomeState extends ConsumerState<Home> {
                                   const WorkspacesPage(),
                                 PageTab(page: PageKind.knownHosts) =>
                                   const KnownHostsPage(),
+                                PageTab(page: PageKind.logs) =>
+                                  const LogsPage(),
+                                PageTab(page: PageKind.log) =>
+                                  const LogViewPage(),
                                 null => const StartPage(),
                               },
                             ),

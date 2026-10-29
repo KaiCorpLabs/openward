@@ -380,7 +380,7 @@ class _HostsPageState extends ConsumerState<HostsPage> {
         runSpacing: 6,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          _FilterChip(
+          FilterPill(
             key: const ValueKey('hosts.filter.all'),
             text: l.hostsAll,
             count: hosts.length,
@@ -389,7 +389,7 @@ class _HostsPageState extends ConsumerState<HostsPage> {
           ),
           for (final (e, n)
               in (envs.values.toList()..sort((a, b) => b.$2 - a.$2)))
-            _FilterChip(
+            FilterPill(
               key: ValueKey('hosts.filter.env.${e.name}'),
               text: e.name,
               count: n,
@@ -399,7 +399,7 @@ class _HostsPageState extends ConsumerState<HostsPage> {
                   setState(() => _env = _env == e.name ? null : e.name),
             ),
           if (favorites > 0)
-            _FilterChip(
+            FilterPill(
               key: const ValueKey('hosts.filter.favorites'),
               text: l.favorites,
               count: favorites,
@@ -409,7 +409,7 @@ class _HostsPageState extends ConsumerState<HostsPage> {
             ),
           if (tags.isNotEmpty) gap(),
           for (final t in tags.entries.toList()..sort(byCount))
-            _FilterChip(
+            FilterPill(
               key: ValueKey('hosts.filter.tag.${t.key}'),
               text: t.key,
               count: t.value,
@@ -427,7 +427,7 @@ class _HostsPageState extends ConsumerState<HostsPage> {
               for (final s in systemCodes)
                 if (systems.containsKey(s)) s,
             ])
-              _FilterChip(
+              FilterPill(
                 key: ValueKey('hosts.filter.system.$code'),
                 text: systemName(l, code),
                 system: code,
@@ -638,8 +638,8 @@ class _HostsPageState extends ConsumerState<HostsPage> {
 }
 
 /// A filter: on or off, with how many hosts it has.
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
+class FilterPill extends StatelessWidget {
+  const FilterPill({
     super.key,
     required this.text,
     required this.count,

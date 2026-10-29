@@ -9,8 +9,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'session.dart';
 
-// These functions are ignored because they are not marked as `pub`: `entry_view`, `marker_view`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`
+// These functions are ignored because they are not marked as `pub`: `entry_view`, `lines_view`, `marker_view`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<LogPlayer>>
 abstract class LogPlayer implements RustOpaqueInterface {
@@ -196,6 +196,25 @@ class LogHit {
           line == other.line;
 }
 
+/// A line of what was seen, with the moment it began.
+class LogLine {
+  final double at;
+  final String text;
+
+  const LogLine({required this.at, required this.text});
+
+  @override
+  int get hashCode => at.hashCode ^ text.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LogLine &&
+          runtimeType == other.runtimeType &&
+          at == other.at &&
+          text == other.text;
+}
+
 class LogMarker {
   final double at;
   final LogMarkerKind kind;
@@ -269,6 +288,26 @@ class LogMarking {
 }
 
 enum LogPlace { host, address, local }
+
+/// What the page shows of a recorded session, without opening it.
+class LogPreview {
+  /// The last lines.
+  final List<LogLine> lines;
+  final List<LogMarker> markers;
+
+  const LogPreview({required this.lines, required this.markers});
+
+  @override
+  int get hashCode => lines.hashCode ^ markers.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LogPreview &&
+          runtimeType == other.runtimeType &&
+          lines == other.lines &&
+          markers == other.markers;
+}
 
 /// This device's choices for the logs, from Ajustes.
 class LogsConfig {

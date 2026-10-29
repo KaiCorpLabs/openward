@@ -174,6 +174,15 @@ pub struct Hit {
     pub line: String,
 }
 
+/// What the page shows of a recorded session.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Preview {
+    /// The last text lines, `(seconds, line)`.
+    pub lines: Vec<(f64, String)>,
+    /// Every marker, `(seconds, label)`.
+    pub markers: Vec<(f64, String)>,
+}
+
 /// Matches shown per session; the rest are counted.
 const HITS_SHOWN: usize = 20;
 
@@ -571,10 +580,92 @@ impl Logs {
     /// Writes what was seen as plain text, a line per line.
     pub fn export_text(&self, id: &str, to: &Path) -> std::io::Result<()> {
         let mut out = std::io::BufWriter::new(create(to)?);
-        for (_, line) in self.text(id)? {
-            writeln!(out, "{line}")?;
-        }
+        out.write_all(self.plain_text(id)?.as_bytes())?;
         out.flush()
+    }
+
+    /// What was seen as plain text, a line per line: to copy it.
+    pub fn plain_text(&self, id: &str) -> std::io::Result<String> {
+        let mut out = String::new();
+        for (_, line) in self.text(id)? {
+            out.push_str(&line);
+            out.push('\n');
+        }
+        Ok(out)
+    }
+
+    /// The text lines around a moment: up to `before` that began before
+    /// it and `after` from it on. What a search result shows of itself.
+    pub fn lines_around(
+        &self,
+        id: &str,
+        at: f64,
+        before: usize,
+        after: usize,
+    ) -> std::io::Result<Vec<(f64, String)>> {
+        self.recorded(id)?;
+        let mut earlier = std::collections::VecDeque::with_capacity(before + 1);
+        let mut later = Vec::new();
+        for_each_line(&self.text_path(id), |t, line| {
+            if t < at {
+                earlier.push_back((t, line.to_owned()));
+                if earlier.len() > before {
+                    earlier.pop_front();
+                }
+                true
+            } else {
+                later.push((t, line.to_owned()));
+                later.len() < after
+            }
+        })?;
+        Ok(earlier.into_iter().chain(later).collect())
+    }
+
+    /// What the page shows of a session: its last text lines and its
+    /// markers (commands and OpenWard's own), without replaying it.
+    pub fn preview(&self, id: &str, lines: usize) -> std::io::Result<Preview> {
+        self.recorded(id)?;
+        let mut last = std::collections::VecDeque::with_capacity(lines + 1);
+        for_each_line(&self.text_path(id), |t, line| {
+            last.push_back((t, line.to_owned()));
+            if last.len() > lines {
+                last.pop_front();
+            }
+            true
+        })?;
+        Ok(Preview {
+            lines: last.into(),
+            markers: self.markers(id)?,
+        })
+    }
+
+    /// A recording's markers, `(seconds, label)`, reading only those.
+    pub fn markers(&self, id: &str) -> std::io::Result<Vec<(f64, String)>> {
+        self.recorded(id)?;
+        let file = File::open(self.cast_path(id))?;
+        let mut input = BufReader::new(MultiGzDecoder::new(file));
+        let mut line = String::new();
+        let mut markers = Vec::new();
+        // The header.
+        input.read_line(&mut line)?;
+        loop {
+            line.clear();
+            match input.read_line(&mut line) {
+                Ok(0) | Err(_) => break,
+                Ok(_) if !line.ends_with('\n') => break,
+                Ok(_) => {}
+            }
+            // Output is most of it: only markers are parsed.
+            if !line.contains(", \"m\", ") {
+                continue;
+            }
+            if let Ok((t, code, label)) = serde_json::from_str::<(f64, String, String)>(&line)
+                && code == "m"
+            {
+                markers.push((t, label));
+            }
+        }
+        Ok(markers)
     }
 
     /// The `index`th command (from 0), its line and what came out after

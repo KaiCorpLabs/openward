@@ -118,6 +118,28 @@ pub struct LogFound {
     pub total: u32,
 }
 
+/// A line of what was seen, with the moment it began.
+#[derive(Clone, Debug, PartialEq)]
+pub struct LogLine {
+    pub at: f64,
+    pub text: String,
+}
+
+fn lines_view(lines: Vec<(f64, String)>) -> Vec<LogLine> {
+    lines
+        .into_iter()
+        .map(|(at, text)| LogLine { at, text })
+        .collect()
+}
+
+/// What the page shows of a recorded session, without opening it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct LogPreview {
+    /// The last lines.
+    pub lines: Vec<LogLine>,
+    pub markers: Vec<LogMarker>,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct LogsUsage {
     pub bytes: u64,
@@ -325,6 +347,36 @@ impl OpenWard {
     /// of it, as text.
     pub fn log_command_text(&self, id: String, index: u32) -> Result<String, VaultError> {
         Ok(self.app.logs().command_text(&id, index as usize)?)
+    }
+
+    /// The last `lines` lines of a recording and its markers.
+    pub fn log_preview(&self, id: String, lines: u32) -> Result<LogPreview, VaultError> {
+        let p = self.app.logs().preview(&id, lines as usize)?;
+        Ok(LogPreview {
+            lines: lines_view(p.lines),
+            markers: p.markers.into_iter().map(marker_view).collect(),
+        })
+    }
+
+    /// The lines around a moment (a search's match): `before` lines that
+    /// began earlier and `after` from it on.
+    pub fn log_lines_around(
+        &self,
+        id: String,
+        at: f64,
+        before: u32,
+        after: u32,
+    ) -> Result<Vec<LogLine>, VaultError> {
+        let lines = self
+            .app
+            .logs()
+            .lines_around(&id, at, before as usize, after as usize)?;
+        Ok(lines_view(lines))
+    }
+
+    /// What was seen as plain text, to copy.
+    pub fn log_text(&self, id: String) -> Result<String, VaultError> {
+        Ok(self.app.logs().plain_text(&id)?)
     }
 
     /// A player for a recording, at its start.
