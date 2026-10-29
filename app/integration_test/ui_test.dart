@@ -3993,6 +3993,13 @@ Host db
     expect(seen, contains('after-4'));
     expect(seen, isNot(contains('hidden-9')));
     expect(v.pauses, isNotEmpty);
+    // Not cut short: going on, its entry with what it has so far.
+    expect(find.textContaining('Sigue grabando'), findsOneWidget);
+    expect(find.textContaining('se cerró de golpe'), findsNothing);
+    final live = app.log(id: a.logId!)!;
+    expect(live.commands, 2);
+    expect(live.bytes > BigInt.zero, isTrue);
+    expect(v.entry.bytes > BigInt.zero, isTrue);
 
     // Deleting all leaves the session going on.
     tabs.openPage(PageKind.settings);

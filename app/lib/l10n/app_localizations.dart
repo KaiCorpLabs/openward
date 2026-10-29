@@ -3860,6 +3860,12 @@ abstract class AppLocalizations {
   /// **'Velocidad: {speed}'**
   String logSpeed(String speed);
 
+  /// No description provided for @logStillRecording.
+  ///
+  /// In es, this message translates to:
+  /// **'Sigue grabando: lo de los últimos segundos aún no está aquí.'**
+  String get logStillRecording;
+
   /// No description provided for @logStopEverywhere.
   ///
   /// In es, this message translates to:
@@ -4819,6 +4825,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Logo nuevo'**
   String get newsLogoTitle;
+
+  /// No description provided for @newsLogsBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Cada conexión deja su entrada en Registros ({shortcut}): dónde, cuándo y cómo acabó. Donde lo actives (Ajustes › Registros, o en un grupo o un host), también lo que salió en pantalla, para buscar en él, volver a verlo comando a comando y exportarlo. Nunca lo que escribes; viene apagado mientras no vaya cifrado.'**
+  String newsLogsBody(String shortcut);
+
+  /// No description provided for @newsLogsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Registros de sesión'**
+  String get newsLogsTitle;
 
   /// No description provided for @newsMoreThemesBody.
   ///

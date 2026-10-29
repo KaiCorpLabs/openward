@@ -1,6 +1,6 @@
 # Registros de sesión
 
-- **Estado:** maquetas aprobadas el 2026-10-28 (fila «Registros» del lienzo). Va en la 0.3.3, con los valores por defecto propuestos. L1 (el núcleo) publicado en main el 2026-10-28 y L2 (la página y el visor) el 2026-10-29; L3 (en la sesión y en Ajustes) hecho el 2026-10-29, sin publicar; L4, pendiente.
+- **Estado:** maquetas aprobadas el 2026-10-28 (fila «Registros» del lienzo). Va en la 0.3.3, con los valores por defecto propuestos. L1 (el núcleo) publicado en main el 2026-10-28; L2 (la página y el visor) y L3 (en la sesión y en Ajustes), el 2026-10-29. L4 (pruebas de ventana, notas, guía y beta) hecho el 2026-10-29, sin publicar.
 - **Fecha:** 2026-10-28.
 - **Base:** [ARCHITECTURE §10](../ARCHITECTURE.md#10-registros-auditoría-y-grabación), que ya prevé un historial de sesiones local con reproducción en asciicast, gratis y en el cliente. Fase 1, antes de la v0.4 (el vault cifrado).
 - **Duración estimada:** unas 2,5 semanas de trabajo.
@@ -128,8 +128,8 @@ No es un control de cumplimiento: la grabación hecha en el cliente se puede evi
 |---|---|---|---|
 | L1 | Núcleo: grabador asciicast, entradas, retención, texto para buscar, reproductor y FFI | 1 | Publicado |
 | L2 | Página Registros y visor: comandos, buscar, línea de tiempo, guardar y exportar | 1 | Publicado |
-| L3 | En la sesión y en Ajustes: cabecera del panel, pausa, tarjeta de corte, ajuste heredado, editor y Ajustes › Registros | 0,5 | Hecho, sin publicar |
-| L4 | Pruebas de ventana, notas, guía de prueba y beta | — | Propuesto |
+| L3 | En la sesión y en Ajustes: cabecera del panel, pausa, tarjeta de corte, ajuste heredado, editor y Ajustes › Registros | 0,5 | Publicado |
+| L4 | Pruebas de ventana, notas, guía de prueba y beta | — | Hecho, sin publicar |
 
 **Qué deja L1 hecho:**
 - **Núcleo (`openward-app::logs`):**
@@ -217,6 +217,17 @@ No es un control de cumplimiento: la grabación hecha en el cliente se puede evi
   - con S2: un host graba porque lo dice su grupo, y un corte deja su único registro entero a los dos lados, con las marcas de la pérdida y la vuelta (38 de servidores);
   - de ventana: Ajustes › Registros con el grupo que lo activa y su enlace al editor, una terminal local que graba, pausada y seguida desde el chip, su registro abierto desde el panel mientras sigue y sin lo de la pausa, y «Borrar todos» que deja la sesión en curso;
   - la de accesibilidad recorre Ajustes › Registros.
+
+**Qué deja L4 hecho:**
+- **Accesibilidad:** la prueba recorre, en sus tres aspectos, el chip con su menú y en pausa, la página Registros y el visor, y con ellos el chip en la cabecera de los paneles. Encontró cuatro fallos, ya arreglados:
+  - el chip medía 22 px de alto: ahora 28, lo menos de un control en una línea, como el de los túneles;
+  - un lector de pantalla encontraba «Exportar…» del visor y no podía pulsarlo: ahora usa el botón del menú;
+  - con la página estrecha (una ventana pequeña) no hay vista previa, y un registro solo se abría con doble clic, sin nada que lo dijera: ahora tocar la fila, o una línea encontrada, lo abre;
+  - en una ventana pequeña, la barra del visor se salía por la derecha: por debajo de 640 px, Guardar, Exportar y Conectar otra vez pasan a iconos, con su nombre en el tooltip, como en la barra de estado.
+- **Galería:** en cada tema, el terminal con su chip «Registro», la página Registros y el visor (nueve capturas por tema). Sus capturas enseñaron otro fallo de L3, ya arreglado: una sesión en curso abierta en el visor decía «OpenWard se cerró de golpe» (el final del archivo aún no está escrito), y su entrada, «0 B» y «0 comandos». Ahora el visor dice «Sigue grabando», y el núcleo da de una sesión en curso sus comandos y lo que ocupa hasta ese momento.
+- **«Novedades»:** los registros de sesión, la primera y marcada como nueva (`newsVersion` 0.3.3-beta.1).
+- **Notas de la versión** ([0.3](../notas/v0.3.md)): qué trae la 0.3.3-beta.1, qué cambia al actualizar y la limitación de ir sin cifrar.
+- **Guía de prueba** ([v0.3](prueba-v0.3.md)): la carpeta `logs/` y el punto 23, con las pruebas de la puerta de salida: la contraseña sin eco, la pausa, el corte, buscar días después, `asciinema play`, el cierre brusco y medir un volcado grande con y sin grabación.
 
 **Pruebas que pide cada hito:**
 - **L1:**

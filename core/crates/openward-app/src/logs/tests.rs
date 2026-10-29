@@ -179,6 +179,12 @@ fn a_sudden_exit_keeps_what_was_flushed() {
     // A flush comes every two seconds while there is output.
     std::thread::sleep(Duration::from_millis(2600));
     session.output(b"dos\r\n");
+    // Meanwhile, its entry says what it has so far.
+    let live = logs.entry(&id).unwrap();
+    assert_eq!((live.end, live.commands), (End::Open, 1));
+    assert!(live.bytes > 0);
+    assert_eq!(logs.list()[0].bytes, live.bytes);
+    assert_eq!(logs.usage().bytes, live.bytes);
 
     let rec = logs.read(&id).unwrap();
     assert!(!rec.complete);

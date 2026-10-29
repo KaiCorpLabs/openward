@@ -1989,6 +1989,7 @@
       }
     }
   },
+  "logStillRecording": "Sigue grabando: lo de los últimos segundos aún no está aquí.",
   "logStopEverywhere": "Activado en todos los hosts; se cambia en Ajustes",
   "logStopFromGroup": "Lo hereda de {group}; se cambia en su editor",
   "@logStopFromGroup": {
@@ -2411,6 +2412,15 @@
   "newsLatencyTitle": "La latencia, siempre a la vista",
   "newsLogoBody": "Umbral, una O abierta con un chevrón: en el icono de la app y, dentro, en la bienvenida, el inicio, Acerca de y aquí, en el color de tu tema.",
   "newsLogoTitle": "Logo nuevo",
+  "newsLogsBody": "Cada conexión deja su entrada en Registros ({shortcut}): dónde, cuándo y cómo acabó. Donde lo actives (Ajustes › Registros, o en un grupo o un host), también lo que salió en pantalla, para buscar en él, volver a verlo comando a comando y exportarlo. Nunca lo que escribes; viene apagado mientras no vaya cifrado.",
+  "@newsLogsBody": {
+    "placeholders": {
+      "shortcut": {
+        "type": "String"
+      }
+    }
+  },
+  "newsLogsTitle": "Registros de sesión",
   "newsMoreThemesBody": "Monitor, con letras verdes de verdad; Berenjena, con el terminal morado; Búnker, todo en un solo fósforo; Marino, verde sobre azul marino; y Catppuccin, Dracula y Tokyo Night para toda la ventana. En Ajustes › Apariencia.",
   "newsMoreThemesTitle": "Siete familias de temas más",
   "newsPaletteBody": "Todo lo que hace la ventana, tus hosts, snippets y los comandos que ya ejecutaste, a unas letras ({shortcut}). El historial se queda en este equipo y nunca guarda contraseñas.",

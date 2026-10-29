@@ -21,8 +21,9 @@ import '../window/shortcuts.dart';
 /// the system and the favorites, 0.3.1-beta.2 panes that are handled
 /// without guessing, 0.3.1-beta.4 the hosts on their page and the sidebar
 /// for every day, 0.3.1-beta.5 seven more theme families, 0.3.1-beta.6 the
-/// new logo, 0.3.1-beta.7 each server's system by its logo.
-const newsVersion = '0.3.1-beta.7';
+/// new logo, 0.3.1-beta.7 each server's system by its logo, 0.3.3-beta.1
+/// the session logs.
+const newsVersion = '0.3.3-beta.1';
 
 /// Who updated and has not seen this release's news yet.
 bool shouldShowNews(Settings s) => s.welcomed && s.seenNews != newsVersion;
@@ -47,7 +48,13 @@ class _WhatsNew extends StatelessWidget {
     String keys(String apple, String other) => isApple ? apple : other;
     // Marked new: what came after who saw the news before.
     final items = [
-      (Icons.dns_outlined, l.newsSystemTitle2, l.newsSystemBody2, true),
+      (
+        Icons.subject,
+        l.newsLogsTitle,
+        l.newsLogsBody(keys('⌘⇧R', '${cs}R')),
+        true,
+      ),
+      (Icons.dns_outlined, l.newsSystemTitle2, l.newsSystemBody2, false),
       (Icons.auto_awesome, l.newsLogoTitle, l.newsLogoBody, false),
       (
         Icons.palette_outlined,

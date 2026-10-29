@@ -313,13 +313,28 @@ impl Logs {
     /// Every entry, the newest first.
     pub fn list(&self) -> Vec<Entry> {
         let inner = lock(&self.inner);
-        let mut list: Vec<Entry> = inner.entries.values().cloned().collect();
+        let mut list: Vec<Entry> = inner
+            .entries
+            .values()
+            .map(|e| self.now(&inner, e))
+            .collect();
         list.sort_by(|a, b| b.started_ms.cmp(&a.started_ms).then(b.id.cmp(&a.id)));
         list
     }
 
     pub fn entry(&self, id: &str) -> Option<Entry> {
-        lock(&self.inner).entries.get(id).cloned()
+        let inner = lock(&self.inner);
+        inner.entries.get(id).map(|e| self.now(&inner, e))
+    }
+
+    /// An entry as it is now: a session going on, with the room its
+    /// recording takes so far.
+    fn now(&self, inner: &Inner, entry: &Entry) -> Entry {
+        let mut entry = entry.clone();
+        if entry.recorded && inner.open.contains(&entry.id) {
+            entry.bytes = files_size(&self.dir, &entry.id);
+        }
+        entry
     }
 
     pub fn usage(&self) -> Usage {
@@ -327,7 +342,7 @@ impl Logs {
         let mut usage = Usage::default();
         for e in inner.entries.values() {
             usage.entries += 1;
-            usage.bytes += e.bytes;
+            usage.bytes += self.now(&inner, e).bytes;
             usage.recorded += u32::from(e.recorded);
             usage.saved += u32::from(e.saved.is_some());
         }
@@ -727,6 +742,14 @@ impl Logs {
         Ok(Player::new(self.read(id)?, scrollback))
     }
 
+    /// A session going on ran one more command: its entry says so.
+    fn counted(&self, id: &str) {
+        if let Some(entry) = lock(&self.inner).entries.get_mut(id) {
+            entry.commands += 1;
+        }
+        self.changed();
+    }
+
     fn finished(&self, entry: Entry) {
         {
             let mut inner = lock(&self.inner);
@@ -824,7 +847,12 @@ impl Session {
         if let Some(r) = &self.recorder
             && r.command(cast::command_label(command))
         {
-            lock(&self.entry).commands += 1;
+            let id = {
+                let mut entry = lock(&self.entry);
+                entry.commands += 1;
+                entry.id.clone()
+            };
+            self.logs.counted(&id);
         }
     }
 

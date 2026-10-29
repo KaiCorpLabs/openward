@@ -92,8 +92,9 @@ class _LogChipState extends ConsumerState<LogChip> {
       },
       onCanceled: widget.onDone,
       itemBuilder: (context) => _items(context, id, live: live, paused: paused),
+      // 28: the least a control in a line of text takes.
       child: Container(
-        height: 22,
+        height: 28,
         padding: const EdgeInsets.symmetric(horizontal: OwSpace.s4),
         decoration: BoxDecoration(
           color: paused ? c.warnSoft : c.surface,

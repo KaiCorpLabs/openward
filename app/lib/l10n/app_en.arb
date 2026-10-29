@@ -818,6 +818,7 @@
       }
     }
   },
+  "logStillRecording": "Still recording: the last few seconds are not here yet.",
   "logStopEverywhere": "Turned on for every host; changed in Settings",
   "logStopFromGroup": "Inherited from {group}; changed in its editor",
   "@logStopFromGroup": {
@@ -1119,6 +1120,15 @@
   "newsLatencyTitle": "Latency in sight",
   "newsLogoBody": "Umbral, an open O with a chevron: in the app's icon and, inside, on the welcome, the start page, About and here, in your theme's color.",
   "newsLogoTitle": "A new logo",
+  "newsLogsBody": "Every connection leaves its entry in Session logs ({shortcut}): where, when and how it ended. Where you turn it on (Settings › Logs, or a group or a host), also what appeared on screen, to search it, watch it again command by command and export it. Never what you type; off by default while it is not encrypted.",
+  "@newsLogsBody": {
+    "placeholders": {
+      "shortcut": {
+        "type": "String"
+      }
+    }
+  },
+  "newsLogsTitle": "Session logs",
   "newsMoreThemesBody": "Monitor, with real green letters; Berenjena, with an aubergine terminal; Búnker, all in one phosphor; Marino, green on navy; and Catppuccin, Dracula and Tokyo Night for the whole window. In Settings › Appearance.",
   "newsMoreThemesTitle": "Seven more theme families",
   "newsPaletteBody": "Everything the window does, your hosts, snippets and the commands you ran, a few letters away ({shortcut}). The history stays on this computer and never keeps passwords.",

@@ -31,9 +31,11 @@ import 'package:openward/hosts/sidebar.dart';
 import 'package:openward/import/program_preview.dart';
 import 'package:openward/import/termius_consent.dart';
 import 'package:openward/l10n/l10n.dart';
+import 'package:openward/logs/log_viewer.dart';
 import 'package:openward/src/rust/api/app.dart';
 import 'package:openward/src/rust/api/identities.dart';
 import 'package:openward/src/rust/api/keychain.dart';
+import 'package:openward/src/rust/api/logs.dart';
 import 'package:openward/src/rust/api/snippets.dart';
 import 'package:openward/src/rust/api/tunnels.dart';
 import 'package:openward/src/rust/api/vault.dart';
@@ -406,6 +408,14 @@ Future<void> _walk(WidgetTester tester, _Look look) async {
       spec: const SnippetSpec(label: 'Logs', script: 'journalctl -n {{n}}'),
     );
     await app.trustHostKey(host: 'web.example.com', port: 22, key: key);
+    // The local terminal recorded: its log's chip, page and viewer.
+    app.setLogsConfig(
+      config: LogsConfig(
+        recordLocal: true,
+        keepDays: 30,
+        maxBytes: BigInt.from(1 << 30),
+      ),
+    );
     final settings = File('${dir.path}/data/settings.json')
       ..writeAsStringSync(
         jsonEncode({
@@ -684,6 +694,47 @@ Future<void> _walk(WidgetTester tester, _Look look) async {
         if (i == 200) fail('the terminal did not read its line');
         await tester.pump(const Duration(milliseconds: 50));
       }
+      // Its log: the chip and its menu, paused; the page and the viewer.
+      for (var i = 0; term.logId == null; i++) {
+        if (i == 100) fail('the terminal was not recorded');
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await tapOn(find.byKey(const ValueKey('log.chip')));
+      await audit('log menu');
+      await tapOn(find.byKey(const ValueKey('log.pause')));
+      await audit('log paused');
+      await tapOn(find.byKey(const ValueKey('log.chip')));
+      await audit('log menu, paused');
+      await tapOn(find.byKey(const ValueKey('log.resume')));
+      await tester.pump(const Duration(milliseconds: 400));
+      tabs.openPage(PageKind.logs);
+      for (
+        var i = 0;
+        find.byKey(ValueKey('logs.row.${term.logId}')).evaluate().isEmpty;
+        i++
+      ) {
+        if (i == 100) fail('the log never showed on its page');
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await audit('logs page');
+      // Narrow, without the preview, its row opens it.
+      final open = find.byKey(const ValueKey('logs.open'));
+      await tapOn(
+        open.evaluate().isNotEmpty
+            ? open
+            : find.byKey(ValueKey('logs.row.${term.logId}')),
+      );
+      for (var i = 0; container.read(logViewerProvider) == null; i++) {
+        if (i == 100) fail('the viewer never opened');
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await audit('log viewer');
+      tabs.select(
+        container
+            .read(tabsProvider)
+            .tabs
+            .indexWhere((t) => t is SessionTab && t.controller == term),
+      );
       // The sidebar as a rail, and shown over the window.
       final sidebarState = container.read(sidebarProvider.notifier);
       sidebarState.chose(SidebarMode.rail);

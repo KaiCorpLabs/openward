@@ -2475,6 +2475,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get logStillRecording =>
+      'Still recording: the last few seconds are not here yet.';
+
+  @override
   String get logStopEverywhere =>
       'Turned on for every host; changed in Settings';
 
@@ -3127,6 +3131,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get newsLogoTitle => 'A new logo';
+
+  @override
+  String newsLogsBody(String shortcut) {
+    return 'Every connection leaves its entry in Session logs ($shortcut): where, when and how it ended. Where you turn it on (Settings › Logs, or a group or a host), also what appeared on screen, to search it, watch it again command by command and export it. Never what you type; off by default while it is not encrypted.';
+  }
+
+  @override
+  String get newsLogsTitle => 'Session logs';
 
   @override
   String get newsMoreThemesBody =>

@@ -151,8 +151,15 @@ class _LogsPageState extends ConsumerState<LogsPage> {
               Expanded(
                 child: LayoutBuilder(
                   builder: (context, box) {
-                    final list = _list(context, shown, hits, selected);
-                    if (box.maxWidth < 760) return list;
+                    final narrow = box.maxWidth < 760;
+                    final list = _list(
+                      context,
+                      shown,
+                      hits,
+                      selected,
+                      narrow: narrow,
+                    );
+                    if (narrow) return list;
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -366,8 +373,9 @@ class _LogsPageState extends ConsumerState<LogsPage> {
     BuildContext context,
     List<LogEntry> shown,
     Map<String, LogFound> hits,
-    LogEntry? selected,
-  ) {
+    LogEntry? selected, {
+    required bool narrow,
+  }) {
     final l = context.l10n;
     final c = context.ow.colors;
     final searching = _query.text.trim().isNotEmpty;
@@ -406,14 +414,19 @@ class _LogsPageState extends ConsumerState<LogsPage> {
             selected: e.id == selected?.id,
             found: hits[e.id],
             chosenHit: e.id == selected?.id ? _hit : null,
-            onTap: () => setState(() {
-              _selected = e.id;
-              _hit = null;
-            }),
-            onHit: (h) => setState(() {
-              _selected = e.id;
-              _hit = h;
-            }),
+            // Narrow, without the preview, a row opens its log.
+            onTap: narrow && e.recorded
+                ? () => _open(e)
+                : () => setState(() {
+                    _selected = e.id;
+                    _hit = null;
+                  }),
+            onHit: narrow
+                ? (h) => _open(e, at: h.at)
+                : (h) => setState(() {
+                    _selected = e.id;
+                    _hit = h;
+                  }),
             onOpen: () => _open(e, at: e.id == selected?.id ? _hit?.at : null),
           ),
         );

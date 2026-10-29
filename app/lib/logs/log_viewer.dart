@@ -197,7 +197,8 @@ class LogViewerNotifier extends Notifier<LogViewer?> {
     final app = ref.read(openWardProvider);
     final viewer = await LogViewer.open(
       app,
-      entry,
+      // As it is now: a session going on has grown since the list was read.
+      app.log(id: entry.id) ?? entry,
       scrollback: ref.read(settingsProvider).scrollback,
     );
     final command = at == null ? viewer.commands.length - 1 : null;
@@ -323,6 +324,7 @@ class _LogView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.ow.colors;
+    final live = viewer.entry.end == LogEnd.open;
     final find = isApple
         ? const SingleActivator(LogicalKeyboardKey.keyF, meta: true)
         : const SingleActivator(
@@ -348,16 +350,22 @@ class _LogView extends ConsumerWidget {
             children: [
               _Bar(viewer: viewer),
               if (viewer.entry.saved) _NoteStrip(viewer: viewer),
+              // Cut short: a session still going on, or a sudden exit.
               if (!viewer.complete)
                 Container(
-                  color: c.warnSoft,
+                  color: live ? c.sunken : c.warnSoft,
                   padding: const EdgeInsets.symmetric(
                     horizontal: OwSpace.s8,
                     vertical: OwSpace.s3,
                   ),
                   child: Text(
-                    context.l10n.logIncomplete,
-                    style: TextStyle(fontSize: OwText.small, color: c.text),
+                    live
+                        ? context.l10n.logStillRecording
+                        : context.l10n.logIncomplete,
+                    style: TextStyle(
+                      fontSize: OwText.small,
+                      color: live ? c.textMuted : c.text,
+                    ),
                   ),
                 ),
               Divider(height: 1, color: c.border),
@@ -408,6 +416,22 @@ class _Bar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        OwSpace.s8,
+        OwSpace.s5,
+        OwSpace.s6,
+        OwSpace.s5,
+      ),
+      // Narrow (a small window), the actions as icons: their names stay in
+      // the tooltips.
+      child: LayoutBuilder(
+        builder: (context, box) => _row(context, ref, box.maxWidth < 640),
+      ),
+    );
+  }
+
+  Widget _row(BuildContext context, WidgetRef ref, bool narrow) {
     final l = context.l10n;
     final c = context.ow.colors;
     final e = viewer.entry;
@@ -418,88 +442,99 @@ class _Bar extends ConsumerWidget {
       if (e.place != LogPlace.local) e.address,
       formatSize(l, e.bytes.toInt()),
     ].join(' · ');
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        OwSpace.s8,
-        OwSpace.s5,
-        OwSpace.s6,
-        OwSpace.s5,
-      ),
-      child: Row(
-        children: [
-          SystemBadge(
-            code: e.place == LogPlace.local ? 'mac' : e.system,
-            env: env,
-            size: 26,
-          ),
-          const SizedBox(width: OwSpace.s6),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Semantics(
-                        header: true,
-                        child: Text(
-                          logLabel(l, e),
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: OwText.title,
-                            fontWeight: FontWeight.w600,
-                          ),
+    return Row(
+      children: [
+        SystemBadge(
+          code: e.place == LogPlace.local ? 'mac' : e.system,
+          env: env,
+          size: 26,
+        ),
+        const SizedBox(width: OwSpace.s6),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Flexible(
+                    child: Semantics(
+                      header: true,
+                      child: Text(
+                        logLabel(l, e),
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: OwText.title,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
-                    if (env != null) ...[
-                      const SizedBox(width: OwSpace.s4),
-                      EnvChip(env),
-                    ],
+                  ),
+                  if (env != null) ...[
                     const SizedBox(width: OwSpace.s4),
-                    Pill(l.logReadOnly, tone: PillTone.warm),
+                    EnvChip(env),
                   ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  meta,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: OwText.small, color: c.textMuted),
-                ),
-              ],
-            ),
+                  const SizedBox(width: OwSpace.s4),
+                  Pill(l.logReadOnly, tone: PillTone.warm),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                meta,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: OwText.small, color: c.textMuted),
+              ),
+            ],
           ),
-          const SizedBox(width: OwSpace.s4),
-          _SaveButton(viewer: viewer),
-          const SizedBox(width: OwSpace.s4),
-          _ExportMenu(viewer: viewer),
-          const SizedBox(width: OwSpace.s4),
+        ),
+        const SizedBox(width: OwSpace.s4),
+        _SaveButton(viewer: viewer, narrow: narrow),
+        const SizedBox(width: OwSpace.s4),
+        _ExportMenu(viewer: viewer, narrow: narrow),
+        const SizedBox(width: OwSpace.s4),
+        if (narrow)
+          IconButton(
+            key: const ValueKey('log.connect'),
+            tooltip: l.logsConnectAgain,
+            onPressed: () => connectAgain(ref, e),
+            icon: const Icon(Icons.refresh, size: 18),
+          )
+        else
           OutlinedButton.icon(
             key: const ValueKey('log.connect'),
             onPressed: () => connectAgain(ref, e),
             icon: const Icon(Icons.refresh, size: 16),
             label: Text(l.logsConnectAgain),
           ),
-          const SizedBox(width: OwSpace.s2),
-          _MoreMenu(viewer: viewer),
-        ],
-      ),
+        const SizedBox(width: OwSpace.s2),
+        _MoreMenu(viewer: viewer),
+      ],
     );
   }
 }
 
 class _SaveButton extends ConsumerWidget {
-  const _SaveButton({required this.viewer});
+  const _SaveButton({required this.viewer, required this.narrow});
 
   final LogViewer viewer;
+  final bool narrow;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = context.l10n;
     final c = context.ow.colors;
     final e = viewer.entry;
+    if (narrow) {
+      return IconButton(
+        key: ValueKey(e.saved ? 'log.saved' : 'log.save'),
+        tooltip: e.saved ? l.logSaved : l.save,
+        onPressed: () => editNote(context, ref, e),
+        icon: e.saved
+            ? Icon(Icons.star, size: 18, color: c.warn)
+            : const Icon(Icons.star_border, size: 18),
+      );
+    }
     if (e.saved) {
       return FilledButton.tonalIcon(
         key: const ValueKey('log.saved'),
@@ -518,9 +553,10 @@ class _SaveButton extends ConsumerWidget {
 }
 
 class _ExportMenu extends ConsumerWidget {
-  const _ExportMenu({required this.viewer});
+  const _ExportMenu({required this.viewer, required this.narrow});
 
   final LogViewer viewer;
+  final bool narrow;
 
   Future<void> _export(
     BuildContext context,
@@ -638,13 +674,19 @@ class _ExportMenu extends ConsumerWidget {
                 ),
         ),
       ],
-      child: IgnorePointer(
-        child: OutlinedButton.icon(
-          onPressed: () {},
-          icon: const Icon(Icons.ios_share, size: 16),
-          label: Text(l.exportEllipsis),
-        ),
-      ),
+      icon: narrow ? const Icon(Icons.ios_share, size: 18) : null,
+      // Only its look: the menu's button is the one a screen reader uses.
+      child: narrow
+          ? null
+          : ExcludeSemantics(
+              child: IgnorePointer(
+                child: OutlinedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.ios_share, size: 16),
+                  label: Text(l.exportEllipsis),
+                ),
+              ),
+            ),
     );
   }
 }

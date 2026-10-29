@@ -24,7 +24,9 @@ import 'package:openward/core/providers.dart';
 import 'package:openward/core/settings.dart';
 import 'package:openward/hosts/sidebar.dart';
 import 'package:openward/import/program_preview.dart';
+import 'package:openward/logs/log_viewer.dart';
 import 'package:openward/src/rust/api/app.dart';
+import 'package:openward/src/rust/api/logs.dart';
 import 'package:openward/src/rust/api/tunnels.dart';
 import 'package:openward/src/rust/api/vault.dart';
 import 'package:openward/src/rust/frb_generated.dart';
@@ -140,6 +142,14 @@ void main() {
         autostart: true,
       ),
     );
+    // The local terminal recorded: its chip, its page and its viewer.
+    app.setLogsConfig(
+      config: LogsConfig(
+        recordLocal: true,
+        keepDays: 30,
+        maxBytes: BigInt.from(1 << 30),
+      ),
+    );
     // What importing the made-up Termius data would bring.
     final termius = await app.readProgramWithKey(
       path: '$_repo/core/crates/openward-import/tests/fixtures/termius/Termius',
@@ -194,7 +204,15 @@ void main() {
     while (term.phase != Phase.running && DateTime.now().isBefore(deadline)) {
       await tester.pump(const Duration(milliseconds: 50));
     }
-    term.session.text(text: 'printf "\\033[32mok\\033[0m %s\\n" galería\n');
+    // Each command marked, as the terminal does on Intro.
+    for (final command in [
+      r'printf "\033[32mok\033[0m %s\n" galería',
+      'seq 1 3',
+    ]) {
+      term.session.logCommand(command: command);
+      term.session.text(text: '$command\n');
+      await tester.pump(const Duration(milliseconds: 300));
+    }
 
     for (final (family, light) in _themes) {
       final name = '$family-${light ? 'claro' : 'oscuro'}';
@@ -238,6 +256,17 @@ void main() {
       await shot('$name-5-import');
       await tester.tap(find.text('Cancelar'));
       await tester.pump(const Duration(milliseconds: 400));
+
+      // The terminal's log: on its page, and in the viewer.
+      tabs.openPage(PageKind.logs);
+      await tester.pump(const Duration(milliseconds: 500));
+      await shot('$name-7-logs');
+      await tester.tap(find.byKey(const ValueKey('logs.open')));
+      for (var i = 0; container.read(logViewerProvider) == null; i++) {
+        if (i == 100) fail('the viewer never opened');
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await shot('$name-8-log-viewer');
       // Back to the terminal alone.
       while (container.read(tabsProvider).tabs.length > 1) {
         tabs.select(1);
@@ -255,7 +284,7 @@ void main() {
     }
     expect(
       out.listSync().where((f) => f.path.endsWith('.png')).length,
-      greaterThanOrEqualTo(_themes.length * 6),
+      greaterThanOrEqualTo(_themes.length * 8),
     );
     binding.reportData = {'screenshots': reported};
     tabs.closeCurrent();

@@ -2480,6 +2480,10 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get logStillRecording =>
+      'Sigue grabando: lo de los últimos segundos aún no está aquí.';
+
+  @override
   String get logStopEverywhere =>
       'Activado en todos los hosts; se cambia en Ajustes';
 
@@ -3134,6 +3138,14 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get newsLogoTitle => 'Logo nuevo';
+
+  @override
+  String newsLogsBody(String shortcut) {
+    return 'Cada conexión deja su entrada en Registros ($shortcut): dónde, cuándo y cómo acabó. Donde lo actives (Ajustes › Registros, o en un grupo o un host), también lo que salió en pantalla, para buscar en él, volver a verlo comando a comando y exportarlo. Nunca lo que escribes; viene apagado mientras no vaya cifrado.';
+  }
+
+  @override
+  String get newsLogsTitle => 'Registros de sesión';
 
   @override
   String get newsMoreThemesBody =>

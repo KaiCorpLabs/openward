@@ -20,9 +20,10 @@ brew upgrade --cask openward
 
 ## Dónde guarda sus datos
 
-En la misma carpeta que la 0.2 ([cuál](prueba-v0.2.md#dónde-guarda-sus-datos)), con un archivo más:
-- `history.json`: el historial de comandos. Es de este equipo: no va al vault ni se sincroniza. Ajustes › Terminal lo apaga o lo borra.
-- `recent.json` (desde la 0.3.0-beta.3): las conexiones recientes y cuánto usas cada acción de la paleta. También es de este equipo; Ajustes › General lo apaga o lo borra.
+En la misma carpeta que la 0.2 ([cuál](prueba-v0.2.md#dónde-guarda-sus-datos)), con algo más:
+- `history.json`: el historial de comandos. Es de este equipo: no va al vault ni se sincroniza. Ajustes › Registros lo apaga o lo borra (antes de la 0.3.3, Ajustes › Terminal).
+- `recent.json` (desde la 0.3.0-beta.3): las conexiones recientes y cuánto usas cada acción de la paleta. También es de este equipo; Ajustes › Registros lo apaga o lo borra (antes de la 0.3.3, Ajustes › General).
+- `logs/` (desde la 0.3.3-beta.1): los registros de sesión. Por cada sesión, `<id>.json` con su entrada; si se grabó, también `<id>.cast.gz` (asciicast v2) y `<id>.txt.gz` (el texto para buscar). Y `config.json`, con los días y el espacio que se guardan. Es de este equipo y aún va **sin cifrar**: lo cifrará la v0.4. Ajustes › Registros abre la carpeta y lo borra todo.
 
 Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre archivos nuevos), y en el `~/.ssh/authorized_keys` de un servidor cuando subes una.
 
@@ -145,9 +146,20 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - exporta tus hosts de una hoja de cálculo o usa la plantilla de Termius;
    - comprueba los grupos, puertos, usuarios y etiquetas, y los avisos de lo que no entra;
    - impórtalo dos veces y comprueba que no se duplica.
+23. **Registros de sesión** (0.3.3-beta.1):
+   - sin activar nada, conéctate a un par de hosts y abre Registros (⌘⇧R): cada sesión debe tener su entrada, «sin registro»;
+   - activa los registros en un grupo de pruebas (en su editor, «Avanzado» › «Registro de sesión») y conéctate a uno de sus hosts: el chip «Registro» debe salir en la barra de estado, y Ajustes › Registros debe nombrar ese grupo;
+   - escribe una contraseña sin eco (`sudo -k; sudo true`, o `read -s x`): ni el visor ni el buscador deben tener lo que tecleaste;
+   - pausa desde el chip, ejecuta `echo oculto-$((6*7))` y sigue: ni `oculto-42` ni el comando deben estar en el registro;
+   - corta la red un momento y vuelve: debe quedar un solo registro, con el corte marcado en la línea de tiempo;
+   - días después, busca en Registros algo que respondió un comando: debe salir sin abrir los registros uno a uno;
+   - en el visor, salta entre comandos con las flechas, reproduce a 8× y guarda uno con una nota; exporta un `.cast` y comprueba que `asciinema play` lo reproduce;
+   - cierra la app de golpe (`kill -9`) mientras graba: al abrirla, el registro debe estar, como mucho sin los últimos segundos;
+   - vuelca algo grande (`cat` de un log de cientos de MB, o `seq 1 30000000`) con la grabación activada y sin ella, y dinos cuánto tarda cada vez;
+   - cambia los días a 90 y reinicia la app: Ajustes › Registros debe seguir diciendo 90.
 
 En Windows y Linux, ⌘ es Ctrl+Mayús: Ctrl+Mayús+K abre la paleta y Ctrl+Mayús+/ la hoja de atajos. La barra lateral se pliega con Ctrl+Mayús+L (Ctrl+B es del shell).
 
 ## Cómo informar
 
-Como en la 0.2 ([cómo](prueba-v0.2.md#cómo-informar)). Para el historial, no pegues los comandos tal cual si llevan nombres de servidores internos: describe qué escribiste y qué esperabas.
+Como en la 0.2 ([cómo](prueba-v0.2.md#cómo-informar)). Para el historial, no pegues los comandos tal cual si llevan nombres de servidores internos: describe qué escribiste y qué esperabas. Lo mismo con los registros: no adjuntes un `.cast` ni un texto exportado sin leerlo antes, porque guarda todo lo que salió en pantalla.
