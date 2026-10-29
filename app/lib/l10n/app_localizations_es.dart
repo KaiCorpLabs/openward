@@ -4826,6 +4826,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get startAction => 'Empezar';
 
   @override
+  String get startColDuration => 'Duración';
+
+  @override
   String get startHere => 'Empieza aquí';
 
   @override

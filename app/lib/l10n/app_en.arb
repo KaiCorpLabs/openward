@@ -1602,6 +1602,7 @@
   "stageOpeningShell": "Opening the shell on {label}…",
   "start": "Get started",
   "startAction": "Start",
+  "startColDuration": "Duration",
   "startHere": "Start here",
   "startShortcutHosts": "all hosts",
   "startShortcutLocal": "local terminal",

@@ -4810,6 +4810,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get startAction => 'Start';
 
   @override
+  String get startColDuration => 'Duration';
+
+  @override
   String get startHere => 'Start here';
 
   @override

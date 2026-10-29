@@ -3564,6 +3564,7 @@
   },
   "start": "Empezar",
   "startAction": "Empezar",
+  "startColDuration": "Duración",
   "startHere": "Empieza aquí",
   "startShortcutHosts": "todos los hosts",
   "startShortcutLocal": "terminal local",

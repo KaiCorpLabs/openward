@@ -1975,13 +1975,26 @@ Host db
 
   testWidgets('start: a quick connection that completes, the recent ones '
       'and the shortcuts sheet', (tester) async {
-    for (final (label, address) in [
-      ('web-1', '10.0.0.11'),
-      ('web-2', '10.0.0.12'),
-      ('db', '10.0.0.5'),
+    // Two favorites, one of them in production.
+    const prod = SettingsSpec(
+      user: 'deploy',
+      environment: EnvironmentKind.mark,
+      environmentName: 'Producción',
+      environmentShort: 'prod',
+      environmentColor: 'red',
+    );
+    for (final (label, address, favorite, settings) in [
+      ('web-1', '10.0.0.11', true, const SettingsSpec(user: 'deploy')),
+      ('web-2', '10.0.0.12', true, prod),
+      ('db', '10.0.0.5', false, const SettingsSpec()),
     ]) {
       await app.createHost(
-        spec: HostSpec(label: label, address: address),
+        spec: HostSpec(
+          label: label,
+          address: address,
+          favorite: favorite,
+          settings: settings,
+        ),
       );
     }
     final web2 = app.hosts().firstWhere((h) => h.label == 'web-2').id;
@@ -2015,6 +2028,23 @@ Host db
       find.byKey(const ValueKey('recent.address:ops@10.0.0.9')),
       findsOneWidget,
     );
+    // As the Hosts page: the whole window, the recent ones in its columns,
+    // the favorites in a row and the shortcuts at its foot.
+    expect(find.text('DURACIÓN'), findsOneWidget);
+    expect(find.byKey(const ValueKey('start.local')), findsOneWidget);
+    expect(find.byKey(const ValueKey('start.newHost')), findsOneWidget);
+    final first = tester.getRect(
+      find.byKey(const ValueKey('start.favorite.web-1')),
+    );
+    final second = tester.getRect(
+      find.byKey(const ValueKey('start.favorite.web-2')),
+    );
+    expect(second.top, first.top);
+    expect(first.width, greaterThan(180));
+    expect(
+      tester.getBottomLeft(find.byKey(const ValueKey('start.shortcuts'))).dy,
+      greaterThan(760),
+    );
     await _shot(tester, '91-start');
 
     // «Conectar» on one line, the button wider instead: in Berenjena's
@@ -2039,6 +2069,18 @@ Host db
     expect(label.size.height, label.getMaxIntrinsicHeight(double.infinity));
     await _shot(tester, '91b-start-big-text');
     container.read(settingsProvider.notifier).update((_) => settings);
+    await _settle(tester);
+
+    // In a small window too, without overflowing: the columns that do not
+    // fit go, and the shortcuts stay at the foot.
+    tester.view.physicalSize = const Size(780, 520) * 2;
+    await _settle(tester);
+    expect(
+      tester.getBottomLeft(find.byKey(const ValueKey('start.shortcuts'))).dy,
+      greaterThan(480),
+    );
+    await _shot(tester, '91c-start-small');
+    tester.view.physicalSize = const Size(1280, 800) * 2;
     await _settle(tester);
 
     // Saved hosts first; of two as good, the one used last.

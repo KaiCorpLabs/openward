@@ -155,90 +155,175 @@ class _StartPageState extends ConsumerState<StartPage> {
 
   @override
   Widget build(BuildContext context) {
-    final ow = context.ow;
-    final c = ow.colors;
-    final l = context.l10n;
-    final theme = Theme.of(context);
+    final c = context.ow.colors;
     final recent = ref.watch(recentProvider).connections;
     final library = ref.watch(libraryProvider);
     final firstDay = recent.isEmpty;
-    // Favorites beside the recent ones, once there are hosts to choose.
+    // Favorites once there are hosts to choose; the first day, after the
+    // ways to start.
     final favorites = library.hosts.isNotEmpty;
-    final recents = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (firstDay)
-          _firstDay(context)
-        else ...[
-          _Heading(l.paletteRecent),
-          const SizedBox(height: 6),
-          for (final r in recent.take(8)) ?_recentRow(context, r, library),
-        ],
-      ],
-    );
+    // As the Hosts page: the whole window, and the shortcuts at its foot.
     return ColoredBox(
       color: c.surface,
-      child: SingleChildScrollView(
+      child: Padding(
         padding: const EdgeInsets.fromLTRB(
-          OwSpace.s12,
-          OwSpace.s18,
-          OwSpace.s12,
-          OwSpace.s12,
+          OwSpace.s14,
+          OwSpace.s11,
+          OwSpace.s14,
+          OwSpace.s6,
         ),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: favorites ? 980 : 760),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _header(context, firstDay),
+            const SizedBox(height: 14),
+            _quick(context),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(
+                  top: OwSpace.s12,
+                  bottom: OwSpace.s8,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const UmbralMark(size: 30),
-                    const SizedBox(width: 12),
-                    Semantics(
-                      header: true,
-                      child: Text(
-                        firstDay ? l.startHere : l.startTitle,
-                        style: theme.textTheme.titleLarge,
-                      ),
-                    ),
+                    if (firstDay) ...[
+                      _firstDay(context),
+                      if (favorites) ...[
+                        const SizedBox(height: 28),
+                        const _Favorites(),
+                      ],
+                    ] else ...[
+                      if (favorites) ...[
+                        const _Favorites(),
+                        const SizedBox(height: 28),
+                      ],
+                      _recents(context, recent, library),
+                    ],
+                    const _OpenTunnels(),
                   ],
                 ),
-                const SizedBox(height: 16),
-                _quick(context),
-                const SizedBox(height: 28),
-                if (!favorites)
-                  recents
-                else
-                  LayoutBuilder(
-                    builder: (context, box) => box.maxWidth >= 720
-                        ? Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(flex: 105, child: recents),
-                              const SizedBox(width: 28),
-                              const Expanded(flex: 100, child: _Favorites()),
-                            ],
-                          )
-                        : Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              recents,
-                              const SizedBox(height: 24),
-                              const _Favorites(),
-                            ],
-                          ),
-                  ),
-                const _OpenTunnels(),
-                const SizedBox(height: 20),
-                Divider(height: 1, color: c.border),
-                const SizedBox(height: 14),
-                _shortcuts(context),
-              ],
+              ),
             ),
-          ),
+            Divider(height: 1, color: c.border),
+            const SizedBox(height: 10),
+            _shortcuts(context),
+          ],
         ),
       ),
+    );
+  }
+
+  /// The title, and on its right what is opened from here most: a local
+  /// terminal and a new host.
+  Widget _header(BuildContext context, bool firstDay) {
+    final l = context.l10n;
+    return LayoutBuilder(
+      builder: (context, box) {
+        // Narrow: the buttons keep only their icon.
+        final narrow = box.maxWidth < 620;
+        Widget button(String key, IconData icon, String text, VoidCallback f) =>
+            narrow
+            ? IconButton(
+                key: ValueKey(key),
+                tooltip: text,
+                onPressed: f,
+                icon: Icon(icon, size: 18),
+              )
+            : OutlinedButton.icon(
+                key: ValueKey(key),
+                onPressed: f,
+                icon: Icon(icon, size: 16),
+                label: Text(text),
+              );
+        return Row(
+          children: [
+            const UmbralMark(size: 30),
+            const SizedBox(width: 12),
+            Semantics(
+              header: true,
+              child: Text(
+                firstDay ? l.startHere : l.startTitle,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            const Spacer(),
+            button(
+              'start.local',
+              Icons.terminal,
+              l.localTerminal,
+              ref.read(tabsProvider.notifier).openLocal,
+            ),
+            const SizedBox(width: 8),
+            button('start.newHost', Icons.add, l.newHost, () async {
+              if (await showHostEditor(context, ref)) {
+                ref.read(libraryProvider.notifier).refresh();
+              }
+            }),
+          ],
+        );
+      },
+    );
+  }
+
+  /// The recent connections, in the columns of the Hosts page.
+  Widget _recents(
+    BuildContext context,
+    List<RecentConnection> recent,
+    Library library,
+  ) {
+    final l = context.l10n;
+    final c = context.ow.colors;
+    final style = Theme.of(context).textTheme.labelSmall?.copyWith(
+      color: c.textSubtle,
+      fontSize: OwText.small,
+      letterSpacing: 0.6,
+    );
+    Text t(String s) => Text(s.toUpperCase(), style: style, maxLines: 1);
+    return LayoutBuilder(
+      builder: (context, box) {
+        final logs = ref.watch(logsProvider);
+        final cols = _Columns(
+          box.maxWidth,
+          MediaQuery.textScalerOf(context),
+          log: recent.take(12).any((r) => latestLog(logs, r.where) != null),
+        );
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _Heading(l.paletteRecent),
+            const SizedBox(height: 10),
+            ExcludeSemantics(
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(
+                  OwSpace.s6,
+                  0,
+                  OwSpace.s6,
+                  OwSpace.s3,
+                ),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: c.border)),
+                ),
+                child: _cells(
+                  cols,
+                  badge: const SizedBox.shrink(),
+                  name: t(l.hostsColName),
+                  address: t(l.hostsColAddress),
+                  length: t(l.startColDuration),
+                  when: Align(
+                    alignment: Alignment.centerRight,
+                    child: t(l.hostsColLast),
+                  ),
+                  log: const SizedBox.shrink(),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            for (final r in recent.take(12))
+              ?_recentRow(context, r, library, cols),
+          ],
+        );
+      },
     );
   }
 
@@ -323,63 +408,107 @@ class _StartPageState extends ConsumerState<StartPage> {
     BuildContext context,
     RecentConnection r,
     Library library,
+    _Columns cols,
   ) {
     final l = context.l10n;
-    final c = context.ow.colors;
+    final ow = context.ow;
+    final c = ow.colors;
     final hostId = r.hostId;
     final host = hostId == null ? null : library.host(hostId);
     final target = r.address == null ? null : QuickTarget.parse(r.address!);
     if (host == null && target == null) return null;
     final tabs = ref.read(tabsProvider.notifier);
+    final env = host?.environment;
     final length = r.length;
     final log = latestLog(ref.watch(logsProvider), r.where);
-    final when = Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Text(
-          agoText(
-            l,
-            DateTime.now().difference(
-              DateTime.fromMillisecondsSinceEpoch(r.at),
-            ),
-          ),
-          style: TextStyle(fontSize: OwText.small, color: c.textMuted),
-        ),
-        if (length != null)
-          Text(
-            [durationText(l, length), if (r.tmux) 'tmux'].join(' · '),
-            style: monoStyle(context, size: 12, color: c.textSubtle),
-          ),
-      ],
-    );
-    return _Row(
-      key: ValueKey('recent.${r.where}'),
-      // An address not saved has no system to tell.
-      leading: SystemBadge(
-        code: host == null ? '?' : host.system?.code,
-        env: host?.environment,
-      ),
-      env: host?.environment,
-      title: host?.label ?? target!.label,
-      subtitle: host != null ? _hostAddress(host) : l.notSaved,
-      trailing: log == null
-          ? when
-          : Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  key: ValueKey('recent.log.${r.where}'),
-                  tooltip: l.logSeeIt,
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () => openLogById(context, ref, log.id),
-                  icon: Icon(Icons.subject, size: 16, color: c.textMuted),
+    final muted = TextStyle(fontSize: OwText.small, color: c.textMuted);
+    return FocusOutline(
+      radius: ow.shape.radius + 2,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(ow.shape.radius + 2),
+        child: InkWell(
+          key: ValueKey('recent.${r.where}'),
+          borderRadius: BorderRadius.circular(ow.shape.radius + 2),
+          onTap: () =>
+              host != null ? tabs.openHost(host) : tabs.openAddress(target!),
+          child: SizedBox(
+            height: 44,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: OwSpace.s6),
+              child: _cells(
+                cols,
+                // An address not saved has no system to tell.
+                badge: SystemBadge(
+                  code: host == null ? '?' : host.system?.code,
+                  env: env,
                 ),
-                const SizedBox(width: OwSpace.s2),
-                when,
-              ],
+                name: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        host?.label ?? target!.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    if (env != null) ...[
+                      const SizedBox(width: 8),
+                      EnvChip(env),
+                    ],
+                  ],
+                ),
+                address: host != null
+                    ? Text(
+                        _hostAddress(host),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: monoStyle(context, size: 12),
+                      )
+                    : Text(
+                        l.notSaved,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: muted.copyWith(color: c.textSubtle),
+                      ),
+                length: Text(
+                  length == null
+                      ? '—'
+                      : [
+                          durationText(l, length),
+                          if (r.tmux) 'tmux',
+                        ].join(' · '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: monoStyle(context, size: 12, color: c.textMuted),
+                ),
+                when: Text(
+                  agoText(
+                    l,
+                    DateTime.now().difference(
+                      DateTime.fromMillisecondsSinceEpoch(r.at),
+                    ),
+                  ),
+                  textAlign: TextAlign.right,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: muted,
+                ),
+                log: log == null
+                    ? const SizedBox.shrink()
+                    : IconButton(
+                        key: ValueKey('recent.log.${r.where}'),
+                        tooltip: l.logSeeIt,
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () => openLogById(context, ref, log.id),
+                        icon: Icon(Icons.subject, size: 16, color: c.textMuted),
+                      ),
+              ),
             ),
-      onTap: () =>
-          host != null ? tabs.openHost(host) : tabs.openAddress(target!),
+          ),
+        ),
+      ),
     );
   }
 
@@ -514,17 +643,29 @@ class _StartPageState extends ConsumerState<StartPage> {
         ),
       ],
     );
-    return Wrap(
-      spacing: 20,
-      runSpacing: 8,
-      crossAxisAlignment: WrapCrossAlignment.center,
+    return Row(
       children: [
-        item('${key}T', l.startShortcutLocal),
-        item('${key}N', l.startShortcutNewHost),
-        item('${key}K', l.startShortcutSearch),
-        item(hostsKeys(l), l.startShortcutHosts),
-        item(sidebarKeys(l), l.shortcutSidebar),
-        // The rest, on the sheet.
+        Expanded(
+          // A small window keeps the first three: the rest are on the sheet.
+          child: LayoutBuilder(
+            builder: (context, box) => Wrap(
+              spacing: 16,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                item('${key}T', l.startShortcutLocal),
+                item('${key}N', l.startShortcutNewHost),
+                item('${key}K', l.startShortcutSearch),
+                if (box.maxWidth >= 720) ...[
+                  item(hostsKeys(l), l.startShortcutHosts),
+                  item(sidebarKeys(l), l.shortcutSidebar),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        // The rest, on the sheet, at the end of the line.
         InkWell(
           key: const ValueKey('start.shortcuts'),
           borderRadius: BorderRadius.circular(context.ow.shape.radius),
@@ -550,6 +691,56 @@ String durationText(AppLocalizations l, Duration d) {
   if (d.inHours < 1) return l.durationMinutes(d.inMinutes);
   return l.durationHours(d.inHours, d.inMinutes % 60);
 }
+
+/// Which columns the recent connections have room for, and how wide the
+/// fixed ones are: wider with a bigger text size.
+class _Columns {
+  _Columns(double width, TextScaler text, {required this.log})
+    : address = width >= 620,
+      length = width >= 760,
+      lengthWidth = text.scale(130),
+      whenWidth = text.scale(150);
+
+  final bool address;
+  final bool length;
+
+  /// Some row has a log to open.
+  final bool log;
+  final double lengthWidth;
+  final double whenWidth;
+}
+
+/// A recent connection's cells, in the columns there is room for.
+Widget _cells(
+  _Columns cols, {
+  required Widget badge,
+  required Widget name,
+  required Widget address,
+  required Widget length,
+  required Widget when,
+  required Widget log,
+}) => Row(
+  children: [
+    SizedBox(width: 32, child: badge),
+    const SizedBox(width: 12),
+    Expanded(flex: 12, child: name),
+    if (cols.address) ...[
+      const SizedBox(width: 12),
+      Expanded(flex: 15, child: address),
+    ],
+    if (cols.length) ...[
+      const SizedBox(width: 12),
+      SizedBox(width: cols.lengthWidth, child: length),
+    ],
+    const SizedBox(width: 12),
+    SizedBox(width: cols.whenWidth, child: when),
+    // Where the log is, if a row has one: the columns stay in line.
+    if (cols.log) ...[
+      const SizedBox(width: 4),
+      SizedBox(width: 36, child: log),
+    ],
+  ],
+);
 
 /// The favorites as cards, in their order: a drag puts one before
 /// another (and so do the actions of a screen reader).
@@ -617,7 +808,8 @@ class _Favorites extends ConsumerWidget {
         else
           LayoutBuilder(
             builder: (context, box) {
-              final columns = box.maxWidth >= 420 ? 3 : 2;
+              // As many as fit at about 200 px each: 2 to 6.
+              final columns = ((box.maxWidth + 8) / 208).floor().clamp(2, 6);
               final w = (box.maxWidth - 8 * (columns - 1)) / columns;
               return Wrap(
                 spacing: 8,
@@ -788,8 +980,8 @@ class _Heading extends StatelessWidget {
   Widget build(BuildContext context) => SectionLabel(text);
 }
 
-/// A row of the start page: an icon, a name and an address, and what goes
-/// on the right.
+/// A row of the start page's open tunnels: an icon, a name and an
+/// address, and what goes on the right.
 class _Row extends StatelessWidget {
   const _Row({
     super.key,
@@ -798,11 +990,9 @@ class _Row extends StatelessWidget {
     required this.subtitle,
     required this.trailing,
     required this.onTap,
-    this.env,
   });
 
   final Widget leading;
-  final EnvironmentView? env;
   final String title;
   final String subtitle;
   final Widget trailing;
@@ -832,23 +1022,11 @@ class _Row extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          if (env case final env?) ...[
-                            const SizedBox(width: 8),
-                            EnvChip(env),
-                          ],
-                        ],
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                       Text(
                         subtitle,

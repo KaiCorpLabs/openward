@@ -7430,6 +7430,12 @@ abstract class AppLocalizations {
   /// **'Empezar'**
   String get startAction;
 
+  /// No description provided for @startColDuration.
+  ///
+  /// In es, this message translates to:
+  /// **'Duración'**
+  String get startColDuration;
+
   /// No description provided for @startHere.
   ///
   /// In es, this message translates to:
