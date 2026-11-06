@@ -18,5 +18,7 @@
 | [plan/temas.md](plan/temas.md) | Las siete familias de temas (Monitor, Berenjena, Búnker, Marino, Catppuccin, Dracula y Tokyo Night), hechas en 0.3.1-beta.5 |
 | [plan/auditoria-0.3.md](plan/auditoria-0.3.md) | Auditoría de la 0.3.1: 128 hallazgos y el plan de remediación R0–R6 (R0 y R1 hechos) |
 | [plan/registros.md](plan/registros.md) | Registros de sesión: lo que se vio en cada sesión, para buscarlo, volver a verlo y exportarlo (maquetas aprobadas, hitos L1–L4) |
+| [plan/community.md](plan/community.md) | Camino a la Community: lo básico completo (Telnet, serie, Mosh, FIDO2, terminal, autocompletado), el vault cifrado, la sync con tu almacenamiento, el servidor con las cuentas de KaiCorp Labs y su paso a producción (propuesta) |
+| [plan/v0.4.md](plan/v0.4.md) | v0.4: el vault cifrado (contraseña maestra, kit de recuperación, desbloqueo con biometría, secretos y copia de seguridad), etapa 2 del camino a la Community (propuesta) |
 
 Pendientes: `THREAT_MODEL.md` (antes de la fase 2) y `PROTOCOL.md` (en [`spec/`](../spec/)).
