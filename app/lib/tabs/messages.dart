@@ -1,5 +1,7 @@
 // What a session's state looks like in words, in the interface's language.
 
+import 'dart:io' show Platform;
+
 import '../core/errors.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/session.dart';
@@ -44,6 +46,7 @@ String failureText(AppLocalizations l, FailureView f) {
     FailureKind.cancelled => l.cancelled,
     FailureKind.noSftp => l.failureNoSftp(f.label),
     FailureKind.network => '${f.label}: ${networkReason(l, f)}',
+    FailureKind.serial => serialReason(l, f),
     // The core's words are in «Detalles».
     FailureKind.other || null => l.failureOther,
   };
@@ -61,6 +64,21 @@ String networkReason(AppLocalizations l, FailureView f) => switch (f.net) {
   // What the command wrote: its words, not the core's.
   NetKind.proxyCommand => l.netProxyCommand(f.reason),
   NetKind.other || null => l.netOther,
+};
+
+/// A serial port that did not open or went away, in words; the core's
+/// own words in «Detalles».
+String serialReason(AppLocalizations l, FailureView f) => switch (f.serial) {
+  SerialKind.missing => l.failureSerialMissing(f.host),
+  SerialKind.busy => l.failureSerialBusy(f.host),
+  // On Linux the port's group is the usual reason: say how to join it.
+  SerialKind.denied =>
+    Platform.isLinux
+        ? l.failureSerialDeniedLinux(f.host)
+        : l.failureSerialDenied(f.host),
+  SerialKind.settings => l.failureSerialSettings(f.host),
+  SerialKind.gone => l.failureSerialGone(f.host),
+  SerialKind.other || null => l.failureSerialOther(f.host),
 };
 
 /// The hops before the target, for "via bastion".

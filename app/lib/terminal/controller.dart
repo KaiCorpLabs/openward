@@ -4,6 +4,7 @@ import 'dart:ui' show Color;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 
+import '../core/address.dart';
 import '../core/connection.dart';
 import '../history/line_tracker.dart';
 import '../src/rust/api/session.dart';
@@ -165,14 +166,21 @@ class TerminalController extends ConnectionController {
     final target = this.target;
     return hostId != null
         ? app.connect(session: session, hostId: hostId)
-        : target != null
-        ? app.connectAddress(
+        : target == null
+        ? app.openLocal(session: session)
+        : target.isSerial
+        ? app.openSerial(
+            session: session,
+            path: target.address,
+            line: target.serial ?? defaultSerialLine,
+          )
+        : app.connectAddress(
             session: session,
             address: target.address,
             user: target.user,
             port: target.port,
-          )
-        : app.openLocal(session: session);
+            protocol: target.protocol,
+          );
   }
 
   @override

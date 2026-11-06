@@ -508,8 +508,9 @@ class _SidebarState extends ConsumerState<Sidebar> {
                     customSemanticsActions: {
                       CustomSemanticsAction(label: l.connect): () =>
                           actions.connect(h),
-                      CustomSemanticsAction(label: l.openSftp): () =>
-                          actions.sftp(h),
+                      if (overSsh(h))
+                        CustomSemanticsAction(label: l.openSftp): () =>
+                            actions.sftp(h),
                       CustomSemanticsAction(label: l.editEllipsis): () =>
                           actions.editHost(id: h.id),
                       CustomSemanticsAction(

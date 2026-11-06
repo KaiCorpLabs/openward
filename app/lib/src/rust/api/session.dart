@@ -7,9 +7,11 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+import 'vault.dart';
+
 // These functions are ignored because they are not marked as `pub`: `event_view`, `failure_view`, `into_answer`, `packed`, `prompt_view`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DartSink`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<TerminalSession>>
 abstract class TerminalSession implements RustOpaqueInterface {
@@ -118,6 +120,10 @@ abstract class TerminalSession implements RustOpaqueInterface {
   /// The selected text, for the clipboard; `None` without a selection.
   String? selectionText();
 
+  /// Sends a break down a serial port (a router's ROM monitor waits for
+  /// one); false if this is not a serial port.
+  bool sendBreak();
+
   void setCellPixels({required double width, required double height});
 
   /// The cursor until a program sets its own, and whether it blinks.
@@ -201,6 +207,9 @@ class ClosedView {
 }
 
 class ConnectedView {
+  /// For Telnet the SSH fields are empty (nothing is encrypted); for a
+  /// serial port `host` is the port and `port` 0.
+  final ProtocolKind protocol;
   final String host;
   final int port;
   final String kex;
@@ -218,6 +227,7 @@ class ConnectedView {
   final double connectMs;
 
   const ConnectedView({
+    required this.protocol,
     required this.host,
     required this.port,
     required this.kex,
@@ -233,6 +243,7 @@ class ConnectedView {
 
   @override
   int get hashCode =>
+      protocol.hashCode ^
       host.hashCode ^
       port.hashCode ^
       kex.hashCode ^
@@ -250,6 +261,7 @@ class ConnectedView {
       identical(this, other) ||
       other is ConnectedView &&
           runtimeType == other.runtimeType &&
+          protocol == other.protocol &&
           host == other.host &&
           port == other.port &&
           kex == other.kex &&
@@ -278,6 +290,9 @@ enum FailureKind {
 
   /// The server has no SFTP.
   noSftp,
+
+  /// A serial port: [`FailureView::serial`] says what.
+  serial,
   network,
   other,
 }
@@ -303,6 +318,7 @@ class FailureView {
   final List<PreviousKeyView> previous;
   final CertKind? cert;
   final NetKind? net;
+  final SerialKind? serial;
   final int seconds;
 
   const FailureView({
@@ -320,6 +336,7 @@ class FailureView {
     required this.previous,
     this.cert,
     this.net,
+    this.serial,
     required this.seconds,
   });
 
@@ -342,6 +359,7 @@ class FailureView {
       previous.hashCode ^
       cert.hashCode ^
       net.hashCode ^
+      serial.hashCode ^
       seconds.hashCode;
 
   @override
@@ -363,6 +381,7 @@ class FailureView {
           previous == other.previous &&
           cert == other.cert &&
           net == other.net &&
+          serial == other.serial &&
           seconds == other.seconds;
 }
 
@@ -790,6 +809,26 @@ class SelectedRange {
           row == other.row &&
           start == other.start &&
           end == other.end;
+}
+
+/// With [`FailureKind::Serial`]: what went wrong with the port
+/// ([`FailureView::host`]).
+enum SerialKind {
+  /// Not there (now).
+  missing,
+
+  /// Another program has it.
+  busy,
+
+  /// Not allowed (on Linux, not in `dialout`).
+  denied,
+
+  /// It does not take these settings; [`FailureView::reason`] says why.
+  settings,
+
+  /// It went while open: the cable was pulled.
+  gone,
+  other,
 }
 
 /// One event; the field named by `kind` is set.

@@ -125,7 +125,8 @@ flowchart TB
 | `openward-term` | Trait `TermEngine` y formato de frames (*damage* por filas) entre el motor y la UI | — | Hecho |
 | `openward-ghostty` | El motor: estado VT, scrollback comprimible, búsqueda, codificación de entrada y respuestas. Único crate con `unsafe` (FFI) | `libghostty-vt` (commit fijado, Zig 0.16, bindings con `bindgen`) | Hecho |
 | `openward-pty` | Terminal local en escritorio | `portable-pty` 0.9.0 fijado (probado en S1.5; sin versión desde febrero de 2025, fork si hace falta) | Hecho |
-| `openward-serial` | Puertos serie en escritorio (Android con USB en una fase posterior; iOS no tiene) | `serialport` (MPL-2.0; busca mantenedores) | Pendiente |
+| `openward-telnet` | Telnet para un terminal, sin E/S: negociación de opciones (RFC 1143), tamaño de ventana (NAWS), tipo de terminal (TTYPE), eco y binario. El transporte es el de SSH (TCP, proxy, ProxyCommand o un salto) | — | Hecho |
+| `openward-serial` | Puertos serie en escritorio (Android con USB en una fase posterior; iOS no tiene): la lista de los del equipo y uno abierto en exclusiva, con su lector y su escritor | `serialport` 4.10.1 fijado, sin libudev (MPL-2.0; busca mantenedores) | Hecho |
 | `openward-mosh` | Cliente Mosh clean-room (fase 4) | — | Fase 4 |
 | `openward-import` | Importar ssh_config, Termius (sus datos del equipo: IndexedDB de Chromium sobre LevelDB, campos cifrados con secretbox y la clave del llavero), PuTTY y KiTTY (.reg y carpetas de sesiones), MobaXterm (.mxtsessions), Tabby (config.yaml), SecureCRT (XML y .ini) y CSV (la plantilla de Termius o columnas reconocidas por la cabecera) | — | Hecho |
 | `openward-integrations` | Tailscale, Vault/OpenBao, step-ca, Teleport, Cloudflare, inventario cloud | `reqwest` | Pendiente |

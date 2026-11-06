@@ -28,16 +28,17 @@ mod system;
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use openward_import::ssh_config::{Paths, SshConfig};
 use openward_pty::Spawn;
 use openward_vault::Vault;
-use openward_vault::proto::ItemId;
+use openward_vault::proto::{ItemId, Protocol, SerialLine};
 
 pub use events::{Answer, Event, EventSink, Failure, Prompt};
 pub use local::Local;
 pub use logs::Logs;
+pub use openward_serial::{PortInfo, ports as serial_ports};
 pub use openward_sftp as files;
 pub use openward_vault as vault;
 pub use plan::{Plan, PlanError};
@@ -132,24 +133,43 @@ impl App {
     }
 
     /// As [`App::connect`], to an address that is not saved, with the
-    /// default settings.
+    /// default settings: by SSH or Telnet.
     pub fn connect_address(
         &self,
         terminal: &Arc<Terminal>,
         address: String,
         user: Option<String>,
         port: Option<u16>,
+        protocol: Protocol,
         sink: Arc<dyn EventSink>,
     ) -> Result<(), PlanError> {
+        if protocol == Protocol::Serial {
+            return Err(PlanError::NotSsh(address));
+        }
         self.connect_to(
             terminal,
             Target::Address {
                 address,
                 user,
                 port,
+                protocol,
             },
             sink,
         )
+    }
+
+    /// Opens the serial port at `path` in `terminal`, as a host that is
+    /// not saved. Returns at once: the outcome arrives on `sink`.
+    pub fn open_serial(
+        &self,
+        terminal: &Arc<Terminal>,
+        path: String,
+        line: SerialLine,
+        sink: Arc<dyn EventSink>,
+    ) {
+        let target = Target::Serial { path, line };
+        // Only a host can fail to plan; this is not one.
+        let _ = self.connect_to(terminal, target, sink);
     }
 
     fn connect_to(
@@ -158,13 +178,27 @@ impl App {
         target: Target,
         sink: Arc<dyn EventSink>,
     ) -> Result<(), PlanError> {
+        let serial = target.serial(&self.vault())?;
+        if let Some(serial) = serial {
+            self.open_serial_line(terminal, &target, serial, sink);
+            return Ok(());
+        }
         // Checked now so that a plan that cannot run fails at once.
         let plan = target.plan(&self.vault(), &self.local)?;
         // A reconnection (by hand, too) leaves the tmux session there to
         // find it again under the same name. Its log is a new one.
         terminal.end_log(logs::End::Closed);
         terminal.detach();
-        let begin = self.log_begin(&target, &plan);
+        let hop = plan.hops.last().expect("a plan ends with its target");
+        let address = match plan.protocol {
+            Protocol::Telnet if hop.port == vault::TELNET_PORT => {
+                format!("telnet://{}", hop.address)
+            }
+            Protocol::Telnet => format!("telnet://{}:{}", hop.address, hop.port),
+            _ if hop.port == 22 => format!("{}@{}", hop.user, hop.address),
+            _ => format!("{}@{}:{}", hop.user, hop.address, hop.port),
+        };
+        let begin = self.log_begin(&target, &hop.label, address, &plan.term);
         let sink: Arc<dyn EventSink> = logs::LogSink::new(sink, &self.logs, terminal, begin);
         let ctx = self.ctx(&sink);
         let term = Arc::downgrade(terminal);
@@ -182,7 +216,10 @@ impl App {
                         });
                     }
                 };
-                let (exit_code, failure, connected) = session(&plan, &ctx, &term, &tmux).await;
+                let (exit_code, failure, connected) = match plan.protocol {
+                    Protocol::Telnet => telnet_session(&plan, &ctx, &term).await,
+                    _ => session(&plan, &ctx, &term, &tmux).await,
+                };
                 if connected {
                     attempt = 0;
                 }
@@ -205,6 +242,76 @@ impl App {
         });
         terminal.set_task(task);
         Ok(())
+    }
+
+    /// Opens a serial port (a saved host's, or one picked by hand) in
+    /// `terminal`. Nothing comes back by itself if the cable is pulled: the
+    /// session closes, saying so.
+    fn open_serial_line(
+        &self,
+        terminal: &Arc<Terminal>,
+        target: &Target,
+        serial: SerialTarget,
+        sink: Arc<dyn EventSink>,
+    ) {
+        terminal.end_log(logs::End::Closed);
+        terminal.detach();
+        // A saved host's log names its port; one picked by hand says what
+        // it is, for the log to open it again.
+        let address = match target {
+            Target::Host(_) => serial.path.clone(),
+            _ => format!("serial://{}", serial.path),
+        };
+        let begin = self.log_begin(target, &serial.label, address, "xterm-256color");
+        let sink: Arc<dyn EventSink> = logs::LogSink::new(sink, &self.logs, terminal, begin);
+        let term = Arc::clone(terminal);
+        self.runtime.spawn_blocking(move || {
+            let started = Instant::now();
+            let SerialTarget { label, path, line } = serial;
+            sink.send(Event::Route {
+                hops: vec![label.clone()],
+            });
+            // Opened again (a reconnection): the last reader lets the port
+            // go within a read's wait. Until then it is still ours, busy.
+            let mut opened = openward_serial::open(&path, &line);
+            for _ in 0..5 {
+                if !matches!(opened, Err(openward_serial::OpenError::Busy(_))) {
+                    break;
+                }
+                std::thread::sleep(openward_serial::READ_WAIT);
+                opened = openward_serial::open(&path, &line);
+            }
+            let failure = |problem| Failure::Serial {
+                port: path.clone(),
+                problem,
+            };
+            let failure = match opened {
+                Ok(port) => {
+                    let connected = events::Connected {
+                        protocol: Protocol::Serial,
+                        host: path.clone(),
+                        port: 0,
+                        kex: String::new(),
+                        post_quantum: false,
+                        cipher: String::new(),
+                        host_key_algorithm: String::new(),
+                        fingerprint: String::new(),
+                        trust: events::Trust::Known,
+                        hops: 1,
+                        connect_ms: started.elapsed().as_secs_f64() * 1000.0,
+                    };
+                    match term.attach_serial(&path, port, connected, Arc::clone(&sink)) {
+                        Ok(()) => return,
+                        Err(e) => failure(events::SerialProblem::Other(e.to_string())),
+                    }
+                }
+                Err(e) => failure(events::SerialProblem::of(&e)),
+            };
+            sink.send(Event::Closed {
+                exit_code: None,
+                failure: Some(failure),
+            });
+        });
     }
 
     fn ctx(&self, sink: &Arc<dyn EventSink>) -> Ctx {
@@ -258,7 +365,7 @@ impl App {
     /// gets `Connected` once it listens). Returns at once.
     pub fn open_tunnel(&self, id: ItemId, sink: Arc<dyn EventSink>) -> Result<(), PlanError> {
         let spec = self.vault().port_forward(id)?.clone();
-        let plan = Plan::for_host(&self.vault(), spec.host, &self.local)?;
+        let plan = Plan::for_host(&self.vault(), spec.host, &self.local)?.ssh()?;
         let Some(ticket) = self.tunnels.begin(id) else {
             // Open or opening already: nothing to do here.
             sink.send(Event::Closed {
@@ -337,7 +444,7 @@ impl App {
     /// if it changed. False when there is no connection: it is told on the
     /// next one.
     async fn learn_system(&self, host: ItemId) -> anyhow::Result<bool> {
-        let plan = self.plan(host)?;
+        let plan = self.plan(host)?.ssh()?;
         let Some(live) = self.live.find(&plan.key()) else {
             return Ok(false);
         };
@@ -383,14 +490,9 @@ impl App {
         vault.set_device_defaults(device);
     }
 
-    /// What the log of a connection to `target` begins as.
-    fn log_begin(&self, target: &Target, plan: &Plan) -> logs::Begin {
-        let hop = plan.hops.last().expect("a plan ends with its target");
-        let address = if hop.port == 22 {
-            format!("{}@{}", hop.user, hop.address)
-        } else {
-            format!("{}@{}:{}", hop.user, hop.address, hop.port)
-        };
+    /// What the log of a connection to `target` (called `label`, at
+    /// `address` as the log shows it) begins as.
+    fn log_begin(&self, target: &Target, label: &str, address: String, term: &str) -> logs::Begin {
         let vault = self.vault();
         let (place, marking, system, record) = match target {
             Target::Host(id) => {
@@ -414,7 +516,7 @@ impl App {
                     settings.session_log.unwrap_or(false),
                 )
             }
-            Target::Address { .. } => (
+            Target::Address { .. } | Target::Serial { .. } => (
                 logs::Place::Address(address.clone()),
                 None,
                 None,
@@ -423,7 +525,7 @@ impl App {
         };
         logs::Begin {
             place,
-            label: hop.label.clone(),
+            label: label.to_owned(),
             address,
             marking,
             system,
@@ -431,7 +533,7 @@ impl App {
             record,
             cols: 0,
             rows: 0,
-            term: plan.term.clone(),
+            term: term.to_owned(),
         }
     }
 
@@ -476,6 +578,7 @@ impl App {
             address,
             user,
             port,
+            protocol: Protocol::Ssh,
         };
         self.connect_sftp_to(sftp, target, sink)
     }
@@ -486,13 +589,14 @@ impl App {
         target: Target,
         sink: Arc<dyn EventSink>,
     ) -> Result<(), PlanError> {
-        let plan = target.plan(&self.vault(), &self.local)?;
+        let plan = target.plan(&self.vault(), &self.local)?.ssh()?;
         let label = plan.hops.last().map_or("", |h| h.label.as_str());
         let link = self.links.get(&plan.key(), label);
         let (vault, local) = (Arc::clone(&self.vault), self.local.clone());
         let plan_of = move || {
             target
                 .plan(&lock(&vault), &local)
+                .and_then(Plan::ssh)
                 .map_err(|e| events::Failure::Other(e.to_string()))
         };
         sftp::start(sftp, plan_of, link, self.ctx(&sink));
@@ -659,7 +763,20 @@ enum Target {
         address: String,
         user: Option<String>,
         port: Option<u16>,
+        protocol: Protocol,
     },
+    /// A serial port picked by hand.
+    Serial {
+        path: String,
+        line: SerialLine,
+    },
+}
+
+/// A serial port to open: a host's, or one picked by hand.
+struct SerialTarget {
+    label: String,
+    path: String,
+    line: SerialLine,
 }
 
 impl Target {
@@ -670,8 +787,40 @@ impl Target {
                 address,
                 user,
                 port,
-            } => Ok(Plan::for_address(address, user.clone(), *port, local)),
+                protocol,
+            } => Ok(Plan::for_address(
+                address,
+                user.clone(),
+                *port,
+                *protocol,
+                local,
+            )),
+            Self::Serial { path, .. } => Err(PlanError::NotSsh(path.clone())),
         }
+    }
+
+    /// The serial port it is, if it is one.
+    fn serial(&self, vault: &Vault) -> Result<Option<SerialTarget>, PlanError> {
+        Ok(match self {
+            Self::Host(id) => {
+                let settings = vault.effective(*id)?.settings;
+                if settings.protocol != Some(Protocol::Serial) {
+                    return Ok(None);
+                }
+                let host = vault.host(*id)?;
+                Some(SerialTarget {
+                    label: host.label.clone(),
+                    path: host.address.clone(),
+                    line: settings.serial.unwrap_or_default(),
+                })
+            }
+            Self::Serial { path, line } => Some(SerialTarget {
+                label: path.clone(),
+                path: path.clone(),
+                line: line.clone(),
+            }),
+            Self::Address { .. } => None,
+        })
     }
 }
 
@@ -721,6 +870,49 @@ pub(crate) fn reconnect_delay(attempt: u32) -> Duration {
 /// One connection, from the first hop to the shell closing. Returns the
 /// exit code, why it ended if not normally, and whether it got as far as
 /// the shell.
+/// A Telnet session: the jumps by SSH, the target's plain stream, and
+/// nothing to watch but the stream itself (Telnet has no keepalive of its
+/// own).
+async fn telnet_session(
+    plan: &Plan,
+    ctx: &Ctx,
+    term: &Weak<Terminal>,
+) -> (Option<u32>, Option<Failure>, bool) {
+    let sink = &ctx.sink;
+    sink.send(Event::Route {
+        hops: plan.hops.iter().map(|h| h.label.clone()).collect(),
+    });
+    let started = Instant::now();
+    let (jumps, stream) = match connect::telnet(plan, ctx).await {
+        Ok(opened) => opened,
+        Err(failure) => return (None, Some(failure), false),
+    };
+    let Some(pipe) = term.upgrade().map(|t| t.pipe()) else {
+        return (None, None, false);
+    };
+    let target = plan.hops.last().expect("a plan ends with its target");
+    // Input goes to the server before anyone hears it is connected.
+    let pump = pipe.pump_telnet(Box::new(stream), &plan.term, &target.label);
+    drop(pipe);
+    sink.send(Event::Connected(events::Connected {
+        protocol: Protocol::Telnet,
+        host: target.address.clone(),
+        port: target.port,
+        kex: String::new(),
+        post_quantum: false,
+        cipher: String::new(),
+        host_key_algorithm: String::new(),
+        fingerprint: String::new(),
+        trust: events::Trust::Known,
+        hops: plan.hops.len(),
+        connect_ms: started.elapsed().as_secs_f64() * 1000.0,
+    }));
+    let (exit_code, failure) = pump.await;
+    // The jumps carried it: they go now.
+    drop(jumps);
+    (exit_code, failure, true)
+}
+
 async fn session(
     plan: &Plan,
     ctx: &Ctx,

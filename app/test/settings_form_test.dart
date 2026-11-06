@@ -48,6 +48,40 @@ void main() {
     expect(f.envMark, isNull);
   });
 
+  /// The protocol and the port's settings are fields like the rest: an
+  /// imported Telnet host edited here stays Telnet.
+  test('the protocol and a serial line, kept and inherited', () {
+    final telnet = SettingsForm(
+      const SettingsSpec(protocol: ProtocolKind.telnet),
+    );
+    addTearDown(telnet.dispose);
+    expect(telnet.toSpec().protocol, ProtocolKind.telnet);
+    expect(telnet.toSpec().serial, isNull);
+
+    final f = SettingsForm(const SettingsSpec());
+    addTearDown(f.dispose);
+    const fromGroup = SettingsSpec(
+      protocol: ProtocolKind.serial,
+      serial: SerialLineSpec(
+        baud: 115200,
+        dataBits: 8,
+        parity: ParityKind.none,
+        stopBits: 1,
+        flow: FlowKind.none,
+      ),
+    );
+    expect(f.protocolWith(fromGroup), ProtocolKind.serial);
+    expect(f.protocolWith(const SettingsSpec()), ProtocolKind.ssh);
+    f.take('serial', fromGroup);
+    expect(f.toSpec().serial?.baud, 115200);
+    expect(f.toSpec().protocol, isNull, reason: 'still inherited');
+    f.take('protocol', const SettingsSpec());
+    expect(f.toSpec().protocol, ProtocolKind.ssh);
+    expect(f.protocolWith(fromGroup), ProtocolKind.ssh, reason: 'its own');
+    f.drop('serial');
+    expect(f.toSpec().serial, isNull);
+  });
+
   test('what stops it from saving, on its field', () {
     final f = SettingsForm(const SettingsSpec());
     addTearDown(f.dispose);

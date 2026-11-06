@@ -108,7 +108,26 @@ class FakeOpenWard extends Fake implements OpenWard {
     required String address,
     String? user,
     int? port,
-  }) => _events(session, 'connect $address');
+    required ProtocolKind protocol,
+  }) => _events(
+    session,
+    protocol == ProtocolKind.ssh
+        ? 'connect $address'
+        : 'connect ${protocol.name} $address',
+  );
+
+  /// What [serialPorts] finds.
+  List<SerialPortView> ports = const [];
+
+  @override
+  Future<List<SerialPortView>> serialPorts() async => ports;
+
+  @override
+  Stream<SessionEvent> openSerial({
+    required TerminalSession session,
+    required String path,
+    required SerialLineSpec line,
+  }) => _events(session, 'serial $path ${line.baud} ${line.dataBits}');
 
   @override
   bool answer({required BigInt promptId, required PromptAnswer answer}) {

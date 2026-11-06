@@ -1,0 +1,20 @@
+[package]
+name = "openward-serial"
+description = "Serial ports on desktop: the list of them, and one open as a terminal's line (serialport)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+openward-proto = { path = "../openward-proto" }
+# Pinned exactly, as little-maintained dependencies are (ARCHITECTURE §3.2).
+# Without libudev: Linux ports are found in /sys, and neither the build nor
+# the package needs libudev.
+serialport = { version = "=4.10.1", default-features = false }
+thiserror = "2"
+
+[lints]
+workspace = true

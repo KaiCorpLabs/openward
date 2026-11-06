@@ -1,6 +1,6 @@
 # Camino a la Community: lo básico completo y la sincronización
 
-- **Estado:** propuesta, pendiente de revisar. Como hasta ahora, cada hito con interfaz nueva pasa antes por maquetas en el lienzo.
+- **Estado:** en marcha. P0 está en main (2026-11-06) y P1 hecho en código, a falta de probarlo con un cable de verdad. Las decisiones por defecto siguen por confirmar. Como hasta ahora, cada hito con interfaz nueva pasa antes por maquetas en el lienzo.
 - **Fecha:** 2026-11-06.
 - **Base:** fases 1 y 2 de la hoja de ruta ([ARCHITECTURE §15](../ARCHITECTURE.md#15-hoja-de-ruta-con-puertas)) y los ADR [004](../adr/ADR-004-vault-y-jerarquia-de-claves.md) (vault), [005](../adr/ADR-005-sync-por-registros-de-dispositivo.md) (sync), [006](../adr/ADR-006-servidor-open-core.md) (servidor) y [009](../adr/ADR-009-mosh-clean-room.md) (Mosh). Incluye el plan de la [v0.4](v0.4.md) como etapa 2, con tres ajustes.
 - **Duración estimada:** unas 29 semanas de plan en cinco etapas. Son estimaciones al estilo de los planes anteriores: la 0.2 y la 0.3 fueron bastante más rápidas que lo que decían sus planes.
@@ -82,6 +82,49 @@ Ese mismo día se descartó montar Postgres y Supabase Auth aparte para OpenWard
   - en los tres sistemas.
 - Los registros, la búsqueda y los temas funcionan igual que en SSH.
 - **Importadores:** los hosts Telnet y serie que hoy se saltan pasan a importarse.
+
+#### Qué deja P1 hecho
+
+- **Los datos:**
+  - dos campos nuevos en los ajustes, heredables como los demás: `protocol` (`ssh`, `telnet` o `serial`) y `serial`, la línea del puerto (baudios, bits de datos, paridad, bits de parada y control de flujo; por defecto 9600 8N1 sin control de flujo);
+  - el host serie guarda su puerto en la dirección: `/dev/cu.usbserial-1410`, `/dev/ttyUSB0`, `COM3`;
+  - un host Telnet cuyo puerto solo ponen los valores por defecto usa el 23, en el núcleo y en el editor;
+  - la versión 0.3.3 lee esos hosts como SSH y no conecta (lo nuevo va en campos y no en variantes, para que la lectura no falle).
+- **Telnet**, en el crate `openward-telnet`:
+  - sin E/S, con 10 pruebas propias;
+  - la negociación sigue el RFC 1143, para no responder en bucle;
+  - acepta el eco, SGA y binario del servidor, y por su parte NAWS (el tamaño, otra vez en cada cambio), TTYPE (el `term` del host) y SGA; rechaza el resto;
+  - Intro va como `CR LF`, el fin de línea de Telnet (RFC 1123, 3.3.1), salvo en binario.
+- **Transporte de Telnet:**
+  - es el de SSH: directo, con proxy, con ProxyCommand o por los saltos de la ruta, que siempre son SSH;
+  - un host Telnet o serie no puede ser un salto;
+  - sin keepalive propio;
+  - si la conexión se pierde, vuelve como una de SSH; si el servidor cuelga (`exit`), la sesión termina sin error.
+- **Serie**, en el crate `openward-serial`:
+  - usa `serialport` 4.10.1, fijado y sin libudev: en Linux los puertos se buscan en `/sys`, y ni la compilación ni el paquete necesitan libudev;
+  - el puerto se abre en exclusiva: una segunda pestaña lo encuentra en uso;
+  - en macOS solo se listan los `cu.`;
+  - si se suelta el cable, la sesión se cierra diciéndolo, sin reconectar sola;
+  - el break se envía desde la paleta;
+  - solo en escritorio: fuera de la comprobación de móvil de la CI.
+- **Lo que solo da SSH** (archivos, túneles, saltos, copiar claves, leer el sistema):
+  - el núcleo lo rechaza para los demás (`PlanError::NotSsh`);
+  - la interfaz no lo ofrece.
+- **Sin dirección guardada:**
+  - `telnet://host[:puerto]` en la barra de conexión rápida;
+  - «Puerto serie» junto a «Terminal local» en el inicio, y «Abrir un puerto serie…» en la paleta;
+  - en los recientes, los registros y los espacios de trabajo se guardan como `telnet://…` y `serial://puerto[:baudios[,8N1[,rtscts|xonxoff]]]`, que una versión anterior no sabe abrir.
+- **Importadores:**
+  - Telnet y serie desde PuTTY, SecureCRT, Tabby y CSV;
+  - Telnet desde Termius, con su puerto de `telnet_configs` cuando la tabla está (la de prueba no la tiene);
+  - Telnet y serie desde MobaXterm, aunque del serie solo el puerto y la velocidad: el resto de la línea lo guarda en números propios cuyo significado no está claro, y queda en 8N1.
+- **Pruebas:**
+  - del núcleo: el códec, el puerto serie con un pseudoterminal (en macOS sin cambiar la velocidad, que no la admite), una sesión Telnet de principio a fin contra un servidor de la propia prueba, y en Linux una consola serie, con el cable soltado y el puerto liberado al cerrar;
+  - de la app: la notación de las direcciones, el formulario, las pestañas y los mensajes;
+  - una prueba de ventana: el editor, una sesión Telnet y un puerto que no está.
+- **Pendiente:**
+  - la prueba con hardware (punto 25 de [la guía](prueba-v0.3.md));
+  - el eco local, para los pocos equipos que no hacen eco y tampoco lo negocian.
 
 ### P2 · Mosh en escritorio
 

@@ -213,13 +213,51 @@ pub(crate) fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 
 /// Authenticated sessions, jumps first; they must live as long as the last.
 pub(crate) async fn run(plan: &Plan, ctx: &Ctx) -> Result<Vec<Session>, Failure> {
-    let mut sessions: Vec<Session> = Vec::with_capacity(plan.hops.len());
-    for (i, hop) in plan.hops.iter().enumerate() {
+    ssh_hops(plan, ctx, plan.hops.len()).await
+}
+
+/// A Telnet plan's connection: its jumps by SSH, then the target's plain
+/// stream, out of the last jump or the way the plan says. The sessions
+/// must live as long as the stream.
+pub(crate) async fn telnet(
+    plan: &Plan,
+    ctx: &Ctx,
+) -> Result<(Vec<Session>, openward_ssh::client::Stream), Failure> {
+    let last = plan.hops.len() - 1;
+    let sessions = ssh_hops(plan, ctx, last).await?;
+    ctx.stage(plan, last, Stage::Connecting);
+    let hop = &plan.hops[last];
+    let target = Target::new(&hop.address, hop.port);
+    let mut proxy = hop.proxy.clone();
+    let mut asked = 0;
+    loop {
+        let transport = match (sessions.last(), &hop.proxy_command, &proxy) {
+            (Some(previous), _, _) => Transport::Via(previous),
+            (None, Some(command), _) => Transport::ProxyCommand(command.clone()),
+            (None, None, Some(p)) => Transport::Proxy(p.clone()),
+            (None, None, None) => Transport::Tcp,
+        };
+        match openward_ssh::client::open_stream(&target, transport, hop.connect_timeout).await {
+            Ok(stream) => return Ok((sessions, stream)),
+            Err(e) if e.downcast_ref::<ProxyAuthRequired>().is_some() && asked < 3 => {
+                let p = proxy.as_mut().expect("only a proxy asks");
+                proxy_login(p, ctx, asked > 0).await?;
+                asked += 1;
+            }
+            Err(e) => return Err(Failure::network(hop.label.clone(), &e)),
+        }
+    }
+}
+
+/// The first `count` hops of `plan`, by SSH.
+async fn ssh_hops(plan: &Plan, ctx: &Ctx, count: usize) -> Result<Vec<Session>, Failure> {
+    let mut sessions: Vec<Session> = Vec::with_capacity(count);
+    for (i, hop) in plan.hops.iter().take(count).enumerate() {
         ctx.stage(plan, i, Stage::Connecting);
         let texts = ctx.known_hosts(&hop.known_hosts);
         let known = texts.all();
         let refused = Arc::new(Mutex::new(None));
-        let last = i + 1 == plan.hops.len();
+        let last = i + 1 == count;
         let opts = Options {
             user: hop.user.clone(),
             known_hosts: Arc::new(Mutex::new(KnownHosts::parse(&known, Unknown::Reject))),

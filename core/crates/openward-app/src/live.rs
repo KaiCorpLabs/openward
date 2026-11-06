@@ -29,6 +29,7 @@ impl Live {
         let hop = plan.hops.last().expect("a plan has hops");
         let info = target.info();
         let connected = Connected {
+            protocol: crate::events::Protocol::Ssh,
             host: hop.address.clone(),
             port: hop.port,
             post_quantum: info.post_quantum(),

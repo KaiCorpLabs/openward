@@ -107,6 +107,70 @@ settings! {
     /// Record what comes out on the screen (never what is typed) in the
     /// session log, to watch it again, search it and export it.
     session_log: bool,
+    /// How the host is reached: SSH when not set.
+    protocol: Protocol,
+    /// How a serial port talks, for hosts reached over one (the host's
+    /// address is the port: `/dev/cu.usbserial-1410`, `COM3`).
+    serial: SerialLine,
+}
+
+/// How a host is reached. New ways go in fields of their own: a variant an
+/// older version does not know would make it fail to read the host.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Protocol {
+    Ssh,
+    /// Unencrypted: network gear and old systems. Through the SSH jump
+    /// hosts of the route, if it has any.
+    Telnet,
+    /// A serial port of this computer, such as a console cable's.
+    Serial,
+}
+
+/// A serial port's settings: 9600 8N1 without flow control by default.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct SerialLine {
+    /// Bits per second.
+    pub baud: u32,
+    /// 5 to 8.
+    pub data_bits: u8,
+    pub parity: Parity,
+    /// 1 or 2.
+    pub stop_bits: u8,
+    pub flow: FlowControl,
+    #[serde(flatten)]
+    pub extra: Extra,
+}
+
+impl Default for SerialLine {
+    fn default() -> Self {
+        Self {
+            baud: 9600,
+            data_bits: 8,
+            parity: Parity::None,
+            stop_bits: 1,
+            flow: FlowControl::None,
+            extra: Extra::new(),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Parity {
+    None,
+    Odd,
+    Even,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FlowControl {
+    None,
+    /// XON/XOFF.
+    Software,
+    /// RTS/CTS.
+    Hardware,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

@@ -12,8 +12,10 @@ publish.workspace = true
 openward-ghostty = { path = "../openward-ghostty" }
 openward-import = { path = "../openward-import" }
 openward-pty = { path = "../openward-pty" }
+openward-serial = { path = "../openward-serial" }
 openward-sftp = { path = "../openward-sftp" }
 openward-ssh = { path = "../openward-ssh" }
+openward-telnet = { path = "../openward-telnet" }
 openward-term = { path = "../openward-term" }
 openward-vault = { path = "../openward-vault" }
 anyhow = "1"
@@ -41,6 +43,8 @@ openward-ssh = { path = "../openward-ssh", features = ["test-auth"] }
 # Paused time for the connection watcher's tests; agents of the tests' own.
 tokio = { version = "1", features = ["test-util", "net"] }
 futures = "0.3"
+# A pseudo-terminal pair plays a serial cable.
+serialport = { version = "=4.10.1", default-features = false }
 
 [lints]
 workspace = true

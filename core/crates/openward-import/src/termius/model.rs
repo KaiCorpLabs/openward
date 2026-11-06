@@ -203,6 +203,7 @@ pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
     let hosts = t("hosts");
     let groups = t("groups");
     let configs = t("ssh_configs");
+    let telnets = t("telnet_configs");
     let config_identities = t("ssh_config_identities");
     let identities = t("ssh_identities");
     let keys = t("keys");
@@ -379,11 +380,18 @@ pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
             .or_else(|| address.clone())
             .unwrap_or_else(|| "Termius".into());
         let ssh = configs.get(h.raw("ssh_config"));
-        let unsupported = match (ssh, h.raw("telnet_config")) {
-            (None, Some(_)) => Some("telnet".to_owned()),
-            _ => None,
-        };
-        let c = config(ssh, &label, &mut out.warnings);
+        let telnet = ssh.is_none() && h.raw("telnet_config").is_some();
+        let mut c = config(ssh, &label, &mut out.warnings);
+        // A Telnet config and no SSH one: Telnet, on the port its config
+        // says (`telnet_configs`, when the table is there).
+        if telnet {
+            c.settings.protocol = Some(openward_proto::Protocol::Telnet);
+            c.settings.port = telnets
+                .get(h.raw("telnet_config"))
+                .and_then(|t| t.number("port", key))
+                .and_then(|p| u16::try_from(p).ok())
+                .filter(|&p| p > 0);
+        }
         if c.mosh {
             out.warnings.push(Warning::about(&label, WarningKind::Mosh));
         }
@@ -404,7 +412,7 @@ pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
             jumps: Vec::<JumpRef>::new(),
             tags: host_tags,
             notes: None,
-            unsupported,
+            unsupported: None,
         });
     }
 

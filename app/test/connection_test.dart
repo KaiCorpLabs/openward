@@ -1,10 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openward/src/rust/api/session.dart';
+import 'package:openward/src/rust/api/vault.dart' show ProtocolKind;
 import 'package:openward/terminal/controller.dart';
 
 import 'fakes.dart';
 
 const _connected = ConnectedView(
+  protocol: ProtocolKind.ssh,
   host: 'web-1.example.com',
   port: 22,
   kex: 'mlkem768x25519-sha256',

@@ -44,7 +44,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -2082725923;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 669895904;
 
 // Section: executor
 
@@ -837,6 +837,7 @@ fn wire__crate__api__app__OpenWard_connect_address_impl(
             let api_address = <String>::sse_decode(&mut deserializer);
             let api_user = <Option<String>>::sse_decode(&mut deserializer);
             let api_port = <Option<u16>>::sse_decode(&mut deserializer);
+            let api_protocol = <crate::api::vault::ProtocolKind>::sse_decode(&mut deserializer);
             let api_events = <StreamSink<
                 crate::api::session::SessionEvent,
                 flutter_rust_bridge::for_generated::SseCodec,
@@ -872,6 +873,7 @@ fn wire__crate__api__app__OpenWard_connect_address_impl(
                         api_address,
                         api_user,
                         api_port,
+                        api_protocol,
                         api_events,
                     )?;
                     std::result::Result::Ok(output_ok)
@@ -3370,6 +3372,80 @@ fn wire__crate__api__app__OpenWard_open_log_impl(
         },
     )
 }
+fn wire__crate__api__app__OpenWard_open_serial_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "OpenWard_open_serial",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<OpenWard>,
+            >>::sse_decode(&mut deserializer);
+            let api_session = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<TerminalSession>,
+            >>::sse_decode(&mut deserializer);
+            let api_path = <String>::sse_decode(&mut deserializer);
+            let api_line = <crate::api::vault::SerialLineSpec>::sse_decode(&mut deserializer);
+            let api_events = <StreamSink<
+                crate::api::session::SessionEvent,
+                flutter_rust_bridge::for_generated::SseCodec,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let mut api_that_guard = None;
+                    let mut api_session_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_session,
+                                1,
+                                false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            1 => api_session_guard = Some(api_session.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let api_session_guard = api_session_guard.unwrap();
+                    let output_ok = Ok::<_, ()>({
+                        crate::api::app::OpenWard::open_serial(
+                            &*api_that_guard,
+                            &*api_session_guard,
+                            api_path,
+                            api_line,
+                            api_events,
+                        );
+                    })?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__app__OpenWard_open_tunnel_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -4387,6 +4463,56 @@ fn wire__crate__api__app__OpenWard_search_logs_impl(
                             api_found,
                         );
                     })?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__app__OpenWard_serial_ports_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "OpenWard_serial_ports",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<OpenWard>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok =
+                        Ok::<_, ()>(crate::api::app::OpenWard::serial_ports(&*api_that_guard))?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -7828,6 +7954,54 @@ fn wire__crate__api__session__TerminalSession_selection_text_impl(
         },
     )
 }
+fn wire__crate__api__session__TerminalSession_send_break_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "TerminalSession_send_break",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<TerminalSession>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let mut api_that_guard = None;
+                let decode_indices_ =
+                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                            &api_that, 0, false,
+                        ),
+                    ]);
+                for i in decode_indices_ {
+                    match i {
+                        0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                        _ => unreachable!(),
+                    }
+                }
+                let api_that_guard = api_that_guard.unwrap();
+                let output_ok = Ok::<_, ()>(crate::api::session::TerminalSession::send_break(
+                    &*api_that_guard,
+                ))?;
+                std::result::Result::Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__session__TerminalSession_set_cell_pixels_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -9095,6 +9269,7 @@ impl SseDecode for crate::api::sftp::ConflictView {
 impl SseDecode for crate::api::session::ConnectedView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_protocol = <crate::api::vault::ProtocolKind>::sse_decode(deserializer);
         let mut var_host = <String>::sse_decode(deserializer);
         let mut var_port = <u16>::sse_decode(deserializer);
         let mut var_kex = <String>::sse_decode(deserializer);
@@ -9107,6 +9282,7 @@ impl SseDecode for crate::api::session::ConnectedView {
         let mut var_hops = <u32>::sse_decode(deserializer);
         let mut var_connectMs = <f64>::sse_decode(deserializer);
         return crate::api::session::ConnectedView {
+            protocol: var_protocol,
             host: var_host,
             port: var_port,
             kex: var_kex,
@@ -9199,8 +9375,9 @@ impl SseDecode for crate::api::session::FailureKind {
             4 => crate::api::session::FailureKind::AuthFailed,
             5 => crate::api::session::FailureKind::Cancelled,
             6 => crate::api::session::FailureKind::NoSftp,
-            7 => crate::api::session::FailureKind::Network,
-            8 => crate::api::session::FailureKind::Other,
+            7 => crate::api::session::FailureKind::Serial,
+            8 => crate::api::session::FailureKind::Network,
+            9 => crate::api::session::FailureKind::Other,
             _ => unreachable!("Invalid variant for FailureKind: {}", inner),
         };
     }
@@ -9224,6 +9401,7 @@ impl SseDecode for crate::api::session::FailureView {
             <Vec<crate::api::session::PreviousKeyView>>::sse_decode(deserializer);
         let mut var_cert = <Option<crate::api::session::CertKind>>::sse_decode(deserializer);
         let mut var_net = <Option<crate::api::session::NetKind>>::sse_decode(deserializer);
+        let mut var_serial = <Option<crate::api::session::SerialKind>>::sse_decode(deserializer);
         let mut var_seconds = <u32>::sse_decode(deserializer);
         return crate::api::session::FailureView {
             kind: var_kind,
@@ -9240,6 +9418,7 @@ impl SseDecode for crate::api::session::FailureView {
             previous: var_previous,
             cert: var_cert,
             net: var_net,
+            serial: var_serial,
             seconds: var_seconds,
         };
     }
@@ -9327,6 +9506,19 @@ impl SseDecode for crate::api::sftp::FileKind {
             2 => crate::api::sftp::FileKind::Link,
             3 => crate::api::sftp::FileKind::Other,
             _ => unreachable!("Invalid variant for FileKind: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::vault::FlowKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::vault::FlowKind::None,
+            1 => crate::api::vault::FlowKind::Software,
+            2 => crate::api::vault::FlowKind::Hardware,
+            _ => unreachable!("Invalid variant for FlowKind: {}", inner),
         };
     }
 }
@@ -9461,6 +9653,8 @@ impl SseDecode for crate::api::vault::HostView {
             <Option<crate::api::vault::EnvironmentView>>::sse_decode(deserializer);
         let mut var_system = <Option<crate::api::vault::SystemView>>::sse_decode(deserializer);
         let mut var_favorite = <Option<u32>>::sse_decode(deserializer);
+        let mut var_protocol = <crate::api::vault::ProtocolKind>::sse_decode(deserializer);
+        let mut var_serial = <Option<crate::api::vault::SerialLineSpec>>::sse_decode(deserializer);
         return crate::api::vault::HostView {
             id: var_id,
             label: var_label,
@@ -9473,6 +9667,8 @@ impl SseDecode for crate::api::vault::HostView {
             environment: var_environment,
             system: var_system,
             favorite: var_favorite,
+            protocol: var_protocol,
+            serial: var_serial,
         };
     }
 }
@@ -10210,6 +10406,18 @@ impl SseDecode for Vec<crate::api::session::SelectedRange> {
             ans_.push(<crate::api::session::SelectedRange>::sse_decode(
                 deserializer,
             ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::app::SerialPortView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::app::SerialPortView>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -10966,6 +11174,17 @@ impl SseDecode for Option<crate::api::session::PromptView> {
     }
 }
 
+impl SseDecode for Option<crate::api::vault::ProtocolKind> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::vault::ProtocolKind>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<crate::api::vault::ProxyKind> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -11019,6 +11238,30 @@ impl SseDecode for Option<crate::api::session::SearchView> {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<crate::api::session::SearchView>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::session::SerialKind> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::session::SerialKind>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::vault::SerialLineSpec> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::vault::SerialLineSpec>::sse_decode(
+                deserializer,
+            ));
         } else {
             return None;
         }
@@ -11201,6 +11444,19 @@ impl SseDecode for crate::api::vault::OriginKind {
             3 => crate::api::vault::OriginKind::Identity,
             4 => crate::api::vault::OriginKind::Host,
             _ => unreachable!("Invalid variant for OriginKind: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::vault::ParityKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::vault::ParityKind::None,
+            1 => crate::api::vault::ParityKind::Odd,
+            2 => crate::api::vault::ParityKind::Even,
+            _ => unreachable!("Invalid variant for ParityKind: {}", inner),
         };
     }
 }
@@ -11523,6 +11779,19 @@ impl SseDecode for crate::api::session::PromptView {
     }
 }
 
+impl SseDecode for crate::api::vault::ProtocolKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::vault::ProtocolKind::Ssh,
+            1 => crate::api::vault::ProtocolKind::Telnet,
+            2 => crate::api::vault::ProtocolKind::Serial,
+            _ => unreachable!("Invalid variant for ProtocolKind: {}", inner),
+        };
+    }
+}
+
 impl SseDecode for crate::api::vault::ProxyKind {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -11652,6 +11921,54 @@ impl SseDecode for crate::api::session::SelectedRange {
     }
 }
 
+impl SseDecode for crate::api::session::SerialKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::session::SerialKind::Missing,
+            1 => crate::api::session::SerialKind::Busy,
+            2 => crate::api::session::SerialKind::Denied,
+            3 => crate::api::session::SerialKind::Settings,
+            4 => crate::api::session::SerialKind::Gone,
+            5 => crate::api::session::SerialKind::Other,
+            _ => unreachable!("Invalid variant for SerialKind: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::vault::SerialLineSpec {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_baud = <u32>::sse_decode(deserializer);
+        let mut var_dataBits = <u8>::sse_decode(deserializer);
+        let mut var_parity = <crate::api::vault::ParityKind>::sse_decode(deserializer);
+        let mut var_stopBits = <u8>::sse_decode(deserializer);
+        let mut var_flow = <crate::api::vault::FlowKind>::sse_decode(deserializer);
+        return crate::api::vault::SerialLineSpec {
+            baud: var_baud,
+            data_bits: var_dataBits,
+            parity: var_parity,
+            stop_bits: var_stopBits,
+            flow: var_flow,
+        };
+    }
+}
+
+impl SseDecode for crate::api::app::SerialPortView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_path = <String>::sse_decode(deserializer);
+        let mut var_description = <String>::sse_decode(deserializer);
+        let mut var_usb = <bool>::sse_decode(deserializer);
+        return crate::api::app::SerialPortView {
+            path: var_path,
+            description: var_description,
+            usb: var_usb,
+        };
+    }
+}
+
 impl SseDecode for crate::api::session::SessionEvent {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -11744,6 +12061,8 @@ impl SseDecode for crate::api::vault::SettingsSpec {
         let mut var_environmentColor = <String>::sse_decode(deserializer);
         let mut var_readOsRelease = <Option<bool>>::sse_decode(deserializer);
         let mut var_sessionLog = <Option<bool>>::sse_decode(deserializer);
+        let mut var_protocol = <Option<crate::api::vault::ProtocolKind>>::sse_decode(deserializer);
+        let mut var_serial = <Option<crate::api::vault::SerialLineSpec>>::sse_decode(deserializer);
         return crate::api::vault::SettingsSpec {
             user: var_user,
             port: var_port,
@@ -11775,6 +12094,8 @@ impl SseDecode for crate::api::vault::SettingsSpec {
             environment_color: var_environmentColor,
             read_os_release: var_readOsRelease,
             session_log: var_sessionLog,
+            protocol: var_protocol,
+            serial: var_serial,
         };
     }
 }
@@ -12489,109 +12810,111 @@ fn pde_ffi_dispatcher_primary_impl(
         62 => wire__crate__api__app__OpenWard_open_impl(port, ptr, rust_vec_len, data_len),
         63 => wire__crate__api__app__OpenWard_open_local_impl(port, ptr, rust_vec_len, data_len),
         64 => wire__crate__api__app__OpenWard_open_log_impl(port, ptr, rust_vec_len, data_len),
-        65 => wire__crate__api__app__OpenWard_open_tunnel_impl(port, ptr, rust_vec_len, data_len),
-        66 => {
+        65 => wire__crate__api__app__OpenWard_open_serial_impl(port, ptr, rust_vec_len, data_len),
+        66 => wire__crate__api__app__OpenWard_open_tunnel_impl(port, ptr, rust_vec_len, data_len),
+        67 => {
             wire__crate__api__app__OpenWard_open_with_home_impl(port, ptr, rust_vec_len, data_len)
         }
-        67 => wire__crate__api__app__OpenWard_open_with_ssh_dir_impl(
+        68 => wire__crate__api__app__OpenWard_open_with_ssh_dir_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        68 => {
+        69 => {
             wire__crate__api__app__OpenWard_order_favorites_impl(port, ptr, rust_vec_len, data_len)
         }
-        72 => wire__crate__api__app__OpenWard_preview_ssh_config_impl(
+        73 => wire__crate__api__app__OpenWard_preview_ssh_config_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        74 => {
+        75 => {
             wire__crate__api__app__OpenWard_read_os_release_impl(port, ptr, rust_vec_len, data_len)
         }
-        75 => wire__crate__api__app__OpenWard_read_program_impl(port, ptr, rust_vec_len, data_len),
-        76 => wire__crate__api__app__OpenWard_read_program_with_key_impl(
+        76 => wire__crate__api__app__OpenWard_read_program_impl(port, ptr, rust_vec_len, data_len),
+        77 => wire__crate__api__app__OpenWard_read_program_with_key_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        79 => wire__crate__api__app__OpenWard_rename_key_impl(port, ptr, rust_vec_len, data_len),
-        80 => {
+        80 => wire__crate__api__app__OpenWard_rename_key_impl(port, ptr, rust_vec_len, data_len),
+        81 => {
             wire__crate__api__app__OpenWard_rename_workspace_impl(port, ptr, rust_vec_len, data_len)
         }
-        82 => wire__crate__api__app__OpenWard_save_log_impl(port, ptr, rust_vec_len, data_len),
-        84 => wire__crate__api__app__OpenWard_search_logs_impl(port, ptr, rust_vec_len, data_len),
-        85 => wire__crate__api__app__OpenWard_set_favorite_impl(port, ptr, rust_vec_len, data_len),
-        95 => {
+        83 => wire__crate__api__app__OpenWard_save_log_impl(port, ptr, rust_vec_len, data_len),
+        85 => wire__crate__api__app__OpenWard_search_logs_impl(port, ptr, rust_vec_len, data_len),
+        86 => wire__crate__api__app__OpenWard_serial_ports_impl(port, ptr, rust_vec_len, data_len),
+        87 => wire__crate__api__app__OpenWard_set_favorite_impl(port, ptr, rust_vec_len, data_len),
+        97 => {
             wire__crate__api__app__OpenWard_trust_host_key_impl(port, ptr, rust_vec_len, data_len)
         }
-        98 => wire__crate__api__app__OpenWard_unsave_log_impl(port, ptr, rust_vec_len, data_len),
-        99 => wire__crate__api__app__OpenWard_update_group_impl(port, ptr, rust_vec_len, data_len),
-        100 => wire__crate__api__app__OpenWard_update_host_impl(port, ptr, rust_vec_len, data_len),
-        101 => {
+        100 => wire__crate__api__app__OpenWard_unsave_log_impl(port, ptr, rust_vec_len, data_len),
+        101 => wire__crate__api__app__OpenWard_update_group_impl(port, ptr, rust_vec_len, data_len),
+        102 => wire__crate__api__app__OpenWard_update_host_impl(port, ptr, rust_vec_len, data_len),
+        103 => {
             wire__crate__api__app__OpenWard_update_identity_impl(port, ptr, rust_vec_len, data_len)
         }
-        102 => {
+        104 => {
             wire__crate__api__app__OpenWard_update_snippet_impl(port, ptr, rust_vec_len, data_len)
         }
-        103 => {
+        105 => {
             wire__crate__api__app__OpenWard_update_tunnel_impl(port, ptr, rust_vec_len, data_len)
         }
-        104 => {
+        106 => {
             wire__crate__api__app__OpenWard_update_workspace_impl(port, ptr, rust_vec_len, data_len)
         }
-        105 => wire__crate__api__app__OpenWard_use_identity_impl(port, ptr, rust_vec_len, data_len),
-        106 => wire__crate__api__app__OpenWard_watch_logs_impl(port, ptr, rust_vec_len, data_len),
-        107 => {
+        107 => wire__crate__api__app__OpenWard_use_identity_impl(port, ptr, rust_vec_len, data_len),
+        108 => wire__crate__api__app__OpenWard_watch_logs_impl(port, ptr, rust_vec_len, data_len),
+        109 => {
             wire__crate__api__app__OpenWard_watch_tunnels_impl(port, ptr, rust_vec_len, data_len)
         }
-        108 => wire__crate__api__app__OpenWard_watch_vault_impl(port, ptr, rust_vec_len, data_len),
-        111 => wire__crate__api__sftp__SftpBrowser_chmod_impl(port, ptr, rust_vec_len, data_len),
-        113 => {
+        110 => wire__crate__api__app__OpenWard_watch_vault_impl(port, ptr, rust_vec_len, data_len),
+        113 => wire__crate__api__sftp__SftpBrowser_chmod_impl(port, ptr, rust_vec_len, data_len),
+        115 => {
             wire__crate__api__sftp__SftpBrowser_conflicts_impl(port, ptr, rust_vec_len, data_len)
         }
-        114 => wire__crate__api__sftp__SftpBrowser_home_impl(port, ptr, rust_vec_len, data_len),
-        115 => wire__crate__api__sftp__SftpBrowser_install_public_key_impl(
+        116 => wire__crate__api__sftp__SftpBrowser_home_impl(port, ptr, rust_vec_len, data_len),
+        117 => wire__crate__api__sftp__SftpBrowser_install_public_key_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        116 => wire__crate__api__sftp__SftpBrowser_list_impl(port, ptr, rust_vec_len, data_len),
-        117 => wire__crate__api__sftp__SftpBrowser_mkdir_impl(port, ptr, rust_vec_len, data_len),
-        118 => wire__crate__api__sftp__SftpBrowser_realpath_impl(port, ptr, rust_vec_len, data_len),
-        119 => wire__crate__api__sftp__SftpBrowser_remove_impl(port, ptr, rust_vec_len, data_len),
-        120 => wire__crate__api__sftp__SftpBrowser_rename_impl(port, ptr, rust_vec_len, data_len),
-        121 => wire__crate__api__sftp__SftpBrowser_stat_impl(port, ptr, rust_vec_len, data_len),
-        125 => wire__crate__api__session__TerminalSession_compress_history_impl(
+        118 => wire__crate__api__sftp__SftpBrowser_list_impl(port, ptr, rust_vec_len, data_len),
+        119 => wire__crate__api__sftp__SftpBrowser_mkdir_impl(port, ptr, rust_vec_len, data_len),
+        120 => wire__crate__api__sftp__SftpBrowser_realpath_impl(port, ptr, rust_vec_len, data_len),
+        121 => wire__crate__api__sftp__SftpBrowser_remove_impl(port, ptr, rust_vec_len, data_len),
+        122 => wire__crate__api__sftp__SftpBrowser_rename_impl(port, ptr, rust_vec_len, data_len),
+        123 => wire__crate__api__sftp__SftpBrowser_stat_impl(port, ptr, rust_vec_len, data_len),
+        127 => wire__crate__api__session__TerminalSession_compress_history_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        156 => {
+        159 => {
             wire__crate__api__session__TerminalSession_watch_impl(port, ptr, rust_vec_len, data_len)
         }
-        159 => {
+        162 => {
             wire__crate__api__session__failure_view_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        160 => wire__crate__api__vault__group_spec_default_impl(port, ptr, rust_vec_len, data_len),
-        161 => wire__crate__api__vault__host_spec_default_impl(port, ptr, rust_vec_len, data_len),
-        162 => wire__crate__api__app__init_app_impl(port, ptr, rust_vec_len, data_len),
-        163 => wire__crate__api__vault__jump_spec_default_impl(port, ptr, rust_vec_len, data_len),
-        164 => wire__crate__api__sftp__local_chmod_impl(port, ptr, rust_vec_len, data_len),
-        166 => wire__crate__api__sftp__local_list_impl(port, ptr, rust_vec_len, data_len),
-        167 => wire__crate__api__sftp__local_mkdir_impl(port, ptr, rust_vec_len, data_len),
-        168 => wire__crate__api__sftp__local_remove_impl(port, ptr, rust_vec_len, data_len),
-        169 => wire__crate__api__sftp__local_rename_impl(port, ptr, rust_vec_len, data_len),
-        170 => wire__crate__api__sftp__local_stat_impl(port, ptr, rust_vec_len, data_len),
-        171 => {
+        163 => wire__crate__api__vault__group_spec_default_impl(port, ptr, rust_vec_len, data_len),
+        164 => wire__crate__api__vault__host_spec_default_impl(port, ptr, rust_vec_len, data_len),
+        165 => wire__crate__api__app__init_app_impl(port, ptr, rust_vec_len, data_len),
+        166 => wire__crate__api__vault__jump_spec_default_impl(port, ptr, rust_vec_len, data_len),
+        167 => wire__crate__api__sftp__local_chmod_impl(port, ptr, rust_vec_len, data_len),
+        169 => wire__crate__api__sftp__local_list_impl(port, ptr, rust_vec_len, data_len),
+        170 => wire__crate__api__sftp__local_mkdir_impl(port, ptr, rust_vec_len, data_len),
+        171 => wire__crate__api__sftp__local_remove_impl(port, ptr, rust_vec_len, data_len),
+        172 => wire__crate__api__sftp__local_rename_impl(port, ptr, rust_vec_len, data_len),
+        173 => wire__crate__api__sftp__local_stat_impl(port, ptr, rust_vec_len, data_len),
+        174 => {
             wire__crate__api__session__prompt_view_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        173 => {
+        176 => {
             wire__crate__api__vault__settings_spec_default_impl(port, ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -12642,132 +12965,135 @@ fn pde_ffi_dispatcher_sync_impl(
         59 => wire__crate__api__app__OpenWard_logs_dir_impl(ptr, rust_vec_len, data_len),
         60 => wire__crate__api__app__OpenWard_logs_set_in_impl(ptr, rust_vec_len, data_len),
         61 => wire__crate__api__app__OpenWard_logs_usage_impl(ptr, rust_vec_len, data_len),
-        69 => wire__crate__api__app__OpenWard_pause_transfer_impl(ptr, rust_vec_len, data_len),
-        70 => wire__crate__api__app__OpenWard_pause_transfers_impl(ptr, rust_vec_len, data_len),
-        71 => wire__crate__api__app__OpenWard_preview_program_impl(ptr, rust_vec_len, data_len),
-        73 => wire__crate__api__app__OpenWard_public_key_line_impl(ptr, rust_vec_len, data_len),
-        77 => wire__crate__api__app__OpenWard_reconnect_attempts_impl(ptr, rust_vec_len, data_len),
-        78 => wire__crate__api__app__OpenWard_remove_transfer_impl(ptr, rust_vec_len, data_len),
-        81 => wire__crate__api__app__OpenWard_resume_transfer_impl(ptr, rust_vec_len, data_len),
-        83 => wire__crate__api__app__OpenWard_search_impl(ptr, rust_vec_len, data_len),
-        86 => wire__crate__api__app__OpenWard_set_logs_config_impl(ptr, rust_vec_len, data_len),
-        87 => wire__crate__api__app__OpenWard_set_read_os_release_everywhere_impl(
+        70 => wire__crate__api__app__OpenWard_pause_transfer_impl(ptr, rust_vec_len, data_len),
+        71 => wire__crate__api__app__OpenWard_pause_transfers_impl(ptr, rust_vec_len, data_len),
+        72 => wire__crate__api__app__OpenWard_preview_program_impl(ptr, rust_vec_len, data_len),
+        74 => wire__crate__api__app__OpenWard_public_key_line_impl(ptr, rust_vec_len, data_len),
+        78 => wire__crate__api__app__OpenWard_reconnect_attempts_impl(ptr, rust_vec_len, data_len),
+        79 => wire__crate__api__app__OpenWard_remove_transfer_impl(ptr, rust_vec_len, data_len),
+        82 => wire__crate__api__app__OpenWard_resume_transfer_impl(ptr, rust_vec_len, data_len),
+        84 => wire__crate__api__app__OpenWard_search_impl(ptr, rust_vec_len, data_len),
+        88 => wire__crate__api__app__OpenWard_set_logs_config_impl(ptr, rust_vec_len, data_len),
+        89 => wire__crate__api__app__OpenWard_set_read_os_release_everywhere_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        88 => wire__crate__api__app__OpenWard_set_session_log_everywhere_impl(
+        90 => wire__crate__api__app__OpenWard_set_session_log_everywhere_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        89 => wire__crate__api__app__OpenWard_sftp_impl(ptr, rust_vec_len, data_len),
-        90 => wire__crate__api__app__OpenWard_snippets_impl(ptr, rust_vec_len, data_len),
-        91 => wire__crate__api__app__OpenWard_tags_impl(ptr, rust_vec_len, data_len),
-        92 => wire__crate__api__app__OpenWard_terminal_impl(ptr, rust_vec_len, data_len),
-        93 => wire__crate__api__app__OpenWard_transfer_impl(ptr, rust_vec_len, data_len),
-        94 => wire__crate__api__app__OpenWard_transfers_impl(ptr, rust_vec_len, data_len),
-        96 => wire__crate__api__app__OpenWard_tunnels_impl(ptr, rust_vec_len, data_len),
-        97 => wire__crate__api__app__OpenWard_unreadable_items_impl(ptr, rust_vec_len, data_len),
-        109 => wire__crate__api__app__OpenWard_workspaces_impl(ptr, rust_vec_len, data_len),
-        110 => wire__crate__api__programs__ProgramData_program_impl(ptr, rust_vec_len, data_len),
-        112 => wire__crate__api__sftp__SftpBrowser_close_impl(ptr, rust_vec_len, data_len),
-        122 => wire__crate__api__session__TerminalSession_clear_history_impl(
+        91 => wire__crate__api__app__OpenWard_sftp_impl(ptr, rust_vec_len, data_len),
+        92 => wire__crate__api__app__OpenWard_snippets_impl(ptr, rust_vec_len, data_len),
+        93 => wire__crate__api__app__OpenWard_tags_impl(ptr, rust_vec_len, data_len),
+        94 => wire__crate__api__app__OpenWard_terminal_impl(ptr, rust_vec_len, data_len),
+        95 => wire__crate__api__app__OpenWard_transfer_impl(ptr, rust_vec_len, data_len),
+        96 => wire__crate__api__app__OpenWard_transfers_impl(ptr, rust_vec_len, data_len),
+        98 => wire__crate__api__app__OpenWard_tunnels_impl(ptr, rust_vec_len, data_len),
+        99 => wire__crate__api__app__OpenWard_unreadable_items_impl(ptr, rust_vec_len, data_len),
+        111 => wire__crate__api__app__OpenWard_workspaces_impl(ptr, rust_vec_len, data_len),
+        112 => wire__crate__api__programs__ProgramData_program_impl(ptr, rust_vec_len, data_len),
+        114 => wire__crate__api__sftp__SftpBrowser_close_impl(ptr, rust_vec_len, data_len),
+        124 => wire__crate__api__session__TerminalSession_clear_history_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        123 => wire__crate__api__session__TerminalSession_clear_selection_impl(
+        125 => wire__crate__api__session__TerminalSession_clear_selection_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        124 => wire__crate__api__session__TerminalSession_close_impl(ptr, rust_vec_len, data_len),
-        126 => {
+        126 => wire__crate__api__session__TerminalSession_close_impl(ptr, rust_vec_len, data_len),
+        128 => {
             wire__crate__api__session__TerminalSession_cursor_cell_impl(ptr, rust_vec_len, data_len)
         }
-        127 => {
+        129 => {
             wire__crate__api__session__TerminalSession_end_search_impl(ptr, rust_vec_len, data_len)
         }
-        128 => wire__crate__api__session__TerminalSession_focus_impl(ptr, rust_vec_len, data_len),
-        129 => wire__crate__api__session__TerminalSession_key_impl(ptr, rust_vec_len, data_len),
-        130 => wire__crate__api__session__TerminalSession_link_at_impl(ptr, rust_vec_len, data_len),
-        131 => {
+        130 => wire__crate__api__session__TerminalSession_focus_impl(ptr, rust_vec_len, data_len),
+        131 => wire__crate__api__session__TerminalSession_key_impl(ptr, rust_vec_len, data_len),
+        132 => wire__crate__api__session__TerminalSession_link_at_impl(ptr, rust_vec_len, data_len),
+        133 => {
             wire__crate__api__session__TerminalSession_log_command_impl(ptr, rust_vec_len, data_len)
         }
-        132 => {
+        134 => {
             wire__crate__api__session__TerminalSession_log_state_impl(ptr, rust_vec_len, data_len)
         }
-        133 => wire__crate__api__session__TerminalSession_note_impl(ptr, rust_vec_len, data_len),
-        134 => wire__crate__api__session__TerminalSession_paste_impl(ptr, rust_vec_len, data_len),
-        135 => {
+        135 => wire__crate__api__session__TerminalSession_note_impl(ptr, rust_vec_len, data_len),
+        136 => wire__crate__api__session__TerminalSession_paste_impl(ptr, rust_vec_len, data_len),
+        137 => {
             wire__crate__api__session__TerminalSession_pause_log_impl(ptr, rust_vec_len, data_len)
         }
-        136 => wire__crate__api__session__TerminalSession_pointer_impl(ptr, rust_vec_len, data_len),
-        137 => wire__crate__api__session__TerminalSession_poll_impl(ptr, rust_vec_len, data_len),
-        138 => {
+        138 => wire__crate__api__session__TerminalSession_pointer_impl(ptr, rust_vec_len, data_len),
+        139 => wire__crate__api__session__TerminalSession_poll_impl(ptr, rust_vec_len, data_len),
+        140 => {
             wire__crate__api__session__TerminalSession_poll_meta_impl(ptr, rust_vec_len, data_len)
         }
-        139 => wire__crate__api__session__TerminalSession_redraw_impl(ptr, rust_vec_len, data_len),
-        140 => wire__crate__api__session__TerminalSession_resize_impl(ptr, rust_vec_len, data_len),
-        141 => {
+        141 => wire__crate__api__session__TerminalSession_redraw_impl(ptr, rust_vec_len, data_len),
+        142 => wire__crate__api__session__TerminalSession_resize_impl(ptr, rust_vec_len, data_len),
+        143 => {
             wire__crate__api__session__TerminalSession_screen_text_impl(ptr, rust_vec_len, data_len)
         }
-        142 => wire__crate__api__session__TerminalSession_scroll_history_impl(
+        144 => wire__crate__api__session__TerminalSession_scroll_history_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        143 => wire__crate__api__session__TerminalSession_search_impl(ptr, rust_vec_len, data_len),
-        144 => {
+        145 => wire__crate__api__session__TerminalSession_search_impl(ptr, rust_vec_len, data_len),
+        146 => {
             wire__crate__api__session__TerminalSession_search_step_impl(ptr, rust_vec_len, data_len)
         }
-        145 => {
+        147 => {
             wire__crate__api__session__TerminalSession_select_all_impl(ptr, rust_vec_len, data_len)
         }
-        146 => {
+        148 => {
             wire__crate__api__session__TerminalSession_select_drag_impl(ptr, rust_vec_len, data_len)
         }
-        147 => wire__crate__api__session__TerminalSession_select_press_impl(
+        149 => wire__crate__api__session__TerminalSession_select_press_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        148 => wire__crate__api__session__TerminalSession_select_release_impl(
+        150 => wire__crate__api__session__TerminalSession_select_release_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        149 => wire__crate__api__session__TerminalSession_selection_text_impl(
+        151 => wire__crate__api__session__TerminalSession_selection_text_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        150 => wire__crate__api__session__TerminalSession_set_cell_pixels_impl(
+        152 => {
+            wire__crate__api__session__TerminalSession_send_break_impl(ptr, rust_vec_len, data_len)
+        }
+        153 => wire__crate__api__session__TerminalSession_set_cell_pixels_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        151 => {
+        154 => {
             wire__crate__api__session__TerminalSession_set_cursor_impl(ptr, rust_vec_len, data_len)
         }
-        152 => wire__crate__api__session__TerminalSession_set_option_as_alt_impl(
+        155 => wire__crate__api__session__TerminalSession_set_option_as_alt_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        153 => {
+        156 => {
             wire__crate__api__session__TerminalSession_set_theme_impl(ptr, rust_vec_len, data_len)
         }
-        154 => wire__crate__api__session__TerminalSession_text_impl(ptr, rust_vec_len, data_len),
-        155 => {
+        157 => wire__crate__api__session__TerminalSession_text_impl(ptr, rust_vec_len, data_len),
+        158 => {
             wire__crate__api__session__TerminalSession_typed_since_impl(ptr, rust_vec_len, data_len)
         }
-        157 => wire__crate__api__session__TerminalSession_wheel_impl(ptr, rust_vec_len, data_len),
-        158 => wire__crate__api__app__core_version_impl(ptr, rust_vec_len, data_len),
-        165 => wire__crate__api__sftp__local_home_impl(ptr, rust_vec_len, data_len),
-        172 => wire__crate__api__snippets__render_snippet_impl(ptr, rust_vec_len, data_len),
-        174 => wire__crate__api__snippets__snippet_variables_impl(ptr, rust_vec_len, data_len),
+        160 => wire__crate__api__session__TerminalSession_wheel_impl(ptr, rust_vec_len, data_len),
+        161 => wire__crate__api__app__core_version_impl(ptr, rust_vec_len, data_len),
+        168 => wire__crate__api__sftp__local_home_impl(ptr, rust_vec_len, data_len),
+        175 => wire__crate__api__snippets__render_snippet_impl(ptr, rust_vec_len, data_len),
+        177 => wire__crate__api__snippets__snippet_variables_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -13023,6 +13349,7 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::sftp::ConflictView>
 impl flutter_rust_bridge::IntoDart for crate::api::session::ConnectedView {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
+            self.protocol.into_into_dart().into_dart(),
             self.host.into_into_dart().into_dart(),
             self.port.into_into_dart().into_dart(),
             self.kex.into_into_dart().into_dart(),
@@ -13141,8 +13468,9 @@ impl flutter_rust_bridge::IntoDart for crate::api::session::FailureKind {
             Self::AuthFailed => 4.into_dart(),
             Self::Cancelled => 5.into_dart(),
             Self::NoSftp => 6.into_dart(),
-            Self::Network => 7.into_dart(),
-            Self::Other => 8.into_dart(),
+            Self::Serial => 7.into_dart(),
+            Self::Network => 8.into_dart(),
+            Self::Other => 9.into_dart(),
             _ => unreachable!(),
         }
     }
@@ -13176,6 +13504,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::session::FailureView {
             self.previous.into_into_dart().into_dart(),
             self.cert.into_into_dart().into_dart(),
             self.net.into_into_dart().into_dart(),
+            self.serial.into_into_dart().into_dart(),
             self.seconds.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -13299,6 +13628,25 @@ impl flutter_rust_bridge::IntoDart for crate::api::sftp::FileKind {
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::sftp::FileKind {}
 impl flutter_rust_bridge::IntoIntoDart<crate::api::sftp::FileKind> for crate::api::sftp::FileKind {
     fn into_into_dart(self) -> crate::api::sftp::FileKind {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::vault::FlowKind {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::None => 0.into_dart(),
+            Self::Software => 1.into_dart(),
+            Self::Hardware => 2.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::vault::FlowKind {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::vault::FlowKind>
+    for crate::api::vault::FlowKind
+{
+    fn into_into_dart(self) -> crate::api::vault::FlowKind {
         self
     }
 }
@@ -13467,6 +13815,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::vault::HostView {
             self.environment.into_into_dart().into_dart(),
             self.system.into_into_dart().into_dart(),
             self.favorite.into_into_dart().into_dart(),
+            self.protocol.into_into_dart().into_dart(),
+            self.serial.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -14321,6 +14671,25 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::vault::OriginKind>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::vault::ParityKind {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::None => 0.into_dart(),
+            Self::Odd => 1.into_dart(),
+            Self::Even => 2.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::vault::ParityKind {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::vault::ParityKind>
+    for crate::api::vault::ParityKind
+{
+    fn into_into_dart(self) -> crate::api::vault::ParityKind {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::session::PersistenceKind {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
@@ -14743,6 +15112,28 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::session::PromptView>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::vault::ProtocolKind {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Ssh => 0.into_dart(),
+            Self::Telnet => 1.into_dart(),
+            Self::Serial => 2.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::vault::ProtocolKind
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::vault::ProtocolKind>
+    for crate::api::vault::ProtocolKind
+{
+    fn into_into_dart(self) -> crate::api::vault::ProtocolKind {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::vault::ProxyKind {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
@@ -14940,6 +15331,77 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::session::SelectedRange>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::session::SerialKind {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Missing => 0.into_dart(),
+            Self::Busy => 1.into_dart(),
+            Self::Denied => 2.into_dart(),
+            Self::Settings => 3.into_dart(),
+            Self::Gone => 4.into_dart(),
+            Self::Other => 5.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::session::SerialKind
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::session::SerialKind>
+    for crate::api::session::SerialKind
+{
+    fn into_into_dart(self) -> crate::api::session::SerialKind {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::vault::SerialLineSpec {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.baud.into_into_dart().into_dart(),
+            self.data_bits.into_into_dart().into_dart(),
+            self.parity.into_into_dart().into_dart(),
+            self.stop_bits.into_into_dart().into_dart(),
+            self.flow.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::vault::SerialLineSpec
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::vault::SerialLineSpec>
+    for crate::api::vault::SerialLineSpec
+{
+    fn into_into_dart(self) -> crate::api::vault::SerialLineSpec {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::app::SerialPortView {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.path.into_into_dart().into_dart(),
+            self.description.into_into_dart().into_dart(),
+            self.usb.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::app::SerialPortView
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::app::SerialPortView>
+    for crate::api::app::SerialPortView
+{
+    fn into_into_dart(self) -> crate::api::app::SerialPortView {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::session::SessionEvent {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -15034,6 +15496,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::vault::SettingsSpec {
             self.environment_color.into_into_dart().into_dart(),
             self.read_os_release.into_into_dart().into_dart(),
             self.session_log.into_into_dart().into_dart(),
+            self.protocol.into_into_dart().into_dart(),
+            self.serial.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -16106,6 +16570,7 @@ impl SseEncode for crate::api::sftp::ConflictView {
 impl SseEncode for crate::api::session::ConnectedView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::vault::ProtocolKind>::sse_encode(self.protocol, serializer);
         <String>::sse_encode(self.host, serializer);
         <u16>::sse_encode(self.port, serializer);
         <String>::sse_encode(self.kex, serializer);
@@ -16196,8 +16661,9 @@ impl SseEncode for crate::api::session::FailureKind {
                 crate::api::session::FailureKind::AuthFailed => 4,
                 crate::api::session::FailureKind::Cancelled => 5,
                 crate::api::session::FailureKind::NoSftp => 6,
-                crate::api::session::FailureKind::Network => 7,
-                crate::api::session::FailureKind::Other => 8,
+                crate::api::session::FailureKind::Serial => 7,
+                crate::api::session::FailureKind::Network => 8,
+                crate::api::session::FailureKind::Other => 9,
                 _ => {
                     unimplemented!("");
                 }
@@ -16224,6 +16690,7 @@ impl SseEncode for crate::api::session::FailureView {
         <Vec<crate::api::session::PreviousKeyView>>::sse_encode(self.previous, serializer);
         <Option<crate::api::session::CertKind>>::sse_encode(self.cert, serializer);
         <Option<crate::api::session::NetKind>>::sse_encode(self.net, serializer);
+        <Option<crate::api::session::SerialKind>>::sse_encode(self.serial, serializer);
         <u32>::sse_encode(self.seconds, serializer);
     }
 }
@@ -16291,6 +16758,23 @@ impl SseEncode for crate::api::sftp::FileKind {
                 crate::api::sftp::FileKind::Dir => 1,
                 crate::api::sftp::FileKind::Link => 2,
                 crate::api::sftp::FileKind::Other => 3,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::vault::FlowKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::vault::FlowKind::None => 0,
+                crate::api::vault::FlowKind::Software => 1,
+                crate::api::vault::FlowKind::Hardware => 2,
                 _ => {
                     unimplemented!("");
                 }
@@ -16385,6 +16869,8 @@ impl SseEncode for crate::api::vault::HostView {
         <Option<crate::api::vault::EnvironmentView>>::sse_encode(self.environment, serializer);
         <Option<crate::api::vault::SystemView>>::sse_encode(self.system, serializer);
         <Option<u32>>::sse_encode(self.favorite, serializer);
+        <crate::api::vault::ProtocolKind>::sse_encode(self.protocol, serializer);
+        <Option<crate::api::vault::SerialLineSpec>>::sse_encode(self.serial, serializer);
     }
 }
 
@@ -16976,6 +17462,16 @@ impl SseEncode for Vec<crate::api::session::SelectedRange> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::session::SelectedRange>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::app::SerialPortView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::app::SerialPortView>::sse_encode(item, serializer);
         }
     }
 }
@@ -17611,6 +18107,16 @@ impl SseEncode for Option<crate::api::session::PromptView> {
     }
 }
 
+impl SseEncode for Option<crate::api::vault::ProtocolKind> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::vault::ProtocolKind>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<crate::api::vault::ProxyKind> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -17657,6 +18163,26 @@ impl SseEncode for Option<crate::api::session::SearchView> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <crate::api::session::SearchView>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::session::SerialKind> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::session::SerialKind>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::vault::SerialLineSpec> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::vault::SerialLineSpec>::sse_encode(value, serializer);
         }
     }
 }
@@ -17819,6 +18345,23 @@ impl SseEncode for crate::api::vault::OriginKind {
                 crate::api::vault::OriginKind::Group => 2,
                 crate::api::vault::OriginKind::Identity => 3,
                 crate::api::vault::OriginKind::Host => 4,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::vault::ParityKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::vault::ParityKind::None => 0,
+                crate::api::vault::ParityKind::Odd => 1,
+                crate::api::vault::ParityKind::Even => 2,
                 _ => {
                     unimplemented!("");
                 }
@@ -18077,6 +18620,23 @@ impl SseEncode for crate::api::session::PromptView {
     }
 }
 
+impl SseEncode for crate::api::vault::ProtocolKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::vault::ProtocolKind::Ssh => 0,
+                crate::api::vault::ProtocolKind::Telnet => 1,
+                crate::api::vault::ProtocolKind::Serial => 2,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
 impl SseEncode for crate::api::vault::ProxyKind {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -18187,6 +18747,46 @@ impl SseEncode for crate::api::session::SelectedRange {
     }
 }
 
+impl SseEncode for crate::api::session::SerialKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::session::SerialKind::Missing => 0,
+                crate::api::session::SerialKind::Busy => 1,
+                crate::api::session::SerialKind::Denied => 2,
+                crate::api::session::SerialKind::Settings => 3,
+                crate::api::session::SerialKind::Gone => 4,
+                crate::api::session::SerialKind::Other => 5,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::vault::SerialLineSpec {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.baud, serializer);
+        <u8>::sse_encode(self.data_bits, serializer);
+        <crate::api::vault::ParityKind>::sse_encode(self.parity, serializer);
+        <u8>::sse_encode(self.stop_bits, serializer);
+        <crate::api::vault::FlowKind>::sse_encode(self.flow, serializer);
+    }
+}
+
+impl SseEncode for crate::api::app::SerialPortView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.path, serializer);
+        <String>::sse_encode(self.description, serializer);
+        <bool>::sse_encode(self.usb, serializer);
+    }
+}
+
 impl SseEncode for crate::api::session::SessionEvent {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -18263,6 +18863,8 @@ impl SseEncode for crate::api::vault::SettingsSpec {
         <String>::sse_encode(self.environment_color, serializer);
         <Option<bool>>::sse_encode(self.read_os_release, serializer);
         <Option<bool>>::sse_encode(self.session_log, serializer);
+        <Option<crate::api::vault::ProtocolKind>>::sse_encode(self.protocol, serializer);
+        <Option<crate::api::vault::SerialLineSpec>>::sse_encode(self.serial, serializer);
     }
 }
 

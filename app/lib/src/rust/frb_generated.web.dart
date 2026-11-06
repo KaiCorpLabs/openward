@@ -282,6 +282,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PromptView dco_decode_box_autoadd_prompt_view(dynamic raw);
 
   @protected
+  ProtocolKind dco_decode_box_autoadd_protocol_kind(dynamic raw);
+
+  @protected
   ProxyKind dco_decode_box_autoadd_proxy_kind(dynamic raw);
 
   @protected
@@ -295,6 +298,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SearchView dco_decode_box_autoadd_search_view(dynamic raw);
+
+  @protected
+  SerialKind dco_decode_box_autoadd_serial_kind(dynamic raw);
+
+  @protected
+  SerialLineSpec dco_decode_box_autoadd_serial_line_spec(dynamic raw);
 
   @protected
   SnippetSpec dco_decode_box_autoadd_snippet_spec(dynamic raw);
@@ -397,6 +406,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FileKind dco_decode_file_kind(dynamic raw);
+
+  @protected
+  FlowKind dco_decode_flow_kind(dynamic raw);
 
   @protected
   FoundProgram dco_decode_found_program(dynamic raw);
@@ -582,6 +594,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<SelectedRange> dco_decode_list_selected_range(dynamic raw);
 
   @protected
+  List<SerialPortView> dco_decode_list_serial_port_view(dynamic raw);
+
+  @protected
   List<SnippetValue> dco_decode_list_snippet_value(dynamic raw);
 
   @protected
@@ -756,6 +771,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PromptView? dco_decode_opt_box_autoadd_prompt_view(dynamic raw);
 
   @protected
+  ProtocolKind? dco_decode_opt_box_autoadd_protocol_kind(dynamic raw);
+
+  @protected
   ProxyKind? dco_decode_opt_box_autoadd_proxy_kind(dynamic raw);
 
   @protected
@@ -769,6 +787,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SearchView? dco_decode_opt_box_autoadd_search_view(dynamic raw);
+
+  @protected
+  SerialKind? dco_decode_opt_box_autoadd_serial_kind(dynamic raw);
+
+  @protected
+  SerialLineSpec? dco_decode_opt_box_autoadd_serial_line_spec(dynamic raw);
 
   @protected
   SshKey? dco_decode_opt_box_autoadd_ssh_key(dynamic raw);
@@ -814,6 +838,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   OriginKind dco_decode_origin_kind(dynamic raw);
+
+  @protected
+  ParityKind dco_decode_parity_kind(dynamic raw);
 
   @protected
   PersistenceKind dco_decode_persistence_kind(dynamic raw);
@@ -867,6 +894,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PromptView dco_decode_prompt_view(dynamic raw);
 
   @protected
+  ProtocolKind dco_decode_protocol_kind(dynamic raw);
+
+  @protected
   ProxyKind dco_decode_proxy_kind(dynamic raw);
 
   @protected
@@ -892,6 +922,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SelectedRange dco_decode_selected_range(dynamic raw);
+
+  @protected
+  SerialKind dco_decode_serial_kind(dynamic raw);
+
+  @protected
+  SerialLineSpec dco_decode_serial_line_spec(dynamic raw);
+
+  @protected
+  SerialPortView dco_decode_serial_port_view(dynamic raw);
 
   @protected
   SessionEvent dco_decode_session_event(dynamic raw);
@@ -1279,6 +1318,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PromptView sse_decode_box_autoadd_prompt_view(SseDeserializer deserializer);
 
   @protected
+  ProtocolKind sse_decode_box_autoadd_protocol_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ProxyKind sse_decode_box_autoadd_proxy_kind(SseDeserializer deserializer);
 
   @protected
@@ -1294,6 +1338,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SearchView sse_decode_box_autoadd_search_view(SseDeserializer deserializer);
+
+  @protected
+  SerialKind sse_decode_box_autoadd_serial_kind(SseDeserializer deserializer);
+
+  @protected
+  SerialLineSpec sse_decode_box_autoadd_serial_line_spec(
+    SseDeserializer deserializer,
+  );
 
   @protected
   SnippetSpec sse_decode_box_autoadd_snippet_spec(SseDeserializer deserializer);
@@ -1406,6 +1458,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FileKind sse_decode_file_kind(SseDeserializer deserializer);
+
+  @protected
+  FlowKind sse_decode_flow_kind(SseDeserializer deserializer);
 
   @protected
   FoundProgram sse_decode_found_program(SseDeserializer deserializer);
@@ -1613,6 +1668,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<SelectedRange> sse_decode_list_selected_range(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<SerialPortView> sse_decode_list_serial_port_view(
     SseDeserializer deserializer,
   );
 
@@ -1841,6 +1901,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ProtocolKind? sse_decode_opt_box_autoadd_protocol_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ProxyKind? sse_decode_opt_box_autoadd_proxy_kind(
     SseDeserializer deserializer,
   );
@@ -1862,6 +1927,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SearchView? sse_decode_opt_box_autoadd_search_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  SerialKind? sse_decode_opt_box_autoadd_serial_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  SerialLineSpec? sse_decode_opt_box_autoadd_serial_line_spec(
     SseDeserializer deserializer,
   );
 
@@ -1927,6 +2002,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   OriginKind sse_decode_origin_kind(SseDeserializer deserializer);
 
   @protected
+  ParityKind sse_decode_parity_kind(SseDeserializer deserializer);
+
+  @protected
   PersistenceKind sse_decode_persistence_kind(SseDeserializer deserializer);
 
   @protected
@@ -1980,6 +2058,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PromptView sse_decode_prompt_view(SseDeserializer deserializer);
 
   @protected
+  ProtocolKind sse_decode_protocol_kind(SseDeserializer deserializer);
+
+  @protected
   ProxyKind sse_decode_proxy_kind(SseDeserializer deserializer);
 
   @protected
@@ -2005,6 +2086,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SelectedRange sse_decode_selected_range(SseDeserializer deserializer);
+
+  @protected
+  SerialKind sse_decode_serial_kind(SseDeserializer deserializer);
+
+  @protected
+  SerialLineSpec sse_decode_serial_line_spec(SseDeserializer deserializer);
+
+  @protected
+  SerialPortView sse_decode_serial_port_view(SseDeserializer deserializer);
 
   @protected
   SessionEvent sse_decode_session_event(SseDeserializer deserializer);
@@ -2490,6 +2580,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_protocol_kind(
+    ProtocolKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_proxy_kind(
     ProxyKind self,
     SseSerializer serializer,
@@ -2516,6 +2612,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_search_view(
     SearchView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_serial_kind(
+    SerialKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_serial_line_spec(
+    SerialLineSpec self,
     SseSerializer serializer,
   );
 
@@ -2662,6 +2770,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_file_kind(FileKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_flow_kind(FlowKind self, SseSerializer serializer);
 
   @protected
   void sse_encode_found_program(FoundProgram self, SseSerializer serializer);
@@ -2927,6 +3038,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_selected_range(
     List<SelectedRange> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_serial_port_view(
+    List<SerialPortView> self,
     SseSerializer serializer,
   );
 
@@ -3211,6 +3328,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_protocol_kind(
+    ProtocolKind? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_proxy_kind(
     ProxyKind? self,
     SseSerializer serializer,
@@ -3237,6 +3360,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_search_view(
     SearchView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_serial_kind(
+    SerialKind? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_serial_line_spec(
+    SerialLineSpec? self,
     SseSerializer serializer,
   );
 
@@ -3316,6 +3451,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_origin_kind(OriginKind self, SseSerializer serializer);
 
   @protected
+  void sse_encode_parity_kind(ParityKind self, SseSerializer serializer);
+
+  @protected
   void sse_encode_persistence_kind(
     PersistenceKind self,
     SseSerializer serializer,
@@ -3385,6 +3523,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_prompt_view(PromptView self, SseSerializer serializer);
 
   @protected
+  void sse_encode_protocol_kind(ProtocolKind self, SseSerializer serializer);
+
+  @protected
   void sse_encode_proxy_kind(ProxyKind self, SseSerializer serializer);
 
   @protected
@@ -3416,6 +3557,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_selected_range(SelectedRange self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_serial_kind(SerialKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_serial_line_spec(
+    SerialLineSpec self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_serial_port_view(
+    SerialPortView self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_session_event(SessionEvent self, SseSerializer serializer);

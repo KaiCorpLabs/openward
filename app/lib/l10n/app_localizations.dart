@@ -176,6 +176,18 @@ abstract class AppLocalizations {
   /// **'proxy, claves del host, sesión persistente, comprobación y agente'**
   String get advancedList;
 
+  /// No description provided for @advancedListSerial.
+  ///
+  /// In es, this message translates to:
+  /// **'registro de sesión'**
+  String get advancedListSerial;
+
+  /// No description provided for @advancedListTelnet.
+  ///
+  /// In es, this message translates to:
+  /// **'proxy, registro de sesión y tiempo para conectar'**
+  String get advancedListTelnet;
+
   /// No description provided for @advancedSetHere.
   ///
   /// In es, this message translates to:
@@ -1946,6 +1958,48 @@ abstract class AppLocalizations {
   /// **'Algo ha fallado (más en «Detalles»).'**
   String get failureOther;
 
+  /// No description provided for @failureSerialBusy.
+  ///
+  /// In es, this message translates to:
+  /// **'{port} está abierto en otro programa, o en otra pestaña.'**
+  String failureSerialBusy(String port);
+
+  /// No description provided for @failureSerialDenied.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu usuario no puede abrir {port}.'**
+  String failureSerialDenied(String port);
+
+  /// No description provided for @failureSerialDeniedLinux.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu usuario no puede abrir {port}: añádelo al grupo dialout (sudo usermod -aG dialout, con tu usuario) y vuelve a entrar en la sesión.'**
+  String failureSerialDeniedLinux(String port);
+
+  /// No description provided for @failureSerialGone.
+  ///
+  /// In es, this message translates to:
+  /// **'Se ha desconectado {port}: ¿se ha soltado el cable?'**
+  String failureSerialGone(String port);
+
+  /// No description provided for @failureSerialMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay ningún puerto {port}: ¿está conectado el cable?'**
+  String failureSerialMissing(String port);
+
+  /// No description provided for @failureSerialOther.
+  ///
+  /// In es, this message translates to:
+  /// **'No se ha podido abrir {port} (más en «Detalles»).'**
+  String failureSerialOther(String port);
+
+  /// No description provided for @failureSerialSettings.
+  ///
+  /// In es, this message translates to:
+  /// **'{port} no admite esa velocidad o ese formato.'**
+  String failureSerialSettings(String port);
+
   /// No description provided for @favorite.
   ///
   /// In es, this message translates to:
@@ -2215,6 +2269,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Primera conexión con {label}'**
   String firstConnectionTo(String label);
+
+  /// No description provided for @flowHardware.
+  ///
+  /// In es, this message translates to:
+  /// **'RTS/CTS (hardware)'**
+  String get flowHardware;
+
+  /// No description provided for @flowNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguno'**
+  String get flowNone;
+
+  /// No description provided for @flowSoftware.
+  ///
+  /// In es, this message translates to:
+  /// **'XON/XOFF (software)'**
+  String get flowSoftware;
 
   /// No description provided for @foldSidebar.
   ///
@@ -5576,6 +5648,24 @@ abstract class AppLocalizations {
   /// **'¿Qué abres en este panel?'**
   String get paneWhat;
 
+  /// No description provided for @parityEven.
+  ///
+  /// In es, this message translates to:
+  /// **'Par'**
+  String get parityEven;
+
+  /// No description provided for @parityNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguna'**
+  String get parityNone;
+
+  /// No description provided for @parityOdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Impar'**
+  String get parityOdd;
+
   /// No description provided for @partNote.
   ///
   /// In es, this message translates to:
@@ -5989,6 +6079,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Protección'**
   String get protection;
+
+  /// No description provided for @protocol.
+  ///
+  /// In es, this message translates to:
+  /// **'Protocolo'**
+  String get protocol;
+
+  /// No description provided for @protocolSerial.
+  ///
+  /// In es, this message translates to:
+  /// **'Puerto serie'**
+  String get protocolSerial;
 
   /// No description provided for @proxy.
   ///
@@ -6890,6 +6992,120 @@ abstract class AppLocalizations {
   /// **'Separar los paneles en pestañas'**
   String get separatePanes;
 
+  /// No description provided for @serialBaud.
+  ///
+  /// In es, this message translates to:
+  /// **'Velocidad'**
+  String get serialBaud;
+
+  /// No description provided for @serialBaudMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Pon una velocidad.'**
+  String get serialBaudMissing;
+
+  /// No description provided for @serialBaudUnit.
+  ///
+  /// In es, this message translates to:
+  /// **'{baud} baudios'**
+  String serialBaudUnit(int baud);
+
+  /// No description provided for @serialDataBits.
+  ///
+  /// In es, this message translates to:
+  /// **'Bits de datos'**
+  String get serialDataBits;
+
+  /// No description provided for @serialFlow.
+  ///
+  /// In es, this message translates to:
+  /// **'Control de flujo'**
+  String get serialFlow;
+
+  /// No description provided for @serialLine.
+  ///
+  /// In es, this message translates to:
+  /// **'Velocidad y formato'**
+  String get serialLine;
+
+  /// No description provided for @serialOpenEllipsis.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir un puerto serie…'**
+  String get serialOpenEllipsis;
+
+  /// No description provided for @serialOpenNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Para la consola de un router o un switch, con su cable: casi siempre 9600 baudios, 8N1.'**
+  String get serialOpenNote;
+
+  /// No description provided for @serialOpenTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir un puerto serie'**
+  String get serialOpenTitle;
+
+  /// No description provided for @serialParity.
+  ///
+  /// In es, this message translates to:
+  /// **'Paridad'**
+  String get serialParity;
+
+  /// No description provided for @serialPortMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige el puerto.'**
+  String get serialPortMissing;
+
+  /// No description provided for @serialPortsAgain.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar otra vez'**
+  String get serialPortsAgain;
+
+  /// No description provided for @serialPortsNone.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay ningún puerto serie conectado.'**
+  String get serialPortsNone;
+
+  /// No description provided for @serialPortsTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Los puertos de este equipo'**
+  String get serialPortsTooltip;
+
+  /// No description provided for @serialSendBreak.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar un break por el puerto serie'**
+  String get serialSendBreak;
+
+  /// No description provided for @serialShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Serie'**
+  String get serialShort;
+
+  /// No description provided for @serialStopBits.
+  ///
+  /// In es, this message translates to:
+  /// **'Bits de parada'**
+  String get serialStopBits;
+
+  /// No description provided for @serialSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'{baud} baudios, {frame}, {flow}'**
+  String serialSummary(int baud, String frame, String flow);
+
+  /// No description provided for @serialSummaryNoFlow.
+  ///
+  /// In es, this message translates to:
+  /// **'sin control de flujo'**
+  String get serialSummaryNoFlow;
+
   /// No description provided for @sessionClosed.
   ///
   /// In es, this message translates to:
@@ -7562,6 +7778,12 @@ abstract class AppLocalizations {
   /// **'Sin respuesta · comprobando…'**
   String get statusStalled;
 
+  /// No description provided for @statusUnencrypted.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin cifrar'**
+  String get statusUnencrypted;
+
   /// No description provided for @stepAppearance.
   ///
   /// In es, this message translates to:
@@ -7699,6 +7921,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Etiquetas'**
   String get tags;
+
+  /// No description provided for @telnetUnencrypted.
+  ///
+  /// In es, this message translates to:
+  /// **'Telnet, sin cifrar'**
+  String get telnetUnencrypted;
+
+  /// No description provided for @telnetUnencryptedNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Telnet no cifra nada: lo que escribes, contraseñas incluidas, viaja tal cual por la red. Para los equipos que no admiten SSH.'**
+  String get telnetUnencryptedNote;
 
   /// No description provided for @terminalAlwaysDark.
   ///

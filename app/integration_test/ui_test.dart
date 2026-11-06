@@ -1080,18 +1080,18 @@ Host web-1 web-2
       'the preview',
     );
     await _settle(tester);
-    // Its groups and hosts; the telnet one cannot come.
+    // Its groups and hosts, the Telnet one too.
     for (final t in ['Producción', 'Web', 'bastion', 'web-1', 'old-switch']) {
       expect(find.text(t), findsOneWidget, reason: t);
     }
-    expect(find.text('Telnet: aún no se puede usar'), findsOneWidget);
+    expect(find.textContaining('aún no se puede usar'), findsNothing);
     // Neither stored key is in this home's ~/.ssh: save the ci one.
     await tester.tap(find.textContaining('~/.ssh/termius-ci,'));
     await tester.pump();
     await _shot(tester, '52-import-preview');
-    await tester.tap(find.text('Importar 4 hosts'));
+    await tester.tap(find.text('Importar 5 hosts'));
     await _settle(tester);
-    expect(find.text('4 hosts importados de Termius'), findsOneWidget);
+    expect(find.text('5 hosts importados de Termius'), findsOneWidget);
     expect(find.text('Clave guardada en ~/.ssh/termius-ci'), findsOneWidget);
     expect(find.textContaining('lab-mosh usaba Mosh'), findsOneWidget);
     await _shot(tester, '53-import-report');
@@ -1099,7 +1099,11 @@ Host web-1 web-2
     await _settle(tester);
 
     final hosts = app.hosts().map((h) => h.label).toSet();
-    expect(hosts, {'bastion', 'web-1', 'lab-mosh', 'packed'});
+    expect(hosts, {'bastion', 'web-1', 'lab-mosh', 'old-switch', 'packed'});
+    expect(
+      app.hosts().firstWhere((h) => h.label == 'old-switch').protocol,
+      ProtocolKind.telnet,
+    );
     expect(File('${dir.path}/home/.ssh/termius-ci').existsSync(), isTrue);
     expect(container.read(snippetsProvider).map((s) => s.spec.label), [
       'Reiniciar nginx',
@@ -1123,7 +1127,7 @@ Host web-1 web-2
     expect(button.onPressed, isNull);
     await tester.tap(find.text('Cancelar'));
     await _settle(tester);
-    expect(app.hosts(), hasLength(4));
+    expect(app.hosts(), hasLength(5));
   });
 
   testWidgets(
@@ -1381,6 +1385,93 @@ Host web-1 web-2
     await _settle(tester);
     expect(field('setting.agent'), findsNothing);
     expect(app.host(id: app.hosts().single.id).spec.settings.port, 2222);
+  });
+
+  testWidgets('telnet and serial: a Telnet host from its editor, a switch '
+      'over it, and a serial port by hand', (tester) async {
+    // A switch's Telnet, here: it greets and asks for nothing.
+    final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(server.close);
+    server.listen((s) {
+      s.add(utf8.encode('\r\nUser Access Verification\r\n\r\nsw-1> '));
+      s.listen((_) {}, onError: (_) {}, cancelOnError: true);
+    });
+    final container = await launch(tester);
+    Finder field(String key) => find.byKey(ValueKey(key));
+
+    // With no hosts yet, the sidebar has no entry for them: the page.
+    container.read(tabsProvider.notifier).openPage(PageKind.hosts);
+    await _settle(tester);
+    await tester.tap(field('hosts.new'));
+    await _settle(tester);
+    await tester.enterText(field('host.label'), 'sw-1');
+    await tester.enterText(field('host.address'), '127.0.0.1');
+    await _reveal(tester, field('setting.protocol'));
+    await tester.tap(field('setting.protocol'));
+    await _settle(tester);
+    await tester.tap(field('settings.protocol'));
+    await _settle(tester);
+    await tester.tap(find.text('Telnet').last);
+    await _settle(tester);
+    // Unencrypted, and said so; nothing of SSH's to set; Telnet's port.
+    expect(field('settings.telnetNote'), findsOneWidget);
+    expect(field('setting.user'), findsNothing);
+    expect(field('setting.identity_files'), findsNothing);
+    await _reveal(tester, field('setting.port'));
+    expect(
+      find.descendant(of: field('setting.port'), matching: find.text('23')),
+      findsOneWidget,
+    );
+    await tester.tap(field('setting.port'));
+    await _settle(tester);
+    expect(
+      tester.widget<TextField>(field('settings.port')).controller!.text,
+      '23',
+    );
+    await tester.enterText(field('settings.port'), '${server.port}');
+    await _shot(tester, '28-telnet-host');
+    await tester.tap(find.text('Guardar'));
+    await _settle(tester);
+    expect(find.text('telnet://127.0.0.1:${server.port}'), findsWidgets);
+    expect(app.hosts().single.protocol, ProtocolKind.telnet);
+    // No files over Telnet.
+    await tester.tap(find.text('sw-1'), buttons: kSecondaryButton);
+    await _settle(tester);
+    expect(find.text('Abrir SFTP'), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await _settle(tester);
+
+    await _connect(tester, 'sw-1');
+    final c = container.read(tabsProvider).currentSession!;
+    await _until(
+      tester,
+      () => c.session.screenText().contains('sw-1>'),
+      'the switch',
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(field('status.unencrypted'), findsOneWidget);
+    expect(field('status.sftp'), findsNothing);
+    await _shot(tester, '29-telnet-session');
+    container.read(tabsProvider.notifier).close(0);
+    await _settle(tester);
+
+    // A port by hand that is not there: said in words, in its tab.
+    final missing = Platform.isWindows
+        ? 'COM250'
+        : '/dev/openward-no-such-port';
+    await tester.tap(field('start.serial'));
+    await _settle(tester);
+    expect(find.text('Abrir un puerto serie'), findsOneWidget);
+    await tester.enterText(field('serial.port'), missing);
+    await tester.tap(field('serial.open'));
+    await tester.pump();
+    final s = container.read(tabsProvider).currentSession!;
+    expect(s.displayTitle, missing);
+    await _until(tester, () => s.phase == Phase.closed, 'the port to fail');
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.textContaining('¿está conectado el cable?'), findsWidgets);
+    container.read(tabsProvider.notifier).close(0);
+    await _settle(tester);
   });
 
   testWidgets('ssh: a changed host key is shown and trusted on purpose', (

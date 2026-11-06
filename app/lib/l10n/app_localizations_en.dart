@@ -52,6 +52,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'proxy, host keys, persistent session, checks and agent';
 
   @override
+  String get advancedListSerial => 'session log';
+
+  @override
+  String get advancedListTelnet => 'proxy, session log and time to connect';
+
+  @override
   String advancedSetHere(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1218,6 +1224,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get failureOther => 'Something went wrong (more in Details).';
 
   @override
+  String failureSerialBusy(String port) {
+    return '$port is open in another program, or in another tab.';
+  }
+
+  @override
+  String failureSerialDenied(String port) {
+    return 'Your user may not open $port.';
+  }
+
+  @override
+  String failureSerialDeniedLinux(String port) {
+    return 'Your user may not open $port: add it to the dialout group (sudo usermod -aG dialout, with your user) and log in again.';
+  }
+
+  @override
+  String failureSerialGone(String port) {
+    return '$port went away: was the cable pulled?';
+  }
+
+  @override
+  String failureSerialMissing(String port) {
+    return 'There is no port $port: is the cable plugged in?';
+  }
+
+  @override
+  String failureSerialOther(String port) {
+    return 'Could not open $port (more in Details).';
+  }
+
+  @override
+  String failureSerialSettings(String port) {
+    return '$port does not take that speed or format.';
+  }
+
+  @override
   String get favorite => 'Favorite';
 
   @override
@@ -1381,6 +1422,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String firstConnectionTo(String label) {
     return 'First connection to $label';
   }
+
+  @override
+  String get flowHardware => 'RTS/CTS (hardware)';
+
+  @override
+  String get flowNone => 'None';
+
+  @override
+  String get flowSoftware => 'XON/XOFF (software)';
 
   @override
   String get foldSidebar => 'Fold the sidebar';
@@ -3575,6 +3625,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paneWhat => 'What do you open in this pane?';
 
   @override
+  String get parityEven => 'Even';
+
+  @override
+  String get parityNone => 'None';
+
+  @override
+  String get parityOdd => 'Odd';
+
+  @override
   String get partNote =>
       'Files are copied under a temporary name (.part) and renamed at the end: if it is cut short, the real file is never left half written and the copy can be resumed.';
 
@@ -3888,6 +3947,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get protection => 'Protection';
+
+  @override
+  String get protocol => 'Protocol';
+
+  @override
+  String get protocolSerial => 'Serial port';
 
   @override
   String get proxy => 'Proxy';
@@ -4483,6 +4548,68 @@ class AppLocalizationsEn extends AppLocalizations {
   String get separatePanes => 'Split the panes into tabs';
 
   @override
+  String get serialBaud => 'Speed';
+
+  @override
+  String get serialBaudMissing => 'Set a speed.';
+
+  @override
+  String serialBaudUnit(int baud) {
+    return '$baud baud';
+  }
+
+  @override
+  String get serialDataBits => 'Data bits';
+
+  @override
+  String get serialFlow => 'Flow control';
+
+  @override
+  String get serialLine => 'Speed and format';
+
+  @override
+  String get serialOpenEllipsis => 'Open a serial port…';
+
+  @override
+  String get serialOpenNote =>
+      'For a router\'s or a switch\'s console, with its cable: nearly always 9600 baud, 8N1.';
+
+  @override
+  String get serialOpenTitle => 'Open a serial port';
+
+  @override
+  String get serialParity => 'Parity';
+
+  @override
+  String get serialPortMissing => 'Pick the port.';
+
+  @override
+  String get serialPortsAgain => 'Look again';
+
+  @override
+  String get serialPortsNone => 'No serial port is connected.';
+
+  @override
+  String get serialPortsTooltip => 'This computer\'s ports';
+
+  @override
+  String get serialSendBreak => 'Send a break down the serial port';
+
+  @override
+  String get serialShort => 'Serial';
+
+  @override
+  String get serialStopBits => 'Stop bits';
+
+  @override
+  String serialSummary(int baud, String frame, String flow) {
+    return '$baud baud, $frame, $flow';
+  }
+
+  @override
+  String get serialSummaryNoFlow => 'no flow control';
+
+  @override
   String get sessionClosed => 'Session closed.';
 
   @override
@@ -4884,6 +5011,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusStalled => 'No answer · checking…';
 
   @override
+  String get statusUnencrypted => 'Unencrypted';
+
+  @override
   String get stepAppearance => 'Appearance';
 
   @override
@@ -4962,6 +5092,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tags => 'Tags';
+
+  @override
+  String get telnetUnencrypted => 'Telnet, unencrypted';
+
+  @override
+  String get telnetUnencryptedNote =>
+      'Telnet encrypts nothing: what you type, passwords included, crosses the network as it is. For devices that do not take SSH.';
 
   @override
   String get terminalAlwaysDark => 'Always dark';

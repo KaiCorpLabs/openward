@@ -10,6 +10,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 pub use openward_ssh::known_hosts::CertProblem;
+pub use openward_vault::proto::Protocol;
 use tokio::sync::oneshot;
 use zeroize::Zeroizing;
 
@@ -105,6 +106,9 @@ pub enum Stage {
 /// What the status bar shows about a live connection.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Connected {
+    /// SSH, Telnet (nothing encrypted: the SSH fields are empty) or a
+    /// serial port (`host` is the port, `port` 0).
+    pub protocol: Protocol,
     /// The target, as the vault has it.
     pub host: String,
     pub port: u16,
@@ -253,6 +257,11 @@ pub enum Failure {
     NoSftp {
         label: String,
     },
+    /// A serial port that did not open, or went (the cable was pulled).
+    Serial {
+        port: String,
+        problem: SerialProblem,
+    },
     /// Could not reach the host, or the connection broke.
     Network {
         label: String,
@@ -262,6 +271,35 @@ pub enum Failure {
         cause: NetCause,
     },
     Other(String),
+}
+
+/// What went wrong with a serial port.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum SerialProblem {
+    /// There is no such port (now): unplugged, or another name.
+    Missing,
+    /// Another program (or tab) has it open.
+    Busy,
+    /// This user may not open it (on Linux, not in `dialout`).
+    Denied,
+    /// The port does not take these settings.
+    Settings(String),
+    /// It went while open: the cable or the adapter was pulled.
+    Gone,
+    Other(String),
+}
+
+impl SerialProblem {
+    pub fn of(e: &openward_serial::OpenError) -> Self {
+        use openward_serial::OpenError as E;
+        match e {
+            E::Missing(_) => Self::Missing,
+            E::Busy(_) => Self::Busy,
+            E::Denied(_) => Self::Denied,
+            E::Settings(_, why) => Self::Settings(why.clone()),
+            E::Other(_, why) => Self::Other(why.clone()),
+        }
+    }
 }
 
 /// What kind of network trouble a [`Failure::Network`] is.
@@ -404,6 +442,14 @@ impl std::fmt::Display for Failure {
             ),
             Self::Cancelled => write!(f, "cancelled"),
             Self::NoSftp { label } => write!(f, "{label}: the server has no SFTP"),
+            Self::Serial { port, problem } => match problem {
+                SerialProblem::Missing => write!(f, "{port}: no such serial port"),
+                SerialProblem::Busy => write!(f, "{port} is in use by another program"),
+                SerialProblem::Denied => write!(f, "not allowed to open {port}"),
+                SerialProblem::Settings(why) => write!(f, "{port}: {why}"),
+                SerialProblem::Gone => write!(f, "{port} went away"),
+                SerialProblem::Other(why) => write!(f, "{port}: {why}"),
+            },
             Self::Network { label, message, .. } => write!(f, "{label}: {message}"),
             Self::Other(message) => write!(f, "{message}"),
         }

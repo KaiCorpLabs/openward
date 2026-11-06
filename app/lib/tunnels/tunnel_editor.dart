@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/errors.dart';
 import '../core/providers.dart';
 import '../hosts/editors.dart';
+import '../hosts/host_actions.dart' show overSsh;
 import '../l10n/l10n.dart';
 import '../src/rust/api/tunnels.dart';
 import '../ui/tokens.dart';
@@ -231,11 +232,13 @@ class _TunnelEditorState extends ConsumerState<_TunnelEditor> {
                   isExpanded: true,
                   initialValue: _host,
                   items: [
+                    // Tunnels go over SSH.
                     for (final h in library.hosts)
-                      DropdownMenuItem(
-                        value: h.id,
-                        child: Text(h.label, overflow: TextOverflow.ellipsis),
-                      ),
+                      if (overSsh(h) || h.id == _host)
+                        DropdownMenuItem(
+                          value: h.id,
+                          child: Text(h.label, overflow: TextOverflow.ellipsis),
+                        ),
                   ],
                   onChanged: (v) => setState(() => _host = v),
                 ),

@@ -229,9 +229,14 @@ class TabsNotifier extends Notifier<TabsState> {
   void openHost(HostView host) =>
       _add(_controller(label: host.label, hostId: host.id));
 
-  /// A new tab connected to an address that is not saved.
-  void openAddress(QuickTarget target) =>
-      _add(_controller(label: target.label, target: target));
+  /// A new tab connected to an address that is not saved, or to a serial
+  /// port (called by its name, without its settings).
+  void openAddress(QuickTarget target) => _add(
+    _controller(
+      label: target.isSerial ? target.address : target.label,
+      target: target,
+    ),
+  );
 
   /// A local shell's name, in the interface's language.
   String get _localLabel =>
@@ -447,7 +452,7 @@ class TabsNotifier extends Notifier<TabsState> {
   /// The SFTP tab for the host of the front tab's session.
   void openSftpHere() {
     final c = state.currentSession;
-    if (c == null || c.isLocal) return;
+    if (c == null || !c.overSsh) return;
     openSftp(hostId: c.hostId, target: c.target, label: c.label);
   }
 

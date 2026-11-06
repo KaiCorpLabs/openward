@@ -86,4 +86,36 @@ void main() {
     final f = _failure(FailureKind.other, reason: 'opening the shell: boom');
     expect(failureText(l, f), l.failureOther);
   });
+
+  test('a serial port says what happened to it, by kind', () {
+    final l = AppLocalizationsEs();
+    String say(SerialKind kind) {
+      final f = FailureView(
+        kind: FailureKind.serial,
+        message: 'COM3 went away',
+        label: 'COM3',
+        host: 'COM3',
+        port: 0,
+        user: '',
+        algorithm: '',
+        fingerprint: '',
+        key: '',
+        methods: const [],
+        reason: '',
+        previous: const [],
+        serial: kind,
+        seconds: 0,
+      );
+      return failureText(l, f);
+    }
+
+    expect(say(SerialKind.missing), l.failureSerialMissing('COM3'));
+    expect(say(SerialKind.busy), l.failureSerialBusy('COM3'));
+    expect(say(SerialKind.gone), l.failureSerialGone('COM3'));
+    expect(say(SerialKind.settings), l.failureSerialSettings('COM3'));
+    expect(say(SerialKind.denied), contains('COM3'));
+    for (final k in SerialKind.values) {
+      expect(say(k), isNot(contains('went away')), reason: '$k');
+    }
+  });
 }

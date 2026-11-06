@@ -167,6 +167,28 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - SFTP con rutas de Windows: `C:\Users\…`, carpetas con espacios y con tildes, y arrastrar desde el Explorador;
    - en Linux, en X11 y en Wayland: arranca, y el portapapeles copia y pega en los dos sentidos;
    - con el tamaño del texto al 150 % (Ajustes › Apariencia), recorre la barra lateral, Hosts y el inicio: nada debe salirse ni cortarse. Los atajos largos, como «Ctrl+Mayús+H», se quitan cuando no caben.
+25. **Telnet y puerto serie** (P1 del [camino a la Community](community.md#p1--telnet-y-puerto-serie)):
+   - **Telnet:** crea un host para un switch o un router; si no tienes ninguno, `docker run --rm -p 2323:23 busybox telnetd -F -l /bin/sh`. En el editor, pon «Protocolo» a Telnet:
+     - debe avisar de que no cifra;
+     - deben desaparecer el usuario, las claves y el agente;
+     - el puerto debe quedar en 23.
+   - conecta:
+     - la barra de estado debe decir «Sin cifrar»;
+     - cambia el tamaño de la ventana: `stty size` debe dar el nuevo;
+     - `echo $TERM` debe dar `xterm-256color`;
+     - `exit` debe cerrar la sesión sin decir que se perdió la conexión;
+   - un host Telnet detrás de un bastión SSH («Ruta» › a través de él) debe conectar por el bastión;
+   - en la barra de conexión rápida, `telnet://host:puerto` debe conectar por Telnet, y volver a hacerlo desde «Recientes»;
+   - **puerto serie** (un cable USB a la consola de un router o un switch, o dos adaptadores cruzados; en Linux sirve `socat -d -d pty,raw,echo=0 pty,raw,echo=0`):
+     - en el inicio, «Puerto serie»: la lista del botón USB debe tener el cable, con su nombre;
+     - a 9600 8N1 debe salir la consola al pulsar Intro;
+     - «Enviar un break por el puerto serie» (en la paleta) debe llevar un router a su monitor de arranque;
+     - el mismo puerto en dos pestañas: la segunda debe decir que está en uso;
+     - suelta el cable: la pestaña debe decir «Se ha desconectado…», y al volver a conectar, «Reconectar» debe abrirlo otra vez;
+     - en Linux, con un usuario que no está en `dialout`, el error debe decir cómo añadirlo;
+     - un host guardado con «Protocolo» › Puerto serie, el puerto elegido de la lista y otra velocidad, debe abrirse con esa velocidad;
+   - **importar** desde PuTTY, SecureCRT, MobaXterm, Tabby, Termius o un CSV con sesiones Telnet y serie: deben llegar como Telnet y serie, no como avisos. De MobaXterm, el serie trae el puerto y la velocidad; comprueba el resto de la línea;
+   - con los registros activados, una sesión Telnet y otra serie deben quedar en Registros y verse en el visor.
 
 En Windows y Linux, ⌘ es Ctrl+Mayús: Ctrl+Mayús+K abre la paleta y Ctrl+Mayús+/ la hoja de atajos. La barra lateral se pliega con Ctrl+Mayús+L (Ctrl+B es del shell).
 

@@ -9,8 +9,8 @@ use std::str::FromStr;
 use flutter_rust_bridge::frb;
 use openward_app::vault::Origin;
 use openward_app::vault::proto::{
-    Agent, Environment, EnvironmentMark, HostKeyPolicy, ItemId, Jump, Proxy, ProxyServer, Route,
-    Settings, System, SystemSource, UseIdentity,
+    Agent, Environment, EnvironmentMark, FlowControl, HostKeyPolicy, ItemId, Jump, Parity,
+    Protocol, Proxy, ProxyServer, Route, SerialLine, Settings, System, SystemSource, UseIdentity,
 };
 
 /// What went wrong with a change to the vault, for the app to say it in
@@ -141,6 +141,102 @@ pub enum ProxyKind {
     Off,
     Http,
     Socks5,
+}
+
+/// How a host is reached.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ProtocolKind {
+    Ssh,
+    /// Unencrypted.
+    Telnet,
+    /// A serial port of this computer: the host's address is the port.
+    Serial,
+}
+
+impl ProtocolKind {
+    pub(crate) fn of(p: Protocol) -> Self {
+        match p {
+            Protocol::Ssh => Self::Ssh,
+            Protocol::Telnet => Self::Telnet,
+            Protocol::Serial => Self::Serial,
+        }
+    }
+
+    pub(crate) fn proto(self) -> Protocol {
+        match self {
+            Self::Ssh => Protocol::Ssh,
+            Self::Telnet => Protocol::Telnet,
+            Self::Serial => Protocol::Serial,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ParityKind {
+    None,
+    Odd,
+    Even,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FlowKind {
+    None,
+    /// XON/XOFF.
+    Software,
+    /// RTS/CTS.
+    Hardware,
+}
+
+/// A serial port's settings.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SerialLineSpec {
+    pub baud: u32,
+    /// 5 to 8.
+    pub data_bits: u8,
+    pub parity: ParityKind,
+    /// 1 or 2.
+    pub stop_bits: u8,
+    pub flow: FlowKind,
+}
+
+impl SerialLineSpec {
+    pub(crate) fn of(l: &SerialLine) -> Self {
+        Self {
+            baud: l.baud,
+            data_bits: l.data_bits,
+            parity: match l.parity {
+                Parity::None => ParityKind::None,
+                Parity::Odd => ParityKind::Odd,
+                Parity::Even => ParityKind::Even,
+            },
+            stop_bits: l.stop_bits,
+            flow: match l.flow {
+                FlowControl::None => FlowKind::None,
+                FlowControl::Software => FlowKind::Software,
+                FlowControl::Hardware => FlowKind::Hardware,
+            },
+        }
+    }
+
+    /// As the vault keeps it, with what a newer version wrote in `old`.
+    pub(crate) fn line(&self, old: Option<&SerialLine>) -> SerialLine {
+        SerialLine {
+            baud: self.baud,
+            data_bits: self.data_bits,
+            parity: match self.parity {
+                ParityKind::None => Parity::None,
+                ParityKind::Odd => Parity::Odd,
+                ParityKind::Even => Parity::Even,
+            },
+            stop_bits: self.stop_bits,
+            flow: match self.flow {
+                FlowKind::None => FlowControl::None,
+                FlowKind::Software => FlowControl::Software,
+                FlowKind::Hardware => FlowControl::Hardware,
+            },
+            extra: old.map(|o| o.extra.clone()).unwrap_or_default(),
+        }
+    }
 }
 
 /// How a group or host is marked; `None` overrides a mark inherited.
@@ -304,6 +400,12 @@ pub struct SettingsSpec {
     /// Record what comes out on the screen in the session log.
     #[frb(default = "null")]
     pub session_log: Option<bool>,
+    /// SSH, Telnet or a serial port.
+    #[frb(default = "null")]
+    pub protocol: Option<ProtocolKind>,
+    /// With a serial port.
+    #[frb(default = "null")]
+    pub serial: Option<SerialLineSpec>,
 }
 
 /// The `identity` setting of a spec.
@@ -377,6 +479,8 @@ impl SettingsSpec {
             environment_color: mark.map(|m| m.color.clone()).unwrap_or_default(),
             read_os_release: s.read_os_release,
             session_log: s.session_log,
+            protocol: s.protocol.map(ProtocolKind::of),
+            serial: s.serial.as_ref().map(SerialLineSpec::of),
             legacy_host_keys: s.legacy_host_keys,
             proxy,
             proxy_host: server.map(|s| s.host.clone()).unwrap_or_default(),
@@ -527,6 +631,8 @@ impl SettingsSpec {
         s.read_os_release = self.read_os_release;
         s.session_log = self.session_log;
         s.legacy_host_keys = self.legacy_host_keys;
+        s.protocol = self.protocol.map(ProtocolKind::proto);
+        s.serial = self.serial.map(|l| l.line(s.serial.as_ref()));
         Ok(())
     }
 }
@@ -549,6 +655,10 @@ pub struct HostView {
     pub system: Option<SystemView>,
     /// Its place among the favorites (lower first), if it is one.
     pub favorite: Option<u32>,
+    /// How it is reached, its own or its groups'.
+    pub protocol: ProtocolKind,
+    /// With a serial port: its settings.
+    pub serial: Option<SerialLineSpec>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -726,6 +836,8 @@ impl SettingsSpec {
                 theirs.read_os_release,
             )?,
             session_log: pick(&base.session_log, mine.session_log, theirs.session_log)?,
+            protocol: pick(&base.protocol, mine.protocol, theirs.protocol)?,
+            serial: pick(&base.serial, mine.serial, theirs.serial)?,
         })
     }
 }

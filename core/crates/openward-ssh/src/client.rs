@@ -645,6 +645,119 @@ pub async fn open(target: &Target, hop: Hop<'_>, opts: &Options) -> anyhow::Resu
     })
 }
 
+/// A plain byte stream, both ways.
+pub trait Duplex: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send + Unpin {}
+
+impl<T: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send + Unpin> Duplex for T {}
+
+/// A connection that is not SSH (Telnet) to `target`, the way an SSH one
+/// would go: straight, through a proxy or a ProxyCommand, or out of a
+/// jump host. A ProxyCommand's program lives as long as the stream.
+pub struct Stream {
+    io: Box<dyn Duplex>,
+    _proxy: Option<Child>,
+}
+
+impl tokio::io::AsyncRead for Stream {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        Pin::new(&mut self.io).poll_read(cx, buf)
+    }
+}
+
+impl tokio::io::AsyncWrite for Stream {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &[u8],
+    ) -> std::task::Poll<std::io::Result<usize>> {
+        Pin::new(&mut self.io).poll_write(cx, buf)
+    }
+
+    fn poll_flush(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        Pin::new(&mut self.io).poll_flush(cx)
+    }
+
+    fn poll_shutdown(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        Pin::new(&mut self.io).poll_shutdown(cx)
+    }
+}
+
+/// Opens a [`Stream`] within `limit`.
+pub async fn open_stream(
+    target: &Target,
+    hop: Hop<'_>,
+    limit: Option<Duration>,
+) -> anyhow::Result<Stream> {
+    let opening = async {
+        Ok(match hop {
+            Hop::Tcp => {
+                let tcp = tokio::net::TcpStream::connect((target.host.as_str(), target.port))
+                    .await
+                    .with_context(|| format!("connecting to {}:{}", target.host, target.port))?;
+                let _ = tcp.set_nodelay(true);
+                Stream {
+                    io: Box::new(tcp),
+                    _proxy: None,
+                }
+            }
+            Hop::ProxyCommand(command) => {
+                let mut child = shell_command(&command)
+                    .await
+                    .stdin(std::process::Stdio::piped())
+                    .stdout(std::process::Stdio::piped())
+                    .stderr(std::process::Stdio::null())
+                    .kill_on_drop(true)
+                    .spawn()
+                    .with_context(|| format!("ProxyCommand {command}"))?;
+                let io = tokio::io::join(
+                    child.stdout.take().context("ProxyCommand stdout")?,
+                    child.stdin.take().context("ProxyCommand stdin")?,
+                );
+                Stream {
+                    io: Box::new(io),
+                    _proxy: Some(child),
+                }
+            }
+            Hop::Proxy(p) => Stream {
+                io: Box::new(crate::proxy::connect(&p, &target.host, target.port).await?),
+                _proxy: None,
+            },
+            Hop::Via(jump) => {
+                let channel = jump
+                    .handle
+                    .channel_open_direct_tcpip(
+                        target.host.as_str(),
+                        u32::from(target.port),
+                        "127.0.0.1",
+                        0,
+                    )
+                    .await
+                    .context("direct-tcpip through the jump host")?;
+                Stream {
+                    io: Box::new(channel.into_stream()),
+                    _proxy: None,
+                }
+            }
+        })
+    };
+    match limit {
+        Some(limit) => tokio::time::timeout(limit, opening)
+            .await
+            .map_err(|_| anyhow::Error::new(NoAnswer(limit)))?,
+        None => opening.await,
+    }
+}
+
 /// The host key was refused; the error carries the verdict.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UntrustedHost(pub Verdict);

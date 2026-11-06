@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../src/rust/api/app.dart';
 import '../src/rust/api/session.dart';
+import '../src/rust/api/vault.dart' show ProtocolKind;
 import 'errors.dart';
 import 'address.dart';
 
@@ -121,6 +122,13 @@ abstract class ConnectionController extends ChangeNotifier {
 
   /// A shell on this machine: neither a saved host nor an address.
   bool get isLocal => hostId == null && target == null;
+
+  /// Reached by SSH, as far as is known (what connecting said, or the
+  /// address typed): what files, tunnels and the like need.
+  bool get overSsh =>
+      !isLocal &&
+      (connected?.protocol ?? target?.protocol ?? ProtocolKind.ssh) ==
+          ProtocolKind.ssh;
 
   bool get isDisposed => _disposed;
 

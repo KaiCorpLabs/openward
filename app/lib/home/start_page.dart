@@ -9,6 +9,8 @@ import '../core/errors.dart';
 import '../core/match.dart';
 import '../core/providers.dart';
 import '../hosts/editors.dart';
+import '../hosts/host_actions.dart' show hostAddress;
+import '../hosts/serial_dialog.dart';
 import '../import/import_dialog.dart';
 import '../l10n/l10n.dart';
 import '../logs/log_viewer.dart' show openLogById;
@@ -77,10 +79,6 @@ class _StartPageState extends ConsumerState<StartPage> {
     _focus.dispose();
     super.dispose();
   }
-
-  String _hostAddress(HostView h) =>
-      '${h.user.isEmpty ? '' : '${h.user}@'}${h.address}'
-      '${h.port == 22 ? '' : ':${h.port}'}';
 
   /// Connects to what was typed, as an address.
   void _connectTyped() {
@@ -215,13 +213,32 @@ class _StartPageState extends ConsumerState<StartPage> {
   }
 
   /// The title, and on its right what is opened from here most: a local
-  /// terminal and a new host.
+  /// terminal, a serial port and a new host.
   Widget _header(BuildContext context, bool firstDay) {
     final l = context.l10n;
+    final title = firstDay ? l.startHere : l.startTitle;
+    final titleStyle = Theme.of(context).textTheme.titleLarge;
+    final labels = [l.localTerminal, l.protocolSerial, l.newHost];
     return LayoutBuilder(
       builder: (context, box) {
-        // Narrow: the buttons keep only their icon.
-        final narrow = box.maxWidth < 620;
+        // Narrow: the buttons keep only their icon. What they take with
+        // their words, as measured at this text size: an outlined button
+        // is its icon, a gap and its padding besides.
+        final buttonStyle = Theme.of(context).textTheme.labelLarge;
+        final wide =
+            30 +
+            12 +
+            textWidth(context, title, titleStyle ?? const TextStyle()) +
+            OwSpace.s12 +
+            [
+              for (final t in labels)
+                textWidth(context, t, buttonStyle ?? const TextStyle()) +
+                    OwSpace.s16 +
+                    OwSpace.s14 +
+                    OwSpace.s4,
+            ].fold<double>(0, (a, b) => a + b) +
+            2 * 8;
+        final narrow = box.maxWidth < wide;
         Widget button(String key, IconData icon, String text, VoidCallback f) =>
             narrow
             ? IconButton(
@@ -240,19 +257,20 @@ class _StartPageState extends ConsumerState<StartPage> {
           children: [
             const UmbralMark(size: 30),
             const SizedBox(width: 12),
-            Semantics(
-              header: true,
-              child: Text(
-                firstDay ? l.startHere : l.startTitle,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
+            Semantics(header: true, child: Text(title, style: titleStyle)),
             const Spacer(),
             button(
               'start.local',
               Icons.terminal,
               l.localTerminal,
               ref.read(tabsProvider.notifier).openLocal,
+            ),
+            const SizedBox(width: 8),
+            button(
+              'start.serial',
+              Icons.cable,
+              l.protocolSerial,
+              () => showSerialOpen(context, ref),
             ),
             const SizedBox(width: 8),
             button('start.newHost', Icons.add, l.newHost, () async {
@@ -382,7 +400,7 @@ class _StartPageState extends ConsumerState<StartPage> {
                   width: field.maxWidth,
                   options: options.toList(),
                   onSelect: select,
-                  hostAddress: _hostAddress,
+                  hostAddress: hostAddress,
                 ),
               ),
             ),
@@ -461,7 +479,7 @@ class _StartPageState extends ConsumerState<StartPage> {
                 ),
                 address: host != null
                     ? Text(
-                        _hostAddress(host),
+                        hostAddress(host),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: monoStyle(context, size: 12),
@@ -867,7 +885,7 @@ class _FavoriteCard extends StatelessWidget {
     final c = ow.colors;
     final h = host;
     final env = h.environment;
-    final address = '${h.user}@${h.address}${h.port == 22 ? '' : ':${h.port}'}';
+    final address = hostAddress(h);
     return Material(
       color: c.raised,
       clipBehavior: Clip.antiAlias,

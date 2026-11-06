@@ -7,8 +7,10 @@ members = [
     "crates/openward-import",
     "crates/openward-proto",
     "crates/openward-pty",
+    "crates/openward-serial",
     "crates/openward-sftp",
     "crates/openward-ssh",
+    "crates/openward-telnet",
     "crates/openward-term",
     "crates/openward-vault",
 ]

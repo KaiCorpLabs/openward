@@ -5,6 +5,7 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 
+import '../../core/address.dart' show defaultSerialLine;
 import '../../l10n/l10n.dart';
 import '../../src/rust/api/vault.dart';
 
@@ -51,6 +52,8 @@ class SettingsForm extends ChangeNotifier {
       envShort = original.environmentShort,
       envColor = original.environmentColor,
       readOsRelease = original.readOsRelease,
+      protocol = original.protocol,
+      serial = original.serial,
       jumps = [...original.jumps],
       setHere = {
         if (original.identity != null) 'identity',
@@ -68,6 +71,8 @@ class SettingsForm extends ChangeNotifier {
         if (original.connectTimeoutSecs != null) 'connect_timeout_secs',
         if (original.environment != null) 'environment',
         if (original.readOsRelease != null) 'read_os_release',
+        if (original.protocol != null) 'protocol',
+        if (original.serial != null) 'serial',
       };
 
   final SettingsSpec original;
@@ -91,6 +96,12 @@ class SettingsForm extends ChangeNotifier {
   EnvironmentKind? envKind;
   String envName, envShort, envColor;
   bool? readOsRelease;
+
+  /// SSH, Telnet or a serial port.
+  ProtocolKind? protocol;
+
+  /// A serial port's settings.
+  SerialLineSpec? serial;
 
   /// The jump chain, first hop first.
   final List<JumpSpec> jumps;
@@ -194,9 +205,19 @@ class SettingsForm extends ChangeNotifier {
         envColor = inherited.environmentColor;
       case 'read_os_release':
         readOsRelease = inherited.readOsRelease ?? false;
+      case 'protocol':
+        protocol = inherited.protocol ?? ProtocolKind.ssh;
+      case 'serial':
+        serial = inherited.serial ?? defaultSerialLine;
     }
     notifyListeners();
   }
+
+  /// The protocol in force with what the form says now: its own, or the
+  /// one it inherits.
+  ProtocolKind protocolWith(SettingsSpec inherited) =>
+      (setHere.contains('protocol') ? protocol : inherited.protocol) ??
+      ProtocolKind.ssh;
 
   /// Goes back to inheriting `field`.
   void drop(String field) {
@@ -240,6 +261,10 @@ class SettingsForm extends ChangeNotifier {
         envName = envShort = envColor = '';
       case 'read_os_release':
         readOsRelease = null;
+      case 'protocol':
+        protocol = null;
+      case 'serial':
+        serial = null;
     }
     notifyListeners();
   }
@@ -272,6 +297,11 @@ class SettingsForm extends ChangeNotifier {
     envShort,
     envColor,
     readOsRelease,
+    protocol,
+    serial == null
+        ? null
+        : '${serial!.baud}|${serial!.dataBits}|${serial!.parity}|'
+              '${serial!.stopBits}|${serial!.flow}',
     for (final j in jumps) '${j.hostId}|${j.address}|${j.user}|${j.port}',
   ].join('\u0000');
 
@@ -330,6 +360,9 @@ class SettingsForm extends ChangeNotifier {
         return (field: 'proxy', text: l.missingProxy);
       }
     }
+    if (setHere.contains('serial') && (serial?.baud ?? 0) < 1) {
+      return (field: 'serial', text: l.serialBaudMissing);
+    }
     return null;
   }
 
@@ -382,6 +415,8 @@ class SettingsForm extends ChangeNotifier {
       environmentShort: envMark?.short ?? '',
       environmentColor: envMark?.color ?? '',
       readOsRelease: setHere.contains('read_os_release') ? readOsRelease : null,
+      protocol: setHere.contains('protocol') ? protocol : null,
+      serial: setHere.contains('serial') ? serial : null,
     );
   }
 }

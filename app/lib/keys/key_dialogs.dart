@@ -11,6 +11,7 @@ import '../core/address.dart';
 import '../core/errors.dart';
 import '../core/match.dart';
 import '../core/providers.dart';
+import '../hosts/host_actions.dart' show overSsh;
 import '../l10n/l10n.dart';
 import '../src/rust/api/keychain.dart';
 import '../src/rust/api/vault.dart';
@@ -474,7 +475,9 @@ class _InstallKeyState extends ConsumerState<_InstallKey> {
   List<HostView> _hosts() {
     final library = ref.read(libraryProvider);
     final matcher = HostMatcher(_query.text, library);
-    return matcher.isEmpty ? library.hosts : matcher.filter(library.hosts);
+    // A key goes over SSH.
+    final hosts = library.hosts.where(overSsh).toList();
+    return matcher.isEmpty ? hosts : matcher.filter(hosts);
   }
 
   void _start({HostView? host, QuickTarget? target}) {

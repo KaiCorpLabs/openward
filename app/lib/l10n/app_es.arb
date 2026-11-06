@@ -20,6 +20,8 @@
   "addressHint": "servidor.example.com o 10.0.0.5",
   "advanced": "Avanzado",
   "advancedList": "proxy, claves del host, sesión persistente, comprobación y agente",
+  "advancedListSerial": "registro de sesión",
+  "advancedListTelnet": "proxy, registro de sesión y tiempo para conectar",
   "advancedSetHere": "{count, plural, =1{1 cambiado aquí} other{{count} cambiados aquí}}",
   "@advancedSetHere": {
     "placeholders": {
@@ -1027,6 +1029,62 @@
     }
   },
   "failureOther": "Algo ha fallado (más en «Detalles»).",
+  "failureSerialBusy": "{port} está abierto en otro programa, o en otra pestaña.",
+  "@failureSerialBusy": {
+    "placeholders": {
+      "port": {
+        "type": "String"
+      }
+    }
+  },
+  "failureSerialDenied": "Tu usuario no puede abrir {port}.",
+  "@failureSerialDenied": {
+    "placeholders": {
+      "port": {
+        "type": "String"
+      }
+    }
+  },
+  "failureSerialDeniedLinux": "Tu usuario no puede abrir {port}: añádelo al grupo dialout (sudo usermod -aG dialout, con tu usuario) y vuelve a entrar en la sesión.",
+  "@failureSerialDeniedLinux": {
+    "placeholders": {
+      "port": {
+        "type": "String"
+      }
+    }
+  },
+  "failureSerialGone": "Se ha desconectado {port}: ¿se ha soltado el cable?",
+  "@failureSerialGone": {
+    "placeholders": {
+      "port": {
+        "type": "String"
+      }
+    }
+  },
+  "failureSerialMissing": "No hay ningún puerto {port}: ¿está conectado el cable?",
+  "@failureSerialMissing": {
+    "placeholders": {
+      "port": {
+        "type": "String"
+      }
+    }
+  },
+  "failureSerialOther": "No se ha podido abrir {port} (más en «Detalles»).",
+  "@failureSerialOther": {
+    "placeholders": {
+      "port": {
+        "type": "String"
+      }
+    }
+  },
+  "failureSerialSettings": "{port} no admite esa velocidad o ese formato.",
+  "@failureSerialSettings": {
+    "placeholders": {
+      "port": {
+        "type": "String"
+      }
+    }
+  },
   "favorite": "Favorito",
   "favoriteLower": "favorito",
   "favoriteNote": "arriba en la barra, en el raíl y en el inicio",
@@ -1145,6 +1203,9 @@
       }
     }
   },
+  "flowHardware": "RTS/CTS (hardware)",
+  "flowNone": "Ninguno",
+  "flowSoftware": "XON/XOFF (software)",
   "foldSidebar": "Plegar la barra lateral",
   "fontFromTheme": "La del tema",
   "fontOther": "Otra fuente instalada…",
@@ -2690,6 +2751,9 @@
   "paneOptions": "Opciones del panel",
   "paneSearch": "Busca una pestaña o un host",
   "paneWhat": "¿Qué abres en este panel?",
+  "parityEven": "Par",
+  "parityNone": "Ninguna",
+  "parityOdd": "Impar",
   "partNote": "Se copia con un nombre temporal (.part) y se renombra al terminar: si se corta, el fichero bueno no queda a medias y la copia se puede reanudar.",
   "passphraseField": "Frase",
   "passphraseOptional": "Frase de paso (opcional)",
@@ -2919,6 +2983,8 @@
   },
   "privateKey": "Clave privada",
   "protection": "Protección",
+  "protocol": "Protocolo",
+  "protocolSerial": "Puerto serie",
   "proxy": "Proxy",
   "proxyHttpNote": "Con un proxy HTTP, la petición CONNECT va sin cifrar: el proxy ve a qué host y puerto te conectas, pero no lo que pasa por SSH.",
   "proxyLoginBody": "{proxy} pide usuario y contraseña para dejarte pasar. No se guardan.",
@@ -3339,6 +3405,45 @@
     }
   },
   "separatePanes": "Separar los paneles en pestañas",
+  "serialBaud": "Velocidad",
+  "serialBaudMissing": "Pon una velocidad.",
+  "serialBaudUnit": "{baud} baudios",
+  "@serialBaudUnit": {
+    "placeholders": {
+      "baud": {
+        "type": "int"
+      }
+    }
+  },
+  "serialDataBits": "Bits de datos",
+  "serialFlow": "Control de flujo",
+  "serialLine": "Velocidad y formato",
+  "serialOpenEllipsis": "Abrir un puerto serie…",
+  "serialOpenNote": "Para la consola de un router o un switch, con su cable: casi siempre 9600 baudios, 8N1.",
+  "serialOpenTitle": "Abrir un puerto serie",
+  "serialParity": "Paridad",
+  "serialPortMissing": "Elige el puerto.",
+  "serialPortsAgain": "Buscar otra vez",
+  "serialPortsNone": "No hay ningún puerto serie conectado.",
+  "serialPortsTooltip": "Los puertos de este equipo",
+  "serialSendBreak": "Enviar un break por el puerto serie",
+  "serialShort": "Serie",
+  "serialStopBits": "Bits de parada",
+  "serialSummary": "{baud} baudios, {frame}, {flow}",
+  "@serialSummary": {
+    "placeholders": {
+      "baud": {
+        "type": "int"
+      },
+      "frame": {
+        "type": "String"
+      },
+      "flow": {
+        "type": "String"
+      }
+    }
+  },
+  "serialSummaryNoFlow": "sin control de flujo",
   "sessionClosed": "Sesión cerrada.",
   "sessionClosedCode": "Sesión cerrada (código {code}).",
   "@sessionClosedCode": {
@@ -3614,6 +3719,7 @@
   "statusFailed": "Ha fallado la conexión",
   "statusIdle": "Sin conectar",
   "statusStalled": "Sin respuesta · comprobando…",
+  "statusUnencrypted": "Sin cifrar",
   "stepAppearance": "Apariencia",
   "stepAuthenticating": "autenticando…",
   "stepConnecting": "conectando…",
@@ -3675,6 +3781,8 @@
   "systemUnknownYet": "Aún sin saber",
   "tabMenuHint": "También puedes arrastrar la pestaña sobre un terminal para dividirlo, o a otro sitio de la barra para ordenarla.",
   "tags": "Etiquetas",
+  "telnetUnencrypted": "Telnet, sin cifrar",
+  "telnetUnencryptedNote": "Telnet no cifra nada: lo que escribes, contraseñas incluidas, viaja tal cual por la red. Para los equipos que no admiten SSH.",
   "terminalAlwaysDark": "Siempre oscuro",
   "terminalAsTheme": "Como el tema",
   "terminalColors": "Colores del terminal",

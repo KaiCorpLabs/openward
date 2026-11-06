@@ -8,7 +8,8 @@ use std::sync::Arc;
 
 use flutter_rust_bridge::frb;
 use openward_app::events::{
-    CertProblem, Connected, Health, KeySource, NetCause, Persistence, Question, Stage, Trust,
+    CertProblem, Connected, Health, KeySource, NetCause, Persistence, Question, SerialProblem,
+    Stage, Trust,
 };
 use openward_app::terminal::{self, Terminal};
 use openward_app::{Answer, Event, EventSink, Failure, Prompt};
@@ -166,6 +167,9 @@ pub struct ReconnectingView {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ConnectedView {
+    /// For Telnet the SSH fields are empty (nothing is encrypted); for a
+    /// serial port `host` is the port and `port` 0.
+    pub protocol: super::vault::ProtocolKind,
     pub host: String,
     pub port: u16,
     pub kex: String,
@@ -192,7 +196,26 @@ pub enum FailureKind {
     Cancelled,
     /// The server has no SFTP.
     NoSftp,
+    /// A serial port: [`FailureView::serial`] says what.
+    Serial,
     Network,
+    Other,
+}
+
+/// With [`FailureKind::Serial`]: what went wrong with the port
+/// ([`FailureView::host`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SerialKind {
+    /// Not there (now).
+    Missing,
+    /// Another program has it.
+    Busy,
+    /// Not allowed (on Linux, not in `dialout`).
+    Denied,
+    /// It does not take these settings; [`FailureView::reason`] says why.
+    Settings,
+    /// It went while open: the cable was pulled.
+    Gone,
     Other,
 }
 
@@ -249,6 +272,7 @@ pub struct FailureView {
     pub previous: Vec<PreviousKeyView>,
     pub cert: Option<CertKind>,
     pub net: Option<NetKind>,
+    pub serial: Option<SerialKind>,
     pub seconds: u32,
 }
 
@@ -396,6 +420,24 @@ pub(crate) fn failure_view(f: Failure) -> FailureView {
                 ..v
             }
         }
+        Failure::Serial { port, problem } => {
+            let (serial, reason) = match problem {
+                SerialProblem::Missing => (SerialKind::Missing, String::new()),
+                SerialProblem::Busy => (SerialKind::Busy, String::new()),
+                SerialProblem::Denied => (SerialKind::Denied, String::new()),
+                SerialProblem::Settings(why) => (SerialKind::Settings, why),
+                SerialProblem::Gone => (SerialKind::Gone, String::new()),
+                SerialProblem::Other(why) => (SerialKind::Other, why),
+            };
+            FailureView {
+                kind: Some(FailureKind::Serial),
+                label: port.clone(),
+                host: port,
+                reason,
+                serial: Some(serial),
+                ..v
+            }
+        }
         Failure::Other(reason) => FailureView {
             kind: Some(FailureKind::Other),
             reason,
@@ -525,6 +567,7 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
             v.prompt = Some(prompt_view(id, prompt));
         }
         Event::Connected(Connected {
+            protocol,
             host,
             port,
             kex,
@@ -543,6 +586,7 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
                 Trust::New => (TrustKind::New, String::new()),
             };
             v.connected = Some(ConnectedView {
+                protocol: super::vault::ProtocolKind::of(protocol),
                 host,
                 port,
                 kex,
@@ -1034,6 +1078,13 @@ impl TerminalSession {
     #[frb(sync)]
     pub fn close(&self) {
         self.term.close();
+    }
+
+    /// Sends a break down a serial port (a router's ROM monitor waits for
+    /// one); false if this is not a serial port.
+    #[frb(sync)]
+    pub fn send_break(&self) -> bool {
+        self.term.send_break()
     }
 
     /// A command ran (the UI saw it at Enter): a marker in the session's

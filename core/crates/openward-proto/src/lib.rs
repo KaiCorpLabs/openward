@@ -22,8 +22,8 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 pub use settings::{
-    Agent, Environment, EnvironmentMark, HostKeyPolicy, IDENTITY_FIELDS, Jump, Proxy, ProxyServer,
-    Route, Settings, UseIdentity,
+    Agent, Environment, EnvironmentMark, FlowControl, HostKeyPolicy, IDENTITY_FIELDS, Jump, Parity,
+    Protocol, Proxy, ProxyServer, Route, SerialLine, Settings, UseIdentity,
 };
 
 /// Fields a newer version wrote that this one does not know.
@@ -586,6 +586,7 @@ mod tests {
             evidence: String::new(),
             extra: Extra::new(),
         });
+        h.settings.serial = Some(SerialLine::default());
         body
     }
 
@@ -801,6 +802,7 @@ mod tests {
             &["alias"],
             &["from", "id"],
             &["code", "source"],
+            &["baud", "parity"],
         ] {
             add_future(&mut value, keys);
         }
@@ -838,6 +840,57 @@ mod tests {
         assert_eq!(extra["future"], future, "source");
         assert_eq!(h.imported.unwrap().extra["future"], future, "imported");
         assert_eq!(h.system.unwrap().extra["future"], future, "system");
+        assert_eq!(h.settings.serial.unwrap().extra["future"], future, "serial");
+    }
+
+    /// A Telnet host and a serial one, as they are encoded.
+    #[test]
+    fn protocols_and_serial_lines_round_trip() {
+        for protocol in [Protocol::Ssh, Protocol::Telnet, Protocol::Serial] {
+            let mut body = host();
+            if let Data::Host(h) = &mut body.data {
+                h.settings.protocol = Some(protocol);
+                h.settings.serial = Some(SerialLine {
+                    baud: 115_200,
+                    data_bits: 7,
+                    parity: Parity::Even,
+                    stop_bits: 2,
+                    flow: FlowControl::Hardware,
+                    extra: Extra::new(),
+                });
+            }
+            assert_eq!(Body::from_cbor(&body.to_cbor()).unwrap(), body);
+        }
+        let value: Value = ciborium::from_reader(
+            &Body {
+                created: 1,
+                modified: 2,
+                data: Data::Host(Host {
+                    settings: Settings {
+                        protocol: Some(Protocol::Telnet),
+                        ..Settings::default()
+                    },
+                    ..Host::default()
+                }),
+            }
+            .to_cbor()[..],
+        )
+        .unwrap();
+        let settings = value
+            .as_map()
+            .unwrap()
+            .iter()
+            .find(|(k, _)| k.as_text() == Some("settings"))
+            .unwrap()
+            .1
+            .clone();
+        assert_eq!(
+            settings,
+            Value::Map(vec![(
+                Value::Text("protocol".into()),
+                Value::Text("telnet".into())
+            )])
+        );
     }
 
     #[test]
