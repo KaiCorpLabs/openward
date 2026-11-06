@@ -4,7 +4,9 @@
 
 #[cfg(unix)]
 use std::future::Future;
-use std::path::{Path, PathBuf};
+#[cfg(unix)]
+use std::path::Path;
+use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Mutex, OnceLock, Weak};
 use std::time::{Duration, Instant};
