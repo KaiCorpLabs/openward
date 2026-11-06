@@ -62,10 +62,16 @@ class RemoteEdits extends ChangeNotifier {
   Timer? _watch;
   bool _disposed = false;
 
-  /// The folder the copies go to, the user's own, made once.
+  /// The folder the copies go to, made once, for this user alone: the
+  /// files may hold secrets. It goes with the tab.
   Directory? _dir;
-  Directory get _folder =>
-      _dir ??= Directory.systemTemp.createTempSync('openward-open-');
+  Directory get _folder {
+    final made = _dir;
+    if (made != null) return made;
+    final dir = Directory.systemTemp.createTempSync('openward-open-');
+    if (!Platform.isWindows) Process.runSync('chmod', ['700', dir.path]);
+    return _dir = dir;
+  }
 
   /// Brings `remote` here and calls `open` with its copy; from then on,
   /// each save goes up. One open already is opened again, not copied.
@@ -181,10 +187,16 @@ class RemoteEdits extends ChangeNotifier {
     }
   }
 
+  /// The tab closes: nothing goes up any more, and the copies go.
   @override
   void dispose() {
     _disposed = true;
     _watch?.cancel();
+    try {
+      _dir?.deleteSync(recursive: true);
+    } on FileSystemException {
+      // Open in a program that holds it (Windows): the system's to clean.
+    }
     super.dispose();
   }
 }

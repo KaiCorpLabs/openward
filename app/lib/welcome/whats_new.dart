@@ -22,8 +22,9 @@ import '../window/shortcuts.dart';
 /// without guessing, 0.3.1-beta.4 the hosts on their page and the sidebar
 /// for every day, 0.3.1-beta.5 seven more theme families, 0.3.1-beta.6 the
 /// new logo, 0.3.1-beta.7 each server's system by its logo, 0.3.3-beta.1
-/// the session logs.
-const newsVersion = '0.3.3-beta.1';
+/// the session logs, 0.3.4-beta.1 Telnet and serial ports, Mosh, security
+/// keys, the terminal's options, suggestions, and snippets on several hosts.
+const newsVersion = '0.3.4-beta.1';
 
 /// Who updated and has not seen this release's news yet.
 bool shouldShowNews(Settings s) => s.welcomed && s.seenNews != newsVersion;
@@ -48,11 +49,17 @@ class _WhatsNew extends StatelessWidget {
     String keys(String apple, String other) => macShortcuts ? apple : other;
     // Marked new: what came after who saw the news before.
     final items = [
+      (Icons.cable, l.newsLinesTitle, l.newsLinesBody, true),
+      (Icons.wifi_tethering, l.newsMoshTitle, l.newsMoshBody, true),
+      (Icons.usb, l.newsSecurityKeysTitle, l.newsSecurityKeysBody, true),
+      (Icons.tune, l.newsTerminalTitle, l.newsTerminalBody, true),
+      (Icons.keyboard_tab, l.newsSuggestTitle, l.newsSuggestBody, true),
+      (Icons.grid_view, l.newsManyHostsTitle, l.newsManyHostsBody, true),
       (
         Icons.subject,
         l.newsLogsTitle,
         l.newsLogsBody(keys('⌘⇧R', '${cs}R')),
-        true,
+        false,
       ),
       (Icons.dns_outlined, l.newsSystemTitle2, l.newsSystemBody2, false),
       (Icons.auto_awesome, l.newsLogoTitle, l.newsLogoBody, false),

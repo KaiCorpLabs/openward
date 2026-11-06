@@ -208,6 +208,8 @@ void main() {
     for (final command in [
       r'printf "\033[32mok\033[0m %s\n" galería',
       'seq 1 3',
+      // Highlighting, in each theme's colors.
+      "echo 'ERROR: 10.0.9.14 refused · warning: retry · ok · 52:54:00:12:34:56'",
     ]) {
       term.session.logCommand(command: command);
       term.session.text(text: '$command\n');
@@ -248,6 +250,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
       await tester.tap(find.text('Apariencia').first);
       await shot('$name-4-appearance');
+      // The terminal's: highlighting with its rules in the theme's colors.
+      await tester.tap(find.text('Terminal').first);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.ensureVisible(find.byKey(const ValueKey('highlight.add')));
+      await tester.pump(const Duration(milliseconds: 200));
+      await shot('$name-9-terminal-settings');
 
       unawaited(
         showProgramPreview(tester.element(find.byType(Sidebar)), importPreview),

@@ -2565,6 +2565,8 @@
   "newsKeysTitle": "Claves",
   "newsLatencyBody": "La barra de estado dice cuánto tarda el servidor en responder, con una gráfica de las últimas comprobaciones; en ámbar si sube mucho sobre lo habitual. Al pasar el ratón, la ruta y el cifrado.",
   "newsLatencyTitle": "La latencia, siempre a la vista",
+  "newsLinesBody": "Un host puede ser SSH, Telnet o un puerto serie de este equipo, para la consola de un switch o un router. «Puerto serie» en el inicio abre uno a mano. Telnet avisa de que no cifra.",
+  "newsLinesTitle": "Telnet y puerto serie",
   "newsLogoBody": "Umbral, una O abierta con un chevrón: en el icono de la app y, dentro, en la bienvenida, el inicio, Acerca de y aquí, en el color de tu tema.",
   "newsLogoTitle": "Logo nuevo",
   "newsLogsBody": "Cada conexión deja su entrada en Registros ({shortcut}): dónde, cuándo y cómo acabó. Donde lo actives (Ajustes › Registros, o en un grupo o un host), también lo que salió en pantalla, para buscar en él, volver a verlo comando a comando y exportarlo. Nunca lo que escribes; viene apagado mientras no vaya cifrado.",
@@ -2576,8 +2578,12 @@
     }
   },
   "newsLogsTitle": "Registros de sesión",
+  "newsManyHostsBody": "Un snippet en los hosts que elijas, cada uno en su panel; un snippet al conectar, heredable; y en SFTP, «Abrir con…»: lo editas aquí y se sube al guardarlo.",
+  "newsManyHostsTitle": "Snippets en varios hosts",
   "newsMoreThemesBody": "Monitor, con letras verdes de verdad; Berenjena, con el terminal morado; Búnker, todo en un solo fósforo; Marino, verde sobre azul marino; y Catppuccin, Dracula y Tokyo Night para toda la ventana. En Ajustes › Apariencia.",
   "newsMoreThemesTitle": "Siete familias de temas más",
+  "newsMoshBody": "En «Avanzado» de un host: la sesión sigue aunque cambies de red o duermas el portátil. Usa el mosh-client que tengas instalado, y si no llega el UDP, sigue por SSH.",
+  "newsMoshTitle": "Mosh, si lo quieres",
   "newsPaletteBody": "Todo lo que hace la ventana, tus hosts, snippets y los comandos que ya ejecutaste, a unas letras ({shortcut}). El historial se queda en este equipo y nunca guarda contraseñas.",
   "@newsPaletteBody": {
     "placeholders": {
@@ -2617,6 +2623,8 @@
     }
   },
   "newsSearchTitle": "Un atajo para buscarlo todo",
+  "newsSecurityKeysBody": "Claves en una YubiKey u otra llave FIDO2: se crean en «Nueva clave», y al conectar la app pide el toque y el PIN. Los certificados que caducan avisan la última semana.",
+  "newsSecurityKeysTitle": "Llaves de seguridad",
   "newsSftpBody": "Arrastra entre este equipo y el servidor, con cola, reanudación y lo que ya existe resuelto a tu manera ({shortcut}).",
   "@newsSftpBody": {
     "placeholders": {
@@ -2655,8 +2663,12 @@
   "newsSnippetsTitle": "Snippets y hosts conocidos",
   "newsStartBody": "La conexión rápida completa con tus hosts y las direcciones que ya usaste; debajo, las conexiones recientes con cuánto duraron y los túneles abiertos.",
   "newsStartTitle": "Un inicio para volver a lo de siempre",
+  "newsSuggestBody": "Lo que sigue sale en gris, del historial de ese host, de tus snippets y de comandos comunes; → lo escribe. Todo en este equipo.",
+  "newsSuggestTitle": "Sugerencias mientras escribes",
   "newsSystemBody2": "Debian, Ubuntu, Fedora, Alpine y 22 sistemas más, con su logo del color de su entorno; macOS y Windows, con un icono propio. Para los que no lo dicen al conectar, como los de Tailscale SSH, «Averiguar el sistema» en su menú lee /etc/os-release; o en todos, desde Ajustes › General.",
   "newsSystemTitle2": "El sistema de cada servidor, con su logo",
+  "newsTerminalBody": "Copiar al seleccionar, pegar con clic derecho, errores y direcciones en color, atajos de Mac o de PC. Por host: la codificación (Latin-1, CP437…), el retroceso y sus propios colores.",
+  "newsTerminalTitle": "El terminal a tu manera",
   "newsThemesBody": "Cinco temas en claro y oscuro, capas que se combinan, tamaño del texto, contraste mínimo y reducir movimiento.",
   "newsThemesTitle": "Temas y accesibilidad visual",
   "newsTunnelsBody": "Local, remoto y SOCKS5, que se abren al conectar; también proxy HTTP y SOCKS5 para llegar al servidor.",

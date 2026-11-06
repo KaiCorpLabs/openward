@@ -113,15 +113,21 @@ class HighlightRules extends ConsumerWidget {
                             ])
                           : null,
                     ),
-                  Switch(
-                    key: ValueKey('highlight.${r.id}.on'),
-                    value: r.enabled,
-                    onChanged: s.highlight
-                        ? (v) => save([
-                            for (final x in rules)
-                              x.id == r.id ? x.copyWith(enabled: v) : x,
-                          ])
-                        : null,
+                  // Named by its rule for a screen reader: one node.
+                  MergeSemantics(
+                    child: Semantics(
+                      label: highlightName(l, r),
+                      child: Switch(
+                        key: ValueKey('highlight.${r.id}.on'),
+                        value: r.enabled,
+                        onChanged: s.highlight
+                            ? (v) => save([
+                                for (final x in rules)
+                                  x.id == r.id ? x.copyWith(enabled: v) : x,
+                              ])
+                            : null,
+                      ),
+                    ),
                   ),
                 ],
               ),

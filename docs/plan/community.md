@@ -286,7 +286,7 @@ Ese mismo día se descartó montar Postgres y Supabase Auth aparte para OpenWard
   - no se escribe al volver a una sesión persistente tal como estaba;
   - solo los snippets que no preguntan nada.
 - **SFTP, «Abrir» y «Abrir con…»** en un archivo del servidor:
-  - se trae a una carpeta temporal propia y se abre con su app o con la elegida: en Windows, su diálogo «Abrir con»; en macOS y Linux, el nombre de una app o un comando, que se recuerda;
+  - se trae a una carpeta temporal solo para este usuario (se borra al cerrar la pestaña) y se abre con su app o con la elegida: en Windows, su diálogo «Abrir con»; en macOS y Linux, el nombre de una app o un comando, que se recuerda;
   - mientras la pestaña SFTP siga abierta, cada vez que se guarda se sube;
   - si en el servidor cambió desde que se abrió, se pregunta antes, y Cancelar deja la copia aquí.
   - Una barra dice qué archivos se siguen y cuándo se subieron.
@@ -301,6 +301,14 @@ Ese mismo día se descartó montar Postgres y Supabase Auth aparte para OpenWard
 ### P7 · Pulido y beta
 
 Novedades, notas, guía de prueba en los tres sistemas, accesibilidad y galería, y una beta 0.3.x.
+
+#### Qué deja P7 hecho
+
+- **«Novedades»** de la 0.3.4-beta.1 (`newsVersion`): seis entradas nuevas, una por hito de P1 a P6.
+- **Notas** de la 0.3.4-beta.1 en [las de la 0.3](../notas/v0.3.md), y en [la guía](prueba-v0.3.md) los puntos 24 a 30, que se prueban en los tres sistemas.
+- **Accesibilidad:** la prueba recorre también el diálogo de una regla de resaltado, «Nueva clave» en una llave de seguridad y un snippet en varios hosts. Encontró que los interruptores de las reglas no tenían nombre para un lector de pantalla, y ya lo tienen.
+- **Galería:** el terminal de cada tema enseña el resaltado, y Ajustes › Terminal sale en cada tema.
+- **La beta, preparada y sin publicar:** falta subir la versión (`tool/bump-version.sh 0.3.4-beta.1`), la etiqueta, la release y el cask, cuando se revise todo esto.
 
 ## Etapa 2 · v0.4, el vault cifrado
 

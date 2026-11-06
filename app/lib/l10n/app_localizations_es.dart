@@ -3379,6 +3379,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get newsLatencyTitle => 'La latencia, siempre a la vista';
 
   @override
+  String get newsLinesBody =>
+      'Un host puede ser SSH, Telnet o un puerto serie de este equipo, para la consola de un switch o un router. «Puerto serie» en el inicio abre uno a mano. Telnet avisa de que no cifra.';
+
+  @override
+  String get newsLinesTitle => 'Telnet y puerto serie';
+
+  @override
   String get newsLogoBody =>
       'Umbral, una O abierta con un chevrón: en el icono de la app y, dentro, en la bienvenida, el inicio, Acerca de y aquí, en el color de tu tema.';
 
@@ -3394,11 +3401,25 @@ class AppLocalizationsEs extends AppLocalizations {
   String get newsLogsTitle => 'Registros de sesión';
 
   @override
+  String get newsManyHostsBody =>
+      'Un snippet en los hosts que elijas, cada uno en su panel; un snippet al conectar, heredable; y en SFTP, «Abrir con…»: lo editas aquí y se sube al guardarlo.';
+
+  @override
+  String get newsManyHostsTitle => 'Snippets en varios hosts';
+
+  @override
   String get newsMoreThemesBody =>
       'Monitor, con letras verdes de verdad; Berenjena, con el terminal morado; Búnker, todo en un solo fósforo; Marino, verde sobre azul marino; y Catppuccin, Dracula y Tokyo Night para toda la ventana. En Ajustes › Apariencia.';
 
   @override
   String get newsMoreThemesTitle => 'Siete familias de temas más';
+
+  @override
+  String get newsMoshBody =>
+      'En «Avanzado» de un host: la sesión sigue aunque cambies de red o duermas el portátil. Usa el mosh-client que tengas instalado, y si no llega el UDP, sigue por SSH.';
+
+  @override
+  String get newsMoshTitle => 'Mosh, si lo quieres';
 
   @override
   String newsPaletteBody(String shortcut) {
@@ -3431,6 +3452,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get newsSearchTitle => 'Un atajo para buscarlo todo';
+
+  @override
+  String get newsSecurityKeysBody =>
+      'Claves en una YubiKey u otra llave FIDO2: se crean en «Nueva clave», y al conectar la app pide el toque y el PIN. Los certificados que caducan avisan la última semana.';
+
+  @override
+  String get newsSecurityKeysTitle => 'Llaves de seguridad';
 
   @override
   String newsSftpBody(String shortcut) {
@@ -3472,11 +3500,25 @@ class AppLocalizationsEs extends AppLocalizations {
   String get newsStartTitle => 'Un inicio para volver a lo de siempre';
 
   @override
+  String get newsSuggestBody =>
+      'Lo que sigue sale en gris, del historial de ese host, de tus snippets y de comandos comunes; → lo escribe. Todo en este equipo.';
+
+  @override
+  String get newsSuggestTitle => 'Sugerencias mientras escribes';
+
+  @override
   String get newsSystemBody2 =>
       'Debian, Ubuntu, Fedora, Alpine y 22 sistemas más, con su logo del color de su entorno; macOS y Windows, con un icono propio. Para los que no lo dicen al conectar, como los de Tailscale SSH, «Averiguar el sistema» en su menú lee /etc/os-release; o en todos, desde Ajustes › General.';
 
   @override
   String get newsSystemTitle2 => 'El sistema de cada servidor, con su logo';
+
+  @override
+  String get newsTerminalBody =>
+      'Copiar al seleccionar, pegar con clic derecho, errores y direcciones en color, atajos de Mac o de PC. Por host: la codificación (Latin-1, CP437…), el retroceso y sus propios colores.';
+
+  @override
+  String get newsTerminalTitle => 'El terminal a tu manera';
 
   @override
   String get newsThemesBody =>

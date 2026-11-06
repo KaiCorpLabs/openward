@@ -6,7 +6,7 @@ La [v0.3](v0.3.md) cierra la fase 1. Su puerta de salida es esta:
 - abre su día con un espacio de trabajo;
 - importa un CSV propio.
 
-Lo que trae está en las [notas de la versión](../notas/v0.3.md).
+Lo que trae está en las [notas de la versión](../notas/v0.3.md). La 0.3.4-beta.1 trae lo del [camino a la Community](community.md) de P1 a P6: se prueba con los puntos 24 a 30, en macOS, Windows y Linux.
 
 ## Instalar
 

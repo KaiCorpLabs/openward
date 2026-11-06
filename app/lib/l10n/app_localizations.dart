@@ -5210,6 +5210,18 @@ abstract class AppLocalizations {
   /// **'La latencia, siempre a la vista'**
   String get newsLatencyTitle;
 
+  /// No description provided for @newsLinesBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Un host puede ser SSH, Telnet o un puerto serie de este equipo, para la consola de un switch o un router. «Puerto serie» en el inicio abre uno a mano. Telnet avisa de que no cifra.'**
+  String get newsLinesBody;
+
+  /// No description provided for @newsLinesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Telnet y puerto serie'**
+  String get newsLinesTitle;
+
   /// No description provided for @newsLogoBody.
   ///
   /// In es, this message translates to:
@@ -5234,6 +5246,18 @@ abstract class AppLocalizations {
   /// **'Registros de sesión'**
   String get newsLogsTitle;
 
+  /// No description provided for @newsManyHostsBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Un snippet en los hosts que elijas, cada uno en su panel; un snippet al conectar, heredable; y en SFTP, «Abrir con…»: lo editas aquí y se sube al guardarlo.'**
+  String get newsManyHostsBody;
+
+  /// No description provided for @newsManyHostsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Snippets en varios hosts'**
+  String get newsManyHostsTitle;
+
   /// No description provided for @newsMoreThemesBody.
   ///
   /// In es, this message translates to:
@@ -5245,6 +5269,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Siete familias de temas más'**
   String get newsMoreThemesTitle;
+
+  /// No description provided for @newsMoshBody.
+  ///
+  /// In es, this message translates to:
+  /// **'En «Avanzado» de un host: la sesión sigue aunque cambies de red o duermas el portátil. Usa el mosh-client que tengas instalado, y si no llega el UDP, sigue por SSH.'**
+  String get newsMoshBody;
+
+  /// No description provided for @newsMoshTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Mosh, si lo quieres'**
+  String get newsMoshTitle;
 
   /// No description provided for @newsPaletteBody.
   ///
@@ -5293,6 +5329,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Un atajo para buscarlo todo'**
   String get newsSearchTitle;
+
+  /// No description provided for @newsSecurityKeysBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Claves en una YubiKey u otra llave FIDO2: se crean en «Nueva clave», y al conectar la app pide el toque y el PIN. Los certificados que caducan avisan la última semana.'**
+  String get newsSecurityKeysBody;
+
+  /// No description provided for @newsSecurityKeysTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Llaves de seguridad'**
+  String get newsSecurityKeysTitle;
 
   /// No description provided for @newsSftpBody.
   ///
@@ -5354,6 +5402,18 @@ abstract class AppLocalizations {
   /// **'Un inicio para volver a lo de siempre'**
   String get newsStartTitle;
 
+  /// No description provided for @newsSuggestBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que sigue sale en gris, del historial de ese host, de tus snippets y de comandos comunes; → lo escribe. Todo en este equipo.'**
+  String get newsSuggestBody;
+
+  /// No description provided for @newsSuggestTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sugerencias mientras escribes'**
+  String get newsSuggestTitle;
+
   /// No description provided for @newsSystemBody2.
   ///
   /// In es, this message translates to:
@@ -5365,6 +5425,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'El sistema de cada servidor, con su logo'**
   String get newsSystemTitle2;
+
+  /// No description provided for @newsTerminalBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar al seleccionar, pegar con clic derecho, errores y direcciones en color, atajos de Mac o de PC. Por host: la codificación (Latin-1, CP437…), el retroceso y sus propios colores.'**
+  String get newsTerminalBody;
+
+  /// No description provided for @newsTerminalTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'El terminal a tu manera'**
+  String get newsTerminalTitle;
 
   /// No description provided for @newsThemesBody.
   ///
