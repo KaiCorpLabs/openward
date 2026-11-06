@@ -104,6 +104,8 @@ pub enum Persistence {
 pub enum Stage {
     Connecting,
     Authenticating,
+    /// Waiting for the security key of `label`'s key file to be touched.
+    TouchKey,
     OpeningShell,
     OpeningSftp,
 }
@@ -160,6 +162,12 @@ pub enum Prompt {
         known_types: Vec<String>,
     },
     Passphrase {
+        key: String,
+        retry: bool,
+    },
+    /// The PIN of the security key that holds `key` (a key made with
+    /// `verify-required`). Not kept.
+    SecurityKeyPin {
         key: String,
         retry: bool,
     },
@@ -259,6 +267,12 @@ pub enum Failure {
         user: String,
         /// What the server would still accept.
         methods: Vec<String>,
+        /// A certificate that went with one of the keys had run out, and
+        /// was not offered: likely why (its path).
+        expired_certificate: Option<String>,
+        /// A security key's file was among the keys and its key did not
+        /// sign: why (not plugged in, not touched…).
+        security_key: Option<SecurityKeyProblem>,
     },
     Cancelled,
     /// The server has no SFTP (a Dropbear without `sftp-server`, a router).
@@ -279,6 +293,44 @@ pub enum Failure {
         cause: NetCause,
     },
     Other(String),
+}
+
+/// Why a security key did not sign or make a key.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SecurityKeyProblem {
+    /// None is plugged in.
+    NoKey,
+    /// More than one: which is not clear.
+    TooManyKeys,
+    /// Its PIN is needed (and was not given).
+    PinRequired,
+    WrongPin,
+    /// Too many wrong PINs.
+    Locked,
+    NotTouched,
+    /// The key plugged in is not the one this file is for.
+    NotThisKey,
+    /// The system does not let OpenWard talk to it (Windows, without
+    /// administrator rights: use the agent of Windows' OpenSSH).
+    NoAccess,
+    Other,
+}
+
+impl SecurityKeyProblem {
+    pub fn of(e: &openward_fido::FidoError) -> Self {
+        use openward_fido::FidoError as F;
+        match e {
+            F::NoKey => Self::NoKey,
+            F::TooManyKeys => Self::TooManyKeys,
+            F::PinRequired => Self::PinRequired,
+            F::WrongPin => Self::WrongPin,
+            F::Locked => Self::Locked,
+            F::NotTouched => Self::NotTouched,
+            F::NotThisKey => Self::NotThisKey,
+            F::NoAccess => Self::NoAccess,
+            F::Other(_) => Self::Other,
+        }
+    }
 }
 
 /// Why a session asked to go over Mosh goes over SSH instead.
@@ -456,6 +508,7 @@ impl std::fmt::Display for Failure {
                 label,
                 user,
                 methods,
+                ..
             } => write!(
                 f,
                 "{label}: authentication failed for {user} (server accepts {})",

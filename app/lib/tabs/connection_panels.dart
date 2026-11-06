@@ -120,6 +120,7 @@ class _RouteSteps extends StatelessWidget {
               detail: switch (stage.stage) {
                 StageKind.connecting => l.stepConnecting,
                 StageKind.authenticating => l.stepAuthenticating,
+                StageKind.touchKey => l.stepTouchKey,
                 StageKind.openingShell => l.stepOpeningShell,
                 StageKind.openingSftp => l.stepOpeningSftp,
               },

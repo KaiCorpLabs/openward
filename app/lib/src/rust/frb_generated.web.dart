@@ -303,6 +303,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SearchView dco_decode_box_autoadd_search_view(dynamic raw);
 
   @protected
+  SecurityKeyKind dco_decode_box_autoadd_security_key_kind(dynamic raw);
+
+  @protected
   SerialKind dco_decode_box_autoadd_serial_kind(dynamic raw);
 
   @protected
@@ -801,6 +804,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SearchView? dco_decode_opt_box_autoadd_search_view(dynamic raw);
 
   @protected
+  SecurityKeyKind? dco_decode_opt_box_autoadd_security_key_kind(dynamic raw);
+
+  @protected
   SerialKind? dco_decode_opt_box_autoadd_serial_kind(dynamic raw);
 
   @protected
@@ -931,6 +937,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SearchView dco_decode_search_view(dynamic raw);
+
+  @protected
+  SecurityKeyKind dco_decode_security_key_kind(dynamic raw);
+
+  @protected
+  SecurityKeyType dco_decode_security_key_type(dynamic raw);
 
   @protected
   SelectedRange dco_decode_selected_range(dynamic raw);
@@ -1355,6 +1367,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SearchView sse_decode_box_autoadd_search_view(SseDeserializer deserializer);
+
+  @protected
+  SecurityKeyKind sse_decode_box_autoadd_security_key_kind(
+    SseDeserializer deserializer,
+  );
 
   @protected
   SerialKind sse_decode_box_autoadd_serial_kind(SseDeserializer deserializer);
@@ -1959,6 +1976,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  SecurityKeyKind? sse_decode_opt_box_autoadd_security_key_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   SerialKind? sse_decode_opt_box_autoadd_serial_kind(
     SseDeserializer deserializer,
   );
@@ -2111,6 +2133,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SearchView sse_decode_search_view(SseDeserializer deserializer);
+
+  @protected
+  SecurityKeyKind sse_decode_security_key_kind(SseDeserializer deserializer);
+
+  @protected
+  SecurityKeyType sse_decode_security_key_type(SseDeserializer deserializer);
 
   @protected
   SelectedRange sse_decode_selected_range(SseDeserializer deserializer);
@@ -2646,6 +2674,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_search_view(
     SearchView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_security_key_kind(
+    SecurityKeyKind self,
     SseSerializer serializer,
   );
 
@@ -3416,6 +3450,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_security_key_kind(
+    SecurityKeyKind? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_serial_kind(
     SerialKind? self,
     SseSerializer serializer,
@@ -3606,6 +3646,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_search_view(SearchView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_security_key_kind(
+    SecurityKeyKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_security_key_type(
+    SecurityKeyType self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_selected_range(SelectedRange self, SseSerializer serializer);

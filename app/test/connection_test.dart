@@ -52,6 +52,7 @@ const _lost = FailureView(
   reason: '',
   previous: [],
   seconds: 20,
+  expiredCertificate: '',
 );
 
 HealthView _rtt(int ms) =>

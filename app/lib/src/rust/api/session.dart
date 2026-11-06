@@ -9,9 +9,9 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'vault.dart';
 
-// These functions are ignored because they are not marked as `pub`: `event_view`, `failure_view`, `into_answer`, `packed`, `prompt_view`
+// These functions are ignored because they are not marked as `pub`: `event_view`, `failure_view`, `into_answer`, `of`, `packed`, `prompt_view`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DartSink`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<TerminalSession>>
 abstract class TerminalSession implements RustOpaqueInterface {
@@ -327,6 +327,13 @@ class FailureView {
   final SerialKind? serial;
   final int seconds;
 
+  /// With [`FailureKind::AuthFailed`]: a certificate that had run out
+  /// and was not offered (its path); empty if none.
+  final String expiredCertificate;
+
+  /// With [`FailureKind::AuthFailed`]: a security key that did not sign.
+  final SecurityKeyKind? securityKey;
+
   const FailureView({
     this.kind,
     required this.message,
@@ -344,6 +351,8 @@ class FailureView {
     this.net,
     this.serial,
     required this.seconds,
+    required this.expiredCertificate,
+    this.securityKey,
   });
 
   static Future<FailureView> default_() =>
@@ -366,7 +375,9 @@ class FailureView {
       cert.hashCode ^
       net.hashCode ^
       serial.hashCode ^
-      seconds.hashCode;
+      seconds.hashCode ^
+      expiredCertificate.hashCode ^
+      securityKey.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -388,7 +399,9 @@ class FailureView {
           cert == other.cert &&
           net == other.net &&
           serial == other.serial &&
-          seconds == other.seconds;
+          seconds == other.seconds &&
+          expiredCertificate == other.expiredCertificate &&
+          securityKey == other.securityKey;
 }
 
 /// An answer from the server (after `rtt_ms`, when it was a question's),
@@ -631,6 +644,9 @@ enum PromptKind {
 
   /// The proxy's password; first its user when `user` is empty.
   proxyLogin,
+
+  /// The PIN of the security key that holds the key file `key`.
+  securityKeyPin,
 }
 
 /// A question; answer it with `OpenWard.answer(id, …)`.
@@ -827,6 +843,21 @@ class SearchView {
           searching == other.searching;
 }
 
+/// Why a security key did not sign or make a key.
+enum SecurityKeyKind {
+  noKey,
+  tooManyKeys,
+  pinRequired,
+  wrongPin,
+  locked,
+  notTouched,
+  notThisKey,
+
+  /// Windows, without administrator rights: the agent of its OpenSSH.
+  noAccess,
+  other,
+}
+
 /// One visible row's selected columns, both inclusive.
 class SelectedRange {
   final int row;
@@ -979,7 +1010,15 @@ enum SessionEventKind {
   closed,
 }
 
-enum StageKind { connecting, authenticating, openingShell, openingSftp }
+enum StageKind {
+  connecting,
+  authenticating,
+
+  /// Touch the security key of the key file in `label`.
+  touchKey,
+  openingShell,
+  openingSftp,
+}
 
 class StageView {
   /// From 0; `hops` in total, the target last.

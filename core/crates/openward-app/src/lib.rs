@@ -60,6 +60,8 @@ pub const DEFAULT_SCROLLBACK: usize = 10_000;
 pub struct App {
     vault: Arc<Mutex<Vault>>,
     local: Local,
+    /// What talks to security keys: the one plugged in, by default.
+    security_keys: Mutex<Arc<dyn openward_fido::Authenticator>>,
     prompts: Arc<Prompts>,
     live: Arc<Registry>,
     links: sftp::Links,
@@ -88,6 +90,7 @@ impl App {
         Ok(Self {
             vault: Arc::new(Mutex::new(vault)),
             local,
+            security_keys: Mutex::new(default_security_keys()),
             prompts: Arc::default(),
             live: Arc::default(),
             links: sftp::Links::default(),
@@ -316,10 +319,22 @@ impl App {
         });
     }
 
+    /// Talks to security keys with `keys` from now on (a software key in
+    /// tests).
+    pub fn set_security_keys(&self, keys: Arc<dyn openward_fido::Authenticator>) {
+        *lock(&self.security_keys) = keys;
+    }
+
+    /// What talks to security keys now.
+    pub fn security_keys(&self) -> Arc<dyn openward_fido::Authenticator> {
+        Arc::clone(&lock(&self.security_keys))
+    }
+
     fn ctx(&self, sink: &Arc<dyn EventSink>) -> Ctx {
         Ctx {
             vault: Arc::clone(&self.vault),
             local: self.local.clone(),
+            security_keys: self.security_keys(),
             prompts: Arc::clone(&self.prompts),
             sink: Arc::clone(sink),
             live: Arc::clone(&self.live),
@@ -824,6 +839,11 @@ impl Target {
             Self::Address { .. } => None,
         })
     }
+}
+
+/// The security key plugged in, over HID where the build has it.
+fn default_security_keys() -> Arc<dyn openward_fido::Authenticator> {
+    Arc::new(openward_fido::hid::HidKeys)
 }
 
 /// Tries after losing a connection, before giving up.

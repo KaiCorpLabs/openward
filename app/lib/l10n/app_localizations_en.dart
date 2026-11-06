@@ -322,6 +322,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String certExpiresIn(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '1 day',
+    );
+    return 'runs out in $_temp0';
+  }
+
+  @override
   String get certForever => 'never expires';
 
   @override
@@ -1191,8 +1202,18 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String failureAuthCertExpired(String user, String host, String path) {
+    return 'Could not log in as $user to $host: the certificate $path has run out; ask for a new one.';
+  }
+
+  @override
   String failureAuthMethods(String user, String label, String methods) {
     return '$user@$label could not sign in (the server accepts: $methods).';
+  }
+
+  @override
+  String failureAuthSecurityKey(String user, String host, String why) {
+    return 'Could not log in as $user to $host: $why.';
   }
 
   @override
@@ -2202,6 +2223,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get keyTypeRsa =>
       'For old servers that take nothing newer. It takes a few seconds to make.';
+
+  @override
+  String get keyTypeSecurityEcdsa =>
+      'ECDSA P-256 on the key: every FIDO2 key has it.';
+
+  @override
+  String get keyTypeSecurityEd25519 =>
+      'Ed25519 on the key: the best choice if your key has it (nearly all since 2020).';
 
   @override
   String get keys => 'Keys';
@@ -3497,6 +3526,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onExitNever => 'Keep it open';
 
   @override
+  String get onSecurityKey => 'On a security key (FIDO2)';
+
+  @override
+  String get onSecurityKeyNote =>
+      'Touch the key when it blinks. The file keeps no secret: without the key it is useless, and nobody can get the key out of it.';
+
+  @override
   String get onSend => 'On send';
 
   @override
@@ -3801,6 +3837,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pickIdentity => 'Pick an identity or “None”.';
+
+  @override
+  String get pinField => 'PIN';
 
   @override
   String get pinSidebar => 'Keep the sidebar open';
@@ -4534,6 +4573,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sectionSystem => 'System';
 
   @override
+  String get securityKeyPill => 'Security key';
+
+  @override
+  String securityKeyPinBody(String key) {
+    return 'The key $key asks for its security key\'s PIN.';
+  }
+
+  @override
+  String get securityKeyPinOptional => 'Key PIN (if it has one)';
+
+  @override
+  String get securityKeyPinTitle => 'Security key PIN';
+
+  @override
   String seenFrom(String host) {
     return 'as $host sees it';
   }
@@ -4875,6 +4928,40 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get skLocked =>
+      'the key is locked after too many wrong PINs: unplug it and plug it in again';
+
+  @override
+  String get skNoAccess =>
+      'Windows does not let OpenWard talk to the key: use Windows\' OpenSSH agent (ssh-add) for security keys';
+
+  @override
+  String get skNoAccessLinux =>
+      'Linux does not let OpenWard open the key: the udev rule that gives access to /dev/hidraw* is missing (the libfido2 or u2f-udev packages install it)';
+
+  @override
+  String get skNoKey => 'no security key is plugged in';
+
+  @override
+  String get skNotThisKey => 'the key plugged in is not this key\'s';
+
+  @override
+  String get skNotTouched => 'the key was not touched in time';
+
+  @override
+  String get skOther => 'the security key failed (more in Details)';
+
+  @override
+  String get skPinRequired => 'the key asks for its PIN';
+
+  @override
+  String get skTooManyKeys =>
+      'more than one security key is plugged in: leave only this key\'s';
+
+  @override
+  String get skWrongPin => 'that is not the key\'s PIN';
+
+  @override
   String get skipGuide => 'Skip the guide';
 
   @override
@@ -4966,6 +5053,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String stageOpeningShell(String label) {
     return 'Opening the shell on $label…';
+  }
+
+  @override
+  String stageTouchKey(String key) {
+    return 'Touch the security key ($key)…';
   }
 
   @override
@@ -5071,6 +5163,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get stepReady => 'Done';
+
+  @override
+  String get stepTouchKey => 'touch your security key…';
 
   @override
   String get stopAction => 'Stop';
@@ -5287,6 +5382,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get toggleSidebar => 'Fold or show the sidebar';
+
+  @override
+  String get touchKeyNow => 'Touch the security key…';
 
   @override
   String get transfers => 'Transfers';
@@ -5566,6 +5664,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get verificationTitle => 'Verification';
 
   @override
+  String get verifyRequired => 'Ask for the PIN every time it is used';
+
+  @override
   String via(String hops) {
     return 'via $hops';
   }
@@ -5760,6 +5861,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wrongPassword => 'Wrong password.';
+
+  @override
+  String get wrongPin => 'That is not the key\'s PIN.';
 
   @override
   String get yes => 'Yes';

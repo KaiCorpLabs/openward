@@ -6,6 +6,7 @@ import '../core/providers.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/identities.dart';
 import '../src/rust/api/vault.dart';
+import '../ui/widgets.dart';
 
 /// The identities, with their keys as this machine has them. Loaded again
 /// with the library, whose hosts they count.
@@ -85,6 +86,32 @@ String keyDetail(AppLocalizations l, KeyView k) => switch (k.state) {
     ?k.comment,
   ].join(' · '),
 };
+
+/// Days left to a certificate that runs out within a week (1 on its last
+/// day); null if it has run out, never does, or has longer.
+int? certificateDaysLeft(int? untilMs, {DateTime? now}) {
+  if (untilMs == null) return null;
+  final left = untilMs - (now ?? DateTime.now()).millisecondsSinceEpoch;
+  if (left <= 0 || left > const Duration(days: 7).inMilliseconds) return null;
+  return (left / Duration.millisecondsPerDay).ceil();
+}
+
+/// A key's certificate as a pill: `plain`, or in warm when it has run
+/// out or runs out within a week.
+Pill certificatePill(
+  AppLocalizations l, {
+  required bool expired,
+  required int? untilMs,
+  required String plain,
+  PillTone tone = PillTone.accent,
+}) {
+  final soon = expired ? null : certificateDaysLeft(untilMs);
+  return expired
+      ? Pill(l.certificateExpired, tone: PillTone.warm)
+      : soon != null
+      ? Pill(l.certExpiresIn(soon), tone: PillTone.warm)
+      : Pill(plain, tone: tone);
+}
 
 /// When a certificate runs out, as a date: `30 nov 2026`.
 String certDate(AppLocalizations l, CertView c) {

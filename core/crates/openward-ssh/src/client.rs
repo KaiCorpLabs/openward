@@ -1055,6 +1055,49 @@ impl russh::Signer for Signing<'_> {
     }
 }
 
+/// What signs with a key whose secret is elsewhere (a security key): it
+/// gets the data to sign and gives SSH's signature, blocking meanwhile
+/// (a touch).
+pub type SignFn = Arc<dyn Fn(&[u8]) -> anyhow::Result<Vec<u8>> + Send + Sync>;
+
+/// A key signed with by a [`SignFn`]; why it failed goes to `failed`.
+struct ExternalSigning {
+    sign: SignFn,
+    failed: Option<tokio::sync::oneshot::Sender<anyhow::Error>>,
+}
+
+impl russh::Signer for ExternalSigning {
+    type Error = russh::AgentAuthError;
+
+    async fn auth_sign(
+        &mut self,
+        _key: &AgentIdentity,
+        _hash_alg: Option<russh::keys::HashAlg>,
+        mut to_sign: Vec<u8>,
+    ) -> Result<Vec<u8>, Self::Error> {
+        let sign = Arc::clone(&self.sign);
+        let data = to_sign.clone();
+        let signed = tokio::task::spawn_blocking(move || sign(&data))
+            .await
+            .map_err(anyhow::Error::from)
+            .and_then(|r| r);
+        match signed {
+            Ok(blob) => {
+                to_sign.extend((blob.len() as u32).to_be_bytes());
+                to_sign.extend(blob);
+                Ok(to_sign)
+            }
+            Err(reason) => {
+                if let Some(failed) = self.failed.take() {
+                    let _ = failed.send(reason);
+                }
+                // Unchanged: russh sends nothing.
+                Ok(to_sign)
+            }
+        }
+    }
+}
+
 /// A local ssh-agent.
 pub struct Agent {
     client: AgentClient<Box<dyn AgentStream + Send + Unpin>>,
@@ -1213,6 +1256,34 @@ impl Session {
             }
         };
         // The agent's time, then the server's.
+        let r = Self::answer(self.limit.map(|l| AGENT_TIMEOUT + l), step).await?;
+        Ok(self.done(r.into()))
+    }
+
+    /// A key whose secret is elsewhere (a security key): `sign` signs, and
+    /// may take a while (it waits for a touch). Why it could not sign is
+    /// this call's error.
+    pub async fn auth_signed(
+        &mut self,
+        user: &str,
+        key: PublicKey,
+        sign: SignFn,
+    ) -> anyhow::Result<Outcome> {
+        self.attempts += 1;
+        let (failed, failure) = tokio::sync::oneshot::channel();
+        let mut signing = ExternalSigning {
+            sign,
+            failed: Some(failed),
+        };
+        let step = async {
+            tokio::select! {
+                r = self.handle.authenticate_publickey_with(user, key, None, &mut signing) => {
+                    r.map_err(anyhow::Error::from)
+                }
+                Ok(reason) = failure => Err(reason),
+            }
+        };
+        // The touch's time, then the server's.
         let r = Self::answer(self.limit.map(|l| AGENT_TIMEOUT + l), step).await?;
         Ok(self.done(r.into()))
     }

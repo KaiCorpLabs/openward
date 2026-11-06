@@ -273,6 +273,14 @@
       }
     }
   },
+  "certExpiresIn": "caduca en {days, plural, =1{1 día} other{{days} días}}",
+  "@certExpiresIn": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "certForever": "sin caducidad",
   "certNextToKey": "Junto a la clave (-cert.pub): se usa sin añadirlo.",
   "certNoAuthority": "ninguna @cert-authority de known_hosts cubre este host",
@@ -965,6 +973,20 @@
       }
     }
   },
+  "failureAuthCertExpired": "No se pudo entrar como {user} en {host}: el certificado {path} ha caducado; pide uno nuevo.",
+  "@failureAuthCertExpired": {
+    "placeholders": {
+      "user": {
+        "type": "String"
+      },
+      "host": {
+        "type": "String"
+      },
+      "path": {
+        "type": "String"
+      }
+    }
+  },
   "failureAuthMethods": "{user}@{label} no ha podido autenticarse (el servidor acepta: {methods}).",
   "@failureAuthMethods": {
     "placeholders": {
@@ -975,6 +997,20 @@
         "type": "String"
       },
       "methods": {
+        "type": "String"
+      }
+    }
+  },
+  "failureAuthSecurityKey": "No se pudo entrar como {user} en {host}: {why}.",
+  "@failureAuthSecurityKey": {
+    "placeholders": {
+      "user": {
+        "type": "String"
+      },
+      "host": {
+        "type": "String"
+      },
+      "why": {
         "type": "String"
       }
     }
@@ -1825,6 +1861,8 @@
   "keyTypeEcdsa": "Para servidores o normas que piden curvas NIST.",
   "keyTypeEd25519": "La recomendada: corta, rápida, y la aceptan los servidores de los últimos diez años.",
   "keyTypeRsa": "Para servidores antiguos que no aceptan nada más nuevo. Tarda unos segundos en crearse.",
+  "keyTypeSecurityEcdsa": "ECDSA P-256 en la llave: la tienen todas las llaves FIDO2.",
+  "keyTypeSecurityEd25519": "Ed25519 en la llave: la mejor opción si tu llave la tiene (casi todas desde 2020).",
   "keys": "Claves",
   "keysHelp": "Una ruta por línea. OpenWard guarda la ruta, nunca la clave.",
   "keysInOrder": "Se prueban en este orden; arrastra para cambiarlo.",
@@ -2684,6 +2722,8 @@
   "onExitClean": "Cerrar si sale bien",
   "onExitHelp": "Con exit o logout, el panel (o la pestaña, si es el último) se cierra solo. Si el programa acaba con un error, se queda abierto para que leas qué pasó, salvo con «Cerrar siempre». Una conexión que se corta nunca se cierra sola: sigue reconectando.",
   "onExitNever": "Dejarla abierta",
+  "onSecurityKey": "En una llave de seguridad (FIDO2)",
+  "onSecurityKeyNote": "Toca la llave cuando parpadee. El archivo no guarda ningún secreto: sin la llave no sirve, y nadie puede sacarla de ella.",
   "onSend": "Al enviar",
   "onSessionHide": "Oculta",
   "onSessionKeep": "Como esté",
@@ -2849,6 +2889,7 @@
   "persistentOn": "Sí, en tmux: sigue tras un corte",
   "persistentSession": "Sesión persistente",
   "pickIdentity": "Elige una identidad o «Ninguna».",
+  "pinField": "PIN",
   "pinSidebar": "Dejar la barra abierta",
   "pixels": "{size} px",
   "@pixels": {
@@ -3371,6 +3412,17 @@
   "sectionEnvironment": "Entorno",
   "sectionGeneral": "General",
   "sectionSystem": "Sistema",
+  "securityKeyPill": "Llave de seguridad",
+  "securityKeyPinBody": "La clave {key} pide el PIN de su llave.",
+  "@securityKeyPinBody": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
+  "securityKeyPinOptional": "PIN de la llave (si tiene)",
+  "securityKeyPinTitle": "PIN de la llave de seguridad",
   "seenFrom": "visto desde {host}",
   "@seenFrom": {
     "placeholders": {
@@ -3583,6 +3635,16 @@
       }
     }
   },
+  "skLocked": "la llave está bloqueada por demasiados PIN incorrectos: desconéctala y vuelve a conectarla",
+  "skNoAccess": "Windows no deja a OpenWard hablar con la llave: usa el agente de OpenSSH de Windows (ssh-add) para las llaves de seguridad",
+  "skNoAccessLinux": "Linux no deja a OpenWard abrir la llave: falta la regla de udev que da acceso a /dev/hidraw* (la instalan los paquetes libfido2 o u2f-udev)",
+  "skNoKey": "no hay ninguna llave de seguridad conectada",
+  "skNotThisKey": "la llave conectada no es la de esta clave",
+  "skNotTouched": "no se tocó la llave a tiempo",
+  "skOther": "la llave de seguridad ha fallado (más en «Detalles»)",
+  "skPinRequired": "la llave pide su PIN",
+  "skTooManyKeys": "hay más de una llave de seguridad conectada: deja solo la de esta clave",
+  "skWrongPin": "el PIN no es el de la llave",
   "skipGuide": "Saltar la guía",
   "snippetDeleted": "Snippet «{name}» eliminado",
   "@snippetDeleted": {
@@ -3684,6 +3746,14 @@
       }
     }
   },
+  "stageTouchKey": "Toca la llave de seguridad ({key})…",
+  "@stageTouchKey": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
   "start": "Empezar",
   "startAction": "Empezar",
   "startColDuration": "Duración",
@@ -3744,6 +3814,7 @@
   "stepOpeningSftp": "abriendo SFTP…",
   "stepOpeningShell": "abriendo el shell…",
   "stepReady": "Listo",
+  "stepTouchKey": "toca la llave de seguridad…",
   "stopAction": "Detener",
   "swapWith": "Intercambiar con {name}",
   "@swapWith": {
@@ -3875,6 +3946,7 @@
     }
   },
   "toggleSidebar": "Plegar o abrir la barra lateral",
+  "touchKeyNow": "Toca la llave de seguridad…",
   "transfers": "Transferencias",
   "trust": "Confianza",
   "trustAndConnect": "Confiar y conectar",
@@ -4094,6 +4166,7 @@
   "variantLight": "claro",
   "variantLightOnly": "Claro",
   "verificationTitle": "Verificación",
+  "verifyRequired": "Pedir el PIN cada vez que se use",
   "via": "vía {hops}",
   "@via": {
     "placeholders": {
@@ -4313,6 +4386,7 @@
   "wrongAnswer": "Respuesta incorrecta.",
   "wrongPassphrase": "Frase incorrecta.",
   "wrongPassword": "Contraseña incorrecta.",
+  "wrongPin": "El PIN no es el de la llave.",
   "yes": "Sí",
   "yesterdayAt": "ayer {time}",
   "@yesterdayAt": {

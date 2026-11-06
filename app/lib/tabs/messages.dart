@@ -13,6 +13,7 @@ String stageText(AppLocalizations l, StageView s) {
   return switch (s.stage) {
     StageKind.connecting => l.stageConnecting(s.label, hop),
     StageKind.authenticating => l.stageAuthenticating(s.label, hop),
+    StageKind.touchKey => l.stageTouchKey(s.label),
     StageKind.openingShell => l.stageOpeningShell(s.label),
     StageKind.openingSftp => l.stageOpeningSftp(s.label),
   };
@@ -39,6 +40,16 @@ String failureText(AppLocalizations l, FailureView f) {
         CertKind.notForHost || null => l.certNotForHost,
       },
     ),
+    // What it likely failed for first: a security key that did not sign,
+    // a certificate that ran out.
+    FailureKind.authFailed when f.securityKey != null =>
+      l.failureAuthSecurityKey(
+        f.user,
+        f.label,
+        securityKeyReason(l, f.securityKey!),
+      ),
+    FailureKind.authFailed when f.expiredCertificate.isNotEmpty =>
+      l.failureAuthCertExpired(f.user, f.label, f.expiredCertificate),
     FailureKind.authFailed =>
       f.methods.isEmpty
           ? l.failureAuth(f.user, f.label)
@@ -64,6 +75,21 @@ String networkReason(AppLocalizations l, FailureView f) => switch (f.net) {
   // What the command wrote: its words, not the core's.
   NetKind.proxyCommand => l.netProxyCommand(f.reason),
   NetKind.other || null => l.netOther,
+};
+
+/// Why a security key did not sign or make a key, in words.
+String securityKeyReason(AppLocalizations l, SecurityKeyKind k) => switch (k) {
+  SecurityKeyKind.noKey => l.skNoKey,
+  SecurityKeyKind.tooManyKeys => l.skTooManyKeys,
+  SecurityKeyKind.pinRequired => l.skPinRequired,
+  SecurityKeyKind.wrongPin => l.skWrongPin,
+  SecurityKeyKind.locked => l.skLocked,
+  SecurityKeyKind.notTouched => l.skNotTouched,
+  SecurityKeyKind.notThisKey => l.skNotThisKey,
+  // Linux without the udev rule; Windows without administrator rights.
+  SecurityKeyKind.noAccess =>
+    Platform.isLinux ? l.skNoAccessLinux : l.skNoAccess,
+  SecurityKeyKind.other => l.skOther,
 };
 
 /// A serial port that did not open or went away, in words; the core's

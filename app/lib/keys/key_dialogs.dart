@@ -47,6 +47,13 @@ class _NewKey extends ConsumerStatefulWidget {
 
 class _NewKeyState extends ConsumerState<_NewKey> {
   SshKeyType _type = SshKeyType.ed25519;
+
+  /// Made on a security key: the file holds no secret.
+  bool _onKey = false;
+
+  /// With [_onKey]: its PIN at every use (`verify-required`).
+  bool _verify = false;
+  final _pin = TextEditingController();
   late final _name = TextEditingController(text: _freeName());
   late final _comment = TextEditingController(
     text: ref.read(openWardProvider).keyComment(),
@@ -74,13 +81,52 @@ class _NewKeyState extends ConsumerState<_NewKey> {
     _comment.dispose();
     _passphrase.dispose();
     _again.dispose();
+    _pin.dispose();
     super.dispose();
   }
 
-  String _freeName() =>
-      freeKeyName(_type, ref.read(keysProvider).map((k) => k.name));
+  String _freeName() => freeKeyName(
+    _type,
+    ref.read(keysProvider).map((k) => k.name),
+    securityKey: _onKey,
+  );
+
+  /// On a security key: it waits for the touch.
+  Future<void> _makeOnKey() async {
+    final l = context.l10n;
+    final name = _name.text.trim();
+    setState(() {
+      _busy = true;
+      _error = null;
+      _cause = null;
+    });
+    final r = await ref
+        .read(openWardProvider)
+        .generateSecurityKey(
+          name: name,
+          kind: _type == SshKeyType.ecdsa
+              ? SecurityKeyType.ecdsa
+              : SecurityKeyType.ed25519,
+          comment: _comment.text.trim(),
+          pin: _pin.text.isEmpty ? null : _pin.text,
+          verify: _verify,
+        );
+    if (!mounted) return;
+    _pin.clear();
+    if (r.failure != null) {
+      setState(() {
+        _busy = false;
+        _error = keyFailureText(l, r.failure!, name);
+        _cause = r.failure;
+      });
+      return;
+    }
+    ref.read(keysProvider.notifier).refresh();
+    Navigator.pop(context, r.key);
+  }
 
   Future<void> _make() async {
+    if (_onKey) return _makeOnKey();
     final l = context.l10n;
     final name = _name.text.trim();
     if (_passphrase.text != _again.text) {
@@ -134,6 +180,23 @@ class _NewKeyState extends ConsumerState<_NewKey> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            SwitchListTile(
+              key: const ValueKey('newKey.onKey'),
+              contentPadding: EdgeInsets.zero,
+              title: Text(l.onSecurityKey),
+              value: _onKey,
+              onChanged: _busy
+                  ? null
+                  : (on) => setState(() {
+                      _onKey = on;
+                      // No RSA on security keys.
+                      if (on && _type == SshKeyType.rsa) {
+                        _type = SshKeyType.ed25519;
+                      }
+                      if (!_nameTouched) _name.text = _freeName();
+                    }),
+            ),
+            const SizedBox(height: 8),
             _labelled(
               context,
               l.keyType,
@@ -142,7 +205,8 @@ class _NewKeyState extends ConsumerState<_NewKey> {
                 showSelectedIcon: false,
                 segments: [
                   for (final t in SshKeyType.values)
-                    ButtonSegment(value: t, label: Text(keyTypeLabel(t))),
+                    if (!_onKey || t != SshKeyType.rsa)
+                      ButtonSegment(value: t, label: Text(keyTypeLabel(t))),
                 ],
                 selected: {_type},
                 onSelectionChanged: _busy
@@ -154,10 +218,12 @@ class _NewKeyState extends ConsumerState<_NewKey> {
               ),
             ),
             const SizedBox(height: 6),
-            Text(switch (_type) {
-              SshKeyType.ed25519 => l.keyTypeEd25519,
-              SshKeyType.ecdsa => l.keyTypeEcdsa,
-              SshKeyType.rsa => l.keyTypeRsa,
+            Text(switch ((_type, _onKey)) {
+              (SshKeyType.ed25519, true) => l.keyTypeSecurityEd25519,
+              (SshKeyType.ecdsa, true) => l.keyTypeSecurityEcdsa,
+              (SshKeyType.ed25519, false) => l.keyTypeEd25519,
+              (SshKeyType.ecdsa, false) => l.keyTypeEcdsa,
+              (SshKeyType.rsa, _) => l.keyTypeRsa,
             }, style: TextStyle(fontSize: OwText.small, color: c.textMuted)),
             const SizedBox(height: 16),
             _labelled(
@@ -184,36 +250,67 @@ class _NewKeyState extends ConsumerState<_NewKey> {
               ),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _labelled(
-                    context,
-                    l.passphraseOptional,
-                    TextField(
-                      key: const ValueKey('newKey.passphrase'),
-                      controller: _passphrase,
-                      enabled: !_busy,
-                      obscureText: true,
+            if (_onKey) ...[
+              _labelled(
+                context,
+                l.securityKeyPinOptional,
+                TextField(
+                  key: const ValueKey('newKey.pin'),
+                  controller: _pin,
+                  enabled: !_busy,
+                  obscureText: true,
+                  onSubmitted: (_) => _make(),
+                ),
+              ),
+              CheckboxListTile(
+                key: const ValueKey('newKey.verify'),
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                title: Text(l.verifyRequired),
+                value: _verify,
+                onChanged: _busy
+                    ? null
+                    : (v) => setState(() => _verify = v ?? false),
+              ),
+              Text(
+                _busy ? l.touchKeyNow : l.onSecurityKeyNote,
+                key: const ValueKey('newKey.touch'),
+                style: TextStyle(
+                  fontSize: OwText.small,
+                  color: _busy ? c.accentText : c.textMuted,
+                ),
+              ),
+            ] else
+              Row(
+                children: [
+                  Expanded(
+                    child: _labelled(
+                      context,
+                      l.passphraseOptional,
+                      TextField(
+                        key: const ValueKey('newKey.passphrase'),
+                        controller: _passphrase,
+                        enabled: !_busy,
+                        obscureText: true,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _labelled(
-                    context,
-                    l.repeatPassphrase,
-                    TextField(
-                      key: const ValueKey('newKey.again'),
-                      controller: _again,
-                      enabled: !_busy,
-                      obscureText: true,
-                      onSubmitted: (_) => _make(),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _labelled(
+                      context,
+                      l.repeatPassphrase,
+                      TextField(
+                        key: const ValueKey('newKey.again'),
+                        controller: _again,
+                        enabled: !_busy,
+                        obscureText: true,
+                        onSubmitted: (_) => _make(),
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
             const SizedBox(height: 12),
             Text(
               l.newKeyWhere('~/.ssh/$name', '~/.ssh/$name.pub'),

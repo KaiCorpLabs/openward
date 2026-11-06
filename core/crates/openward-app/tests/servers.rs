@@ -14,7 +14,7 @@ use std::time::{Duration, Instant};
 use openward_app::alive::Timing;
 use openward_app::events::{
     CertProblem, ChangedKey, Connected, Health, KeySource, MoshFallback, NetCause, Persistence,
-    PreviousKey, Trust,
+    PreviousKey, SecurityKeyProblem, Stage, Trust,
 };
 use openward_app::vault::proto::{
     Agent, Data, Group, Host, HostKeyPolicy, Identity, ItemId, Jump, Route, Settings, System,
@@ -1946,6 +1946,163 @@ fn through_a_proxy_that_asks_for_a_password() {
     // Cancelling gives up.
     let (_term, rx) = f.connect(host, |_| Answer::Cancel);
     assert_eq!(outcome(&rx).0.unwrap_err(), Some(Failure::Cancelled));
+}
+
+/// A security key's sk-ssh-ed25519 key on the server: it logs in, asking
+/// for the touch; with another key plugged in, the failure says it was not
+/// this one. (A key in software, which signs as a real one does.)
+#[test]
+fn a_security_key_logs_in_and_says_when_it_is_not_this_one() {
+    use openward_fido::soft::SoftKeys;
+    let f = Fixture::new(servers!());
+    let password = f.password("demo");
+    let soft = Arc::new(SoftKeys::new());
+    f.app.set_security_keys(soft.clone());
+    let with_password = f.host(
+        "with-password",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: Some(vec![]),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    let answer = password.clone();
+    let (sftp, events) = f.sftp(with_password, move |p| match p {
+        Prompt::Password { .. } | Prompt::KeyboardInteractive { .. } => text(&answer),
+        _ => Answer::Cancel,
+    });
+    outcome(&events).0.unwrap();
+    let remote = sftp.link().get().unwrap();
+    let file = "/home/demo/.ssh/authorized_keys";
+    let original = block_on(remote.read_small(file, 1 << 20)).unwrap();
+
+    let key =
+        openward_fido::new_key(&*soft, openward_fido::Kind::Ed25519, "s2-sk", None, false).unwrap();
+    let keys = tempfile::tempdir().unwrap();
+    let path = keys.path().join("id_ed25519_sk");
+    std::fs::write(
+        &path,
+        key.to_openssh(openward_ssh::russh::keys::ssh_key::LineEnding::LF)
+            .unwrap()
+            .as_bytes(),
+    )
+    .unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    }
+    let added = block_on(sftp.install_public_key(key.public_key().to_openssh().unwrap()));
+
+    let with_key = f.host(
+        "with-security-key",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: Some(vec![path.display().to_string()]),
+            identities_only: Some(true),
+            agent: Some(openward_app::vault::proto::Agent::Off),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    let (_term, rx) = f.connect(with_key, |p| panic!("asked: {p:?}"));
+    let mut touched = false;
+    let logged_in = loop {
+        match rx
+            .recv_timeout(Duration::from_secs(30))
+            .expect("no outcome")
+        {
+            Event::Stage {
+                stage: Stage::TouchKey,
+                ..
+            } => touched = true,
+            Event::Connected(c) => break Ok(c),
+            Event::Closed { failure, .. } => break Err(failure),
+            _ => {}
+        }
+    };
+
+    // Another key plugged in: not this one.
+    f.app.set_security_keys(Arc::new(SoftKeys::new()));
+    let (_term, rx) = f.connect(with_key, |p| match p {
+        Prompt::Password { .. } | Prompt::KeyboardInteractive { .. } => text("not-this-one"),
+        _ => Answer::Cancel,
+    });
+    let other = outcome(&rx).0;
+
+    if let Some(bytes) = &original {
+        let next = format!("{file}.restore");
+        block_on(remote.write_all(&next, bytes, 0o600)).unwrap();
+        block_on(remote.rename(&next, file, true)).unwrap();
+    }
+    assert!(added.unwrap(), "the key went in");
+    logged_in.unwrap();
+    assert!(touched, "the touch was asked for");
+    assert!(
+        matches!(
+            other,
+            Err(Some(Failure::AuthFailed {
+                security_key: Some(SecurityKeyProblem::NotThisKey),
+                ..
+            }))
+        ),
+        "{other:?}"
+    );
+}
+
+/// A key only accepted through its certificate, with one that ran out
+/// yesterday: it is not offered, and the failure says it was the reason.
+#[test]
+fn an_expired_certificate_is_why_the_login_fails() {
+    let f = Fixture::new(servers!());
+    let dir = tempfile::tempdir().unwrap();
+    let key = dir.path().join("id_cert");
+    std::fs::copy(f.fx.join("id_cert"), &key).unwrap();
+    std::fs::copy(f.fx.join("id_cert.pub"), dir.path().join("id_cert.pub")).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&key, std::fs::Permissions::from_mode(0o600)).unwrap();
+    }
+    let signed = std::process::Command::new("ssh-keygen")
+        .args(["-q", "-s"])
+        .arg(f.fx.join("user_ca"))
+        .args(["-I", "s2-old", "-n", "demo", "-V", "-2d:-1d"])
+        .arg(dir.path().join("id_cert.pub"))
+        .status()
+        .unwrap();
+    assert!(signed.success());
+    let cert = dir.path().join("id_cert-cert.pub");
+    let host = f.host(
+        "bastion",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: Some(vec![key.display().to_string()]),
+            identities_only: Some(true),
+            agent: Some(openward_app::vault::proto::Agent::Off),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    // Wrong passwords, so that it ends as a failed login.
+    let (_term, rx) = f.connect(host, |p| match p {
+        Prompt::Password { .. } | Prompt::KeyboardInteractive { .. } => text("not-this-one"),
+        _ => Answer::Cancel,
+    });
+    match outcome(&rx).0 {
+        Err(Some(Failure::AuthFailed {
+            expired_certificate: Some(path),
+            ..
+        })) => assert_eq!(std::path::Path::new(&path), cert),
+        other => panic!("not a failed login because of the certificate: {other:?}"),
+    }
 }
 
 /// The user, key and certificate come from the identity of the host's

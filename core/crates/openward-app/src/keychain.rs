@@ -32,10 +32,15 @@ pub struct KeyFile {
     pub comment: Option<String>,
     /// Behind a passphrase.
     pub encrypted: bool,
+    /// A security key's (FIDO2): the secret is on the key, not here.
+    pub security_key: bool,
     /// Its `.pub` is next to it.
     pub has_public: bool,
     /// A certificate (`-cert.pub`) is next to it.
     pub certificate: bool,
+    /// When that certificate runs out; `None` if it never does (or there
+    /// is none, or it cannot be read).
+    pub certificate_until: Option<std::time::SystemTime>,
     /// Hosts, groups and identities whose keys include it, by name.
     pub used_by: Vec<String>,
 }
@@ -67,6 +72,9 @@ pub enum KeyError {
     /// PEM and PuTTY keys: their passphrase is changed with their program.
     #[error("only OpenSSH keys can be given another passphrase here")]
     NotOpenSsh,
+    /// The security key did not make one.
+    #[error("{0}")]
+    SecurityKey(openward_fido::FidoError),
 }
 
 fn io(e: impl std::fmt::Display) -> KeyError {
@@ -199,8 +207,20 @@ fn describe(local: &Local, file: &Path, users: &[(PathBuf, String)]) -> KeyFile 
             .map(|p| p.comment().as_str_lossy().to_owned())
             .filter(|c| !c.is_empty()),
         encrypted,
+        security_key: public.as_ref().is_some_and(|p| {
+            matches!(
+                p.algorithm(),
+                openward_ssh::russh::keys::Algorithm::SkEd25519
+                    | openward_ssh::russh::keys::Algorithm::SkEcdsaSha2NistP256
+            )
+        }),
         has_public: pub_path.is_file(),
         certificate: with_suffix(file, "-cert.pub").is_file(),
+        certificate_until: openward_ssh::russh::keys::ssh_key::Certificate::read_file(
+            &with_suffix(file, "-cert.pub"),
+        )
+        .ok()
+        .and_then(|c| c.valid_before_time()),
         used_by,
     }
 }
@@ -423,6 +443,40 @@ pub fn generate(
     Ok(describe(local, &path, &users()))
 }
 
+/// A key to make on a security key.
+pub struct NewSecurityKey<'a> {
+    pub kind: openward_fido::Kind,
+    pub comment: &'a str,
+    /// The security key's PIN, when it has one.
+    pub pin: Option<&'a str>,
+    /// Asked for at every use (`verify-required`), not only touched.
+    pub verify: bool,
+}
+
+/// Makes `~/.ssh/<name>` on the security key plugged in: touched, with its
+/// PIN when it has one. The file holds no secret: the key does.
+pub fn generate_security_key(
+    local: &Local,
+    name: &str,
+    keys: &dyn openward_fido::Authenticator,
+    new: NewSecurityKey,
+    users: impl FnOnce() -> Users,
+) -> Result<KeyFile, KeyError> {
+    let path = new_path(local, name)?;
+    let pin = new.pin.filter(|p| !p.is_empty());
+    let key = openward_fido::new_key(keys, new.kind, new.comment, pin, new.verify)
+        .map_err(KeyError::SecurityKey)?;
+    let public = key
+        .public_key()
+        .to_openssh()
+        .map_err(|e| KeyError::Make(e.to_string()))?;
+    let text = key
+        .to_openssh(LineEnding::LF)
+        .map_err(|e| KeyError::Make(e.to_string()))?;
+    write_pair(&path, text.as_bytes(), Some(&public))?;
+    Ok(describe(local, &path, &users()))
+}
+
 /// Saves a private key given as text (OpenSSH, PEM or PuTTY's) as
 /// `~/.ssh/<name>`, with its `.pub` when its public half can be read.
 pub fn import(
@@ -542,6 +596,57 @@ pub fn with_authorized(existing: Option<&[u8]>, line: &str) -> Option<Vec<u8>> {
 mod tests {
     use super::*;
 
+    /// A key made on a security key: its file and .pub, described as one,
+    /// with no secret in the file.
+    #[test]
+    fn a_key_made_on_a_security_key() {
+        let home = tempfile::tempdir().unwrap();
+        let local = Local {
+            home: home.path().to_owned(),
+            user: "ana".into(),
+            ssh_dir: home.path().join(".ssh"),
+            system_ssh_dir: home.path().join("etc-ssh"),
+            agent: None,
+        };
+        let soft = openward_fido::soft::SoftKeys::new();
+        let new = |kind| NewSecurityKey {
+            kind,
+            comment: "ana@yubikey",
+            pin: None,
+            verify: false,
+        };
+        let k = generate_security_key(
+            &local,
+            "id_ed25519_sk",
+            &soft,
+            new(openward_fido::Kind::Ed25519),
+            Users::default,
+        )
+        .unwrap();
+        assert_eq!(k.algorithm.as_deref(), Some("Ed25519-SK"));
+        assert!(k.has_public && !k.encrypted && k.security_key);
+        let k = generate_security_key(
+            &local,
+            "id_ecdsa_sk",
+            &soft,
+            new(openward_fido::Kind::Ecdsa),
+            Users::default,
+        )
+        .unwrap();
+        assert_eq!(k.algorithm.as_deref(), Some("ECDSA-SK P-256"));
+        let none = openward_fido::soft::SoftKeys::with_pin("1234");
+        assert_eq!(
+            generate_security_key(
+                &local,
+                "id_x",
+                &none,
+                new(openward_fido::Kind::Ed25519),
+                Users::default
+            ),
+            Err(KeyError::SecurityKey(openward_fido::FidoError::PinRequired))
+        );
+    }
+
     fn local(dir: &Path) -> Local {
         Local {
             home: dir.to_owned(),
@@ -631,7 +736,7 @@ mod tests {
             ))
             .unwrap();
         let k = import(&local, "traida", &text, || users(&local, &vault)).unwrap();
-        assert!(k.has_public && !k.encrypted);
+        assert!(k.has_public && !k.encrypted && !k.security_key);
         assert_eq!(k.used_by, ["web"]);
         assert_eq!(
             k.fingerprint,

@@ -426,6 +426,9 @@ class _KeyItem extends StatelessWidget {
     final c = ow.colors;
     final l = context.l10n;
     final cert = info.certificate;
+    final soon = cert == null || cert.expired
+        ? null
+        : certificateDaysLeft(cert.validBeforeMs);
     final missing = info.state == KeyStateKind.missing;
     return Container(
       decoration: BoxDecoration(
@@ -536,10 +539,15 @@ class _KeyItem extends StatelessWidget {
                         ? l.certExpiredOn(certDate(l, cert))
                         : cert.validBeforeMs == null
                         ? l.certForever
-                        : l.certUntil(certDate(l, cert)),
+                        : [
+                            l.certUntil(certDate(l, cert)),
+                            if (soon != null) l.certExpiresIn(soon),
+                          ].join(' · '),
                     style: TextStyle(
                       fontSize: OwText.small,
-                      color: cert.expired ? c.warn : c.accentText,
+                      color: cert.expired || soon != null
+                          ? c.warn
+                          : c.accentText,
                     ),
                   ),
                   if (cert.implicit)

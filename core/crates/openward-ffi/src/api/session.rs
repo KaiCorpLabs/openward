@@ -116,6 +116,8 @@ pub struct PersistentView {
 pub enum StageKind {
     Connecting,
     Authenticating,
+    /// Touch the security key of the key file in `label`.
+    TouchKey,
     OpeningShell,
     OpeningSftp,
 }
@@ -139,6 +141,40 @@ pub enum PromptKind {
     KeyboardInteractive,
     /// The proxy's password; first its user when `user` is empty.
     ProxyLogin,
+    /// The PIN of the security key that holds the key file `key`.
+    SecurityKeyPin,
+}
+
+/// Why a security key did not sign or make a key.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SecurityKeyKind {
+    NoKey,
+    TooManyKeys,
+    PinRequired,
+    WrongPin,
+    Locked,
+    NotTouched,
+    NotThisKey,
+    /// Windows, without administrator rights: the agent of its OpenSSH.
+    NoAccess,
+    Other,
+}
+
+impl SecurityKeyKind {
+    pub(crate) fn of(p: openward_app::events::SecurityKeyProblem) -> Self {
+        use openward_app::events::SecurityKeyProblem as P;
+        match p {
+            P::NoKey => Self::NoKey,
+            P::TooManyKeys => Self::TooManyKeys,
+            P::PinRequired => Self::PinRequired,
+            P::WrongPin => Self::WrongPin,
+            P::Locked => Self::Locked,
+            P::NotTouched => Self::NotTouched,
+            P::NotThisKey => Self::NotThisKey,
+            P::NoAccess => Self::NoAccess,
+            P::Other => Self::Other,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -299,6 +335,11 @@ pub struct FailureView {
     pub net: Option<NetKind>,
     pub serial: Option<SerialKind>,
     pub seconds: u32,
+    /// With [`FailureKind::AuthFailed`]: a certificate that had run out
+    /// and was not offered (its path); empty if none.
+    pub expired_certificate: String,
+    /// With [`FailureKind::AuthFailed`]: a security key that did not sign.
+    pub security_key: Option<SecurityKeyKind>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -402,11 +443,15 @@ pub(crate) fn failure_view(f: Failure) -> FailureView {
             label,
             user,
             methods,
+            expired_certificate,
+            security_key,
         } => FailureView {
             kind: Some(FailureKind::AuthFailed),
             label,
             user,
             methods,
+            expired_certificate: expired_certificate.unwrap_or_default(),
+            security_key: security_key.map(SecurityKeyKind::of),
             ..v
         },
         Failure::Cancelled => FailureView {
@@ -500,6 +545,12 @@ fn prompt_view(id: u64, p: Prompt) -> PromptView {
             retry,
             ..v
         },
+        Prompt::SecurityKeyPin { key, retry } => PromptView {
+            kind: Some(PromptKind::SecurityKeyPin),
+            key,
+            retry,
+            ..v
+        },
         Prompt::ProxyLogin { proxy, user, retry } => PromptView {
             kind: Some(PromptKind::ProxyLogin),
             host: proxy,
@@ -585,6 +636,7 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
                     Stage::Authenticating => StageKind::Authenticating,
                     Stage::OpeningShell => StageKind::OpeningShell,
                     Stage::OpeningSftp => StageKind::OpeningSftp,
+                    Stage::TouchKey => StageKind::TouchKey,
                 },
             });
         }

@@ -536,6 +536,12 @@ abstract class AppLocalizations {
   /// **'caducó el {date}'**
   String certExpiredOn(String date);
 
+  /// No description provided for @certExpiresIn.
+  ///
+  /// In es, this message translates to:
+  /// **'caduca en {days, plural, =1{1 día} other{{days} días}}'**
+  String certExpiresIn(int days);
+
   /// No description provided for @certForever.
   ///
   /// In es, this message translates to:
@@ -1916,11 +1922,23 @@ abstract class AppLocalizations {
   /// **'{user}@{label} no ha podido autenticarse.'**
   String failureAuth(String user, String label);
 
+  /// No description provided for @failureAuthCertExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo entrar como {user} en {host}: el certificado {path} ha caducado; pide uno nuevo.'**
+  String failureAuthCertExpired(String user, String host, String path);
+
   /// No description provided for @failureAuthMethods.
   ///
   /// In es, this message translates to:
   /// **'{user}@{label} no ha podido autenticarse (el servidor acepta: {methods}).'**
   String failureAuthMethods(String user, String label, String methods);
+
+  /// No description provided for @failureAuthSecurityKey.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo entrar como {user} en {host}: {why}.'**
+  String failureAuthSecurityKey(String user, String host, String why);
 
   /// No description provided for @failureBadCertificate.
   ///
@@ -3391,6 +3409,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Para servidores antiguos que no aceptan nada más nuevo. Tarda unos segundos en crearse.'**
   String get keyTypeRsa;
+
+  /// No description provided for @keyTypeSecurityEcdsa.
+  ///
+  /// In es, this message translates to:
+  /// **'ECDSA P-256 en la llave: la tienen todas las llaves FIDO2.'**
+  String get keyTypeSecurityEcdsa;
+
+  /// No description provided for @keyTypeSecurityEd25519.
+  ///
+  /// In es, this message translates to:
+  /// **'Ed25519 en la llave: la mejor opción si tu llave la tiene (casi todas desde 2020).'**
+  String get keyTypeSecurityEd25519;
 
   /// No description provided for @keys.
   ///
@@ -5414,6 +5444,18 @@ abstract class AppLocalizations {
   /// **'Dejarla abierta'**
   String get onExitNever;
 
+  /// No description provided for @onSecurityKey.
+  ///
+  /// In es, this message translates to:
+  /// **'En una llave de seguridad (FIDO2)'**
+  String get onSecurityKey;
+
+  /// No description provided for @onSecurityKeyNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Toca la llave cuando parpadee. El archivo no guarda ningún secreto: sin la llave no sirve, y nadie puede sacarla de ella.'**
+  String get onSecurityKeyNote;
+
   /// No description provided for @onSend.
   ///
   /// In es, this message translates to:
@@ -5941,6 +5983,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Elige una identidad o «Ninguna».'**
   String get pickIdentity;
+
+  /// No description provided for @pinField.
+  ///
+  /// In es, this message translates to:
+  /// **'PIN'**
+  String get pinField;
 
   /// No description provided for @pinSidebar.
   ///
@@ -6992,6 +7040,30 @@ abstract class AppLocalizations {
   /// **'Sistema'**
   String get sectionSystem;
 
+  /// No description provided for @securityKeyPill.
+  ///
+  /// In es, this message translates to:
+  /// **'Llave de seguridad'**
+  String get securityKeyPill;
+
+  /// No description provided for @securityKeyPinBody.
+  ///
+  /// In es, this message translates to:
+  /// **'La clave {key} pide el PIN de su llave.'**
+  String securityKeyPinBody(String key);
+
+  /// No description provided for @securityKeyPinOptional.
+  ///
+  /// In es, this message translates to:
+  /// **'PIN de la llave (si tiene)'**
+  String get securityKeyPinOptional;
+
+  /// No description provided for @securityKeyPinTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'PIN de la llave de seguridad'**
+  String get securityKeyPinTitle;
+
   /// No description provided for @seenFrom.
   ///
   /// In es, this message translates to:
@@ -7562,6 +7634,66 @@ abstract class AppLocalizations {
   /// **'desde hace {seconds} s'**
   String sinceSeconds(int seconds);
 
+  /// No description provided for @skLocked.
+  ///
+  /// In es, this message translates to:
+  /// **'la llave está bloqueada por demasiados PIN incorrectos: desconéctala y vuelve a conectarla'**
+  String get skLocked;
+
+  /// No description provided for @skNoAccess.
+  ///
+  /// In es, this message translates to:
+  /// **'Windows no deja a OpenWard hablar con la llave: usa el agente de OpenSSH de Windows (ssh-add) para las llaves de seguridad'**
+  String get skNoAccess;
+
+  /// No description provided for @skNoAccessLinux.
+  ///
+  /// In es, this message translates to:
+  /// **'Linux no deja a OpenWard abrir la llave: falta la regla de udev que da acceso a /dev/hidraw* (la instalan los paquetes libfido2 o u2f-udev)'**
+  String get skNoAccessLinux;
+
+  /// No description provided for @skNoKey.
+  ///
+  /// In es, this message translates to:
+  /// **'no hay ninguna llave de seguridad conectada'**
+  String get skNoKey;
+
+  /// No description provided for @skNotThisKey.
+  ///
+  /// In es, this message translates to:
+  /// **'la llave conectada no es la de esta clave'**
+  String get skNotThisKey;
+
+  /// No description provided for @skNotTouched.
+  ///
+  /// In es, this message translates to:
+  /// **'no se tocó la llave a tiempo'**
+  String get skNotTouched;
+
+  /// No description provided for @skOther.
+  ///
+  /// In es, this message translates to:
+  /// **'la llave de seguridad ha fallado (más en «Detalles»)'**
+  String get skOther;
+
+  /// No description provided for @skPinRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'la llave pide su PIN'**
+  String get skPinRequired;
+
+  /// No description provided for @skTooManyKeys.
+  ///
+  /// In es, this message translates to:
+  /// **'hay más de una llave de seguridad conectada: deja solo la de esta clave'**
+  String get skTooManyKeys;
+
+  /// No description provided for @skWrongPin.
+  ///
+  /// In es, this message translates to:
+  /// **'el PIN no es el de la llave'**
+  String get skWrongPin;
+
   /// No description provided for @skipGuide.
   ///
   /// In es, this message translates to:
@@ -7693,6 +7825,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Abriendo el shell en {label}…'**
   String stageOpeningShell(String label);
+
+  /// No description provided for @stageTouchKey.
+  ///
+  /// In es, this message translates to:
+  /// **'Toca la llave de seguridad ({key})…'**
+  String stageTouchKey(String key);
 
   /// No description provided for @start.
   ///
@@ -7885,6 +8023,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Listo'**
   String get stepReady;
+
+  /// No description provided for @stepTouchKey.
+  ///
+  /// In es, this message translates to:
+  /// **'toca la llave de seguridad…'**
+  String get stepTouchKey;
 
   /// No description provided for @stopAction.
   ///
@@ -8257,6 +8401,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Plegar o abrir la barra lateral'**
   String get toggleSidebar;
+
+  /// No description provided for @touchKeyNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Toca la llave de seguridad…'**
+  String get touchKeyNow;
 
   /// No description provided for @transfers.
   ///
@@ -8642,6 +8792,12 @@ abstract class AppLocalizations {
   /// **'Verificación'**
   String get verificationTitle;
 
+  /// No description provided for @verifyRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Pedir el PIN cada vez que se use'**
+  String get verifyRequired;
+
   /// No description provided for @via.
   ///
   /// In es, this message translates to:
@@ -8887,6 +9043,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Contraseña incorrecta.'**
   String get wrongPassword;
+
+  /// No description provided for @wrongPin.
+  ///
+  /// In es, this message translates to:
+  /// **'El PIN no es el de la llave.'**
+  String get wrongPin;
 
   /// No description provided for @yes.
   ///

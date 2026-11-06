@@ -127,6 +127,16 @@ abstract class OpenWard implements RustOpaqueInterface {
     String? passphrase,
   });
 
+  /// Makes `~/.ssh/<name>` on the security key plugged in: it waits
+  /// for the touch. `verify`: its PIN at every use (`verify-required`).
+  Future<SshKeyResult> generateSecurityKey({
+    required String name,
+    required SecurityKeyType kind,
+    required String comment,
+    String? pin,
+    required bool verify,
+  });
+
   GroupDetail group({required String id});
 
   List<GroupView> groups();

@@ -195,6 +195,14 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - con el servidor detrás de un cortafuegos que no deja pasar UDP (o un host sin `mosh`), la sesión debe seguir por SSH, en tmux, con una línea que diga por qué;
    - sin `mosh-client` en el equipo, igual, y la línea debe decir cómo instalarlo;
    - si `mosh-server` no está en el `PATH` del servidor (Homebrew en un Mac), pon su ruta en «Servidor de Mosh».
+27. **Llaves de seguridad y certificados** (P3 del [camino a la Community](community.md#p3--llaves-fido2-y-certificados)), con una YubiKey u otra llave FIDO2, en los tres sistemas:
+   - **crear:** «Claves» › «Nueva clave» › «En una llave de seguridad», Ed25519, y toca la llave cuando parpadee. Debe quedar `~/.ssh/id_ed25519_sk` con «Llave de seguridad» en la lista. Con una llave sin Ed25519 (las anteriores a 2020), elige ECDSA;
+   - **entrar:** pon la clave en un servidor («Poner en un servidor») y conecta. La tarjeta debe pedir el toque, y sin tocarla debe decir que no se tocó a tiempo;
+   - **el PIN:** crea otra con «Pedir el PIN cada vez». Al conectar, debe pedir el PIN, y con uno mal, decirlo y volver a pedirlo;
+   - **otra llave:** con una segunda llave conectada en lugar de la primera, el error debe decir que no es la de esta clave; con las dos a la vez, que hay más de una;
+   - **importar** una hecha con `ssh-keygen -t ed25519-sk`: debe entrar igual;
+   - **en Linux**, sin la regla de udev de `/dev/hidraw*`, el error debe decir que falta y qué paquete la trae; **en Windows**, sin ser administrador, que se use el agente de OpenSSH de Windows;
+   - **un certificado** que caduque en unos días (`ssh-keygen -s ca -V +3d`): «caduca en 3 días» en las claves y en la identidad. Ya caducado, el error al entrar debe decir que es el certificado.
  Ctrl+Mayús+K abre la paleta y Ctrl+Mayús+/ la hoja de atajos. La barra lateral se pliega con Ctrl+Mayús+L (Ctrl+B es del shell).
 
 ## Cómo informar

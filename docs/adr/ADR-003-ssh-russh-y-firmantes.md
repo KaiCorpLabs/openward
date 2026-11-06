@@ -61,6 +61,19 @@ Necesitamos un cliente SSH embebible en Rust que funcione en las 5 plataformas, 
 
 Dependemos de un proyecto open source con un mantenedor principal (unas 1.900 estrellas). Hay que presupuestar contribuciones upstream (firma `sk-*` en `ssh-key`, CI móvil, casos raros de servidores) y tener una matriz de interoperabilidad en CI. Las alertas de seguridad corregidas en la 0.64.0 y la 0.64.1 obligan a vigilar los avisos de seguridad (`cargo-audit`) y a actualizar con rapidez. Los firmantes de plataforma necesitan código `unsafe` o FFI aislado en crates aparte y revisado.
 
+## Revisión del 2026-11-06: llaves FIDO2 en escritorio
+
+Con P3 del [camino a la Community](../plan/community.md#p3--llaves-fido2-y-certificados):
+
+- **La firma `sk-*`** la hace el crate `openward-fido`. Pide a la llave una aserción CTAP2 para la aplicación `ssh:` sobre `SHA-256` de los datos, y monta con ella la firma de OpenSSH: la de la llave, sus flags y su contador (`PROTOCOL.u2f`). `ssh-key` la verifica, así que las pruebas la comprueban como lo hace el servidor.
+- **La llave** se habla por un trait `Authenticator`:
+  - en escritorio, `ctap-hid-fido2` por USB HID, con `aws-lc-rs` y sin `libfido2`;
+  - en las pruebas, uno por software que firma igual.
+- **`russh`** recibe la firma por una función (`auth_signed`, sobre su `Signer`), que corre fuera del runtime porque espera el toque.
+- **Linux:** compilar pide `libudev-dev` (`hidapi`), y la app usa `libudev.so.1`, que traen todas las distribuciones con systemd. La licencia de HIDAPI (la opción BSD) va en las licencias de la app.
+- **Windows** no deja hablar con una llave FIDO a un programa sin permisos de administrador. Ahí la llave va por el agente de OpenSSH de Windows, que usa WebAuthn, y la app lo dice.
+- Secure Enclave y Keystore siguen con S3 y con D4 de la v0.4.
+
 ## Validación y revisión
 
 Aceptado para escritorio con la matriz de S2 en verde, que corre en la CI de Linux en cada push contra servidores reales. La parte de firmantes se acepta con S3 funcionando en dos plataformas. Reabrir si `russh` deja de mantenerse más de 6 meses o si hay un fallo de seguridad sin corregir en el transporte.

@@ -10,7 +10,8 @@
 # cargo knows nothing of: Ghostty's license and those of what it builds in
 # (simdutf, Highway, Wuffs, uucode) come from its sources at the commit in
 # GHOSTTY_COMMIT and from Zig's package cache, both left by
-# build-libghostty.sh. Needs cargo-about and jq (`make setup`).
+# build-libghostty.sh; HIDAPI's (the C the hidapi crate builds in), from
+# that crate's sources. Needs cargo-about and jq (`make setup`).
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -125,7 +126,20 @@ jq -n \
     {packages: ["Wuffs"], text: $wuffs},
     {packages: ["uucode"], text: $uucode}]' > "$tmp/ghostty.json"
 
-jq -s '.[0] + .[1]' "$tmp/ghostty.json" "$tmp/rust.json" > "$tmp/core.json"
+# HIDAPI, the C that hidapi (security keys) builds in, under the BSD-style
+# one of its three licenses.
+hidapi="$(cd "$root/core" && cargo metadata --format-version 1 --offline 2>/dev/null |
+  jq -r '.packages[] | select(.name == "hidapi") | .manifest_path')"
+[[ -n "$hidapi" ]] || { echo "hidapi is not among the crates" >&2; exit 1; }
+{
+  echo "HIDAPI can be used under one of three licenses: OpenWard takes the BSD-style one."
+  echo
+  cat "$(dirname "$hidapi")/etc/hidapi/LICENSE-bsd.txt"
+} > "$tmp/hidapi.txt"
+jq -n --rawfile hidapi "$tmp/hidapi.txt" \
+  '[{packages: ["HIDAPI (hidapi)"], text: $hidapi}]' > "$tmp/c.json"
+
+jq -s '.[0] + .[1] + .[2]' "$tmp/ghostty.json" "$tmp/c.json" "$tmp/rust.json" > "$tmp/core.json"
 
 if $check; then
   if ! cmp -s "$tmp/core.json" "$out"; then

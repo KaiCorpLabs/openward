@@ -174,6 +174,29 @@ Ese mismo día se descartó montar Postgres y Supabase Auth aparte para OpenWard
   - en las pruebas automáticas, un autenticador por software, y una llave real a mano antes de cerrar el hito.
 - Las claves en el Secure Enclave (Touch ID) van con D4 de la v0.4, porque comparten su riesgo de firma.
 
+#### Qué deja P3 hecho
+
+- **El núcleo** (`openward-fido`, [ADR-003](../adr/ADR-003-ssh-russh-y-firmantes.md#revisión-del-2026-11-06-llaves-fido2-en-escritorio)):
+  - pide a la llave una aserción CTAP2 para `ssh:` y monta con ella la firma de OpenSSH (la de la llave, sus flags y su contador);
+  - habla con la llave por USB HID con `ctap-hid-fido2`, sin `libfido2`, detrás de un trait `Authenticator`;
+  - en las pruebas, un autenticador por software que firma como una llave.
+- **Iniciar sesión** con una clave `sk` de `IdentityFile` o de una identidad:
+  - la tarjeta de conexión dice «toca la llave de seguridad…» en el paso de ese salto;
+  - si la clave se hizo con `verify-required`, pide el PIN, con hasta tres intentos;
+  - si falla, dice por qué en palabras: no hay llave, hay más de una, el PIN, bloqueada, no se tocó a tiempo, no es la llave de esta clave, o Windows no deja (ahí, el agente de OpenSSH de Windows).
+- **Generar:** «Nueva clave» › «En una llave de seguridad (FIDO2)», Ed25519 o ECDSA P-256, con el PIN si la llave lo tiene y «Pedir el PIN cada vez». Se guarda como `~/.ssh/id_ed25519_sk` y su `.pub`; el archivo no guarda ningún secreto. Las de `ssh-keygen -t ed25519-sk` se importan como cualquier clave.
+- **La página de claves:** «Llave de seguridad» en vez de la frase de paso.
+- **Certificados:**
+  - uno caducado no se ofrece, y si el inicio de sesión falla, el error dice que fue eso;
+  - las claves y las identidades avisan la última semana: «caduca en 3 días».
+- **Pruebas:**
+  - las dos clases de llave firman y OpenSSH lo verifica; el PIN; la llave de otra clave;
+  - en S2: entrar con una clave `sk`, que con otra llave diga «no es la de esta clave», y un certificado que caducó ayer.
+- **Pendiente:**
+  - una llave de verdad a mano en los tres sistemas (punto 27 de [la guía](prueba-v0.3.md));
+  - en Linux, el usuario necesita acceso a `/dev/hidraw*`: la regla de udev la traen `libfido2` o `u2f-udev` en casi todas las distribuciones;
+  - las llaves residentes (`-O resident`) no se crean; las que ya existen se sacan con `ssh-keygen -K` y se importan.
+
 ### P4 · Terminal
 
 - **Copiar al seleccionar y pegar con clic derecho**, como ajustes de la app.

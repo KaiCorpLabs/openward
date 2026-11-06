@@ -9,6 +9,8 @@ FailureView _failure(
   CertKind? cert,
   int seconds = 0,
   String reason = '',
+  String expired = '',
+  SecurityKeyKind? securityKey,
 }) => FailureView(
   kind: kind,
   message: 'db: $reason',
@@ -25,6 +27,8 @@ FailureView _failure(
   cert: cert,
   net: net,
   seconds: seconds,
+  expiredCertificate: expired,
+  securityKey: securityKey,
 );
 
 FailureView _network(NetKind net, {int seconds = 0, String reason = ''}) =>
@@ -105,6 +109,7 @@ void main() {
         previous: const [],
         serial: kind,
         seconds: 0,
+        expiredCertificate: '',
       );
       return failureText(l, f);
     }
@@ -117,5 +122,31 @@ void main() {
     for (final k in SerialKind.values) {
       expect(say(k), isNot(contains('went away')), reason: '$k');
     }
+  });
+
+  test('a login that failed says first what likely made it fail', () {
+    final l = AppLocalizationsEs();
+    final plain = failureText(l, _failure(FailureKind.authFailed));
+    final key = failureText(
+      l,
+      _failure(
+        FailureKind.authFailed,
+        securityKey: SecurityKeyKind.notThisKey,
+        expired: '~/.ssh/id_ed25519-cert.pub',
+      ),
+    );
+    // The security key before the certificate: it is what was tried.
+    expect(key, contains(l.skNotThisKey));
+    expect(key, isNot(equals(plain)));
+    final cert = failureText(
+      l,
+      _failure(FailureKind.authFailed, expired: '~/.ssh/id_ed25519-cert.pub'),
+    );
+    expect(cert, contains('id_ed25519-cert.pub'));
+    // Every kind has its own words, none the core's English.
+    final said = {
+      for (final k in SecurityKeyKind.values) securityKeyReason(l, k),
+    };
+    expect(said, hasLength(SecurityKeyKind.values.length));
   });
 }
