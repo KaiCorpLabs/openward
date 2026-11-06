@@ -324,7 +324,7 @@ jobs:
       - name: List screenshots
         if: always()
         run: ls -R "$OPENWARD_SHOTS" 2>/dev/null | head -50 || echo "no screenshots"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: OpenWard-screenshots-${{ runner.os }}
@@ -354,7 +354,7 @@ jobs:
               ;;
           esac
           ls -la build/OpenWard-*
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: OpenWard-${{ runner.os }}
           path: app/build/OpenWard-*
