@@ -20,6 +20,7 @@ HostView _host(String id, String label, {int? favorite}) => HostView(
   port: 22,
   protocol: ProtocolKind.ssh,
   terminalScheme: '',
+  startupSnippet: '',
   favorite: favorite,
 );
 

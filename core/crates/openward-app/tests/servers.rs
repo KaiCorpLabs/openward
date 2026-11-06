@@ -155,6 +155,16 @@ impl Fixture {
         host: ItemId,
         reply: impl Fn(&Prompt) -> Answer + Send + Sync + 'static,
     ) -> Receiver<Event> {
+        self.connect_with(term, host, reply, false)
+    }
+
+    fn connect_with(
+        &self,
+        term: &Arc<Terminal>,
+        host: ItemId,
+        reply: impl Fn(&Prompt) -> Answer + Send + Sync + 'static,
+        reuse: bool,
+    ) -> Receiver<Event> {
         let (tx, rx) = channel();
         let ui = Arc::new(Ui {
             app: OnceLock::new(),
@@ -162,7 +172,11 @@ impl Fixture {
             reply: Box::new(reply),
         });
         let _ = ui.app.set(Arc::downgrade(&self.app));
-        self.app.connect(term, host, ui).unwrap();
+        if reuse {
+            self.app.connect_reusing(term, host, ui).unwrap();
+        } else {
+            self.app.connect(term, host, ui).unwrap();
+        }
         rx
     }
 }
@@ -423,6 +437,38 @@ fn demo_host(f: &Fixture, label: &str, port: u16, persistent: Option<bool>) -> I
             ..Settings::default()
         },
     )
+}
+
+/// A second terminal asked to reuse goes over the first one's connection:
+/// it does not log in again, and both shells answer.
+#[test]
+fn a_second_shell_goes_over_the_connection_that_is_up() {
+    let f = Fixture::new(servers!());
+    let host = demo_host(&f, "s2-openssh-9.2", 22092, None);
+    let (first, rx) = f.connect(host, |_| Answer::Cancel);
+    first_shell(&rx);
+    let second = f.app.terminal(80, 24, 1000);
+    let rx2 = f.connect_with(&second, host, |_| Answer::Cancel, true);
+    let mut logged_in = false;
+    loop {
+        match rx2
+            .recv_timeout(Duration::from_secs(30))
+            .expect("no outcome")
+        {
+            Event::Stage {
+                stage: Stage::Authenticating,
+                ..
+            } => logged_in = true,
+            Event::Connected(_) => break,
+            Event::Closed { failure, .. } => panic!("{failure:?}"),
+            _ => {}
+        }
+    }
+    assert!(!logged_in, "it logged in again");
+    second.text("echo second-$((6*7))\n");
+    wait_for(&second, "second-42");
+    first.text("echo first-$((6*7))\n");
+    wait_for(&first, "first-42");
 }
 
 /// A server that stops answering without closing (frozen, as when it

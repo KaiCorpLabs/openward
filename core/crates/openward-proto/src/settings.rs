@@ -128,6 +128,9 @@ settings! {
     /// The terminal's colors for this host: a scheme's name (the
     /// gallery's or one imported). The app's own when none.
     terminal_scheme: String,
+    /// A snippet (by id) typed in each new shell once it is up: not in a
+    /// persistent session found again as it was. Empty for none.
+    startup_snippet: String,
 }
 
 /// What the Backspace key sends: DEL, as systems of today expect, or

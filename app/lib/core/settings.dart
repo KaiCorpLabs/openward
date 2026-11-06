@@ -173,6 +173,7 @@ class Settings {
     this.shortcutProfile = ShortcutProfile.system,
     this.terminalKeysFirst = false,
     this.autocomplete = true,
+    this.openWith = '',
   });
 
   /// Terminal font size, in logical pixels.
@@ -267,6 +268,9 @@ class Settings {
   /// command history on).
   final bool autocomplete;
 
+  /// The program remote files were last opened with («Abrir con…»).
+  final String openWith;
+
   /// Whether shortcuts go with ⌘.
   bool get macShortcuts => switch (shortcutProfile) {
     ShortcutProfile.system => keys.isApple,
@@ -328,6 +332,7 @@ class Settings {
     ShortcutProfile? shortcutProfile,
     bool? terminalKeysFirst,
     bool? autocomplete,
+    String? openWith,
   }) => Settings(
     fontSize: fontSize ?? this.fontSize,
     theme: theme ?? this.theme,
@@ -363,6 +368,7 @@ class Settings {
     shortcutProfile: shortcutProfile ?? this.shortcutProfile,
     terminalKeysFirst: terminalKeysFirst ?? this.terminalKeysFirst,
     autocomplete: autocomplete ?? this.autocomplete,
+    openWith: openWith ?? this.openWith,
   );
 
   /// The same settings with one theme's layers changed (or reset).
@@ -421,6 +427,7 @@ class Settings {
     'shortcut_profile': shortcutProfile.name,
     'terminal_keys_first': terminalKeysFirst,
     'autocomplete': autocomplete,
+    if (openWith.isNotEmpty) 'open_with': openWith,
   };
 
   /// Unknown or broken values fall back to the defaults, one by one.
@@ -505,6 +512,7 @@ class Settings {
       ),
       terminalKeysFirst: flag('terminal_keys_first', d.terminalKeysFirst),
       autocomplete: flag('autocomplete', d.autocomplete),
+      openWith: text('open_with', d.openWith),
     );
   }
 

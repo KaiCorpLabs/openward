@@ -68,6 +68,13 @@ abstract class OpenWard implements RustOpaqueInterface {
     required ProtocolKind protocol,
   });
 
+  /// As [`OpenWard::connect`], over the connection to the host that is
+  /// up already, if one is: no logging in again.
+  Stream<SessionEvent> connectReusing({
+    required TerminalSession session,
+    required String hostId,
+  });
+
   /// Connects a browser to a saved host, over a terminal's connection to
   /// it when one is up. The stream is the connection's events, as for
   /// terminals; `connected` means it can browse.

@@ -45,6 +45,7 @@ import 'package:openward/hosts/sidebar.dart';
 import 'package:openward/logs/log_viewer.dart';
 import 'package:openward/logs/logs.dart';
 import 'package:openward/src/rust/api/logs.dart';
+import 'package:openward/src/rust/api/snippets.dart';
 import 'package:openward/tabs/close_guard.dart' show confirmQuit;
 import 'package:openward/tabs/session_view.dart';
 import 'package:openward/tabs/tab_strip.dart';
@@ -54,6 +55,7 @@ import 'package:openward/terminal/controller.dart';
 import 'package:openward/terminal/keys.dart';
 import 'package:openward/terminal/renderer.dart';
 import 'package:openward/settings/settings_page.dart';
+import 'package:openward/snippets/run_on_hosts.dart';
 import 'package:openward/snippets/snippets.dart';
 import 'package:openward/sftp/sftp_controller.dart';
 import 'package:openward/sftp/transfers.dart';
@@ -1529,6 +1531,84 @@ Host web-1 web-2
     await _settle(tester);
   });
 
+  testWidgets('snippets: one a host starts with, and one on several hosts', (
+    tester,
+  ) async {
+    final fixtures = await _servers();
+    if (fixtures == null) return markTestSkipped('S2 servers not running');
+    final startup = await app.createSnippet(
+      spec: const SnippetSpec(
+        label: 'Al entrar',
+        script: r'echo startup-$((6*7)) {{host}}',
+        defaults: [],
+        typeOnly: false,
+      ),
+    );
+    await app.createSnippet(
+      spec: const SnippetSpec(
+        label: 'En todos',
+        script: r'echo multi-$((6*7)) {{host}}',
+        defaults: [],
+        typeOnly: false,
+      ),
+    );
+    SettingsSpec demo(int port, {String? startup}) => SettingsSpec(
+      user: 'demo',
+      port: port,
+      identityFiles: ['$fixtures/id_ed25519'],
+      agent: AgentKind.off,
+      hostKeyPolicy: KeyPolicy.acceptNew,
+      startupSnippet: startup,
+    );
+    await app.createHost(
+      spec: HostSpec(
+        label: 'ninetwo',
+        address: '127.0.0.1',
+        settings: demo(22092, startup: startup),
+      ),
+    );
+    await app.createHost(
+      spec: HostSpec(
+        label: 'tenzero',
+        address: '127.0.0.1',
+        settings: demo(22100),
+      ),
+    );
+    final container = await launch(tester);
+    await _connect(tester, 'ninetwo');
+    final first = container.read(tabsProvider).currentSession!;
+    await _until(
+      tester,
+      () => first.session.screenText().contains('startup-42 ninetwo'),
+      'the startup snippet',
+    );
+
+    // On both, from the snippets' page: a tab with a pane each.
+    final library = container.read(libraryProvider);
+    final s = container
+        .read(snippetsProvider)
+        .firstWhere((s) => s.spec.label == 'En todos');
+    runOnHosts(container, s, [
+      for (final label in ['ninetwo', 'tenzero'])
+        library.hosts.firstWhere((h) => h.label == label),
+    ], const {});
+    await tester.pump(const Duration(milliseconds: 300));
+    final tab = container.read(tabsProvider).current as SessionTab;
+    final panes = tab.panes.controllers.toList();
+    expect(panes.map((c) => c.label), ['ninetwo', 'tenzero']);
+    for (final c in panes) {
+      await _until(
+        tester,
+        () => c.session.screenText().contains('multi-42 ${c.label}'),
+        'the snippet on ${c.label}',
+      );
+    }
+    await _shot(tester, '81-snippet-on-hosts');
+    container.read(tabsProvider.notifier).close(1);
+    container.read(tabsProvider.notifier).close(0);
+    await _settle(tester);
+  });
+
   testWidgets('ssh: a server that does not tell its system, found out in '
       'one click', (tester) async {
     final fixtures = await _servers();
@@ -2721,6 +2801,93 @@ Host db
     container.read(tabsProvider.notifier).close(0);
     await _settle(tester);
   });
+  testWidgets('sftp: a remote file opened here goes up when saved, and asks '
+      'first if the server changed it', (tester) async {
+    final fixtures = await _servers();
+    if (fixtures == null) return markTestSkipped('S2 servers not running');
+    await app.createHost(
+      spec: HostSpec(
+        label: 'bastion',
+        address: '127.0.0.1',
+        settings: SettingsSpec(
+          user: 'demo',
+          port: 22100,
+          identityFiles: ['$fixtures/id_ed25519'],
+          agent: AgentKind.off,
+          hostKeyPolicy: KeyPolicy.acceptNew,
+        ),
+      ),
+    );
+    final container = await launch(tester);
+    final host = container
+        .read(libraryProvider)
+        .hosts
+        .firstWhere((h) => h.label == 'bastion');
+    container
+        .read(tabsProvider.notifier)
+        .openSftp(hostId: host.id, label: host.label);
+    await tester.pump();
+    final c = (container.read(tabsProvider).current! as SftpTab).controller;
+    await _until(tester, () => c.remote.path == '/home/demo', 'home');
+    final name = 'nota-$pid.txt';
+    final remote = '/home/demo/$name';
+    final work = Directory('${dir.path}/edit')..createSync();
+    final mine = File('${work.path}/$name')..writeAsStringSync('primera\n');
+    await c.copy(Side.local, [mine.path], '/home/demo', ask: (_) async => {});
+    Future<int?> size() async =>
+        (await c.browser.stat(path: remote))?.size.toInt();
+    await _until(
+      tester,
+      () => c.remote.entries.any((e) => e.name == name),
+      'the file there',
+    );
+    final entry = c.remote.entries.firstWhere((e) => e.name == name);
+
+    // Opened «with an app» that saves it at once.
+    var asked = 0;
+    c.edits.onChangedThere = (_) async {
+      asked++;
+      return false;
+    };
+    await c.edits.open(remote, entry, (local) async {
+      File(local).writeAsStringSync('cambiada aquí\n');
+    });
+    await tester.pump();
+    expect(find.byKey(const ValueKey('sftp.edits')), findsOneWidget);
+    await _until(
+      tester,
+      () => c.edits.edits.single.uploaded != null,
+      'the upload',
+    );
+    expect(await size(), 'cambiada aquí\n'.length);
+
+    // Changed on the server meanwhile: asked, and not uploaded.
+    await Future<void>.delayed(const Duration(milliseconds: 1100));
+    mine.writeAsStringSync('cambiada en el servidor, más larga\n');
+    await c.copy(
+      Side.local,
+      [mine.path],
+      '/home/demo',
+      ask: (conflicts) async {
+        return {for (final x in conflicts) x.source: ConflictChoice.replace};
+      },
+    );
+    await _until(
+      tester,
+      () => c.queue.jobs.every((j) => j.finished),
+      'the other upload',
+    );
+    final there = await size();
+    File(c.edits.edits.single.local).writeAsStringSync('otra vez aquí\n');
+    await _until(tester, () => asked == 1, 'the question');
+    await tester.pump(const Duration(milliseconds: 1500));
+    expect(await size(), there);
+
+    await c.browser.remove(paths: [remote]);
+    container.read(tabsProvider.notifier).close(0);
+    await _settle(tester);
+  });
+
   testWidgets(
     'sftp: from the terminal, folders, copies both ways, conflicts, permissions',
     (tester) async {

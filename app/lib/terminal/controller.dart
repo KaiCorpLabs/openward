@@ -24,9 +24,22 @@ class TerminalController extends ConnectionController {
     super.hostId,
     super.target,
     int scrollback = 0,
+    this.reuse = false,
   }) : session = app.terminal(cols: 80, rows: 24, scrollback: scrollback) {
     _wakes = session.watch().listen((_) => _onWake());
   }
+
+  /// Over the connection to its host that is up already, if one is
+  /// (snippets run on several hosts): no logging in again.
+  final bool reuse;
+
+  /// What to type in each new shell once it is up (the host's startup
+  /// snippet), worked out then; null for nothing.
+  String? Function()? startup;
+
+  /// Typed once in the next shell that comes up (a snippet run on several
+  /// hosts), after [startup]; with Enter, or left on the line.
+  ({String text, bool enter})? sendWhenUp;
 
   /// A recording played back into `session` (its player's): drawn like
   /// any terminal, never connected nor typed into.
@@ -34,7 +47,7 @@ class TerminalController extends ConnectionController {
     required super.app,
     required super.label,
     required this.session,
-  }) {
+  }) : reuse = false {
     _wakes = session.watch().listen((_) => _onWake());
   }
 
@@ -176,7 +189,9 @@ class TerminalController extends ConnectionController {
     final hostId = this.hostId;
     final target = this.target;
     return hostId != null
-        ? app.connect(session: session, hostId: hostId)
+        ? reuse
+              ? app.connectReusing(session: session, hostId: hostId)
+              : app.connect(session: session, hostId: hostId)
         : target == null
         ? app.openLocal(session: session)
         : target.isSerial
@@ -237,6 +252,21 @@ class TerminalController extends ConnectionController {
         since == null ? Duration.zero : now.difference(since),
       );
       session.note(text: '\r\n\x1b[2m── $text ──\x1b[0m\r\n');
+    }
+    // A new shell: its startup snippet, unless tmux brings back the one
+    // from before as it was; then what was waiting for it.
+    if (e.kind == SessionEventKind.connected && !isDisposed) {
+      final resumed = persistent?.state == PersistenceKind.resumed;
+      final first = resumed ? null : startup?.call();
+      if (first != null) session.text(text: '$first\n');
+      if (sendWhenUp case final send?) {
+        sendWhenUp = null;
+        if (send.enter) {
+          session.text(text: '${send.text}\n');
+        } else {
+          session.paste(text: send.text, allowUnsafe: true);
+        }
+      }
     }
   }
 

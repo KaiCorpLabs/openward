@@ -19,9 +19,9 @@
   "address": "Dirección",
   "addressHint": "servidor.example.com o 10.0.0.5",
   "advanced": "Avanzado",
-  "advancedList": "proxy, claves del host, sesión persistente, Mosh, terminal, comprobación y agente",
-  "advancedListSerial": "terminal y registro de sesión",
-  "advancedListTelnet": "proxy, terminal, registro de sesión y tiempo para conectar",
+  "advancedList": "proxy, claves del host, sesión persistente, Mosh, terminal, snippet al conectar, comprobación y agente",
+  "advancedListSerial": "terminal, snippet al conectar y registro de sesión",
+  "advancedListTelnet": "proxy, terminal, snippet al conectar, registro de sesión y tiempo para conectar",
   "advancedSetHere": "{count, plural, =1{1 cambiado aquí} other{{count} cambiados aquí}}",
   "@advancedSetHere": {
     "placeholders": {
@@ -2792,6 +2792,16 @@
   },
   "openOnConnectNote": "Desde un terminal o un SFTP. Si el puerto está ocupado, la conexión sigue y el túnel avisa.",
   "openOtherHere": "Abrir otra cosa aquí…",
+  "openRemote": "Abrir",
+  "openRemoteFollowing": "{name} abierto aquí: se sube al servidor cada vez que lo guardes.",
+  "@openRemoteFollowing": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "openRemoteWith": "Abrir con…",
   "openSection": "Abiertas",
   "openSftp": "Abrir SFTP",
   "openSshStillWarns": "OpenWard no modifica ~/.ssh/known_hosts: ssh seguirá avisando hasta que quites la clave vieja de allí ({command}).",
@@ -2811,6 +2821,17 @@
     }
   },
   "openTunnels": "Túneles abiertos",
+  "openWithHelp": "Un comando, como code, gedit o kate; se le pasa el archivo al final.",
+  "openWithHelpMac": "El nombre de una app (TextEdit, Visual Studio Code) o un comando (/usr/local/bin/subl).",
+  "openWithProgram": "Programa",
+  "openWithTitle": "Abrir «{name}» con",
+  "@openWithTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "optionAltBoth": "Las dos",
   "optionAltLeft": "La izquierda",
   "optionAltOff": "Ninguna",
@@ -3227,6 +3248,44 @@
   "reduceMotion": "Reducir movimiento",
   "reimportNote": "Si vuelves a importar, lo que ya trajiste se queda como está, con tus cambios. Solo entra lo nuevo.",
   "reload": "Recargar",
+  "remoteChangedBody": "Alguien lo cambió desde que lo abriste aquí. Si subes tu versión, lo que cambiaron se pierde; si cancelas, tu copia sigue aquí y se vuelve a preguntar al guardar.",
+  "remoteChangedTitle": "«{name}» cambió en el servidor",
+  "@remoteChangedTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "remoteChangedUpload": "Subir el mío encima",
+  "remoteEditFailed": "{name}: no se pudo subir (más en la cola)",
+  "@remoteEditFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "remoteEditStop": "Dejar de subirlo",
+  "remoteEditUploaded": "{name}: subido a las {time}",
+  "@remoteEditUploaded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "remoteEditWatching": "{name}: se sube al guardarlo",
+  "@remoteEditWatching": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "remoteSentence": "Lo que se conecte en {host} al puerto {port} llega a {dest} de este equipo.",
   "@remoteSentence": {
     "placeholders": {
@@ -3377,6 +3436,35 @@
   "routeStart": "este equipo",
   "runEllipsis": "Ejecutar…",
   "runIn": "Ejecutar en…",
+  "runOnHostsAction": "Ejecutar en {n, plural, =0{ningún host} =1{1 host} other{{n} hosts}}",
+  "@runOnHostsAction": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "runOnHostsAll": "Todos los mostrados",
+  "runOnHostsFilter": "Filtrar por nombre, dirección, grupo o etiqueta",
+  "runOnHostsMax": "Hasta {max} a la vez.",
+  "@runOnHostsMax": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "runOnHostsMenu": "En varios hosts…",
+  "runOnHostsNone": "Ninguno",
+  "runOnHostsNote": "Cada host en su panel de una pestaña nueva, donde se ve su resultado. Los que ya están conectados no vuelven a iniciar sesión.",
+  "runOnHostsTitle": "«{snippet}» en varios hosts",
+  "@runOnHostsTitle": {
+    "placeholders": {
+      "snippet": {
+        "type": "String"
+      }
+    }
+  },
   "runSnippetBroadcast": "Va a los {count} paneles que reciben el broadcast",
   "@runSnippetBroadcast": {
     "placeholders": {
@@ -3841,6 +3929,10 @@
   },
   "startupQuit": "Salir",
   "startupShowFolder": "Mostrar la carpeta de datos",
+  "startupSnippet": "Snippet al conectar",
+  "startupSnippetGone": "Un snippet que ya no está, o que ahora pregunta algo",
+  "startupSnippetNone": "Ninguno",
+  "startupSnippetNote": "Se escribe en cada shell nuevo en cuanto está listo: al conectar y al reconectar, no al volver a una sesión persistente tal como estaba. Solo los que no preguntan nada.",
   "state": "Estado",
   "statusConnected": "Conectado",
   "statusConnecting": "Conectando",

@@ -173,19 +173,19 @@ abstract class AppLocalizations {
   /// No description provided for @advancedList.
   ///
   /// In es, this message translates to:
-  /// **'proxy, claves del host, sesión persistente, Mosh, terminal, comprobación y agente'**
+  /// **'proxy, claves del host, sesión persistente, Mosh, terminal, snippet al conectar, comprobación y agente'**
   String get advancedList;
 
   /// No description provided for @advancedListSerial.
   ///
   /// In es, this message translates to:
-  /// **'terminal y registro de sesión'**
+  /// **'terminal, snippet al conectar y registro de sesión'**
   String get advancedListSerial;
 
   /// No description provided for @advancedListTelnet.
   ///
   /// In es, this message translates to:
-  /// **'proxy, terminal, registro de sesión y tiempo para conectar'**
+  /// **'proxy, terminal, snippet al conectar, registro de sesión y tiempo para conectar'**
   String get advancedListTelnet;
 
   /// No description provided for @advancedSetHere.
@@ -5780,6 +5780,24 @@ abstract class AppLocalizations {
   /// **'Abrir otra cosa aquí…'**
   String get openOtherHere;
 
+  /// No description provided for @openRemote.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir'**
+  String get openRemote;
+
+  /// No description provided for @openRemoteFollowing.
+  ///
+  /// In es, this message translates to:
+  /// **'{name} abierto aquí: se sube al servidor cada vez que lo guardes.'**
+  String openRemoteFollowing(String name);
+
+  /// No description provided for @openRemoteWith.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir con…'**
+  String get openRemoteWith;
+
   /// No description provided for @openSection.
   ///
   /// In es, this message translates to:
@@ -5809,6 +5827,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Túneles abiertos'**
   String get openTunnels;
+
+  /// No description provided for @openWithHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Un comando, como code, gedit o kate; se le pasa el archivo al final.'**
+  String get openWithHelp;
+
+  /// No description provided for @openWithHelpMac.
+  ///
+  /// In es, this message translates to:
+  /// **'El nombre de una app (TextEdit, Visual Studio Code) o un comando (/usr/local/bin/subl).'**
+  String get openWithHelpMac;
+
+  /// No description provided for @openWithProgram.
+  ///
+  /// In es, this message translates to:
+  /// **'Programa'**
+  String get openWithProgram;
+
+  /// No description provided for @openWithTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir «{name}» con'**
+  String openWithTitle(String name);
 
   /// No description provided for @optionAltBoth.
   ///
@@ -6758,6 +6800,48 @@ abstract class AppLocalizations {
   /// **'Recargar'**
   String get reload;
 
+  /// No description provided for @remoteChangedBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Alguien lo cambió desde que lo abriste aquí. Si subes tu versión, lo que cambiaron se pierde; si cancelas, tu copia sigue aquí y se vuelve a preguntar al guardar.'**
+  String get remoteChangedBody;
+
+  /// No description provided for @remoteChangedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'«{name}» cambió en el servidor'**
+  String remoteChangedTitle(String name);
+
+  /// No description provided for @remoteChangedUpload.
+  ///
+  /// In es, this message translates to:
+  /// **'Subir el mío encima'**
+  String get remoteChangedUpload;
+
+  /// No description provided for @remoteEditFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'{name}: no se pudo subir (más en la cola)'**
+  String remoteEditFailed(String name);
+
+  /// No description provided for @remoteEditStop.
+  ///
+  /// In es, this message translates to:
+  /// **'Dejar de subirlo'**
+  String get remoteEditStop;
+
+  /// No description provided for @remoteEditUploaded.
+  ///
+  /// In es, this message translates to:
+  /// **'{name}: subido a las {time}'**
+  String remoteEditUploaded(String name, String time);
+
+  /// No description provided for @remoteEditWatching.
+  ///
+  /// In es, this message translates to:
+  /// **'{name}: se sube al guardarlo'**
+  String remoteEditWatching(String name);
+
   /// No description provided for @remoteSentence.
   ///
   /// In es, this message translates to:
@@ -7081,6 +7165,54 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ejecutar en…'**
   String get runIn;
+
+  /// No description provided for @runOnHostsAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejecutar en {n, plural, =0{ningún host} =1{1 host} other{{n} hosts}}'**
+  String runOnHostsAction(int n);
+
+  /// No description provided for @runOnHostsAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Todos los mostrados'**
+  String get runOnHostsAll;
+
+  /// No description provided for @runOnHostsFilter.
+  ///
+  /// In es, this message translates to:
+  /// **'Filtrar por nombre, dirección, grupo o etiqueta'**
+  String get runOnHostsFilter;
+
+  /// No description provided for @runOnHostsMax.
+  ///
+  /// In es, this message translates to:
+  /// **'Hasta {max} a la vez.'**
+  String runOnHostsMax(int max);
+
+  /// No description provided for @runOnHostsMenu.
+  ///
+  /// In es, this message translates to:
+  /// **'En varios hosts…'**
+  String get runOnHostsMenu;
+
+  /// No description provided for @runOnHostsNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguno'**
+  String get runOnHostsNone;
+
+  /// No description provided for @runOnHostsNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Cada host en su panel de una pestaña nueva, donde se ve su resultado. Los que ya están conectados no vuelven a iniciar sesión.'**
+  String get runOnHostsNote;
+
+  /// No description provided for @runOnHostsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'«{snippet}» en varios hosts'**
+  String runOnHostsTitle(String snippet);
 
   /// No description provided for @runSnippetBroadcast.
   ///
@@ -8227,6 +8359,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Mostrar la carpeta de datos'**
   String get startupShowFolder;
+
+  /// No description provided for @startupSnippet.
+  ///
+  /// In es, this message translates to:
+  /// **'Snippet al conectar'**
+  String get startupSnippet;
+
+  /// No description provided for @startupSnippetGone.
+  ///
+  /// In es, this message translates to:
+  /// **'Un snippet que ya no está, o que ahora pregunta algo'**
+  String get startupSnippetGone;
+
+  /// No description provided for @startupSnippetNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguno'**
+  String get startupSnippetNone;
+
+  /// No description provided for @startupSnippetNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Se escribe en cada shell nuevo en cuanto está listo: al conectar y al reconectar, no al volver a una sesión persistente tal como estaba. Solo los que no preguntan nada.'**
+  String get startupSnippetNote;
 
   /// No description provided for @state.
   ///

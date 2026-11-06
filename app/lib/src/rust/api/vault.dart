@@ -322,6 +322,10 @@ class HostView {
   /// Its terminal's scheme, its own or its groups'; empty for the app's.
   final String terminalScheme;
 
+  /// The snippet typed in each new shell, its own or its groups'; empty
+  /// for none.
+  final String startupSnippet;
+
   const HostView({
     required this.id,
     required this.label,
@@ -337,6 +341,7 @@ class HostView {
     required this.protocol,
     this.serial,
     required this.terminalScheme,
+    required this.startupSnippet,
   });
 
   @override
@@ -354,7 +359,8 @@ class HostView {
       favorite.hashCode ^
       protocol.hashCode ^
       serial.hashCode ^
-      terminalScheme.hashCode;
+      terminalScheme.hashCode ^
+      startupSnippet.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -374,7 +380,8 @@ class HostView {
           favorite == other.favorite &&
           protocol == other.protocol &&
           serial == other.serial &&
-          terminalScheme == other.terminalScheme;
+          terminalScheme == other.terminalScheme &&
+          startupSnippet == other.startupSnippet;
 }
 
 /// Which identity applies; `None` overrides one inherited.
@@ -720,6 +727,10 @@ class SettingsSpec {
   /// The terminal's colors: a scheme's name.
   final String? terminalScheme;
 
+  /// A snippet's id, typed in each new shell; empty here for none, over
+  /// a group's.
+  final String? startupSnippet;
+
   const SettingsSpec({
     this.user,
     this.port,
@@ -758,6 +769,7 @@ class SettingsSpec {
     this.encoding = null,
     this.backspace = null,
     this.terminalScheme = null,
+    this.startupSnippet = null,
   });
 
   static Future<SettingsSpec> default_() =>
@@ -801,7 +813,8 @@ class SettingsSpec {
       moshServer.hashCode ^
       encoding.hashCode ^
       backspace.hashCode ^
-      terminalScheme.hashCode;
+      terminalScheme.hashCode ^
+      startupSnippet.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -844,7 +857,8 @@ class SettingsSpec {
           moshServer == other.moshServer &&
           encoding == other.encoding &&
           backspace == other.backspace &&
-          terminalScheme == other.terminalScheme;
+          terminalScheme == other.terminalScheme &&
+          startupSnippet == other.startupSnippet;
 }
 
 enum SystemKind {

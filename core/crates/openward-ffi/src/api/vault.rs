@@ -447,6 +447,10 @@ pub struct SettingsSpec {
     /// The terminal's colors: a scheme's name.
     #[frb(default = "null")]
     pub terminal_scheme: Option<String>,
+    /// A snippet's id, typed in each new shell; empty here for none, over
+    /// a group's.
+    #[frb(default = "null")]
+    pub startup_snippet: Option<String>,
 }
 
 /// The `identity` setting of a spec.
@@ -527,6 +531,7 @@ impl SettingsSpec {
             encoding: s.encoding.clone(),
             backspace: s.backspace.map(BackspaceKind::of),
             terminal_scheme: s.terminal_scheme.clone(),
+            startup_snippet: s.startup_snippet.clone(),
             legacy_host_keys: s.legacy_host_keys,
             proxy,
             proxy_host: server.map(|s| s.host.clone()).unwrap_or_default(),
@@ -690,6 +695,7 @@ impl SettingsSpec {
         s.backspace = self.backspace.map(BackspaceKind::proto);
         // Empty here is the app's own colors, over a group's scheme.
         s.terminal_scheme = self.terminal_scheme.as_deref().map(|t| t.trim().to_owned());
+        s.startup_snippet = self.startup_snippet.as_deref().map(|t| t.trim().to_owned());
         Ok(())
     }
 }
@@ -718,6 +724,9 @@ pub struct HostView {
     pub serial: Option<SerialLineSpec>,
     /// Its terminal's scheme, its own or its groups'; empty for the app's.
     pub terminal_scheme: String,
+    /// The snippet typed in each new shell, its own or its groups'; empty
+    /// for none.
+    pub startup_snippet: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -905,6 +914,11 @@ impl SettingsSpec {
                 &base.terminal_scheme,
                 mine.terminal_scheme,
                 theirs.terminal_scheme,
+            )?,
+            startup_snippet: pick(
+                &base.startup_snippet,
+                mine.startup_snippet,
+                theirs.startup_snippet,
             )?,
         })
     }

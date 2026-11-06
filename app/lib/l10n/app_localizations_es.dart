@@ -49,14 +49,15 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get advancedList =>
-      'proxy, claves del host, sesión persistente, Mosh, terminal, comprobación y agente';
+      'proxy, claves del host, sesión persistente, Mosh, terminal, snippet al conectar, comprobación y agente';
 
   @override
-  String get advancedListSerial => 'terminal y registro de sesión';
+  String get advancedListSerial =>
+      'terminal, snippet al conectar y registro de sesión';
 
   @override
   String get advancedListTelnet =>
-      'proxy, terminal, registro de sesión y tiempo para conectar';
+      'proxy, terminal, snippet al conectar, registro de sesión y tiempo para conectar';
 
   @override
   String advancedSetHere(int count) {
@@ -3724,6 +3725,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get openOtherHere => 'Abrir otra cosa aquí…';
 
   @override
+  String get openRemote => 'Abrir';
+
+  @override
+  String openRemoteFollowing(String name) {
+    return '$name abierto aquí: se sube al servidor cada vez que lo guardes.';
+  }
+
+  @override
+  String get openRemoteWith => 'Abrir con…';
+
+  @override
   String get openSection => 'Abiertas';
 
   @override
@@ -3747,6 +3759,22 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get openTunnels => 'Túneles abiertos';
+
+  @override
+  String get openWithHelp =>
+      'Un comando, como code, gedit o kate; se le pasa el archivo al final.';
+
+  @override
+  String get openWithHelpMac =>
+      'El nombre de una app (TextEdit, Visual Studio Code) o un comando (/usr/local/bin/subl).';
+
+  @override
+  String get openWithProgram => 'Programa';
+
+  @override
+  String openWithTitle(String name) {
+    return 'Abrir «$name» con';
+  }
 
   @override
   String get optionAltBoth => 'Las dos';
@@ -4396,6 +4424,36 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reload => 'Recargar';
 
   @override
+  String get remoteChangedBody =>
+      'Alguien lo cambió desde que lo abriste aquí. Si subes tu versión, lo que cambiaron se pierde; si cancelas, tu copia sigue aquí y se vuelve a preguntar al guardar.';
+
+  @override
+  String remoteChangedTitle(String name) {
+    return '«$name» cambió en el servidor';
+  }
+
+  @override
+  String get remoteChangedUpload => 'Subir el mío encima';
+
+  @override
+  String remoteEditFailed(String name) {
+    return '$name: no se pudo subir (más en la cola)';
+  }
+
+  @override
+  String get remoteEditStop => 'Dejar de subirlo';
+
+  @override
+  String remoteEditUploaded(String name, String time) {
+    return '$name: subido a las $time';
+  }
+
+  @override
+  String remoteEditWatching(String name) {
+    return '$name: se sube al guardarlo';
+  }
+
+  @override
   String remoteSentence(String host, String port, String dest) {
     return 'Lo que se conecte en $host al puerto $port llega a $dest de este equipo.';
   }
@@ -4608,6 +4666,45 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get runIn => 'Ejecutar en…';
+
+  @override
+  String runOnHostsAction(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n hosts',
+      one: '1 host',
+      zero: 'ningún host',
+    );
+    return 'Ejecutar en $_temp0';
+  }
+
+  @override
+  String get runOnHostsAll => 'Todos los mostrados';
+
+  @override
+  String get runOnHostsFilter =>
+      'Filtrar por nombre, dirección, grupo o etiqueta';
+
+  @override
+  String runOnHostsMax(int max) {
+    return 'Hasta $max a la vez.';
+  }
+
+  @override
+  String get runOnHostsMenu => 'En varios hosts…';
+
+  @override
+  String get runOnHostsNone => 'Ninguno';
+
+  @override
+  String get runOnHostsNote =>
+      'Cada host en su panel de una pestaña nueva, donde se ve su resultado. Los que ya están conectados no vuelven a iniciar sesión.';
+
+  @override
+  String runOnHostsTitle(String snippet) {
+    return '«$snippet» en varios hosts';
+  }
 
   @override
   String runSnippetBroadcast(int count) {
@@ -5292,6 +5389,20 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get startupShowFolder => 'Mostrar la carpeta de datos';
+
+  @override
+  String get startupSnippet => 'Snippet al conectar';
+
+  @override
+  String get startupSnippetGone =>
+      'Un snippet que ya no está, o que ahora pregunta algo';
+
+  @override
+  String get startupSnippetNone => 'Ninguno';
+
+  @override
+  String get startupSnippetNote =>
+      'Se escribe en cada shell nuevo en cuanto está listo: al conectar y al reconectar, no al volver a una sesión persistente tal como estaba. Solo los que no preguntan nada.';
 
   @override
   String get state => 'Estado';

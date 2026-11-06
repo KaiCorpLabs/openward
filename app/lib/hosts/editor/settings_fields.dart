@@ -12,6 +12,8 @@ import '../../identities/identity_editor.dart';
 import '../../l10n/l10n.dart';
 import '../../src/rust/api/vault.dart';
 import '../../settings/appearance_page.dart' show themeName;
+import '../../snippets/snippets.dart' show asksNothing, snippetsProvider;
+import '../../src/rust/api/snippets.dart' show SnippetView;
 import '../../terminal/schemes.dart';
 import '../../ui/themes.dart';
 import '../../ui/tokens.dart';
@@ -135,7 +137,12 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
   };
 
   /// How the terminal reads and shows the host, whatever reaches it.
-  static const _terminalFields = ['encoding', 'backspace', 'terminal_scheme'];
+  static const _terminalFields = [
+    'encoding',
+    'backspace',
+    'terminal_scheme',
+    'startup_snippet',
+  ];
 
   /// How the item is reached with what the form says now.
   ProtocolKind get _protocol {
@@ -161,6 +168,22 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
         (s.id, s.name),
     ];
   }
+
+  /// The snippets a shell can start with: those that ask nothing.
+  List<SnippetView> get _startupSnippets => [
+    for (final s in ref.watch(snippetsProvider))
+      if (asksNothing(s)) s,
+  ];
+
+  String _snippetName(AppLocalizations l, String id) => id.isEmpty
+      ? l.startupSnippetNone
+      : ref
+                .watch(snippetsProvider)
+                .where((s) => s.id == id)
+                .firstOrNull
+                ?.spec
+                .label ??
+            l.startupSnippetGone;
 
   String _schemeName(AppLocalizations l, String id) => id.isEmpty
       ? l.terminalSchemeApp
@@ -279,6 +302,7 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
       'encoding' => charsetLabel(e.encoding ?? 'utf-8'),
       'backspace' => backspaceLabel(l, e.backspace ?? BackspaceKind.delete),
       'terminal_scheme' => _schemeName(l, e.terminalScheme ?? ''),
+      'startup_snippet' => _snippetName(l, e.startupSnippet ?? ''),
       'serial' => serialSummary(l, e.serial ?? defaultSerialLine),
       'identity_files' => e.identityFiles?.join(', ') ?? l.defaultKeys,
       'agent' => switch (e.agent) {
@@ -1077,6 +1101,47 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
                 const SizedBox(height: 8),
                 Text(
                   l.terminalSchemeNote,
+                  style: TextStyle(
+                    fontSize: OwText.small,
+                    color: ow.colors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _row(
+            field: 'startup_snippet',
+            label: l.startupSnippet,
+            editor: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<String>(
+                  style: fieldTextStyle(context),
+                  key: const ValueKey('settings.startupSnippet'),
+                  autofocus: focusFor('startup_snippet'),
+                  initialValue: f.startupSnippet ?? '',
+                  isExpanded: true,
+                  items: [
+                    DropdownMenuItem(
+                      value: '',
+                      child: Text(l.startupSnippetNone),
+                    ),
+                    for (final s in _startupSnippets)
+                      DropdownMenuItem(value: s.id, child: Text(s.spec.label)),
+                    // One deleted since, or that asks for values now.
+                    if (f.startupSnippet case final id?
+                        when id.isNotEmpty &&
+                            !_startupSnippets.any((s) => s.id == id))
+                      DropdownMenuItem(
+                        value: id,
+                        child: Text(l.startupSnippetGone),
+                      ),
+                  ],
+                  onChanged: (v) => f.update(() => f.startupSnippet = v),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l.startupSnippetNote,
                   style: TextStyle(
                     fontSize: OwText.small,
                     color: ow.colors.textMuted,

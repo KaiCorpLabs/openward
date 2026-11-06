@@ -268,6 +268,7 @@ impl OpenWard {
                         .then(|| settings.serial.as_ref().map(SerialLineSpec::of))
                         .flatten(),
                     terminal_scheme: settings.terminal_scheme.clone().unwrap_or_default(),
+                    startup_snippet: settings.startup_snippet.clone().unwrap_or_default(),
                 }
             })
             .collect()
@@ -576,6 +577,22 @@ impl OpenWard {
         events: StreamSink<SessionEvent>,
     ) -> Result<(), VaultError> {
         self.app.connect(
+            &session.term,
+            super::vault::id(&host_id)?,
+            Arc::new(DartSink(events)),
+        )?;
+        Ok(())
+    }
+
+    /// As [`OpenWard::connect`], over the connection to the host that is
+    /// up already, if one is: no logging in again.
+    pub fn connect_reusing(
+        &self,
+        session: &TerminalSession,
+        host_id: String,
+        events: StreamSink<SessionEvent>,
+    ) -> Result<(), VaultError> {
+        self.app.connect_reusing(
             &session.term,
             super::vault::id(&host_id)?,
             Arc::new(DartSink(events)),

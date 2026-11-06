@@ -274,6 +274,30 @@ Ese mismo día se descartó montar Postgres y Supabase Auth aparte para OpenWard
   - abrir un archivo remoto con su app del sistema o con «Abrir con…»;
   - al guardarlo, se vuelve a subir, con aviso si cambió en el servidor mientras tanto.
 
+#### Qué deja P6 hecho
+
+- **«Ejecutar…» › «En varios hosts…»**, en la página de snippets:
+  - se eligen los hosts (filtro por nombre, dirección, grupo o etiqueta; hasta 16) y lo que el snippet pregunta;
+  - se abre una pestaña nueva con un panel por host en rejilla, y el snippet se escribe en cada uno en cuanto su shell está listo, con los valores de ese host;
+  - el resultado de cada host queda en su panel.
+- **Reutilizar la conexión:** los hosts que ya están conectados (en otra pestaña, por SFTP o por un túnel) abren un shell nuevo por esa conexión, sin volver a iniciar sesión (`App::connect_reusing`). Una reconexión abre la suya.
+- **«Snippet al conectar»**, heredable, en «Avanzado» del editor y para los tres protocolos:
+  - se escribe en cada shell nuevo en cuanto está listo, al conectar y al reconectar;
+  - no se escribe al volver a una sesión persistente tal como estaba;
+  - solo los snippets que no preguntan nada.
+- **SFTP, «Abrir» y «Abrir con…»** en un archivo del servidor:
+  - se trae a una carpeta temporal propia y se abre con su app o con la elegida: en Windows, su diálogo «Abrir con»; en macOS y Linux, el nombre de una app o un comando, que se recuerda;
+  - mientras la pestaña SFTP siga abierta, cada vez que se guarda se sube;
+  - si en el servidor cambió desde que se abrió, se pregunta antes, y Cancelar deja la copia aquí.
+  - Una barra dice qué archivos se siguen y cuándo se subieron.
+- **Pruebas:**
+  - en S2, un segundo shell por la conexión del primero sin volver a iniciar sesión;
+  - en la ventana, con S2: el snippet al conectar, uno en dos hosts a la vez, y un archivo abierto que se sube al guardarlo y que pregunta si cambió en el servidor;
+  - de la rejilla de paneles.
+- **Pendiente:**
+  - probar «Abrir con…» con editores de verdad en los tres sistemas (punto 30 de [la guía](prueba-v0.3.md));
+  - los resultados en una vista propia (salida y código de cada host) quedan para más adelante: hoy, cada uno en su panel.
+
 ### P7 · Pulido y beta
 
 Novedades, notas, guía de prueba en los tres sistemas, accesibilidad y galería, y una beta 0.3.x.

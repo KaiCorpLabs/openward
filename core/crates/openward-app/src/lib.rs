@@ -134,7 +134,20 @@ impl App {
         host: ItemId,
         sink: Arc<dyn EventSink>,
     ) -> Result<(), PlanError> {
-        self.connect_to(terminal, Target::Host(host), sink)
+        self.connect_to(terminal, Target::Host(host), sink, false)
+    }
+
+    /// As [`App::connect`], over the connection to the host that is up
+    /// already, if one is (another terminal's, an SFTP browser's, a
+    /// tunnel's): a new shell, without logging in again. A reconnection
+    /// opens its own.
+    pub fn connect_reusing(
+        &self,
+        terminal: &Arc<Terminal>,
+        host: ItemId,
+        sink: Arc<dyn EventSink>,
+    ) -> Result<(), PlanError> {
+        self.connect_to(terminal, Target::Host(host), sink, true)
     }
 
     /// As [`App::connect`], to an address that is not saved, with the
@@ -160,6 +173,7 @@ impl App {
                 protocol,
             },
             sink,
+            false,
         )
     }
 
@@ -174,7 +188,7 @@ impl App {
     ) {
         let target = Target::Serial { path, line };
         // Only a host can fail to plan; this is not one.
-        let _ = self.connect_to(terminal, target, sink);
+        let _ = self.connect_to(terminal, target, sink, false);
     }
 
     fn connect_to(
@@ -182,6 +196,7 @@ impl App {
         terminal: &Arc<Terminal>,
         target: Target,
         sink: Arc<dyn EventSink>,
+        reuse: bool,
     ) -> Result<(), PlanError> {
         let serial = target.serial(&self.vault())?;
         if let Some(serial) = serial {
@@ -223,7 +238,7 @@ impl App {
                 };
                 let (exit_code, failure, connected) = match plan.protocol {
                     Protocol::Telnet => telnet_session(&plan, &ctx, &term).await,
-                    _ => session(&plan, &ctx, &term, &tmux).await,
+                    _ => session(&plan, &ctx, &term, &tmux, reuse && attempt == 0).await,
                 };
                 if connected {
                     attempt = 0;
@@ -951,19 +966,27 @@ async fn session(
     ctx: &Ctx,
     term: &Weak<Terminal>,
     tmux: &str,
+    reuse: bool,
 ) -> (Option<u32>, Option<Failure>, bool) {
     let sink = &ctx.sink;
     sink.send(Event::Route {
         hops: plan.hops.iter().map(|h| h.label.clone()).collect(),
     });
-    let live = match connect::run(plan, ctx).await {
-        Ok(sessions) => Live::new(plan, sessions, ctx.runtime.clone()),
-        Err(failure) => return (None, Some(failure), false),
+    let live = match reuse.then(|| ctx.live.find(&plan.key())).flatten() {
+        // Up already: its tunnels and the system it learnt are there.
+        Some(live) => live,
+        None => {
+            let live = match connect::run(plan, ctx).await {
+                Ok(sessions) => Live::new(plan, sessions, ctx.runtime.clone()),
+                Err(failure) => return (None, Some(failure), false),
+            };
+            // An SFTP browser for the same host can go over it.
+            ctx.live.add(plan.key(), &live);
+            ctx.learn_systems(plan, &live);
+            ctx.autostart(plan, &live).await;
+            live
+        }
     };
-    // An SFTP browser for the same host can go over it.
-    ctx.live.add(plan.key(), &live);
-    ctx.learn_systems(plan, &live);
-    ctx.autostart(plan, &live).await;
     if let Some(server) = &plan.mosh {
         return mosh_session(plan, ctx, term, tmux, live, server).await;
     }

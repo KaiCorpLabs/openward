@@ -59,6 +59,7 @@ class SettingsForm extends ChangeNotifier {
       encoding = original.encoding,
       backspace = original.backspace,
       terminalScheme = original.terminalScheme,
+      startupSnippet = original.startupSnippet,
       jumps = [...original.jumps],
       setHere = {
         if (original.identity != null) 'identity',
@@ -83,6 +84,7 @@ class SettingsForm extends ChangeNotifier {
         if (original.encoding != null) 'encoding',
         if (original.backspace != null) 'backspace',
         if (original.terminalScheme != null) 'terminal_scheme',
+        if (original.startupSnippet != null) 'startup_snippet',
       };
 
   final SettingsSpec original;
@@ -103,6 +105,9 @@ class SettingsForm extends ChangeNotifier {
 
   /// The terminal's scheme, by id; empty for the app's own colors.
   String? terminalScheme;
+
+  /// The snippet typed in each new shell, by id; empty for none.
+  String? startupSnippet;
   AgentKind? agent;
   RouteKind? route;
   ProxyKind? proxy;
@@ -245,6 +250,8 @@ class SettingsForm extends ChangeNotifier {
         backspace = inherited.backspace ?? BackspaceKind.delete;
       case 'terminal_scheme':
         terminalScheme = inherited.terminalScheme ?? '';
+      case 'startup_snippet':
+        startupSnippet = inherited.startupSnippet ?? '';
     }
     notifyListeners();
   }
@@ -311,6 +318,8 @@ class SettingsForm extends ChangeNotifier {
         backspace = null;
       case 'terminal_scheme':
         terminalScheme = null;
+      case 'startup_snippet':
+        startupSnippet = null;
     }
     notifyListeners();
   }
@@ -331,6 +340,7 @@ class SettingsForm extends ChangeNotifier {
     encoding,
     backspace,
     terminalScheme,
+    startupSnippet,
     jumpAddress.text,
     agent,
     route,
@@ -474,6 +484,9 @@ class SettingsForm extends ChangeNotifier {
       backspace: setHere.contains('backspace') ? backspace : null,
       terminalScheme: setHere.contains('terminal_scheme')
           ? terminalScheme
+          : null,
+      startupSnippet: setHere.contains('startup_snippet')
+          ? startupSnippet
           : null,
     );
   }

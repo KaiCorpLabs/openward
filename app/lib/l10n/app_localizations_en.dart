@@ -49,14 +49,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get advancedList =>
-      'proxy, host keys, persistent session, Mosh, terminal, checks and agent';
+      'proxy, host keys, persistent session, Mosh, terminal, snippet on connect, checks and agent';
 
   @override
-  String get advancedListSerial => 'terminal and session log';
+  String get advancedListSerial =>
+      'terminal, snippet on connect and session log';
 
   @override
   String get advancedListTelnet =>
-      'proxy, terminal, session log and time to connect';
+      'proxy, terminal, snippet on connect, session log and time to connect';
 
   @override
   String advancedSetHere(int count) {
@@ -3711,6 +3712,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openOtherHere => 'Open something else here…';
 
   @override
+  String get openRemote => 'Open';
+
+  @override
+  String openRemoteFollowing(String name) {
+    return '$name opened here: it goes up to the server each time you save it.';
+  }
+
+  @override
+  String get openRemoteWith => 'Open with…';
+
+  @override
   String get openSection => 'Open';
 
   @override
@@ -3734,6 +3746,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get openTunnels => 'Open tunnels';
+
+  @override
+  String get openWithHelp =>
+      'A command, such as code, gedit or kate; the file goes at the end.';
+
+  @override
+  String get openWithHelpMac =>
+      'An app\'s name (TextEdit, Visual Studio Code) or a command (/usr/local/bin/subl).';
+
+  @override
+  String get openWithProgram => 'Program';
+
+  @override
+  String openWithTitle(String name) {
+    return 'Open “$name” with';
+  }
 
   @override
   String get optionAltBoth => 'Both';
@@ -4379,6 +4407,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reload => 'Reload';
 
   @override
+  String get remoteChangedBody =>
+      'Someone changed it since you opened it here. If you upload yours, what they changed is lost; if you cancel, your copy stays here and you are asked again on saving.';
+
+  @override
+  String remoteChangedTitle(String name) {
+    return '“$name” changed on the server';
+  }
+
+  @override
+  String get remoteChangedUpload => 'Upload mine over it';
+
+  @override
+  String remoteEditFailed(String name) {
+    return '$name: could not upload (more in the queue)';
+  }
+
+  @override
+  String get remoteEditStop => 'Stop uploading it';
+
+  @override
+  String remoteEditUploaded(String name, String time) {
+    return '$name: uploaded at $time';
+  }
+
+  @override
+  String remoteEditWatching(String name) {
+    return '$name: goes up on saving';
+  }
+
+  @override
   String remoteSentence(String host, String port, String dest) {
     return 'What connects on $host to port $port reaches $dest on this computer.';
   }
@@ -4591,6 +4649,44 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get runIn => 'Run in…';
+
+  @override
+  String runOnHostsAction(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n hosts',
+      one: '1 host',
+      zero: 'no host',
+    );
+    return 'Run on $_temp0';
+  }
+
+  @override
+  String get runOnHostsAll => 'All shown';
+
+  @override
+  String get runOnHostsFilter => 'Filter by name, address, group or tag';
+
+  @override
+  String runOnHostsMax(int max) {
+    return 'Up to $max at a time.';
+  }
+
+  @override
+  String get runOnHostsMenu => 'On several hosts…';
+
+  @override
+  String get runOnHostsNone => 'None';
+
+  @override
+  String get runOnHostsNote =>
+      'Each host in its pane of a new tab, where its result shows. Those connected already do not log in again.';
+
+  @override
+  String runOnHostsTitle(String snippet) {
+    return '“$snippet” on several hosts';
+  }
 
   @override
   String runSnippetBroadcast(int count) {
@@ -5276,6 +5372,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get startupShowFolder => 'Show the data folder';
+
+  @override
+  String get startupSnippet => 'Snippet on connect';
+
+  @override
+  String get startupSnippetGone =>
+      'A snippet no longer there, or that now asks something';
+
+  @override
+  String get startupSnippetNone => 'None';
+
+  @override
+  String get startupSnippetNote =>
+      'Typed in each new shell as soon as it is ready: on connecting and reconnecting, not when coming back to a persistent session as it was. Only those that ask nothing.';
 
   @override
   String get state => 'State';

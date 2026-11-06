@@ -216,6 +216,11 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - con fish, o zsh con zsh-autosuggestions, solo la del shell, no las dos;
    - un snippet de una línea debe sugerirse también, y `do` en un host nuevo, `docker ps`;
    - con el historial de comandos apagado (Ajustes › Registros), «Sugerir mientras escribes» queda apagado y no sale nada.
+30. **Snippets en varios hosts y archivos remotos** (P6 del [camino a la Community](community.md#p6--snippets-en-varios-hosts-y-archivos-remotos)):
+   - en Snippets, «Ejecutar…» › «En varios hosts…»: elige tres hosts, uno ya conectado. Debe abrirse una pestaña con tres paneles y el resultado en cada uno; el que estaba conectado no debe pedir la contraseña otra vez;
+   - pon a un host «Snippet al conectar» (por ejemplo `cd /srv/app && git status`): debe escribirse al conectar y al reconectar, pero no al volver a su sesión persistente;
+   - en SFTP, «Abrir» un archivo de texto del servidor: se abre en su editor. Guárdalo: la barra debe decir «subido a las…» y el archivo cambiar en el servidor. Cámbialo también en el servidor (`echo x >> archivo`) y guarda otra vez: debe preguntar antes de subirlo encima;
+   - «Abrir con…»: en Windows, su diálogo; en macOS, `TextEdit` o `Visual Studio Code`; en Linux, `gedit` o `code`.
  Ctrl+Mayús+K abre la paleta y Ctrl+Mayús+/ la hoja de atajos. La barra lateral se pliega con Ctrl+Mayús+L (Ctrl+B es del shell).
 
 ## Cómo informar
