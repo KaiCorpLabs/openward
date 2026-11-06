@@ -53,7 +53,10 @@ if [[ "$target" == native ]]; then
   if [[ "$os" == windows-msvc ]]; then
     target_flag=("-Dtarget=$name")
   else
-    target_flag=()
+    # Any CPU of the kind, not only this one's: a library built on a newer
+    # machine (a CI runner, the one that packs a release) must not stop
+    # with SIGILL on an older one. A named target is baseline already.
+    target_flag=("-Dcpu=baseline")
   fi
 else
   name="$target"
