@@ -522,6 +522,20 @@ impl Terminal {
         self.detach();
     }
 
+    /// Ends the program `run_program` started, and only it: the session
+    /// that runs it goes on (over SSH, when Mosh got nothing back). The
+    /// screen leaves its alternate screen and modes.
+    pub(crate) fn end_program(&self) {
+        let mut io = lock(&self.io);
+        if matches!(*io, Io::Pty(_))
+            && let Io::Pty(pty) = std::mem::replace(&mut *io, Io::None)
+        {
+            pty.kill();
+        }
+        drop(io);
+        let _ = Self::output(&self.state, b"\x1b[?1049l\x1b[!p\r\n");
+    }
+
     /// Drops the connection or the local program, leaving a persistent
     /// session on the server to be found again: what reconnecting does.
     pub(crate) fn detach(&self) {

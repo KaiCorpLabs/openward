@@ -1024,7 +1024,8 @@ async fn mosh_session(
     let first = tokio::time::timeout(mosh::UDP_WAIT, async {
         tokio::select! {
             ended = &mut program.exited => Some(ended.ok().flatten()),
-            _ = &mut program.seen => None,
+            // Only when it was seen: the program's end closes it too.
+            Ok(()) = &mut program.seen => None,
         }
     })
     .await;
@@ -1033,8 +1034,9 @@ async fn mosh_session(
         Ok(Some(exit_code)) => return (exit_code, None, true),
         // Nothing came back over UDP.
         Ok(None) => {
+            // Not detach: that would end this very session.
             if let Some(t) = term.upgrade() {
-                t.detach();
+                t.end_program();
             }
             return over_ssh(MoshFallback::NoUdp).await;
         }
