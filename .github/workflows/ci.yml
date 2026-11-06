@@ -294,7 +294,8 @@ jobs:
             want="$(grep -cE '^\s*(testWidgets|test)\(' "$1")"
             got="$(grep -cE '^(✅|⏭️)' "$log" || true)"
             echo "$1: $got of $want tests passed or skipped"
-            ! grep -q "❌" "$log" && [ "$got" -eq "$want" ]
+            # At least one per testWidgets in the file: a loop makes more.
+            ! grep -q "❌" "$log" && [ "$got" -gt 0 ] && [ "$got" -ge "$want" ]
           }
           itest() {
             once "$1" && return 0
