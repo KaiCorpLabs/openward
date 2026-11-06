@@ -16,7 +16,7 @@ En macOS, como la 0.2 ([cómo](prueba-v0.2.md#instalar)): con Homebrew, o el `.d
 brew upgrade --cask openward
 ```
 
-**Linux:** desde la 0.3.2-beta.7 la release trae un `.tar.gz` para x86_64 y otro para arm64; se descomprime y se abre `OpenWard/openward`. Necesita GTK 3. También se construye con `make package-linux` (en un contenedor, con podman o docker). **Windows:** por ahora hay que compilarla en Windows (`fvm flutter build windows`); la compilación copia junto a la app el runtime de Visual C++, aún sin probar en un Windows recién instalado.
+**Linux:** desde la 0.3.2-beta.7 la release trae un `.tar.gz` para x86_64 y otro para arm64; se descomprime y se abre `OpenWard/openward`. Necesita GTK 3. También se construye con `make package-linux` (en un contenedor, con podman o docker). **Windows:** desde la 0.3.4, cada etiqueta de versión deja en la CI un `.zip` (el artefacto `OpenWard-Windows` de esa ejecución), que acaba en la release. Mientras no haya, se compila en Windows con `fvm flutter build windows`. La compilación copia junto a la app el runtime de Visual C++; probarlo en un Windows recién instalado es el punto 24.
 
 ## Dónde guarda sus datos
 
@@ -158,6 +158,15 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - cierra la app de golpe (`kill -9`) mientras graba: al abrirla, el registro debe estar, como mucho sin los últimos segundos;
    - vuelca algo grande (`cat` de un log de cientos de MB, o `seq 1 30000000`) con la grabación activada y sin ella, y dinos cuánto tarda cada vez;
    - cambia los días a 90 y reinicia la app: Ajustes › Registros debe seguir diciendo 90.
+24. **En Windows y en Linux** (P0 del [camino a la Community](community.md#p0--windows-y-linux-al-día)). Desde aquí, cada beta se prueba en los tres sistemas:
+   - **Windows recién instalado:** en Windows Sandbox (o un Windows sin herramientas de desarrollo), descomprime el `.zip` y abre `openward.exe`. Debe arrancar sin instalar nada más, porque el runtime de Visual C++ va con la app. Si falta una DLL, dinos cuál;
+   - la primera vez, el asistente debe encontrar `%USERPROFILE%\.ssh\config` y las claves de esa carpeta;
+   - la terminal local abre PowerShell, con colores, `Ctrl+C` y el tamaño al cambiar la ventana;
+   - si usas el agente de OpenSSH de Windows (el servicio «OpenSSH Authentication Agent»), OpenWard debe conectar con sus claves sin pedirte nada;
+   - **con el teclado español**, en Windows y en Linux: AltGr escribe en el terminal `@ # | \ [ ] { } €` y nunca dispara un atajo; Alt con una letra llega al programa como Alt (pruébalo con `cat -v` en un servidor: Alt+X debe salir `^[x`);
+   - SFTP con rutas de Windows: `C:\Users\…`, carpetas con espacios y con tildes, y arrastrar desde el Explorador;
+   - en Linux, en X11 y en Wayland: arranca, y el portapapeles copia y pega en los dos sentidos;
+   - con el tamaño del texto al 150 % (Ajustes › Apariencia), recorre la barra lateral, Hosts y el inicio: nada debe salirse ni cortarse. Los atajos largos, como «Ctrl+Mayús+H», se quitan cuando no caben.
 
 En Windows y Linux, ⌘ es Ctrl+Mayús: Ctrl+Mayús+K abre la paleta y Ctrl+Mayús+/ la hoja de atajos. La barra lateral se pliega con Ctrl+Mayús+L (Ctrl+B es del shell).
 

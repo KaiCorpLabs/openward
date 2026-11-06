@@ -1,14 +1,15 @@
 name: CI
 
-# While the repository is private, Actions minutes are billed: macOS counts
-# 10x and Windows 2x. So, by event (the `systems` job decides):
+# The `systems` job decides where the matrix runs. While the repository is
+# public, Actions minutes are free: the three systems on every push and PR.
+# If it goes private again, minutes are billed (macOS counts 10x, Windows
+# 2x), and it falls back by itself to:
 # - pushes to main and PRs: Linux only (with the iOS/Android compile check);
 # - a version tag (v…): Linux and Windows, so every version is tried on
 #   Windows; macOS has gone through `make ci` on the Mac before the tag;
-# - the weekly run: the three systems;
-# - «Run workflow»: the systems chosen, the three by default. On a tag with
-#   the three, it also leaves a draft release with the three packages.
-# When the repository goes public, run the three on every push again.
+# - the weekly run: the three systems.
+# «Run workflow» runs on the systems chosen (the three by default); on a tag
+# with the three, it also leaves a draft release with the three packages.
 on:
   push:
     branches: [main]
@@ -39,11 +40,15 @@ jobs:
           EVENT: ${{ github.event_name }}
           REF: ${{ github.ref }}
           ASKED: ${{ inputs.systems }}
+          # Empty in the weekly run's event: it runs the three anyway.
+          PRIVATE: ${{ github.event.repository.private }}
         run: |
           all='["ubuntu-latest","macos-latest","windows-latest"]'
           some='["ubuntu-latest","windows-latest"]'
           linux='["ubuntu-latest"]'
+          [[ "$PRIVATE" == false && "$EVENT" != workflow_dispatch ]] && EVENT=public
           case "$EVENT:$ASKED" in
+            public:*) os="$all" ;;
             schedule:* | workflow_dispatch:all | workflow_dispatch:) os="$all" ;;
             workflow_dispatch:linux-windows) os="$some" ;;
             push:*) if [[ "$REF" == refs/tags/v* ]]; then os="$some"; else os="$linux"; fi ;;

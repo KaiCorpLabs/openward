@@ -67,7 +67,7 @@ Ese mismo día se descartó montar Postgres y Supabase Auth aparte para OpenWard
 ### P0 · Windows y Linux al día
 
 - La 0.3.3 se prueba en un Windows limpio (Windows Sandbox) y en un Linux de escritorio, y se arregla lo que salga.
-- La CI de la organización corre en Windows y macOS al menos en cada versión. Correrla en cada push de `main` se decide según el coste en minutos.
+- **La CI corre en los tres sistemas en cada push y cada PR**, porque el repositorio es público desde el 2026-11-06 y los minutos no se cobran. Si vuelve a ser privado, la CI vuelve sola al reparto que ahorra minutos: Linux en cada push, Linux y Windows en cada etiqueta de versión, y los tres cada semana. «Run workflow» deja elegir los sistemas.
 - La guía de prueba cubre los tres sistemas. Desde aquí, cada hito se prueba en los tres antes de darlo por hecho.
 
 ### P1 · Telnet y puerto serie
