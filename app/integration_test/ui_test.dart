@@ -2859,7 +2859,8 @@ Host db
       () => c.edits.edits.single.uploaded != null,
       'the upload',
     );
-    expect(await size(), 'cambiada aquí\n'.length);
+    // In bytes, as the server counts them: «í» takes two.
+    expect(await size(), utf8.encode('cambiada aquí\n').length);
 
     // Changed on the server meanwhile: asked, and not uploaded.
     await Future<void>.delayed(const Duration(milliseconds: 1100));
