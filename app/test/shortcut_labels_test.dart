@@ -41,14 +41,16 @@ void main() {
     };
     final found = <String>[];
     for (final f in Directory('lib').listSync(recursive: true)) {
-      if (f is! File || !f.path.endsWith('.dart')) continue;
-      if (f.path.contains('/l10n/') || f.path.contains('/src/rust/')) continue;
+      // As the code writes paths: Windows lists `lib\l10n`.
+      final path = f.path.replaceAll(r'\', '/');
+      if (f is! File || !path.endsWith('.dart')) continue;
+      if (path.contains('/l10n/') || path.contains('/src/rust/')) continue;
       final lines = f.readAsLinesSync();
       for (var i = 0; i < lines.length; i++) {
         final line = lines[i];
         if (line.trimLeft().startsWith('//')) continue;
         for (final MapEntry(key: bad, value: why) in banned.entries) {
-          if (line.contains(bad)) found.add('${f.path}:${i + 1}: $bad ($why)');
+          if (line.contains(bad)) found.add('$path:${i + 1}: $bad ($why)');
         }
       }
     }

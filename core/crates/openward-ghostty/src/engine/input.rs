@@ -798,7 +798,11 @@ mod tests {
         e.set_option_as_alt(OptionAsAlt::Left);
         // Only macOS turns Option+X into "≈"; elsewhere Alt+X brings "x",
         // and Alt is always Alt.
-        let typed = if cfg!(target_os = "macos") { "≈" } else { "x" };
+        let typed = if cfg!(target_os = "macos") {
+            "≈"
+        } else {
+            "x"
+        };
         assert_eq!(key(&mut e, press(KEY_X, mods::ALT, typed, 'x')), b"\x1bx");
         if cfg!(target_os = "macos") {
             let right = press(KEY_X, mods::ALT | mods::ALT_RIGHT, "≈", 'x');
