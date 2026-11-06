@@ -7621,6 +7621,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  MoshFallbackView dco_decode_box_autoadd_mosh_fallback_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_mosh_fallback_view(raw);
+  }
+
+  @protected
   NetKind dco_decode_box_autoadd_net_kind(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_net_kind(raw);
@@ -7859,21 +7865,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ConnectedView dco_decode_connected_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 12)
-      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
+    if (arr.length != 13)
+      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
     return ConnectedView(
       protocol: dco_decode_protocol_kind(arr[0]),
-      host: dco_decode_String(arr[1]),
-      port: dco_decode_u_16(arr[2]),
-      kex: dco_decode_String(arr[3]),
-      postQuantum: dco_decode_bool(arr[4]),
-      cipher: dco_decode_String(arr[5]),
-      hostKeyAlgorithm: dco_decode_String(arr[6]),
-      fingerprint: dco_decode_String(arr[7]),
-      trust: dco_decode_trust_kind(arr[8]),
-      ca: dco_decode_String(arr[9]),
-      hops: dco_decode_u_32(arr[10]),
-      connectMs: dco_decode_f_64(arr[11]),
+      mosh: dco_decode_bool(arr[1]),
+      host: dco_decode_String(arr[2]),
+      port: dco_decode_u_16(arr[3]),
+      kex: dco_decode_String(arr[4]),
+      postQuantum: dco_decode_bool(arr[5]),
+      cipher: dco_decode_String(arr[6]),
+      hostKeyAlgorithm: dco_decode_String(arr[7]),
+      fingerprint: dco_decode_String(arr[8]),
+      trust: dco_decode_trust_kind(arr[9]),
+      ca: dco_decode_String(arr[10]),
+      hops: dco_decode_u_32(arr[11]),
+      connectMs: dco_decode_f_64(arr[12]),
     );
   }
 
@@ -8823,6 +8830,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  MoshFallbackKind dco_decode_mosh_fallback_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return MoshFallbackKind.values[raw as int];
+  }
+
+  @protected
+  MoshFallbackView dco_decode_mosh_fallback_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return MoshFallbackView(
+      kind: dco_decode_mosh_fallback_kind(arr[0]),
+      said: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
   NetKind dco_decode_net_kind(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return NetKind.values[raw as int];
@@ -8989,6 +9014,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   MissingKind? dco_decode_opt_box_autoadd_missing_kind(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_missing_kind(raw);
+  }
+
+  @protected
+  MoshFallbackView? dco_decode_opt_box_autoadd_mosh_fallback_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_mosh_fallback_view(raw);
   }
 
   @protected
@@ -9524,8 +9555,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   SessionEvent dco_decode_session_event(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 12)
-      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
+    if (arr.length != 13)
+      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
     return SessionEvent(
       kind: dco_decode_session_event_kind(arr[0]),
       route: dco_decode_list_String(arr[1]),
@@ -9539,6 +9570,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       program: dco_decode_opt_String(arr[9]),
       closed: dco_decode_opt_box_autoadd_closed_view(arr[10]),
       unknownSystems: dco_decode_list_String(arr[11]),
+      moshFallback: dco_decode_opt_box_autoadd_mosh_fallback_view(arr[12]),
     );
   }
 
@@ -9552,8 +9584,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   SettingsSpec dco_decode_settings_spec(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 32)
-      throw Exception('unexpected arr length: expect 32 but see ${arr.length}');
+    if (arr.length != 34)
+      throw Exception('unexpected arr length: expect 34 but see ${arr.length}');
     return SettingsSpec(
       user: dco_decode_opt_String(arr[0]),
       port: dco_decode_opt_box_autoadd_u_16(arr[1]),
@@ -9587,6 +9619,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       sessionLog: dco_decode_opt_box_autoadd_bool(arr[29]),
       protocol: dco_decode_opt_box_autoadd_protocol_kind(arr[30]),
       serial: dco_decode_opt_box_autoadd_serial_line_spec(arr[31]),
+      mosh: dco_decode_opt_box_autoadd_bool(arr[32]),
+      moshServer: dco_decode_opt_String(arr[33]),
     );
   }
 
@@ -10485,6 +10519,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  MoshFallbackView sse_decode_box_autoadd_mosh_fallback_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_mosh_fallback_view(deserializer));
+  }
+
+  @protected
   NetKind sse_decode_box_autoadd_net_kind(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_net_kind(deserializer));
@@ -10746,6 +10788,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ConnectedView sse_decode_connected_view(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_protocol = sse_decode_protocol_kind(deserializer);
+    var var_mosh = sse_decode_bool(deserializer);
     var var_host = sse_decode_String(deserializer);
     var var_port = sse_decode_u_16(deserializer);
     var var_kex = sse_decode_String(deserializer);
@@ -10759,6 +10802,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_connectMs = sse_decode_f_64(deserializer);
     return ConnectedView(
       protocol: var_protocol,
+      mosh: var_mosh,
       host: var_host,
       port: var_port,
       kex: var_kex,
@@ -12061,6 +12105,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  MoshFallbackKind sse_decode_mosh_fallback_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return MoshFallbackKind.values[inner];
+  }
+
+  @protected
+  MoshFallbackView sse_decode_mosh_fallback_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_mosh_fallback_kind(deserializer);
+    var var_said = sse_decode_String(deserializer);
+    return MoshFallbackView(kind: var_kind, said: var_said);
+  }
+
+  @protected
   NetKind sse_decode_net_kind(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
@@ -12385,6 +12444,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_missing_kind(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  MoshFallbackView? sse_decode_opt_box_autoadd_mosh_fallback_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_mosh_fallback_view(deserializer));
     } else {
       return null;
     }
@@ -13144,6 +13216,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_program = sse_decode_opt_String(deserializer);
     var var_closed = sse_decode_opt_box_autoadd_closed_view(deserializer);
     var var_unknownSystems = sse_decode_list_String(deserializer);
+    var var_moshFallback = sse_decode_opt_box_autoadd_mosh_fallback_view(
+      deserializer,
+    );
     return SessionEvent(
       kind: var_kind,
       route: var_route,
@@ -13157,6 +13232,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       program: var_program,
       closed: var_closed,
       unknownSystems: var_unknownSystems,
+      moshFallback: var_moshFallback,
     );
   }
 
@@ -13204,6 +13280,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_sessionLog = sse_decode_opt_box_autoadd_bool(deserializer);
     var var_protocol = sse_decode_opt_box_autoadd_protocol_kind(deserializer);
     var var_serial = sse_decode_opt_box_autoadd_serial_line_spec(deserializer);
+    var var_mosh = sse_decode_opt_box_autoadd_bool(deserializer);
+    var var_moshServer = sse_decode_opt_String(deserializer);
     return SettingsSpec(
       user: var_user,
       port: var_port,
@@ -13237,6 +13315,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       sessionLog: var_sessionLog,
       protocol: var_protocol,
       serial: var_serial,
+      mosh: var_mosh,
+      moshServer: var_moshServer,
     );
   }
 
@@ -14254,6 +14334,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_mosh_fallback_view(
+    MoshFallbackView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_mosh_fallback_view(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_net_kind(NetKind self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_net_kind(self, serializer);
@@ -14553,6 +14642,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_connected_view(ConnectedView self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_protocol_kind(self.protocol, serializer);
+    sse_encode_bool(self.mosh, serializer);
     sse_encode_String(self.host, serializer);
     sse_encode_u_16(self.port, serializer);
     sse_encode_String(self.kex, serializer);
@@ -15595,6 +15685,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_mosh_fallback_kind(
+    MoshFallbackKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_mosh_fallback_view(
+    MoshFallbackView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_mosh_fallback_kind(self.kind, serializer);
+    sse_encode_String(self.said, serializer);
+  }
+
+  @protected
   void sse_encode_net_kind(NetKind self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.index, serializer);
@@ -15933,6 +16042,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_missing_kind(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_mosh_fallback_view(
+    MoshFallbackView? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_mosh_fallback_view(self, serializer);
     }
   }
 
@@ -16594,6 +16716,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_String(self.program, serializer);
     sse_encode_opt_box_autoadd_closed_view(self.closed, serializer);
     sse_encode_list_String(self.unknownSystems, serializer);
+    sse_encode_opt_box_autoadd_mosh_fallback_view(
+      self.moshFallback,
+      serializer,
+    );
   }
 
   @protected
@@ -16640,6 +16766,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_box_autoadd_bool(self.sessionLog, serializer);
     sse_encode_opt_box_autoadd_protocol_kind(self.protocol, serializer);
     sse_encode_opt_box_autoadd_serial_line_spec(self.serial, serializer);
+    sse_encode_opt_box_autoadd_bool(self.mosh, serializer);
+    sse_encode_opt_String(self.moshServer, serializer);
   }
 
   @protected

@@ -66,6 +66,11 @@ pub enum Event {
         session: String,
         state: Persistence,
     },
+    /// Mosh was asked for and could not be: the session goes on over SSH
+    /// (in tmux, to come back to it), for this reason.
+    MoshFallback {
+        reason: MoshFallback,
+    },
     /// A local program is running: input goes to it from now on.
     Started {
         program: String,
@@ -109,6 +114,9 @@ pub struct Connected {
     /// SSH, Telnet (nothing encrypted: the SSH fields are empty) or a
     /// serial port (`host` is the port, `port` 0).
     pub protocol: Protocol,
+    /// The shell goes over Mosh: SSH only started it (its fields are those
+    /// of that SSH connection).
+    pub mosh: bool,
     /// The target, as the vault has it.
     pub host: String,
     pub port: u16,
@@ -270,6 +278,19 @@ pub enum Failure {
         /// What it was, for the UI to say it in its words.
         cause: NetCause,
     },
+    Other(String),
+}
+
+/// Why a session asked to go over Mosh goes over SSH instead.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum MoshFallback {
+    /// `mosh-client` is not installed on this computer.
+    NoClient,
+    /// The server has no `mosh-server` (where it was looked for).
+    NoServer,
+    /// The server's UDP did not get through (a firewall, a NAT, a jump).
+    NoUdp,
+    /// `mosh-server` did not start: what it said.
     Other(String),
 }
 

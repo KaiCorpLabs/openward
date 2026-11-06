@@ -406,6 +406,12 @@ pub struct SettingsSpec {
     /// With a serial port.
     #[frb(default = "null")]
     pub serial: Option<SerialLineSpec>,
+    /// The shell over Mosh (SSH only).
+    #[frb(default = "null")]
+    pub mosh: Option<bool>,
+    /// What starts `mosh-server`, when it is not on the server's `PATH`.
+    #[frb(default = "null")]
+    pub mosh_server: Option<String>,
 }
 
 /// The `identity` setting of a spec.
@@ -481,6 +487,8 @@ impl SettingsSpec {
             session_log: s.session_log,
             protocol: s.protocol.map(ProtocolKind::of),
             serial: s.serial.as_ref().map(SerialLineSpec::of),
+            mosh: s.mosh,
+            mosh_server: s.mosh_server.clone(),
             legacy_host_keys: s.legacy_host_keys,
             proxy,
             proxy_host: server.map(|s| s.host.clone()).unwrap_or_default(),
@@ -633,6 +641,8 @@ impl SettingsSpec {
         s.legacy_host_keys = self.legacy_host_keys;
         s.protocol = self.protocol.map(ProtocolKind::proto);
         s.serial = self.serial.map(|l| l.line(s.serial.as_ref()));
+        s.mosh = self.mosh;
+        s.mosh_server = self.mosh_server.clone().filter(|m| !m.trim().is_empty());
         Ok(())
     }
 }
@@ -838,6 +848,8 @@ impl SettingsSpec {
             session_log: pick(&base.session_log, mine.session_log, theirs.session_log)?,
             protocol: pick(&base.protocol, mine.protocol, theirs.protocol)?,
             serial: pick(&base.serial, mine.serial, theirs.serial)?,
+            mosh: pick(&base.mosh, mine.mosh, theirs.mosh)?,
+            mosh_server: pick(&base.mosh_server, mine.mosh_server, theirs.mosh_server)?,
         })
     }
 }

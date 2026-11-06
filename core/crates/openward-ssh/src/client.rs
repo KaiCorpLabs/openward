@@ -428,6 +428,39 @@ async fn login_path() -> Option<&'static std::ffi::OsStr> {
     .as_deref()
 }
 
+/// Where a program on this computer is (`mosh-client`): in the login
+/// shell's `PATH`, the app's own, or the usual places of package managers
+/// that an app opened from the Finder does not see.
+pub async fn find_program(name: &str) -> Option<PathBuf> {
+    let own = std::env::var_os("PATH").unwrap_or_default();
+    let path = match login_path().await {
+        Some(login) => merge_paths(login, &own).unwrap_or(own),
+        None => own,
+    };
+    let mut dirs: Vec<PathBuf> = std::env::split_paths(&path).collect();
+    for extra in [
+        "/opt/homebrew/bin",
+        "/usr/local/bin",
+        "/usr/bin",
+        "/bin",
+        "/snap/bin",
+        "/run/current-system/sw/bin",
+    ] {
+        dirs.push(PathBuf::from(extra));
+    }
+    if let Some(home) = std::env::var_os("HOME") {
+        dirs.push(PathBuf::from(home).join(".nix-profile/bin"));
+    }
+    let file = if cfg!(windows) {
+        format!("{name}.exe")
+    } else {
+        name.to_owned()
+    };
+    dirs.into_iter()
+        .map(|d| d.join(&file))
+        .find(|p| p.is_file())
+}
+
 /// The login shell's folders, then the app's own that it lacks.
 fn merge_paths(login: &std::ffi::OsStr, own: &std::ffi::OsStr) -> Option<std::ffi::OsString> {
     let mut dirs: Vec<PathBuf> = std::env::split_paths(login).collect();
@@ -1241,6 +1274,37 @@ impl Session {
     /// that the command is let go.
     pub async fn exec_short(&self, command: &str) -> anyhow::Result<Output> {
         self.run(command, false, &[], EXEC_OUTPUT).await
+    }
+
+    /// A short command whose answer is complete as soon as `done` says so
+    /// (a line it waits for), even if something it left running keeps the
+    /// channel open: what came until then, its status if it ended.
+    pub async fn exec_until(
+        &self,
+        command: &str,
+        done: impl Fn(&str) -> bool,
+    ) -> anyhow::Result<Output> {
+        let mut channel = self.handle.channel_open_session().await?;
+        channel.exec(true, command).await?;
+        let mut out = Output {
+            stdout: Vec::new(),
+            status: None,
+        };
+        while let Some(msg) = channel.wait().await {
+            match msg {
+                ChannelMsg::Data { data } | ChannelMsg::ExtendedData { data, .. } => {
+                    let room = EXEC_OUTPUT - out.stdout.len();
+                    out.stdout.extend_from_slice(&data[..data.len().min(room)]);
+                    if data.len() > room || done(&String::from_utf8_lossy(&out.stdout)) {
+                        break;
+                    }
+                }
+                ChannelMsg::ExitStatus { exit_status } => out.status = Some(exit_status),
+                ChannelMsg::Close => break,
+                _ => {}
+            }
+        }
+        Ok(out)
     }
 
     async fn run(

@@ -142,6 +142,23 @@ Ese mismo día se descartó montar Postgres y Supabase Auth aparte para OpenWard
   - los saltos solo sirven para arrancar el servidor, porque el UDP va directo;
   - en Windows, hasta el cliente clean-room, que sigue en la fase 4 junto con el móvil.
 
+#### Qué deja P2 hecho
+
+- **Los datos:** dos ajustes heredables, `mosh` (apagado por defecto) y `mosh_server`, por si `mosh-server` no está en el `PATH` del servidor (`/opt/homebrew/bin/mosh-server`). Solo cuentan con SSH.
+- **El núcleo** (`openward-app/src/mosh.rs`):
+  - por la conexión SSH, arranca `mosh-server new -c 256`: primero con `LANG=C.UTF-8` y si no, con `en_US.UTF-8`, y con `-s` cuando no hay saltos;
+  - lee `MOSH CONNECT` sin esperar a que el canal se cierre (`exec_until`, por si el servidor lo deja abierto);
+  - busca `mosh-client` en el `PATH` de la shell de inicio y en los sitios de siempre (`find_program`);
+  - lo lanza en el PTY con `MOSH_KEY`, y la conexión SSH sobra en cuanto llegan los primeros paquetes.
+- **Si no se puede:** sin `mosh-client`, sin `mosh-server`, sin respuesta del servidor, o si `mosh-client` dice en 20 s que no le llega nada por UDP, la sesión sigue por esa misma conexión SSH, en tmux, sin volver a pedir la contraseña. La terminal dice por qué en una línea (`Event::MoshFallback`).
+- **La app:** «Mosh» y «Servidor de Mosh» en «Avanzado» del editor, solo con SSH y con su nota; la píldora «Mosh» en la barra de estado, que con Mosh no enseña la latencia de SSH; y la línea de por qué no.
+- **Pruebas:**
+  - del formato de `MOSH CONNECT`, del comando y de qué ha fallado;
+  - en S2 (el bastión tiene `mosh` y su UDP publicado; la CI instala `mosh-client`): una sesión por Mosh de punta a punta, Dropbear sin `mosh-server`, y un servidor sin UDP publicado que vuelve a SSH.
+- **Pendiente:**
+  - probarlo cambiando de red de verdad (punto 26 de [la guía](prueba-v0.3.md));
+  - en Windows sigue por SSH hasta el cliente clean-room.
+
 ### P3 · Llaves FIDO2 y certificados
 
 - **Llaves de seguridad** (`sk-ecdsa-sha2-nistp256@openssh.com` y `sk-ssh-ed25519@openssh.com`):

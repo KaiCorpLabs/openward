@@ -345,6 +345,62 @@ impl Terminal {
         Ok(())
     }
 
+    /// Runs a local program (`mosh-client`) without telling anyone: what
+    /// it prints feeds the screen, and the caller hears when `needle` shows
+    /// in it and when it ends, with its exit code.
+    pub(crate) fn run_program(
+        &self,
+        spawn: Spawn,
+        needle: &'static str,
+    ) -> anyhow::Result<Program> {
+        let (pty, mut reader) = Pty::spawn(&spawn)?;
+        let pty = Arc::new(pty);
+        *lock(&self.io) = Io::Pty(Arc::clone(&pty));
+        let (saw, seen) = tokio::sync::oneshot::channel();
+        let (ended, exited) = tokio::sync::oneshot::channel();
+        let state = Arc::clone(&self.state);
+        let activity = Arc::clone(&self.activity);
+        thread::Builder::new()
+            .name("openward-program".into())
+            .spawn(move || {
+                let mut buf = vec![0u8; 64 * 1024];
+                let mut window: Vec<u8> = Vec::new();
+                let mut saw = Some(saw);
+                loop {
+                    let n = match reader.read(&mut buf) {
+                        Ok(0) | Err(_) => break,
+                        Ok(n) => n,
+                    };
+                    activity.received();
+                    if saw.is_some() {
+                        window.extend_from_slice(&buf[..n]);
+                        if crate::mosh::seen(&window, needle)
+                            && let Some(saw) = saw.take()
+                        {
+                            let _ = saw.send(());
+                        }
+                        let keep = window.len().saturating_sub(needle.len());
+                        window.drain(..keep);
+                    }
+                    let replies = Self::output(&state, &buf[..n]);
+                    if !replies.is_empty() {
+                        let _ = pty.write(&replies);
+                    }
+                }
+                lock(&state).touch();
+                let mut exit_code = pty.exit_code();
+                for _ in 0..50 {
+                    if exit_code.is_some() {
+                        break;
+                    }
+                    thread::sleep(std::time::Duration::from_millis(20));
+                    exit_code = pty.exit_code();
+                }
+                let _ = ended.send(exit_code);
+            })?;
+        Ok(Program { seen, exited })
+    }
+
     /// Talks to an open serial port: `connected` goes out at once, and
     /// the session closes when the terminal lets the port go, or with a
     /// failure if the port went (the cable was pulled).
@@ -795,6 +851,14 @@ impl Terminal {
         s.engine.redraw();
         s.touch();
     }
+}
+
+/// A local program run by [`Terminal::run_program`].
+pub(crate) struct Program {
+    /// Its needle showed in what it printed.
+    pub seen: tokio::sync::oneshot::Receiver<()>,
+    /// It ended, with its exit code if it gave one.
+    pub exited: tokio::sync::oneshot::Receiver<Option<u32>>,
 }
 
 /// A terminal's state and input side, for the task that feeds it.

@@ -94,12 +94,14 @@ jobs:
         working-directory: core
         run: cargo clippy --workspace --all-targets -- -D warnings
       # openward-app's connection tests run against the S2 servers; without
-      # them (macOS, Windows) they skip.
+      # them (macOS, Windows) they skip. mosh-client for its Mosh cases.
       - name: Start SSH test servers
         if: runner.os == 'Linux'
         env:
           S2_RUNTIME: docker
-        run: spikes/s2-ssh/servers/up.sh
+        run: |
+          sudo apt-get install -y --no-install-recommends mosh >/dev/null
+          spikes/s2-ssh/servers/up.sh
       - name: Test
         working-directory: core
         env:

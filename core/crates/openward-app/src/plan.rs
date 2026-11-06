@@ -64,6 +64,8 @@ pub struct Plan {
     pub agent_forward: bool,
     /// The shell goes inside tmux, to come back to it.
     pub persistent: bool,
+    /// The shell goes over Mosh, started with this program (SSH only).
+    pub mosh: Option<String>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -138,6 +140,7 @@ impl Plan {
             persistent: settings.persistent_session.unwrap_or(false) && protocol == Protocol::Ssh,
             hops: vec![target],
             protocol,
+            mosh: None,
         }
     }
 
@@ -183,6 +186,13 @@ impl Plan {
                 && target.agent.is_some()
                 && protocol == Protocol::Ssh,
             persistent: settings.persistent_session.unwrap_or(false) && protocol == Protocol::Ssh,
+            mosh: (settings.mosh == Some(true) && protocol == Protocol::Ssh).then(|| {
+                settings
+                    .mosh_server
+                    .clone()
+                    .filter(|s| !s.trim().is_empty())
+                    .unwrap_or_else(|| "mosh-server".into())
+            }),
             hops,
             protocol,
         })

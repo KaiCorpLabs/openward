@@ -30,6 +30,7 @@ impl Live {
         let info = target.info();
         let connected = Connected {
             protocol: crate::events::Protocol::Ssh,
+            mosh: false,
             host: hop.address.clone(),
             port: hop.port,
             post_quantum: info.post_quantum(),

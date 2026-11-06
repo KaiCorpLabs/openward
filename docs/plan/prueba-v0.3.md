@@ -189,8 +189,13 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
      - un host guardado con «Protocolo» › Puerto serie, el puerto elegido de la lista y otra velocidad, debe abrirse con esa velocidad;
    - **importar** desde PuTTY, SecureCRT, MobaXterm, Tabby, Termius o un CSV con sesiones Telnet y serie: deben llegar como Telnet y serie, no como avisos. De MobaXterm, el serie trae el puerto y la velocidad; comprueba el resto de la línea;
    - con los registros activados, una sesión Telnet y otra serie deben quedar en Registros y verse en el visor.
-
-En Windows y Linux, ⌘ es Ctrl+Mayús: Ctrl+Mayús+K abre la paleta y Ctrl+Mayús+/ la hoja de atajos. La barra lateral se pliega con Ctrl+Mayús+L (Ctrl+B es del shell).
+26. **Mosh** (P2 del [camino a la Community](community.md#p2--mosh-en-escritorio)), con `brew install mosh` (o `apt install mosh`) aquí y `mosh` en un servidor tuyo:
+   - en el editor del host, «Avanzado» › Mosh › Encendido, y conecta: la barra debe decir «Mosh»;
+   - cambia de red sin cerrar nada (de la wifi al móvil, o duerme el portátil diez minutos): la sesión debe seguir donde estaba, sin «Reconectando»;
+   - con el servidor detrás de un cortafuegos que no deja pasar UDP (o un host sin `mosh`), la sesión debe seguir por SSH, en tmux, con una línea que diga por qué;
+   - sin `mosh-client` en el equipo, igual, y la línea debe decir cómo instalarlo;
+   - si `mosh-server` no está en el `PATH` del servidor (Homebrew en un Mac), pon su ruta en «Servidor de Mosh».
+ Ctrl+Mayús+K abre la paleta y Ctrl+Mayús+/ la hoja de atajos. La barra lateral se pliega con Ctrl+Mayús+L (Ctrl+B es del shell).
 
 ## Cómo informar
 

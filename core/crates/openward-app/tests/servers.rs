@@ -13,8 +13,8 @@ use std::time::{Duration, Instant};
 
 use openward_app::alive::Timing;
 use openward_app::events::{
-    CertProblem, ChangedKey, Connected, Health, KeySource, NetCause, Persistence, PreviousKey,
-    Trust,
+    CertProblem, ChangedKey, Connected, Health, KeySource, MoshFallback, NetCause, Persistence,
+    PreviousKey, Trust,
 };
 use openward_app::vault::proto::{
     Agent, Data, Group, Host, HostKeyPolicy, Identity, ItemId, Jump, Route, Settings, System,
@@ -185,6 +185,7 @@ fn outcome(rx: &Receiver<Event>) -> (Result<Connected, Option<Failure>>, Vec<Pro
             | Event::Health(_)
             | Event::Hops { .. }
             | Event::HostsChanged { .. }
+            | Event::MoshFallback { .. }
             | Event::Persistent { .. } => {}
         }
     }
@@ -482,6 +483,114 @@ fn a_server_that_stops_answering_is_noticed_in_seconds() {
             _ => {}
         }
     }
+    term.text("echo back-$((6*7))\n");
+    wait_for(&term, "back-42");
+}
+
+/// A host with Mosh on.
+fn mosh_host(f: &Fixture, label: &str, port: u16) -> ItemId {
+    f.host(
+        label,
+        "127.0.0.1",
+        port,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: f.key("id_ed25519"),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            mosh: Some(true),
+            ..Settings::default()
+        },
+    )
+}
+
+/// Whether this computer has `mosh-client`.
+fn has_mosh_client() -> bool {
+    tokio::runtime::Runtime::new()
+        .unwrap()
+        .block_on(openward_ssh::client::find_program("mosh-client"))
+        .is_some()
+}
+
+/// The events until the first shell is up, with the Mosh fallbacks that
+/// came before it.
+fn first_shell(rx: &Receiver<Event>) -> (Connected, Vec<MoshFallback>) {
+    let mut fallbacks = Vec::new();
+    loop {
+        match rx
+            .recv_timeout(Duration::from_secs(45))
+            .expect("no outcome")
+        {
+            Event::Connected(c) => return (c, fallbacks),
+            Event::MoshFallback { reason } => fallbacks.push(reason),
+            Event::Closed { failure, .. } => panic!("{failure:?}"),
+            _ => {}
+        }
+    }
+}
+
+/// Mosh asked for where it cannot be (no mosh-server in Dropbear's
+/// image, or no mosh-client here): the session goes on over SSH, saying
+/// why.
+#[test]
+fn mosh_where_it_cannot_be_goes_on_over_ssh() {
+    let f = Fixture::new(servers!());
+    let host = mosh_host(&f, "dropbear", 22200);
+    let (term, rx) = f.connect(host, |_| Answer::Cancel);
+    let (connected, fallbacks) = first_shell(&rx);
+    assert!(!connected.mosh);
+    let want = if has_mosh_client() {
+        MoshFallback::NoServer
+    } else {
+        MoshFallback::NoClient
+    };
+    assert_eq!(fallbacks, [want]);
+    term.text("echo ssh-$((6*7))\n");
+    wait_for(&term, "ssh-42");
+}
+
+/// Over Mosh to the bastion, whose UDP is published: the shell is
+/// mosh-client's, and exit ends it.
+#[test]
+fn a_mosh_session_over_udp() {
+    let f = Fixture::new(servers!());
+    if !has_mosh_client() {
+        return eprintln!("skipped: no mosh-client here");
+    }
+    let host = mosh_host(&f, "bastion", BASTION);
+    let (term, rx) = f.connect(host, |_| Answer::Cancel);
+    let (connected, fallbacks) = first_shell(&rx);
+    assert!(fallbacks.is_empty(), "{fallbacks:?}");
+    assert!(connected.mosh);
+    term.text("echo mosh-$((6*7))\n");
+    wait_for(&term, "mosh-42");
+    term.text("exit\n");
+    loop {
+        match rx.recv_timeout(Duration::from_secs(30)).expect("no end") {
+            Event::MoshFallback { reason } => panic!("fell back: {reason:?}"),
+            Event::Closed { exit_code, failure } => {
+                assert_eq!((exit_code, failure), (Some(0), None));
+                break;
+            }
+            _ => {}
+        }
+    }
+}
+
+/// A server whose UDP does not get through (this one's is not published):
+/// after the wait, the session goes on over SSH, in tmux.
+#[test]
+fn mosh_without_udp_goes_on_over_ssh() {
+    let f = Fixture::new(servers!());
+    if !has_mosh_client() {
+        return eprintln!("skipped: no mosh-client here");
+    }
+    let host = mosh_host(&f, "s2-openssh-9.2", 22092);
+    let (term, rx) = f.connect(host, |_| Answer::Cancel);
+    let (first, fallbacks) = first_shell(&rx);
+    assert!(first.mosh && fallbacks.is_empty());
+    let (again, fallbacks) = first_shell(&rx);
+    assert_eq!(fallbacks, [MoshFallback::NoUdp]);
+    assert!(!again.mosh);
     term.text("echo back-$((6*7))\n");
     wait_for(&term, "back-42");
 }

@@ -170,6 +170,9 @@ abstract class ConnectionController extends ChangeNotifier {
     switch (e.kind) {
       case SessionEventKind.route:
         route = e.route;
+      // The terminal says it in a line of its own (TerminalController).
+      case SessionEventKind.moshFallback:
+        break;
       case SessionEventKind.stage:
         stage = e.stage;
         reconnectAt = null;

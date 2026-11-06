@@ -173,7 +173,7 @@ abstract class AppLocalizations {
   /// No description provided for @advancedList.
   ///
   /// In es, this message translates to:
-  /// **'proxy, claves del host, sesión persistente, comprobación y agente'**
+  /// **'proxy, claves del host, sesión persistente, Mosh, comprobación y agente'**
   String get advancedList;
 
   /// No description provided for @advancedListSerial.
@@ -4549,6 +4549,66 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Más opciones'**
   String get moreOptions;
+
+  /// No description provided for @moshFallbackNoClient.
+  ///
+  /// In es, this message translates to:
+  /// **'sin Mosh: falta mosh-client en este equipo (brew install mosh, o apt install mosh) · sigue por SSH'**
+  String get moshFallbackNoClient;
+
+  /// No description provided for @moshFallbackNoServer.
+  ///
+  /// In es, this message translates to:
+  /// **'sin Mosh: el servidor no tiene mosh-server · sigue por SSH'**
+  String get moshFallbackNoServer;
+
+  /// No description provided for @moshFallbackNoUdp.
+  ///
+  /// In es, this message translates to:
+  /// **'sin Mosh: no llega el UDP del servidor (un cortafuegos, o una red que no lo deja pasar) · sigue por SSH, en tmux'**
+  String get moshFallbackNoUdp;
+
+  /// No description provided for @moshFallbackOther.
+  ///
+  /// In es, this message translates to:
+  /// **'sin Mosh: {said} · sigue por SSH'**
+  String moshFallbackOther(String said);
+
+  /// No description provided for @moshFallbackWindows.
+  ///
+  /// In es, this message translates to:
+  /// **'sin Mosh: en Windows todavía no · sigue por SSH'**
+  String get moshFallbackWindows;
+
+  /// No description provided for @moshNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Hace falta mosh-server en el servidor y mosh-client en este equipo (macOS: brew install mosh; Linux: apt o dnf install mosh). El UDP va directo: los saltos solo sirven para arrancarlo. Si no llega, la sesión sigue por SSH, en tmux.'**
+  String get moshNote;
+
+  /// No description provided for @moshOff.
+  ///
+  /// In es, this message translates to:
+  /// **'Apagado: SSH'**
+  String get moshOff;
+
+  /// No description provided for @moshOn.
+  ///
+  /// In es, this message translates to:
+  /// **'Encendido: por Mosh cuando se pueda'**
+  String get moshOn;
+
+  /// No description provided for @moshServer.
+  ///
+  /// In es, this message translates to:
+  /// **'Servidor de Mosh'**
+  String get moshServer;
+
+  /// No description provided for @moshServerHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Dónde está mosh-server en el servidor, si no está en su PATH: /opt/homebrew/bin/mosh-server'**
+  String get moshServerHelp;
 
   /// No description provided for @moveEarlier.
   ///

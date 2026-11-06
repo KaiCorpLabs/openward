@@ -37,9 +37,31 @@ pub enum SessionEventKind {
     /// How the shell of a host with a persistent session started
     /// (`persistent`).
     Persistent,
+    /// Mosh was asked for and the session goes over SSH (`mosh_fallback`).
+    MoshFallback,
     /// A local program is running (`program`).
     Started,
     Closed,
+}
+
+/// Why a session asked to go over Mosh goes over SSH, in tmux.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MoshFallbackKind {
+    /// No `mosh-client` on this computer.
+    NoClient,
+    /// No `mosh-server` on the server.
+    NoServer,
+    /// The server's UDP did not get through.
+    NoUdp,
+    /// `mosh-server` did not start; [`MoshFallbackView::said`] is why.
+    Other,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MoshFallbackView {
+    pub kind: MoshFallbackKind,
+    /// What the server said, with `Other`.
+    pub said: String,
 }
 
 /// One event; the field named by `kind` is set.
@@ -61,6 +83,7 @@ pub struct SessionEvent {
     /// Saved hosts (by id) that do not tell their system and do not read
     /// `/etc/os-release`, with `HostsChanged`.
     pub unknown_systems: Vec<String>,
+    pub mosh_fallback: Option<MoshFallbackView>,
 }
 
 /// An answer from the server (after `rtt_ms`, when it was a question's),
@@ -170,6 +193,8 @@ pub struct ConnectedView {
     /// For Telnet the SSH fields are empty (nothing is encrypted); for a
     /// serial port `host` is the port and `port` 0.
     pub protocol: super::vault::ProtocolKind,
+    /// The shell goes over Mosh (SSH only started it).
+    pub mosh: bool,
     pub host: String,
     pub port: u16,
     pub kex: String,
@@ -526,6 +551,7 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
         program: None,
         closed: None,
         unknown_systems: Vec::new(),
+        mosh_fallback: None,
     };
     match e {
         Event::Route { hops } => {
@@ -568,6 +594,7 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
         }
         Event::Connected(Connected {
             protocol,
+            mosh,
             host,
             port,
             kex,
@@ -587,6 +614,7 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
             };
             v.connected = Some(ConnectedView {
                 protocol: super::vault::ProtocolKind::of(protocol),
+                mosh,
                 host,
                 port,
                 kex,
@@ -633,6 +661,17 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
                     Persistence::NoTmux => PersistenceKind::NoTmux,
                 },
             });
+        }
+        Event::MoshFallback { reason } => {
+            use openward_app::events::MoshFallback;
+            v.kind = SessionEventKind::MoshFallback;
+            let (kind, said) = match reason {
+                MoshFallback::NoClient => (MoshFallbackKind::NoClient, String::new()),
+                MoshFallback::NoServer => (MoshFallbackKind::NoServer, String::new()),
+                MoshFallback::NoUdp => (MoshFallbackKind::NoUdp, String::new()),
+                MoshFallback::Other(said) => (MoshFallbackKind::Other, said),
+            };
+            v.mosh_fallback = Some(MoshFallbackView { kind, said });
         }
         Event::Started { program } => {
             v.kind = SessionEventKind::Started;

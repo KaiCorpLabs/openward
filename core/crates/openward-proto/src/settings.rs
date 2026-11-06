@@ -112,6 +112,13 @@ settings! {
     /// How a serial port talks, for hosts reached over one (the host's
     /// address is the port: `/dev/cu.usbserial-1410`, `COM3`).
     serial: SerialLine,
+    /// The shell over Mosh: SSH starts `mosh-server`, and the installed
+    /// `mosh-client` carries the session over UDP, roaming across networks.
+    /// Without it, or without UDP, the session goes on over SSH.
+    mosh: bool,
+    /// What starts the server, when `mosh-server` is not on the server's
+    /// `PATH` (`/opt/homebrew/bin/mosh-server`).
+    mosh_server: String,
 }
 
 /// How a host is reached. New ways go in fields of their own: a variant an

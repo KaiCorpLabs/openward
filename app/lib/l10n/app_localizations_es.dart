@@ -49,7 +49,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get advancedList =>
-      'proxy, claves del host, sesión persistente, comprobación y agente';
+      'proxy, claves del host, sesión persistente, Mosh, comprobación y agente';
 
   @override
   String get advancedListSerial => 'registro de sesión';
@@ -2990,6 +2990,44 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get moreOptions => 'Más opciones';
+
+  @override
+  String get moshFallbackNoClient =>
+      'sin Mosh: falta mosh-client en este equipo (brew install mosh, o apt install mosh) · sigue por SSH';
+
+  @override
+  String get moshFallbackNoServer =>
+      'sin Mosh: el servidor no tiene mosh-server · sigue por SSH';
+
+  @override
+  String get moshFallbackNoUdp =>
+      'sin Mosh: no llega el UDP del servidor (un cortafuegos, o una red que no lo deja pasar) · sigue por SSH, en tmux';
+
+  @override
+  String moshFallbackOther(String said) {
+    return 'sin Mosh: $said · sigue por SSH';
+  }
+
+  @override
+  String get moshFallbackWindows =>
+      'sin Mosh: en Windows todavía no · sigue por SSH';
+
+  @override
+  String get moshNote =>
+      'Hace falta mosh-server en el servidor y mosh-client en este equipo (macOS: brew install mosh; Linux: apt o dnf install mosh). El UDP va directo: los saltos solo sirven para arrancarlo. Si no llega, la sesión sigue por SSH, en tmux.';
+
+  @override
+  String get moshOff => 'Apagado: SSH';
+
+  @override
+  String get moshOn => 'Encendido: por Mosh cuando se pueda';
+
+  @override
+  String get moshServer => 'Servidor de Mosh';
+
+  @override
+  String get moshServerHelp =>
+      'Dónde está mosh-server en el servidor, si no está en su PATH: /opt/homebrew/bin/mosh-server';
 
   @override
   String get moveEarlier => 'Mover antes';

@@ -41,6 +41,16 @@ En móvil, las sesiones SSH mueren al cambiar de red o al suspenderse la app (iO
 
 Son semanas de trabajo de protocolo y pruebas, y existe el riesgo de diferencias sutiles con `mosh-server`. El orden por fases da valor antes: tmux con reenganche cubre buena parte de los casos sin instalar nada nuevo en el servidor.
 
+## Revisión del 2026-11-06: el `mosh-client` instalado, en escritorio
+
+Para no esperar a la fase 4 en escritorio, OpenWard usa los programas del propio proyecto Mosh, instalados por el usuario (Homebrew, apt, dnf), como programas aparte. No enlaza ni distribuye código GPL, ni lo lee:
+
+1. Por su conexión SSH de siempre (autenticación, saltos, known hosts), arranca `mosh-server new`, en UTF-8 y con un límite de una semana sin noticias del cliente.
+2. Lee `MOSH CONNECT <puerto> <clave>`.
+3. Lanza `mosh-client <ip> <puerto>` en el PTY de la terminal, con la clave en `MOSH_KEY`; desde ahí la conexión SSH sobra.
+
+Es un ajuste por host o grupo (`mosh`, apagado por defecto), con `mosh_server` para cuando no está en el `PATH` del servidor. Si falta `mosh-client` aquí o `mosh-server` allí, o el UDP no llega en 20 s, la sesión sigue por esa misma conexión SSH, en tmux, y lo dice. Con saltos, el UDP va directo al destino: los saltos solo arrancan el servidor. El cliente clean-room sigue siendo el plan para el móvil y para Windows (fase 4).
+
 ## Validación y revisión
 
 Pruebas de interoperabilidad contra `mosh-server` 1.4+ con pérdida de paquetes y cambios de IP simulados, y revisión de la procedencia del código. Reabrir si aparece una implementación Rust con licencia compatible y madura, para adoptarla o contribuir a ella.

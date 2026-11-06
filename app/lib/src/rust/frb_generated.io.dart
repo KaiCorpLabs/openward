@@ -259,6 +259,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   MissingKind dco_decode_box_autoadd_missing_kind(dynamic raw);
 
   @protected
+  MoshFallbackView dco_decode_box_autoadd_mosh_fallback_view(dynamic raw);
+
+  @protected
   NetKind dco_decode_box_autoadd_net_kind(dynamic raw);
 
   @protected
@@ -670,6 +673,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   MissingKind dco_decode_missing_kind(dynamic raw);
 
   @protected
+  MoshFallbackKind dco_decode_mosh_fallback_kind(dynamic raw);
+
+  @protected
+  MoshFallbackView dco_decode_mosh_fallback_view(dynamic raw);
+
+  @protected
   NetKind dco_decode_net_kind(dynamic raw);
 
   @protected
@@ -752,6 +761,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   MissingKind? dco_decode_opt_box_autoadd_missing_kind(dynamic raw);
+
+  @protected
+  MoshFallbackView? dco_decode_opt_box_autoadd_mosh_fallback_view(dynamic raw);
 
   @protected
   NetKind? dco_decode_opt_box_autoadd_net_kind(dynamic raw);
@@ -1289,6 +1301,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   MissingKind sse_decode_box_autoadd_missing_kind(SseDeserializer deserializer);
 
   @protected
+  MoshFallbackView sse_decode_box_autoadd_mosh_fallback_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NetKind sse_decode_box_autoadd_net_kind(SseDeserializer deserializer);
 
   @protected
@@ -1760,6 +1777,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   MissingKind sse_decode_missing_kind(SseDeserializer deserializer);
 
   @protected
+  MoshFallbackKind sse_decode_mosh_fallback_kind(SseDeserializer deserializer);
+
+  @protected
+  MoshFallbackView sse_decode_mosh_fallback_view(SseDeserializer deserializer);
+
+  @protected
   NetKind sse_decode_net_kind(SseDeserializer deserializer);
 
   @protected
@@ -1872,6 +1895,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   MissingKind? sse_decode_opt_box_autoadd_missing_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  MoshFallbackView? sse_decode_opt_box_autoadd_mosh_fallback_view(
     SseDeserializer deserializer,
   );
 
@@ -2539,6 +2567,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_mosh_fallback_view(
+    MoshFallbackView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_net_kind(NetKind self, SseSerializer serializer);
 
   @protected
@@ -3142,6 +3176,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_missing_kind(MissingKind self, SseSerializer serializer);
 
   @protected
+  void sse_encode_mosh_fallback_kind(
+    MoshFallbackKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_mosh_fallback_view(
+    MoshFallbackView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_net_kind(NetKind self, SseSerializer serializer);
 
   @protected
@@ -3292,6 +3338,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_missing_kind(
     MissingKind? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_mosh_fallback_view(
+    MoshFallbackView? self,
     SseSerializer serializer,
   );
 

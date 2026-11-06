@@ -191,6 +191,10 @@ class TerminalController extends ConnectionController {
   /// long away.
   String Function(DateTime at, Duration away)? comebackLine;
 
+  /// The words of the line that says why the session goes over SSH when
+  /// Mosh was asked for, set by the pane.
+  String Function(MoshFallbackView why)? moshFallbackLine;
+
   @override
   void onEvent(SessionEvent e) {
     final down = phase == Phase.reconnecting;
@@ -205,6 +209,11 @@ class TerminalController extends ConnectionController {
       PersistenceKind.new_ || PersistenceKind.resumed => true,
       _ => false,
     };
+    if (e.moshFallback case final why?) {
+      if (moshFallbackLine case final words?) {
+        session.note(text: '\r\n\x1b[2m── ${words(why)} ──\x1b[0m\r\n');
+      }
+    }
     final line = comebackLine;
     if (down &&
         !inTmux &&

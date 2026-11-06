@@ -7,6 +7,7 @@ import 'fakes.dart';
 
 const _connected = ConnectedView(
   protocol: ProtocolKind.ssh,
+  mosh: false,
   host: 'web-1.example.com',
   port: 22,
   kex: 'mlkem768x25519-sha256',

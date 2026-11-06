@@ -691,6 +691,12 @@ class SettingsSpec {
   /// With a serial port.
   final SerialLineSpec? serial;
 
+  /// The shell over Mosh (SSH only).
+  final bool? mosh;
+
+  /// What starts `mosh-server`, when it is not on the server's `PATH`.
+  final String? moshServer;
+
   const SettingsSpec({
     this.user,
     this.port,
@@ -724,6 +730,8 @@ class SettingsSpec {
     this.sessionLog = null,
     this.protocol = null,
     this.serial = null,
+    this.mosh = null,
+    this.moshServer = null,
   });
 
   static Future<SettingsSpec> default_() =>
@@ -762,7 +770,9 @@ class SettingsSpec {
       readOsRelease.hashCode ^
       sessionLog.hashCode ^
       protocol.hashCode ^
-      serial.hashCode;
+      serial.hashCode ^
+      mosh.hashCode ^
+      moshServer.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -800,7 +810,9 @@ class SettingsSpec {
           readOsRelease == other.readOsRelease &&
           sessionLog == other.sessionLog &&
           protocol == other.protocol &&
-          serial == other.serial;
+          serial == other.serial &&
+          mosh == other.mosh &&
+          moshServer == other.moshServer;
 }
 
 enum SystemKind {

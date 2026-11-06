@@ -36,6 +36,8 @@ class SettingsForm extends ChangeNotifier {
         text: original.proxyPort == 0 ? '' : '${original.proxyPort}',
       ),
       proxyUser = TextEditingController(text: original.proxyUser),
+      moshServer = TextEditingController(text: original.moshServer ?? ''),
+      mosh = original.mosh,
       proxy = original.proxy,
       agent = original.agent,
       route = original.route,
@@ -73,11 +75,19 @@ class SettingsForm extends ChangeNotifier {
         if (original.readOsRelease != null) 'read_os_release',
         if (original.protocol != null) 'protocol',
         if (original.serial != null) 'serial',
+        if (original.mosh != null) 'mosh',
+        if (original.moshServer != null) 'mosh_server',
       };
 
   final SettingsSpec original;
   final TextEditingController user, port, keys, socket, command;
   final TextEditingController proxyHost, proxyPort, proxyUser;
+
+  /// Where mosh-server is on the server, when not on its PATH.
+  final TextEditingController moshServer;
+
+  /// The shell over Mosh.
+  bool? mosh;
   AgentKind? agent;
   RouteKind? route;
   ProxyKind? proxy;
@@ -140,6 +150,7 @@ class SettingsForm extends ChangeNotifier {
       proxyHost,
       proxyPort,
       proxyUser,
+      moshServer,
     ]) {
       c.dispose();
     }
@@ -209,6 +220,10 @@ class SettingsForm extends ChangeNotifier {
         protocol = inherited.protocol ?? ProtocolKind.ssh;
       case 'serial':
         serial = inherited.serial ?? defaultSerialLine;
+      case 'mosh':
+        mosh = inherited.mosh ?? false;
+      case 'mosh_server':
+        moshServer.text = inherited.moshServer ?? 'mosh-server';
     }
     notifyListeners();
   }
@@ -265,6 +280,10 @@ class SettingsForm extends ChangeNotifier {
         protocol = null;
       case 'serial':
         serial = null;
+      case 'mosh':
+        mosh = null;
+      case 'mosh_server':
+        moshServer.clear();
     }
     notifyListeners();
   }
@@ -280,6 +299,8 @@ class SettingsForm extends ChangeNotifier {
     proxyHost.text,
     proxyPort.text,
     proxyUser.text,
+    moshServer.text,
+    mosh,
     jumpAddress.text,
     agent,
     route,
@@ -417,6 +438,8 @@ class SettingsForm extends ChangeNotifier {
       readOsRelease: setHere.contains('read_os_release') ? readOsRelease : null,
       protocol: setHere.contains('protocol') ? protocol : null,
       serial: setHere.contains('serial') ? serial : null,
+      mosh: setHere.contains('mosh') ? mosh : null,
+      moshServer: text('mosh_server', moshServer),
     );
   }
 }

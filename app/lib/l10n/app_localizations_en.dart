@@ -49,7 +49,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get advancedList =>
-      'proxy, host keys, persistent session, checks and agent';
+      'proxy, host keys, persistent session, Mosh, checks and agent';
 
   @override
   String get advancedListSerial => 'session log';
@@ -2982,6 +2982,44 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get moreOptions => 'More options';
+
+  @override
+  String get moshFallbackNoClient =>
+      'no Mosh: mosh-client is missing on this computer (brew install mosh, or apt install mosh) · going on over SSH';
+
+  @override
+  String get moshFallbackNoServer =>
+      'no Mosh: the server has no mosh-server · going on over SSH';
+
+  @override
+  String get moshFallbackNoUdp =>
+      'no Mosh: the server\'s UDP does not get through (a firewall, or a network that blocks it) · going on over SSH, in tmux';
+
+  @override
+  String moshFallbackOther(String said) {
+    return 'no Mosh: $said · going on over SSH';
+  }
+
+  @override
+  String get moshFallbackWindows =>
+      'no Mosh: not on Windows yet · going on over SSH';
+
+  @override
+  String get moshNote =>
+      'It needs mosh-server on the server and mosh-client on this computer (macOS: brew install mosh; Linux: apt or dnf install mosh). UDP goes straight there: jumps only start it. If it does not get through, the session goes on over SSH, in tmux.';
+
+  @override
+  String get moshOff => 'Off: SSH';
+
+  @override
+  String get moshOn => 'On: over Mosh when it can';
+
+  @override
+  String get moshServer => 'Mosh server';
+
+  @override
+  String get moshServerHelp =>
+      'Where mosh-server is on the server, if not on its PATH: /opt/homebrew/bin/mosh-server';
 
   @override
   String get moveEarlier => 'Move earlier';

@@ -18,7 +18,7 @@ import '../history/line_tracker.dart';
 import '../l10n/l10n.dart';
 import '../snippets/palette.dart' show showSnippetPalette;
 import '../src/rust/api/session.dart';
-import '../tabs/connection_motion.dart' show comebackWords;
+import '../tabs/connection_motion.dart' show comebackWords, moshFallbackWords;
 import '../ui/tokens.dart';
 import 'controller.dart';
 import 'keys.dart';
@@ -121,6 +121,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
       if (!mounted) return;
       final l = context.l10n;
       _c.comebackLine = (at, away) => comebackWords(l, at, away);
+      _c.moshFallbackLine = (why) => moshFallbackWords(l, why);
     });
     final settings = ref.read(settingsProvider);
     _optionAsAlt = settings.optionAsAlt;

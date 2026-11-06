@@ -76,6 +76,11 @@ class StatusBar extends ConsumerWidget {
             ),
           ),
           if (pq) ...[const SizedBox(width: 8), Pill(l.postQuantum)],
+          // Over Mosh: the session roams, and SSH only started it.
+          if (k.mosh) ...[
+            const SizedBox(width: 8),
+            const Pill('Mosh', key: ValueKey('status.mosh')),
+          ],
           // Telnet: what is typed goes as it is.
           if (k.protocol == ProtocolKind.telnet) ...[
             const SizedBox(width: 8),
@@ -91,8 +96,9 @@ class StatusBar extends ConsumerWidget {
           ],
           if (s.persistent case final p?) tmuxPill(context, p),
           const SizedBox(width: 6),
-          // Only SSH asks the server how long it takes.
-          if (ssh) LatencyChip(controller: s),
+          // Only SSH asks the server how long it takes (Mosh's own bar
+          // says when the server is late).
+          if (ssh && !k.mosh) LatencyChip(controller: s),
           if (via != null)
             Flexible(
               child: Padding(

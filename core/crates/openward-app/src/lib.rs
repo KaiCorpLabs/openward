@@ -24,6 +24,7 @@ pub mod tunnels;
 
 mod connect;
 mod live;
+mod mosh;
 mod system;
 
 use std::path::{Path, PathBuf};
@@ -289,6 +290,7 @@ impl App {
                 Ok(port) => {
                     let connected = events::Connected {
                         protocol: Protocol::Serial,
+                        mosh: false,
                         host: path.clone(),
                         port: 0,
                         kex: String::new(),
@@ -896,6 +898,7 @@ async fn telnet_session(
     drop(pipe);
     sink.send(Event::Connected(events::Connected {
         protocol: Protocol::Telnet,
+        mosh: false,
         host: target.address.clone(),
         port: target.port,
         kex: String::new(),
@@ -931,6 +934,128 @@ async fn session(
     ctx.live.add(plan.key(), &live);
     ctx.learn_systems(plan, &live);
     ctx.autostart(plan, &live).await;
+    if let Some(server) = &plan.mosh {
+        return mosh_session(plan, ctx, term, tmux, live, server).await;
+    }
+    shell(plan, ctx, term, tmux, live, plan.persistent).await
+}
+
+/// The session over Mosh, on a connection that is up: SSH starts the
+/// server, then `mosh-client` takes over in the terminal's PTY and the
+/// connection goes. Without Mosh here or there, or without UDP, the
+/// session goes on over this same connection, in tmux.
+async fn mosh_session(
+    plan: &Plan,
+    ctx: &Ctx,
+    term: &Weak<Terminal>,
+    tmux: &str,
+    live: Arc<Live>,
+    server: &str,
+) -> (Option<u32>, Option<Failure>, bool) {
+    use events::MoshFallback;
+    let sink = &ctx.sink;
+    let last = plan.hops.len() - 1;
+    let target_hop = &plan.hops[last];
+    sink.send(Event::Stage {
+        hop: last,
+        hops: plan.hops.len(),
+        label: target_hop.label.clone(),
+        stage: Stage::OpeningShell,
+    });
+    let over_ssh = |reason| {
+        sink.send(Event::MoshFallback { reason });
+        shell(plan, ctx, term, tmux, Arc::clone(&live), true)
+    };
+    let Some(client) = openward_ssh::client::find_program("mosh-client").await else {
+        return over_ssh(MoshFallback::NoClient).await;
+    };
+    // Straight to the server: it listens where SSH came in. Through
+    // jumps, everywhere (the packets come from outside).
+    let command = mosh::server_command(server, plan.hops.len() == 1);
+    let started = tokio::time::timeout(
+        mosh::SERVER_START,
+        live.target()
+            .exec_until(&command, |out| mosh::connect_line(out).is_some()),
+    )
+    .await;
+    let (port, key) = match started {
+        Ok(Ok(out)) => match mosh::connect_line(&out.text()) {
+            Some(found) => found,
+            None => return over_ssh(mosh::server_problem(&out.text(), out.status)).await,
+        },
+        Ok(Err(e)) => return over_ssh(MoshFallback::Other(format!("{e:#}"))).await,
+        Err(_) => {
+            let silent = no_answer(mosh::SERVER_START);
+            return over_ssh(MoshFallback::Other(silent)).await;
+        }
+    };
+    let ip = match tokio::net::lookup_host((target_hop.address.as_str(), port)).await {
+        Ok(mut found) => match found.next() {
+            Some(addr) => addr.ip(),
+            None => return over_ssh(MoshFallback::NoUdp).await,
+        },
+        Err(_) => return over_ssh(MoshFallback::NoUdp).await,
+    };
+    let Some(t) = term.upgrade() else {
+        return (None, None, false);
+    };
+    let size = t.size();
+    let run = t.run_program(
+        Spawn {
+            program: Some(client.display().to_string()),
+            args: vec![ip.to_string(), port.to_string()],
+            env: vec![("MOSH_KEY".into(), key)],
+            cols: size.cols,
+            rows: size.rows,
+            ..Spawn::default()
+        },
+        mosh::NOTHING_RECEIVED,
+    );
+    drop(t);
+    let mut program = match run {
+        Ok(program) => program,
+        Err(e) => return over_ssh(MoshFallback::Other(format!("{e:#}"))).await,
+    };
+    let mut connected = live.connected.clone();
+    connected.mosh = true;
+    sink.send(Event::Connected(connected));
+    // The connection stays while the first packets may still not come:
+    // without them, the session goes on over it.
+    let first = tokio::time::timeout(mosh::UDP_WAIT, async {
+        tokio::select! {
+            ended = &mut program.exited => Some(ended.ok().flatten()),
+            _ = &mut program.seen => None,
+        }
+    })
+    .await;
+    match first {
+        // It ended early (it could not start, or the user left at once).
+        Ok(Some(exit_code)) => return (exit_code, None, true),
+        // Nothing came back over UDP.
+        Ok(None) => {
+            if let Some(t) = term.upgrade() {
+                t.detach();
+            }
+            return over_ssh(MoshFallback::NoUdp).await;
+        }
+        Err(_) => {}
+    }
+    // Mosh has it now: the connection goes, unless a browser uses it.
+    drop(live);
+    let exit_code = program.exited.await.ok().flatten();
+    (exit_code, None, true)
+}
+
+/// The shell on a connection that is up, in tmux when `persistent`.
+async fn shell(
+    plan: &Plan,
+    ctx: &Ctx,
+    term: &Weak<Terminal>,
+    tmux: &str,
+    live: Arc<Live>,
+    persistent: bool,
+) -> (Option<u32>, Option<Failure>, bool) {
+    let sink = &ctx.sink;
     let Some(pipe) = term.upgrade().map(|t| t.pipe()) else {
         return (None, None, false);
     };
@@ -945,7 +1070,7 @@ async fn session(
     let size = pipe.size();
     let (cols, rows) = (u32::from(size.cols), u32::from(size.rows));
     let target = live.target();
-    let persistence = if plan.persistent {
+    let persistence = if persistent {
         let state = tmux_state(target, tmux).await;
         sink.send(Event::Persistent {
             session: tmux.to_owned(),

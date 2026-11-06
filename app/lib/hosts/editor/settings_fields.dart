@@ -112,6 +112,8 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
       'host_key_policy',
       'legacy_host_keys',
       'persistent_session',
+      'mosh',
+      'mosh_server',
       'session_log',
       'keepalive_secs',
       'connect_timeout_secs',
@@ -244,6 +246,8 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
             ? '23'
             : '${e.port ?? 22}',
       'protocol' => _protocolName(l, e.protocol ?? ProtocolKind.ssh),
+      'mosh' => e.mosh ?? false ? l.moshOn : l.moshOff,
+      'mosh_server' => e.moshServer ?? 'mosh-server',
       'serial' => serialSummary(l, e.serial ?? defaultSerialLine),
       'identity_files' => e.identityFiles?.join(', ') ?? l.defaultKeys,
       'agent' => switch (e.agent) {
@@ -865,6 +869,55 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
                 onChanged: (v) => f.update(() => f.persistent = v),
               ),
             ),
+          ],
+          if (_protocol == ProtocolKind.ssh) ...[
+            _row(
+              field: 'mosh',
+              label: 'Mosh',
+              editor: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DropdownButtonFormField<bool>(
+                    style: fieldTextStyle(context),
+                    key: const ValueKey('settings.mosh'),
+                    autofocus: focusFor('mosh'),
+                    initialValue: f.mosh ?? false,
+                    isExpanded: true,
+                    items: [
+                      DropdownMenuItem(value: true, child: Text(l.moshOn)),
+                      DropdownMenuItem(value: false, child: Text(l.moshOff)),
+                    ],
+                    onChanged: (v) => f.update(() => f.mosh = v),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    l.moshNote,
+                    style: TextStyle(
+                      fontSize: OwText.small,
+                      color: ow.colors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Where its server is: only while Mosh is on.
+            if ((f.setHere.contains('mosh') ? f.mosh : _from.mosh) ?? false)
+              _row(
+                field: 'mosh_server',
+                label: l.moshServer,
+                mono: true,
+                editor: TextField(
+                  key: const ValueKey('settings.moshServer'),
+                  controller: f.moshServer,
+                  autofocus: focusFor('mosh_server'),
+                  style: monoStyle(context, size: 13, color: ow.colors.text),
+                  decoration: InputDecoration(
+                    hintText: 'mosh-server',
+                    helperText: l.moshServerHelp,
+                    helperMaxLines: 2,
+                  ),
+                ),
+              ),
           ],
           _row(
             field: 'session_log',

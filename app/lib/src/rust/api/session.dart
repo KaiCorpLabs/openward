@@ -11,7 +11,7 @@ import 'vault.dart';
 
 // These functions are ignored because they are not marked as `pub`: `event_view`, `failure_view`, `into_answer`, `packed`, `prompt_view`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DartSink`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<TerminalSession>>
 abstract class TerminalSession implements RustOpaqueInterface {
@@ -210,6 +210,9 @@ class ConnectedView {
   /// For Telnet the SSH fields are empty (nothing is encrypted); for a
   /// serial port `host` is the port and `port` 0.
   final ProtocolKind protocol;
+
+  /// The shell goes over Mosh (SSH only started it).
+  final bool mosh;
   final String host;
   final int port;
   final String kex;
@@ -228,6 +231,7 @@ class ConnectedView {
 
   const ConnectedView({
     required this.protocol,
+    required this.mosh,
     required this.host,
     required this.port,
     required this.kex,
@@ -244,6 +248,7 @@ class ConnectedView {
   @override
   int get hashCode =>
       protocol.hashCode ^
+      mosh.hashCode ^
       host.hashCode ^
       port.hashCode ^
       kex.hashCode ^
@@ -262,6 +267,7 @@ class ConnectedView {
       other is ConnectedView &&
           runtimeType == other.runtimeType &&
           protocol == other.protocol &&
+          mosh == other.mosh &&
           host == other.host &&
           port == other.port &&
           kex == other.kex &&
@@ -486,6 +492,41 @@ class LogStateView {
           recording == other.recording &&
           paused == other.paused &&
           failed == other.failed;
+}
+
+/// Why a session asked to go over Mosh goes over SSH, in tmux.
+enum MoshFallbackKind {
+  /// No `mosh-client` on this computer.
+  noClient,
+
+  /// No `mosh-server` on the server.
+  noServer,
+
+  /// The server's UDP did not get through.
+  noUdp,
+
+  /// `mosh-server` did not start; [`MoshFallbackView::said`] is why.
+  other,
+}
+
+class MoshFallbackView {
+  final MoshFallbackKind kind;
+
+  /// What the server said, with `Other`.
+  final String said;
+
+  const MoshFallbackView({required this.kind, required this.said});
+
+  @override
+  int get hashCode => kind.hashCode ^ said.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MoshFallbackView &&
+          runtimeType == other.runtimeType &&
+          kind == other.kind &&
+          said == other.said;
 }
 
 /// With [`FailureKind::Network`]: what kind of trouble.
@@ -851,6 +892,7 @@ class SessionEvent {
   /// Saved hosts (by id) that do not tell their system and do not read
   /// `/etc/os-release`, with `HostsChanged`.
   final List<String> unknownSystems;
+  final MoshFallbackView? moshFallback;
 
   const SessionEvent({
     required this.kind,
@@ -865,6 +907,7 @@ class SessionEvent {
     this.program,
     this.closed,
     required this.unknownSystems,
+    this.moshFallback,
   });
 
   @override
@@ -880,7 +923,8 @@ class SessionEvent {
       persistent.hashCode ^
       program.hashCode ^
       closed.hashCode ^
-      unknownSystems.hashCode;
+      unknownSystems.hashCode ^
+      moshFallback.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -898,7 +942,8 @@ class SessionEvent {
           persistent == other.persistent &&
           program == other.program &&
           closed == other.closed &&
-          unknownSystems == other.unknownSystems;
+          unknownSystems == other.unknownSystems &&
+          moshFallback == other.moshFallback;
 }
 
 enum SessionEventKind {
@@ -925,6 +970,9 @@ enum SessionEventKind {
   /// How the shell of a host with a persistent session started
   /// (`persistent`).
   persistent,
+
+  /// Mosh was asked for and the session goes over SSH (`mosh_fallback`).
+  moshFallback,
 
   /// A local program is running (`program`).
   started,

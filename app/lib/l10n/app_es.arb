@@ -19,7 +19,7 @@
   "address": "Dirección",
   "addressHint": "servidor.example.com o 10.0.0.5",
   "advanced": "Avanzado",
-  "advancedList": "proxy, claves del host, sesión persistente, comprobación y agente",
+  "advancedList": "proxy, claves del host, sesión persistente, Mosh, comprobación y agente",
   "advancedListSerial": "registro de sesión",
   "advancedListTelnet": "proxy, registro de sesión y tiempo para conectar",
   "advancedSetHere": "{count, plural, =1{1 cambiado aquí} other{{count} cambiados aquí}}",
@@ -2354,6 +2354,23 @@
   "monthsShort": "ene,feb,mar,abr,may,jun,jul,ago,sept,oct,nov,dic",
   "moreActions": "Más acciones",
   "moreOptions": "Más opciones",
+  "moshFallbackNoClient": "sin Mosh: falta mosh-client en este equipo (brew install mosh, o apt install mosh) · sigue por SSH",
+  "moshFallbackNoServer": "sin Mosh: el servidor no tiene mosh-server · sigue por SSH",
+  "moshFallbackNoUdp": "sin Mosh: no llega el UDP del servidor (un cortafuegos, o una red que no lo deja pasar) · sigue por SSH, en tmux",
+  "moshFallbackOther": "sin Mosh: {said} · sigue por SSH",
+  "@moshFallbackOther": {
+    "placeholders": {
+      "said": {
+        "type": "String"
+      }
+    }
+  },
+  "moshFallbackWindows": "sin Mosh: en Windows todavía no · sigue por SSH",
+  "moshNote": "Hace falta mosh-server en el servidor y mosh-client en este equipo (macOS: brew install mosh; Linux: apt o dnf install mosh). El UDP va directo: los saltos solo sirven para arrancarlo. Si no llega, la sesión sigue por SSH, en tmux.",
+  "moshOff": "Apagado: SSH",
+  "moshOn": "Encendido: por Mosh cuando se pueda",
+  "moshServer": "Servidor de Mosh",
+  "moshServerHelp": "Dónde está mosh-server en el servidor, si no está en su PATH: /opt/homebrew/bin/mosh-server",
   "moveEarlier": "Mover antes",
   "moveLater": "Mover después",
   "moveToNewTab": "Mover a una pestaña nueva",

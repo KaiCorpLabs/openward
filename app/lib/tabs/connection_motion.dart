@@ -3,6 +3,7 @@
 // to the host, drawn and animated (still when motion is reduced).
 
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -790,6 +791,16 @@ class StalledBar extends StatelessWidget {
 }
 
 /// The comeback line's words for a terminal, in the interface's language.
+/// Why a session asked to go over Mosh goes over SSH, in words.
+String moshFallbackWords(AppLocalizations l, MoshFallbackView why) =>
+    switch (why.kind) {
+      MoshFallbackKind.noClient =>
+        Platform.isWindows ? l.moshFallbackWindows : l.moshFallbackNoClient,
+      MoshFallbackKind.noServer => l.moshFallbackNoServer,
+      MoshFallbackKind.noUdp => l.moshFallbackNoUdp,
+      MoshFallbackKind.other => l.moshFallbackOther(why.said),
+    };
+
 String comebackWords(AppLocalizations l, DateTime at, Duration away) {
   return l.comebackLine(
     DateFormat.Hm(l.localeName).format(at),

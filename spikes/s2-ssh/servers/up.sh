@@ -44,7 +44,8 @@ run() { # name image [extra args…]
 }
 run s2-openssh-8.9 s2-openssh-8.9 -p 127.0.0.1:22089:22
 run s2-openssh-9.2 s2-openssh-9.2 -p 127.0.0.1:22092:22
-run bastion s2-openssh-10.0 -p 127.0.0.1:22100:22
+# The bastion's Mosh too: mosh-server takes the first free port from 60001.
+run bastion s2-openssh-10.0 -p 127.0.0.1:22100:22 -p 127.0.0.1:60001-60004:60001-60004/udp
 run s2-freeze s2-openssh-10.0 -p 127.0.0.1:22101:22
 run s2-dropbear s2-dropbear -p 127.0.0.1:22200:22
 "$runtime" network connect s2-jump-a bastion

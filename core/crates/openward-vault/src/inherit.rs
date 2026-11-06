@@ -47,6 +47,7 @@ pub fn defaults() -> Settings {
         session_log: Some(false),
         protocol: Some(Protocol::Ssh),
         serial: Some(SerialLine::default()),
+        mosh: Some(false),
         ..Settings::default()
     }
 }

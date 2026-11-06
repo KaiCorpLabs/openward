@@ -82,6 +82,23 @@ void main() {
     expect(f.toSpec().serial, isNull);
   });
 
+  test('Mosh, and where its server is, set here or inherited', () {
+    final f = SettingsForm(const SettingsSpec(mosh: true));
+    addTearDown(f.dispose);
+    expect(f.setHere, contains('mosh'));
+    expect(f.toSpec().mosh, isTrue);
+    expect(f.toSpec().moshServer, isNull);
+    f.take('mosh_server', const SettingsSpec());
+    expect(f.moshServer.text, 'mosh-server');
+    f.moshServer.text = '/opt/homebrew/bin/mosh-server';
+    expect(f.toSpec().moshServer, '/opt/homebrew/bin/mosh-server');
+    f
+      ..drop('mosh')
+      ..drop('mosh_server');
+    expect(f.toSpec().mosh, isNull);
+    expect(f.toSpec().moshServer, isNull);
+  });
+
   test('what stops it from saving, on its field', () {
     final f = SettingsForm(const SettingsSpec());
     addTearDown(f.dispose);

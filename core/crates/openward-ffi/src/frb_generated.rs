@@ -9270,6 +9270,7 @@ impl SseDecode for crate::api::session::ConnectedView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_protocol = <crate::api::vault::ProtocolKind>::sse_decode(deserializer);
+        let mut var_mosh = <bool>::sse_decode(deserializer);
         let mut var_host = <String>::sse_decode(deserializer);
         let mut var_port = <u16>::sse_decode(deserializer);
         let mut var_kex = <String>::sse_decode(deserializer);
@@ -9283,6 +9284,7 @@ impl SseDecode for crate::api::session::ConnectedView {
         let mut var_connectMs = <f64>::sse_decode(deserializer);
         return crate::api::session::ConnectedView {
             protocol: var_protocol,
+            mosh: var_mosh,
             host: var_host,
             port: var_port,
             kex: var_kex,
@@ -10798,6 +10800,32 @@ impl SseDecode for crate::api::programs::MissingKind {
     }
 }
 
+impl SseDecode for crate::api::session::MoshFallbackKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::session::MoshFallbackKind::NoClient,
+            1 => crate::api::session::MoshFallbackKind::NoServer,
+            2 => crate::api::session::MoshFallbackKind::NoUdp,
+            3 => crate::api::session::MoshFallbackKind::Other,
+            _ => unreachable!("Invalid variant for MoshFallbackKind: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::session::MoshFallbackView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_kind = <crate::api::session::MoshFallbackKind>::sse_decode(deserializer);
+        let mut var_said = <String>::sse_decode(deserializer);
+        return crate::api::session::MoshFallbackView {
+            kind: var_kind,
+            said: var_said,
+        };
+    }
+}
+
 impl SseDecode for crate::api::session::NetKind {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -11107,6 +11135,19 @@ impl SseDecode for Option<crate::api::programs::MissingKind> {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<crate::api::programs::MissingKind>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::session::MoshFallbackView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::session::MoshFallbackView>::sse_decode(
                 deserializer,
             ));
         } else {
@@ -11987,6 +12028,8 @@ impl SseDecode for crate::api::session::SessionEvent {
         let mut var_program = <Option<String>>::sse_decode(deserializer);
         let mut var_closed = <Option<crate::api::session::ClosedView>>::sse_decode(deserializer);
         let mut var_unknownSystems = <Vec<String>>::sse_decode(deserializer);
+        let mut var_moshFallback =
+            <Option<crate::api::session::MoshFallbackView>>::sse_decode(deserializer);
         return crate::api::session::SessionEvent {
             kind: var_kind,
             route: var_route,
@@ -12000,6 +12043,7 @@ impl SseDecode for crate::api::session::SessionEvent {
             program: var_program,
             closed: var_closed,
             unknown_systems: var_unknownSystems,
+            mosh_fallback: var_moshFallback,
         };
     }
 }
@@ -12018,8 +12062,9 @@ impl SseDecode for crate::api::session::SessionEventKind {
             6 => crate::api::session::SessionEventKind::Hops,
             7 => crate::api::session::SessionEventKind::HostsChanged,
             8 => crate::api::session::SessionEventKind::Persistent,
-            9 => crate::api::session::SessionEventKind::Started,
-            10 => crate::api::session::SessionEventKind::Closed,
+            9 => crate::api::session::SessionEventKind::MoshFallback,
+            10 => crate::api::session::SessionEventKind::Started,
+            11 => crate::api::session::SessionEventKind::Closed,
             _ => unreachable!("Invalid variant for SessionEventKind: {}", inner),
         };
     }
@@ -12063,6 +12108,8 @@ impl SseDecode for crate::api::vault::SettingsSpec {
         let mut var_sessionLog = <Option<bool>>::sse_decode(deserializer);
         let mut var_protocol = <Option<crate::api::vault::ProtocolKind>>::sse_decode(deserializer);
         let mut var_serial = <Option<crate::api::vault::SerialLineSpec>>::sse_decode(deserializer);
+        let mut var_mosh = <Option<bool>>::sse_decode(deserializer);
+        let mut var_moshServer = <Option<String>>::sse_decode(deserializer);
         return crate::api::vault::SettingsSpec {
             user: var_user,
             port: var_port,
@@ -12096,6 +12143,8 @@ impl SseDecode for crate::api::vault::SettingsSpec {
             session_log: var_sessionLog,
             protocol: var_protocol,
             serial: var_serial,
+            mosh: var_mosh,
+            mosh_server: var_moshServer,
         };
     }
 }
@@ -13350,6 +13399,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::session::ConnectedView {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.protocol.into_into_dart().into_dart(),
+            self.mosh.into_into_dart().into_dart(),
             self.host.into_into_dart().into_dart(),
             self.port.into_into_dart().into_dart(),
             self.kex.into_into_dart().into_dart(),
@@ -14604,6 +14654,50 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::programs::MissingKind>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::session::MoshFallbackKind {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::NoClient => 0.into_dart(),
+            Self::NoServer => 1.into_dart(),
+            Self::NoUdp => 2.into_dart(),
+            Self::Other => 3.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::session::MoshFallbackKind
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::session::MoshFallbackKind>
+    for crate::api::session::MoshFallbackKind
+{
+    fn into_into_dart(self) -> crate::api::session::MoshFallbackKind {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::session::MoshFallbackView {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.kind.into_into_dart().into_dart(),
+            self.said.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::session::MoshFallbackView
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::session::MoshFallbackView>
+    for crate::api::session::MoshFallbackView
+{
+    fn into_into_dart(self) -> crate::api::session::MoshFallbackView {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::session::NetKind {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
@@ -15417,6 +15511,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::session::SessionEvent {
             self.program.into_into_dart().into_dart(),
             self.closed.into_into_dart().into_dart(),
             self.unknown_systems.into_into_dart().into_dart(),
+            self.mosh_fallback.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -15445,8 +15540,9 @@ impl flutter_rust_bridge::IntoDart for crate::api::session::SessionEventKind {
             Self::Hops => 6.into_dart(),
             Self::HostsChanged => 7.into_dart(),
             Self::Persistent => 8.into_dart(),
-            Self::Started => 9.into_dart(),
-            Self::Closed => 10.into_dart(),
+            Self::MoshFallback => 9.into_dart(),
+            Self::Started => 10.into_dart(),
+            Self::Closed => 11.into_dart(),
             _ => unreachable!(),
         }
     }
@@ -15498,6 +15594,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::vault::SettingsSpec {
             self.session_log.into_into_dart().into_dart(),
             self.protocol.into_into_dart().into_dart(),
             self.serial.into_into_dart().into_dart(),
+            self.mosh.into_into_dart().into_dart(),
+            self.mosh_server.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -16571,6 +16669,7 @@ impl SseEncode for crate::api::session::ConnectedView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <crate::api::vault::ProtocolKind>::sse_encode(self.protocol, serializer);
+        <bool>::sse_encode(self.mosh, serializer);
         <String>::sse_encode(self.host, serializer);
         <u16>::sse_encode(self.port, serializer);
         <String>::sse_encode(self.kex, serializer);
@@ -17776,6 +17875,32 @@ impl SseEncode for crate::api::programs::MissingKind {
     }
 }
 
+impl SseEncode for crate::api::session::MoshFallbackKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::session::MoshFallbackKind::NoClient => 0,
+                crate::api::session::MoshFallbackKind::NoServer => 1,
+                crate::api::session::MoshFallbackKind::NoUdp => 2,
+                crate::api::session::MoshFallbackKind::Other => 3,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::session::MoshFallbackView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::session::MoshFallbackKind>::sse_encode(self.kind, serializer);
+        <String>::sse_encode(self.said, serializer);
+    }
+}
+
 impl SseEncode for crate::api::session::NetKind {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -18053,6 +18178,16 @@ impl SseEncode for Option<crate::api::programs::MissingKind> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <crate::api::programs::MissingKind>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::session::MoshFallbackView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::session::MoshFallbackView>::sse_encode(value, serializer);
         }
     }
 }
@@ -18802,6 +18937,7 @@ impl SseEncode for crate::api::session::SessionEvent {
         <Option<String>>::sse_encode(self.program, serializer);
         <Option<crate::api::session::ClosedView>>::sse_encode(self.closed, serializer);
         <Vec<String>>::sse_encode(self.unknown_systems, serializer);
+        <Option<crate::api::session::MoshFallbackView>>::sse_encode(self.mosh_fallback, serializer);
     }
 }
 
@@ -18819,8 +18955,9 @@ impl SseEncode for crate::api::session::SessionEventKind {
                 crate::api::session::SessionEventKind::Hops => 6,
                 crate::api::session::SessionEventKind::HostsChanged => 7,
                 crate::api::session::SessionEventKind::Persistent => 8,
-                crate::api::session::SessionEventKind::Started => 9,
-                crate::api::session::SessionEventKind::Closed => 10,
+                crate::api::session::SessionEventKind::MoshFallback => 9,
+                crate::api::session::SessionEventKind::Started => 10,
+                crate::api::session::SessionEventKind::Closed => 11,
                 _ => {
                     unimplemented!("");
                 }
@@ -18865,6 +19002,8 @@ impl SseEncode for crate::api::vault::SettingsSpec {
         <Option<bool>>::sse_encode(self.session_log, serializer);
         <Option<crate::api::vault::ProtocolKind>>::sse_encode(self.protocol, serializer);
         <Option<crate::api::vault::SerialLineSpec>>::sse_encode(self.serial, serializer);
+        <Option<bool>>::sse_encode(self.mosh, serializer);
+        <Option<String>>::sse_encode(self.mosh_server, serializer);
     }
 }
 
