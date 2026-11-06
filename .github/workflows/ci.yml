@@ -1,29 +1,63 @@
 name: CI
 
 # While the repository is private, Actions minutes are billed: macOS counts
-# 10x and Windows 2x. Pushes and PRs therefore run on Linux only (including
-# the iOS/Android compile check), and the macOS/Windows matrix runs weekly or
-# on demand. Pushing a tag (v…) runs nothing; «Run workflow» on a tag runs
-# the full matrix and leaves a draft release with the three packages. When
-# the repository goes public, run the full matrix on every push again.
+# 10x and Windows 2x. So, by event (the `systems` job decides):
+# - pushes to main and PRs: Linux only (with the iOS/Android compile check);
+# - a version tag (v…): Linux and Windows, so every version is tried on
+#   Windows; macOS has gone through `make ci` on the Mac before the tag;
+# - the weekly run: the three systems;
+# - «Run workflow»: the systems chosen, the three by default. On a tag with
+#   the three, it also leaves a draft release with the three packages.
+# When the repository goes public, run the three on every push again.
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
   schedule:
     - cron: "0 5 * * 1"
   workflow_dispatch:
+    inputs:
+      systems:
+        description: Systems to run on
+        type: choice
+        options: [all, linux-windows, linux]
+        default: all
 
 permissions:
   contents: read
 
 jobs:
+  systems:
+    name: Which systems
+    runs-on: ubuntu-latest
+    outputs:
+      os: ${{ steps.pick.outputs.os }}
+    steps:
+      - id: pick
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          ASKED: ${{ inputs.systems }}
+        run: |
+          all='["ubuntu-latest","macos-latest","windows-latest"]'
+          some='["ubuntu-latest","windows-latest"]'
+          linux='["ubuntu-latest"]'
+          case "$EVENT:$ASKED" in
+            schedule:* | workflow_dispatch:all | workflow_dispatch:) os="$all" ;;
+            workflow_dispatch:linux-windows) os="$some" ;;
+            push:*) if [[ "$REF" == refs/tags/v* ]]; then os="$some"; else os="$linux"; fi ;;
+            *) os="$linux" ;;
+          esac
+          echo "os=$os" | tee -a "$GITHUB_OUTPUT"
+
   core:
     name: Rust core (${{ matrix.os }})
+    needs: systems
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
+        os: ${{ fromJSON(needs.systems.outputs.os) }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -126,10 +160,11 @@ jobs:
 
   ssh:
     name: Spike S2 SSH (${{ matrix.os }})
+    needs: systems
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
+        os: ${{ fromJSON(needs.systems.outputs.os) }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -161,12 +196,14 @@ jobs:
 
   app:
     name: App (${{ matrix.os }})
+    needs: systems
     # Linux on every push: analysis, tests (integration ones under Xvfb) and
-    # a release build. macOS (.dmg) and Windows (.zip) with the weekly run.
+    # a release build. Windows (.zip) on every version tag too, and macOS
+    # (.dmg) with the weekly run.
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
+        os: ${{ fromJSON(needs.systems.outputs.os) }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     defaults:
@@ -335,10 +372,10 @@ jobs:
 
   release:
     name: Draft release
-    # Only when run on a version tag («Run workflow» on it), once the three
-    # packages are built. It stays a draft: publishing it is a person's
-    # decision.
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Only when run by hand on a version tag with the three systems, once
+    # the three packages are built. It stays a draft: publishing it is a
+    # person's decision.
+    if: github.event_name == 'workflow_dispatch' && inputs.systems == 'all' && startsWith(github.ref, 'refs/tags/v')
     needs: app
     runs-on: ubuntu-latest
     permissions:

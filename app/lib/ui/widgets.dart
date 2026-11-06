@@ -202,27 +202,51 @@ class KeyCap extends StatelessWidget {
 
   final String keys;
 
+  static const _padding = EdgeInsets.symmetric(horizontal: 5, vertical: 1);
+
+  static TextStyle _style(BuildContext context) => TextStyle(
+    fontFamily: context.ow.fonts.mono,
+    fontSize: 12,
+    color: context.ow.colors.textSubtle,
+  );
+
+  /// How wide the cap for `keys` is here, with this text size: for rows
+  /// that drop the shortcut when it does not fit («Ctrl+Mayús+H» is much
+  /// longer than «⌘⇧H»).
+  static double widthOf(BuildContext context, String keys) =>
+      textWidth(context, keys, _style(context)) + _padding.horizontal + 2;
+
   @override
   Widget build(BuildContext context) {
     final ow = context.ow;
     return ExcludeSemantics(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+        padding: _padding,
         decoration: BoxDecoration(
           border: Border.all(color: ow.colors.control),
           borderRadius: BorderRadius.circular(ow.shape.radiusSmall),
         ),
-        child: Text(
-          keys,
-          style: TextStyle(
-            fontFamily: ow.fonts.mono,
-            fontSize: 12,
-            color: ow.colors.textSubtle,
-          ),
-        ),
+        child: Text(keys, style: _style(context)),
       ),
     );
   }
+}
+
+/// How wide `text` takes in one line here, in `style` over the ambient
+/// text style and with the text size the person chose.
+double textWidth(BuildContext context, String text, TextStyle style) {
+  final painter = TextPainter(
+    text: TextSpan(
+      text: text,
+      style: DefaultTextStyle.of(context).style.merge(style),
+    ),
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+    maxLines: 1,
+  )..layout();
+  final width = painter.width;
+  painter.dispose();
+  return width;
 }
 
 /// The text of fields and menus: body size, never Material's title style.

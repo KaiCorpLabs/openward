@@ -978,30 +978,53 @@ class _HostsEntry extends ConsumerWidget {
                     horizontal: OwSpace.s5,
                     vertical: OwSpace.s4,
                   ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.dns_outlined, size: 17, color: c.accentText),
-                      const SizedBox(width: 10),
-                      Text(
-                        l.hosts,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          summary,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: OwText.small,
-                            color: c.textMuted,
+                  child: LayoutBuilder(
+                    builder: (context, box) {
+                      const label = TextStyle(fontWeight: FontWeight.w600);
+                      final keys = hostsKeys(l);
+                      // The shortcut gives way first when the row is tight
+                      // (a narrow sidebar, large text, «Ctrl+Mayús+H»); the
+                      // summary already shrinks to nothing.
+                      final rest =
+                          17 +
+                          10 +
+                          8 +
+                          4 +
+                          16 +
+                          textWidth(context, l.hosts, label);
+                      final showKeys =
+                          box.maxWidth >= rest + KeyCap.widthOf(context, keys);
+                      return Row(
+                        children: [
+                          Icon(
+                            Icons.dns_outlined,
+                            size: 17,
+                            color: c.accentText,
                           ),
-                        ),
-                      ),
-                      KeyCap(hostsKeys(l)),
-                      const SizedBox(width: 4),
-                      Icon(Icons.chevron_right, size: 16, color: c.textSubtle),
-                    ],
+                          const SizedBox(width: 10),
+                          Text(l.hosts, style: label),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              summary,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: OwText.small,
+                                color: c.textMuted,
+                              ),
+                            ),
+                          ),
+                          if (showKeys) KeyCap(keys),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.chevron_right,
+                            size: 16,
+                            color: c.textSubtle,
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ),

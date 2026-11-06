@@ -64,7 +64,9 @@ out="$cache/ghostty/build/${commit:0:8}/$name"
 flags=(-Demit-lib-vt=true -Doptimize=ReleaseFast ${target_flag[@]+"${target_flag[@]}"})
 # What else makes the build: another Zig, other flags or another script
 # make another library, though the commit and target are the same.
-key="$({ echo "zig $zig_version"; echo "${flags[*]}"; cat "$0"; } | shasum -a 256 | cut -d' ' -f1)"
+# sha256sum on Linux and in Git for Windows' bash; shasum on macOS.
+sha256() { if command -v sha256sum >/dev/null; then sha256sum; else shasum -a 256; fi; }
+key="$({ echo "zig $zig_version"; echo "${flags[*]}"; cat "$0"; } | sha256 | cut -d' ' -f1)"
 # Already built so for this commit and target.
 if ! $bindings && compgen -G "$out/lib/*ghostty-vt*" >/dev/null &&
   [[ "$(cat "$out/.build-key" 2>/dev/null)" == "$key" ]]; then
