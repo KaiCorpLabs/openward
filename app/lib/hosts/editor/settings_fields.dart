@@ -6,10 +6,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/address.dart';
 import '../../core/providers.dart';
+import '../../core/settings.dart';
 import '../../identities/identities.dart';
 import '../../identities/identity_editor.dart';
 import '../../l10n/l10n.dart';
 import '../../src/rust/api/vault.dart';
+import '../../settings/appearance_page.dart' show themeName;
+import '../../terminal/schemes.dart';
+import '../../ui/themes.dart';
 import '../../ui/tokens.dart';
 import '../../ui/widgets.dart';
 
@@ -114,15 +118,24 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
       'persistent_session',
       'mosh',
       'mosh_server',
+      ..._terminalFields,
       'session_log',
       'keepalive_secs',
       'connect_timeout_secs',
       'agent',
       if (widget.system == null) 'read_os_release',
     ],
-    ProtocolKind.telnet => ['proxy', 'session_log', 'connect_timeout_secs'],
-    ProtocolKind.serial => ['session_log'],
+    ProtocolKind.telnet => [
+      'proxy',
+      ..._terminalFields,
+      'session_log',
+      'connect_timeout_secs',
+    ],
+    ProtocolKind.serial => [..._terminalFields, 'session_log'],
   };
+
+  /// How the terminal reads and shows the host, whatever reaches it.
+  static const _terminalFields = ['encoding', 'backspace', 'terminal_scheme'];
 
   /// How the item is reached with what the form says now.
   ProtocolKind get _protocol {
@@ -137,6 +150,21 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
   };
 
   SettingsForm get f => widget.form;
+
+  /// The colors a host can have of its own, by id and name: the themes'
+  /// terminals, the gallery's schemes and those imported.
+  List<(String, String)> get _schemes {
+    final l = context.l10n;
+    return [
+      for (final t in OwThemes.all.values) ('theme:${t.id}', themeName(l, t)),
+      for (final s in [...knownSchemes, ...ref.watch(settingsProvider).schemes])
+        (s.id, s.name),
+    ];
+  }
+
+  String _schemeName(AppLocalizations l, String id) => id.isEmpty
+      ? l.terminalSchemeApp
+      : _schemes.where((s) => s.$1 == id).firstOrNull?.$2 ?? id;
 
   /// What the item inherits before its own identity choice (for the
   /// identity row), and with it (for the rest).
@@ -248,6 +276,9 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
       'protocol' => _protocolName(l, e.protocol ?? ProtocolKind.ssh),
       'mosh' => e.mosh ?? false ? l.moshOn : l.moshOff,
       'mosh_server' => e.moshServer ?? 'mosh-server',
+      'encoding' => charsetLabel(e.encoding ?? 'utf-8'),
+      'backspace' => backspaceLabel(l, e.backspace ?? BackspaceKind.delete),
+      'terminal_scheme' => _schemeName(l, e.terminalScheme ?? ''),
       'serial' => serialSummary(l, e.serial ?? defaultSerialLine),
       'identity_files' => e.identityFiles?.join(', ') ?? l.defaultKeys,
       'agent' => switch (e.agent) {
@@ -951,6 +982,109 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
               ],
             ),
           ),
+          _row(
+            field: 'encoding',
+            label: l.encodingLabel,
+            editor: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<String>(
+                  style: fieldTextStyle(context),
+                  key: const ValueKey('settings.encoding'),
+                  autofocus: focusFor('encoding'),
+                  initialValue: f.encoding ?? 'utf-8',
+                  isExpanded: true,
+                  items: [
+                    for (final c in {
+                      ...ref.read(openWardProvider).charsets(),
+                      ?f.encoding,
+                    })
+                      DropdownMenuItem(value: c, child: Text(charsetLabel(c))),
+                  ],
+                  onChanged: (v) => f.update(() => f.encoding = v),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _protocol == ProtocolKind.ssh
+                      ? l.encodingNoteMosh
+                      : l.encodingNote,
+                  style: TextStyle(
+                    fontSize: OwText.small,
+                    color: ow.colors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _row(
+            field: 'backspace',
+            label: l.backspaceLabel,
+            editor: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<BackspaceKind>(
+                  style: fieldTextStyle(context),
+                  key: const ValueKey('settings.backspace'),
+                  autofocus: focusFor('backspace'),
+                  initialValue: f.backspace ?? BackspaceKind.delete,
+                  isExpanded: true,
+                  items: [
+                    for (final b in BackspaceKind.values)
+                      DropdownMenuItem(
+                        value: b,
+                        child: Text(backspaceLabel(l, b)),
+                      ),
+                  ],
+                  onChanged: (v) => f.update(() => f.backspace = v),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l.backspaceNote,
+                  style: TextStyle(
+                    fontSize: OwText.small,
+                    color: ow.colors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _row(
+            field: 'terminal_scheme',
+            label: l.terminalSchemeLabel,
+            editor: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<String>(
+                  style: fieldTextStyle(context),
+                  key: const ValueKey('settings.terminalScheme'),
+                  autofocus: focusFor('terminal_scheme'),
+                  initialValue: f.terminalScheme ?? '',
+                  isExpanded: true,
+                  items: [
+                    DropdownMenuItem(
+                      value: '',
+                      child: Text(l.terminalSchemeApp),
+                    ),
+                    for (final (id, name) in _schemes)
+                      DropdownMenuItem(value: id, child: Text(name)),
+                    // One that is gone (an imported scheme deleted).
+                    if (f.terminalScheme case final id?
+                        when id.isNotEmpty && !_schemes.any((s) => s.$1 == id))
+                      DropdownMenuItem(value: id, child: Text(id)),
+                  ],
+                  onChanged: (v) => f.update(() => f.terminalScheme = v),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l.terminalSchemeNote,
+                  style: TextStyle(
+                    fontSize: OwText.small,
+                    color: ow.colors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
           if (_protocol == ProtocolKind.ssh)
             _row(
               field: 'keepalive_secs',
@@ -1043,3 +1177,28 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
     );
   }
 }
+
+/// A character set's name as people know it.
+String charsetLabel(String label) => switch (label.toLowerCase()) {
+  'utf-8' => 'UTF-8',
+  'iso-8859-1' => 'Latin-1 (ISO-8859-1)',
+  'iso-8859-15' => 'Latin-9 (ISO-8859-15)',
+  'windows-1252' => 'Windows-1252',
+  'cp437' => 'CP437 (IBM PC)',
+  'iso-8859-2' => 'Latin-2 (ISO-8859-2)',
+  'windows-1250' => 'Windows-1250',
+  'windows-1251' => 'Windows-1251',
+  'koi8-r' => 'KOI8-R',
+  'ibm866' => 'CP866',
+  'shift_jis' => 'Shift-JIS',
+  'euc-jp' => 'EUC-JP',
+  'big5' => 'Big5',
+  'gb18030' => 'GB18030',
+  'euc-kr' => 'EUC-KR',
+  _ => label,
+};
+
+String backspaceLabel(AppLocalizations l, BackspaceKind b) => switch (b) {
+  BackspaceKind.delete => l.backspaceDelete,
+  BackspaceKind.controlH => l.backspaceControlH,
+};

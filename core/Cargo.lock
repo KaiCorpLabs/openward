@@ -1891,6 +1891,7 @@ version = "0.3.3-beta.2"
 dependencies = [
  "anyhow",
  "data-encoding",
+ "encoding_rs",
  "flate2",
  "futures",
  "hmac",

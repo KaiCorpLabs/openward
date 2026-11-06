@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 
 import 'frame.dart';
 import 'glyph_atlas.dart';
+import 'highlight.dart';
 import 'metrics.dart';
 import 'palette.dart';
 
@@ -51,6 +52,10 @@ class TerminalRenderer extends ChangeNotifier {
 
   /// The link under the pointer, underlined while it can be opened.
   ({int row, int start, int end})? link;
+
+  /// Words and addresses in color, as rows are painted; none in the
+  /// alternate screen, where programs draw their own.
+  Highlighter? highlighter;
 
   /// Off during the dark half of a blink.
   bool cursorOn = true;
@@ -174,11 +179,13 @@ class TerminalRenderer extends ChangeNotifier {
       }
       atlas.flush();
     }
+    final hl = highlighter;
     for (final line in frame.lines) {
       if (line.index >= rows) continue;
+      final spans = hl == null ? line.spans : hl.apply(line.spans);
       _rows[line.index]?.dispose();
-      _rows[line.index] = line.spans.isEmpty ? null : _record(line.spans);
-      _spans[line.index] = line.spans.isEmpty ? null : line.spans;
+      _rows[line.index] = spans.isEmpty ? null : _record(spans);
+      _spans[line.index] = spans.isEmpty ? null : spans;
       final text = _lineText(line.spans);
       if (text != _text[line.index]) {
         _text[line.index] = text;

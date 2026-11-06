@@ -210,6 +210,30 @@ Ese mismo día se descartó montar Postgres y Supabase Auth aparte para OpenWard
   - tema del terminal.
 - **Atajos:** perfiles Mac y PC, y la opción de que los atajos de la app no se coman teclas dentro del terminal.
 
+#### Qué deja P4 hecho
+
+- **Ajustes › Terminal**, de este equipo:
+  - **Ratón:** «Copiar al seleccionar» y «Pegar con clic derecho» (con Ctrl y clic derecho, el menú del terminal). Los dos, apagados por defecto.
+  - **Resaltado**, encendido por defecto: errores, avisos, «bien», direcciones IP (v4 con máscara y v6) y MAC (también las de Cisco, `0011.2233.4455`).
+    - Cada regla tiene su interruptor y su color, uno de los 16 del terminal, que sigue al tema.
+    - Se pueden añadir reglas propias con una expresión regular.
+    - Solo se pinta el texto que el programa deja sin color, y nada en la pantalla alternativa (vim, less). La salida, lo que se copia y los registros no cambian.
+  - **Atajos de:** este equipo, Mac (⌘) o PC (Ctrl+Mayús), en los tres sistemas. Con los de PC, «Las teclas, para el terminal» deja Ctrl+Tab, Ctrl+=, Ctrl+−, Ctrl+0, Ctrl+, y Ctrl+Alt+número al programa.
+- **Por host**, heredables, en «Avanzado» del editor y para los tres protocolos:
+  - **Codificación:** UTF-8, Latin-1, Latin-9, Windows-1252, CP437, Latin-2, Windows-1250/1251, KOI8-R, CP866, Shift-JIS, EUC-JP, Big5, GB18030 y EUC-KR.
+    - El núcleo traduce a UTF-8 antes del motor y al enviar (`openward-app/src/charset.rs`, con `encoding_rs`; CP437 con su tabla).
+    - El motor, la pantalla y el registro solo ven UTF-8. Por Mosh, siempre UTF-8.
+  - **Retroceso:** DEL (`^?`) o Control-H (`^H`); Ctrl+Retroceso, el otro.
+  - **Colores del terminal:** el terminal de un tema (Monitor, Berenjena, Búnker…), un esquema de la galería o uno importado, sea cual sea el tema de la app. «Los del tema de la app» en un host gana a lo que diga su grupo.
+- **Importar:** de PuTTY llegan su `LineCodePage` y su `BksIsDel`.
+- **Pruebas:**
+  - del juego de caracteres (un carácter partido entre lecturas, CP437, lo que Latin-1 no tiene) y del retroceso;
+  - del resaltado: qué colorea, que no pasa de un tramo a otro, los anchos, horas y versiones que no son direcciones;
+  - de los ajustes y de los dos perfiles.
+- **Pendiente:**
+  - un equipo de red de verdad con Latin-1 o CP437 (punto 28 de [la guía](prueba-v0.3.md));
+  - los atajos de Mac en Windows usan la tecla de Windows, que el sistema se queda en muchas combinaciones.
+
 ### P5 · Autocompletado local
 
 - **Sugerencias en línea mientras se escribe**, en texto atenuado; una tecla las acepta.

@@ -20,6 +20,8 @@ openward-telnet = { path = "../openward-telnet" }
 openward-term = { path = "../openward-term" }
 openward-vault = { path = "../openward-vault" }
 anyhow = "1"
+# A host's character set when it is not UTF-8 (Latin-1, Shift-JIS…).
+encoding_rs = "0.8"
 # Session logs: gzip for the recordings, JSON for asciicast and their notes.
 flate2 = "1"
 serde = { version = "1", features = ["derive"] }

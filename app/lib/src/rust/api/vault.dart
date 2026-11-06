@@ -7,10 +7,19 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `apply`, `from_settings`, `id`, `identity_choice`, `line`, `merge`, `merge`, `of`, `of`, `of`, `of`, `opt_id`, `origin`, `pick`, `proto`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
+// These functions are ignored because they are not marked as `pub`: `apply`, `from_settings`, `id`, `identity_choice`, `line`, `merge`, `merge`, `of`, `of`, `of`, `of`, `of`, `opt_id`, `origin`, `pick`, `proto`, `proto`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
 
 enum AgentKind { off, system, socket }
+
+/// What the Backspace key sends.
+enum BackspaceKind {
+  /// `^?`, as systems of today expect.
+  delete,
+
+  /// `^H`, for old systems and some network gear.
+  controlH,
+}
 
 class EnvVar {
   final String name;
@@ -310,6 +319,9 @@ class HostView {
   /// With a serial port: its settings.
   final SerialLineSpec? serial;
 
+  /// Its terminal's scheme, its own or its groups'; empty for the app's.
+  final String terminalScheme;
+
   const HostView({
     required this.id,
     required this.label,
@@ -324,6 +336,7 @@ class HostView {
     this.favorite,
     required this.protocol,
     this.serial,
+    required this.terminalScheme,
   });
 
   @override
@@ -340,7 +353,8 @@ class HostView {
       system.hashCode ^
       favorite.hashCode ^
       protocol.hashCode ^
-      serial.hashCode;
+      serial.hashCode ^
+      terminalScheme.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -359,7 +373,8 @@ class HostView {
           system == other.system &&
           favorite == other.favorite &&
           protocol == other.protocol &&
-          serial == other.serial;
+          serial == other.serial &&
+          terminalScheme == other.terminalScheme;
 }
 
 /// Which identity applies; `None` overrides one inherited.
@@ -697,6 +712,14 @@ class SettingsSpec {
   /// What starts `mosh-server`, when it is not on the server's `PATH`.
   final String? moshServer;
 
+  /// The host's character set, as `encoding_rs` names it (`utf-8`,
+  /// `iso-8859-1`, `cp437`…).
+  final String? encoding;
+  final BackspaceKind? backspace;
+
+  /// The terminal's colors: a scheme's name.
+  final String? terminalScheme;
+
   const SettingsSpec({
     this.user,
     this.port,
@@ -732,6 +755,9 @@ class SettingsSpec {
     this.serial = null,
     this.mosh = null,
     this.moshServer = null,
+    this.encoding = null,
+    this.backspace = null,
+    this.terminalScheme = null,
   });
 
   static Future<SettingsSpec> default_() =>
@@ -772,7 +798,10 @@ class SettingsSpec {
       protocol.hashCode ^
       serial.hashCode ^
       mosh.hashCode ^
-      moshServer.hashCode;
+      moshServer.hashCode ^
+      encoding.hashCode ^
+      backspace.hashCode ^
+      terminalScheme.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -812,7 +841,10 @@ class SettingsSpec {
           protocol == other.protocol &&
           serial == other.serial &&
           mosh == other.mosh &&
-          moshServer == other.moshServer;
+          moshServer == other.moshServer &&
+          encoding == other.encoding &&
+          backspace == other.backspace &&
+          terminalScheme == other.terminalScheme;
 }
 
 enum SystemKind {

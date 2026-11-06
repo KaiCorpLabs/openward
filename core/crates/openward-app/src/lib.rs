@@ -8,6 +8,7 @@
 //! as the attempt that uses them.
 
 pub mod alive;
+pub mod charset;
 pub mod events;
 pub mod import;
 pub mod keychain;
@@ -260,6 +261,7 @@ impl App {
     ) {
         terminal.end_log(logs::End::Closed);
         terminal.detach();
+        terminal.set_coding(serial.coding);
         // A saved host's log names its port; one picked by hand says what
         // it is, for the log to open it again.
         let address = match target {
@@ -271,7 +273,9 @@ impl App {
         let term = Arc::clone(terminal);
         self.runtime.spawn_blocking(move || {
             let started = Instant::now();
-            let SerialTarget { label, path, line } = serial;
+            let SerialTarget {
+                label, path, line, ..
+            } = serial;
             sink.send(Event::Route {
                 hops: vec![label.clone()],
             });
@@ -794,6 +798,7 @@ struct SerialTarget {
     label: String,
     path: String,
     line: SerialLine,
+    coding: charset::Coding,
 }
 
 impl Target {
@@ -828,6 +833,7 @@ impl Target {
                 Some(SerialTarget {
                     label: host.label.clone(),
                     path: host.address.clone(),
+                    coding: charset::Coding::of(&settings),
                     line: settings.serial.unwrap_or_default(),
                 })
             }
@@ -835,6 +841,7 @@ impl Target {
                 label: path.clone(),
                 path: path.clone(),
                 line: line.clone(),
+                coding: charset::Coding::default(),
             }),
             Self::Address { .. } => None,
         })
@@ -909,7 +916,10 @@ async fn telnet_session(
         Ok(opened) => opened,
         Err(failure) => return (None, Some(failure), false),
     };
-    let Some(pipe) = term.upgrade().map(|t| t.pipe()) else {
+    let Some(pipe) = term.upgrade().map(|t| {
+        t.set_coding(plan.coding);
+        t.pipe()
+    }) else {
         return (None, None, false);
     };
     let target = plan.hops.last().expect("a plan ends with its target");
@@ -1020,6 +1030,9 @@ async fn mosh_session(
         return (None, None, false);
     };
     let size = t.size();
+    // mosh-client and mosh-server speak UTF-8 between them, whatever the
+    // host's settings say.
+    t.set_coding(plan.coding.utf8());
     let run = t.run_program(
         Spawn {
             program: Some(client.display().to_string()),
@@ -1078,7 +1091,10 @@ async fn shell(
     persistent: bool,
 ) -> (Option<u32>, Option<Failure>, bool) {
     let sink = &ctx.sink;
-    let Some(pipe) = term.upgrade().map(|t| t.pipe()) else {
+    let Some(pipe) = term.upgrade().map(|t| {
+        t.set_coding(plan.coding);
+        t.pipe()
+    }) else {
         return (None, None, false);
     };
     let last = plan.hops.len() - 1;

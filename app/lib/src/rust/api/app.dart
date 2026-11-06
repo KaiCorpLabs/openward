@@ -41,6 +41,10 @@ abstract class OpenWard implements RustOpaqueInterface {
     String? new_,
   });
 
+  /// The character sets a host can be set to, UTF-8 first, as the
+  /// settings name them.
+  List<String> charsets();
+
   void clearFinishedTransfers();
 
   /// Closes it (and forgets an error it had).

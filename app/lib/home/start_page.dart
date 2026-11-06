@@ -534,7 +534,7 @@ class _StartPageState extends ConsumerState<StartPage> {
     final ow = context.ow;
     final c = ow.colors;
     final l = context.l10n;
-    final key = isApple ? '⌘' : l.ctrlShiftPrefix;
+    final key = macShortcuts ? '⌘' : l.ctrlShiftPrefix;
     Widget action(IconData icon, String text, String? keys, VoidCallback f) =>
         InkWell(
           onTap: f,
@@ -649,7 +649,7 @@ class _StartPageState extends ConsumerState<StartPage> {
   Widget _shortcuts(BuildContext context) {
     final l = context.l10n;
     final c = context.ow.colors;
-    final key = isApple ? '⌘' : l.ctrlShiftPrefix;
+    final key = macShortcuts ? '⌘' : l.ctrlShiftPrefix;
     Widget item(String keys, String text) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [

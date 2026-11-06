@@ -229,7 +229,7 @@ class _HomeState extends ConsumerState<Home> {
       ): () =>
           tabs.cycle(-1),
     };
-    if (isApple) {
+    if (macShortcuts) {
       bindings.addAll({
         const SingleActivator(LogicalKeyboardKey.comma, meta: true): settings,
         const SingleActivator(LogicalKeyboardKey.keyT, meta: true):
@@ -419,6 +419,8 @@ class _HomeState extends ConsumerState<Home> {
   @override
   Widget build(BuildContext context) {
     final welcomed = ref.watch(settingsProvider.select((s) => s.welcomed));
+    // The window's shortcuts are made again with another profile.
+    ref.watch(settingsProvider.select((s) => s.shortcutProfile));
     final empty = ref.watch(
       libraryProvider.select((l) => l.hosts.isEmpty && l.groups.isEmpty),
     );

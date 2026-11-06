@@ -30,6 +30,7 @@ use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
 use crate::alive::Activity;
+use crate::charset::{Coding, Decoder};
 use crate::events::{Connected, Event, EventSink, Failure, SerialProblem};
 use crate::logs::{self, End};
 
@@ -107,6 +108,9 @@ struct State {
     waker: Option<Waker>,
     /// The session log of the connection going on, if one is kept.
     log: Option<Arc<logs::Session>>,
+    /// Reads the host's output into UTF-8, when it writes another
+    /// character set.
+    decoder: Option<Decoder>,
 }
 
 impl State {
@@ -168,6 +172,22 @@ pub struct Terminal {
     /// The tmux session of a persistent shell: the same for every
     /// connection of this terminal, so that reconnecting finds it again.
     tmux: Mutex<Option<String>>,
+    /// The host's character set and Backspace.
+    coding: Mutex<Coding>,
+}
+
+/// Backspace's USB HID usage (keyboard page 7), as the UI gives it.
+const BACKSPACE: u32 = 0x0007_002a;
+
+/// A host that wants `^H` for Backspace: DEL and `^H` change places,
+/// alone or after Alt's ESC (Ctrl+Backspace gives the other). What the
+/// keyboard protocols of today encode is left as it is.
+fn swap_backspace(bytes: &mut [u8]) {
+    match bytes {
+        [b] | [0x1b, b] if *b == 0x7f => *b = 0x08,
+        [b] | [0x1b, b] if *b == 0x08 => *b = 0x7f,
+        _ => {}
+    }
 }
 
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -184,13 +204,22 @@ impl Terminal {
                 notified: false,
                 waker: None,
                 log: None,
+                decoder: None,
             })),
             io: Arc::new(Mutex::new(Io::None)),
             task: Mutex::new(None),
             activity: Arc::default(),
             closer: Mutex::new(None),
             tmux: Mutex::new(None),
+            coding: Mutex::new(Coding::default()),
         })
+    }
+
+    /// How the host's bytes are read and written from now on: its
+    /// character set (a character cut in two is dropped) and Backspace.
+    pub(crate) fn set_coding(&self, coding: Coding) {
+        *lock(&self.coding) = coding;
+        lock(&self.state).decoder = coding.charset.map(|c| c.decoder());
     }
 
     /// The name of this terminal's tmux session, made the first time.
@@ -217,6 +246,10 @@ impl Terminal {
     /// Output from the program; replies to its queries go straight back.
     fn output(state: &Mutex<State>, bytes: &[u8]) -> Vec<u8> {
         let mut s = lock(state);
+        let s = &mut *s;
+        // The engine and the log only see UTF-8.
+        let decoded = s.decoder.as_mut().map(|d| d.decode(bytes));
+        let bytes = decoded.as_deref().unwrap_or(bytes);
         s.engine.feed(bytes);
         if let Some(log) = &s.log {
             log.output(bytes);
@@ -572,6 +605,11 @@ impl Terminal {
                 s.touch();
             }
         }
+        let charset = lock(&self.coding).charset;
+        let bytes = match charset {
+            Some(c) => c.encode(&bytes),
+            None => bytes,
+        };
         match &*lock(&self.io) {
             Io::Pty(pty) => pty.write(&bytes).is_ok(),
             Io::Remote(tx) | Io::Serial { tx, .. } => tx.try_send(RemoteCmd::Data(bytes)).is_ok(),
@@ -647,7 +685,10 @@ impl Terminal {
             text,
             unshifted,
         };
-        let bytes = lock(&self.state).engine.encode_key(&key);
+        let mut bytes = lock(&self.state).engine.encode_key(&key);
+        if hid_usage == BACKSPACE && lock(&self.coding).backspace_h {
+            swap_backspace(&mut bytes);
+        }
         self.send(bytes)
     }
 
@@ -1156,5 +1197,67 @@ mod tests {
         assert!(term.poll().is_some());
         assert!(term.poll().is_none());
         assert_eq!(calls.load(Ordering::Relaxed), 3);
+    }
+
+    /// A Latin-1 host: its bytes reach the screen as their letters, and
+    /// what is typed goes back in its bytes.
+    #[test]
+    fn a_host_in_another_charset_is_read_and_written_in_it() {
+        let term = Terminal::new(40, 4, 100);
+        let (tx, mut rx) = mpsc::channel(SEND_QUEUE);
+        *lock(&term.io) = Io::Remote(tx);
+        term.set_coding(Coding {
+            charset: crate::charset::Charset::of("iso-8859-1"),
+            backspace_h: false,
+        });
+        term.feed(b"canci\xf3n");
+        assert!(
+            term.screen_text().contains("canción"),
+            "{}",
+            term.screen_text()
+        );
+        term.text("ñ");
+        match rx.try_recv() {
+            Ok(RemoteCmd::Data(bytes)) => assert_eq!(bytes, b"\xf1"),
+            _ => panic!("nothing sent"),
+        }
+        // Back to UTF-8: as it comes.
+        term.set_coding(Coding::default());
+        term.feed("\r\nañil".as_bytes());
+        assert!(
+            term.screen_text().contains("añil"),
+            "{}",
+            term.screen_text()
+        );
+    }
+
+    #[test]
+    fn backspace_sends_control_h_where_asked() {
+        let mut bytes = vec![0x7f];
+        swap_backspace(&mut bytes);
+        assert_eq!(bytes, [0x08]);
+        let mut alt = vec![0x1b, 0x7f];
+        swap_backspace(&mut alt);
+        assert_eq!(alt, [0x1b, 0x08]);
+        let mut ctrl = vec![0x08];
+        swap_backspace(&mut ctrl);
+        assert_eq!(ctrl, [0x7f]);
+        // A keyboard protocol's own report stays as it is.
+        let mut kitty = b"\x1b[127;5u".to_vec();
+        swap_backspace(&mut kitty);
+        assert_eq!(kitty, b"\x1b[127;5u");
+
+        let term = Terminal::new(40, 4, 100);
+        let (tx, mut rx) = mpsc::channel(SEND_QUEUE);
+        *lock(&term.io) = Io::Remote(tx);
+        term.set_coding(Coding {
+            charset: None,
+            backspace_h: true,
+        });
+        assert!(term.key(BACKSPACE, KeyKind::Down, 0, String::new(), 0));
+        match rx.try_recv() {
+            Ok(RemoteCmd::Data(bytes)) => assert_eq!(bytes, [0x08]),
+            _ => panic!("nothing sent"),
+        }
     }
 }

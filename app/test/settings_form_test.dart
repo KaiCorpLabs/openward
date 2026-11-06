@@ -99,6 +99,31 @@ void main() {
     expect(f.toSpec().moshServer, isNull);
   });
 
+  test('the character set, Backspace and the colors, here or inherited', () {
+    final f = SettingsForm(const SettingsSpec(encoding: 'cp437'));
+    addTearDown(f.dispose);
+    expect(f.setHere, contains('encoding'));
+    expect(f.toSpec().encoding, 'cp437');
+    expect(f.toSpec().backspace, isNull);
+    f
+      ..take('backspace', const SettingsSpec())
+      ..take('terminal_scheme', const SettingsSpec(terminalScheme: 'nord'));
+    expect(f.toSpec().backspace, BackspaceKind.delete);
+    expect(f.toSpec().terminalScheme, 'nord');
+    f.update(() => f.backspace = BackspaceKind.controlH);
+    // The app's own colors over a group's scheme: empty, but set here.
+    f.update(() => f.terminalScheme = '');
+    expect(f.toSpec().backspace, BackspaceKind.controlH);
+    expect(f.toSpec().terminalScheme, '');
+    f
+      ..drop('encoding')
+      ..drop('backspace')
+      ..drop('terminal_scheme');
+    expect(f.toSpec().encoding, isNull);
+    expect(f.toSpec().backspace, isNull);
+    expect(f.toSpec().terminalScheme, isNull);
+  });
+
   test('what stops it from saving, on its field', () {
     final f = SettingsForm(const SettingsSpec());
     addTearDown(f.dispose);

@@ -16,7 +16,8 @@ use std::io;
 use std::path::Path;
 
 use openward_proto::{
-    Agent, FlowControl, ForwardKind, Parity, Protocol, Proxy, ProxyServer, SerialLine, Settings,
+    Agent, Backspace, FlowControl, ForwardKind, Parity, Protocol, Proxy, ProxyServer, SerialLine,
+    Settings,
 };
 
 use crate::bundle::{
@@ -293,6 +294,11 @@ fn bundle(sessions: Vec<(String, Session)>, folders: &HashMap<String, Vec<String
         if let Some(cert) = text("DetachedCertificate") {
             settings.certificate_files = Some(vec![cert]);
         }
+        // Its character set and Backspace, for old gear.
+        settings.encoding = text("LineCodePage").and_then(|c| code_page(&c));
+        if flag("BksIsDel") == Some(false) {
+            settings.backspace = Some(Backspace::ControlH);
+        }
         if flag("AgentFwd") == Some(true) {
             settings.agent_forward = Some(true);
         }
@@ -488,6 +494,29 @@ fn port_forwardings(spec: &str) -> Vec<Tunnel> {
         .collect()
 }
 
+/// PuTTY's name for a character set (`ISO-8859-1:1998 (Latin-1, West
+/// Europe)`, `Win1252 (Western)`, `CP437`) as `encoding_rs` labels them;
+/// none for UTF-8, the default, and for "Use font encoding".
+fn code_page(name: &str) -> Option<String> {
+    let token = name
+        .split([':', '('])
+        .next()
+        .unwrap_or_default()
+        .trim()
+        .to_lowercase();
+    let label = if let Some(n) = token.strip_prefix("win") {
+        format!("windows-{n}")
+    } else if token == "mac roman" {
+        "macintosh".into()
+    } else {
+        token
+    };
+    match label.as_str() {
+        "" | "utf-8" | "use font encoding" => None,
+        _ => Some(label),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -523,6 +552,8 @@ mod tests {
 "HostName"="10.0.9.2"
 "Protocol"="telnet"
 "PortNumber"=dword:00000017
+"LineCodePage"="ISO-8859-1:1998 (Latin-1, West Europe)"
+"BksIsDel"=dword:00000000
 
 [HKEY_CURRENT_USER\Software\SimonTatham\PuTTY\Sessions\console]
 "HostName"=""
@@ -550,6 +581,21 @@ mod tests {
     }
 
     #[test]
+    fn code_pages_as_encoding_rs_labels() {
+        assert_eq!(
+            code_page("ISO-8859-15:1999 (Latin-9, \"euro\")").as_deref(),
+            Some("iso-8859-15")
+        );
+        assert_eq!(
+            code_page("Win1251 (Cyrillic)").as_deref(),
+            Some("windows-1251")
+        );
+        assert_eq!(code_page("CP437").as_deref(), Some("cp437"));
+        assert_eq!(code_page("UTF-8"), None);
+        assert_eq!(code_page("Use font encoding"), None);
+    }
+
+    #[test]
     fn a_utf16_registry_export() {
         let (program, b) = from_reg(&utf16(REG)).unwrap();
         assert_eq!(program, Program::Putty);
@@ -570,6 +616,10 @@ mod tests {
         assert_eq!(switch.unsupported, None);
         assert_eq!(switch.settings.protocol, Some(Protocol::Telnet));
         assert_eq!(switch.settings.port, Some(23));
+        assert_eq!(switch.settings.encoding.as_deref(), Some("iso-8859-1"));
+        assert_eq!(switch.settings.backspace, Some(Backspace::ControlH));
+        assert_eq!(web.settings.encoding, None);
+        assert_eq!(web.settings.backspace, None);
         let console = &b.hosts[3];
         assert_eq!(console.unsupported, None);
         assert_eq!(console.address, "COM3");

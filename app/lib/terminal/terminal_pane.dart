@@ -12,6 +12,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/providers.dart';
 import '../core/settings.dart';
 import '../history/history.dart';
 import '../history/line_tracker.dart';
@@ -19,8 +20,10 @@ import '../l10n/l10n.dart';
 import '../snippets/palette.dart' show showSnippetPalette;
 import '../src/rust/api/session.dart';
 import '../tabs/connection_motion.dart' show comebackWords, moshFallbackWords;
+import '../ui/themes.dart' show hostTerminal;
 import '../ui/tokens.dart';
 import 'controller.dart';
+import 'highlight.dart';
 import 'keys.dart';
 import 'links.dart';
 import 'paste.dart';
@@ -160,10 +163,20 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   TerminalRenderer _look() {
     final settings = ref.watch(settingsProvider);
     final ow = context.ow;
+    _c.setHighlighter(
+      highlighterFor(on: settings.highlight, rules: settings.highlightRules),
+    );
+    // A host with colors of its own (or its groups'), whatever the theme.
+    final hostId = _c.hostId;
+    final own = hostId == null
+        ? ''
+        : ref.watch(
+            libraryProvider.select((l) => l.host(hostId)?.terminalScheme ?? ''),
+          );
     final r = _c.renderer(
       MediaQuery.devicePixelRatioOf(context),
       fontSize: (settings.fontSize + _c.zoom).clamp(6, 48),
-      palette: ow.terminal,
+      palette: hostTerminal(own, settings) ?? ow.terminal,
       fontFamily: ow.fonts.terminal,
       lineHeight: settings.lineHeight,
       minimumContrast: settings.minimumContrast ? ow.minimumContrast : 1,
@@ -367,7 +380,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
       return KeyEventResult.handled;
     }
     if (event is KeyDownEvent &&
-        isApple &&
+        macShortcuts &&
         mods & Mods.superKey != 0 &&
         event.logicalKey == LogicalKeyboardKey.keyA) {
       _session.selectAll();
@@ -418,7 +431,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
 
   bool _isCopyShortcut(KeyDownEvent e, int mods) {
     final c = e.logicalKey == LogicalKeyboardKey.keyC;
-    if (isApple) return c && mods & Mods.superKey != 0;
+    if (macShortcuts) return c && mods & Mods.superKey != 0;
     return c && mods & Mods.ctrl != 0 && mods & Mods.shift != 0;
   }
 
@@ -433,7 +446,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   Future<void> _contextMenu(Offset at) async {
     final hasSelection = _session.selectionText()?.isNotEmpty ?? false;
     final l = context.l10n;
-    final key = isApple ? '⌘' : l.ctrlShiftPrefix;
+    final key = macShortcuts ? '⌘' : l.ctrlShiftPrefix;
     final action = await showMenu<VoidCallback>(
       context: context,
       position: RelativeRect.fromLTRB(at.dx, at.dy, at.dx, at.dy),
@@ -460,7 +473,10 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
           PopupMenuItem(
             value: () => showSnippetPalette(context),
             height: 34,
-            child: _MenuRow(l.snippetsEllipsis, isApple ? '⌘⇧S' : '${key}S'),
+            child: _MenuRow(
+              l.snippetsEllipsis,
+              macShortcuts ? '⌘⇧S' : '${key}S',
+            ),
           ),
           // What scrolled away, forgotten here; the program is not told.
           PopupMenuItem(
@@ -474,7 +490,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
         PopupMenuItem(
           value: _session.selectAll,
           height: 34,
-          child: _MenuRow(l.selectAllText, isApple ? '⌘A' : ''),
+          child: _MenuRow(l.selectAllText, macShortcuts ? '⌘A' : ''),
         ),
         PopupMenuItem(
           enabled: hasSelection,
@@ -491,7 +507,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
 
   bool _isPasteShortcut(KeyDownEvent e, int mods) {
     final v = e.logicalKey == LogicalKeyboardKey.keyV;
-    if (isApple) return v && mods & Mods.superKey != 0;
+    if (macShortcuts) return v && mods & Mods.superKey != 0;
     return (v && mods & Mods.ctrl != 0 && mods & Mods.shift != 0) ||
         (e.logicalKey == LogicalKeyboardKey.insert && mods & Mods.shift != 0);
   }
@@ -768,7 +784,14 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     }
     if (!_toProgram) {
       if (pressed & kSecondaryMouseButton != 0) {
-        _contextMenu(e.position);
+        // Pasting with a right click (an option): with Ctrl, the menu.
+        if (ref.read(settingsProvider).rightClickPaste &&
+            !widget.readOnly &&
+            !HardwareKeyboard.instance.isControlPressed) {
+          _paste();
+        } else {
+          _contextMenu(e.position);
+        }
       } else if (pressed & kPrimaryMouseButton != 0) {
         _selecting = true;
         _session.selectPress(x: e.localPosition.dx, y: e.localPosition.dy);
@@ -842,6 +865,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
       _autoScroll?.cancel();
       _autoScroll = null;
       _session.selectRelease(x: e.localPosition.dx, y: e.localPosition.dy);
+      if (ref.read(settingsProvider).copyOnSelect) _copy();
       return;
     }
     if (!_programMouse || released == 0) return;

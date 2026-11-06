@@ -9,6 +9,7 @@ import '../core/connection.dart';
 import '../history/line_tracker.dart';
 import '../src/rust/api/session.dart';
 import 'frame.dart';
+import 'highlight.dart';
 import 'palette.dart';
 import 'renderer.dart';
 
@@ -61,6 +62,16 @@ class TerminalController extends ConnectionController {
 
   /// A full-screen program (an editor, a pager) is on view.
   bool altScreen = false;
+
+  /// Keyword highlighting, from the settings (null when off).
+  Highlighter? highlighter;
+
+  /// Paints the screen again with `h`, when it is another.
+  void setHighlighter(Highlighter? h) {
+    if (identical(h, highlighter)) return;
+    highlighter = h;
+    if (!isDisposed) session.redraw();
+  }
 
   /// What is being typed at the prompt, for the command history.
   final LineTracker line = LineTracker();
@@ -366,6 +377,7 @@ class TerminalController extends ConnectionController {
       session.redraw();
       return false;
     }
+    renderer.highlighter = f.altScreen ? null : highlighter;
     renderer.apply(frame);
     renderer.setSelection([
       for (final r in f.selection) (row: r.row, start: r.start, end: r.end),

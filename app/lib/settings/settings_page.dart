@@ -26,6 +26,7 @@ import '../ui/umbral.dart';
 import '../ui/widgets.dart';
 import '../welcome/whats_new.dart';
 import 'appearance_page.dart';
+import 'highlight_rules.dart';
 import 'report.dart';
 import '../window/shortcuts.dart';
 import '../window/sidebar_state.dart';
@@ -539,9 +540,79 @@ class _Terminal extends ConsumerWidget {
                 notifier.update((s) => s.copyWith(onExit: v.single)),
           ),
         ),
+        SectionLabel(l.settingsMouse),
+        _Row(
+          label: l.copyOnSelect,
+          help: l.copyOnSelectHelp,
+          control: Switch(
+            key: const ValueKey('settings.copyOnSelect'),
+            value: s.copyOnSelect,
+            onChanged: (v) =>
+                notifier.update((s) => s.copyWith(copyOnSelect: v)),
+          ),
+        ),
+        _Row(
+          label: l.rightClickPaste,
+          help: l.rightClickPasteHelp,
+          control: Switch(
+            key: const ValueKey('settings.rightClickPaste'),
+            value: s.rightClickPaste,
+            onChanged: (v) =>
+                notifier.update((s) => s.copyWith(rightClickPaste: v)),
+          ),
+        ),
+        SectionLabel(l.settingsHighlight),
+        _Row(
+          label: l.highlightOn,
+          help: l.highlightOnHelp,
+          control: Switch(
+            key: const ValueKey('settings.highlight'),
+            value: s.highlight,
+            onChanged: (v) => notifier.update((s) => s.copyWith(highlight: v)),
+          ),
+        ),
+        const HighlightRules(),
+        SectionLabel(l.settingsShortcuts),
+        _Row(
+          label: l.shortcutProfile,
+          help: l.shortcutProfileHelp,
+          control: SegmentedButton<ShortcutProfile>(
+            key: const ValueKey('settings.shortcutProfile'),
+            showSelectedIcon: false,
+            segments: [
+              ButtonSegment(
+                value: ShortcutProfile.system,
+                label: Text(l.shortcutProfileSystem),
+              ),
+              ButtonSegment(
+                value: ShortcutProfile.mac,
+                label: Text(l.shortcutProfileMac),
+              ),
+              ButtonSegment(
+                value: ShortcutProfile.pc,
+                label: Text(l.shortcutProfilePc),
+              ),
+            ],
+            selected: {s.shortcutProfile},
+            onSelectionChanged: (v) =>
+                notifier.update((s) => s.copyWith(shortcutProfile: v.single)),
+          ),
+        ),
+        // With ⌘ there is nothing to give: no program hears ⌘.
+        if (!s.macShortcuts)
+          _Row(
+            label: l.terminalKeysFirst,
+            help: l.terminalKeysFirstHelp,
+            control: Switch(
+              key: const ValueKey('settings.terminalKeysFirst'),
+              value: s.terminalKeysFirst,
+              onChanged: (v) =>
+                  notifier.update((s) => s.copyWith(terminalKeysFirst: v)),
+            ),
+          ),
         const SizedBox(height: 12),
         Text(
-          l.terminalShortcuts(isApple ? '⌘' : l.ctrlShiftPrefix),
+          l.terminalShortcuts(macShortcuts ? '⌘' : l.ctrlShiftPrefix),
           style: TextStyle(
             fontSize: OwText.small,
             color: context.ow.colors.textMuted,

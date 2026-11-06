@@ -166,6 +166,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnswerKind dco_decode_answer_kind(dynamic raw);
 
   @protected
+  BackspaceKind dco_decode_backspace_kind(dynamic raw);
+
+  @protected
   bool dco_decode_bool(dynamic raw);
 
   @protected
@@ -176,6 +179,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AgentKind dco_decode_box_autoadd_agent_kind(dynamic raw);
+
+  @protected
+  BackspaceKind dco_decode_box_autoadd_backspace_kind(dynamic raw);
 
   @protected
   bool dco_decode_box_autoadd_bool(dynamic raw);
@@ -697,6 +703,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AgentKind? dco_decode_opt_box_autoadd_agent_kind(dynamic raw);
 
   @protected
+  BackspaceKind? dco_decode_opt_box_autoadd_backspace_kind(dynamic raw);
+
+  @protected
   bool? dco_decode_opt_box_autoadd_bool(dynamic raw);
 
   @protected
@@ -1204,6 +1213,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnswerKind sse_decode_answer_kind(SseDeserializer deserializer);
 
   @protected
+  BackspaceKind sse_decode_backspace_kind(SseDeserializer deserializer);
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
@@ -1214,6 +1226,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AgentKind sse_decode_box_autoadd_agent_kind(SseDeserializer deserializer);
+
+  @protected
+  BackspaceKind sse_decode_box_autoadd_backspace_kind(
+    SseDeserializer deserializer,
+  );
 
   @protected
   bool sse_decode_box_autoadd_bool(SseDeserializer deserializer);
@@ -1813,6 +1830,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AgentKind? sse_decode_opt_box_autoadd_agent_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BackspaceKind? sse_decode_opt_box_autoadd_backspace_kind(
     SseDeserializer deserializer,
   );
 
@@ -2423,6 +2445,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_answer_kind(AnswerKind self, SseSerializer serializer);
 
   @protected
+  void sse_encode_backspace_kind(BackspaceKind self, SseSerializer serializer);
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
@@ -2435,6 +2460,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_agent_kind(
     AgentKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_backspace_kind(
+    BackspaceKind self,
     SseSerializer serializer,
   );
 
@@ -3237,6 +3268,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_agent_kind(
     AgentKind? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_backspace_kind(
+    BackspaceKind? self,
     SseSerializer serializer,
   );
 

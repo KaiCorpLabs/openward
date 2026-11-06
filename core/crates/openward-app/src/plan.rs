@@ -66,6 +66,8 @@ pub struct Plan {
     pub persistent: bool,
     /// The shell goes over Mosh, started with this program (SSH only).
     pub mosh: Option<String>,
+    /// The target's character set and Backspace.
+    pub coding: crate::charset::Coding,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -131,6 +133,7 @@ impl Plan {
         };
         let target = hop(address, None, address, &bare, local, true)
             .expect("an address alone has no ProxyCommand");
+        let coding = crate::charset::Coding::of(&settings);
         Self {
             term: settings.term.unwrap_or_else(|| "xterm-256color".into()),
             env: settings.env.unwrap_or_default().into_iter().collect(),
@@ -141,6 +144,7 @@ impl Plan {
             hops: vec![target],
             protocol,
             mosh: None,
+            coding,
         }
     }
 
@@ -179,6 +183,7 @@ impl Plan {
             first.proxy = chosen.and_then(proxy_of);
         }
         let target = hops.last().expect("the chain ends with the host");
+        let coding = crate::charset::Coding::of(&settings);
         Ok(Self {
             term: settings.term.unwrap_or_else(|| "xterm-256color".into()),
             env: settings.env.unwrap_or_default().into_iter().collect(),
@@ -193,6 +198,7 @@ impl Plan {
                     .filter(|s| !s.trim().is_empty())
                     .unwrap_or_else(|| "mosh-server".into())
             }),
+            coding,
             hops,
             protocol,
         })

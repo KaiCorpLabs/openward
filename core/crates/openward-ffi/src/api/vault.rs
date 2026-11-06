@@ -9,8 +9,9 @@ use std::str::FromStr;
 use flutter_rust_bridge::frb;
 use openward_app::vault::Origin;
 use openward_app::vault::proto::{
-    Agent, Environment, EnvironmentMark, FlowControl, HostKeyPolicy, ItemId, Jump, Parity,
-    Protocol, Proxy, ProxyServer, Route, SerialLine, Settings, System, SystemSource, UseIdentity,
+    Agent, Backspace, Environment, EnvironmentMark, FlowControl, HostKeyPolicy, ItemId, Jump,
+    Parity, Protocol, Proxy, ProxyServer, Route, SerialLine, Settings, System, SystemSource,
+    UseIdentity,
 };
 
 /// What went wrong with a change to the vault, for the app to say it in
@@ -151,6 +152,31 @@ pub enum ProtocolKind {
     Telnet,
     /// A serial port of this computer: the host's address is the port.
     Serial,
+}
+
+/// What the Backspace key sends.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BackspaceKind {
+    /// `^?`, as systems of today expect.
+    Delete,
+    /// `^H`, for old systems and some network gear.
+    ControlH,
+}
+
+impl BackspaceKind {
+    pub(crate) fn of(b: Backspace) -> Self {
+        match b {
+            Backspace::Delete => Self::Delete,
+            Backspace::ControlH => Self::ControlH,
+        }
+    }
+
+    pub(crate) fn proto(self) -> Backspace {
+        match self {
+            Self::Delete => Backspace::Delete,
+            Self::ControlH => Backspace::ControlH,
+        }
+    }
 }
 
 impl ProtocolKind {
@@ -412,6 +438,15 @@ pub struct SettingsSpec {
     /// What starts `mosh-server`, when it is not on the server's `PATH`.
     #[frb(default = "null")]
     pub mosh_server: Option<String>,
+    /// The host's character set, as `encoding_rs` names it (`utf-8`,
+    /// `iso-8859-1`, `cp437`…).
+    #[frb(default = "null")]
+    pub encoding: Option<String>,
+    #[frb(default = "null")]
+    pub backspace: Option<BackspaceKind>,
+    /// The terminal's colors: a scheme's name.
+    #[frb(default = "null")]
+    pub terminal_scheme: Option<String>,
 }
 
 /// The `identity` setting of a spec.
@@ -489,6 +524,9 @@ impl SettingsSpec {
             serial: s.serial.as_ref().map(SerialLineSpec::of),
             mosh: s.mosh,
             mosh_server: s.mosh_server.clone(),
+            encoding: s.encoding.clone(),
+            backspace: s.backspace.map(BackspaceKind::of),
+            terminal_scheme: s.terminal_scheme.clone(),
             legacy_host_keys: s.legacy_host_keys,
             proxy,
             proxy_host: server.map(|s| s.host.clone()).unwrap_or_default(),
@@ -643,6 +681,15 @@ impl SettingsSpec {
         s.serial = self.serial.map(|l| l.line(s.serial.as_ref()));
         s.mosh = self.mosh;
         s.mosh_server = self.mosh_server.clone().filter(|m| !m.trim().is_empty());
+        s.encoding = self
+            .encoding
+            .as_deref()
+            .map(str::trim)
+            .filter(|e| !e.is_empty())
+            .map(str::to_lowercase);
+        s.backspace = self.backspace.map(BackspaceKind::proto);
+        // Empty here is the app's own colors, over a group's scheme.
+        s.terminal_scheme = self.terminal_scheme.as_deref().map(|t| t.trim().to_owned());
         Ok(())
     }
 }
@@ -669,6 +716,8 @@ pub struct HostView {
     pub protocol: ProtocolKind,
     /// With a serial port: its settings.
     pub serial: Option<SerialLineSpec>,
+    /// Its terminal's scheme, its own or its groups'; empty for the app's.
+    pub terminal_scheme: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -850,6 +899,13 @@ impl SettingsSpec {
             serial: pick(&base.serial, mine.serial, theirs.serial)?,
             mosh: pick(&base.mosh, mine.mosh, theirs.mosh)?,
             mosh_server: pick(&base.mosh_server, mine.mosh_server, theirs.mosh_server)?,
+            encoding: pick(&base.encoding, mine.encoding, theirs.encoding)?,
+            backspace: pick(&base.backspace, mine.backspace, theirs.backspace)?,
+            terminal_scheme: pick(
+                &base.terminal_scheme,
+                mine.terminal_scheme,
+                theirs.terminal_scheme,
+            )?,
         })
     }
 }

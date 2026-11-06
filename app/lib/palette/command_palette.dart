@@ -155,7 +155,7 @@ class _PaletteState extends ConsumerState<_Palette> {
     final state = ref.read(tabsProvider);
     final session = state.currentSession;
     final terminal = session != null && !session.isDisposed;
-    final key = isApple ? '⌘' : l.ctrlShiftPrefix;
+    final key = macShortcuts ? '⌘' : l.ctrlShiftPrefix;
     final container = ProviderScope.containerOf(window);
     _Entry action(
       String id,
@@ -196,7 +196,7 @@ class _PaletteState extends ConsumerState<_Palette> {
             PageTab(:final page) => pageIcon(page),
           },
           pill: i == state.active ? l.paletteHere : null,
-          keys: !isApple
+          keys: !macShortcuts
               ? null
               : i < 8
               ? '⌘${i + 1}'
@@ -317,35 +317,35 @@ class _PaletteState extends ConsumerState<_Palette> {
           l.splitDown,
           Icons.horizontal_split_outlined,
           () => tabs.split(Axis.vertical),
-          keys: isApple ? '⌘⇧D' : '${key}E',
+          keys: macShortcuts ? '⌘⇧D' : '${key}E',
         ),
         action(
           'maximize',
           l.maximizePane,
           Icons.fullscreen,
           tabs.toggleMaximize,
-          keys: isApple ? '⌘⇧↩' : '$key↩',
+          keys: macShortcuts ? '⌘⇧↩' : '$key↩',
         ),
         action(
           'broadcast',
           l.paletteBroadcast,
           Icons.cell_tower,
           tabs.toggleBroadcast,
-          keys: isApple ? '⌘⇧B' : '${key}B',
+          keys: macShortcuts ? '⌘⇧B' : '${key}B',
         ),
         action(
           'find',
           l.findInTerminal,
           Icons.manage_search,
           () => home.read(tabsProvider).currentSession?.openFind(),
-          keys: isApple ? '⌘F' : '${key}F',
+          keys: macShortcuts ? '⌘F' : '${key}F',
         ),
         action(
           'snippets',
           l.snippets,
           Icons.terminal,
           () => showSnippetPalette(window),
-          keys: isApple ? '⌘⇧S' : '${key}S',
+          keys: macShortcuts ? '⌘⇧S' : '${key}S',
         ),
         // A router's ROM monitor waits for one.
         if (session.connected?.protocol == ProtocolKind.serial)
@@ -361,7 +361,7 @@ class _PaletteState extends ConsumerState<_Palette> {
             l.openSftp,
             Icons.folder_outlined,
             tabs.openSftpHere,
-            keys: isApple ? '⌘⇧O' : '${key}O',
+            keys: macShortcuts ? '⌘⇧O' : '${key}O',
           ),
         if (session.log case final log?
             when log.recording && log.failed == null)
@@ -396,7 +396,7 @@ class _PaletteState extends ConsumerState<_Palette> {
           l.closeTab,
           Icons.close,
           tabs.closeCurrent,
-          keys: isApple ? '⌘W' : '${key}W',
+          keys: macShortcuts ? '⌘W' : '${key}W',
         ),
       action('newKey', l.newKeyAction, Icons.key_outlined, () async {
         if (await showNewKeyDialog(window) != null) {
@@ -414,14 +414,14 @@ class _PaletteState extends ConsumerState<_Palette> {
         l.goToPage(l.hosts),
         Icons.dns_outlined,
         () => tabs.openPage(PageKind.hosts),
-        keys: isApple ? '⌘⇧H' : '${key}H',
+        keys: macShortcuts ? '⌘⇧H' : '${key}H',
       ),
       action(
         'page.logs',
         l.goToPage(l.logs),
         Icons.history,
         () => tabs.openPage(PageKind.logs),
-        keys: isApple ? '⌘⇧R' : '${key}R',
+        keys: macShortcuts ? '⌘⇧R' : '${key}R',
       ),
       for (final (page, title, icon) in [
         (PageKind.keys, l.keys, Icons.key_outlined),
@@ -442,7 +442,7 @@ class _PaletteState extends ConsumerState<_Palette> {
         l.settings,
         Icons.settings_outlined,
         () => tabs.openPage(PageKind.settings),
-        keys: isApple ? '⌘,' : 'Ctrl+,',
+        keys: macShortcuts ? '⌘,' : 'Ctrl+,',
       ),
       action(
         'shortcuts',
@@ -668,7 +668,7 @@ class _PaletteState extends ConsumerState<_Palette> {
     }
     // ⌘⌫ (Ctrl+Shift+Backspace): out of the history.
     final mods = hardwareMods();
-    final forget = isApple
+    final forget = macShortcuts
         ? mods & Mods.superKey != 0
         : mods & Mods.ctrl != 0 && mods & Mods.shift != 0;
     if (k == LogicalKeyboardKey.backspace && forget && shown.isNotEmpty) {

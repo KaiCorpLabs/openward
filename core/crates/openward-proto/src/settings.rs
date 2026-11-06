@@ -119,6 +119,27 @@ settings! {
     /// What starts the server, when `mosh-server` is not on the server's
     /// `PATH` (`/opt/homebrew/bin/mosh-server`).
     mosh_server: String,
+    /// How the host writes text: `utf-8` unless it says otherwise
+    /// (`iso-8859-1`, `cp437`, `shift_jis`, as `encoding_rs` names them).
+    /// Old network gear and old systems need it; Mosh is always UTF-8.
+    encoding: String,
+    /// What the Backspace key sends.
+    backspace: Backspace,
+    /// The terminal's colors for this host: a scheme's name (the
+    /// gallery's or one imported). The app's own when none.
+    terminal_scheme: String,
+}
+
+/// What the Backspace key sends: DEL, as systems of today expect, or
+/// Control-H, as some old ones and some network gear do. New choices go
+/// in fields of their own, as with [`Protocol`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Backspace {
+    /// `^?` (0x7f).
+    Delete,
+    /// `^H` (0x08).
+    ControlH,
 }
 
 /// How a host is reached. New ways go in fields of their own: a variant an

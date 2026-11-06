@@ -49,13 +49,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get advancedList =>
-      'proxy, host keys, persistent session, Mosh, checks and agent';
+      'proxy, host keys, persistent session, Mosh, terminal, checks and agent';
 
   @override
-  String get advancedListSerial => 'session log';
+  String get advancedListSerial => 'terminal and session log';
 
   @override
-  String get advancedListTelnet => 'proxy, session log and time to connect';
+  String get advancedListTelnet =>
+      'proxy, terminal, session log and time to connect';
 
   @override
   String advancedSetHere(int count) {
@@ -202,6 +203,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String backAgain(String host) {
     return 'Connected to $host again';
   }
+
+  @override
+  String get backspaceControlH => 'Control-H (^H)';
+
+  @override
+  String get backspaceDelete => 'DEL (^?), today\'s';
+
+  @override
+  String get backspaceLabel => 'Backspace';
+
+  @override
+  String get backspaceNote =>
+      'If the server writes ^? or ^H instead of deleting, change this.';
 
   @override
   String get badgeChanges => 'changes';
@@ -535,10 +549,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get colorBlue => 'Blue';
 
   @override
+  String get colorBrightBlue => 'Bright blue';
+
+  @override
+  String get colorBrightCyan => 'Bright cyan';
+
+  @override
+  String get colorBrightGreen => 'Bright green';
+
+  @override
+  String get colorBrightMagenta => 'Bright magenta';
+
+  @override
+  String get colorBrightRed => 'Bright red';
+
+  @override
+  String get colorBrightYellow => 'Bright yellow';
+
+  @override
+  String get colorCyan => 'Cyan';
+
+  @override
   String get colorGray => 'Gray';
 
   @override
   String get colorGreen => 'Green';
+
+  @override
+  String get colorMagenta => 'Magenta';
 
   @override
   String get colorOrange => 'Orange';
@@ -724,6 +762,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String copyOfName(String name) {
     return '$name (copy)';
   }
+
+  @override
+  String get copyOnSelect => 'Copy on select';
+
+  @override
+  String get copyOnSelectHelp =>
+      'What you select with the mouse goes to the clipboard, without pressing copy.';
 
   @override
   String get copyPath => 'Copy path';
@@ -1063,6 +1108,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get emptyPane => 'empty pane';
+
+  @override
+  String get encodingLabel => 'Character set';
+
+  @override
+  String get encodingNote =>
+      'For old gear and systems that do not write UTF-8: if odd characters show instead of accents or lines, try Latin-1 or CP437.';
+
+  @override
+  String get encodingNoteMosh =>
+      'For old gear and systems that do not write UTF-8: if odd characters show instead of accents or lines, try Latin-1 or CP437. Over Mosh it is always UTF-8.';
 
   @override
   String get envColor => 'Color';
@@ -1601,6 +1657,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hideQueue => 'Hide';
+
+  @override
+  String get highlightAdd => 'Add a rule…';
+
+  @override
+  String get highlightCase => 'Match case';
+
+  @override
+  String get highlightColor => 'Color';
+
+  @override
+  String get highlightColorNote =>
+      'The colors are the terminal\'s: they change with its theme.';
+
+  @override
+  String get highlightEdit => 'Change';
+
+  @override
+  String get highlightError => 'Errors (error, failed, denied…)';
+
+  @override
+  String get highlightIp => 'IP addresses';
+
+  @override
+  String get highlightMac => 'MAC addresses';
+
+  @override
+  String get highlightName => 'Name';
+
+  @override
+  String get highlightNewTitle => 'New highlighting rule';
+
+  @override
+  String get highlightOk => 'Good (ok, success, done…)';
+
+  @override
+  String get highlightOn => 'Highlight words and addresses';
+
+  @override
+  String get highlightOnHelp =>
+      'Only when painting, and only on text the program leaves uncolored: what comes in, what you copy and the logs stay as they are. Nothing in editors or less.';
+
+  @override
+  String get highlightPattern => 'What to highlight';
+
+  @override
+  String get highlightPatternBad =>
+      'It does not read as a regular expression, or it would highlight nothing.';
+
+  @override
+  String get highlightPatternHelp =>
+      'A word or a regular expression. \\b marks the edge of a word.';
+
+  @override
+  String get highlightRemove => 'Remove';
+
+  @override
+  String get highlightReset => 'Back to the app\'s';
+
+  @override
+  String get highlightWarning => 'Warnings (warning, deprecated, timeout)';
 
   @override
   String get host => 'Host';
@@ -4440,6 +4557,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reviewKey => 'Review the key…';
 
   @override
+  String get rightClickPaste => 'Paste with a right click';
+
+  @override
+  String get rightClickPasteHelp =>
+      'As in PuTTY. The terminal\'s menu is still there with Ctrl and a right click.';
+
+  @override
   String get route => 'How to get there';
 
   @override
@@ -4747,7 +4871,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsGeneral => 'General';
 
   @override
+  String get settingsHighlight => 'Highlighting';
+
+  @override
   String get settingsLogs => 'Logs';
+
+  @override
+  String get settingsMouse => 'Mouse';
+
+  @override
+  String get settingsShortcuts => 'Shortcuts';
 
   @override
   String get settingsTerminal => 'Terminal';
@@ -4821,6 +4954,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shortcutPreviousTab => 'Previous tab';
+
+  @override
+  String get shortcutProfile => 'Shortcuts of';
+
+  @override
+  String get shortcutProfileHelp =>
+      'A Mac\'s go with ⌘ (on Windows and Linux, the system key); a PC\'s, with Ctrl+Shift.';
+
+  @override
+  String get shortcutProfileMac => 'Mac';
+
+  @override
+  String get shortcutProfilePc => 'PC';
+
+  @override
+  String get shortcutProfileSystem => 'This computer';
 
   @override
   String get shortcutSearch => 'Searches your hosts';
@@ -5249,6 +5398,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get terminalFont => 'Terminal font';
 
   @override
+  String get terminalKeysFirst => 'Keys go to the terminal';
+
+  @override
+  String get terminalKeysFirstHelp =>
+      'In a terminal, Ctrl+Tab, Ctrl+=, Ctrl+−, Ctrl+0, Ctrl+, and Ctrl+Alt+number reach the program. Ctrl+Shift shortcuts stay the window\'s.';
+
+  @override
   String get terminalMenuHint =>
       'Drag a tab or a host here to open it in one half of this pane.';
 
@@ -5260,6 +5416,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get terminalScheme => 'Own scheme';
+
+  @override
+  String get terminalSchemeApp => 'The app theme\'s';
+
+  @override
+  String get terminalSchemeLabel => 'Terminal colors';
+
+  @override
+  String get terminalSchemeNote =>
+      'Other colors for this host, whatever the theme: to tell at a glance, say, the production ones.';
 
   @override
   String terminalShortcuts(String key) {

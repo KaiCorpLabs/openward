@@ -267,6 +267,7 @@ impl OpenWard {
                     serial: (settings.protocol == Some(Protocol::Serial))
                         .then(|| settings.serial.as_ref().map(SerialLineSpec::of))
                         .flatten(),
+                    terminal_scheme: settings.terminal_scheme.clone().unwrap_or_default(),
                 }
             })
             .collect()
@@ -602,6 +603,16 @@ impl OpenWard {
             Arc::new(DartSink(events)),
         )?;
         Ok(())
+    }
+
+    /// The character sets a host can be set to, UTF-8 first, as the
+    /// settings name them.
+    #[frb(sync)]
+    pub fn charsets(&self) -> Vec<String> {
+        openward_app::charset::OFFERED
+            .iter()
+            .map(|c| (*c).to_owned())
+            .collect()
     }
 
     /// The serial ports there are now, USB ones (cables, adapters) first.

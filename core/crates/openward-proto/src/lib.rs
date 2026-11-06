@@ -22,8 +22,8 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 pub use settings::{
-    Agent, Environment, EnvironmentMark, FlowControl, HostKeyPolicy, IDENTITY_FIELDS, Jump, Parity,
-    Protocol, Proxy, ProxyServer, Route, SerialLine, Settings, UseIdentity,
+    Agent, Backspace, Environment, EnvironmentMark, FlowControl, HostKeyPolicy, IDENTITY_FIELDS,
+    Jump, Parity, Protocol, Proxy, ProxyServer, Route, SerialLine, Settings, UseIdentity,
 };
 
 /// Fields a newer version wrote that this one does not know.

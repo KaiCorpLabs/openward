@@ -5,7 +5,7 @@
 use std::collections::BTreeMap;
 
 use openward_proto::{
-    Agent, Environment, HostKeyPolicy, ItemId, Protocol, Route, SerialLine, Settings,
+    Agent, Backspace, Environment, HostKeyPolicy, ItemId, Protocol, Route, SerialLine, Settings,
 };
 
 /// Where an effective setting came from, for the UI to show.
@@ -48,6 +48,8 @@ pub fn defaults() -> Settings {
         protocol: Some(Protocol::Ssh),
         serial: Some(SerialLine::default()),
         mosh: Some(false),
+        encoding: Some("utf-8".into()),
+        backspace: Some(Backspace::Delete),
         ..Settings::default()
     }
 }

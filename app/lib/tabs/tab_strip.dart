@@ -317,7 +317,7 @@ class _TabRowState extends ConsumerState<_TabRow> {
     final l = context.l10n;
     final tabs = ref.read(tabsProvider.notifier);
     final tab = widget.state.tabs[index];
-    final key = isApple ? '⌘' : l.ctrlShiftPrefix;
+    final key = macShortcuts ? '⌘' : l.ctrlShiftPrefix;
     final split = tab is SessionTab && tab.panes.isSplit;
     final many = widget.state.tabs.length > 1;
     final action = await showMenu<VoidCallback>(
@@ -332,7 +332,7 @@ class _TabRowState extends ConsumerState<_TabRow> {
             tabs.select(index);
             tabs.split(Axis.horizontal);
           }),
-          menuItem(context, l.splitDown, isApple ? '⌘⇧D' : '${key}E', () {
+          menuItem(context, l.splitDown, macShortcuts ? '⌘⇧D' : '${key}E', () {
             tabs.select(index);
             tabs.split(Axis.vertical);
           }),

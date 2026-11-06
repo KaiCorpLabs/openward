@@ -173,19 +173,19 @@ abstract class AppLocalizations {
   /// No description provided for @advancedList.
   ///
   /// In es, this message translates to:
-  /// **'proxy, claves del host, sesión persistente, Mosh, comprobación y agente'**
+  /// **'proxy, claves del host, sesión persistente, Mosh, terminal, comprobación y agente'**
   String get advancedList;
 
   /// No description provided for @advancedListSerial.
   ///
   /// In es, this message translates to:
-  /// **'registro de sesión'**
+  /// **'terminal y registro de sesión'**
   String get advancedListSerial;
 
   /// No description provided for @advancedListTelnet.
   ///
   /// In es, this message translates to:
-  /// **'proxy, registro de sesión y tiempo para conectar'**
+  /// **'proxy, terminal, registro de sesión y tiempo para conectar'**
   String get advancedListTelnet;
 
   /// No description provided for @advancedSetHere.
@@ -403,6 +403,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Conectado de nuevo a {host}'**
   String backAgain(String host);
+
+  /// No description provided for @backspaceControlH.
+  ///
+  /// In es, this message translates to:
+  /// **'Control-H (^H)'**
+  String get backspaceControlH;
+
+  /// No description provided for @backspaceDelete.
+  ///
+  /// In es, this message translates to:
+  /// **'DEL (^?), el de hoy'**
+  String get backspaceDelete;
+
+  /// No description provided for @backspaceLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Retroceso'**
+  String get backspaceLabel;
+
+  /// No description provided for @backspaceNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Si al borrar el servidor escribe ^? o ^H en vez de borrar, cambia este.'**
+  String get backspaceNote;
 
   /// No description provided for @badgeChanges.
   ///
@@ -866,6 +890,48 @@ abstract class AppLocalizations {
   /// **'Azul'**
   String get colorBlue;
 
+  /// No description provided for @colorBrightBlue.
+  ///
+  /// In es, this message translates to:
+  /// **'Azul claro'**
+  String get colorBrightBlue;
+
+  /// No description provided for @colorBrightCyan.
+  ///
+  /// In es, this message translates to:
+  /// **'Cian claro'**
+  String get colorBrightCyan;
+
+  /// No description provided for @colorBrightGreen.
+  ///
+  /// In es, this message translates to:
+  /// **'Verde claro'**
+  String get colorBrightGreen;
+
+  /// No description provided for @colorBrightMagenta.
+  ///
+  /// In es, this message translates to:
+  /// **'Magenta claro'**
+  String get colorBrightMagenta;
+
+  /// No description provided for @colorBrightRed.
+  ///
+  /// In es, this message translates to:
+  /// **'Rojo claro'**
+  String get colorBrightRed;
+
+  /// No description provided for @colorBrightYellow.
+  ///
+  /// In es, this message translates to:
+  /// **'Amarillo claro'**
+  String get colorBrightYellow;
+
+  /// No description provided for @colorCyan.
+  ///
+  /// In es, this message translates to:
+  /// **'Cian'**
+  String get colorCyan;
+
   /// No description provided for @colorGray.
   ///
   /// In es, this message translates to:
@@ -877,6 +943,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Verde'**
   String get colorGreen;
+
+  /// No description provided for @colorMagenta.
+  ///
+  /// In es, this message translates to:
+  /// **'Magenta'**
+  String get colorMagenta;
 
   /// No description provided for @colorOrange.
   ///
@@ -1153,6 +1225,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{name} (copia)'**
   String copyOfName(String name);
+
+  /// No description provided for @copyOnSelect.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar al seleccionar'**
+  String get copyOnSelect;
+
+  /// No description provided for @copyOnSelectHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que seleccionas con el ratón va al portapapeles, sin pulsar copiar.'**
+  String get copyOnSelectHelp;
 
   /// No description provided for @copyPath.
   ///
@@ -1681,6 +1765,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'panel vacío'**
   String get emptyPane;
+
+  /// No description provided for @encodingLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Codificación'**
+  String get encodingLabel;
+
+  /// No description provided for @encodingNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Para equipos y sistemas antiguos que no escriben en UTF-8: si salen letras raras en vez de tildes o líneas, prueba Latin-1 o CP437.'**
+  String get encodingNote;
+
+  /// No description provided for @encodingNoteMosh.
+  ///
+  /// In es, this message translates to:
+  /// **'Para equipos y sistemas antiguos que no escriben en UTF-8: si salen letras raras en vez de tildes o líneas, prueba Latin-1 o CP437. Por Mosh siempre es UTF-8.'**
+  String get encodingNoteMosh;
 
   /// No description provided for @envColor.
   ///
@@ -2533,6 +2635,120 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ocultar'**
   String get hideQueue;
+
+  /// No description provided for @highlightAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Añadir una regla…'**
+  String get highlightAdd;
+
+  /// No description provided for @highlightCase.
+  ///
+  /// In es, this message translates to:
+  /// **'Distinguir mayúsculas'**
+  String get highlightCase;
+
+  /// No description provided for @highlightColor.
+  ///
+  /// In es, this message translates to:
+  /// **'Color'**
+  String get highlightColor;
+
+  /// No description provided for @highlightColorNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Los colores son los del terminal: cambian con su tema.'**
+  String get highlightColorNote;
+
+  /// No description provided for @highlightEdit.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar'**
+  String get highlightEdit;
+
+  /// No description provided for @highlightError.
+  ///
+  /// In es, this message translates to:
+  /// **'Errores (error, failed, denied…)'**
+  String get highlightError;
+
+  /// No description provided for @highlightIp.
+  ///
+  /// In es, this message translates to:
+  /// **'Direcciones IP'**
+  String get highlightIp;
+
+  /// No description provided for @highlightMac.
+  ///
+  /// In es, this message translates to:
+  /// **'Direcciones MAC'**
+  String get highlightMac;
+
+  /// No description provided for @highlightName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre'**
+  String get highlightName;
+
+  /// No description provided for @highlightNewTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva regla de resaltado'**
+  String get highlightNewTitle;
+
+  /// No description provided for @highlightOk.
+  ///
+  /// In es, this message translates to:
+  /// **'Bien (ok, success, done…)'**
+  String get highlightOk;
+
+  /// No description provided for @highlightOn.
+  ///
+  /// In es, this message translates to:
+  /// **'Resaltar palabras y direcciones'**
+  String get highlightOn;
+
+  /// No description provided for @highlightOnHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo al pintar, y solo en el texto que el programa deja sin color: no cambia lo que llega, lo que copias ni los registros. En los editores y en less, nada.'**
+  String get highlightOnHelp;
+
+  /// No description provided for @highlightPattern.
+  ///
+  /// In es, this message translates to:
+  /// **'Qué resaltar'**
+  String get highlightPattern;
+
+  /// No description provided for @highlightPatternBad.
+  ///
+  /// In es, this message translates to:
+  /// **'No se lee como expresión regular, o no resaltaría nada.'**
+  String get highlightPatternBad;
+
+  /// No description provided for @highlightPatternHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Una palabra o una expresión regular. \\b marca el borde de una palabra.'**
+  String get highlightPatternHelp;
+
+  /// No description provided for @highlightRemove.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar'**
+  String get highlightRemove;
+
+  /// No description provided for @highlightReset.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a las de la app'**
+  String get highlightReset;
+
+  /// No description provided for @highlightWarning.
+  ///
+  /// In es, this message translates to:
+  /// **'Avisos (warning, deprecated, timeout)'**
+  String get highlightWarning;
 
   /// No description provided for @host.
   ///
@@ -6800,6 +7016,18 @@ abstract class AppLocalizations {
   /// **'Revisar la clave…'**
   String get reviewKey;
 
+  /// No description provided for @rightClickPaste.
+  ///
+  /// In es, this message translates to:
+  /// **'Pegar con clic derecho'**
+  String get rightClickPaste;
+
+  /// No description provided for @rightClickPasteHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Como en PuTTY. El menú del terminal sigue con Ctrl y clic derecho.'**
+  String get rightClickPasteHelp;
+
   /// No description provided for @route.
   ///
   /// In es, this message translates to:
@@ -7316,11 +7544,29 @@ abstract class AppLocalizations {
   /// **'General'**
   String get settingsGeneral;
 
+  /// No description provided for @settingsHighlight.
+  ///
+  /// In es, this message translates to:
+  /// **'Resaltado'**
+  String get settingsHighlight;
+
   /// No description provided for @settingsLogs.
   ///
   /// In es, this message translates to:
   /// **'Registros'**
   String get settingsLogs;
+
+  /// No description provided for @settingsMouse.
+  ///
+  /// In es, this message translates to:
+  /// **'Ratón'**
+  String get settingsMouse;
+
+  /// No description provided for @settingsShortcuts.
+  ///
+  /// In es, this message translates to:
+  /// **'Atajos'**
+  String get settingsShortcuts;
 
   /// No description provided for @settingsTerminal.
   ///
@@ -7453,6 +7699,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Pestaña anterior'**
   String get shortcutPreviousTab;
+
+  /// No description provided for @shortcutProfile.
+  ///
+  /// In es, this message translates to:
+  /// **'Atajos de'**
+  String get shortcutProfile;
+
+  /// No description provided for @shortcutProfileHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Los de Mac van con ⌘ (en Windows y Linux, la tecla del sistema); los de PC, con Ctrl+Mayús.'**
+  String get shortcutProfileHelp;
+
+  /// No description provided for @shortcutProfileMac.
+  ///
+  /// In es, this message translates to:
+  /// **'Mac'**
+  String get shortcutProfileMac;
+
+  /// No description provided for @shortcutProfilePc.
+  ///
+  /// In es, this message translates to:
+  /// **'PC'**
+  String get shortcutProfilePc;
+
+  /// No description provided for @shortcutProfileSystem.
+  ///
+  /// In es, this message translates to:
+  /// **'Este equipo'**
+  String get shortcutProfileSystem;
 
   /// No description provided for @shortcutSearch.
   ///
@@ -8168,6 +8444,18 @@ abstract class AppLocalizations {
   /// **'Fuente del terminal'**
   String get terminalFont;
 
+  /// No description provided for @terminalKeysFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Las teclas, para el terminal'**
+  String get terminalKeysFirst;
+
+  /// No description provided for @terminalKeysFirstHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'En un terminal, Ctrl+Tab, Ctrl+=, Ctrl+−, Ctrl+0, Ctrl+, y Ctrl+Alt+número llegan al programa. Los atajos con Ctrl+Mayús siguen siendo de la ventana.'**
+  String get terminalKeysFirstHelp;
+
   /// No description provided for @terminalMenuHint.
   ///
   /// In es, this message translates to:
@@ -8191,6 +8479,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Esquema propio'**
   String get terminalScheme;
+
+  /// No description provided for @terminalSchemeApp.
+  ///
+  /// In es, this message translates to:
+  /// **'Los del tema de la app'**
+  String get terminalSchemeApp;
+
+  /// No description provided for @terminalSchemeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Colores del terminal'**
+  String get terminalSchemeLabel;
+
+  /// No description provided for @terminalSchemeNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Otros colores para este host, sea cual sea el tema: para reconocer de un vistazo, por ejemplo, los de producción.'**
+  String get terminalSchemeNote;
 
   /// No description provided for @terminalShortcuts.
   ///

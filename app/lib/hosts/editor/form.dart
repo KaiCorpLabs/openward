@@ -56,6 +56,9 @@ class SettingsForm extends ChangeNotifier {
       readOsRelease = original.readOsRelease,
       protocol = original.protocol,
       serial = original.serial,
+      encoding = original.encoding,
+      backspace = original.backspace,
+      terminalScheme = original.terminalScheme,
       jumps = [...original.jumps],
       setHere = {
         if (original.identity != null) 'identity',
@@ -77,6 +80,9 @@ class SettingsForm extends ChangeNotifier {
         if (original.serial != null) 'serial',
         if (original.mosh != null) 'mosh',
         if (original.moshServer != null) 'mosh_server',
+        if (original.encoding != null) 'encoding',
+        if (original.backspace != null) 'backspace',
+        if (original.terminalScheme != null) 'terminal_scheme',
       };
 
   final SettingsSpec original;
@@ -88,6 +94,15 @@ class SettingsForm extends ChangeNotifier {
 
   /// The shell over Mosh.
   bool? mosh;
+
+  /// The host's character set (`utf-8`, `iso-8859-1`…).
+  String? encoding;
+
+  /// What Backspace sends.
+  BackspaceKind? backspace;
+
+  /// The terminal's scheme, by id; empty for the app's own colors.
+  String? terminalScheme;
   AgentKind? agent;
   RouteKind? route;
   ProxyKind? proxy;
@@ -224,6 +239,12 @@ class SettingsForm extends ChangeNotifier {
         mosh = inherited.mosh ?? false;
       case 'mosh_server':
         moshServer.text = inherited.moshServer ?? 'mosh-server';
+      case 'encoding':
+        encoding = inherited.encoding ?? 'utf-8';
+      case 'backspace':
+        backspace = inherited.backspace ?? BackspaceKind.delete;
+      case 'terminal_scheme':
+        terminalScheme = inherited.terminalScheme ?? '';
     }
     notifyListeners();
   }
@@ -284,6 +305,12 @@ class SettingsForm extends ChangeNotifier {
         mosh = null;
       case 'mosh_server':
         moshServer.clear();
+      case 'encoding':
+        encoding = null;
+      case 'backspace':
+        backspace = null;
+      case 'terminal_scheme':
+        terminalScheme = null;
     }
     notifyListeners();
   }
@@ -301,6 +328,9 @@ class SettingsForm extends ChangeNotifier {
     proxyUser.text,
     moshServer.text,
     mosh,
+    encoding,
+    backspace,
+    terminalScheme,
     jumpAddress.text,
     agent,
     route,
@@ -440,6 +470,11 @@ class SettingsForm extends ChangeNotifier {
       serial: setHere.contains('serial') ? serial : null,
       mosh: setHere.contains('mosh') ? mosh : null,
       moshServer: text('mosh_server', moshServer),
+      encoding: setHere.contains('encoding') ? encoding : null,
+      backspace: setHere.contains('backspace') ? backspace : null,
+      terminalScheme: setHere.contains('terminal_scheme')
+          ? terminalScheme
+          : null,
     );
   }
 }

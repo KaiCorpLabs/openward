@@ -203,6 +203,13 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - **importar** una hecha con `ssh-keygen -t ed25519-sk`: debe entrar igual;
    - **en Linux**, sin la regla de udev de `/dev/hidraw*`, el error debe decir que falta y qué paquete la trae; **en Windows**, sin ser administrador, que se use el agente de OpenSSH de Windows;
    - **un certificado** que caduque en unos días (`ssh-keygen -s ca -V +3d`): «caduca en 3 días» en las claves y en la identidad. Ya caducado, el error al entrar debe decir que es el certificado.
+28. **Terminal** (P4 del [camino a la Community](community.md#p4--terminal)):
+   - **ratón:** en Ajustes › Terminal, «Copiar al seleccionar»: selecciona y pega en otra app sin copiar. «Pegar con clic derecho»: el clic derecho pega, y con Ctrl abre el menú;
+   - **resaltado:** `ip addr`, `ping`, `journalctl -p warning` y un `make` que falle deben mostrar en color las direcciones, los avisos y los errores. `ls --color` debe seguir con sus colores, y en `vim` o `less` no debe pintarse nada. Apaga una regla, añade una tuya (`\bretry\b`) y cambia el tema: los colores lo siguen;
+   - **codificación:** un switch o un sistema viejo en Latin-1 (o `printf '\xe1\xe9\xed\n'` en un servidor), con «Avanzado» › Codificación › Latin-1, debe verse «áéí» y escribir «ñ» debe llegar bien. Un BIOS o un menú de DOS en CP437 debe dibujar sus cajas;
+   - **retroceso:** con Control-H, en un equipo que lo pida, Retroceso debe borrar en vez de escribir `^H`;
+   - **colores por host:** pon Monitor a un host de producción. Su pestaña debe tener esos colores con cualquier tema, y los demás, los del tema;
+   - **atajos:** en un Mac, «Atajos de» PC: Ctrl+Mayús+T abre un terminal y ⌘T no. En Windows o Linux con «Las teclas, para el terminal», Ctrl+Tab debe llegar al programa (en `emacs`, o con `showkey -a`).
  Ctrl+Mayús+K abre la paleta y Ctrl+Mayús+/ la hoja de atajos. La barra lateral se pliega con Ctrl+Mayús+L (Ctrl+B es del shell).
 
 ## Cómo informar

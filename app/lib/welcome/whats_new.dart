@@ -45,7 +45,7 @@ class _WhatsNew extends StatelessWidget {
     final c = ow.colors;
     final l = context.l10n;
     final cs = l.ctrlShiftPrefix;
-    String keys(String apple, String other) => isApple ? apple : other;
+    String keys(String apple, String other) => macShortcuts ? apple : other;
     // Marked new: what came after who saw the news before.
     final items = [
       (
