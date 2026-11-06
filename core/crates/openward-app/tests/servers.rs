@@ -2,6 +2,7 @@
 //! (`spikes/s2-ssh/servers/up.sh`). Skipped when they are not running,
 //! unless `OPENWARD_REQUIRE_SERVERS` is set (`make ci`).
 
+#[cfg(unix)]
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, Sender, channel};
@@ -18,6 +19,7 @@ use openward_app::vault::proto::{
     SystemSource, UseIdentity,
 };
 use openward_app::{Answer, App, Event, EventSink, Failure, Local, Prompt, Terminal};
+#[cfg(unix)]
 use openward_ssh::russh::keys::{Algorithm, PrivateKey, agent};
 use zeroize::Zeroizing;
 
@@ -792,7 +794,10 @@ fn passphrase_and_password_are_asked_for() {
 }
 
 /// An agent of the test's own at `socket`, holding `keys`; with `refuse`,
-/// it will not sign with them, as when its user says no.
+/// it will not sign with them, as when its user says no. On a Unix socket:
+/// the Windows agent (a named pipe) is tried by hand, in
+/// docs/plan/prueba-v0.3.md.
+#[cfg(unix)]
 fn test_agent(socket: &Path, keys: Vec<PrivateKey>, refuse: bool) {
     #[derive(Clone)]
     struct Refuse(bool);
@@ -834,6 +839,7 @@ fn test_agent(socket: &Path, keys: Vec<PrivateKey>, refuse: bool) {
 /// An agent that will not sign (a denied confirmation, a locked password
 /// manager) is passed over for the next method, not taken for a network
 /// failure.
+#[cfg(unix)]
 #[test]
 fn an_agent_that_will_not_sign_is_passed_over() {
     let f = Fixture::new(servers!());
@@ -871,6 +877,7 @@ fn an_agent_that_will_not_sign_is_passed_over() {
 
 /// A server that hangs up after too many keys (`MaxAuthTries`) failed the
 /// login: no network failure, to be tried again offering them all.
+#[cfg(unix)]
 #[test]
 fn too_many_keys_is_a_failed_login() {
     let f = Fixture::new(servers!());
@@ -2260,7 +2267,9 @@ fn a_cut_keeps_the_log_whole_on_both_sides() {
     assert_eq!(marks, ["lost", "back"]);
 }
 
-/// A local terminal is recorded only when this device asks for it.
+/// A local terminal is recorded only when this device asks for it. With
+/// `sh`: PowerShell on Windows is tried by hand, in docs/plan/prueba-v0.3.md.
+#[cfg(unix)]
 #[test]
 fn a_local_shell_is_recorded_when_asked() {
     let dir = tempfile::tempdir().unwrap();
