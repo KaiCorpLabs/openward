@@ -57,6 +57,16 @@ class TerminalRenderer extends ChangeNotifier {
   /// alternate screen, where programs draw their own.
   Highlighter? highlighter;
 
+  /// A suggestion for the rest of the command line, dimmed from the
+  /// cursor on (it does not wrap).
+  ({int row, int col, String text})? ghost;
+
+  void setGhost(({int row, int col, String text})? value) {
+    if (value == ghost) return;
+    ghost = value;
+    notifyListeners();
+  }
+
   /// Off during the dark half of a blink.
   bool cursorOn = true;
 
@@ -408,6 +418,20 @@ class TerminalRenderer extends ChangeNotifier {
           paint,
         );
       }
+    }
+    final g = ghost;
+    if (g != null && displayOffset == 0 && g.col < cols) {
+      final room = cols - g.col;
+      final runes = g.text.runes.toList();
+      final text = String.fromCharCodes(
+        runes.length > room ? runes.sublist(0, room) : runes,
+      );
+      final p = metrics.paragraph(
+        text,
+        color: palette.foreground.withValues(alpha: 0.42),
+      );
+      canvas.drawParagraph(p, Offset(g.col * cw, g.row * ch));
+      p.dispose();
     }
     final c = cursor;
     if (c != null && c.visible && cursorOn && displayOffset == 0) {

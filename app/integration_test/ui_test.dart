@@ -3840,6 +3840,55 @@ Host db
     await _settle(tester);
   });
 
+  testWidgets('suggestions: the history, dimmed after the cursor; → takes it', (
+    tester,
+  ) async {
+    final container = await launch(tester);
+    await tester.tap(find.text('Abrir un terminal local'));
+    await tester.pump();
+    final a = container.read(tabsProvider).currentSession!;
+    await _until(tester, () => a.phase == Phase.running, 'the shell');
+    await tester.pump(const Duration(milliseconds: 500));
+    final pane = tester.state<TerminalPaneState>(find.byType(TerminalPane));
+    container.read(historyProvider.notifier).add(r'echo ghost-$((40+2))', a);
+    String? ghost() => a.currentRenderer?.ghost?.text;
+
+    pane.updateEditingValue(
+      const TextEditingValue(
+        text: '  echo gh',
+        selection: TextSelection.collapsed(offset: 9),
+      ),
+    );
+    await _until(tester, () => ghost() == r'ost-$((40+2))', 'the suggestion');
+    await _shot(tester, '80-suggestion');
+    // Typing what it says keeps it; typing otherwise takes it away.
+    pane.updateEditingValue(
+      const TextEditingValue(
+        text: '  x',
+        selection: TextSelection.collapsed(offset: 3),
+      ),
+    );
+    await _until(tester, () => ghost() == null, 'no suggestion for ghx');
+    await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
+    await _until(tester, () => ghost() == r'ost-$((40+2))', 'it again');
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await _until(
+      tester,
+      () => a.session.screenText().contains(r'echo ghost-$((40+2))'),
+      'the suggestion typed',
+    );
+    expect(ghost(), isNull);
+    pane.performAction(TextInputAction.newline);
+    await _until(
+      tester,
+      () => a.session.screenText().contains('ghost-42\n'),
+      'the command run',
+    );
+    container.read(historyProvider.notifier).clear();
+    container.read(tabsProvider.notifier).close(0);
+    await _settle(tester);
+  });
+
   testWidgets('logs: a local session recorded, found, watched, kept and '
       'deleted', (tester) async {
     app.setLogsConfig(

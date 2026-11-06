@@ -48,6 +48,9 @@
   "askedWhenRunHint": "Comes from what you write between braces.",
   "asks": "Asks",
   "asksNothing": "It asks nothing. Write {example} where it should ask.",
+  "autocomplete": "Suggest as you type",
+  "autocompleteHelp": "In gray, what comes next: from this host's history, the snippets and some common commands. → or End takes it. All on this device, without the network; nothing in editors or when a password is asked.",
+  "autocompleteNeedsHistory": "It needs the command history (Settings › Logs).",
   "awayFor": "away for {time}",
   "@awayFor": {
     "placeholders": {

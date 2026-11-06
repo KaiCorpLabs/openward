@@ -172,6 +172,7 @@ class Settings {
     this.highlightRules = defaultHighlights,
     this.shortcutProfile = ShortcutProfile.system,
     this.terminalKeysFirst = false,
+    this.autocomplete = true,
   });
 
   /// Terminal font size, in logical pixels.
@@ -262,6 +263,10 @@ class Settings {
   /// take without Ctrl+Shift (Ctrl+Tab, Ctrl+=…): PC shortcuts only.
   final bool terminalKeysFirst;
 
+  /// The rest of a command, suggested dimmed as it is typed (with the
+  /// command history on).
+  final bool autocomplete;
+
   /// Whether shortcuts go with ⌘.
   bool get macShortcuts => switch (shortcutProfile) {
     ShortcutProfile.system => keys.isApple,
@@ -322,6 +327,7 @@ class Settings {
     List<HighlightRule>? highlightRules,
     ShortcutProfile? shortcutProfile,
     bool? terminalKeysFirst,
+    bool? autocomplete,
   }) => Settings(
     fontSize: fontSize ?? this.fontSize,
     theme: theme ?? this.theme,
@@ -356,6 +362,7 @@ class Settings {
     highlightRules: highlightRules ?? this.highlightRules,
     shortcutProfile: shortcutProfile ?? this.shortcutProfile,
     terminalKeysFirst: terminalKeysFirst ?? this.terminalKeysFirst,
+    autocomplete: autocomplete ?? this.autocomplete,
   );
 
   /// The same settings with one theme's layers changed (or reset).
@@ -413,6 +420,7 @@ class Settings {
       'highlight_rules': [for (final r in highlightRules) r.toJson()],
     'shortcut_profile': shortcutProfile.name,
     'terminal_keys_first': terminalKeysFirst,
+    'autocomplete': autocomplete,
   };
 
   /// Unknown or broken values fall back to the defaults, one by one.
@@ -496,6 +504,7 @@ class Settings {
         d.shortcutProfile,
       ),
       terminalKeysFirst: flag('terminal_keys_first', d.terminalKeysFirst),
+      autocomplete: flag('autocomplete', d.autocomplete),
     );
   }
 

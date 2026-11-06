@@ -540,6 +540,19 @@ class _Terminal extends ConsumerWidget {
                 notifier.update((s) => s.copyWith(onExit: v.single)),
           ),
         ),
+        _Row(
+          label: l.autocomplete,
+          help: s.commandHistory
+              ? l.autocompleteHelp
+              : l.autocompleteNeedsHistory,
+          control: Switch(
+            key: const ValueKey('settings.autocomplete'),
+            value: s.autocomplete && s.commandHistory,
+            onChanged: s.commandHistory
+                ? (v) => notifier.update((s) => s.copyWith(autocomplete: v))
+                : null,
+          ),
+        ),
         SectionLabel(l.settingsMouse),
         _Row(
           label: l.copyOnSelect,

@@ -210,6 +210,12 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - **retroceso:** con Control-H, en un equipo que lo pida, Retroceso debe borrar en vez de escribir `^H`;
    - **colores por host:** pon Monitor a un host de producción. Su pestaña debe tener esos colores con cualquier tema, y los demás, los del tema;
    - **atajos:** en un Mac, «Atajos de» PC: Ctrl+Mayús+T abre un terminal y ⌘T no. En Windows o Linux con «Las teclas, para el terminal», Ctrl+Tab debe llegar al programa (en `emacs`, o con `showkey -a`).
+29. **Sugerencias** (P5 del [camino a la Community](community.md#p5--autocompletado-local)):
+   - en un host con historial, escribe el principio de un comando que ya usaste: el resto debe salir en gris y → (o Fin) escribirlo. Escribe otra cosa: debe desaparecer;
+   - con `sudo` o `read -s`, mientras pide la contraseña, nada; en `vim` o `less`, nada;
+   - con fish, o zsh con zsh-autosuggestions, solo la del shell, no las dos;
+   - un snippet de una línea debe sugerirse también, y `do` en un host nuevo, `docker ps`;
+   - con el historial de comandos apagado (Ajustes › Registros), «Sugerir mientras escribes» queda apagado y no sale nada.
  Ctrl+Mayús+K abre la paleta y Ctrl+Mayús+/ la hoja de atajos. La barra lateral se pliega con Ctrl+Mayús+L (Ctrl+B es del shell).
 
 ## Cómo informar

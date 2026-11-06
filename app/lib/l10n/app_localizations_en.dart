@@ -192,6 +192,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get autocomplete => 'Suggest as you type';
+
+  @override
+  String get autocompleteHelp =>
+      'In gray, what comes next: from this host\'s history, the snippets and some common commands. → or End takes it. All on this device, without the network; nothing in editors or when a password is asked.';
+
+  @override
+  String get autocompleteNeedsHistory =>
+      'It needs the command history (Settings › Logs).';
+
+  @override
   String awayFor(String time) {
     return 'away for $time';
   }

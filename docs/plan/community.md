@@ -244,6 +244,25 @@ Ese mismo día se descartó montar Postgres y Supabase Auth aparte para OpenWard
   - no sugiere con el historial desactivado.
 - **La IA queda para la fase 3** ([ADR-008](../adr/ADR-008-ia-mcp-y-byok.md)), con tu propia clave o un modelo local. El diseño le deja el hueco para entrar como una fuente más.
 
+#### Qué deja P5 hecho
+
+- **«Sugerir mientras escribes»**, en Ajustes › Terminal, encendido con el historial de comandos:
+  - lo que sigue, en gris tras el cursor; → o Fin lo acepta y se escribe como si se tecleara;
+  - de dónde sale, en este orden: el historial de ese host (lo último primero), los snippets de una línea sin variables que preguntar, y unos 50 comandos comunes (desde dos letras);
+  - todo en el equipo, sin red (`lib/history/suggest.dart`).
+- **Cuándo no sugiere,** con el seguidor de línea del historial:
+  - en la pantalla alternativa;
+  - si el prompt pide un secreto, o la pantalla no muestra lo tecleado (no hay eco);
+  - si la línea se editó con flechas o Tab;
+  - si el shell ya sugiere tras el cursor (fish, zsh-autosuggestions);
+  - con el historial apagado o mientras se hace broadcast;
+  - para una línea que empieza con espacio.
+- **La IA:** una `SuggestionSource` más cuando llegue (fase 3).
+- **Pruebas:**
+  - de las fuentes y su orden, y de cuándo la pantalla deja sugerir;
+  - en la ventana: el historial sugiere, otra letra lo quita, Retroceso lo vuelve a traer y → lo escribe y se ejecuta.
+- **Pendiente:** probarlo a mano con bash, zsh y fish (punto 29 de [la guía](prueba-v0.3.md)).
+
 ### P6 · Snippets en varios hosts y archivos remotos
 
 - **Ejecutar un snippet en una selección de hosts:**

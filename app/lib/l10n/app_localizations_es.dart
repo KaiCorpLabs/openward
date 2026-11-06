@@ -193,6 +193,17 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get autocomplete => 'Sugerir mientras escribes';
+
+  @override
+  String get autocompleteHelp =>
+      'En gris, lo que sigue: del historial de este host, de los snippets y de unos comandos comunes. → o Fin lo acepta. Todo en este equipo, sin red; nada en los editores ni cuando se pide una contraseña.';
+
+  @override
+  String get autocompleteNeedsHistory =>
+      'Necesita el historial de comandos (Ajustes › Registros).';
+
+  @override
   String awayFor(String time) {
     return '$time fuera';
   }

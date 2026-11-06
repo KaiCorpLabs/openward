@@ -386,6 +386,24 @@ abstract class AppLocalizations {
   /// **'No pregunta nada. Escribe {example} donde quieras que pregunte.'**
   String asksNothing(String example);
 
+  /// No description provided for @autocomplete.
+  ///
+  /// In es, this message translates to:
+  /// **'Sugerir mientras escribes'**
+  String get autocomplete;
+
+  /// No description provided for @autocompleteHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'En gris, lo que sigue: del historial de este host, de los snippets y de unos comandos comunes. → o Fin lo acepta. Todo en este equipo, sin red; nada en los editores ni cuando se pide una contraseña.'**
+  String get autocompleteHelp;
+
+  /// No description provided for @autocompleteNeedsHistory.
+  ///
+  /// In es, this message translates to:
+  /// **'Necesita el historial de comandos (Ajustes › Registros).'**
+  String get autocompleteNeedsHistory;
+
   /// No description provided for @awayFor.
   ///
   /// In es, this message translates to:

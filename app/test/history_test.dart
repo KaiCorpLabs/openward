@@ -8,6 +8,7 @@ import 'package:openward/core/match.dart';
 import 'package:openward/core/settings.dart';
 import 'package:openward/history/history.dart';
 import 'package:openward/history/line_tracker.dart';
+import 'package:openward/history/suggest.dart';
 import 'package:openward/terminal/keys.dart';
 
 /// A screen of one prompt row: the prompt, what the shell echoed, and
@@ -159,6 +160,58 @@ void main() {
       t.key(Hid.a + 17, Mods.ctrl, '', s); // Ctrl+R
       s.echoed = 'ssh prod';
       expect(t.enter(s, altScreen: false), isNull);
+    });
+
+    test('a suggestion goes only where the screen shows what was typed', () {
+      final s = _Screen('ana@web:~\$ ');
+      final t = LineTracker();
+      expect(t.plainTyped, isNull);
+      _type(t, s, 'git st');
+      expect(t.plainTyped, 'git st');
+      expect(t.showsTyped(s), isTrue);
+      // The shell suggests on its own: not ours as well.
+      s.after = 'atus';
+      expect(t.showsTyped(s), isFalse);
+      s.after = '';
+      // The echo is not there yet.
+      t.text('a', s);
+      expect(t.showsTyped(s), isFalse);
+      s.echoed += 'a';
+      expect(t.showsTyped(s), isTrue);
+      // After an arrow, the line is the screen's to say.
+      t.key(Hid.arrowLeft, 0, '', s);
+      expect(t.plainTyped, isNull);
+      t.enter(s, altScreen: false);
+
+      final secret = _Screen('[sudo] password for ana: ');
+      _type(t, secret, 'ls', echo: true);
+      expect(t.plainTyped, isNull);
+    });
+  });
+
+  group('suggestions', () {
+    test('the first source that has one; the rest of it', () {
+      final history = ['git status -sb', 'git stash'];
+      final sources = [
+        SuggestionSource(history),
+        const SuggestionSource(['git switch main']),
+        const SuggestionSource(commonCommands, minTyped: 2),
+      ];
+      expect(suggestFor('git st', sources), 'atus -sb');
+      expect(suggestFor('git sw', sources), 'itch main');
+      expect(suggestFor('d', sources), isNull, reason: 'too short for these');
+      expect(suggestFor('df', sources), ' -h');
+      // Nothing for what is complete, after a space in front, or empty.
+      expect(suggestFor('git stash', sources), isNull);
+      expect(suggestFor(' git', sources), isNull);
+      expect(suggestFor('', sources), isNull);
+      // Snippets of several lines are not suggested.
+      expect(
+        suggestFor('dep', [
+          const SuggestionSource(['deploy\nrestart']),
+        ]),
+        isNull,
+      );
     });
   });
 

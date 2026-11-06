@@ -16,8 +16,10 @@ import '../core/providers.dart';
 import '../core/settings.dart';
 import '../history/history.dart';
 import '../history/line_tracker.dart';
+import '../history/suggest.dart';
 import '../l10n/l10n.dart';
 import '../snippets/palette.dart' show showSnippetPalette;
+import '../snippets/snippets.dart' show snippetsProvider;
 import '../src/rust/api/session.dart';
 import '../tabs/connection_motion.dart' show comebackWords, moshFallbackWords;
 import '../ui/themes.dart' show hostTerminal;
@@ -257,6 +259,67 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     if (before?.row != after?.row || before?.col != after?.col) {
       SchedulerBinding.instance.addPostFrameCallback((_) => _updateImeRects());
     }
+    _suggest();
+  }
+
+  // ------------------------------------------------------------ suggestions
+
+  /// The rest of the command line shown dimmed, or null.
+  String? _ghost;
+
+  /// Works out the suggestion for what the screen shows now: none in the
+  /// alternate screen, where a secret is asked, with the history off,
+  /// while broadcasting, or while the shell suggests on its own.
+  void _suggest() {
+    final s = ref.read(settingsProvider);
+    final line = _c.line;
+    final typed = line.plainTyped;
+    String? rest;
+    if (s.autocomplete &&
+        s.commandHistory &&
+        !widget.readOnly &&
+        !_c.altScreen &&
+        focusNode.hasFocus &&
+        (widget.mirrors?.call() ?? const []).isEmpty &&
+        typed != null &&
+        typed.isNotEmpty &&
+        line.showsTyped(_screen)) {
+      final place = historyPlace(_c);
+      rest = suggestFor(typed, [
+        SuggestionSource(
+          ref
+              .read(historyProvider)
+              .where((e) => e.where == place)
+              .map((e) => e.command),
+        ),
+        SuggestionSource(
+          ref
+              .read(snippetsProvider)
+              .where((v) => v.variables.asked.isEmpty)
+              .map((v) => v.spec.script),
+        ),
+        const SuggestionSource(commonCommands, minTyped: 2),
+      ]);
+    }
+    _setGhost(rest);
+  }
+
+  void _setGhost(String? rest) {
+    final cursor = _renderer?.cursor;
+    if (rest == null || cursor == null) {
+      _ghost = null;
+      _renderer?.setGhost(null);
+      return;
+    }
+    _ghost = rest;
+    _renderer?.setGhost((row: cursor.row, col: cursor.col, text: rest));
+  }
+
+  /// → or End with a suggestion shown: it is typed.
+  void _takeGhost(String rest) {
+    _setGhost(null);
+    _c.line.text(rest, _screen);
+    _session.text(text: rest);
   }
 
   /// The size on its way to the core. Dragging a divider or the window
@@ -369,6 +432,15 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
 
     final mods = hardwareMods();
     _renderer?.setCursorOn(true);
+    final rest = _ghost;
+    if (rest != null &&
+        event is KeyDownEvent &&
+        mods & (Mods.shift | Mods.ctrl | Mods.alt | Mods.superKey) == 0 &&
+        (event.logicalKey == LogicalKeyboardKey.arrowRight ||
+            event.logicalKey == LogicalKeyboardKey.end)) {
+      _takeGhost(rest);
+      return KeyEventResult.handled;
+    }
     if (event is KeyDownEvent &&
         !widget.readOnly &&
         _isPasteShortcut(event, mods)) {
@@ -566,6 +638,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     final has = focusNode.hasFocus;
     if (!_c.isDisposed) _session.focus(gained: has);
     _renderer?.setFocused(has);
+    if (!has) _setGhost(null);
     if (has && !widget.readOnly) {
       _openInput();
     } else {
