@@ -3,6 +3,7 @@
 | Documento | Contenido |
 |---|---|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Arquitectura, stack, fases y riesgos |
+| [THREAT_MODEL.md](THREAT_MODEL.md) | Modelo de amenazas: qué se protege, de quién, lo que hay en el disco, las garantías de la v0.4 y lo que queda fuera (propuesta, D0) |
 | [adr/](adr/) | Decisiones de arquitectura (ADR-001 a ADR-009) |
 | [spikes/S1-terminal.md](spikes/S1-terminal.md) | Plan y resultados del spike del motor de terminal |
 | [spikes/S2-ssh.md](spikes/S2-ssh.md) | Plan y resultados del spike de SSH con `russh` |
@@ -21,4 +22,4 @@
 | [plan/community.md](plan/community.md) | Camino a la Community: lo básico completo (Telnet, serie, Mosh, FIDO2, terminal, autocompletado), el vault cifrado, la sync con tu almacenamiento, el servidor con las cuentas de KaiCorp Labs y su paso a producción (propuesta) |
 | [plan/v0.4.md](plan/v0.4.md) | v0.4: el vault cifrado (contraseña maestra, kit de recuperación, desbloqueo con biometría, secretos y copia de seguridad), etapa 2 del camino a la Community (propuesta) |
 
-Pendientes: `THREAT_MODEL.md` (antes de la fase 2) y `PROTOCOL.md` (en [`spec/`](../spec/)).
+Pendiente: `PROTOCOL.md` (en [`spec/`](../spec/)).

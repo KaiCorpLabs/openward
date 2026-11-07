@@ -395,7 +395,7 @@ Hay que ser honestos con el cliente: la grabación hecha en el cliente es una at
 
 ## 11. Seguridad y cadena de suministro
 
-- **Modelo de amenazas** (documento aparte, `THREAT_MODEL.md`):
+- **Modelo de amenazas** (documento aparte, [`THREAT_MODEL.md`](THREAT_MODEL.md)):
   - Atacantes considerados: el servidor (comprometido o curioso), la red, otro miembro del equipo malicioso, el robo del dispositivo (bloqueado o desbloqueado), las dependencias y builds troyanizadas (instaladores falsos de clientes SSH distribuidos con anuncios patrocinados) y los agentes de IA.
   - Fuera de alcance: un dispositivo comprometido mientras está desbloqueado.
 - **En código** (hecho, salvo lo marcado):
