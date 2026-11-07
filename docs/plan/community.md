@@ -308,7 +308,7 @@ Novedades, notas, guía de prueba en los tres sistemas, accesibilidad y galería
 - **Notas** de la 0.3.4-beta.1 en [las de la 0.3](../notas/v0.3.md), y en [la guía](prueba-v0.3.md) los puntos 24 a 30, que se prueban en los tres sistemas.
 - **Accesibilidad:** la prueba recorre también el diálogo de una regla de resaltado, «Nueva clave» en una llave de seguridad y un snippet en varios hosts. Encontró que los interruptores de las reglas no tenían nombre para un lector de pantalla, y ya lo tienen.
 - **Galería:** el terminal de cada tema enseña el resaltado, y Ajustes › Terminal sale en cada tema.
-- **La beta, preparada y sin publicar:** falta subir la versión (`tool/bump-version.sh 0.3.4-beta.1`), la etiqueta, la release y el cask, cuando se revise todo esto.
+- **La beta 0.3.4-beta.1** (2026-11-07): la etiqueta `v0.3.4-beta.1`, el borrador de la release que deja la CI con los paquetes de los tres sistemas, y el `.dmg` en el cask `openward` de `kaicorplabs/tap`.
 
 ## Etapa 2 · v0.4, el vault cifrado
 
