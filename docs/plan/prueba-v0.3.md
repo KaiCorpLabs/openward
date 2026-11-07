@@ -166,7 +166,8 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - **con el teclado español**, en Windows y en Linux: AltGr escribe en el terminal `@ # | \ [ ] { } €` y nunca dispara un atajo; Alt con una letra llega al programa como Alt (pruébalo con `cat -v` en un servidor: Alt+X debe salir `^[x`);
    - SFTP con rutas de Windows: `C:\Users\…`, carpetas con espacios y con tildes, y arrastrar desde el Explorador;
    - en Linux, en X11 y en Wayland: arranca, y el portapapeles copia y pega en los dos sentidos;
-   - con el tamaño del texto al 150 % (Ajustes › Apariencia), recorre la barra lateral, Hosts y el inicio: nada debe salirse ni cortarse. Los atajos largos, como «Ctrl+Mayús+H», se quitan cuando no caben.
+   - con el tamaño del texto al 150 % (Ajustes › Apariencia), recorre la barra lateral, Hosts y el inicio: nada debe salirse ni cortarse. Los atajos largos, como «Ctrl+Mayús+H», se quitan cuando no caben;
+   - en Windows y en Linux, Ctrl+Mayús+K abre la paleta y Ctrl+Mayús+/ la hoja de atajos. La barra lateral se pliega con Ctrl+Mayús+L (Ctrl+B es del shell).
 25. **Telnet y puerto serie** (P1 del [camino a la Community](community.md#p1--telnet-y-puerto-serie)):
    - **Telnet:** crea un host para un switch o un router; si no tienes ninguno, `docker run --rm -p 2323:23 busybox telnetd -F -l /bin/sh`. En el editor, pon «Protocolo» a Telnet:
      - debe avisar de que no cifra;
@@ -221,7 +222,12 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - pon a un host «Snippet al conectar» (por ejemplo `cd /srv/app && git status`): debe escribirse al conectar y al reconectar, pero no al volver a su sesión persistente;
    - en SFTP, «Abrir» un archivo de texto del servidor: se abre en su editor. Guárdalo: la barra debe decir «subido a las…» y el archivo cambiar en el servidor. Cámbialo también en el servidor (`echo x >> archivo`) y guarda otra vez: debe preguntar antes de subirlo encima;
    - «Abrir con…»: en Windows, su diálogo; en macOS, `TextEdit` o `Visual Studio Code`; en Linux, `gedit` o `code`.
- Ctrl+Mayús+K abre la paleta y Ctrl+Mayús+/ la hoja de atajos. La barra lateral se pliega con Ctrl+Mayús+L (Ctrl+B es del shell).
+31. **«Abrir» sin sorpresas** (0.3.4-beta.2), en los tres sistemas, con archivos que creas en un servidor tuyo:
+   - `touch 'prueba&calc.txt'` y, en Windows, «Abrir»: debe abrirse el Bloc de notas con ese archivo, y no la Calculadora;
+   - `touch setup.exe` (Windows), `touch instalar.command` (macOS) o `touch lanzador.desktop` (Linux): «Abrir» debe preguntar antes, con Cancelar delante;
+   - `touch "$(printf 'factura\342\200\256fdp.exe')"`: la lista debe enseñar `factura⟨RLO⟩fdp.exe` en ámbar;
+   - en Windows, un `.docx` abierto así debe salir en Word en vista protegida;
+   - abre un archivo, cierra la app a la fuerza (el Administrador de tareas, o `kill -9`) y ábrela otra vez: en la carpeta temporal (`%TEMP%`, `$TMPDIR` o `/tmp`) no debe quedar ninguna `openward-open-…`.
 
 ## Cómo informar
 

@@ -1,6 +1,6 @@
 # Camino a la Community: lo básico completo y la sincronización
 
-- **Estado:** en marcha. La etapa 1 (P0–P7) está hecha y salió en la 0.3.4-beta.1 (2026-11-07); lo que pide hardware de verdad (un cable serie, una llave FIDO2) queda para la guía de prueba. La etapa 2 empieza con D0, el [modelo de amenazas](../THREAT_MODEL.md). Las decisiones por defecto siguen por confirmar. Como hasta ahora, cada hito con interfaz nueva pasa antes por maquetas en el lienzo.
+- **Estado:** en marcha. La etapa 1 (P0–P7) está hecha y salió en la 0.3.4-beta.1 (2026-11-07); lo que pide hardware de verdad (un cable serie, una llave FIDO2) queda para la guía de prueba. La etapa 2 empieza con D0, el [modelo de amenazas](../THREAT_MODEL.md), que está escrito; los tres arreglos de «Abrir» que salieron de él van en la 0.3.4-beta.2, la misma semana. Las decisiones por defecto siguen por confirmar. Como hasta ahora, cada hito con interfaz nueva pasa antes por maquetas en el lienzo.
 - **Fecha:** 2026-11-06.
 - **Base:** fases 1 y 2 de la hoja de ruta ([ARCHITECTURE §15](../ARCHITECTURE.md#15-hoja-de-ruta-con-puertas)) y los ADR [004](../adr/ADR-004-vault-y-jerarquia-de-claves.md) (vault), [005](../adr/ADR-005-sync-por-registros-de-dispositivo.md) (sync), [006](../adr/ADR-006-servidor-open-core.md) (servidor) y [009](../adr/ADR-009-mosh-clean-room.md) (Mosh). Incluye el plan de la [v0.4](v0.4.md) como etapa 2, con tres ajustes.
 - **Duración estimada:** unas 29 semanas de plan en cinco etapas. Son estimaciones al estilo de los planes anteriores: la 0.2 y la 0.3 fueron bastante más rápidas que lo que decían sus planes.
@@ -308,7 +308,7 @@ Novedades, notas, guía de prueba en los tres sistemas, accesibilidad y galería
 - **Notas** de la 0.3.4-beta.1 en [las de la 0.3](../notas/v0.3.md), y en [la guía](prueba-v0.3.md) los puntos 24 a 30, que se prueban en los tres sistemas.
 - **Accesibilidad:** la prueba recorre también el diálogo de una regla de resaltado, «Nueva clave» en una llave de seguridad y un snippet en varios hosts. Encontró que los interruptores de las reglas no tenían nombre para un lector de pantalla, y ya lo tienen.
 - **Galería:** el terminal de cada tema enseña el resaltado, y Ajustes › Terminal sale en cada tema.
-- **La beta 0.3.4-beta.1** (2026-11-07): la etiqueta `v0.3.4-beta.1`, el borrador de la release que deja la CI con los paquetes de los tres sistemas, y el `.dmg` en el cask `openward` de `kaicorplabs/tap`.
+- **La beta 0.3.4-beta.1** (2026-11-07): la etiqueta `v0.3.4-beta.1`, el borrador de la release que deja la CI con los paquetes de los tres sistemas, y el `.dmg` en el cask `openward` de `kaicorplabs/tap`. Su borrador no se publica: el paquete de Windows tenía AM-1, y la 0.3.4-beta.2 lo sustituye con los arreglos de D0.
 
 ## Etapa 2 · v0.4, el vault cifrado
 
