@@ -1952,7 +1952,7 @@ dependencies = [
 name = "openward-import"
 version = "0.3.4-beta.2"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "crypto_secretbox",
  "glob",
  "keyring",
