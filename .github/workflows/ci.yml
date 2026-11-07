@@ -412,5 +412,8 @@ jobs:
           sed "s#](\.\./#](https://github.com/$GITHUB_REPOSITORY/blob/$TAG/docs/#g" "$notes" > "$RUNNER_TEMP/notes.md"
           pre=()
           [[ "$version" == *-* ]] && pre=(--prerelease)
+          # The packages alone: the .dmg.commit beside the .dmg is for
+          # release-tap.sh. One missing stays unexpanded and stops the draft.
           gh release create "$TAG" --draft "${pre[@]}" --verify-tag \
-            --title "OpenWard $version" --notes-file "$RUNNER_TEMP/notes.md" dist/*/OpenWard-*
+            --title "OpenWard $version" --notes-file "$RUNNER_TEMP/notes.md" \
+            dist/*/OpenWard-*.{dmg,zip,tar.gz}
