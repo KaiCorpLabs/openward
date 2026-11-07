@@ -1,6 +1,7 @@
 // What a paste really holds, before it is sent: control characters, the
 // ones that turn text around (bidi) and the ones of no width, which a
-// terminal would obey without showing them, made visible.
+// terminal would obey without showing them, made visible. And what a
+// file's name hides: the same, which can dress `fdp.exe` as `exe.pdf`.
 
 import 'package:flutter/painting.dart';
 
@@ -17,6 +18,8 @@ const _named = {
   0x202C: 'PDF',
   0x202D: 'LRO',
   0x202E: 'RLO',
+  0x2028: 'LS',
+  0x2029: 'PS',
   0x2060: 'WJ',
   0x2066: 'LRI',
   0x2067: 'RLI',
@@ -26,9 +29,10 @@ const _named = {
 };
 
 /// How `rune` shows when it would not: a control picture (␛) or its name
-/// (⟨RLO⟩); null for what shows as itself. Line breaks and tabs are text.
-String? visibleForm(int rune) {
-  if (rune == 0x0A || rune == 0x09) return null;
+/// (⟨RLO⟩); null for what shows as itself. Line breaks and tabs are text
+/// unless not [lines] (a name, all on one line).
+String? visibleForm(int rune, {bool lines = true}) {
+  if (lines && (rune == 0x0A || rune == 0x09)) return null;
   if (rune < 0x20) return String.fromCharCode(0x2400 + rune);
   if (rune == 0x7F) return '␡';
   if (rune >= 0x80 && rune < 0xA0) {
@@ -45,6 +49,7 @@ TextSpan visibleText(
   required TextStyle style,
   required TextStyle mark,
   void Function(bool hidden)? hidden,
+  bool lines = true,
 }) {
   final spans = <TextSpan>[];
   final plain = StringBuffer();
@@ -56,7 +61,7 @@ TextSpan visibleText(
   }
 
   for (final rune in text.runes) {
-    final shown = visibleForm(rune);
+    final shown = visibleForm(rune, lines: lines);
     if (shown == null) {
       plain.writeCharCode(rune);
       continue;
@@ -71,4 +76,16 @@ TextSpan visibleText(
 }
 
 /// Whether `text` holds anything [visibleText] would mark.
-bool hasHidden(String text) => text.runes.any((r) => visibleForm(r) != null);
+bool hasHidden(String text, {bool lines = true}) =>
+    text.runes.any((r) => visibleForm(r, lines: lines) != null);
+
+/// A name with what it hides written out, for a line of plain text (a
+/// dialog's title): `factura⟨RLO⟩fdp.exe`.
+String visibleName(String name) {
+  final out = StringBuffer();
+  for (final rune in name.runes) {
+    final shown = visibleForm(rune, lines: false);
+    shown == null ? out.writeCharCode(rune) : out.write(shown);
+  }
+  return out.toString();
+}

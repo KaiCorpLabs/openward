@@ -3803,6 +3803,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String get openTunnels => 'Túneles abiertos';
 
   @override
+  String get openRunsAction => 'Ejecutarlo';
+
+  @override
+  String openRunsBody(String type) {
+    return 'Este ordenador ejecuta los archivos .$type al abrirlos, y lo que hace este lo decidió quien lo puso en el servidor. Ábrelo solo si te fías; para leerlo, usa «Abrir con…».';
+  }
+
+  @override
+  String openRunsTitle(String name) {
+    return '«$name» no se abre: se ejecuta';
+  }
+
+  @override
   String get openWithHelp =>
       'Un comando, como code, gedit o kate; se le pasa el archivo al final.';
 

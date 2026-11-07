@@ -6,10 +6,21 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 
 import '../src/rust/api/app.dart';
 import '../src/rust/api/sftp.dart';
+import 'open_safety.dart';
 import 'transfers.dart';
+
+/// How the folders of the copies start, in the system's temporary folder.
+const openCopiesPrefix = 'openward-open-';
+
+/// Held while its folder is in use: a later start leaves it alone.
+const _lockName = '.openward-lock';
+
+/// The folders this run made: its own lock does not keep them from it.
+final _ours = <String>{};
 
 /// One remote file with its copy here.
 class RemoteEdit {
@@ -63,13 +74,18 @@ class RemoteEdits extends ChangeNotifier {
   bool _disposed = false;
 
   /// The folder the copies go to, made once, for this user alone: the
-  /// files may hold secrets. It goes with the tab.
+  /// files may hold secrets. It goes with the tab; if the app ends first,
+  /// the next start takes it ([cleanStaleOpenCopies]).
   Directory? _dir;
+  RandomAccessFile? _lock;
   Directory get _folder {
     final made = _dir;
     if (made != null) return made;
-    final dir = Directory.systemTemp.createTempSync('openward-open-');
+    final dir = Directory.systemTemp.createTempSync(openCopiesPrefix);
     if (!Platform.isWindows) Process.runSync('chmod', ['700', dir.path]);
+    _ours.add(dir.path);
+    _lock = File('${dir.path}/$_lockName').openSync(mode: FileMode.write)
+      ..lockSync();
     return _dir = dir;
   }
 
@@ -88,6 +104,7 @@ class RemoteEdits extends ChangeNotifier {
     )..createSync(recursive: true);
     await _transfer(TransferDirection.download, remote, dir.path);
     final local = '${dir.path}/${entry.name}';
+    await markFromOutside(local);
     final file = File(local);
     final edit = RemoteEdit(
       remote: remote,
@@ -192,28 +209,78 @@ class RemoteEdits extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _watch?.cancel();
-    try {
-      _dir?.deleteSync(recursive: true);
-    } on FileSystemException {
-      // Open in a program that holds it (Windows): the system's to clean.
+    final dir = _dir;
+    if (dir != null) {
+      _lock?.closeSync();
+      _ours.remove(dir.path);
+      try {
+        dir.deleteSync(recursive: true);
+      } on FileSystemException {
+        // Open in a program that holds it (Windows): the next start's.
+      }
     }
     super.dispose();
   }
 }
 
-/// Opens `path` with this computer's app for it.
-Future<void> openWithSystem(String path) async {
-  if (Platform.isMacOS) {
-    await Process.start('open', [path], mode: ProcessStartMode.detached);
-  } else if (Platform.isWindows) {
-    await Process.start('cmd', [
-      '/c',
-      'start',
-      '',
-      path,
-    ], mode: ProcessStartMode.detached);
-  } else {
-    await Process.start('xdg-open', [path], mode: ProcessStartMode.detached);
+/// Deletes the copies an earlier run left in `temp` (the system's
+/// temporary folder): those whose lock is free, as the run that held it
+/// ended however it ended; and those of a version before the lock, a day
+/// on. Another OpenWard that is open keeps its own. Only folders: a link
+/// of that name is not followed.
+Future<void> cleanStaleOpenCopies({Directory? temp, DateTime? now}) async {
+  final cutoff = (now ?? DateTime.now()).subtract(const Duration(days: 1));
+  try {
+    await for (final e in (temp ?? Directory.systemTemp).list(
+      followLinks: false,
+    )) {
+      final name = e.path.substring(
+        e.path.lastIndexOf(Platform.pathSeparator) + 1,
+      );
+      if (e is! Directory || !name.startsWith(openCopiesPrefix)) continue;
+      if (_ours.contains(e.path)) continue;
+      try {
+        if (await _left(e, cutoff)) await e.delete(recursive: true);
+      } on FileSystemException {
+        // Someone else's, or in use: it stays.
+      }
+    }
+  } on FileSystemException {
+    // No temporary folder to look in.
+  }
+}
+
+/// Whether `dir`'s run is over.
+Future<bool> _left(Directory dir, DateTime cutoff) async {
+  final stat = await dir.stat();
+  // Ours are 0700; one of another user's would not open anyway.
+  if (!Platform.isWindows && stat.mode & 0x1ff != 0x1c0) return false;
+  final lock = File('${dir.path}/$_lockName');
+  if (!await lock.exists()) return stat.modified.isBefore(cutoff);
+  final held = await lock.open(mode: FileMode.append);
+  try {
+    await held.lock();
+    return true;
+  } on FileSystemException {
+    return false;
+  } finally {
+    await held.close();
+  }
+}
+
+/// Opens `path` with this computer's app for it. `os` is
+/// [Platform.operatingSystem]'s name, to try another's way.
+Future<void> openWithSystem(String path, {String? os}) async {
+  switch (os ?? Platform.operatingSystem) {
+    case 'macos':
+      await Process.start('open', [path], mode: ProcessStartMode.detached);
+    case 'windows':
+      // ShellExecute with the path as the file to open: no `cmd` reads
+      // the name, which the server chose (`x&calc` ran `calc`). The plain
+      // path, not a file: URL: nothing to encode and decode on the way.
+      if (!await launchUrlString(path)) await openWithChooser(path);
+    default:
+      await Process.start('xdg-open', [path], mode: ProcessStartMode.detached);
   }
 }
 

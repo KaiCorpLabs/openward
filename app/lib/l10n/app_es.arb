@@ -2833,6 +2833,23 @@
     }
   },
   "openTunnels": "Túneles abiertos",
+  "openRunsAction": "Ejecutarlo",
+  "openRunsBody": "Este ordenador ejecuta los archivos .{type} al abrirlos, y lo que hace este lo decidió quien lo puso en el servidor. Ábrelo solo si te fías; para leerlo, usa «Abrir con…».",
+  "@openRunsBody": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "openRunsTitle": "«{name}» no se abre: se ejecuta",
+  "@openRunsTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "openWithHelp": "Un comando, como code, gedit o kate; se le pasa el archivo al final.",
   "openWithHelpMac": "El nombre de una app (TextEdit, Visual Studio Code) o un comando (/usr/local/bin/subl).",
   "openWithProgram": "Programa",

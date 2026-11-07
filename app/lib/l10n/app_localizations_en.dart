@@ -3790,6 +3790,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openTunnels => 'Open tunnels';
 
   @override
+  String get openRunsAction => 'Run it';
+
+  @override
+  String openRunsBody(String type) {
+    return 'This computer runs .$type files when it opens them, and whoever put this one on the server decided what it does. Open it only if you trust it; to read it, use “Open with…”.';
+  }
+
+  @override
+  String openRunsTitle(String name) {
+    return '“$name” runs instead of opening';
+  }
+
+  @override
   String get openWithHelp =>
       'A command, such as code, gedit or kate; the file goes at the end.';
 

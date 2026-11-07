@@ -5900,6 +5900,24 @@ abstract class AppLocalizations {
   /// **'Túneles abiertos'**
   String get openTunnels;
 
+  /// No description provided for @openRunsAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejecutarlo'**
+  String get openRunsAction;
+
+  /// No description provided for @openRunsBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Este ordenador ejecuta los archivos .{type} al abrirlos, y lo que hace este lo decidió quien lo puso en el servidor. Ábrelo solo si te fías; para leerlo, usa «Abrir con…».'**
+  String openRunsBody(String type);
+
+  /// No description provided for @openRunsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'«{name}» no se abre: se ejecuta'**
+  String openRunsTitle(String name);
+
   /// No description provided for @openWithHelp.
   ///
   /// In es, this message translates to:
