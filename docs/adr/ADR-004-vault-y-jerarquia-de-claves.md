@@ -1,6 +1,6 @@
 # ADR-004 — Vault local-first, cifrado por ítem y recuperación primero
 
-- **Estado:** propuesto.
+- **Estado:** propuesto. [S6](../spikes/S6-hpke.md) (2026-11-09) cierra el KEM y la biblioteca; falta decidir [D0-1](../THREAT_MODEL.md#11-decisiones-que-salen-de-d0), cómo se envuelve el paquete de la clave de cuenta.
 - **Fecha:** 2026-10-08.
 - **Alcance:** almacenamiento local, jerarquía de claves, desbloqueo, recuperación y vaults de equipo.
 
@@ -15,12 +15,13 @@ Tres fallos habituales en gestores de credenciales con sync propietaria son perd
   - contraseña → Argon2id → KEK → clave de cuenta (Ed25519 para firmar y KEM para recibir claves);
   - clave de cuenta → certificados de dispositivo;
   - claves de vault por generación, envueltas con HPKE.
-- **KEM híbrido poscuántico (X-Wing: X25519 + ML-KEM-768)** para envolver claves de vault. Estado a 2026-10-08:
-  - **`hpke-rs`** 0.8.0: mantenido dentro de libcrux, con backend **verificado formalmente**, X-Wing draft-06 y licencia **MPL-2.0**.
-  - **`hpke`** (rozbb) 0.14.1: MIT/Apache, X-Wing draft-10 por defecto, nunca auditado.
-  - **`ml-kem`** 0.3.2 y **`x-wing`** 0.1.1 (RustCrypto): sin auditar.
+- **KEM híbrido poscuántico, X-Wing (X25519 + ML-KEM-768),** para envolver claves de vault, en HPKE con modo base, HKDF-SHA256 y ChaCha20-Poly1305, y con **`hpke-rs` 0.8.0 sobre libcrux**. Lo midió [S6](../spikes/S6-hpke.md) (2026-11-09):
+  - las tres candidatas pasan los vectores de RFC 9180, de `draft-ietf-hpke-pq` y del borrador 11 de X-Wing, y cada una abre lo que sellan las otras;
+  - libcrux es la única con las primitivas **verificadas formalmente**: ML-KEM con hax y F\*, y X25519, ChaCha20-Poly1305 y SHA-2 de HACL\*. La capa HPKE no lo está;
+  - trae 25 crates nuevos y un aviso de mantenimiento ([RUSTSEC-2026-0173](https://rustsec.org/advisories/RUSTSEC-2026-0173)) en una macro que solo corre al compilar;
+  - **`hpke` (rozbb) 0.15.1 es la alternativa:** pone los mismos bytes en el disco y trae solo 7 crates nuevos, pero no está verificada ni auditada. Se cambia a ella sin volver a cifrar nada.
 
-  **Preferencia: `hpke-rs` con backend libcrux.** X-Wing es todavía un *draft* del IETF, así que `kem_id` registra la versión exacta del draft y hay un plan de migración a la RFC final. Si ninguna opción supera la revisión, se usa DHKEM(X25519) con `kem_id` versionado.
+  X-Wing es todavía un *draft* del IETF: va por el 11, en el camino independiente, y su código para HPKE, `0x647a`, lo registra `draft-ietf-hpke-pq-05`. Por eso `kem_id` registra la versión exacta, y el plan de migración a la RFC final es volver a envolver la clave de cada generación. DHKEM(X25519), con `kem_id` versionado, queda como alternativa decidida.
 - **Desbloqueo:** contraseña, biometría (una clave aleatoria guardada en Keychain, Keystore o Windows Hello) o PIN con límite de intentos en móvil.
 - **El kit de recuperación es obligatorio** al dar de alta. Cambiar la contraseña exige la actual, el kit u otro dispositivo aprobado. **Nunca se borra el vault sin avisar.**
 - **Vaults de equipo con manifiesto firmado** (cadena de entradas `add_member`, `remove_member`, `rotate`, `set_role` firmadas por un administrador; el génesis lo firma el creador). La baja de un miembro rota la clave y los ítems antiguos se vuelven a cifrar de forma perezosa. La recuperación de cuenta por la organización es una política opcional y visible.
@@ -42,4 +43,4 @@ Tres fallos habituales en gestores de credenciales con sync propietaria son perd
 
 ## Validación y revisión
 
-Vectores de prueba propios, pruebas de rotación y recuperación, y revisión criptográfica externa antes de lanzar OpenWard Cloud. Reabrir si la experiencia de alta de miembros en equipos piloto exige atestación del servidor por defecto.
+Los vectores publicados que reúne S6 y una prueba de interoperabilidad con `hpke` (rozbb), en las pruebas de `openward-crypto`; vectores propios del sobre y de la jerarquía; pruebas de rotación y recuperación; y revisión criptográfica externa antes de lanzar OpenWard Cloud. Reabrir si la experiencia de alta de miembros en equipos piloto exige atestación del servidor por defecto.
