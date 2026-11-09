@@ -64,6 +64,12 @@ jobs:
       matrix:
         os: ${{ fromJSON(needs.systems.outputs.os) }}
     runs-on: ${{ matrix.os }}
+    # Bash on Windows too: PowerShell does not stop when a command in a
+    # step fails, and the step takes the last one's exit code, so a test
+    # that failed on Windows went by green.
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # openward-ghostty links a prebuilt libghostty-vt, built with Zig at
@@ -182,6 +188,10 @@ jobs:
       matrix:
         os: ${{ fromJSON(needs.systems.outputs.os) }}
     runs-on: ${{ matrix.os }}
+    # Bash on Windows too, as in the core's job.
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install toolchain from rust-toolchain.toml

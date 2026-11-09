@@ -1620,6 +1620,8 @@ mod tests {
         );
     }
 
+    // On Unix only: Windows asks no login shell, and its PATH uses `;`.
+    #[cfg(unix)]
     #[test]
     fn the_login_shell_s_folders_go_first() {
         let path = merge_paths(
