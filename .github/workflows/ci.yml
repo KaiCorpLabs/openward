@@ -207,6 +207,39 @@ jobs:
           S2_RUNTIME: docker
         run: spikes/s2-ssh/servers/down.sh
 
+  hpke:
+    name: Spike S6 HPKE (${{ matrix.os }})
+    needs: systems
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(needs.systems.outputs.os) }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: spikes/s6-hpke/hpkebench
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install toolchain from rust-toolchain.toml
+        run: rustup show
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: spikes/s6-hpke/hpkebench
+      - name: Lint
+        run: |
+          cargo fmt -- --check
+          cargo clippy --all-targets -- -D warnings
+      # A vector or an interop check that fails, fails the job; the timings
+      # are for the results (docs/spikes/S6-hpke.md).
+      - name: Vectors, interop and timings
+        run: cargo run --release -- --json "$RUNNER_TEMP/s6-${{ runner.os }}-${{ runner.arch }}.json"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: s6-hpke-${{ runner.os }}-${{ runner.arch }}
+          path: ${{ runner.temp }}/s6-${{ runner.os }}-${{ runner.arch }}.json
+          retention-days: 14
+
   app:
     name: App (${{ matrix.os }})
     needs: systems
