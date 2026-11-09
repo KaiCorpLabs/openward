@@ -10,7 +10,7 @@ Tres fallos habituales en gestores de credenciales con sync propietaria son perd
 
 ## Decisión
 
-- **Cifrado por ítem:** XChaCha20-Poly1305 con AAD ligada a `vault_id‖item_id‖rev‖key_gen`. Nombres, direcciones, tipo y marcas de tiempo van dentro del texto cifrado. SQLite guarda los sobres cifrados, así que **no se usa SQLCipher**: el formato local y el de sync son el mismo.
+- **Cifrado por ítem:** XChaCha20-Poly1305 con la cabecera del sobre como AAD (`v`, `vault`, `item`, `device`, `key_gen`, `parents`, en CBOR canónico), como propone [S4](../spikes/S4-sync.md#5-el-sobre-v1) (2026-11-09). La revisión no va en el AAD porque sale del propio sobre: es su SHA-256 sin la firma. Nombres, direcciones, tipo y marcas de tiempo van dentro del texto cifrado. SQLite guarda los sobres cifrados, así que **no se usa SQLCipher**: el formato local y el de sync son el mismo.
 - **Jerarquía de claves:**
   - contraseña → Argon2id → KEK → clave de cuenta (Ed25519 para firmar y KEM para recibir claves);
   - clave de cuenta → certificados de dispositivo;

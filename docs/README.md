@@ -7,6 +7,8 @@
 | [adr/](adr/) | Decisiones de arquitectura (ADR-001 a ADR-009) |
 | [spikes/S1-terminal.md](spikes/S1-terminal.md) | Plan y resultados del spike del motor de terminal |
 | [spikes/S2-ssh.md](spikes/S2-ssh.md) | Plan y resultados del spike de SSH con `russh` |
+| [spikes/S4-sync.md](spikes/S4-sync.md) | Primera parte del spike de sync: el sobre `v: 1` y el merge por relojes de campo |
+| [spikes/S6-hpke.md](spikes/S6-hpke.md) | Plan y resultados del spike del envoltorio de claves (HPKE con X-Wing) |
 | [plan/alfa-escritorio.md](plan/alfa-escritorio.md) | Alfa de escritorio (v0.1): alcance, decisiones e hitos A0–A6 |
 | [plan/alfa-prueba.md](plan/alfa-prueba.md) | Guía para la semana de uso de la alfa |
 | [plan/v0.2.md](plan/v0.2.md) | v0.2: diseño, SFTP, túneles, paneles, identidades, snippets e importadores |
