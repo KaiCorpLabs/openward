@@ -77,8 +77,37 @@ if ! $bindings && compgen -G "$out/lib/*ghostty-vt*" >/dev/null &&
   exit 0
 fi
 
+# Zig's own HTTP client fails on some hosts where curl does not: on the
+# Windows runners, GitHub's archives end in `HttpConnectionClosing`. When
+# the build stops on a package it could not fetch, curl gets that one,
+# `zig fetch` files it under its hash, and the build goes again.
+build() {
+  local log tmp where file line url tried=" "
+  log="$(mktemp)"
+  tmp="$(mktemp -d)"
+  while true; do
+    if (cd "$src" && zig build "${flags[@]}" --prefix "$out") 2>&1 | tee "$log"; then
+      rm -rf "$log" "$tmp"
+      return 0
+    fi
+    # `<dir>/build.zig.zon:<line>:<col>: error: …` points at the URL.
+    where="$(sed -nE 's/^(.*build\.zig\.zon):([0-9]+):[0-9]+: error: .*/\1|\2/p' "$log" | head -1)"
+    [[ -n "$where" ]] || return 1
+    file="${where%|*}"
+    line="${where##*|}"
+    if command -v cygpath >/dev/null; then file="$(cygpath -u "$file")"; fi
+    url="$(sed -n "${line}p" "$file" | grep -oE 'https?://[^"]+' | head -1)"
+    # Not a URL, or one already fetched this way: a real failure.
+    [[ -n "$url" && "$tried" != *" $url "* ]] || return 1
+    tried+="$url "
+    echo "libghostty-vt: Zig could not fetch $url; fetching it with curl" >&2
+    curl -fsSL --retry 5 --retry-all-errors -o "$tmp/${url##*/}" "$url"
+    (cd "$src" && zig fetch "$tmp/${url##*/}")
+  done
+}
+
 rm -rf "$out"
-(cd "$src" && zig build "${flags[@]}" --prefix "$out")
+build
 echo "$key" > "$out/.build-key"
 echo "libghostty-vt: $out"
 

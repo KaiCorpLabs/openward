@@ -67,14 +67,17 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # openward-ghostty links a prebuilt libghostty-vt, built with Zig at
-      # the pinned Ghostty commit and cached per commit and OS.
+      # the pinned Ghostty commit and cached per OS and everything the
+      # script checks before reusing a build (its .build-key): the commit,
+      # the script and the Zig it installs. A key with the commit alone
+      # kept a stale build that was rebuilt on every run and never saved.
       - name: Cache location
         shell: bash
         run: echo "OPENWARD_CACHE=$RUNNER_TEMP/openward" >> "$GITHUB_ENV"
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/openward/ghostty/build
-          key: libghostty-vt-${{ runner.os }}-${{ hashFiles('core/crates/openward-ghostty/GHOSTTY_COMMIT') }}
+          key: libghostty-vt-${{ runner.os }}-${{ hashFiles('core/crates/openward-ghostty/GHOSTTY_COMMIT', 'core/crates/openward-ghostty/build-libghostty.sh', '.github/scripts/install-zig.sh') }}
       - name: Install Zig
         shell: bash
         run: .github/scripts/install-zig.sh
@@ -303,7 +306,7 @@ jobs:
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/openward/ghostty/build
-          key: libghostty-vt-app-${{ runner.os }}-${{ hashFiles('core/crates/openward-ghostty/GHOSTTY_COMMIT') }}
+          key: libghostty-vt-app-${{ runner.os }}-${{ hashFiles('core/crates/openward-ghostty/GHOSTTY_COMMIT', 'core/crates/openward-ghostty/build-libghostty.sh', '.github/scripts/install-zig.sh') }}
       - name: Install Zig
         run: .github/scripts/install-zig.sh
       - name: Build libghostty-vt
