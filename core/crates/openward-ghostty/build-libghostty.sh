@@ -70,8 +70,18 @@ flags=(-Demit-lib-vt=true -Doptimize=ReleaseFast ${target_flag[@]+"${target_flag
 # sha256sum on Linux and in Git for Windows' bash; shasum on macOS.
 sha256() { if command -v sha256sum >/dev/null; then sha256sum; else shasum -a 256; fi; }
 key="$({ echo "zig $zig_version"; echo "${flags[*]}"; cat "$0"; } | sha256 | cut -d' ' -f1)"
+# The library is there. A glob with the folder quoted: on Windows it has
+# backslashes (D:\a\_temp), and `compgen -G` reads them as escapes, so it
+# never found a build and Windows rebuilt every time.
+built() {
+  local f
+  for f in "$out"/lib/*ghostty-vt*; do
+    [[ -e "$f" ]] && return 0
+  done
+  return 1
+}
 # Already built so for this commit and target.
-if ! $bindings && compgen -G "$out/lib/*ghostty-vt*" >/dev/null &&
+if ! $bindings && built &&
   [[ "$(cat "$out/.build-key" 2>/dev/null)" == "$key" ]]; then
   echo "libghostty-vt: $out (cached)"
   exit 0
