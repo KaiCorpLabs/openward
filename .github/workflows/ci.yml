@@ -240,6 +240,43 @@ jobs:
           path: ${{ runner.temp }}/s6-${{ runner.os }}-${{ runner.arch }}.json
           retention-days: 14
 
+  sync:
+    name: Spike S4 sync (${{ matrix.os }})
+    needs: systems
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(needs.systems.outputs.os) }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: spikes/s4-sync/syncsim
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install toolchain from rust-toolchain.toml
+        run: rustup show
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: spikes/s4-sync/syncsim
+      - name: Lint
+        run: |
+          cargo fmt -- --check
+          cargo clippy --all-targets -- -D warnings
+      # The envelope, the clock, and convergence with proptest (2,000 random
+      # runs of three devices, with pruned logs and skewed clocks).
+      - name: Tests
+        run: cargo test
+      # A field-clock run that diverges or loses a write fails the job; the
+      # rest is for the results (docs/spikes/S4-sync.md).
+      - name: Sizes, unlock and 10,000 writes
+        run: cargo run --release -- --json "$RUNNER_TEMP/s4-${{ runner.os }}-${{ runner.arch }}.json"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: s4-sync-${{ runner.os }}-${{ runner.arch }}
+          path: ${{ runner.temp }}/s4-${{ runner.os }}-${{ runner.arch }}.json
+          retention-days: 14
+
   app:
     name: App (${{ matrix.os }})
     needs: systems

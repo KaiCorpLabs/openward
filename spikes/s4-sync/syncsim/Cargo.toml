@@ -1,0 +1,31 @@
+[package]
+name = "syncsim"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "Apache-2.0"
+description = "Spike S4, part 1: the v1 envelope, the revision DAG and the merge, on devices simulated in memory (docs/spikes/S4-sync.md)"
+
+[dependencies]
+# The item body as the vault stores it today, for realistic sizes.
+openward-proto = { path = "../../../core/crates/openward-proto" }
+ciborium = "0.2"
+chacha20poly1305 = "=0.11.0"
+ed25519-dalek = { version = "=3.0.0", features = ["batch", "rand_core"] }
+sha2 = "0.11"
+rand = "0.10"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+proptest = { version = "1", default-features = false, features = ["std"] }
+
+[profile.release]
+debug = false
+
+# The property tests run thousands of simulations: optimise them too.
+[profile.test]
+opt-level = 2
+
+# Not part of the core's workspace.
+[workspace]
