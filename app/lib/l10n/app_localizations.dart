@@ -3734,6 +3734,12 @@ abstract class AppLocalizations {
   /// **'Las claves de servidor en las que confías. Al conectar se miran las de OpenWard y las de {file}; las nuevas se guardan en OpenWard.'**
   String knownHostsIntro(String file);
 
+  /// No description provided for @lanDynamicNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Es un proxy SOCKS sin contraseña: cualquiera de tu red podrá entrar por él en todo lo que alcanza {host} mientras esté abierto.'**
+  String lanDynamicNote(String host);
+
   /// No description provided for @lanLocalNote.
   ///
   /// In es, this message translates to:
@@ -9386,6 +9392,12 @@ abstract class AppLocalizations {
   /// **'Espera tu respuesta'**
   String get waitingForYou;
 
+  /// No description provided for @warnAgentForward.
+  ///
+  /// In es, this message translates to:
+  /// **'{host} reenviaba el agente SSH, con el que ese servidor puede usar tus claves mientras estás conectado; no se ha traído, para no hacerlo porque lo diga el archivo de otro programa.'**
+  String warnAgentForward(String host);
+
   /// No description provided for @warnBadValue.
   ///
   /// In es, this message translates to:
@@ -9439,6 +9451,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{host} usaba Mosh: se conectará por SSH.'**
   String warnMosh(String host);
+
+  /// No description provided for @warnOpenTunnel.
+  ///
+  /// In es, this message translates to:
+  /// **'El túnel {tunnel} escuchaba en {address}, abierto a otros equipos; llega cerrado a la red, para no abrirlo porque lo diga el archivo de otro programa. Si confías en él, ábrelo en «Quién puede usarlo».'**
+  String warnOpenTunnel(String tunnel, String address);
 
   /// No description provided for @warnPartlyUnreadable.
   ///

@@ -2406,6 +2406,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String lanDynamicNote(String host) {
+    return 'It is a SOCKS proxy without a password: anyone on your network can go through it to everything $host reaches while it is open.';
+  }
+
+  @override
   String get lanLocalNote =>
       'Anyone on your network can use it while it is open.';
 
@@ -6020,6 +6025,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get waitingForYou => 'Waiting for you';
 
   @override
+  String warnAgentForward(String host) {
+    return '$host forwarded the SSH agent, which lets that server use your keys while you are connected; it did not come along, so as not to do it because another program\'s file says so.';
+  }
+
+  @override
   String warnBadValue(String subject, String at, String detail) {
     return 'Invalid value in $subject$at: $detail.';
   }
@@ -6061,6 +6071,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String warnMosh(String host) {
     return '$host used Mosh: it will connect over SSH.';
+  }
+
+  @override
+  String warnOpenTunnel(String tunnel, String address) {
+    return 'The tunnel $tunnel listened on $address, open to other computers; it comes closed to the network, so as not to open it because another program\'s file says so. If you trust it, open it in “Who can use it”.';
   }
 
   @override

@@ -35,4 +35,28 @@ void main() {
       '3 elementos de los datos no se han podido leer.',
     );
   });
+
+  /// AM-8: what was held back says what the file asked for.
+  test('the agent and the open tunnel held back, in words', () {
+    final l = AppLocalizationsEs();
+    final agent = warningText(
+      l,
+      const ProgramWarning(
+        subject: 'bastion',
+        kind: ProgramWarningKind.agentForward,
+        detail: '',
+      ),
+    );
+    expect(agent, startsWith('bastion reenviaba el agente SSH'));
+    final tunnel = warningText(
+      l,
+      const ProgramWarning(
+        subject: 'SOCKS',
+        kind: ProgramWarningKind.openTunnel,
+        detail: '0.0.0.0',
+      ),
+    );
+    expect(tunnel, startsWith('El túnel SOCKS escuchaba en 0.0.0.0'));
+    expect(tunnel, contains(l.whoCanUse));
+  });
 }

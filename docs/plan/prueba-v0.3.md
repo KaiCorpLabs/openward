@@ -228,6 +228,10 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - `touch "$(printf 'factura\342\200\256fdp.exe')"`: la lista debe enseñar `factura⟨RLO⟩fdp.exe` en ámbar;
    - en Windows, un `.docx` abierto así debe salir en Word en vista protegida;
    - abre un archivo, cierra la app a la fuerza (el Administrador de tareas, o `kill -9`) y ábrela otra vez: en la carpeta temporal (`%TEMP%`, `$TMPDIR` o `/tmp`) no debe quedar ninguna `openward-open-…`.
+32. **Importar sin sorpresas** (0.3.4-beta.3):
+   - importa de PuTTY (un `.reg`) o de Tabby un host que reenvíe el agente y tenga un túnel abierto a la red (`LocalPortAcceptAll` en PuTTY, `host: 0.0.0.0` en Tabby). La vista previa debe avisar de los dos. Después, conectado a ese host, `ssh-add -l` en el servidor debe decir que no hay agente, y el túnel debe salir en «Solo este equipo»;
+   - un túnel dinámico con «Toda la red local»: el aviso debe hablar de un proxy SOCKS sin contraseña;
+   - en Linux, `stat -c %a ~/.local/share/dev.openward.OpenWard` debe dar `700`, también si antes daba `755`.
 
 ## Cómo informar
 

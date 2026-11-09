@@ -216,6 +216,13 @@ pub enum WarningKind {
     /// on the word of another program's file. The text is the command, for
     /// the user to set it by hand if they trust it.
     ProxyCommand(String),
+    /// The agent forwarded to the server, left out: that server could sign
+    /// with your keys while you are connected, on the word of another
+    /// program's file. See [`Bundle::hold_back`].
+    AgentForward,
+    /// A tunnel that listened at this address, open to other computers: it
+    /// comes in listening on loopback. See [`Bundle::hold_back`].
+    OpenTunnel(String),
     /// Something OpenWard does not have; the rest of the item came in.
     Unsupported(Missing),
     /// A value that made no sense (`port`, `70000`); left out.
@@ -278,5 +285,152 @@ impl Warning {
             subject: None,
             kind,
         }
+    }
+}
+
+impl Bundle {
+    /// Leaves out what another program's file could turn against you, and
+    /// says so, as with a `ProxyCommand`: the agent forwarded to a server
+    /// (whoever runs it signs with your keys while you are connected) and
+    /// tunnels open to the network (anyone there goes through them). The
+    /// file's word is not enough for either; whoever trusts it sets them
+    /// by hand. An agent turned off on purpose stays off.
+    pub fn hold_back(&mut self) {
+        let mut said = Vec::new();
+        for g in &mut self.groups {
+            if g.settings.agent_forward == Some(true) {
+                g.settings.agent_forward = None;
+                said.push(Warning::about(&g.name, WarningKind::AgentForward));
+            }
+        }
+        for h in &mut self.hosts {
+            if h.settings.agent_forward == Some(true) {
+                h.settings.agent_forward = None;
+                // One that does not come in needs no word.
+                if h.unsupported.is_none() {
+                    said.push(Warning::about(&h.label, WarningKind::AgentForward));
+                }
+            }
+        }
+        for t in &mut self.tunnels {
+            let Some(address) = t.listen_address.take_if(|a| !loopback(a)) else {
+                continue;
+            };
+            let name = if t.label.trim().is_empty() {
+                let host = self.hosts.iter().find(|h| h.id == t.host);
+                let host = host.map_or(t.host.as_str(), |h| h.label.as_str());
+                format!("{host} :{}", t.listen_port)
+            } else {
+                t.label.clone()
+            };
+            said.push(Warning::about(name, WarningKind::OpenTunnel(address)));
+        }
+        self.warnings.extend(said);
+    }
+}
+
+/// Whether a tunnel listening at `address` is for this computer alone, as
+/// the tunnels read it: no address, `localhost` or a loopback one.
+fn loopback(address: &str) -> bool {
+    let a = address.trim().trim_start_matches('[').trim_end_matches(']');
+    a.is_empty()
+        || a.eq_ignore_ascii_case("localhost")
+        || a.parse::<std::net::IpAddr>()
+            .is_ok_and(|ip| ip.is_loopback())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn host(id: &str, forward: Option<bool>) -> Host {
+        let mut h = Host {
+            id: id.into(),
+            label: id.into(),
+            address: format!("{id}.example.com"),
+            ..Host::default()
+        };
+        h.settings.agent_forward = forward;
+        h
+    }
+
+    fn tunnel(label: &str, listen: Option<&str>) -> Tunnel {
+        Tunnel {
+            host: "web".into(),
+            label: label.into(),
+            kind: ForwardKind::Local,
+            listen_address: listen.map(Into::into),
+            listen_port: 8080,
+            dest_host: Some("db".into()),
+            dest_port: Some(5432),
+            autostart: true,
+        }
+    }
+
+    /// AM-8: a file that points a host at a server with your agent, or
+    /// opens a tunnel to the network, brings neither.
+    #[test]
+    fn the_agent_and_open_tunnels_are_held_back_and_said() {
+        let mut group = Group {
+            id: "g".into(),
+            name: "Producción".into(),
+            ..Group::default()
+        };
+        group.settings.agent_forward = Some(true);
+        let mut telnet = host("switch", Some(true));
+        telnet.unsupported = Some("telnet".into());
+        let mut b = Bundle {
+            groups: vec![group],
+            hosts: vec![
+                host("web", Some(true)),
+                host("off", Some(false)),
+                host("plain", None),
+                telnet,
+            ],
+            tunnels: vec![
+                tunnel("abierto", Some("0.0.0.0")),
+                tunnel("", Some("*")),
+                tunnel("v6", Some("[::]")),
+                tunnel("local", Some("127.0.0.1")),
+                tunnel("local6", Some("[::1]")),
+                tunnel("nombre", Some("localhost")),
+                tunnel("vacío", Some(" ")),
+                tunnel("ninguno", None),
+            ],
+            ..Bundle::default()
+        };
+        b.hold_back();
+
+        assert_eq!(b.groups[0].settings.agent_forward, None);
+        let forwards: Vec<_> = b.hosts.iter().map(|h| h.settings.agent_forward).collect();
+        assert_eq!(forwards, [None, Some(false), None, None]);
+        let open: Vec<_> = b
+            .tunnels
+            .iter()
+            .map(|t| t.listen_address.as_deref())
+            .collect();
+        assert_eq!(
+            open,
+            [
+                None,
+                None,
+                None,
+                Some("127.0.0.1"),
+                Some("[::1]"),
+                Some("localhost"),
+                Some(" "),
+                None
+            ]
+        );
+        assert_eq!(
+            b.warnings,
+            [
+                Warning::about("Producción", WarningKind::AgentForward),
+                Warning::about("web", WarningKind::AgentForward),
+                Warning::about("abierto", WarningKind::OpenTunnel("0.0.0.0".into())),
+                Warning::about("web :8080", WarningKind::OpenTunnel("*".into())),
+                Warning::about("v6", WarningKind::OpenTunnel("[::]".into())),
+            ]
+        );
     }
 }
