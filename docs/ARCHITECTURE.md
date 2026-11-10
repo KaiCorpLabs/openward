@@ -16,7 +16,7 @@ OpenWard es un cliente SSH open-core para Windows, macOS, Linux, iOS y Android. 
 | Vault | **Aceptado.** Cifrado por ítem (XChaCha20-Poly1305) sobre SQLite. Jerarquía de claves con HPKE (X-Wing, `hpke-rs` y libcrux) y kit de recuperación obligatorio. | [ADR-004](adr/ADR-004-vault-y-jerarquia-de-claves.md) |
 | Sync | **Aceptado** (la segunda parte de S4, con backends, puede reabrirlo). Registros inmutables por dispositivo, firmados y cifrados, con merge por relojes de campo. Sirven para cualquier backend "tonto" (carpeta, S3, WebDAV, Git) y para el relay. | [ADR-005](adr/ADR-005-sync-por-registros-de-dispositivo.md) |
 | Servidor | **Aceptado.** Monolito modular en Go: SQLite para autoalojar y Postgres para el servicio alojado. Open core por fases: todo AGPL en las fases 2 y 3 (ingresos del servicio alojado); `ee/` aparece en la fase 4 solo con funciones nuevas (SAML, SCIM, SIEM, grabaciones). | [ADR-006](adr/ADR-006-servidor-open-core.md) |
-| Licencias | **Aceptado.** Cliente y núcleo con Apache-2.0 y DCO. Servidor con AGPL-3.0 y **CLA desde el primer commit**. La licencia de `ee/` se decide en la fase 4 con datos. Cobros e infraestructura en un repositorio privado. | [ADR-007](adr/ADR-007-licencias-y-contribuciones.md) |
+| Licencias | **Aceptado, revisado el 2026-11-10.** Hasta el lanzamiento de la Community, todo con todos los derechos reservados. Al lanzar: cliente y núcleo con GPL-3.0, servidor con AGPL-3.0, y **CLA en todo el repositorio**. La licencia de `ee/` se decide en la fase 4 con datos. Cobros e infraestructura en un repositorio privado. | [ADR-007](adr/ADR-007-licencias-y-contribuciones.md) |
 | IA | Servidor MCP local ("el agente usa SSH, pero nunca ve la clave") y modelos BYOK o locales. No pagamos inferencia. | [ADR-008](adr/ADR-008-ia-mcp-y-byok.md) |
 | Mosh | Implementación clean-room en Rust: no se enlaza mosh porque es GPLv3. Hasta entonces se usan SSH + tmux con reconexión automática. | [ADR-009](adr/ADR-009-mosh-clean-room.md) |
 
@@ -422,20 +422,22 @@ Hay que ser honestos con el cliente: la grabación hecha en el cliente es una at
 
 ## 12. Repositorio y licencias
 
+Hasta el lanzamiento de la Community, todo el repositorio tiene todos los derechos reservados ([LICENSE](../LICENSE)). Las licencias de abajo son las del lanzamiento ([ADR-007](adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-10)).
+
 ```
 openward/
-├── core/         Rust (workspace)          Apache-2.0   DCO
-├── app/          Flutter                   Apache-2.0   DCO
+├── core/         Rust (workspace)          GPL-3.0      CLA
+├── app/          Flutter                   GPL-3.0      CLA
 ├── server/       Go                        AGPL-3.0     CLA
 │   └── ee/       Go (build tag `ee`, fase 4)   Por decidir: comercial, FSL o AGPL (ADR-006)
-├── spec/         Formato del vault, sync y API   CC-BY-4.0
-├── spikes/       Prototipos de la fase 0 (no es producto)   Apache-2.0
-└── docs/         Arquitectura, ADRs, amenazas, operación   CC-BY-4.0
+├── spec/         Formato del vault, sync y API   CC-BY-4.0   CLA
+├── spikes/       Prototipos de la fase 0 (no es producto)   GPL-3.0   CLA
+└── docs/         Arquitectura, ADRs, amenazas, operación   CC-BY-4.0   CLA
 ```
 
-- **El cliente es completamente open source:** el SSO del cliente es un flujo OIDC o SAML estándar del navegador y las políticas son configuración firmada. Eso permite firmar las builds de Windows gratis con SignPath (que exige que no haya componentes propietarios).
-- **CLA en `server/`** para poder vender licencias comerciales del núcleo AGPL junto a `ee/` sin violar la AGPL de contribuciones externas. **DCO** en el resto, para que contribuir sea fácil.
-- **Lista pública de "siempre gratis"** desde la v0.1 (cliente completo, sync con almacenamiento propio, relay autoalojado, vaults de equipo básicos y OIDC). Nunca se recortará después: recortar lo que ya era gratis es lo que rompe la confianza de una comunidad open source.
+- **Desde el lanzamiento, el cliente es completamente open source (GPL-3.0):** el SSO del cliente es un flujo OIDC o SAML estándar del navegador y las políticas son configuración firmada. Eso permite firmar las builds de Windows gratis con SignPath (que exige una licencia OSI y que no haya componentes propietarios).
+- **CLA en todo el repositorio**, para poder ofrecer el cliente también con otra licencia (la App Store no admite la GPL de terceros) y vender licencias comerciales del núcleo AGPL junto a `ee/` sin violar la AGPL de contribuciones externas.
+- **Lista pública de "siempre gratis"**, en borrador desde la v0.1 y en vigor desde el lanzamiento (cliente completo, sync con almacenamiento propio, relay autoalojado, vaults de equipo básicos y OIDC). Nunca se recortará después: recortar lo que ya era gratis es lo que rompe la confianza de una comunidad open source.
 
 ---
 

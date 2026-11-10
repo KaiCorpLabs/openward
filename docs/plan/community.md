@@ -408,7 +408,7 @@ El servidor sale del tailnet para que entre gente de fuera del equipo, al están
 
 | # | Hito | Semanas |
 |---|---|---|
-| M1 | Dirección pública por el túnel de Cloudflare, con el WebSocket a través de él (pings por debajo del límite de inactividad). Es la dirección estable que guardan los clientes, así que se decide aquí si va bajo `kaicorplabs.com` o bajo un dominio propio de OpenWard | 0,5 |
+| M1 | Dirección pública por el túnel de Cloudflare, con el WebSocket a través de él (pings por debajo del límite de inactividad). Es la dirección estable que guardan los clientes: un dominio propio de OpenWard (decidido el 2026-11-10) | 0,5 |
 | M2 | Al estándar de la casa: copias nocturnas comprobadas, vigilancia, el borrado de una persona también en OpenWard e imágenes firmadas | 0,5 |
 | M3 | Términos y privacidad (hay datos de personas de fuera), la membresía de OpenWard para quien la pida, notas y beta | 0,5 |
 
@@ -418,12 +418,13 @@ El servidor sale del tailnet para que entre gente de fuera del equipo, al están
 
 Lo que queda para lanzar y que este plan no hace. El [plan de lanzamiento](lanzamiento.md) lo ordena por prioridad junto con las etapas de arriba:
 - **Web y distribución:**
-  - la web (bajo `kaicorplabs.com` o en un dominio propio, la misma decisión que en M1) y la documentación pública;
+  - la web, en el dominio propio de OpenWard que usa M1, y la documentación pública;
   - firma y notarización en macOS y firma en Windows;
   - actualizaciones automáticas (Sparkle, WinSparkle);
   - Flatpak, AppImage y .deb; winget y Scoop.
 - **Repositorio:**
   - el repo público, con la CI completa;
+  - la licencia del lanzamiento (GPL-3.0 en el cliente y AGPL-3.0 en el servidor), la CLA en todo el repositorio y el registro de la marca ([ADR-007](../adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-10));
   - el canal de `SECURITY.md`;
   - la lista «Siempre gratis», cerrada.
 - **Legal:** el análisis de la Ley de Ciberresiliencia (CRA).

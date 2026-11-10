@@ -10,7 +10,7 @@
 Lanzar la **Community**, la edición gratuita, en macOS, Windows y Linux:
 - con el vault cifrado, la sync con tu almacenamiento y el servidor abierto con las cuentas de KaiCorp Labs, como pide la puerta de salida del [camino a la Community](community.md);
 - que se descargue de una web, firmada y con actualizaciones automáticas;
-- con lo legal en orden: términos, privacidad y la Ley de Ciberresiliencia.
+- con lo legal en orden: la licencia, la marca, los términos, la privacidad y la Ley de Ciberresiliencia.
 
 La sync alojada de pago viene después ([prioridad 3](#prioridad-3-para-cobrar)).
 
@@ -18,6 +18,7 @@ La sync alojada de pago viene después ([prioridad 3](#prioridad-3-para-cobrar))
 
 - **La etapa 1 está hecha** (P0–P7, de la 0.3.4-beta.1 a la beta.3).
 - **De la v0.4 están hechos D0–D2**, con sus decisiones aceptadas, y ADR-004 y ADR-005 aceptados.
+- **Desde el 2026-11-10, el repositorio tiene todos los derechos reservados** ([ADR-007](../adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-10)). Al lanzar, el cliente pasa a GPL-3.0 y el servidor sale con AGPL-3.0.
 - **No hay ninguna release publicada.** Las 27 del repositorio son borradores. Hoy la app solo llega por el cask `openward` de `kaicorplabs/tap` y por los artefactos de la CI.
 - **Lo que sale de la CI:**
   - en macOS, un `.dmg` con firma ad hoc;
@@ -40,7 +41,7 @@ La sync alojada de pago viene después ([prioridad 3](#prioridad-3-para-cobrar))
 | 8 | La web y la documentación pública | sin estimar | este documento |
 | 9 | La prueba final: dos semanas de uso y la guía con hardware | 2 | [community.md](community.md) |
 | 10 | Legal: la Ley de Ciberresiliencia | sin estimar | este documento |
-| 11 | Cerrar la lista «Siempre gratis» y repasar `SECURITY.md` | — | [README](../../README.md#siempre-gratis-borrador) |
+| 11 | La licencia del lanzamiento, la marca, la lista «Siempre gratis» y `SECURITY.md` | — | [ADR-007](../adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-10) |
 | 12 | Publicar la primera release | — | — |
 
 ### 1 · Touch ID y el Secure Enclave
@@ -93,7 +94,7 @@ El motor `openward-sync`, con la segunda parte de S4 como puerta de ADR-005 (3 d
 
 ### 8 · Web y documentación pública
 
-- El dominio es la misma decisión que M1: bajo `kaicorplabs.com` o uno propio de OpenWard. Conviene tomarla una sola vez, antes de M1.
+- El dominio es propio de OpenWard (decidido el 2026-11-10), y es el mismo que usa M1 para el servidor. Hay que comprarlo antes de M1.
 - La web, con las descargas de los tres sistemas.
 - La documentación de uso, con la guía de prueba como punto de partida.
 
@@ -116,9 +117,11 @@ El análisis de la Ley de Ciberresiliencia (CRA, Reglamento (UE) 2024/2847). Com
 
 El análisis dice qué aplica a la Community y qué al plan de pago. Va con los términos y la privacidad de M3.
 
-### 11 · «Siempre gratis» y `SECURITY.md`
+### 11 · Licencia, marca, «Siempre gratis» y `SECURITY.md`
 
-- **La lista «Siempre gratis»** del README es un borrador, y lo que diga queda como promesa pública.
+- **La marca:** registrar «OpenWard» (OEPM o EUIPO). Cuanto antes, porque la fecha de la solicitud es la que cuenta.
+- **La licencia del lanzamiento:** hasta entonces, todos los derechos reservados. Al publicar, el cliente pasa a GPL-3.0 y el servidor sale con AGPL-3.0, con el bot de la CLA para todo el repositorio y la revisión legal de LICENSE y de la CLA.
+- **La lista «Siempre gratis»** del README es un borrador, y lo que diga queda como promesa pública desde el lanzamiento.
 - **`SECURITY.md` ya existe**, con el reporte privado de GitHub. Se repasa que los plazos sigan siendo realistas con usuarios de fuera.
 
 ### 12 · Publicar la primera release
@@ -131,7 +134,8 @@ Publicarla es una decisión aparte, como hasta ahora. Antes, se decide qué hace
 - **El 7, el 8, el 10 y el 11 no tocan el núcleo** y pueden ir en paralelo con la v0.5 y la v0.6:
   - la firma de macOS, en cuanto el punto 1 diga si hace falta antes;
   - las actualizaciones automáticas, antes de la primera beta con gente de fuera, para que las correcciones les lleguen solas;
-  - el dominio, antes de M1;
+  - comprar el dominio, antes de M1;
+  - registrar la marca, lo antes posible;
   - lo legal, antes de M3.
 - El 9 y el 12 cierran.
 
@@ -153,13 +157,13 @@ Publicarla es una decisión aparte, como hasta ahora. Antes, se decide qué hace
 
 ## Lo que hay que decidir o hacer a mano
 
-- **Gastos:** la cuenta de Apple Developer y el certificado de firma de Windows.
+- **Gastos:** la cuenta de Apple Developer, el certificado de firma de Windows, el dominio y el registro de la marca.
 - **Decisiones:**
   - las diez del camino a la Community (punto 2);
-  - el dominio (puntos 6 y 8);
   - publicar cada release.
+- **Trámites:** registrar la marca y comprar el dominio (puntos 8 y 11).
 - **Pruebas:** las de hardware y las dos semanas de uso (punto 9).
-- **Legal:** revisar los términos, la privacidad y el análisis de la CRA.
+- **Legal:** revisar LICENSE, la CLA, los términos, la privacidad y el análisis de la CRA.
 
 ## Fuera de la ruta
 
