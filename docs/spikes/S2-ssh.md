@@ -145,7 +145,7 @@ Resultado del 2026-10-13 (`sshprobe matrix`, datos en `spikes/s2-ssh/results/mac
 3. **Los certificados de host también vienen desactivados** (`host_key_certificates`). Al activarlos, la validación es nuestra: firma de la CA, vigencia y principals. Está en `known_hosts.rs`, con pruebas.
 4. **Un rechazo de la clave de host llega como un error genérico.** El cliente guarda el veredicto (`Changed`, `Unknown`…) para que la UI explique qué pasa.
 5. **Kex poscuántico:** se negocia con OpenSSH ≥ 9.9 y con Dropbear 2025.88. Con OpenSSH 9.0–9.8 no: esos servidores ofrecen `sntrup761x25519`, que `russh` no implementa, y se cae a `curve25519`. Es un hueco a contribuir upstream si importa.
-6. **`ssh-key` 0.7 sigue en RC** (`0.7.0-rc.11`), fijada por `russh`.
+6. **`ssh-key` 0.7 sigue en RC** (`0.7.0-rc.11`), fijada por `russh`. Rechaza las claves P-256 con el escalar en 31 bytes, una de cada 512 de `ssh-keygen` («length invalid»): por eso la matriz fallaba de vez en cuando con el `id_ecdsa` recién generado. Desde el 2026-11-10 `openward-ssh` las lee (`keyfile.rs`).
 
 **Pendiente:**
 - probar a mano antes de la v0.1 Windows OpenSSH (servidor) y Tailscale SSH;

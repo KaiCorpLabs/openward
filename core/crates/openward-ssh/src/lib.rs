@@ -6,6 +6,7 @@
 
 pub mod client;
 pub mod forward;
+pub mod keyfile;
 pub mod known_hosts;
 pub mod proxy;
 #[cfg(feature = "test-auth")]

@@ -950,6 +950,53 @@ fn passphrase_and_password_are_asked_for() {
     assert_eq!(outcome(&rx).0.unwrap_err(), Some(Failure::Cancelled));
 }
 
+/// About one P-256 key in 512 that `ssh-keygen` makes has a 31-byte
+/// scalar, which `ssh-key` alone refuses. `openward-ssh`'s fixture (in
+/// every server's authorized_keys, by fixtures.sh) logs in on all of them,
+/// and behind a passphrase too.
+#[test]
+fn an_ecdsa_key_with_a_short_scalar_logs_in() {
+    let f = Fixture::new(servers!());
+    let key = |name: &str| {
+        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../openward-ssh/tests/fixtures");
+        Some(vec![dir.join(name).display().to_string()])
+    };
+    let host = |label: &str, port, file: &str| {
+        f.host(
+            label,
+            "127.0.0.1",
+            port,
+            Settings {
+                user: Some("demo".into()),
+                identity_files: key(file),
+                host_key_policy: Some(HostKeyPolicy::AcceptNew),
+                ..Settings::default()
+            },
+        )
+    };
+    for (label, port) in [
+        ("s2-openssh-8.9", 22089),
+        ("s2-openssh-9.2", 22092),
+        ("bastion", BASTION),
+        ("dropbear", 22200),
+    ] {
+        // No passphrase, no password: only the key gets in.
+        let (_t, rx) = f.connect(host(label, port, "ecdsa-p256-short"), |_| Answer::Cancel);
+        let (result, prompts) = outcome(&rx);
+        result.unwrap_or_else(|e| panic!("{label}: {e:?}"));
+        assert!(prompts.is_empty(), "{label}: {prompts:?}");
+    }
+
+    let encrypted = host("pass", BASTION, "ecdsa-p256-short-aes256-ctr");
+    let (_t, rx) = f.connect(encrypted, |p| match p {
+        Prompt::Passphrase { retry: false, .. } => text("openward-test"),
+        _ => Answer::Cancel,
+    });
+    let (result, prompts) = outcome(&rx);
+    result.unwrap();
+    assert_eq!(prompts.len(), 1, "{prompts:?}");
+}
+
 /// An agent of the test's own at `socket`, holding `keys`; with `refuse`,
 /// it will not sign with them, as when its user says no. On a Unix socket:
 /// the Windows agent (a named pipe) is tried by hand, in
