@@ -43,7 +43,7 @@ class PaneHeader extends ConsumerWidget {
     final tabs = ref.read(tabsProvider.notifier);
     final receives = panes.receives(pane);
     final controller = pane.controller;
-    final key = isApple ? '⌘' : l.ctrlShiftPrefix;
+    final key = macShortcuts ? '⌘' : l.ctrlShiftPrefix;
     PopupMenuItem<VoidCallback> item(
       String text,
       String keys,
@@ -185,19 +185,23 @@ class PaneHeader extends ConsumerWidget {
               if (controller != null)
                 item(l.openOtherHere, '', () => tabs.openOtherHere(tab, pane)),
               if (panes.isSplit || controller != null) const PopupMenuDivider(),
-              item(l.splitRight, isApple ? '⌘D' : '${key}D', () {
+              item(l.splitRight, macShortcuts ? '⌘D' : '${key}D', () {
                 panes.focus(pane);
                 tabs.split(Axis.horizontal);
               }),
-              item(l.splitDown, isApple ? '⌘⇧D' : '${key}E', () {
+              item(l.splitDown, macShortcuts ? '⌘⇧D' : '${key}E', () {
                 panes.focus(pane);
                 tabs.split(Axis.vertical);
               }),
               if (panes.isSplit) ...[
-                item(l.equalizePanes, isApple ? '⌘⌥=' : '', panes.equalize),
+                item(
+                  l.equalizePanes,
+                  macShortcuts ? '⌘⌥=' : '',
+                  panes.equalize,
+                ),
                 item(
                   panes.maximized == null ? l.maximizePane : l.restorePanes,
-                  isApple ? '⌘⇧↩' : '$key↩',
+                  macShortcuts ? '⌘⇧↩' : '$key↩',
                   () {
                     panes.focus(pane);
                     tabs.toggleMaximize();
@@ -208,12 +212,12 @@ class PaneHeader extends ConsumerWidget {
               if (panes.isSplit)
                 item(
                   panes.broadcast ? l.broadcastOff : l.broadcastOn,
-                  isApple ? '⌘⇧B' : '${key}B',
+                  macShortcuts ? '⌘⇧B' : '${key}B',
                   tabs.toggleBroadcast,
                 ),
               item(
                 l.closePane,
-                isApple ? '⌘W' : '${key}W',
+                macShortcuts ? '⌘W' : '${key}W',
                 () => guard.closePane(context, tab, pane),
               ),
             ],

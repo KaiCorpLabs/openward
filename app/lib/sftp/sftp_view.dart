@@ -11,19 +11,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/connection.dart';
 import '../core/errors.dart';
+import '../core/settings.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/sftp.dart';
 import '../tabs/connection_panels.dart';
 import '../tabs/messages.dart';
 import '../tabs/prompt_card.dart';
 import '../terminal/keys.dart';
+import '../terminal/visible_text.dart';
+import '../ui/announcer.dart';
+import '../ui/confirm.dart';
 import '../ui/move_draggable.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import '../window/shortcuts.dart';
 import 'dialogs.dart';
 import 'format.dart';
+import 'open_safety.dart';
 import 'queue_view.dart';
+import 'remote_edit.dart';
 import 'sftp_controller.dart';
 
 /// Rows of the listings, in logical pixels: more as the text grows.
@@ -75,6 +81,7 @@ class _SftpViewState extends State<SftpView> {
               ),
             ),
           ),
+          _EditsBar(edits: c.edits),
           QueueView(
             open: _queueOpen,
             onToggle: () => setState(() => _queueOpen = !_queueOpen),
@@ -206,6 +213,98 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
           dest: dest.path,
         ),
       ),
+    );
+  }
+
+  /// Brings a remote file here and opens it with this computer's app for
+  /// it, or one chosen; each save goes back up while this tab is open.
+  Future<void> _openHere(FileEntry e, {bool choose = false}) async {
+    final l = context.l10n;
+    Future<void> Function(String)? opener = openWithSystem;
+    if (choose) {
+      if (Platform.isWindows) {
+        opener = openWithChooser;
+      } else {
+        final program = await _askProgram(e.name);
+        if (program == null || program.trim().isEmpty) return;
+        opener = (path) => openWithProgram(path, program);
+      }
+    } else if (runsWhenOpened(e.name) case final type?) {
+      // The system would run it, and the server wrote it.
+      final run = await confirmAction(
+        context,
+        title: l.openRunsTitle(visibleName(e.name)),
+        body: l.openRunsBody(type),
+        action: l.openRunsAction,
+        danger: true,
+        icon: Icons.warning_amber_rounded,
+        actionKey: const ValueKey('sftp.openRuns.run'),
+      );
+      if (!run || !mounted) return;
+    }
+    final edits = _c.edits;
+    edits.onChangedThere ??= _askChangedThere;
+    await _run(() async {
+      await edits.open(_pane.pathOf(e.name), e, opener!);
+      if (mounted) announce(context, l.openRemoteFollowing(e.name));
+    });
+  }
+
+  /// The program to open a file with, the last one used offered again.
+  Future<String?> _askProgram(String name) async {
+    final l = context.l10n;
+    final last = ref.read(settingsProvider).openWith;
+    final text = TextEditingController(text: last);
+    final program = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l.openWithTitle(visibleName(name))),
+        content: SizedBox(
+          width: 420,
+          child: TextField(
+            key: const ValueKey('sftp.openWith.program'),
+            controller: text,
+            autofocus: true,
+            onSubmitted: (v) => Navigator.of(context).pop(v),
+            decoration: InputDecoration(
+              labelText: l.openWithProgram,
+              helperText: isApple ? l.openWithHelpMac : l.openWithHelp,
+              helperMaxLines: 3,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(text.text),
+            child: Text(l.openRemote),
+          ),
+        ],
+      ),
+    );
+    text.dispose();
+    if (program != null && program.trim().isNotEmpty) {
+      ref
+          .read(settingsProvider.notifier)
+          .update((s) => s.copyWith(openWith: program.trim()));
+    }
+    return program;
+  }
+
+  /// The server's copy changed since it was opened: upload over it?
+  Future<bool> _askChangedThere(RemoteEdit e) async {
+    final l = context.l10n;
+    if (!mounted) return false;
+    // Cancel keeps the server's: nothing is lost by pressing Enter.
+    return confirmAction(
+      context,
+      title: l.remoteChangedTitle(e.name),
+      body: l.remoteChangedBody,
+      action: l.remoteChangedUpload,
+      danger: true,
     );
   }
 
@@ -403,6 +502,14 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
             '',
             connected && _other.path.isNotEmpty ? _copySelection : null,
           ),
+          if (_remote && one != null && !one.isDir) ...[
+            item(l.openRemote, '', connected ? () => _openHere(one) : null),
+            item(
+              l.openRemoteWith,
+              '',
+              connected ? () => _openHere(one, choose: true) : null,
+            ),
+          ],
           item(l.copyPath, isApple ? '⌥⌘C' : '', () => _copyPath(one)),
           const PopupMenuDivider(),
           item(l.rename, 'F2', one == null ? null : () => _rename(one)),
@@ -889,11 +996,20 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
                 Icon(icon, size: 16, color: iconColor),
                 const SizedBox(width: 9),
                 Flexible(
-                  child: Text(
-                    e.name,
+                  // What the name hides, shown: the server picks it, and
+                  // a bidi mark can dress `fdp.exe` as `exe.pdf`.
+                  child: Text.rich(
+                    visibleText(
+                      e.name,
+                      style: TextStyle(color: e.hidden ? c.textMuted : c.text),
+                      mark: TextStyle(
+                        color: c.warn,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      lines: false,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: e.hidden ? c.textMuted : c.text),
                   ),
                 ),
                 if (e.linkTarget != null) ...[
@@ -1172,3 +1288,65 @@ class _SftpStatusBar extends StatelessWidget {
 
 /// Permissions exist on this machine too, except on Windows.
 final bool isUnix = !Platform.isWindows;
+
+/// The remote files opened here, that go back up as they are saved.
+class _EditsBar extends StatelessWidget {
+  const _EditsBar({required this.edits});
+
+  final RemoteEdits edits;
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: edits,
+    builder: (context, _) {
+      if (edits.edits.isEmpty) return const SizedBox.shrink();
+      final l = context.l10n;
+      final c = context.ow.colors;
+      String time(DateTime t) =>
+          '${t.hour.toString().padLeft(2, '0')}:'
+          '${t.minute.toString().padLeft(2, '0')}';
+      return Container(
+        key: const ValueKey('sftp.edits'),
+        padding: const EdgeInsets.symmetric(
+          horizontal: OwSpace.s5,
+          vertical: OwSpace.s2,
+        ),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: c.border)),
+        ),
+        child: Wrap(
+          spacing: OwSpace.s5,
+          runSpacing: OwSpace.s1,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Icon(Icons.edit_note, size: 16, color: c.accentText),
+            for (final e in edits.edits)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    e.failure != null
+                        ? l.remoteEditFailed(e.name)
+                        : e.uploaded != null
+                        ? l.remoteEditUploaded(e.name, time(e.uploaded!))
+                        : l.remoteEditWatching(e.name),
+                    style: TextStyle(
+                      fontSize: OwText.small,
+                      color: e.failure != null ? c.danger : c.textMuted,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: l.remoteEditStop,
+                    iconSize: 14,
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.close),
+                    onPressed: () => edits.stop(e),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      );
+    },
+  );
+}

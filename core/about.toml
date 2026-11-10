@@ -20,6 +20,8 @@ targets = [
     "x86_64-pc-windows-msvc",
 ]
 ignore-build-dependencies = true
+# Our own crates keep all rights reserved (LICENSE) and are not published.
+private = { ignore = true }
 ignore-dev-dependencies = true
 
 # Says its license only in a file.

@@ -21,7 +21,7 @@ use openward_proto::{
     PortForward, Route, Settings, Snippet, UseIdentity, Workspace,
 };
 
-pub use inherit::{Effective, Origin, defaults};
+pub use inherit::{Effective, Origin, TELNET_PORT, defaults};
 pub use openward_proto as proto;
 
 #[derive(Debug, thiserror::Error)]

@@ -1,0 +1,33 @@
+[package]
+name = "openward-fido"
+description = "Security keys (FIDO2) for SSH: sk-* keys made and signed with on the key itself, over CTAP2"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[features]
+default = ["hid"]
+# The keys themselves, over USB HID (desktop). Without it, only the
+# software authenticator of the tests.
+hid = ["dep:ctap-hid-fido2", "dep:anyhow"]
+# The software authenticator, for other crates' tests.
+soft = ["dep:rand"]
+
+[dependencies]
+# Pinned exactly: russh pins ssh-key to a release candidate (ADR-003).
+ssh-key = { version = "=0.7.0-rc.11", features = ["ed25519", "p256", "alloc", "std", "rand_core"] }
+signature = "3"
+thiserror = "2"
+# CTAP2 over HID (ADR-003), with the crypto russh uses already.
+ctap-hid-fido2 = { version = "=3.6.1", default-features = false, features = ["aws-lc-rs"], optional = true }
+anyhow = { version = "1", optional = true }
+rand = { version = "0.10", features = ["thread_rng"], optional = true }
+
+[dev-dependencies]
+rand = { version = "0.10", features = ["thread_rng"] }
+
+[lints]
+workspace = true

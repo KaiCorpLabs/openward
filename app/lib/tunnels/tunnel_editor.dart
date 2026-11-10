@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/errors.dart';
 import '../core/providers.dart';
 import '../hosts/editors.dart';
+import '../hosts/host_actions.dart' show overSsh;
 import '../l10n/l10n.dart';
 import '../src/rust/api/tunnels.dart';
 import '../ui/tokens.dart';
@@ -22,6 +23,16 @@ Future<bool> showTunnelEditor(
   context,
   (_) => _TunnelEditor(tunnel: tunnel, hostId: hostId),
 );
+
+/// What opening a tunnel to the network lets in. A dynamic one is a SOCKS
+/// proxy without a password: anyone there gets into all that `host`
+/// reaches, not just one port (AM-5).
+String lanNote(AppLocalizations l, TunnelKind kind, String host) =>
+    switch (kind) {
+      TunnelKind.remote => l.lanRemoteNote,
+      TunnelKind.dynamic_ => l.lanDynamicNote(host),
+      TunnelKind.local => l.lanLocalNote,
+    };
 
 class _TunnelEditor extends ConsumerStatefulWidget {
   const _TunnelEditor({this.tunnel, this.hostId});
@@ -231,11 +242,13 @@ class _TunnelEditorState extends ConsumerState<_TunnelEditor> {
                   isExpanded: true,
                   initialValue: _host,
                   items: [
+                    // Tunnels go over SSH.
                     for (final h in library.hosts)
-                      DropdownMenuItem(
-                        value: h.id,
-                        child: Text(h.label, overflow: TextOverflow.ellipsis),
-                      ),
+                      if (overSsh(h) || h.id == _host)
+                        DropdownMenuItem(
+                          value: h.id,
+                          child: Text(h.label, overflow: TextOverflow.ellipsis),
+                        ),
                   ],
                   onChanged: (v) => setState(() => _host = v),
                 ),
@@ -352,7 +365,7 @@ class _TunnelEditorState extends ConsumerState<_TunnelEditor> {
           Padding(
             padding: const EdgeInsets.only(top: OwSpace.s4),
             child: Text(
-              remote ? l.lanRemoteNote : l.lanLocalNote,
+              lanNote(l, _kind, hostLabel),
               style: TextStyle(fontSize: OwText.small, color: c.warn),
             ),
           ),

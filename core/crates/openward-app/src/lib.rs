@@ -8,6 +8,7 @@
 //! as the attempt that uses them.
 
 pub mod alive;
+pub mod charset;
 pub mod events;
 pub mod import;
 pub mod keychain;
@@ -24,20 +25,22 @@ pub mod tunnels;
 
 mod connect;
 mod live;
+mod mosh;
 mod system;
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use openward_import::ssh_config::{Paths, SshConfig};
 use openward_pty::Spawn;
 use openward_vault::Vault;
-use openward_vault::proto::ItemId;
+use openward_vault::proto::{ItemId, Protocol, SerialLine};
 
 pub use events::{Answer, Event, EventSink, Failure, Prompt};
 pub use local::Local;
 pub use logs::Logs;
+pub use openward_serial::{PortInfo, ports as serial_ports};
 pub use openward_sftp as files;
 pub use openward_vault as vault;
 pub use plan::{Plan, PlanError};
@@ -58,6 +61,8 @@ pub const DEFAULT_SCROLLBACK: usize = 10_000;
 pub struct App {
     vault: Arc<Mutex<Vault>>,
     local: Local,
+    /// What talks to security keys: the one plugged in, by default.
+    security_keys: Mutex<Arc<dyn openward_fido::Authenticator>>,
     prompts: Arc<Prompts>,
     live: Arc<Registry>,
     links: sftp::Links,
@@ -86,6 +91,7 @@ impl App {
         Ok(Self {
             vault: Arc::new(Mutex::new(vault)),
             local,
+            security_keys: Mutex::new(default_security_keys()),
             prompts: Arc::default(),
             live: Arc::default(),
             links: sftp::Links::default(),
@@ -128,28 +134,61 @@ impl App {
         host: ItemId,
         sink: Arc<dyn EventSink>,
     ) -> Result<(), PlanError> {
-        self.connect_to(terminal, Target::Host(host), sink)
+        self.connect_to(terminal, Target::Host(host), sink, false)
+    }
+
+    /// As [`App::connect`], over the connection to the host that is up
+    /// already, if one is (another terminal's, an SFTP browser's, a
+    /// tunnel's): a new shell, without logging in again. A reconnection
+    /// opens its own.
+    pub fn connect_reusing(
+        &self,
+        terminal: &Arc<Terminal>,
+        host: ItemId,
+        sink: Arc<dyn EventSink>,
+    ) -> Result<(), PlanError> {
+        self.connect_to(terminal, Target::Host(host), sink, true)
     }
 
     /// As [`App::connect`], to an address that is not saved, with the
-    /// default settings.
+    /// default settings: by SSH or Telnet.
     pub fn connect_address(
         &self,
         terminal: &Arc<Terminal>,
         address: String,
         user: Option<String>,
         port: Option<u16>,
+        protocol: Protocol,
         sink: Arc<dyn EventSink>,
     ) -> Result<(), PlanError> {
+        if protocol == Protocol::Serial {
+            return Err(PlanError::NotSsh(address));
+        }
         self.connect_to(
             terminal,
             Target::Address {
                 address,
                 user,
                 port,
+                protocol,
             },
             sink,
+            false,
         )
+    }
+
+    /// Opens the serial port at `path` in `terminal`, as a host that is
+    /// not saved. Returns at once: the outcome arrives on `sink`.
+    pub fn open_serial(
+        &self,
+        terminal: &Arc<Terminal>,
+        path: String,
+        line: SerialLine,
+        sink: Arc<dyn EventSink>,
+    ) {
+        let target = Target::Serial { path, line };
+        // Only a host can fail to plan; this is not one.
+        let _ = self.connect_to(terminal, target, sink, false);
     }
 
     fn connect_to(
@@ -157,14 +196,29 @@ impl App {
         terminal: &Arc<Terminal>,
         target: Target,
         sink: Arc<dyn EventSink>,
+        reuse: bool,
     ) -> Result<(), PlanError> {
+        let serial = target.serial(&self.vault())?;
+        if let Some(serial) = serial {
+            self.open_serial_line(terminal, &target, serial, sink);
+            return Ok(());
+        }
         // Checked now so that a plan that cannot run fails at once.
         let plan = target.plan(&self.vault(), &self.local)?;
         // A reconnection (by hand, too) leaves the tmux session there to
         // find it again under the same name. Its log is a new one.
         terminal.end_log(logs::End::Closed);
         terminal.detach();
-        let begin = self.log_begin(&target, &plan);
+        let hop = plan.hops.last().expect("a plan ends with its target");
+        let address = match plan.protocol {
+            Protocol::Telnet if hop.port == vault::TELNET_PORT => {
+                format!("telnet://{}", hop.address)
+            }
+            Protocol::Telnet => format!("telnet://{}:{}", hop.address, hop.port),
+            _ if hop.port == 22 => format!("{}@{}", hop.user, hop.address),
+            _ => format!("{}@{}:{}", hop.user, hop.address, hop.port),
+        };
+        let begin = self.log_begin(&target, &hop.label, address, &plan.term);
         let sink: Arc<dyn EventSink> = logs::LogSink::new(sink, &self.logs, terminal, begin);
         let ctx = self.ctx(&sink);
         let term = Arc::downgrade(terminal);
@@ -182,7 +236,10 @@ impl App {
                         });
                     }
                 };
-                let (exit_code, failure, connected) = session(&plan, &ctx, &term, &tmux).await;
+                let (exit_code, failure, connected) = match plan.protocol {
+                    Protocol::Telnet => telnet_session(&plan, &ctx, &term).await,
+                    _ => session(&plan, &ctx, &term, &tmux, reuse && attempt == 0).await,
+                };
                 if connected {
                     attempt = 0;
                 }
@@ -207,10 +264,96 @@ impl App {
         Ok(())
     }
 
+    /// Opens a serial port (a saved host's, or one picked by hand) in
+    /// `terminal`. Nothing comes back by itself if the cable is pulled: the
+    /// session closes, saying so.
+    fn open_serial_line(
+        &self,
+        terminal: &Arc<Terminal>,
+        target: &Target,
+        serial: SerialTarget,
+        sink: Arc<dyn EventSink>,
+    ) {
+        terminal.end_log(logs::End::Closed);
+        terminal.detach();
+        terminal.set_coding(serial.coding);
+        // A saved host's log names its port; one picked by hand says what
+        // it is, for the log to open it again.
+        let address = match target {
+            Target::Host(_) => serial.path.clone(),
+            _ => format!("serial://{}", serial.path),
+        };
+        let begin = self.log_begin(target, &serial.label, address, "xterm-256color");
+        let sink: Arc<dyn EventSink> = logs::LogSink::new(sink, &self.logs, terminal, begin);
+        let term = Arc::clone(terminal);
+        self.runtime.spawn_blocking(move || {
+            let started = Instant::now();
+            let SerialTarget {
+                label, path, line, ..
+            } = serial;
+            sink.send(Event::Route {
+                hops: vec![label.clone()],
+            });
+            // Opened again (a reconnection): the last reader lets the port
+            // go within a read's wait. Until then it is still ours, busy.
+            let mut opened = openward_serial::open(&path, &line);
+            for _ in 0..5 {
+                if !matches!(opened, Err(openward_serial::OpenError::Busy(_))) {
+                    break;
+                }
+                std::thread::sleep(openward_serial::READ_WAIT);
+                opened = openward_serial::open(&path, &line);
+            }
+            let failure = |problem| Failure::Serial {
+                port: path.clone(),
+                problem,
+            };
+            let failure = match opened {
+                Ok(port) => {
+                    let connected = events::Connected {
+                        protocol: Protocol::Serial,
+                        mosh: false,
+                        host: path.clone(),
+                        port: 0,
+                        kex: String::new(),
+                        post_quantum: false,
+                        cipher: String::new(),
+                        host_key_algorithm: String::new(),
+                        fingerprint: String::new(),
+                        trust: events::Trust::Known,
+                        hops: 1,
+                        connect_ms: started.elapsed().as_secs_f64() * 1000.0,
+                    };
+                    match term.attach_serial(&path, port, connected, Arc::clone(&sink)) {
+                        Ok(()) => return,
+                        Err(e) => failure(events::SerialProblem::Other(e.to_string())),
+                    }
+                }
+                Err(e) => failure(events::SerialProblem::of(&e)),
+            };
+            sink.send(Event::Closed {
+                exit_code: None,
+                failure: Some(failure),
+            });
+        });
+    }
+
+    /// Talks to security keys with `keys` from now on (a software key in
+    /// tests).
+    pub fn set_security_keys(&self, keys: Arc<dyn openward_fido::Authenticator>) {
+        *lock(&self.security_keys) = keys;
+    }
+
+    /// What talks to security keys now.
+    pub fn security_keys(&self) -> Arc<dyn openward_fido::Authenticator> {
+        Arc::clone(&lock(&self.security_keys))
+    }
+
     fn ctx(&self, sink: &Arc<dyn EventSink>) -> Ctx {
         Ctx {
             vault: Arc::clone(&self.vault),
             local: self.local.clone(),
+            security_keys: self.security_keys(),
             prompts: Arc::clone(&self.prompts),
             sink: Arc::clone(sink),
             live: Arc::clone(&self.live),
@@ -258,7 +401,7 @@ impl App {
     /// gets `Connected` once it listens). Returns at once.
     pub fn open_tunnel(&self, id: ItemId, sink: Arc<dyn EventSink>) -> Result<(), PlanError> {
         let spec = self.vault().port_forward(id)?.clone();
-        let plan = Plan::for_host(&self.vault(), spec.host, &self.local)?;
+        let plan = Plan::for_host(&self.vault(), spec.host, &self.local)?.ssh()?;
         let Some(ticket) = self.tunnels.begin(id) else {
             // Open or opening already: nothing to do here.
             sink.send(Event::Closed {
@@ -337,7 +480,7 @@ impl App {
     /// if it changed. False when there is no connection: it is told on the
     /// next one.
     async fn learn_system(&self, host: ItemId) -> anyhow::Result<bool> {
-        let plan = self.plan(host)?;
+        let plan = self.plan(host)?.ssh()?;
         let Some(live) = self.live.find(&plan.key()) else {
             return Ok(false);
         };
@@ -383,14 +526,9 @@ impl App {
         vault.set_device_defaults(device);
     }
 
-    /// What the log of a connection to `target` begins as.
-    fn log_begin(&self, target: &Target, plan: &Plan) -> logs::Begin {
-        let hop = plan.hops.last().expect("a plan ends with its target");
-        let address = if hop.port == 22 {
-            format!("{}@{}", hop.user, hop.address)
-        } else {
-            format!("{}@{}:{}", hop.user, hop.address, hop.port)
-        };
+    /// What the log of a connection to `target` (called `label`, at
+    /// `address` as the log shows it) begins as.
+    fn log_begin(&self, target: &Target, label: &str, address: String, term: &str) -> logs::Begin {
         let vault = self.vault();
         let (place, marking, system, record) = match target {
             Target::Host(id) => {
@@ -414,7 +552,7 @@ impl App {
                     settings.session_log.unwrap_or(false),
                 )
             }
-            Target::Address { .. } => (
+            Target::Address { .. } | Target::Serial { .. } => (
                 logs::Place::Address(address.clone()),
                 None,
                 None,
@@ -423,7 +561,7 @@ impl App {
         };
         logs::Begin {
             place,
-            label: hop.label.clone(),
+            label: label.to_owned(),
             address,
             marking,
             system,
@@ -431,7 +569,7 @@ impl App {
             record,
             cols: 0,
             rows: 0,
-            term: plan.term.clone(),
+            term: term.to_owned(),
         }
     }
 
@@ -476,6 +614,7 @@ impl App {
             address,
             user,
             port,
+            protocol: Protocol::Ssh,
         };
         self.connect_sftp_to(sftp, target, sink)
     }
@@ -486,13 +625,14 @@ impl App {
         target: Target,
         sink: Arc<dyn EventSink>,
     ) -> Result<(), PlanError> {
-        let plan = target.plan(&self.vault(), &self.local)?;
+        let plan = target.plan(&self.vault(), &self.local)?.ssh()?;
         let label = plan.hops.last().map_or("", |h| h.label.as_str());
         let link = self.links.get(&plan.key(), label);
         let (vault, local) = (Arc::clone(&self.vault), self.local.clone());
         let plan_of = move || {
             target
                 .plan(&lock(&vault), &local)
+                .and_then(Plan::ssh)
                 .map_err(|e| events::Failure::Other(e.to_string()))
         };
         sftp::start(sftp, plan_of, link, self.ctx(&sink));
@@ -659,7 +799,21 @@ enum Target {
         address: String,
         user: Option<String>,
         port: Option<u16>,
+        protocol: Protocol,
     },
+    /// A serial port picked by hand.
+    Serial {
+        path: String,
+        line: SerialLine,
+    },
+}
+
+/// A serial port to open: a host's, or one picked by hand.
+struct SerialTarget {
+    label: String,
+    path: String,
+    line: SerialLine,
+    coding: charset::Coding,
 }
 
 impl Target {
@@ -670,9 +824,48 @@ impl Target {
                 address,
                 user,
                 port,
-            } => Ok(Plan::for_address(address, user.clone(), *port, local)),
+                protocol,
+            } => Ok(Plan::for_address(
+                address,
+                user.clone(),
+                *port,
+                *protocol,
+                local,
+            )),
+            Self::Serial { path, .. } => Err(PlanError::NotSsh(path.clone())),
         }
     }
+
+    /// The serial port it is, if it is one.
+    fn serial(&self, vault: &Vault) -> Result<Option<SerialTarget>, PlanError> {
+        Ok(match self {
+            Self::Host(id) => {
+                let settings = vault.effective(*id)?.settings;
+                if settings.protocol != Some(Protocol::Serial) {
+                    return Ok(None);
+                }
+                let host = vault.host(*id)?;
+                Some(SerialTarget {
+                    label: host.label.clone(),
+                    path: host.address.clone(),
+                    coding: charset::Coding::of(&settings),
+                    line: settings.serial.unwrap_or_default(),
+                })
+            }
+            Self::Serial { path, line } => Some(SerialTarget {
+                label: path.clone(),
+                path: path.clone(),
+                line: line.clone(),
+                coding: charset::Coding::default(),
+            }),
+            Self::Address { .. } => None,
+        })
+    }
+}
+
+/// The security key plugged in, over HID where the build has it.
+fn default_security_keys() -> Arc<dyn openward_fido::Authenticator> {
+    Arc::new(openward_fido::hid::HidKeys)
 }
 
 /// Tries after losing a connection, before giving up.
@@ -721,25 +914,210 @@ pub(crate) fn reconnect_delay(attempt: u32) -> Duration {
 /// One connection, from the first hop to the shell closing. Returns the
 /// exit code, why it ended if not normally, and whether it got as far as
 /// the shell.
-async fn session(
+/// A Telnet session: the jumps by SSH, the target's plain stream, and
+/// nothing to watch but the stream itself (Telnet has no keepalive of its
+/// own).
+async fn telnet_session(
     plan: &Plan,
     ctx: &Ctx,
     term: &Weak<Terminal>,
-    tmux: &str,
 ) -> (Option<u32>, Option<Failure>, bool) {
     let sink = &ctx.sink;
     sink.send(Event::Route {
         hops: plan.hops.iter().map(|h| h.label.clone()).collect(),
     });
-    let live = match connect::run(plan, ctx).await {
-        Ok(sessions) => Live::new(plan, sessions, ctx.runtime.clone()),
+    let started = Instant::now();
+    let (jumps, stream) = match connect::telnet(plan, ctx).await {
+        Ok(opened) => opened,
         Err(failure) => return (None, Some(failure), false),
     };
-    // An SFTP browser for the same host can go over it.
-    ctx.live.add(plan.key(), &live);
-    ctx.learn_systems(plan, &live);
-    ctx.autostart(plan, &live).await;
-    let Some(pipe) = term.upgrade().map(|t| t.pipe()) else {
+    let Some(pipe) = term.upgrade().map(|t| {
+        t.set_coding(plan.coding);
+        t.pipe()
+    }) else {
+        return (None, None, false);
+    };
+    let target = plan.hops.last().expect("a plan ends with its target");
+    // Input goes to the server before anyone hears it is connected.
+    let pump = pipe.pump_telnet(Box::new(stream), &plan.term, &target.label);
+    drop(pipe);
+    sink.send(Event::Connected(events::Connected {
+        protocol: Protocol::Telnet,
+        mosh: false,
+        host: target.address.clone(),
+        port: target.port,
+        kex: String::new(),
+        post_quantum: false,
+        cipher: String::new(),
+        host_key_algorithm: String::new(),
+        fingerprint: String::new(),
+        trust: events::Trust::Known,
+        hops: plan.hops.len(),
+        connect_ms: started.elapsed().as_secs_f64() * 1000.0,
+    }));
+    let (exit_code, failure) = pump.await;
+    // The jumps carried it: they go now.
+    drop(jumps);
+    (exit_code, failure, true)
+}
+
+async fn session(
+    plan: &Plan,
+    ctx: &Ctx,
+    term: &Weak<Terminal>,
+    tmux: &str,
+    reuse: bool,
+) -> (Option<u32>, Option<Failure>, bool) {
+    let sink = &ctx.sink;
+    sink.send(Event::Route {
+        hops: plan.hops.iter().map(|h| h.label.clone()).collect(),
+    });
+    let live = match reuse.then(|| ctx.live.find(&plan.key())).flatten() {
+        // Up already: its tunnels and the system it learnt are there.
+        Some(live) => live,
+        None => {
+            let live = match connect::run(plan, ctx).await {
+                Ok(sessions) => Live::new(plan, sessions, ctx.runtime.clone()),
+                Err(failure) => return (None, Some(failure), false),
+            };
+            // An SFTP browser for the same host can go over it.
+            ctx.live.add(plan.key(), &live);
+            ctx.learn_systems(plan, &live);
+            ctx.autostart(plan, &live).await;
+            live
+        }
+    };
+    if let Some(server) = &plan.mosh {
+        return mosh_session(plan, ctx, term, tmux, live, server).await;
+    }
+    shell(plan, ctx, term, tmux, live, plan.persistent).await
+}
+
+/// The session over Mosh, on a connection that is up: SSH starts the
+/// server, then `mosh-client` takes over in the terminal's PTY and the
+/// connection goes. Without Mosh here or there, or without UDP, the
+/// session goes on over this same connection, in tmux.
+async fn mosh_session(
+    plan: &Plan,
+    ctx: &Ctx,
+    term: &Weak<Terminal>,
+    tmux: &str,
+    live: Arc<Live>,
+    server: &str,
+) -> (Option<u32>, Option<Failure>, bool) {
+    use events::MoshFallback;
+    let sink = &ctx.sink;
+    let last = plan.hops.len() - 1;
+    let target_hop = &plan.hops[last];
+    sink.send(Event::Stage {
+        hop: last,
+        hops: plan.hops.len(),
+        label: target_hop.label.clone(),
+        stage: Stage::OpeningShell,
+    });
+    let over_ssh = |reason| {
+        sink.send(Event::MoshFallback { reason });
+        shell(plan, ctx, term, tmux, Arc::clone(&live), true)
+    };
+    let Some(client) = openward_ssh::client::find_program("mosh-client").await else {
+        return over_ssh(MoshFallback::NoClient).await;
+    };
+    // Straight to the server: it listens where SSH came in. Through
+    // jumps, everywhere (the packets come from outside).
+    let command = mosh::server_command(server, plan.hops.len() == 1);
+    let started = tokio::time::timeout(
+        mosh::SERVER_START,
+        live.target()
+            .exec_until(&command, |out| mosh::connect_line(out).is_some()),
+    )
+    .await;
+    let (port, key) = match started {
+        Ok(Ok(out)) => match mosh::connect_line(&out.text()) {
+            Some(found) => found,
+            None => return over_ssh(mosh::server_problem(&out.text(), out.status)).await,
+        },
+        Ok(Err(e)) => return over_ssh(MoshFallback::Other(format!("{e:#}"))).await,
+        Err(_) => {
+            let silent = no_answer(mosh::SERVER_START);
+            return over_ssh(MoshFallback::Other(silent)).await;
+        }
+    };
+    let ip = match tokio::net::lookup_host((target_hop.address.as_str(), port)).await {
+        Ok(mut found) => match found.next() {
+            Some(addr) => addr.ip(),
+            None => return over_ssh(MoshFallback::NoUdp).await,
+        },
+        Err(_) => return over_ssh(MoshFallback::NoUdp).await,
+    };
+    let Some(t) = term.upgrade() else {
+        return (None, None, false);
+    };
+    let size = t.size();
+    // mosh-client and mosh-server speak UTF-8 between them, whatever the
+    // host's settings say.
+    t.set_coding(plan.coding.utf8());
+    let run = t.run_program(
+        Spawn {
+            program: Some(client.display().to_string()),
+            args: vec![ip.to_string(), port.to_string()],
+            env: vec![("MOSH_KEY".into(), key)],
+            cols: size.cols,
+            rows: size.rows,
+            ..Spawn::default()
+        },
+        mosh::NOTHING_RECEIVED,
+    );
+    drop(t);
+    let mut program = match run {
+        Ok(program) => program,
+        Err(e) => return over_ssh(MoshFallback::Other(format!("{e:#}"))).await,
+    };
+    let mut connected = live.connected.clone();
+    connected.mosh = true;
+    sink.send(Event::Connected(connected));
+    // The connection stays while the first packets may still not come:
+    // without them, the session goes on over it.
+    let first = tokio::time::timeout(mosh::UDP_WAIT, async {
+        tokio::select! {
+            ended = &mut program.exited => Some(ended.ok().flatten()),
+            // Only when it was seen: the program's end closes it too.
+            Ok(()) = &mut program.seen => None,
+        }
+    })
+    .await;
+    match first {
+        // It ended early (it could not start, or the user left at once).
+        Ok(Some(exit_code)) => return (exit_code, None, true),
+        // Nothing came back over UDP.
+        Ok(None) => {
+            // Not detach: that would end this very session.
+            if let Some(t) = term.upgrade() {
+                t.end_program();
+            }
+            return over_ssh(MoshFallback::NoUdp).await;
+        }
+        Err(_) => {}
+    }
+    // Mosh has it now: the connection goes, unless a browser uses it.
+    drop(live);
+    let exit_code = program.exited.await.ok().flatten();
+    (exit_code, None, true)
+}
+
+/// The shell on a connection that is up, in tmux when `persistent`.
+async fn shell(
+    plan: &Plan,
+    ctx: &Ctx,
+    term: &Weak<Terminal>,
+    tmux: &str,
+    live: Arc<Live>,
+    persistent: bool,
+) -> (Option<u32>, Option<Failure>, bool) {
+    let sink = &ctx.sink;
+    let Some(pipe) = term.upgrade().map(|t| {
+        t.set_coding(plan.coding);
+        t.pipe()
+    }) else {
         return (None, None, false);
     };
     let last = plan.hops.len() - 1;
@@ -753,7 +1131,7 @@ async fn session(
     let size = pipe.size();
     let (cols, rows) = (u32::from(size.cols), u32::from(size.rows));
     let target = live.target();
-    let persistence = if plan.persistent {
+    let persistence = if persistent {
         let state = tmux_state(target, tmux).await;
         sink.send(Event::Persistent {
             session: tmux.to_owned(),
@@ -853,18 +1231,26 @@ async fn session(
     (exit_code, failure, true)
 }
 
-/// The data directory, readable by its owner only on Unix.
+/// The data directory, readable by its owner only on Unix: made so, and
+/// made so again when it was there already, as the app's folder is made
+/// first by `path_provider`, at 0755 (AM-3). The history, the recent
+/// connections and the logs inside are then the owner's alone, whatever
+/// their own mode. One that cannot be changed opens as it is.
 fn create_private_dir(dir: &Path) -> std::io::Result<()> {
-    if dir.is_dir() {
-        return Ok(());
-    }
     #[cfg(unix)]
     {
-        use std::os::unix::fs::DirBuilderExt;
-        std::fs::DirBuilder::new()
-            .recursive(true)
-            .mode(0o700)
-            .create(dir)
+        use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
+        if !dir.is_dir() {
+            std::fs::DirBuilder::new()
+                .recursive(true)
+                .mode(0o700)
+                .create(dir)?;
+        }
+        if std::fs::metadata(dir)?.permissions().mode() & 0o077 != 0 {
+            // Not its owner's to change (another user's folder): as it is.
+            let _ = std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700));
+        }
+        Ok(())
     }
     #[cfg(not(unix))]
     std::fs::create_dir_all(dir)
@@ -873,6 +1259,24 @@ fn create_private_dir(dir: &Path) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// AM-3: a data folder made before by someone else, open to all, is
+    /// the owner's alone once the app opens it.
+    #[cfg(unix)]
+    #[test]
+    fn the_data_folder_is_made_private_even_when_there_already() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let mode = |p: &Path| std::fs::metadata(p).unwrap().permissions().mode() & 0o777;
+        let there = tmp.path().join("dev.openward.OpenWard");
+        std::fs::create_dir(&there).unwrap();
+        std::fs::set_permissions(&there, std::fs::Permissions::from_mode(0o755)).unwrap();
+        create_private_dir(&there).unwrap();
+        assert_eq!(mode(&there), 0o700);
+        let new = tmp.path().join("a/b");
+        create_private_dir(&new).unwrap();
+        assert_eq!(mode(&new), 0o700);
+    }
 
     #[test]
     fn reconnect_delays_grow_to_half_a_minute() {

@@ -28,6 +28,9 @@ HostView _host(String label, {int? favorite}) => HostView(
   tags: const [],
   user: 'ops',
   port: 22,
+  protocol: ProtocolKind.ssh,
+  terminalScheme: '',
+  startupSnippet: '',
   favorite: favorite,
 );
 

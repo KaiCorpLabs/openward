@@ -9,6 +9,7 @@ import '../l10n/l10n.dart';
 import '../home/recent.dart';
 import '../sftp/sftp_controller.dart';
 import '../sftp/transfers.dart';
+import '../snippets/snippets.dart' show snippetsProvider, startupText;
 import '../src/rust/api/vault.dart';
 import '../terminal/controller.dart';
 import 'panes.dart';
@@ -217,21 +218,36 @@ class TabsNotifier extends Notifier<TabsState> {
     required String label,
     String? hostId,
     QuickTarget? target,
-  }) => TerminalController(
-    app: ref.read(openWardProvider),
-    label: label,
-    hostId: hostId,
-    target: target,
-    scrollback: ref.read(settingsProvider).scrollback,
-  );
+    bool reuse = false,
+  }) {
+    final c = TerminalController(
+      app: ref.read(openWardProvider),
+      label: label,
+      hostId: hostId,
+      target: target,
+      scrollback: ref.read(settingsProvider).scrollback,
+      reuse: reuse,
+    );
+    // Worked out at each new shell: the host's setting may change.
+    if (hostId != null) {
+      c.startup = () =>
+          startupText(ref.read(libraryProvider), ref.read(snippetsProvider), c);
+    }
+    return c;
+  }
 
   /// A new tab connected to a saved host.
   void openHost(HostView host) =>
       _add(_controller(label: host.label, hostId: host.id));
 
-  /// A new tab connected to an address that is not saved.
-  void openAddress(QuickTarget target) =>
-      _add(_controller(label: target.label, target: target));
+  /// A new tab connected to an address that is not saved, or to a serial
+  /// port (called by its name, without its settings).
+  void openAddress(QuickTarget target) => _add(
+    _controller(
+      label: target.isSerial ? target.address : target.label,
+      target: target,
+    ),
+  );
 
   /// A local shell's name, in the interface's language.
   String get _localLabel =>
@@ -425,14 +441,17 @@ class TabsNotifier extends Notifier<TabsState> {
 
   /// A session started for a pane put together elsewhere (a workspace): a
   /// saved host, an address, or (neither) a local shell.
-  TerminalController startSession({HostView? host, QuickTarget? target}) =>
-      _start(
-        host != null
-            ? _controller(label: host.label, hostId: host.id)
-            : target != null
-            ? _controller(label: target.label, target: target)
-            : _controller(label: _localLabel),
-      );
+  TerminalController startSession({
+    HostView? host,
+    QuickTarget? target,
+    bool reuse = false,
+  }) => _start(
+    host != null
+        ? _controller(label: host.label, hostId: host.id, reuse: reuse)
+        : target != null
+        ? _controller(label: target.label, target: target)
+        : _controller(label: _localLabel),
+  );
 
   /// Adds tabs put together elsewhere, after the open ones, with `front`
   /// in front.
@@ -447,7 +466,7 @@ class TabsNotifier extends Notifier<TabsState> {
   /// The SFTP tab for the host of the front tab's session.
   void openSftpHere() {
     final c = state.currentSession;
-    if (c == null || c.isLocal) return;
+    if (c == null || !c.overSsh) return;
     openSftp(hostId: c.hostId, target: c.target, label: c.label);
   }
 

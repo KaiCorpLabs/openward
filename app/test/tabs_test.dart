@@ -56,6 +56,15 @@ void main() {
     expect(c.controller!.customTitle, isNull);
   });
 
+  testWidgets('Telnet and serial ports open as what they are', (tester) async {
+    tabs.openAddress(QuickTarget.parse('telnet://sw-1')!);
+    tabs.openAddress(QuickTarget.parse('serial://COM3:115200')!);
+    expect(app.calls, ['connect telnet sw-1', 'serial COM3 115200 8']);
+    final serial = state().current! as SessionTab;
+    expect(serial.controller!.displayTitle, 'COM3', reason: 'by its name');
+    expect(serial.controller!.overSsh, isFalse);
+  });
+
   testWidgets('moved tabs keep the one in front; closed ones open again '
       'where they were going', (tester) async {
     tabs

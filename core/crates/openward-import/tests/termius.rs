@@ -205,9 +205,17 @@ fn the_fixture_as_a_bundle() {
     assert_eq!(web1.identity.as_deref(), Some("id:403|local:3"));
     assert_eq!(web1.tags, ["prod"]);
 
-    // Mosh comes in as SSH, with its port from `content`; telnet does not.
+    // Mosh comes in as SSH, with its port from `content`; Telnet as
+    // Telnet, with its own config's port.
     assert_eq!(host("lab-mosh").settings.port, Some(2200));
-    assert_eq!(host("old-switch").unsupported.as_deref(), Some("telnet"));
+    let switch = host("old-switch");
+    assert_eq!(switch.unsupported, None);
+    assert_eq!(
+        switch.settings.protocol,
+        Some(openward_proto::Protocol::Telnet)
+    );
+    // Its Telnet config is not in the fixture: Telnet's own port.
+    assert_eq!(switch.settings.port, None);
     assert_eq!(host("packed").address, "192.0.2.24");
     assert_eq!(host("packed").id, "local:5");
     assert!(

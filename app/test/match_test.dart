@@ -18,6 +18,9 @@ HostView _host(
   tags: tags,
   user: user,
   port: 22,
+  protocol: ProtocolKind.ssh,
+  terminalScheme: '',
+  startupSnippet: '',
 );
 
 GroupView _group(String id, String name, {String? parent}) =>

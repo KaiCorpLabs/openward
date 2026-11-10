@@ -1,6 +1,6 @@
 //! Tabby's `config.yaml`, read where Tabby keeps it: no export needed.
 //!
-//! Profiles of type `ssh` become hosts, `groups` (nested through
+//! Profiles of type `ssh`, `telnet` and `serial` become hosts, `groups` (nested through
 //! `parentGroupId`) groups. A jump is another profile's id. Keys go by
 //! `file://` URL, or live in Tabby's vault, which is not read. Tabby's
 //! default user is `root`, so a profile without one keeps `root`. Its
@@ -9,7 +9,9 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use openward_proto::{ForwardKind, Proxy, ProxyServer, Settings};
+use openward_proto::{
+    FlowControl, ForwardKind, Parity, Protocol, Proxy, ProxyServer, SerialLine, Settings,
+};
 use yaml_rust2::parser::{Event, MarkedEventReceiver, Parser};
 use yaml_rust2::scanner::Marker;
 use yaml_rust2::{Yaml, YamlLoader};
@@ -129,16 +131,7 @@ pub fn parse(bytes: &[u8]) -> Result<Bundle, String> {
             continue;
         };
         let o = &p["options"];
-        if kind != "ssh" {
-            if kind == "telnet" || kind == "serial" {
-                out.hosts.push(Host {
-                    id,
-                    label: name,
-                    address: s(&o["host"]).unwrap_or_default(),
-                    unsupported: Some(kind),
-                    ..Host::default()
-                });
-            }
+        if !matches!(kind.as_str(), "ssh" | "telnet" | "serial") {
             continue;
         }
         // Since config version 5 a profile names its group by id; before,
@@ -158,6 +151,68 @@ pub fn parse(bytes: &[u8]) -> Result<Bundle, String> {
                 g
             }
         });
+        if kind == "telnet" {
+            out.hosts.push(Host {
+                id,
+                label: name,
+                address: s(&o["host"]).unwrap_or_default(),
+                group,
+                settings: Settings {
+                    protocol: Some(Protocol::Telnet),
+                    port: n(&o["port"])
+                        .and_then(|p| u16::try_from(p).ok())
+                        .filter(|&p| p > 0),
+                    ..Settings::default()
+                },
+                ..Host::default()
+            });
+            continue;
+        }
+        if kind == "serial" {
+            let mut line = SerialLine::default();
+            if let Some(baud) = n(&o["baudrate"])
+                .and_then(|b| u32::try_from(b).ok())
+                .filter(|&b| b > 0)
+            {
+                line.baud = baud;
+            }
+            if let Some(bits) = n(&o["databits"]).and_then(|b| u8::try_from(b).ok()) {
+                line.data_bits = bits;
+            }
+            if let Some(bits) = n(&o["stopbits"]).and_then(|b| u8::try_from(b).ok()) {
+                line.stop_bits = bits;
+            }
+            match s(&o["parity"]).as_deref() {
+                None | Some("none") => {}
+                Some("odd") => line.parity = Parity::Odd,
+                Some("even") => line.parity = Parity::Even,
+                Some(other) => out.warnings.push(Warning::about(
+                    &name,
+                    WarningKind::BadValue {
+                        field: "parity".into(),
+                        value: other.into(),
+                    },
+                )),
+            }
+            if o["rtscts"].as_bool() == Some(true) {
+                line.flow = FlowControl::Hardware;
+            } else if o["xon"].as_bool() == Some(true) || o["xoff"].as_bool() == Some(true) {
+                line.flow = FlowControl::Software;
+            }
+            out.hosts.push(Host {
+                id,
+                label: name,
+                address: s(&o["port"]).unwrap_or_default(),
+                group,
+                settings: Settings {
+                    protocol: Some(Protocol::Serial),
+                    serial: Some(line),
+                    ..Settings::default()
+                },
+                ..Host::default()
+            });
+            continue;
+        }
         let mut settings = Settings {
             user: Some(s(&o["user"]).unwrap_or_else(|| "root".into())),
             ..Settings::default()
@@ -352,13 +407,46 @@ profiles:
     options:
       host: old.example.com
       user: root
+  - id: telnet:sw
+    type: telnet
+    name: switch
+    group: g1
+    options:
+      host: 10.0.9.2
+      port: 23
+  - id: serial:console
+    type: serial
+    name: console
+    options:
+      port: /dev/ttyUSB0
+      baudrate: 115200
+      databits: 8
+      stopbits: 1
+      parity: even
+      rtscts: true
 "#;
 
     #[test]
     fn profiles_groups_jumps_and_forwards() {
         assert!(sniff(CONFIG));
         let b = parse(CONFIG.as_bytes()).unwrap();
-        assert_eq!(b.hosts.len(), 3);
+        assert_eq!(b.hosts.len(), 5);
+        let switch = &b.hosts[3];
+        assert_eq!(switch.unsupported, None);
+        assert_eq!(switch.group.as_deref(), Some("g1"));
+        assert_eq!(switch.settings.protocol, Some(Protocol::Telnet));
+        assert_eq!(switch.settings.port, Some(23));
+        let console = &b.hosts[4];
+        assert_eq!(console.address, "/dev/ttyUSB0");
+        assert_eq!(
+            console.settings.serial,
+            Some(SerialLine {
+                baud: 115_200,
+                parity: Parity::Even,
+                flow: FlowControl::Hardware,
+                ..SerialLine::default()
+            })
+        );
         let db = &b.hosts[1];
         assert_eq!(db.group.as_deref(), Some("g2"));
         assert_eq!(db.settings.user.as_deref(), Some("root"));

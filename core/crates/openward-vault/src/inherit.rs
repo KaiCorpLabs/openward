@@ -4,7 +4,9 @@
 
 use std::collections::BTreeMap;
 
-use openward_proto::{Agent, Environment, HostKeyPolicy, ItemId, Route, Settings};
+use openward_proto::{
+    Agent, Backspace, Environment, HostKeyPolicy, ItemId, Protocol, Route, SerialLine, Settings,
+};
 
 /// Where an effective setting came from, for the UI to show.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -43,9 +45,17 @@ pub fn defaults() -> Settings {
         environment: Some(Environment::None),
         read_os_release: Some(false),
         session_log: Some(false),
+        protocol: Some(Protocol::Ssh),
+        serial: Some(SerialLine::default()),
+        mosh: Some(false),
+        encoding: Some("utf-8".into()),
+        backspace: Some(Backspace::Delete),
         ..Settings::default()
     }
 }
+
+/// Telnet's port when nothing but the defaults sets one: 22 is SSH's.
+pub const TELNET_PORT: u16 = 23;
 
 impl Effective {
     /// Overlays this device's defaults, `groups` (root first), the
@@ -77,6 +87,11 @@ impl Effective {
         settings.overlay(host, |f| {
             origins.insert(f, Origin::Host);
         });
+        if settings.protocol == Some(Protocol::Telnet)
+            && origins.get("port") == Some(&Origin::Default)
+        {
+            settings.port = Some(TELNET_PORT);
+        }
         Self {
             settings,
             identity: identity.map(|(id, _)| id),

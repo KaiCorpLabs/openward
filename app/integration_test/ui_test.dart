@@ -45,6 +45,7 @@ import 'package:openward/hosts/sidebar.dart';
 import 'package:openward/logs/log_viewer.dart';
 import 'package:openward/logs/logs.dart';
 import 'package:openward/src/rust/api/logs.dart';
+import 'package:openward/src/rust/api/snippets.dart';
 import 'package:openward/tabs/close_guard.dart' show confirmQuit;
 import 'package:openward/tabs/session_view.dart';
 import 'package:openward/tabs/tab_strip.dart';
@@ -54,6 +55,7 @@ import 'package:openward/terminal/controller.dart';
 import 'package:openward/terminal/keys.dart';
 import 'package:openward/terminal/renderer.dart';
 import 'package:openward/settings/settings_page.dart';
+import 'package:openward/snippets/run_on_hosts.dart';
 import 'package:openward/snippets/snippets.dart';
 import 'package:openward/sftp/sftp_controller.dart';
 import 'package:openward/sftp/transfers.dart';
@@ -1080,18 +1082,18 @@ Host web-1 web-2
       'the preview',
     );
     await _settle(tester);
-    // Its groups and hosts; the telnet one cannot come.
+    // Its groups and hosts, the Telnet one too.
     for (final t in ['Producción', 'Web', 'bastion', 'web-1', 'old-switch']) {
       expect(find.text(t), findsOneWidget, reason: t);
     }
-    expect(find.text('Telnet: aún no se puede usar'), findsOneWidget);
+    expect(find.textContaining('aún no se puede usar'), findsNothing);
     // Neither stored key is in this home's ~/.ssh: save the ci one.
     await tester.tap(find.textContaining('~/.ssh/termius-ci,'));
     await tester.pump();
     await _shot(tester, '52-import-preview');
-    await tester.tap(find.text('Importar 4 hosts'));
+    await tester.tap(find.text('Importar 5 hosts'));
     await _settle(tester);
-    expect(find.text('4 hosts importados de Termius'), findsOneWidget);
+    expect(find.text('5 hosts importados de Termius'), findsOneWidget);
     expect(find.text('Clave guardada en ~/.ssh/termius-ci'), findsOneWidget);
     expect(find.textContaining('lab-mosh usaba Mosh'), findsOneWidget);
     await _shot(tester, '53-import-report');
@@ -1099,7 +1101,11 @@ Host web-1 web-2
     await _settle(tester);
 
     final hosts = app.hosts().map((h) => h.label).toSet();
-    expect(hosts, {'bastion', 'web-1', 'lab-mosh', 'packed'});
+    expect(hosts, {'bastion', 'web-1', 'lab-mosh', 'old-switch', 'packed'});
+    expect(
+      app.hosts().firstWhere((h) => h.label == 'old-switch').protocol,
+      ProtocolKind.telnet,
+    );
     expect(File('${dir.path}/home/.ssh/termius-ci').existsSync(), isTrue);
     expect(container.read(snippetsProvider).map((s) => s.spec.label), [
       'Reiniciar nginx',
@@ -1123,7 +1129,7 @@ Host web-1 web-2
     expect(button.onPressed, isNull);
     await tester.tap(find.text('Cancelar'));
     await _settle(tester);
-    expect(app.hosts(), hasLength(4));
+    expect(app.hosts(), hasLength(5));
   });
 
   testWidgets(
@@ -1383,6 +1389,93 @@ Host web-1 web-2
     expect(app.host(id: app.hosts().single.id).spec.settings.port, 2222);
   });
 
+  testWidgets('telnet and serial: a Telnet host from its editor, a switch '
+      'over it, and a serial port by hand', (tester) async {
+    // A switch's Telnet, here: it greets and asks for nothing.
+    final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(server.close);
+    server.listen((s) {
+      s.add(utf8.encode('\r\nUser Access Verification\r\n\r\nsw-1> '));
+      s.listen((_) {}, onError: (_) {}, cancelOnError: true);
+    });
+    final container = await launch(tester);
+    Finder field(String key) => find.byKey(ValueKey(key));
+
+    // With no hosts yet, the sidebar has no entry for them: the page.
+    container.read(tabsProvider.notifier).openPage(PageKind.hosts);
+    await _settle(tester);
+    await tester.tap(field('hosts.new'));
+    await _settle(tester);
+    await tester.enterText(field('host.label'), 'sw-1');
+    await tester.enterText(field('host.address'), '127.0.0.1');
+    await _reveal(tester, field('setting.protocol'));
+    await tester.tap(field('setting.protocol'));
+    await _settle(tester);
+    await tester.tap(field('settings.protocol'));
+    await _settle(tester);
+    await tester.tap(find.text('Telnet').last);
+    await _settle(tester);
+    // Unencrypted, and said so; nothing of SSH's to set; Telnet's port.
+    expect(field('settings.telnetNote'), findsOneWidget);
+    expect(field('setting.user'), findsNothing);
+    expect(field('setting.identity_files'), findsNothing);
+    await _reveal(tester, field('setting.port'));
+    expect(
+      find.descendant(of: field('setting.port'), matching: find.text('23')),
+      findsOneWidget,
+    );
+    await tester.tap(field('setting.port'));
+    await _settle(tester);
+    expect(
+      tester.widget<TextField>(field('settings.port')).controller!.text,
+      '23',
+    );
+    await tester.enterText(field('settings.port'), '${server.port}');
+    await _shot(tester, '28-telnet-host');
+    await tester.tap(find.text('Guardar'));
+    await _settle(tester);
+    expect(find.text('telnet://127.0.0.1:${server.port}'), findsWidgets);
+    expect(app.hosts().single.protocol, ProtocolKind.telnet);
+    // No files over Telnet.
+    await tester.tap(find.text('sw-1'), buttons: kSecondaryButton);
+    await _settle(tester);
+    expect(find.text('Abrir SFTP'), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await _settle(tester);
+
+    await _connect(tester, 'sw-1');
+    final c = container.read(tabsProvider).currentSession!;
+    await _until(
+      tester,
+      () => c.session.screenText().contains('sw-1>'),
+      'the switch',
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(field('status.unencrypted'), findsOneWidget);
+    expect(field('status.sftp'), findsNothing);
+    await _shot(tester, '29-telnet-session');
+    container.read(tabsProvider.notifier).close(0);
+    await _settle(tester);
+
+    // A port by hand that is not there: said in words, in its tab.
+    final missing = Platform.isWindows
+        ? 'COM250'
+        : '/dev/openward-no-such-port';
+    await tester.tap(field('start.serial'));
+    await _settle(tester);
+    expect(find.text('Abrir un puerto serie'), findsOneWidget);
+    await tester.enterText(field('serial.port'), missing);
+    await tester.tap(field('serial.open'));
+    await tester.pump();
+    final s = container.read(tabsProvider).currentSession!;
+    expect(s.displayTitle, missing);
+    await _until(tester, () => s.phase == Phase.closed, 'the port to fail');
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.textContaining('¿está conectado el cable?'), findsWidgets);
+    container.read(tabsProvider.notifier).close(0);
+    await _settle(tester);
+  });
+
   testWidgets('ssh: a changed host key is shown and trusted on purpose', (
     tester,
   ) async {
@@ -1434,6 +1527,84 @@ Host web-1 web-2
     await tester.tap(trust);
     await _until(tester, () => c.phase == Phase.connected, 'the connection');
     expect(c.connected!.trust, TrustKind.known);
+    container.read(tabsProvider.notifier).close(0);
+    await _settle(tester);
+  });
+
+  testWidgets('snippets: one a host starts with, and one on several hosts', (
+    tester,
+  ) async {
+    final fixtures = await _servers();
+    if (fixtures == null) return markTestSkipped('S2 servers not running');
+    final startup = await app.createSnippet(
+      spec: const SnippetSpec(
+        label: 'Al entrar',
+        script: r'echo startup-$((6*7)) {{host}}',
+        defaults: [],
+        typeOnly: false,
+      ),
+    );
+    await app.createSnippet(
+      spec: const SnippetSpec(
+        label: 'En todos',
+        script: r'echo multi-$((6*7)) {{host}}',
+        defaults: [],
+        typeOnly: false,
+      ),
+    );
+    SettingsSpec demo(int port, {String? startup}) => SettingsSpec(
+      user: 'demo',
+      port: port,
+      identityFiles: ['$fixtures/id_ed25519'],
+      agent: AgentKind.off,
+      hostKeyPolicy: KeyPolicy.acceptNew,
+      startupSnippet: startup,
+    );
+    await app.createHost(
+      spec: HostSpec(
+        label: 'ninetwo',
+        address: '127.0.0.1',
+        settings: demo(22092, startup: startup),
+      ),
+    );
+    await app.createHost(
+      spec: HostSpec(
+        label: 'tenzero',
+        address: '127.0.0.1',
+        settings: demo(22100),
+      ),
+    );
+    final container = await launch(tester);
+    await _connect(tester, 'ninetwo');
+    final first = container.read(tabsProvider).currentSession!;
+    await _until(
+      tester,
+      () => first.session.screenText().contains('startup-42 ninetwo'),
+      'the startup snippet',
+    );
+
+    // On both, from the snippets' page: a tab with a pane each.
+    final library = container.read(libraryProvider);
+    final s = container
+        .read(snippetsProvider)
+        .firstWhere((s) => s.spec.label == 'En todos');
+    runOnHosts(container, s, [
+      for (final label in ['ninetwo', 'tenzero'])
+        library.hosts.firstWhere((h) => h.label == label),
+    ], const {});
+    await tester.pump(const Duration(milliseconds: 300));
+    final tab = container.read(tabsProvider).current as SessionTab;
+    final panes = tab.panes.controllers.toList();
+    expect(panes.map((c) => c.label), ['ninetwo', 'tenzero']);
+    for (final c in panes) {
+      await _until(
+        tester,
+        () => c.session.screenText().contains('multi-42 ${c.label}'),
+        'the snippet on ${c.label}',
+      );
+    }
+    await _shot(tester, '81-snippet-on-hosts');
+    container.read(tabsProvider.notifier).close(1);
     container.read(tabsProvider.notifier).close(0);
     await _settle(tester);
   });
@@ -2630,6 +2801,94 @@ Host db
     container.read(tabsProvider.notifier).close(0);
     await _settle(tester);
   });
+  testWidgets('sftp: a remote file opened here goes up when saved, and asks '
+      'first if the server changed it', (tester) async {
+    final fixtures = await _servers();
+    if (fixtures == null) return markTestSkipped('S2 servers not running');
+    await app.createHost(
+      spec: HostSpec(
+        label: 'bastion',
+        address: '127.0.0.1',
+        settings: SettingsSpec(
+          user: 'demo',
+          port: 22100,
+          identityFiles: ['$fixtures/id_ed25519'],
+          agent: AgentKind.off,
+          hostKeyPolicy: KeyPolicy.acceptNew,
+        ),
+      ),
+    );
+    final container = await launch(tester);
+    final host = container
+        .read(libraryProvider)
+        .hosts
+        .firstWhere((h) => h.label == 'bastion');
+    container
+        .read(tabsProvider.notifier)
+        .openSftp(hostId: host.id, label: host.label);
+    await tester.pump();
+    final c = (container.read(tabsProvider).current! as SftpTab).controller;
+    await _until(tester, () => c.remote.path == '/home/demo', 'home');
+    final name = 'nota-$pid.txt';
+    final remote = '/home/demo/$name';
+    final work = Directory('${dir.path}/edit')..createSync();
+    final mine = File('${work.path}/$name')..writeAsStringSync('primera\n');
+    await c.copy(Side.local, [mine.path], '/home/demo', ask: (_) async => {});
+    Future<int?> size() async =>
+        (await c.browser.stat(path: remote))?.size.toInt();
+    await _until(
+      tester,
+      () => c.remote.entries.any((e) => e.name == name),
+      'the file there',
+    );
+    final entry = c.remote.entries.firstWhere((e) => e.name == name);
+
+    // Opened «with an app» that saves it at once.
+    var asked = 0;
+    c.edits.onChangedThere = (_) async {
+      asked++;
+      return false;
+    };
+    await c.edits.open(remote, entry, (local) async {
+      File(local).writeAsStringSync('cambiada aquí\n');
+    });
+    await tester.pump();
+    expect(find.byKey(const ValueKey('sftp.edits')), findsOneWidget);
+    await _until(
+      tester,
+      () => c.edits.edits.single.uploaded != null,
+      'the upload',
+    );
+    // In bytes, as the server counts them: «í» takes two.
+    expect(await size(), utf8.encode('cambiada aquí\n').length);
+
+    // Changed on the server meanwhile: asked, and not uploaded.
+    await Future<void>.delayed(const Duration(milliseconds: 1100));
+    mine.writeAsStringSync('cambiada en el servidor, más larga\n');
+    await c.copy(
+      Side.local,
+      [mine.path],
+      '/home/demo',
+      ask: (conflicts) async {
+        return {for (final x in conflicts) x.source: ConflictChoice.replace};
+      },
+    );
+    await _until(
+      tester,
+      () => c.queue.jobs.every((j) => j.finished),
+      'the other upload',
+    );
+    final there = await size();
+    File(c.edits.edits.single.local).writeAsStringSync('otra vez aquí\n');
+    await _until(tester, () => asked == 1, 'the question');
+    await tester.pump(const Duration(milliseconds: 1500));
+    expect(await size(), there);
+
+    await c.browser.remove(paths: [remote]);
+    container.read(tabsProvider.notifier).close(0);
+    await _settle(tester);
+  });
+
   testWidgets(
     'sftp: from the terminal, folders, copies both ways, conflicts, permissions',
     (tester) async {
@@ -3745,6 +4004,55 @@ Host db
     container.read(historyProvider.notifier).clear();
     expect(container.read(historyProvider), isEmpty);
 
+    container.read(tabsProvider.notifier).close(0);
+    await _settle(tester);
+  });
+
+  testWidgets('suggestions: the history, dimmed after the cursor; → takes it', (
+    tester,
+  ) async {
+    final container = await launch(tester);
+    await tester.tap(find.text('Abrir un terminal local'));
+    await tester.pump();
+    final a = container.read(tabsProvider).currentSession!;
+    await _until(tester, () => a.phase == Phase.running, 'the shell');
+    await tester.pump(const Duration(milliseconds: 500));
+    final pane = tester.state<TerminalPaneState>(find.byType(TerminalPane));
+    container.read(historyProvider.notifier).add(r'echo ghost-$((40+2))', a);
+    String? ghost() => a.currentRenderer?.ghost?.text;
+
+    pane.updateEditingValue(
+      const TextEditingValue(
+        text: '  echo gh',
+        selection: TextSelection.collapsed(offset: 9),
+      ),
+    );
+    await _until(tester, () => ghost() == r'ost-$((40+2))', 'the suggestion');
+    await _shot(tester, '80-suggestion');
+    // Typing what it says keeps it; typing otherwise takes it away.
+    pane.updateEditingValue(
+      const TextEditingValue(
+        text: '  x',
+        selection: TextSelection.collapsed(offset: 3),
+      ),
+    );
+    await _until(tester, () => ghost() == null, 'no suggestion for ghx');
+    await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
+    await _until(tester, () => ghost() == r'ost-$((40+2))', 'it again');
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await _until(
+      tester,
+      () => a.session.screenText().contains(r'echo ghost-$((40+2))'),
+      'the suggestion typed',
+    );
+    expect(ghost(), isNull);
+    pane.performAction(TextInputAction.newline);
+    await _until(
+      tester,
+      () => a.session.screenText().contains('ghost-42\n'),
+      'the command run',
+    );
+    container.read(historyProvider.notifier).clear();
     container.read(tabsProvider.notifier).close(0);
     await _settle(tester);
   });

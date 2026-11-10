@@ -2,6 +2,7 @@ import '../core/connection.dart';
 import '../src/rust/api/session.dart';
 import '../src/rust/api/sftp.dart';
 import 'files.dart';
+import 'remote_edit.dart';
 import 'transfers.dart';
 
 export 'files.dart';
@@ -29,6 +30,13 @@ class SftpController extends ConnectionController {
   final TransferQueue queue;
   late final FilePane local;
   late final FilePane remote;
+
+  /// Remote files opened in an app here, uploaded as they are saved.
+  late final RemoteEdits edits = RemoteEdits(
+    app: app,
+    browser: browser,
+    queue: queue,
+  );
 
   /// The side with the keyboard.
   Side active = Side.local;
@@ -150,6 +158,7 @@ class SftpController extends ConnectionController {
   @override
   void dispose() {
     queue.removeListener(_onQueue);
+    edits.dispose();
     browser.close();
     browser.dispose();
     local.dispose();

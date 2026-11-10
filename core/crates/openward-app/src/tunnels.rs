@@ -273,6 +273,11 @@ impl Tunnels {
         live: Arc<Live>,
         on_connect: bool,
     ) {
+        // Closed while it connected (a question pending): it does not take
+        // the port, not even for the moment that letting it go would last.
+        if !lock(&self.state).current(id, ticket) {
+            return;
+        }
         let result = self.listen(id, ticket, &spec, &live).await;
         let mut s = lock(&self.state);
         if !s.current(id, ticket) {

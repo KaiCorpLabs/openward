@@ -46,10 +46,14 @@ List<TerminalController> snippetTargets(ProviderContainer ref) {
 }
 
 /// The values a pane fills in itself: its host, address, user and port.
-Map<String, String> builtinValues(ProviderContainer ref, TerminalController c) {
-  final host = c.hostId == null
-      ? null
-      : ref.read(libraryProvider).host(c.hostId!);
+Map<String, String> builtinValues(
+  ProviderContainer ref,
+  TerminalController c,
+) => builtinValuesIn(ref.read(libraryProvider), c);
+
+/// [builtinValues], with the library at hand.
+Map<String, String> builtinValuesIn(Library library, TerminalController c) {
+  final host = c.hostId == null ? null : library.host(c.hostId!);
   final t = c.target;
   final localUser =
       Platform.environment['USER'] ?? Platform.environment['USERNAME'] ?? '';
@@ -73,6 +77,32 @@ String renderFor(
       SnippetValue(name: e.key, value: e.value),
   ],
 );
+
+/// Whether `s` can run without asking anything: what a startup snippet
+/// and the menus that run at once need.
+bool asksNothing(SnippetView s) => s.variables.asked.isEmpty;
+
+/// The startup snippet of `c`'s host (its own or its groups'), filled in
+/// for it; null for none, one deleted since, or one that asks for values.
+String? startupText(
+  Library library,
+  List<SnippetView> snippets,
+  TerminalController c,
+) {
+  final hostId = c.hostId;
+  if (hostId == null) return null;
+  final id = library.host(hostId)?.startupSnippet ?? '';
+  if (id.isEmpty) return null;
+  final s = snippets.where((s) => s.id == id).firstOrNull;
+  if (s == null || !asksNothing(s)) return null;
+  return renderSnippet(
+    script: s.spec.script,
+    values: [
+      for (final e in builtinValuesIn(library, c).entries)
+        SnippetValue(name: e.key, value: e.value),
+    ],
+  );
+}
 
 /// Sends `s` to the front tab: the panes that receive while broadcasting,
 /// or the active one. Asks first for its variables and, with more than

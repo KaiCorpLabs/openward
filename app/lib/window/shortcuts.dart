@@ -11,7 +11,7 @@ import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 
 /// `apple` on macOS, `other` elsewhere.
-String keysFor(String apple, String other) => isApple ? apple : other;
+String keysFor(String apple, String other) => macShortcuts ? apple : other;
 
 /// A button's tooltip with its shortcut: «Carpeta nueva (⌘⇧N)».
 String withKeys(String text, String keys) => '$text ($keys)';
@@ -29,7 +29,7 @@ String logsKeys(AppLocalizations l) => keysFor('⌘⇧R', '${l.ctrlShiftPrefix}R
 /// What opens the last closed tab again: Ctrl+Shift+T elsewhere opens a
 /// local shell, so Alt joins it.
 String reopenKeys(AppLocalizations l, {bool? apple}) =>
-    (apple ?? isApple) ? '⌘⇧T' : '${l.ctrlShiftPrefix}Alt+T';
+    (apple ?? macShortcuts) ? '⌘⇧T' : '${l.ctrlShiftPrefix}Alt+T';
 
 /// One line of the sheet: what it does and the keys that do it, any of
 /// them.
@@ -50,7 +50,7 @@ class ShortcutGroup {
 /// The shortcuts of the window, as the window binds them (`home.dart`,
 /// the terminal, the SFTP browser and the editors), for macOS or not.
 List<ShortcutGroup> shortcutGroups(AppLocalizations l, {bool? apple}) {
-  final mac = apple ?? isApple;
+  final mac = apple ?? macShortcuts;
   final cs = l.ctrlShiftPrefix;
   // Window keys: ⌘ on macOS, Ctrl+Shift elsewhere, so that Ctrl alone
   // stays the terminal's.

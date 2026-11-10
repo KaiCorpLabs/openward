@@ -173,8 +173,20 @@ abstract class AppLocalizations {
   /// No description provided for @advancedList.
   ///
   /// In es, this message translates to:
-  /// **'proxy, claves del host, sesión persistente, comprobación y agente'**
+  /// **'proxy, claves del host, sesión persistente, Mosh, terminal, snippet al conectar, comprobación y agente'**
   String get advancedList;
+
+  /// No description provided for @advancedListSerial.
+  ///
+  /// In es, this message translates to:
+  /// **'terminal, snippet al conectar y registro de sesión'**
+  String get advancedListSerial;
+
+  /// No description provided for @advancedListTelnet.
+  ///
+  /// In es, this message translates to:
+  /// **'proxy, terminal, snippet al conectar, registro de sesión y tiempo para conectar'**
+  String get advancedListTelnet;
 
   /// No description provided for @advancedSetHere.
   ///
@@ -374,6 +386,24 @@ abstract class AppLocalizations {
   /// **'No pregunta nada. Escribe {example} donde quieras que pregunte.'**
   String asksNothing(String example);
 
+  /// No description provided for @autocomplete.
+  ///
+  /// In es, this message translates to:
+  /// **'Sugerir mientras escribes'**
+  String get autocomplete;
+
+  /// No description provided for @autocompleteHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'En gris, lo que sigue: del historial de este host, de los snippets y de unos comandos comunes. → o Fin lo acepta. Todo en este equipo, sin red; nada en los editores ni cuando se pide una contraseña.'**
+  String get autocompleteHelp;
+
+  /// No description provided for @autocompleteNeedsHistory.
+  ///
+  /// In es, this message translates to:
+  /// **'Necesita el historial de comandos (Ajustes › Registros).'**
+  String get autocompleteNeedsHistory;
+
   /// No description provided for @awayFor.
   ///
   /// In es, this message translates to:
@@ -391,6 +421,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Conectado de nuevo a {host}'**
   String backAgain(String host);
+
+  /// No description provided for @backspaceControlH.
+  ///
+  /// In es, this message translates to:
+  /// **'Control-H (^H)'**
+  String get backspaceControlH;
+
+  /// No description provided for @backspaceDelete.
+  ///
+  /// In es, this message translates to:
+  /// **'DEL (^?), el de hoy'**
+  String get backspaceDelete;
+
+  /// No description provided for @backspaceLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Retroceso'**
+  String get backspaceLabel;
+
+  /// No description provided for @backspaceNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Si al borrar el servidor escribe ^? o ^H en vez de borrar, cambia este.'**
+  String get backspaceNote;
 
   /// No description provided for @badgeChanges.
   ///
@@ -523,6 +577,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'caducó el {date}'**
   String certExpiredOn(String date);
+
+  /// No description provided for @certExpiresIn.
+  ///
+  /// In es, this message translates to:
+  /// **'caduca en {days, plural, =1{1 día} other{{days} días}}'**
+  String certExpiresIn(int days);
 
   /// No description provided for @certForever.
   ///
@@ -848,6 +908,48 @@ abstract class AppLocalizations {
   /// **'Azul'**
   String get colorBlue;
 
+  /// No description provided for @colorBrightBlue.
+  ///
+  /// In es, this message translates to:
+  /// **'Azul claro'**
+  String get colorBrightBlue;
+
+  /// No description provided for @colorBrightCyan.
+  ///
+  /// In es, this message translates to:
+  /// **'Cian claro'**
+  String get colorBrightCyan;
+
+  /// No description provided for @colorBrightGreen.
+  ///
+  /// In es, this message translates to:
+  /// **'Verde claro'**
+  String get colorBrightGreen;
+
+  /// No description provided for @colorBrightMagenta.
+  ///
+  /// In es, this message translates to:
+  /// **'Magenta claro'**
+  String get colorBrightMagenta;
+
+  /// No description provided for @colorBrightRed.
+  ///
+  /// In es, this message translates to:
+  /// **'Rojo claro'**
+  String get colorBrightRed;
+
+  /// No description provided for @colorBrightYellow.
+  ///
+  /// In es, this message translates to:
+  /// **'Amarillo claro'**
+  String get colorBrightYellow;
+
+  /// No description provided for @colorCyan.
+  ///
+  /// In es, this message translates to:
+  /// **'Cian'**
+  String get colorCyan;
+
   /// No description provided for @colorGray.
   ///
   /// In es, this message translates to:
@@ -859,6 +961,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Verde'**
   String get colorGreen;
+
+  /// No description provided for @colorMagenta.
+  ///
+  /// In es, this message translates to:
+  /// **'Magenta'**
+  String get colorMagenta;
 
   /// No description provided for @colorOrange.
   ///
@@ -1135,6 +1243,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{name} (copia)'**
   String copyOfName(String name);
+
+  /// No description provided for @copyOnSelect.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar al seleccionar'**
+  String get copyOnSelect;
+
+  /// No description provided for @copyOnSelectHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que seleccionas con el ratón va al portapapeles, sin pulsar copiar.'**
+  String get copyOnSelectHelp;
 
   /// No description provided for @copyPath.
   ///
@@ -1664,6 +1784,24 @@ abstract class AppLocalizations {
   /// **'panel vacío'**
   String get emptyPane;
 
+  /// No description provided for @encodingLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Codificación'**
+  String get encodingLabel;
+
+  /// No description provided for @encodingNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Para equipos y sistemas antiguos que no escriben en UTF-8: si salen letras raras en vez de tildes o líneas, prueba Latin-1 o CP437.'**
+  String get encodingNote;
+
+  /// No description provided for @encodingNoteMosh.
+  ///
+  /// In es, this message translates to:
+  /// **'Para equipos y sistemas antiguos que no escriben en UTF-8: si salen letras raras en vez de tildes o líneas, prueba Latin-1 o CP437. Por Mosh siempre es UTF-8.'**
+  String get encodingNoteMosh;
+
   /// No description provided for @envColor.
   ///
   /// In es, this message translates to:
@@ -1904,11 +2042,23 @@ abstract class AppLocalizations {
   /// **'{user}@{label} no ha podido autenticarse.'**
   String failureAuth(String user, String label);
 
+  /// No description provided for @failureAuthCertExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo entrar como {user} en {host}: el certificado {path} ha caducado; pide uno nuevo.'**
+  String failureAuthCertExpired(String user, String host, String path);
+
   /// No description provided for @failureAuthMethods.
   ///
   /// In es, this message translates to:
   /// **'{user}@{label} no ha podido autenticarse (el servidor acepta: {methods}).'**
   String failureAuthMethods(String user, String label, String methods);
+
+  /// No description provided for @failureAuthSecurityKey.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo entrar como {user} en {host}: {why}.'**
+  String failureAuthSecurityKey(String user, String host, String why);
 
   /// No description provided for @failureBadCertificate.
   ///
@@ -1945,6 +2095,48 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Algo ha fallado (más en «Detalles»).'**
   String get failureOther;
+
+  /// No description provided for @failureSerialBusy.
+  ///
+  /// In es, this message translates to:
+  /// **'{port} está abierto en otro programa, o en otra pestaña.'**
+  String failureSerialBusy(String port);
+
+  /// No description provided for @failureSerialDenied.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu usuario no puede abrir {port}.'**
+  String failureSerialDenied(String port);
+
+  /// No description provided for @failureSerialDeniedLinux.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu usuario no puede abrir {port}: añádelo al grupo dialout (sudo usermod -aG dialout, con tu usuario) y vuelve a entrar en la sesión.'**
+  String failureSerialDeniedLinux(String port);
+
+  /// No description provided for @failureSerialGone.
+  ///
+  /// In es, this message translates to:
+  /// **'Se ha desconectado {port}: ¿se ha soltado el cable?'**
+  String failureSerialGone(String port);
+
+  /// No description provided for @failureSerialMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay ningún puerto {port}: ¿está conectado el cable?'**
+  String failureSerialMissing(String port);
+
+  /// No description provided for @failureSerialOther.
+  ///
+  /// In es, this message translates to:
+  /// **'No se ha podido abrir {port} (más en «Detalles»).'**
+  String failureSerialOther(String port);
+
+  /// No description provided for @failureSerialSettings.
+  ///
+  /// In es, this message translates to:
+  /// **'{port} no admite esa velocidad o ese formato.'**
+  String failureSerialSettings(String port);
 
   /// No description provided for @favorite.
   ///
@@ -2216,6 +2408,24 @@ abstract class AppLocalizations {
   /// **'Primera conexión con {label}'**
   String firstConnectionTo(String label);
 
+  /// No description provided for @flowHardware.
+  ///
+  /// In es, this message translates to:
+  /// **'RTS/CTS (hardware)'**
+  String get flowHardware;
+
+  /// No description provided for @flowNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguno'**
+  String get flowNone;
+
+  /// No description provided for @flowSoftware.
+  ///
+  /// In es, this message translates to:
+  /// **'XON/XOFF (software)'**
+  String get flowSoftware;
+
   /// No description provided for @foldSidebar.
   ///
   /// In es, this message translates to:
@@ -2443,6 +2653,120 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ocultar'**
   String get hideQueue;
+
+  /// No description provided for @highlightAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Añadir una regla…'**
+  String get highlightAdd;
+
+  /// No description provided for @highlightCase.
+  ///
+  /// In es, this message translates to:
+  /// **'Distinguir mayúsculas'**
+  String get highlightCase;
+
+  /// No description provided for @highlightColor.
+  ///
+  /// In es, this message translates to:
+  /// **'Color'**
+  String get highlightColor;
+
+  /// No description provided for @highlightColorNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Los colores son los del terminal: cambian con su tema.'**
+  String get highlightColorNote;
+
+  /// No description provided for @highlightEdit.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar'**
+  String get highlightEdit;
+
+  /// No description provided for @highlightError.
+  ///
+  /// In es, this message translates to:
+  /// **'Errores (error, failed, denied…)'**
+  String get highlightError;
+
+  /// No description provided for @highlightIp.
+  ///
+  /// In es, this message translates to:
+  /// **'Direcciones IP'**
+  String get highlightIp;
+
+  /// No description provided for @highlightMac.
+  ///
+  /// In es, this message translates to:
+  /// **'Direcciones MAC'**
+  String get highlightMac;
+
+  /// No description provided for @highlightName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre'**
+  String get highlightName;
+
+  /// No description provided for @highlightNewTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva regla de resaltado'**
+  String get highlightNewTitle;
+
+  /// No description provided for @highlightOk.
+  ///
+  /// In es, this message translates to:
+  /// **'Bien (ok, success, done…)'**
+  String get highlightOk;
+
+  /// No description provided for @highlightOn.
+  ///
+  /// In es, this message translates to:
+  /// **'Resaltar palabras y direcciones'**
+  String get highlightOn;
+
+  /// No description provided for @highlightOnHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo al pintar, y solo en el texto que el programa deja sin color: no cambia lo que llega, lo que copias ni los registros. En los editores y en less, nada.'**
+  String get highlightOnHelp;
+
+  /// No description provided for @highlightPattern.
+  ///
+  /// In es, this message translates to:
+  /// **'Qué resaltar'**
+  String get highlightPattern;
+
+  /// No description provided for @highlightPatternBad.
+  ///
+  /// In es, this message translates to:
+  /// **'No se lee como expresión regular, o no resaltaría nada.'**
+  String get highlightPatternBad;
+
+  /// No description provided for @highlightPatternHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Una palabra o una expresión regular. \\b marca el borde de una palabra.'**
+  String get highlightPatternHelp;
+
+  /// No description provided for @highlightRemove.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar'**
+  String get highlightRemove;
+
+  /// No description provided for @highlightReset.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a las de la app'**
+  String get highlightReset;
+
+  /// No description provided for @highlightWarning.
+  ///
+  /// In es, this message translates to:
+  /// **'Avisos (warning, deprecated, timeout)'**
+  String get highlightWarning;
 
   /// No description provided for @host.
   ///
@@ -3320,6 +3644,18 @@ abstract class AppLocalizations {
   /// **'Para servidores antiguos que no aceptan nada más nuevo. Tarda unos segundos en crearse.'**
   String get keyTypeRsa;
 
+  /// No description provided for @keyTypeSecurityEcdsa.
+  ///
+  /// In es, this message translates to:
+  /// **'ECDSA P-256 en la llave: la tienen todas las llaves FIDO2.'**
+  String get keyTypeSecurityEcdsa;
+
+  /// No description provided for @keyTypeSecurityEd25519.
+  ///
+  /// In es, this message translates to:
+  /// **'Ed25519 en la llave: la mejor opción si tu llave la tiene (casi todas desde 2020).'**
+  String get keyTypeSecurityEd25519;
+
   /// No description provided for @keys.
   ///
   /// In es, this message translates to:
@@ -3397,6 +3733,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Las claves de servidor en las que confías. Al conectar se miran las de OpenWard y las de {file}; las nuevas se guardan en OpenWard.'**
   String knownHostsIntro(String file);
+
+  /// No description provided for @lanDynamicNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Es un proxy SOCKS sin contraseña: cualquiera de tu red podrá entrar por él en todo lo que alcanza {host} mientras esté abierto.'**
+  String lanDynamicNote(String host);
 
   /// No description provided for @lanLocalNote.
   ///
@@ -4478,6 +4820,66 @@ abstract class AppLocalizations {
   /// **'Más opciones'**
   String get moreOptions;
 
+  /// No description provided for @moshFallbackNoClient.
+  ///
+  /// In es, this message translates to:
+  /// **'sin Mosh: falta mosh-client en este equipo (brew install mosh, o apt install mosh) · sigue por SSH'**
+  String get moshFallbackNoClient;
+
+  /// No description provided for @moshFallbackNoServer.
+  ///
+  /// In es, this message translates to:
+  /// **'sin Mosh: el servidor no tiene mosh-server · sigue por SSH'**
+  String get moshFallbackNoServer;
+
+  /// No description provided for @moshFallbackNoUdp.
+  ///
+  /// In es, this message translates to:
+  /// **'sin Mosh: no llega el UDP del servidor (un cortafuegos, o una red que no lo deja pasar) · sigue por SSH, en tmux'**
+  String get moshFallbackNoUdp;
+
+  /// No description provided for @moshFallbackOther.
+  ///
+  /// In es, this message translates to:
+  /// **'sin Mosh: {said} · sigue por SSH'**
+  String moshFallbackOther(String said);
+
+  /// No description provided for @moshFallbackWindows.
+  ///
+  /// In es, this message translates to:
+  /// **'sin Mosh: en Windows todavía no · sigue por SSH'**
+  String get moshFallbackWindows;
+
+  /// No description provided for @moshNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Hace falta mosh-server en el servidor y mosh-client en este equipo (macOS: brew install mosh; Linux: apt o dnf install mosh). El UDP va directo: los saltos solo sirven para arrancarlo. Si no llega, la sesión sigue por SSH, en tmux.'**
+  String get moshNote;
+
+  /// No description provided for @moshOff.
+  ///
+  /// In es, this message translates to:
+  /// **'Apagado: SSH'**
+  String get moshOff;
+
+  /// No description provided for @moshOn.
+  ///
+  /// In es, this message translates to:
+  /// **'Encendido: por Mosh cuando se pueda'**
+  String get moshOn;
+
+  /// No description provided for @moshServer.
+  ///
+  /// In es, this message translates to:
+  /// **'Servidor de Mosh'**
+  String get moshServer;
+
+  /// No description provided for @moshServerHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Dónde está mosh-server en el servidor, si no está en su PATH: /opt/homebrew/bin/mosh-server'**
+  String get moshServerHelp;
+
   /// No description provided for @moveEarlier.
   ///
   /// In es, this message translates to:
@@ -4814,6 +5216,18 @@ abstract class AppLocalizations {
   /// **'La latencia, siempre a la vista'**
   String get newsLatencyTitle;
 
+  /// No description provided for @newsLinesBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Un host puede ser SSH, Telnet o un puerto serie de este equipo, para la consola de un switch o un router. «Puerto serie» en el inicio abre uno a mano. Telnet avisa de que no cifra.'**
+  String get newsLinesBody;
+
+  /// No description provided for @newsLinesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Telnet y puerto serie'**
+  String get newsLinesTitle;
+
   /// No description provided for @newsLogoBody.
   ///
   /// In es, this message translates to:
@@ -4838,6 +5252,18 @@ abstract class AppLocalizations {
   /// **'Registros de sesión'**
   String get newsLogsTitle;
 
+  /// No description provided for @newsManyHostsBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Un snippet en los hosts que elijas, cada uno en su panel; un snippet al conectar, heredable; y en SFTP, «Abrir con…»: lo editas aquí y se sube al guardarlo.'**
+  String get newsManyHostsBody;
+
+  /// No description provided for @newsManyHostsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Snippets en varios hosts'**
+  String get newsManyHostsTitle;
+
   /// No description provided for @newsMoreThemesBody.
   ///
   /// In es, this message translates to:
@@ -4849,6 +5275,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Siete familias de temas más'**
   String get newsMoreThemesTitle;
+
+  /// No description provided for @newsMoshBody.
+  ///
+  /// In es, this message translates to:
+  /// **'En «Avanzado» de un host: la sesión sigue aunque cambies de red o duermas el portátil. Usa el mosh-client que tengas instalado, y si no llega el UDP, sigue por SSH.'**
+  String get newsMoshBody;
+
+  /// No description provided for @newsMoshTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Mosh, si lo quieres'**
+  String get newsMoshTitle;
 
   /// No description provided for @newsPaletteBody.
   ///
@@ -4897,6 +5335,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Un atajo para buscarlo todo'**
   String get newsSearchTitle;
+
+  /// No description provided for @newsSecurityKeysBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Claves en una YubiKey u otra llave FIDO2: se crean en «Nueva clave», y al conectar la app pide el toque y el PIN. Los certificados que caducan avisan la última semana.'**
+  String get newsSecurityKeysBody;
+
+  /// No description provided for @newsSecurityKeysTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Llaves de seguridad'**
+  String get newsSecurityKeysTitle;
 
   /// No description provided for @newsSftpBody.
   ///
@@ -4958,6 +5408,18 @@ abstract class AppLocalizations {
   /// **'Un inicio para volver a lo de siempre'**
   String get newsStartTitle;
 
+  /// No description provided for @newsSuggestBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que sigue sale en gris, del historial de ese host, de tus snippets y de comandos comunes; → lo escribe. Todo en este equipo.'**
+  String get newsSuggestBody;
+
+  /// No description provided for @newsSuggestTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sugerencias mientras escribes'**
+  String get newsSuggestTitle;
+
   /// No description provided for @newsSystemBody2.
   ///
   /// In es, this message translates to:
@@ -4969,6 +5431,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'El sistema de cada servidor, con su logo'**
   String get newsSystemTitle2;
+
+  /// No description provided for @newsTerminalBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar al seleccionar, pegar con clic derecho, errores y direcciones en color, atajos de Mac o de PC. Por host: la codificación (Latin-1, CP437…), el retroceso y sus propios colores.'**
+  String get newsTerminalBody;
+
+  /// No description provided for @newsTerminalTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'El terminal a tu manera'**
+  String get newsTerminalTitle;
 
   /// No description provided for @newsThemesBody.
   ///
@@ -5282,6 +5756,18 @@ abstract class AppLocalizations {
   /// **'Dejarla abierta'**
   String get onExitNever;
 
+  /// No description provided for @onSecurityKey.
+  ///
+  /// In es, this message translates to:
+  /// **'En una llave de seguridad (FIDO2)'**
+  String get onSecurityKey;
+
+  /// No description provided for @onSecurityKeyNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Toca la llave cuando parpadee. El archivo no guarda ningún secreto: sin la llave no sirve, y nadie puede sacarla de ella.'**
+  String get onSecurityKeyNote;
+
   /// No description provided for @onSend.
   ///
   /// In es, this message translates to:
@@ -5372,6 +5858,24 @@ abstract class AppLocalizations {
   /// **'Abrir otra cosa aquí…'**
   String get openOtherHere;
 
+  /// No description provided for @openRemote.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir'**
+  String get openRemote;
+
+  /// No description provided for @openRemoteFollowing.
+  ///
+  /// In es, this message translates to:
+  /// **'{name} abierto aquí: se sube al servidor cada vez que lo guardes.'**
+  String openRemoteFollowing(String name);
+
+  /// No description provided for @openRemoteWith.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir con…'**
+  String get openRemoteWith;
+
   /// No description provided for @openSection.
   ///
   /// In es, this message translates to:
@@ -5401,6 +5905,48 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Túneles abiertos'**
   String get openTunnels;
+
+  /// No description provided for @openRunsAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejecutarlo'**
+  String get openRunsAction;
+
+  /// No description provided for @openRunsBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Este ordenador ejecuta los archivos .{type} al abrirlos, y lo que hace este lo decidió quien lo puso en el servidor. Ábrelo solo si te fías; para leerlo, usa «Abrir con…».'**
+  String openRunsBody(String type);
+
+  /// No description provided for @openRunsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'«{name}» no se abre: se ejecuta'**
+  String openRunsTitle(String name);
+
+  /// No description provided for @openWithHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Un comando, como code, gedit o kate; se le pasa el archivo al final.'**
+  String get openWithHelp;
+
+  /// No description provided for @openWithHelpMac.
+  ///
+  /// In es, this message translates to:
+  /// **'El nombre de una app (TextEdit, Visual Studio Code) o un comando (/usr/local/bin/subl).'**
+  String get openWithHelpMac;
+
+  /// No description provided for @openWithProgram.
+  ///
+  /// In es, this message translates to:
+  /// **'Programa'**
+  String get openWithProgram;
+
+  /// No description provided for @openWithTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir «{name}» con'**
+  String openWithTitle(String name);
 
   /// No description provided for @optionAltBoth.
   ///
@@ -5575,6 +6121,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'¿Qué abres en este panel?'**
   String get paneWhat;
+
+  /// No description provided for @parityEven.
+  ///
+  /// In es, this message translates to:
+  /// **'Par'**
+  String get parityEven;
+
+  /// No description provided for @parityNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguna'**
+  String get parityNone;
+
+  /// No description provided for @parityOdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Impar'**
+  String get parityOdd;
 
   /// No description provided for @partNote.
   ///
@@ -5792,6 +6356,12 @@ abstract class AppLocalizations {
   /// **'Elige una identidad o «Ninguna».'**
   String get pickIdentity;
 
+  /// No description provided for @pinField.
+  ///
+  /// In es, this message translates to:
+  /// **'PIN'**
+  String get pinField;
+
   /// No description provided for @pinSidebar.
   ///
   /// In es, this message translates to:
@@ -5989,6 +6559,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Protección'**
   String get protection;
+
+  /// No description provided for @protocol.
+  ///
+  /// In es, this message translates to:
+  /// **'Protocolo'**
+  String get protocol;
+
+  /// No description provided for @protocolSerial.
+  ///
+  /// In es, this message translates to:
+  /// **'Puerto serie'**
+  String get protocolSerial;
 
   /// No description provided for @proxy.
   ///
@@ -6314,6 +6896,48 @@ abstract class AppLocalizations {
   /// **'Recargar'**
   String get reload;
 
+  /// No description provided for @remoteChangedBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Alguien lo cambió desde que lo abriste aquí. Si subes tu versión, lo que cambiaron se pierde; si cancelas, tu copia sigue aquí y se vuelve a preguntar al guardar.'**
+  String get remoteChangedBody;
+
+  /// No description provided for @remoteChangedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'«{name}» cambió en el servidor'**
+  String remoteChangedTitle(String name);
+
+  /// No description provided for @remoteChangedUpload.
+  ///
+  /// In es, this message translates to:
+  /// **'Subir el mío encima'**
+  String get remoteChangedUpload;
+
+  /// No description provided for @remoteEditFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'{name}: no se pudo subir (más en la cola)'**
+  String remoteEditFailed(String name);
+
+  /// No description provided for @remoteEditStop.
+  ///
+  /// In es, this message translates to:
+  /// **'Dejar de subirlo'**
+  String get remoteEditStop;
+
+  /// No description provided for @remoteEditUploaded.
+  ///
+  /// In es, this message translates to:
+  /// **'{name}: subido a las {time}'**
+  String remoteEditUploaded(String name, String time);
+
+  /// No description provided for @remoteEditWatching.
+  ///
+  /// In es, this message translates to:
+  /// **'{name}: se sube al guardarlo'**
+  String remoteEditWatching(String name);
+
   /// No description provided for @remoteSentence.
   ///
   /// In es, this message translates to:
@@ -6590,6 +7214,18 @@ abstract class AppLocalizations {
   /// **'Revisar la clave…'**
   String get reviewKey;
 
+  /// No description provided for @rightClickPaste.
+  ///
+  /// In es, this message translates to:
+  /// **'Pegar con clic derecho'**
+  String get rightClickPaste;
+
+  /// No description provided for @rightClickPasteHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Como en PuTTY. El menú del terminal sigue con Ctrl y clic derecho.'**
+  String get rightClickPasteHelp;
+
   /// No description provided for @route.
   ///
   /// In es, this message translates to:
@@ -6625,6 +7261,54 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ejecutar en…'**
   String get runIn;
+
+  /// No description provided for @runOnHostsAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejecutar en {n, plural, =0{ningún host} =1{1 host} other{{n} hosts}}'**
+  String runOnHostsAction(int n);
+
+  /// No description provided for @runOnHostsAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Todos los mostrados'**
+  String get runOnHostsAll;
+
+  /// No description provided for @runOnHostsFilter.
+  ///
+  /// In es, this message translates to:
+  /// **'Filtrar por nombre, dirección, grupo o etiqueta'**
+  String get runOnHostsFilter;
+
+  /// No description provided for @runOnHostsMax.
+  ///
+  /// In es, this message translates to:
+  /// **'Hasta {max} a la vez.'**
+  String runOnHostsMax(int max);
+
+  /// No description provided for @runOnHostsMenu.
+  ///
+  /// In es, this message translates to:
+  /// **'En varios hosts…'**
+  String get runOnHostsMenu;
+
+  /// No description provided for @runOnHostsNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguno'**
+  String get runOnHostsNone;
+
+  /// No description provided for @runOnHostsNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Cada host en su panel de una pestaña nueva, donde se ve su resultado. Los que ya están conectados no vuelven a iniciar sesión.'**
+  String get runOnHostsNote;
+
+  /// No description provided for @runOnHostsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'«{snippet}» en varios hosts'**
+  String runOnHostsTitle(String snippet);
 
   /// No description provided for @runSnippetBroadcast.
   ///
@@ -6830,6 +7514,30 @@ abstract class AppLocalizations {
   /// **'Sistema'**
   String get sectionSystem;
 
+  /// No description provided for @securityKeyPill.
+  ///
+  /// In es, this message translates to:
+  /// **'Llave de seguridad'**
+  String get securityKeyPill;
+
+  /// No description provided for @securityKeyPinBody.
+  ///
+  /// In es, this message translates to:
+  /// **'La clave {key} pide el PIN de su llave.'**
+  String securityKeyPinBody(String key);
+
+  /// No description provided for @securityKeyPinOptional.
+  ///
+  /// In es, this message translates to:
+  /// **'PIN de la llave (si tiene)'**
+  String get securityKeyPinOptional;
+
+  /// No description provided for @securityKeyPinTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'PIN de la llave de seguridad'**
+  String get securityKeyPinTitle;
+
   /// No description provided for @seenFrom.
   ///
   /// In es, this message translates to:
@@ -6889,6 +7597,120 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Separar los paneles en pestañas'**
   String get separatePanes;
+
+  /// No description provided for @serialBaud.
+  ///
+  /// In es, this message translates to:
+  /// **'Velocidad'**
+  String get serialBaud;
+
+  /// No description provided for @serialBaudMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Pon una velocidad.'**
+  String get serialBaudMissing;
+
+  /// No description provided for @serialBaudUnit.
+  ///
+  /// In es, this message translates to:
+  /// **'{baud} baudios'**
+  String serialBaudUnit(int baud);
+
+  /// No description provided for @serialDataBits.
+  ///
+  /// In es, this message translates to:
+  /// **'Bits de datos'**
+  String get serialDataBits;
+
+  /// No description provided for @serialFlow.
+  ///
+  /// In es, this message translates to:
+  /// **'Control de flujo'**
+  String get serialFlow;
+
+  /// No description provided for @serialLine.
+  ///
+  /// In es, this message translates to:
+  /// **'Velocidad y formato'**
+  String get serialLine;
+
+  /// No description provided for @serialOpenEllipsis.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir un puerto serie…'**
+  String get serialOpenEllipsis;
+
+  /// No description provided for @serialOpenNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Para la consola de un router o un switch, con su cable: casi siempre 9600 baudios, 8N1.'**
+  String get serialOpenNote;
+
+  /// No description provided for @serialOpenTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir un puerto serie'**
+  String get serialOpenTitle;
+
+  /// No description provided for @serialParity.
+  ///
+  /// In es, this message translates to:
+  /// **'Paridad'**
+  String get serialParity;
+
+  /// No description provided for @serialPortMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige el puerto.'**
+  String get serialPortMissing;
+
+  /// No description provided for @serialPortsAgain.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar otra vez'**
+  String get serialPortsAgain;
+
+  /// No description provided for @serialPortsNone.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay ningún puerto serie conectado.'**
+  String get serialPortsNone;
+
+  /// No description provided for @serialPortsTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Los puertos de este equipo'**
+  String get serialPortsTooltip;
+
+  /// No description provided for @serialSendBreak.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar un break por el puerto serie'**
+  String get serialSendBreak;
+
+  /// No description provided for @serialShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Serie'**
+  String get serialShort;
+
+  /// No description provided for @serialStopBits.
+  ///
+  /// In es, this message translates to:
+  /// **'Bits de parada'**
+  String get serialStopBits;
+
+  /// No description provided for @serialSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'{baud} baudios, {frame}, {flow}'**
+  String serialSummary(int baud, String frame, String flow);
+
+  /// No description provided for @serialSummaryNoFlow.
+  ///
+  /// In es, this message translates to:
+  /// **'sin control de flujo'**
+  String get serialSummaryNoFlow;
 
   /// No description provided for @sessionClosed.
   ///
@@ -6968,11 +7790,29 @@ abstract class AppLocalizations {
   /// **'General'**
   String get settingsGeneral;
 
+  /// No description provided for @settingsHighlight.
+  ///
+  /// In es, this message translates to:
+  /// **'Resaltado'**
+  String get settingsHighlight;
+
   /// No description provided for @settingsLogs.
   ///
   /// In es, this message translates to:
   /// **'Registros'**
   String get settingsLogs;
+
+  /// No description provided for @settingsMouse.
+  ///
+  /// In es, this message translates to:
+  /// **'Ratón'**
+  String get settingsMouse;
+
+  /// No description provided for @settingsShortcuts.
+  ///
+  /// In es, this message translates to:
+  /// **'Atajos'**
+  String get settingsShortcuts;
 
   /// No description provided for @settingsTerminal.
   ///
@@ -7105,6 +7945,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Pestaña anterior'**
   String get shortcutPreviousTab;
+
+  /// No description provided for @shortcutProfile.
+  ///
+  /// In es, this message translates to:
+  /// **'Atajos de'**
+  String get shortcutProfile;
+
+  /// No description provided for @shortcutProfileHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Los de Mac van con ⌘ (en Windows y Linux, la tecla del sistema); los de PC, con Ctrl+Mayús.'**
+  String get shortcutProfileHelp;
+
+  /// No description provided for @shortcutProfileMac.
+  ///
+  /// In es, this message translates to:
+  /// **'Mac'**
+  String get shortcutProfileMac;
+
+  /// No description provided for @shortcutProfilePc.
+  ///
+  /// In es, this message translates to:
+  /// **'PC'**
+  String get shortcutProfilePc;
+
+  /// No description provided for @shortcutProfileSystem.
+  ///
+  /// In es, this message translates to:
+  /// **'Este equipo'**
+  String get shortcutProfileSystem;
 
   /// No description provided for @shortcutSearch.
   ///
@@ -7286,6 +8156,66 @@ abstract class AppLocalizations {
   /// **'desde hace {seconds} s'**
   String sinceSeconds(int seconds);
 
+  /// No description provided for @skLocked.
+  ///
+  /// In es, this message translates to:
+  /// **'la llave está bloqueada por demasiados PIN incorrectos: desconéctala y vuelve a conectarla'**
+  String get skLocked;
+
+  /// No description provided for @skNoAccess.
+  ///
+  /// In es, this message translates to:
+  /// **'Windows no deja a OpenWard hablar con la llave: usa el agente de OpenSSH de Windows (ssh-add) para las llaves de seguridad'**
+  String get skNoAccess;
+
+  /// No description provided for @skNoAccessLinux.
+  ///
+  /// In es, this message translates to:
+  /// **'Linux no deja a OpenWard abrir la llave: falta la regla de udev que da acceso a /dev/hidraw* (la instalan los paquetes libfido2 o u2f-udev)'**
+  String get skNoAccessLinux;
+
+  /// No description provided for @skNoKey.
+  ///
+  /// In es, this message translates to:
+  /// **'no hay ninguna llave de seguridad conectada'**
+  String get skNoKey;
+
+  /// No description provided for @skNotThisKey.
+  ///
+  /// In es, this message translates to:
+  /// **'la llave conectada no es la de esta clave'**
+  String get skNotThisKey;
+
+  /// No description provided for @skNotTouched.
+  ///
+  /// In es, this message translates to:
+  /// **'no se tocó la llave a tiempo'**
+  String get skNotTouched;
+
+  /// No description provided for @skOther.
+  ///
+  /// In es, this message translates to:
+  /// **'la llave de seguridad ha fallado (más en «Detalles»)'**
+  String get skOther;
+
+  /// No description provided for @skPinRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'la llave pide su PIN'**
+  String get skPinRequired;
+
+  /// No description provided for @skTooManyKeys.
+  ///
+  /// In es, this message translates to:
+  /// **'hay más de una llave de seguridad conectada: deja solo la de esta clave'**
+  String get skTooManyKeys;
+
+  /// No description provided for @skWrongPin.
+  ///
+  /// In es, this message translates to:
+  /// **'el PIN no es el de la llave'**
+  String get skWrongPin;
+
   /// No description provided for @skipGuide.
   ///
   /// In es, this message translates to:
@@ -7418,6 +8348,12 @@ abstract class AppLocalizations {
   /// **'Abriendo el shell en {label}…'**
   String stageOpeningShell(String label);
 
+  /// No description provided for @stageTouchKey.
+  ///
+  /// In es, this message translates to:
+  /// **'Toca la llave de seguridad ({key})…'**
+  String stageTouchKey(String key);
+
   /// No description provided for @start.
   ///
   /// In es, this message translates to:
@@ -7520,6 +8456,30 @@ abstract class AppLocalizations {
   /// **'Mostrar la carpeta de datos'**
   String get startupShowFolder;
 
+  /// No description provided for @startupSnippet.
+  ///
+  /// In es, this message translates to:
+  /// **'Snippet al conectar'**
+  String get startupSnippet;
+
+  /// No description provided for @startupSnippetGone.
+  ///
+  /// In es, this message translates to:
+  /// **'Un snippet que ya no está, o que ahora pregunta algo'**
+  String get startupSnippetGone;
+
+  /// No description provided for @startupSnippetNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguno'**
+  String get startupSnippetNone;
+
+  /// No description provided for @startupSnippetNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Se escribe en cada shell nuevo en cuanto está listo: al conectar y al reconectar, no al volver a una sesión persistente tal como estaba. Solo los que no preguntan nada.'**
+  String get startupSnippetNote;
+
   /// No description provided for @state.
   ///
   /// In es, this message translates to:
@@ -7562,6 +8522,12 @@ abstract class AppLocalizations {
   /// **'Sin respuesta · comprobando…'**
   String get statusStalled;
 
+  /// No description provided for @statusUnencrypted.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin cifrar'**
+  String get statusUnencrypted;
+
   /// No description provided for @stepAppearance.
   ///
   /// In es, this message translates to:
@@ -7603,6 +8569,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Listo'**
   String get stepReady;
+
+  /// No description provided for @stepTouchKey.
+  ///
+  /// In es, this message translates to:
+  /// **'toca la llave de seguridad…'**
+  String get stepTouchKey;
 
   /// No description provided for @stopAction.
   ///
@@ -7700,6 +8672,18 @@ abstract class AppLocalizations {
   /// **'Etiquetas'**
   String get tags;
 
+  /// No description provided for @telnetUnencrypted.
+  ///
+  /// In es, this message translates to:
+  /// **'Telnet, sin cifrar'**
+  String get telnetUnencrypted;
+
+  /// No description provided for @telnetUnencryptedNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Telnet no cifra nada: lo que escribes, contraseñas incluidas, viaja tal cual por la red. Para los equipos que no admiten SSH.'**
+  String get telnetUnencryptedNote;
+
   /// No description provided for @terminalAlwaysDark.
   ///
   /// In es, this message translates to:
@@ -7730,6 +8714,18 @@ abstract class AppLocalizations {
   /// **'Fuente del terminal'**
   String get terminalFont;
 
+  /// No description provided for @terminalKeysFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Las teclas, para el terminal'**
+  String get terminalKeysFirst;
+
+  /// No description provided for @terminalKeysFirstHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'En un terminal, Ctrl+Tab, Ctrl+=, Ctrl+−, Ctrl+0, Ctrl+, y Ctrl+Alt+número llegan al programa. Los atajos con Ctrl+Mayús siguen siendo de la ventana.'**
+  String get terminalKeysFirstHelp;
+
   /// No description provided for @terminalMenuHint.
   ///
   /// In es, this message translates to:
@@ -7753,6 +8749,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Esquema propio'**
   String get terminalScheme;
+
+  /// No description provided for @terminalSchemeApp.
+  ///
+  /// In es, this message translates to:
+  /// **'Los del tema de la app'**
+  String get terminalSchemeApp;
+
+  /// No description provided for @terminalSchemeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Colores del terminal'**
+  String get terminalSchemeLabel;
+
+  /// No description provided for @terminalSchemeNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Otros colores para este host, sea cual sea el tema: para reconocer de un vistazo, por ejemplo, los de producción.'**
+  String get terminalSchemeNote;
 
   /// No description provided for @terminalShortcuts.
   ///
@@ -7963,6 +8977,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Plegar o abrir la barra lateral'**
   String get toggleSidebar;
+
+  /// No description provided for @touchKeyNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Toca la llave de seguridad…'**
+  String get touchKeyNow;
 
   /// No description provided for @transfers.
   ///
@@ -8348,6 +9368,12 @@ abstract class AppLocalizations {
   /// **'Verificación'**
   String get verificationTitle;
 
+  /// No description provided for @verifyRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Pedir el PIN cada vez que se use'**
+  String get verifyRequired;
+
   /// No description provided for @via.
   ///
   /// In es, this message translates to:
@@ -8365,6 +9391,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Espera tu respuesta'**
   String get waitingForYou;
+
+  /// No description provided for @warnAgentForward.
+  ///
+  /// In es, this message translates to:
+  /// **'{host} reenviaba el agente SSH, con el que ese servidor puede usar tus claves mientras estás conectado; no se ha traído, para no hacerlo porque lo diga el archivo de otro programa.'**
+  String warnAgentForward(String host);
 
   /// No description provided for @warnBadValue.
   ///
@@ -8419,6 +9451,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{host} usaba Mosh: se conectará por SSH.'**
   String warnMosh(String host);
+
+  /// No description provided for @warnOpenTunnel.
+  ///
+  /// In es, this message translates to:
+  /// **'El túnel {tunnel} escuchaba en {address}, abierto a otros equipos; llega cerrado a la red, para no abrirlo porque lo diga el archivo de otro programa. Si confías en él, ábrelo en «Quién puede usarlo».'**
+  String warnOpenTunnel(String tunnel, String address);
 
   /// No description provided for @warnPartlyUnreadable.
   ///
@@ -8593,6 +9631,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Contraseña incorrecta.'**
   String get wrongPassword;
+
+  /// No description provided for @wrongPin.
+  ///
+  /// In es, this message translates to:
+  /// **'El PIN no es el de la llave.'**
+  String get wrongPin;
 
   /// No description provided for @yes.
   ///

@@ -20,6 +20,7 @@ import 'vault.dart';
 import 'workspaces.dart';
 
 // These functions are ignored because they are not marked as `pub`: `apply_group`, `apply_host`, `for_tests`, `host_spec`, `next_favorite`, `warning`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `eq`, `fmt`
 
 /// The core's version, for «Acerca de» and problem reports.
 String coreVersion() => RustLib.instance.api.crateApiAppCoreVersion();
@@ -40,6 +41,10 @@ abstract class OpenWard implements RustOpaqueInterface {
     String? new_,
   });
 
+  /// The character sets a host can be set to, UTF-8 first, as the
+  /// settings name them.
+  List<String> charsets();
+
   void clearFinishedTransfers();
 
   /// Closes it (and forgets an error it had).
@@ -54,12 +59,20 @@ abstract class OpenWard implements RustOpaqueInterface {
   });
 
   /// As [`OpenWard::connect`], to an address that is not saved, with the
-  /// default settings.
+  /// default settings: by SSH or Telnet.
   Stream<SessionEvent> connectAddress({
     required TerminalSession session,
     required String address,
     String? user,
     int? port,
+    required ProtocolKind protocol,
+  });
+
+  /// As [`OpenWard::connect`], over the connection to the host that is
+  /// up already, if one is: no logging in again.
+  Stream<SessionEvent> connectReusing({
+    required TerminalSession session,
+    required String hostId,
   });
 
   /// Connects a browser to a saved host, over a terminal's connection to
@@ -123,6 +136,16 @@ abstract class OpenWard implements RustOpaqueInterface {
     required SshKeyType kind,
     required String comment,
     String? passphrase,
+  });
+
+  /// Makes `~/.ssh/<name>` on the security key plugged in: it waits
+  /// for the touch. `verify`: its PIN at every use (`verify-required`).
+  Future<SshKeyResult> generateSecurityKey({
+    required String name,
+    required SecurityKeyType kind,
+    required String comment,
+    String? pin,
+    required bool verify,
   });
 
   GroupDetail group({required String id});
@@ -248,6 +271,15 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// A player for a recording, at its start.
   Future<LogPlayer> openLog({required String id, required int scrollback});
 
+  /// Opens the serial port at `path` in `session`. In Dart this returns
+  /// the stream of its events, as for a host: connected, or closed with
+  /// why.
+  Stream<SessionEvent> openSerial({
+    required TerminalSession session,
+    required String path,
+    required SerialLineSpec line,
+  });
+
   /// Opens a tunnel, connecting to its host if needed. The stream is that
   /// connection's events (questions, and `connected` once it listens).
   Stream<SessionEvent> openTunnel({required String id});
@@ -338,6 +370,9 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// sessions first; each one with matches comes on the stream as it is
   /// found, and the stream ends with the search.
   Stream<LogFound> searchLogs({required String query});
+
+  /// The serial ports there are now, USB ones (cables, adapters) first.
+  Future<List<SerialPortView>> serialPorts();
 
   /// Makes a host a favorite (the last one) or not.
   Future<void> setFavorite({required String id, required bool favorite});
@@ -474,4 +509,35 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   /// Every workspace, by name.
   List<WorkspaceView> workspaces();
+}
+
+/// A serial port of this computer.
+class SerialPortView {
+  /// What to open: `/dev/cu.usbserial-1410`, `/dev/ttyUSB0`, `COM3`.
+  final String path;
+
+  /// What it is, when it says ("FT232R USB UART (FTDI)"); empty
+  /// otherwise.
+  final String description;
+
+  /// A cable or an adapter on USB.
+  final bool usb;
+
+  const SerialPortView({
+    required this.path,
+    required this.description,
+    required this.usb,
+  });
+
+  @override
+  int get hashCode => path.hashCode ^ description.hashCode ^ usb.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SerialPortView &&
+          runtimeType == other.runtimeType &&
+          path == other.path &&
+          description == other.description &&
+          usb == other.usb;
 }

@@ -1,7 +1,8 @@
 use ciborium::Value;
 use openward_proto::{
     Agent, Environment, EnvironmentMark, ForwardKind, Group, Host, HostKeyPolicy, Identity, Jump,
-    KnownHost, PortForward, Route, Settings, System, SystemSource, UseIdentity,
+    KnownHost, PortForward, Protocol, Route, SerialLine, Settings, System, SystemSource,
+    UseIdentity,
 };
 use rusqlite::params;
 
@@ -140,6 +141,59 @@ fn settings_inherit_from_groups_with_their_origin() {
     assert_eq!(top.settings.port, Some(22));
     assert_eq!(top.origin("port"), Some(Origin::Default));
     assert_eq!(top.origin("user"), None);
+}
+
+/// A group of switches over Telnet: its hosts go by Telnet, on port 23
+/// unless something other than the defaults sets one.
+#[test]
+fn telnet_is_inherited_and_brings_its_port() {
+    let mut v = Vault::open_in_memory().unwrap();
+    let switches = v
+        .create(group(
+            "switches",
+            None,
+            Settings {
+                protocol: Some(Protocol::Telnet),
+                ..Settings::default()
+            },
+        ))
+        .unwrap();
+    let h = v
+        .create(host("sw-1", Some(switches), Settings::default()))
+        .unwrap();
+    let e = v.effective(h).unwrap();
+    assert_eq!(e.settings.protocol, Some(Protocol::Telnet));
+    assert_eq!(e.origin("protocol"), Some(Origin::Group(switches)));
+    assert_eq!(e.settings.port, Some(TELNET_PORT));
+    assert_eq!(e.origin("port"), Some(Origin::Default));
+    assert_eq!(e.settings.serial, Some(SerialLine::default()));
+    assert_eq!(
+        v.inherited(Some(switches), None).unwrap().settings.port,
+        Some(TELNET_PORT)
+    );
+
+    let other = v
+        .create(host(
+            "sw-2",
+            Some(switches),
+            Settings {
+                port: Some(2323),
+                ..Settings::default()
+            },
+        ))
+        .unwrap();
+    assert_eq!(v.effective(other).unwrap().settings.port, Some(2323));
+    let ssh = v
+        .create(host(
+            "web",
+            Some(switches),
+            Settings {
+                protocol: Some(Protocol::Ssh),
+                ..Settings::default()
+            },
+        ))
+        .unwrap();
+    assert_eq!(v.effective(ssh).unwrap().settings.port, Some(22));
 }
 
 /// The environment is a setting like the others: set on a group, the

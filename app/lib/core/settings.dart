@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../terminal/highlight.dart';
+import '../terminal/keys.dart' as keys;
 import '../terminal/schemes.dart';
 import 'json_file.dart';
 
@@ -19,6 +21,10 @@ enum MotionChoice { system, reduce, full }
 
 /// macOS: which Option keys act as Alt.
 enum OptionAltChoice { off, both, left, right }
+
+/// Which shortcuts the window answers to: with ⌘, a Mac's, or with
+/// Ctrl+Shift, a PC's; the system's own unless chosen.
+enum ShortcutProfile { system, mac, pc }
 
 /// The cursor's shape when the program does not choose one.
 enum CursorChoice { block, bar, underline }
@@ -160,6 +166,14 @@ class Settings {
     this.recentConnections = true,
     this.readOsRelease = false,
     this.sessionLog = false,
+    this.copyOnSelect = false,
+    this.rightClickPaste = false,
+    this.highlight = true,
+    this.highlightRules = defaultHighlights,
+    this.shortcutProfile = ShortcutProfile.system,
+    this.terminalKeysFirst = false,
+    this.autocomplete = true,
+    this.openWith = '',
   });
 
   /// Terminal font size, in logical pixels.
@@ -235,6 +249,35 @@ class Settings {
   /// for addresses typed by hand; on this device only.
   final bool sessionLog;
 
+  /// Text selected with the mouse goes to the clipboard at once.
+  final bool copyOnSelect;
+
+  /// A right click pastes; with Ctrl, the terminal's menu.
+  final bool rightClickPaste;
+
+  /// Words and addresses in color ([highlightRules]).
+  final bool highlight;
+  final List<HighlightRule> highlightRules;
+  final ShortcutProfile shortcutProfile;
+
+  /// In a terminal, the program has the keys the window would otherwise
+  /// take without Ctrl+Shift (Ctrl+Tab, Ctrl+=…): PC shortcuts only.
+  final bool terminalKeysFirst;
+
+  /// The rest of a command, suggested dimmed as it is typed (with the
+  /// command history on).
+  final bool autocomplete;
+
+  /// The program remote files were last opened with («Abrir con…»).
+  final String openWith;
+
+  /// Whether shortcuts go with ⌘.
+  bool get macShortcuts => switch (shortcutProfile) {
+    ShortcutProfile.system => keys.isApple,
+    ShortcutProfile.mac => true,
+    ShortcutProfile.pc => false,
+  };
+
   static const defaultSidebarWidth = 272.0;
   static const minSidebarWidth = 220.0;
   static const maxSidebarWidth = 420.0;
@@ -282,6 +325,14 @@ class Settings {
     bool? recentConnections,
     bool? readOsRelease,
     bool? sessionLog,
+    bool? copyOnSelect,
+    bool? rightClickPaste,
+    bool? highlight,
+    List<HighlightRule>? highlightRules,
+    ShortcutProfile? shortcutProfile,
+    bool? terminalKeysFirst,
+    bool? autocomplete,
+    String? openWith,
   }) => Settings(
     fontSize: fontSize ?? this.fontSize,
     theme: theme ?? this.theme,
@@ -310,6 +361,14 @@ class Settings {
     recentConnections: recentConnections ?? this.recentConnections,
     readOsRelease: readOsRelease ?? this.readOsRelease,
     sessionLog: sessionLog ?? this.sessionLog,
+    copyOnSelect: copyOnSelect ?? this.copyOnSelect,
+    rightClickPaste: rightClickPaste ?? this.rightClickPaste,
+    highlight: highlight ?? this.highlight,
+    highlightRules: highlightRules ?? this.highlightRules,
+    shortcutProfile: shortcutProfile ?? this.shortcutProfile,
+    terminalKeysFirst: terminalKeysFirst ?? this.terminalKeysFirst,
+    autocomplete: autocomplete ?? this.autocomplete,
+    openWith: openWith ?? this.openWith,
   );
 
   /// The same settings with one theme's layers changed (or reset).
@@ -360,6 +419,15 @@ class Settings {
     'recent_connections': recentConnections,
     'read_os_release': readOsRelease,
     'session_log': sessionLog,
+    'copy_on_select': copyOnSelect,
+    'right_click_paste': rightClickPaste,
+    'highlight': highlight,
+    if (!listEquals(highlightRules, defaultHighlights))
+      'highlight_rules': [for (final r in highlightRules) r.toJson()],
+    'shortcut_profile': shortcutProfile.name,
+    'terminal_keys_first': terminalKeysFirst,
+    'autocomplete': autocomplete,
+    if (openWith.isNotEmpty) 'open_with': openWith,
   };
 
   /// Unknown or broken values fall back to the defaults, one by one.
@@ -379,6 +447,7 @@ class Settings {
     final scroll = json['scrollback'];
     final overrides = json['overrides'];
     final schemes = json['terminal_schemes'];
+    final rules = json['highlight_rules'];
     return Settings(
       fontSize: number('font_size', 8, 40, d.fontSize),
       theme: pick(ThemeChoice.values, 'theme', d.theme),
@@ -430,6 +499,20 @@ class Settings {
       recentConnections: flag('recent_connections', d.recentConnections),
       readOsRelease: flag('read_os_release', d.readOsRelease),
       sessionLog: flag('session_log', d.sessionLog),
+      copyOnSelect: flag('copy_on_select', d.copyOnSelect),
+      rightClickPaste: flag('right_click_paste', d.rightClickPaste),
+      highlight: flag('highlight', d.highlight),
+      highlightRules: rules is List
+          ? [for (final r in rules) ?HighlightRule.fromJson(r)]
+          : d.highlightRules,
+      shortcutProfile: pick(
+        ShortcutProfile.values,
+        'shortcut_profile',
+        d.shortcutProfile,
+      ),
+      terminalKeysFirst: flag('terminal_keys_first', d.terminalKeysFirst),
+      autocomplete: flag('autocomplete', d.autocomplete),
+      openWith: text('open_with', d.openWith),
     );
   }
 
@@ -453,17 +536,26 @@ class SettingsNotifier extends Notifier<Settings> {
   Settings build() {
     try {
       final json = readJsonFile(ref.read(settingsFileProvider));
-      if (json is Map<String, Object?>) return Settings.fromJson(json);
+      if (json is Map<String, Object?>) {
+        return _keys(Settings.fromJson(json));
+      }
     } catch (_) {
       // Not ours to read: the defaults.
     }
-    return const Settings();
+    return _keys(const Settings());
+  }
+
+  /// The keyboard code reads these where no provider reaches.
+  static Settings _keys(Settings s) {
+    keys.macShortcuts = s.macShortcuts;
+    keys.terminalKeysFirst = s.terminalKeysFirst;
+    return s;
   }
 
   void update(Settings Function(Settings) change) {
     final next = change(state);
     if (next == state) return;
-    state = next;
+    state = _keys(next);
     final file = ref.read(settingsFileProvider);
     try {
       writeFileAtomically(

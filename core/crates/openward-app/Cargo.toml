@@ -10,13 +10,18 @@ publish.workspace = true
 
 [dependencies]
 openward-ghostty = { path = "../openward-ghostty" }
+openward-fido = { path = "../openward-fido" }
 openward-import = { path = "../openward-import" }
 openward-pty = { path = "../openward-pty" }
+openward-serial = { path = "../openward-serial" }
 openward-sftp = { path = "../openward-sftp" }
 openward-ssh = { path = "../openward-ssh" }
+openward-telnet = { path = "../openward-telnet" }
 openward-term = { path = "../openward-term" }
 openward-vault = { path = "../openward-vault" }
 anyhow = "1"
+# A host's character set when it is not UTF-8 (Latin-1, Shift-JIS…).
+encoding_rs = "0.8"
 # Session logs: gzip for the recordings, JSON for asciicast and their notes.
 flate2 = "1"
 serde = { version = "1", features = ["derive"] }
@@ -41,6 +46,10 @@ openward-ssh = { path = "../openward-ssh", features = ["test-auth"] }
 # Paused time for the connection watcher's tests; agents of the tests' own.
 tokio = { version = "1", features = ["test-util", "net"] }
 futures = "0.3"
+# A security key in software, for logging in with an sk key.
+openward-fido = { path = "../openward-fido", features = ["soft"] }
+# A pseudo-terminal pair plays a serial cable.
+serialport = { version = "=4.10.1", default-features = false }
 
 [lints]
 workspace = true

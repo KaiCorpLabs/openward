@@ -58,7 +58,7 @@ class SidebarRail extends ConsumerWidget {
           _RailButton(
             key: const ValueKey('rail.search'),
             tooltip:
-                '${l.search} (${isApple ? '⌘K' : '${l.ctrlShiftPrefix}K'})',
+                '${l.search} (${macShortcuts ? '⌘K' : '${l.ctrlShiftPrefix}K'})',
             onPressed: onSearch,
             child: Icon(Icons.search, size: 18, color: c.textMuted),
           ),

@@ -18,6 +18,9 @@ HostView _host(String id, String label, {int? favorite}) => HostView(
   tags: const [],
   user: 'deploy',
   port: 22,
+  protocol: ProtocolKind.ssh,
+  terminalScheme: '',
+  startupSnippet: '',
   favorite: favorite,
 );
 

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../identities/identities.dart' show certificatePill;
 import '../l10n/l10n.dart';
 import '../src/rust/api/keychain.dart';
 import '../ui/announcer.dart';
@@ -193,7 +194,15 @@ class _KeysPageState extends ConsumerState<KeysPage> {
             if (k.certificate)
               Padding(
                 padding: const EdgeInsets.only(top: OwSpace.s1),
-                child: Pill(l.withCertificate, tone: PillTone.accent),
+                child: certificatePill(
+                  l,
+                  expired:
+                      k.certificateUntilMs != null &&
+                      k.certificateUntilMs! <=
+                          DateTime.now().millisecondsSinceEpoch,
+                  untilMs: k.certificateUntilMs,
+                  plain: l.withCertificate,
+                ),
               ),
           ],
         ),
@@ -208,24 +217,34 @@ class _KeysPageState extends ConsumerState<KeysPage> {
             ),
           ],
         ),
-        Row(
-          children: [
-            // Open and in amber without a passphrase: a closed lock would
-            // say the opposite.
-            Icon(
-              k.encrypted ? Icons.lock_outline : Icons.lock_open,
-              size: 14,
-              color: k.encrypted ? c.accentText : c.warn,
-            ),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                k.encrypted ? l.withPassphrase : l.withoutPassphrase,
-                style: TextStyle(color: k.encrypted ? c.text : c.warn),
+        if (k.securityKey)
+          // Its secret is on the key: no passphrase to warn about.
+          Row(
+            children: [
+              Icon(Icons.usb, size: 14, color: c.accentText),
+              const SizedBox(width: 6),
+              Flexible(child: Text(l.securityKeyPill)),
+            ],
+          )
+        else
+          Row(
+            children: [
+              // Open and in amber without a passphrase: a closed lock would
+              // say the opposite.
+              Icon(
+                k.encrypted ? Icons.lock_outline : Icons.lock_open,
+                size: 14,
+                color: k.encrypted ? c.accentText : c.warn,
               ),
-            ),
-          ],
-        ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  k.encrypted ? l.withPassphrase : l.withoutPassphrase,
+                  style: TextStyle(color: k.encrypted ? c.text : c.warn),
+                ),
+              ),
+            ],
+          ),
         Text(
           k.usedBy.isEmpty ? '—' : k.usedBy.join(', '),
           overflow: TextOverflow.ellipsis,

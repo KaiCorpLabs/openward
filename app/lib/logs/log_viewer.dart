@@ -325,7 +325,7 @@ class _LogView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.ow.colors;
     final live = viewer.entry.end == LogEnd.open;
-    final find = isApple
+    final find = macShortcuts
         ? const SingleActivator(LogicalKeyboardKey.keyF, meta: true)
         : const SingleActivator(
             LogicalKeyboardKey.keyF,

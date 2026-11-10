@@ -12,6 +12,7 @@ import '../core/errors.dart';
 import '../core/providers.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/session.dart';
+import '../src/rust/api/vault.dart' show ProtocolKind;
 import '../terminal/controller.dart';
 import '../ui/confirm.dart';
 import '../ui/tokens.dart';
@@ -119,6 +120,7 @@ class _RouteSteps extends StatelessWidget {
               detail: switch (stage.stage) {
                 StageKind.connecting => l.stepConnecting,
                 StageKind.authenticating => l.stepAuthenticating,
+                StageKind.touchKey => l.stepTouchKey,
                 StageKind.openingShell => l.stepOpeningShell,
                 StageKind.openingSftp => l.stepOpeningSftp,
               },
@@ -594,7 +596,12 @@ Future<void> showConnectionInfo(BuildContext context, ConnectionController c) {
   final k = c.connected;
   if (k == null) return Future.value();
   final l = context.l10n;
-  final where = k.port == 22 ? k.host : '${k.host}:${k.port}';
+  final ssh = k.protocol == ProtocolKind.ssh;
+  final where = switch (k.protocol) {
+    ProtocolKind.ssh => k.port == 22 ? k.host : '${k.host}:${k.port}',
+    ProtocolKind.telnet => k.port == 23 ? k.host : '${k.host}:${k.port}',
+    ProtocolKind.serial => k.host,
+  };
   final trust = switch (k.trust) {
     TrustKind.known => l.trustKnown,
     TrustKind.new_ => l.trustNew,
@@ -633,41 +640,53 @@ Future<void> showConnectionInfo(BuildContext context, ConnectionController c) {
               row(l.destination, where),
               if (c.route.length > 1)
                 row(l.route, [l.routeStart, ...c.route].join(' → ')),
-              row(
-                l.keyExchange,
-                k.postQuantum ? l.postQuantumKex(k.kex) : k.kex,
-                mono: true,
-              ),
-              if (!k.postQuantum)
-                Padding(
-                  padding: const EdgeInsets.only(
-                    left: _labelColumn,
-                    bottom: OwSpace.s2,
-                  ),
-                  child: Text(
-                    l.noPostQuantumNote,
-                    style: TextStyle(
-                      fontSize: OwText.small,
-                      color: ow.colors.textMuted,
+              // Nothing of SSH's to tell: what it is, and that Telnet
+              // encrypts nothing.
+              if (!ssh)
+                row(
+                  l.protocol,
+                  k.protocol == ProtocolKind.telnet
+                      ? l.telnetUnencrypted
+                      : l.protocolSerial,
+                ),
+              if (ssh) ...[
+                row(
+                  l.keyExchange,
+                  k.postQuantum ? l.postQuantumKex(k.kex) : k.kex,
+                  mono: true,
+                ),
+                if (!k.postQuantum)
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      left: _labelColumn,
+                      bottom: OwSpace.s2,
+                    ),
+                    child: Text(
+                      l.noPostQuantumNote,
+                      style: TextStyle(
+                        fontSize: OwText.small,
+                        color: ow.colors.textMuted,
+                      ),
                     ),
                   ),
-                ),
-              row(l.cipher, k.cipher, mono: true),
-              row(l.hostKey, k.hostKeyAlgorithm, mono: true),
-              row(l.fingerprint, k.fingerprint, mono: true),
-              row(l.trust, trust),
+                row(l.cipher, k.cipher, mono: true),
+                row(l.hostKey, k.hostKeyAlgorithm, mono: true),
+                row(l.fingerprint, k.fingerprint, mono: true),
+                row(l.trust, trust),
+              ],
               row(l.time, l.milliseconds(k.connectMs.round())),
             ],
           ),
         ),
         actions: [
-          OutlinedButton(
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: k.fingerprint));
-              Navigator.pop(context);
-            },
-            child: Text(l.copyFingerprint),
-          ),
+          if (ssh)
+            OutlinedButton(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: k.fingerprint));
+                Navigator.pop(context);
+              },
+              child: Text(l.copyFingerprint),
+            ),
           FilledButton(
             onPressed: () => Navigator.pop(context),
             child: Text(l.close),

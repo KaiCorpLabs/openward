@@ -7,8 +7,18 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+import 'session.dart';
+
 // These functions are ignored because they are not marked as `pub`: `failure`, `result`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`
+
+/// Which kind of key to make on a security key.
+enum SecurityKeyType {
+  ed25519,
+
+  /// ECDSA on P-256: every FIDO2 key has it.
+  ecdsa,
+}
 
 class SshKey {
   /// As settings write it: `~/.ssh/…`.
@@ -18,8 +28,15 @@ class SshKey {
   final String? fingerprint;
   final String? comment;
   final bool encrypted;
+
+  /// A security key's (FIDO2): no passphrase needed, it asks for a touch.
+  final bool securityKey;
   final bool hasPublic;
   final bool certificate;
+
+  /// When the certificate runs out, in milliseconds since the epoch;
+  /// `None` if it never does (or there is none).
+  final PlatformInt64? certificateUntilMs;
 
   /// Hosts, groups and identities that use it.
   final List<String> usedBy;
@@ -31,8 +48,10 @@ class SshKey {
     this.fingerprint,
     this.comment,
     required this.encrypted,
+    required this.securityKey,
     required this.hasPublic,
     required this.certificate,
+    this.certificateUntilMs,
     required this.usedBy,
   });
 
@@ -44,8 +63,10 @@ class SshKey {
       fingerprint.hashCode ^
       comment.hashCode ^
       encrypted.hashCode ^
+      securityKey.hashCode ^
       hasPublic.hashCode ^
       certificate.hashCode ^
+      certificateUntilMs.hashCode ^
       usedBy.hashCode;
 
   @override
@@ -59,19 +80,26 @@ class SshKey {
           fingerprint == other.fingerprint &&
           comment == other.comment &&
           encrypted == other.encrypted &&
+          securityKey == other.securityKey &&
           hasPublic == other.hasPublic &&
           certificate == other.certificate &&
+          certificateUntilMs == other.certificateUntilMs &&
           usedBy == other.usedBy;
 }
 
 class SshKeyFailure {
   final SshKeyFailureKind kind;
   final String message;
+  final SecurityKeyKind? securityKey;
 
-  const SshKeyFailure({required this.kind, required this.message});
+  const SshKeyFailure({
+    required this.kind,
+    required this.message,
+    this.securityKey,
+  });
 
   @override
-  int get hashCode => kind.hashCode ^ message.hashCode;
+  int get hashCode => kind.hashCode ^ message.hashCode ^ securityKey.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -79,7 +107,8 @@ class SshKeyFailure {
       other is SshKeyFailure &&
           runtimeType == other.runtimeType &&
           kind == other.kind &&
-          message == other.message;
+          message == other.message &&
+          securityKey == other.securityKey;
 }
 
 enum SshKeyFailureKind {
@@ -92,6 +121,9 @@ enum SshKeyFailureKind {
 
   /// PEM and PuTTY keys change their passphrase with their program.
   notOpenSsh,
+
+  /// The security key did not make it (`security_key` says why).
+  securityKey,
 }
 
 /// A key made or brought in, or why not.

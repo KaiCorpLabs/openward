@@ -364,7 +364,7 @@ class _FirstRunState extends ConsumerState<FirstRun> {
   List<Widget> _readyStep(BuildContext context, ThemeData theme) {
     final l = context.l10n;
     final c = context.ow.colors;
-    final key = isApple ? '⌘' : l.ctrlShiftPrefix;
+    final key = macShortcuts ? '⌘' : l.ctrlShiftPrefix;
     Widget shortcut(String keys, String text) => Padding(
       padding: const EdgeInsets.symmetric(vertical: OwSpace.s3),
       child: Row(
@@ -388,7 +388,7 @@ class _FirstRunState extends ConsumerState<FirstRun> {
       shortcut('${key}T', l.shortcutLocal),
       shortcut('${key}K', l.shortcutSearch),
       shortcut('${key}N', l.shortcutNewHost),
-      shortcut(isApple ? '⌘,' : 'Ctrl+,', l.shortcutSettings),
+      shortcut(macShortcuts ? '⌘,' : 'Ctrl+,', l.shortcutSettings),
       const SizedBox(height: 24),
       Row(
         children: [

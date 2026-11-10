@@ -107,6 +107,101 @@ settings! {
     /// Record what comes out on the screen (never what is typed) in the
     /// session log, to watch it again, search it and export it.
     session_log: bool,
+    /// How the host is reached: SSH when not set.
+    protocol: Protocol,
+    /// How a serial port talks, for hosts reached over one (the host's
+    /// address is the port: `/dev/cu.usbserial-1410`, `COM3`).
+    serial: SerialLine,
+    /// The shell over Mosh: SSH starts `mosh-server`, and the installed
+    /// `mosh-client` carries the session over UDP, roaming across networks.
+    /// Without it, or without UDP, the session goes on over SSH.
+    mosh: bool,
+    /// What starts the server, when `mosh-server` is not on the server's
+    /// `PATH` (`/opt/homebrew/bin/mosh-server`).
+    mosh_server: String,
+    /// How the host writes text: `utf-8` unless it says otherwise
+    /// (`iso-8859-1`, `cp437`, `shift_jis`, as `encoding_rs` names them).
+    /// Old network gear and old systems need it; Mosh is always UTF-8.
+    encoding: String,
+    /// What the Backspace key sends.
+    backspace: Backspace,
+    /// The terminal's colors for this host: a scheme's name (the
+    /// gallery's or one imported). The app's own when none.
+    terminal_scheme: String,
+    /// A snippet (by id) typed in each new shell once it is up: not in a
+    /// persistent session found again as it was. Empty for none.
+    startup_snippet: String,
+}
+
+/// What the Backspace key sends: DEL, as systems of today expect, or
+/// Control-H, as some old ones and some network gear do. New choices go
+/// in fields of their own, as with [`Protocol`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Backspace {
+    /// `^?` (0x7f).
+    Delete,
+    /// `^H` (0x08).
+    ControlH,
+}
+
+/// How a host is reached. New ways go in fields of their own: a variant an
+/// older version does not know would make it fail to read the host.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Protocol {
+    Ssh,
+    /// Unencrypted: network gear and old systems. Through the SSH jump
+    /// hosts of the route, if it has any.
+    Telnet,
+    /// A serial port of this computer, such as a console cable's.
+    Serial,
+}
+
+/// A serial port's settings: 9600 8N1 without flow control by default.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct SerialLine {
+    /// Bits per second.
+    pub baud: u32,
+    /// 5 to 8.
+    pub data_bits: u8,
+    pub parity: Parity,
+    /// 1 or 2.
+    pub stop_bits: u8,
+    pub flow: FlowControl,
+    #[serde(flatten)]
+    pub extra: Extra,
+}
+
+impl Default for SerialLine {
+    fn default() -> Self {
+        Self {
+            baud: 9600,
+            data_bits: 8,
+            parity: Parity::None,
+            stop_bits: 1,
+            flow: FlowControl::None,
+            extra: Extra::new(),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Parity {
+    None,
+    Odd,
+    Even,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FlowControl {
+    None,
+    /// XON/XOFF.
+    Software,
+    /// RTS/CTS.
+    Hardware,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

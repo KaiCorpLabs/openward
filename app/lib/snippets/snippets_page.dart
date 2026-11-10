@@ -10,6 +10,7 @@ import '../ui/tokens.dart';
 import '../ui/page.dart';
 import '../ui/widgets.dart';
 import '../window/shortcuts.dart';
+import 'run_on_hosts.dart';
 import 'snippet_editor.dart';
 import 'snippets.dart';
 
@@ -157,12 +158,19 @@ class _SnippetsPageState extends ConsumerState<SnippetsPage> {
           alignment: Alignment.centerRight,
           child: PopupMenuButton<int>(
             key: ValueKey('snippet.run.${s.spec.label}'),
-            enabled: terminals.isNotEmpty,
-            tooltip: terminals.isEmpty ? l.openATerminalFirst : l.runIn,
-            onSelected: (i) => _runIn(s, i),
+            tooltip: l.runIn,
+            onSelected: (i) => i < 0
+                ? showRunOnHosts(context, ProviderScope.containerOf(context), s)
+                : _runIn(s, i),
             itemBuilder: (_) => [
               for (final (i, title) in terminals)
                 PopupMenuItem(value: i, child: Text(title)),
+              if (terminals.isNotEmpty) const PopupMenuDivider(),
+              PopupMenuItem(
+                key: ValueKey('snippet.runOnHosts.${s.spec.label}'),
+                value: -1,
+                child: Text(l.runOnHostsMenu),
+              ),
             ],
             child: Container(
               height: 28,
@@ -174,10 +182,7 @@ class _SnippetsPageState extends ConsumerState<SnippetsPage> {
               ),
               child: Text(
                 l.runEllipsis,
-                style: TextStyle(
-                  fontSize: OwText.small,
-                  color: terminals.isEmpty ? c.textSubtle : c.accentText,
-                ),
+                style: TextStyle(fontSize: OwText.small, color: c.accentText),
               ),
             ),
           ),

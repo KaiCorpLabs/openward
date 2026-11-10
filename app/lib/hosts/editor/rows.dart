@@ -17,11 +17,15 @@ class AdvancedToggle extends StatelessWidget {
     required this.open,
     required this.setHere,
     required this.onTap,
+    this.list,
   });
 
   final bool open;
   final int setHere;
   final VoidCallback onTap;
+
+  /// What is under it, when not SSH's.
+  final String? list;
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +72,7 @@ class AdvancedToggle extends StatelessWidget {
                     ),
                     Expanded(
                       child: Text(
-                        ' · ${l.advancedList}',
+                        ' · ${list ?? l.advancedList}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(

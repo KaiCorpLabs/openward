@@ -2,22 +2,26 @@
 //! (`spikes/s2-ssh/servers/up.sh`). Skipped when they are not running,
 //! unless `OPENWARD_REQUIRE_SERVERS` is set (`make ci`).
 
+#[cfg(unix)]
 use std::future::Future;
-use std::path::{Path, PathBuf};
+#[cfg(unix)]
+use std::path::Path;
+use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Mutex, OnceLock, Weak};
 use std::time::{Duration, Instant};
 
 use openward_app::alive::Timing;
 use openward_app::events::{
-    CertProblem, ChangedKey, Connected, Health, KeySource, NetCause, Persistence, PreviousKey,
-    Trust,
+    CertProblem, ChangedKey, Connected, Health, KeySource, MoshFallback, NetCause, Persistence,
+    PreviousKey, SecurityKeyProblem, Stage, Trust,
 };
 use openward_app::vault::proto::{
     Agent, Data, Group, Host, HostKeyPolicy, Identity, ItemId, Jump, Route, Settings, System,
     SystemSource, UseIdentity,
 };
 use openward_app::{Answer, App, Event, EventSink, Failure, Local, Prompt, Terminal};
+#[cfg(unix)]
 use openward_ssh::russh::keys::{Algorithm, PrivateKey, agent};
 use zeroize::Zeroizing;
 
@@ -151,6 +155,16 @@ impl Fixture {
         host: ItemId,
         reply: impl Fn(&Prompt) -> Answer + Send + Sync + 'static,
     ) -> Receiver<Event> {
+        self.connect_with(term, host, reply, false)
+    }
+
+    fn connect_with(
+        &self,
+        term: &Arc<Terminal>,
+        host: ItemId,
+        reply: impl Fn(&Prompt) -> Answer + Send + Sync + 'static,
+        reuse: bool,
+    ) -> Receiver<Event> {
         let (tx, rx) = channel();
         let ui = Arc::new(Ui {
             app: OnceLock::new(),
@@ -158,7 +172,11 @@ impl Fixture {
             reply: Box::new(reply),
         });
         let _ = ui.app.set(Arc::downgrade(&self.app));
-        self.app.connect(term, host, ui).unwrap();
+        if reuse {
+            self.app.connect_reusing(term, host, ui).unwrap();
+        } else {
+            self.app.connect(term, host, ui).unwrap();
+        }
         rx
     }
 }
@@ -181,6 +199,7 @@ fn outcome(rx: &Receiver<Event>) -> (Result<Connected, Option<Failure>>, Vec<Pro
             | Event::Health(_)
             | Event::Hops { .. }
             | Event::HostsChanged { .. }
+            | Event::MoshFallback { .. }
             | Event::Persistent { .. } => {}
         }
     }
@@ -420,6 +439,38 @@ fn demo_host(f: &Fixture, label: &str, port: u16, persistent: Option<bool>) -> I
     )
 }
 
+/// A second terminal asked to reuse goes over the first one's connection:
+/// it does not log in again, and both shells answer.
+#[test]
+fn a_second_shell_goes_over_the_connection_that_is_up() {
+    let f = Fixture::new(servers!());
+    let host = demo_host(&f, "s2-openssh-9.2", 22092, None);
+    let (first, rx) = f.connect(host, |_| Answer::Cancel);
+    first_shell(&rx);
+    let second = f.app.terminal(80, 24, 1000);
+    let rx2 = f.connect_with(&second, host, |_| Answer::Cancel, true);
+    let mut logged_in = false;
+    loop {
+        match rx2
+            .recv_timeout(Duration::from_secs(30))
+            .expect("no outcome")
+        {
+            Event::Stage {
+                stage: Stage::Authenticating,
+                ..
+            } => logged_in = true,
+            Event::Connected(_) => break,
+            Event::Closed { failure, .. } => panic!("{failure:?}"),
+            _ => {}
+        }
+    }
+    assert!(!logged_in, "it logged in again");
+    second.text("echo second-$((6*7))\n");
+    wait_for(&second, "second-42");
+    first.text("echo first-$((6*7))\n");
+    wait_for(&first, "first-42");
+}
+
 /// A server that stops answering without closing (frozen, as when it
 /// reboots or its network goes) is said not to respond within seconds, and
 /// given up and reconnected to in under half a minute, not two.
@@ -478,6 +529,114 @@ fn a_server_that_stops_answering_is_noticed_in_seconds() {
             _ => {}
         }
     }
+    term.text("echo back-$((6*7))\n");
+    wait_for(&term, "back-42");
+}
+
+/// A host with Mosh on.
+fn mosh_host(f: &Fixture, label: &str, port: u16) -> ItemId {
+    f.host(
+        label,
+        "127.0.0.1",
+        port,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: f.key("id_ed25519"),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            mosh: Some(true),
+            ..Settings::default()
+        },
+    )
+}
+
+/// Whether this computer has `mosh-client`.
+fn has_mosh_client() -> bool {
+    tokio::runtime::Runtime::new()
+        .unwrap()
+        .block_on(openward_ssh::client::find_program("mosh-client"))
+        .is_some()
+}
+
+/// The events until the first shell is up, with the Mosh fallbacks that
+/// came before it.
+fn first_shell(rx: &Receiver<Event>) -> (Connected, Vec<MoshFallback>) {
+    let mut fallbacks = Vec::new();
+    loop {
+        match rx
+            .recv_timeout(Duration::from_secs(45))
+            .expect("no outcome")
+        {
+            Event::Connected(c) => return (c, fallbacks),
+            Event::MoshFallback { reason } => fallbacks.push(reason),
+            Event::Closed { failure, .. } => panic!("{failure:?}"),
+            _ => {}
+        }
+    }
+}
+
+/// Mosh asked for where it cannot be (no mosh-server in Dropbear's
+/// image, or no mosh-client here): the session goes on over SSH, saying
+/// why.
+#[test]
+fn mosh_where_it_cannot_be_goes_on_over_ssh() {
+    let f = Fixture::new(servers!());
+    let host = mosh_host(&f, "dropbear", 22200);
+    let (term, rx) = f.connect(host, |_| Answer::Cancel);
+    let (connected, fallbacks) = first_shell(&rx);
+    assert!(!connected.mosh);
+    let want = if has_mosh_client() {
+        MoshFallback::NoServer
+    } else {
+        MoshFallback::NoClient
+    };
+    assert_eq!(fallbacks, [want]);
+    term.text("echo ssh-$((6*7))\n");
+    wait_for(&term, "ssh-42");
+}
+
+/// Over Mosh to the bastion, whose UDP is published: the shell is
+/// mosh-client's, and exit ends it.
+#[test]
+fn a_mosh_session_over_udp() {
+    let f = Fixture::new(servers!());
+    if !has_mosh_client() {
+        return eprintln!("skipped: no mosh-client here");
+    }
+    let host = mosh_host(&f, "bastion", BASTION);
+    let (term, rx) = f.connect(host, |_| Answer::Cancel);
+    let (connected, fallbacks) = first_shell(&rx);
+    assert!(fallbacks.is_empty(), "{fallbacks:?}");
+    assert!(connected.mosh);
+    term.text("echo mosh-$((6*7))\n");
+    wait_for(&term, "mosh-42");
+    term.text("exit\n");
+    loop {
+        match rx.recv_timeout(Duration::from_secs(30)).expect("no end") {
+            Event::MoshFallback { reason } => panic!("fell back: {reason:?}"),
+            Event::Closed { exit_code, failure } => {
+                assert_eq!((exit_code, failure), (Some(0), None));
+                break;
+            }
+            _ => {}
+        }
+    }
+}
+
+/// A server whose UDP does not get through (this one's is not published):
+/// after the wait, the session goes on over SSH, in tmux.
+#[test]
+fn mosh_without_udp_goes_on_over_ssh() {
+    let f = Fixture::new(servers!());
+    if !has_mosh_client() {
+        return eprintln!("skipped: no mosh-client here");
+    }
+    let host = mosh_host(&f, "s2-openssh-9.2", 22092);
+    let (term, rx) = f.connect(host, |_| Answer::Cancel);
+    let (first, fallbacks) = first_shell(&rx);
+    assert!(first.mosh && fallbacks.is_empty());
+    let (again, fallbacks) = first_shell(&rx);
+    assert_eq!(fallbacks, [MoshFallback::NoUdp]);
+    assert!(!again.mosh);
     term.text("echo back-$((6*7))\n");
     wait_for(&term, "back-42");
 }
@@ -791,8 +950,58 @@ fn passphrase_and_password_are_asked_for() {
     assert_eq!(outcome(&rx).0.unwrap_err(), Some(Failure::Cancelled));
 }
 
+/// About one P-256 key in 512 that `ssh-keygen` makes has a 31-byte
+/// scalar, which `ssh-key` alone refuses. `openward-ssh`'s fixture (in
+/// every server's authorized_keys, by fixtures.sh) logs in on all of them,
+/// and behind a passphrase too.
+#[test]
+fn an_ecdsa_key_with_a_short_scalar_logs_in() {
+    let f = Fixture::new(servers!());
+    let key = |name: &str| {
+        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../openward-ssh/tests/fixtures");
+        Some(vec![dir.join(name).display().to_string()])
+    };
+    let host = |label: &str, port, file: &str| {
+        f.host(
+            label,
+            "127.0.0.1",
+            port,
+            Settings {
+                user: Some("demo".into()),
+                identity_files: key(file),
+                host_key_policy: Some(HostKeyPolicy::AcceptNew),
+                ..Settings::default()
+            },
+        )
+    };
+    for (label, port) in [
+        ("s2-openssh-8.9", 22089),
+        ("s2-openssh-9.2", 22092),
+        ("bastion", BASTION),
+        ("dropbear", 22200),
+    ] {
+        // No passphrase, no password: only the key gets in.
+        let (_t, rx) = f.connect(host(label, port, "ecdsa-p256-short"), |_| Answer::Cancel);
+        let (result, prompts) = outcome(&rx);
+        result.unwrap_or_else(|e| panic!("{label}: {e:?}"));
+        assert!(prompts.is_empty(), "{label}: {prompts:?}");
+    }
+
+    let encrypted = host("pass", BASTION, "ecdsa-p256-short-aes256-ctr");
+    let (_t, rx) = f.connect(encrypted, |p| match p {
+        Prompt::Passphrase { retry: false, .. } => text("openward-test"),
+        _ => Answer::Cancel,
+    });
+    let (result, prompts) = outcome(&rx);
+    result.unwrap();
+    assert_eq!(prompts.len(), 1, "{prompts:?}");
+}
+
 /// An agent of the test's own at `socket`, holding `keys`; with `refuse`,
-/// it will not sign with them, as when its user says no.
+/// it will not sign with them, as when its user says no. On a Unix socket:
+/// the Windows agent (a named pipe) is tried by hand, in
+/// docs/plan/prueba-v0.3.md.
+#[cfg(unix)]
 fn test_agent(socket: &Path, keys: Vec<PrivateKey>, refuse: bool) {
     #[derive(Clone)]
     struct Refuse(bool);
@@ -834,6 +1043,7 @@ fn test_agent(socket: &Path, keys: Vec<PrivateKey>, refuse: bool) {
 /// An agent that will not sign (a denied confirmation, a locked password
 /// manager) is passed over for the next method, not taken for a network
 /// failure.
+#[cfg(unix)]
 #[test]
 fn an_agent_that_will_not_sign_is_passed_over() {
     let f = Fixture::new(servers!());
@@ -871,6 +1081,7 @@ fn an_agent_that_will_not_sign_is_passed_over() {
 
 /// A server that hangs up after too many keys (`MaxAuthTries`) failed the
 /// login: no network failure, to be tried again offering them all.
+#[cfg(unix)]
 #[test]
 fn too_many_keys_is_a_failed_login() {
     let f = Fixture::new(servers!());
@@ -1830,6 +2041,163 @@ fn through_a_proxy_that_asks_for_a_password() {
     assert_eq!(outcome(&rx).0.unwrap_err(), Some(Failure::Cancelled));
 }
 
+/// A security key's sk-ssh-ed25519 key on the server: it logs in, asking
+/// for the touch; with another key plugged in, the failure says it was not
+/// this one. (A key in software, which signs as a real one does.)
+#[test]
+fn a_security_key_logs_in_and_says_when_it_is_not_this_one() {
+    use openward_fido::soft::SoftKeys;
+    let f = Fixture::new(servers!());
+    let password = f.password("demo");
+    let soft = Arc::new(SoftKeys::new());
+    f.app.set_security_keys(soft.clone());
+    let with_password = f.host(
+        "with-password",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: Some(vec![]),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    let answer = password.clone();
+    let (sftp, events) = f.sftp(with_password, move |p| match p {
+        Prompt::Password { .. } | Prompt::KeyboardInteractive { .. } => text(&answer),
+        _ => Answer::Cancel,
+    });
+    outcome(&events).0.unwrap();
+    let remote = sftp.link().get().unwrap();
+    let file = "/home/demo/.ssh/authorized_keys";
+    let original = block_on(remote.read_small(file, 1 << 20)).unwrap();
+
+    let key =
+        openward_fido::new_key(&*soft, openward_fido::Kind::Ed25519, "s2-sk", None, false).unwrap();
+    let keys = tempfile::tempdir().unwrap();
+    let path = keys.path().join("id_ed25519_sk");
+    std::fs::write(
+        &path,
+        key.to_openssh(openward_ssh::russh::keys::ssh_key::LineEnding::LF)
+            .unwrap()
+            .as_bytes(),
+    )
+    .unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    }
+    let added = block_on(sftp.install_public_key(key.public_key().to_openssh().unwrap()));
+
+    let with_key = f.host(
+        "with-security-key",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: Some(vec![path.display().to_string()]),
+            identities_only: Some(true),
+            agent: Some(openward_app::vault::proto::Agent::Off),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    let (_term, rx) = f.connect(with_key, |p| panic!("asked: {p:?}"));
+    let mut touched = false;
+    let logged_in = loop {
+        match rx
+            .recv_timeout(Duration::from_secs(30))
+            .expect("no outcome")
+        {
+            Event::Stage {
+                stage: Stage::TouchKey,
+                ..
+            } => touched = true,
+            Event::Connected(c) => break Ok(c),
+            Event::Closed { failure, .. } => break Err(failure),
+            _ => {}
+        }
+    };
+
+    // Another key plugged in: not this one.
+    f.app.set_security_keys(Arc::new(SoftKeys::new()));
+    let (_term, rx) = f.connect(with_key, |p| match p {
+        Prompt::Password { .. } | Prompt::KeyboardInteractive { .. } => text("not-this-one"),
+        _ => Answer::Cancel,
+    });
+    let other = outcome(&rx).0;
+
+    if let Some(bytes) = &original {
+        let next = format!("{file}.restore");
+        block_on(remote.write_all(&next, bytes, 0o600)).unwrap();
+        block_on(remote.rename(&next, file, true)).unwrap();
+    }
+    assert!(added.unwrap(), "the key went in");
+    logged_in.unwrap();
+    assert!(touched, "the touch was asked for");
+    assert!(
+        matches!(
+            other,
+            Err(Some(Failure::AuthFailed {
+                security_key: Some(SecurityKeyProblem::NotThisKey),
+                ..
+            }))
+        ),
+        "{other:?}"
+    );
+}
+
+/// A key only accepted through its certificate, with one that ran out
+/// yesterday: it is not offered, and the failure says it was the reason.
+#[test]
+fn an_expired_certificate_is_why_the_login_fails() {
+    let f = Fixture::new(servers!());
+    let dir = tempfile::tempdir().unwrap();
+    let key = dir.path().join("id_cert");
+    std::fs::copy(f.fx.join("id_cert"), &key).unwrap();
+    std::fs::copy(f.fx.join("id_cert.pub"), dir.path().join("id_cert.pub")).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&key, std::fs::Permissions::from_mode(0o600)).unwrap();
+    }
+    let signed = std::process::Command::new("ssh-keygen")
+        .args(["-q", "-s"])
+        .arg(f.fx.join("user_ca"))
+        .args(["-I", "s2-old", "-n", "demo", "-V", "-2d:-1d"])
+        .arg(dir.path().join("id_cert.pub"))
+        .status()
+        .unwrap();
+    assert!(signed.success());
+    let cert = dir.path().join("id_cert-cert.pub");
+    let host = f.host(
+        "bastion",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: Some(vec![key.display().to_string()]),
+            identities_only: Some(true),
+            agent: Some(openward_app::vault::proto::Agent::Off),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    // Wrong passwords, so that it ends as a failed login.
+    let (_term, rx) = f.connect(host, |p| match p {
+        Prompt::Password { .. } | Prompt::KeyboardInteractive { .. } => text("not-this-one"),
+        _ => Answer::Cancel,
+    });
+    match outcome(&rx).0 {
+        Err(Some(Failure::AuthFailed {
+            expired_certificate: Some(path),
+            ..
+        })) => assert_eq!(std::path::Path::new(&path), cert),
+        other => panic!("not a failed login because of the certificate: {other:?}"),
+    }
+}
+
 /// The user, key and certificate come from the identity of the host's
 /// group: the key is only accepted through its certificate.
 #[test]
@@ -2260,7 +2628,9 @@ fn a_cut_keeps_the_log_whole_on_both_sides() {
     assert_eq!(marks, ["lost", "back"]);
 }
 
-/// A local terminal is recorded only when this device asks for it.
+/// A local terminal is recorded only when this device asks for it. With
+/// `sh`: PowerShell on Windows is tried by hand, in docs/plan/prueba-v0.3.md.
+#[cfg(unix)]
 #[test]
 fn a_local_shell_is_recorded_when_asked() {
     let dir = tempfile::tempdir().unwrap();

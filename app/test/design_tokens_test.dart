@@ -32,29 +32,30 @@ String _args(String text, int open) {
 void main() {
   test('no design literals outside lib/ui', () {
     final found = <String>[];
+    // As the code writes paths: Windows lists `lib\ui`.
     final files = Directory('lib')
         .listSync(recursive: true)
         .whereType<File>()
-        .where((f) => f.path.endsWith('.dart'))
+        .map((f) => (f, f.path.replaceAll(r'\', '/')))
+        .where((f) => f.$2.endsWith('.dart'))
         .where(
-          (f) =>
-              !f.path.startsWith('lib/ui/') && !f.path.startsWith('lib/src/'),
+          (f) => !f.$2.startsWith('lib/ui/') && !f.$2.startsWith('lib/src/'),
         )
-        .where((f) => !f.path.startsWith('lib/l10n/app_localizations'));
-    for (final file in files) {
+        .where((f) => !f.$2.startsWith('lib/l10n/app_localizations'));
+    for (final (file, path) in files) {
       final text = file.readAsStringSync();
       int lineOf(int offset) =>
           '\n'.allMatches(text.substring(0, offset)).length + 1;
       for (final MapEntry(key: what, value: rule) in _rules.entries) {
         for (final m in rule.allMatches(text)) {
-          found.add('${file.path}:${lineOf(m.start)}: $what');
+          found.add('$path:${lineOf(m.start)}: $what');
         }
       }
       for (final m in _edgeInsets.allMatches(text)) {
         final args = _args(text, m.end - 1);
         for (final a in _atom.allMatches(args)) {
           if (double.parse(a.group(2)!) != 0) {
-            found.add('${file.path}:${lineOf(m.start)}: a space (OwSpace)');
+            found.add('$path:${lineOf(m.start)}: a space (OwSpace)');
             break;
           }
         }

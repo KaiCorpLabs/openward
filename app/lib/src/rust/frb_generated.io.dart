@@ -166,6 +166,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnswerKind dco_decode_answer_kind(dynamic raw);
 
   @protected
+  BackspaceKind dco_decode_backspace_kind(dynamic raw);
+
+  @protected
   bool dco_decode_bool(dynamic raw);
 
   @protected
@@ -176,6 +179,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AgentKind dco_decode_box_autoadd_agent_kind(dynamic raw);
+
+  @protected
+  BackspaceKind dco_decode_box_autoadd_backspace_kind(dynamic raw);
 
   @protected
   bool dco_decode_box_autoadd_bool(dynamic raw);
@@ -259,6 +265,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   MissingKind dco_decode_box_autoadd_missing_kind(dynamic raw);
 
   @protected
+  MoshFallbackView dco_decode_box_autoadd_mosh_fallback_view(dynamic raw);
+
+  @protected
   NetKind dco_decode_box_autoadd_net_kind(dynamic raw);
 
   @protected
@@ -280,6 +289,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PromptView dco_decode_box_autoadd_prompt_view(dynamic raw);
 
   @protected
+  ProtocolKind dco_decode_box_autoadd_protocol_kind(dynamic raw);
+
+  @protected
   ProxyKind dco_decode_box_autoadd_proxy_kind(dynamic raw);
 
   @protected
@@ -293,6 +305,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SearchView dco_decode_box_autoadd_search_view(dynamic raw);
+
+  @protected
+  SecurityKeyKind dco_decode_box_autoadd_security_key_kind(dynamic raw);
+
+  @protected
+  SerialKind dco_decode_box_autoadd_serial_kind(dynamic raw);
+
+  @protected
+  SerialLineSpec dco_decode_box_autoadd_serial_line_spec(dynamic raw);
 
   @protected
   SnippetSpec dco_decode_box_autoadd_snippet_spec(dynamic raw);
@@ -395,6 +416,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FileKind dco_decode_file_kind(dynamic raw);
+
+  @protected
+  FlowKind dco_decode_flow_kind(dynamic raw);
 
   @protected
   FoundProgram dco_decode_found_program(dynamic raw);
@@ -580,6 +604,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<SelectedRange> dco_decode_list_selected_range(dynamic raw);
 
   @protected
+  List<SerialPortView> dco_decode_list_serial_port_view(dynamic raw);
+
+  @protected
   List<SnippetValue> dco_decode_list_snippet_value(dynamic raw);
 
   @protected
@@ -655,6 +682,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   MissingKind dco_decode_missing_kind(dynamic raw);
 
   @protected
+  MoshFallbackKind dco_decode_mosh_fallback_kind(dynamic raw);
+
+  @protected
+  MoshFallbackView dco_decode_mosh_fallback_view(dynamic raw);
+
+  @protected
   NetKind dco_decode_net_kind(dynamic raw);
 
   @protected
@@ -668,6 +701,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AgentKind? dco_decode_opt_box_autoadd_agent_kind(dynamic raw);
+
+  @protected
+  BackspaceKind? dco_decode_opt_box_autoadd_backspace_kind(dynamic raw);
 
   @protected
   bool? dco_decode_opt_box_autoadd_bool(dynamic raw);
@@ -739,6 +775,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   MissingKind? dco_decode_opt_box_autoadd_missing_kind(dynamic raw);
 
   @protected
+  MoshFallbackView? dco_decode_opt_box_autoadd_mosh_fallback_view(dynamic raw);
+
+  @protected
   NetKind? dco_decode_opt_box_autoadd_net_kind(dynamic raw);
 
   @protected
@@ -754,6 +793,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PromptView? dco_decode_opt_box_autoadd_prompt_view(dynamic raw);
 
   @protected
+  ProtocolKind? dco_decode_opt_box_autoadd_protocol_kind(dynamic raw);
+
+  @protected
   ProxyKind? dco_decode_opt_box_autoadd_proxy_kind(dynamic raw);
 
   @protected
@@ -767,6 +809,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SearchView? dco_decode_opt_box_autoadd_search_view(dynamic raw);
+
+  @protected
+  SecurityKeyKind? dco_decode_opt_box_autoadd_security_key_kind(dynamic raw);
+
+  @protected
+  SerialKind? dco_decode_opt_box_autoadd_serial_kind(dynamic raw);
+
+  @protected
+  SerialLineSpec? dco_decode_opt_box_autoadd_serial_line_spec(dynamic raw);
 
   @protected
   SshKey? dco_decode_opt_box_autoadd_ssh_key(dynamic raw);
@@ -812,6 +863,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   OriginKind dco_decode_origin_kind(dynamic raw);
+
+  @protected
+  ParityKind dco_decode_parity_kind(dynamic raw);
 
   @protected
   PersistenceKind dco_decode_persistence_kind(dynamic raw);
@@ -865,6 +919,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PromptView dco_decode_prompt_view(dynamic raw);
 
   @protected
+  ProtocolKind dco_decode_protocol_kind(dynamic raw);
+
+  @protected
   ProxyKind dco_decode_proxy_kind(dynamic raw);
 
   @protected
@@ -889,7 +946,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SearchView dco_decode_search_view(dynamic raw);
 
   @protected
+  SecurityKeyKind dco_decode_security_key_kind(dynamic raw);
+
+  @protected
+  SecurityKeyType dco_decode_security_key_type(dynamic raw);
+
+  @protected
   SelectedRange dco_decode_selected_range(dynamic raw);
+
+  @protected
+  SerialKind dco_decode_serial_kind(dynamic raw);
+
+  @protected
+  SerialLineSpec dco_decode_serial_line_spec(dynamic raw);
+
+  @protected
+  SerialPortView dco_decode_serial_port_view(dynamic raw);
 
   @protected
   SessionEvent dco_decode_session_event(dynamic raw);
@@ -1141,6 +1213,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnswerKind sse_decode_answer_kind(SseDeserializer deserializer);
 
   @protected
+  BackspaceKind sse_decode_backspace_kind(SseDeserializer deserializer);
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
@@ -1151,6 +1226,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AgentKind sse_decode_box_autoadd_agent_kind(SseDeserializer deserializer);
+
+  @protected
+  BackspaceKind sse_decode_box_autoadd_backspace_kind(
+    SseDeserializer deserializer,
+  );
 
   @protected
   bool sse_decode_box_autoadd_bool(SseDeserializer deserializer);
@@ -1250,6 +1330,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   MissingKind sse_decode_box_autoadd_missing_kind(SseDeserializer deserializer);
 
   @protected
+  MoshFallbackView sse_decode_box_autoadd_mosh_fallback_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NetKind sse_decode_box_autoadd_net_kind(SseDeserializer deserializer);
 
   @protected
@@ -1277,6 +1362,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PromptView sse_decode_box_autoadd_prompt_view(SseDeserializer deserializer);
 
   @protected
+  ProtocolKind sse_decode_box_autoadd_protocol_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ProxyKind sse_decode_box_autoadd_proxy_kind(SseDeserializer deserializer);
 
   @protected
@@ -1292,6 +1382,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SearchView sse_decode_box_autoadd_search_view(SseDeserializer deserializer);
+
+  @protected
+  SecurityKeyKind sse_decode_box_autoadd_security_key_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  SerialKind sse_decode_box_autoadd_serial_kind(SseDeserializer deserializer);
+
+  @protected
+  SerialLineSpec sse_decode_box_autoadd_serial_line_spec(
+    SseDeserializer deserializer,
+  );
 
   @protected
   SnippetSpec sse_decode_box_autoadd_snippet_spec(SseDeserializer deserializer);
@@ -1404,6 +1507,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FileKind sse_decode_file_kind(SseDeserializer deserializer);
+
+  @protected
+  FlowKind sse_decode_flow_kind(SseDeserializer deserializer);
 
   @protected
   FoundProgram sse_decode_found_program(SseDeserializer deserializer);
@@ -1615,6 +1721,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<SerialPortView> sse_decode_list_serial_port_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<SnippetValue> sse_decode_list_snippet_value(
     SseDeserializer deserializer,
   );
@@ -1700,6 +1811,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   MissingKind sse_decode_missing_kind(SseDeserializer deserializer);
 
   @protected
+  MoshFallbackKind sse_decode_mosh_fallback_kind(SseDeserializer deserializer);
+
+  @protected
+  MoshFallbackView sse_decode_mosh_fallback_view(SseDeserializer deserializer);
+
+  @protected
   NetKind sse_decode_net_kind(SseDeserializer deserializer);
 
   @protected
@@ -1713,6 +1830,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AgentKind? sse_decode_opt_box_autoadd_agent_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BackspaceKind? sse_decode_opt_box_autoadd_backspace_kind(
     SseDeserializer deserializer,
   );
 
@@ -1816,6 +1938,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  MoshFallbackView? sse_decode_opt_box_autoadd_mosh_fallback_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NetKind? sse_decode_opt_box_autoadd_net_kind(SseDeserializer deserializer);
 
   @protected
@@ -1835,6 +1962,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PromptView? sse_decode_opt_box_autoadd_prompt_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ProtocolKind? sse_decode_opt_box_autoadd_protocol_kind(
     SseDeserializer deserializer,
   );
 
@@ -1860,6 +1992,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SearchView? sse_decode_opt_box_autoadd_search_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  SecurityKeyKind? sse_decode_opt_box_autoadd_security_key_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  SerialKind? sse_decode_opt_box_autoadd_serial_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  SerialLineSpec? sse_decode_opt_box_autoadd_serial_line_spec(
     SseDeserializer deserializer,
   );
 
@@ -1925,6 +2072,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   OriginKind sse_decode_origin_kind(SseDeserializer deserializer);
 
   @protected
+  ParityKind sse_decode_parity_kind(SseDeserializer deserializer);
+
+  @protected
   PersistenceKind sse_decode_persistence_kind(SseDeserializer deserializer);
 
   @protected
@@ -1978,6 +2128,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PromptView sse_decode_prompt_view(SseDeserializer deserializer);
 
   @protected
+  ProtocolKind sse_decode_protocol_kind(SseDeserializer deserializer);
+
+  @protected
   ProxyKind sse_decode_proxy_kind(SseDeserializer deserializer);
 
   @protected
@@ -2002,7 +2155,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SearchView sse_decode_search_view(SseDeserializer deserializer);
 
   @protected
+  SecurityKeyKind sse_decode_security_key_kind(SseDeserializer deserializer);
+
+  @protected
+  SecurityKeyType sse_decode_security_key_type(SseDeserializer deserializer);
+
+  @protected
   SelectedRange sse_decode_selected_range(SseDeserializer deserializer);
+
+  @protected
+  SerialKind sse_decode_serial_kind(SseDeserializer deserializer);
+
+  @protected
+  SerialLineSpec sse_decode_serial_line_spec(SseDeserializer deserializer);
+
+  @protected
+  SerialPortView sse_decode_serial_port_view(SseDeserializer deserializer);
 
   @protected
   SessionEvent sse_decode_session_event(SseDeserializer deserializer);
@@ -2277,6 +2445,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_answer_kind(AnswerKind self, SseSerializer serializer);
 
   @protected
+  void sse_encode_backspace_kind(BackspaceKind self, SseSerializer serializer);
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
@@ -2289,6 +2460,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_agent_kind(
     AgentKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_backspace_kind(
+    BackspaceKind self,
     SseSerializer serializer,
   );
 
@@ -2449,6 +2626,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_mosh_fallback_view(
+    MoshFallbackView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_net_kind(NetKind self, SseSerializer serializer);
 
   @protected
@@ -2488,6 +2671,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_protocol_kind(
+    ProtocolKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_proxy_kind(
     ProxyKind self,
     SseSerializer serializer,
@@ -2514,6 +2703,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_search_view(
     SearchView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_security_key_kind(
+    SecurityKeyKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_serial_kind(
+    SerialKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_serial_line_spec(
+    SerialLineSpec self,
     SseSerializer serializer,
   );
 
@@ -2660,6 +2867,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_file_kind(FileKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_flow_kind(FlowKind self, SseSerializer serializer);
 
   @protected
   void sse_encode_found_program(FoundProgram self, SseSerializer serializer);
@@ -2929,6 +3139,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_serial_port_view(
+    List<SerialPortView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_snippet_value(
     List<SnippetValue> self,
     SseSerializer serializer,
@@ -3025,6 +3241,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_missing_kind(MissingKind self, SseSerializer serializer);
 
   @protected
+  void sse_encode_mosh_fallback_kind(
+    MoshFallbackKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_mosh_fallback_view(
+    MoshFallbackView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_net_kind(NetKind self, SseSerializer serializer);
 
   @protected
@@ -3040,6 +3268,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_agent_kind(
     AgentKind? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_backspace_kind(
+    BackspaceKind? self,
     SseSerializer serializer,
   );
 
@@ -3179,6 +3413,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_mosh_fallback_view(
+    MoshFallbackView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_net_kind(
     NetKind? self,
     SseSerializer serializer,
@@ -3209,6 +3449,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_protocol_kind(
+    ProtocolKind? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_proxy_kind(
     ProxyKind? self,
     SseSerializer serializer,
@@ -3235,6 +3481,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_search_view(
     SearchView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_security_key_kind(
+    SecurityKeyKind? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_serial_kind(
+    SerialKind? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_serial_line_spec(
+    SerialLineSpec? self,
     SseSerializer serializer,
   );
 
@@ -3314,6 +3578,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_origin_kind(OriginKind self, SseSerializer serializer);
 
   @protected
+  void sse_encode_parity_kind(ParityKind self, SseSerializer serializer);
+
+  @protected
   void sse_encode_persistence_kind(
     PersistenceKind self,
     SseSerializer serializer,
@@ -3383,6 +3650,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_prompt_view(PromptView self, SseSerializer serializer);
 
   @protected
+  void sse_encode_protocol_kind(ProtocolKind self, SseSerializer serializer);
+
+  @protected
   void sse_encode_proxy_kind(ProxyKind self, SseSerializer serializer);
 
   @protected
@@ -3413,7 +3683,34 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_search_view(SearchView self, SseSerializer serializer);
 
   @protected
+  void sse_encode_security_key_kind(
+    SecurityKeyKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_security_key_type(
+    SecurityKeyType self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_selected_range(SelectedRange self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_serial_kind(SerialKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_serial_line_spec(
+    SerialLineSpec self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_serial_port_view(
+    SerialPortView self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_session_event(SessionEvent self, SseSerializer serializer);

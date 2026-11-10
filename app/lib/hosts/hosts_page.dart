@@ -1061,8 +1061,9 @@ class _HostItemState extends State<_HostItem> {
                       customSemanticsActions: {
                         CustomSemanticsAction(label: l.connect): () =>
                             a.connect(h),
-                        CustomSemanticsAction(label: l.openSftp): () =>
-                            a.sftp(h),
+                        if (overSsh(h))
+                          CustomSemanticsAction(label: l.openSftp): () =>
+                              a.sftp(h),
                         CustomSemanticsAction(label: l.editEllipsis): () =>
                             a.editHost(id: h.id),
                         CustomSemanticsAction(
@@ -1144,8 +1145,10 @@ class _HostItemState extends State<_HostItem> {
             child: Text(l.connect),
           ),
           if (!compact) ...[
-            const SizedBox(width: 6),
-            small('sftp', Icons.folder_outlined, l.openSftp, () => a.sftp(h)),
+            if (overSsh(h)) ...[
+              const SizedBox(width: 6),
+              small('sftp', Icons.folder_outlined, l.openSftp, () => a.sftp(h)),
+            ],
             const SizedBox(width: 4),
             small(
               'edit',

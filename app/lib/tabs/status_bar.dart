@@ -11,6 +11,7 @@ import '../core/errors.dart';
 import '../l10n/l10n.dart';
 import '../logs/log_chip.dart';
 import '../src/rust/api/session.dart';
+import '../src/rust/api/vault.dart' show ProtocolKind;
 import '../terminal/controller.dart';
 import '../snippets/palette.dart';
 import '../tunnels/tunnels_page.dart';
@@ -48,12 +49,22 @@ class StatusBar extends ConsumerWidget {
       // The algorithms and the route are in the latency's card and in the
       // connection's details: here, how it is doing.
       final via = viaText(l, s);
+      final ssh = k.protocol == ProtocolKind.ssh;
       line = Row(
         children: [
           Icon(
-            pq ? Icons.verified_user_outlined : Icons.lock_outline,
+            switch (k.protocol) {
+              ProtocolKind.ssh =>
+                pq ? Icons.verified_user_outlined : Icons.lock_outline,
+              ProtocolKind.telnet => Icons.lock_open,
+              ProtocolKind.serial => Icons.cable,
+            },
             size: 14,
-            color: pq ? c.accent : c.textMuted,
+            color: pq
+                ? c.accent
+                : k.protocol == ProtocolKind.telnet
+                ? c.warn
+                : c.textMuted,
           ),
           const SizedBox(width: 8),
           Text(
@@ -65,9 +76,29 @@ class StatusBar extends ConsumerWidget {
             ),
           ),
           if (pq) ...[const SizedBox(width: 8), Pill(l.postQuantum)],
+          // Over Mosh: the session roams, and SSH only started it.
+          if (k.mosh) ...[
+            const SizedBox(width: 8),
+            const Pill('Mosh', key: ValueKey('status.mosh')),
+          ],
+          // Telnet: what is typed goes as it is.
+          if (k.protocol == ProtocolKind.telnet) ...[
+            const SizedBox(width: 8),
+            Pill(
+              l.statusUnencrypted,
+              key: const ValueKey('status.unencrypted'),
+              tone: PillTone.warm,
+            ),
+          ],
+          if (k.protocol == ProtocolKind.serial) ...[
+            const SizedBox(width: 8),
+            Text(k.host, style: monoStyle(context, size: OwText.small)),
+          ],
           if (s.persistent case final p?) tmuxPill(context, p),
           const SizedBox(width: 6),
-          LatencyChip(controller: s),
+          // Only SSH asks the server how long it takes (Mosh's own bar
+          // says when the server is late).
+          if (ssh && !k.mosh) LatencyChip(controller: s),
           if (via != null)
             Flexible(
               child: Padding(
@@ -176,7 +207,7 @@ class StatusBar extends ConsumerWidget {
                   keys: keysFor('⌘⇧S', '${l.ctrlShiftPrefix}S'),
                   onPressed: () => showSnippetPalette(context),
                 ),
-              if (k != null)
+              if (k != null && s.overSsh)
                 _StatusAction(
                   key: const ValueKey('status.sftp'),
                   narrow: narrow,

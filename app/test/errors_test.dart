@@ -86,6 +86,7 @@ void main() {
       reason: 'opening the shell: no pty',
       previous: [],
       seconds: 0,
+      expiredCertificate: '',
     );
     expect(errorDetails(f), 'opening the shell: no pty');
     await tester.pumpWidget(

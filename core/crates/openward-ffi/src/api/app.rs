@@ -4,7 +4,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use flutter_rust_bridge::frb;
-use openward_app::vault::proto::{Data, Group, Host, Settings, Source, System, SystemSource};
+use openward_app::vault::proto::{
+    Data, Group, Host, Protocol, Settings, Source, System, SystemSource,
+};
 use openward_app::{App, DEFAULT_SCROLLBACK, RECONNECT_ATTEMPTS};
 use openward_import::ssh_config::Warning;
 
@@ -23,6 +25,18 @@ pub fn init_app() {
 #[frb(sync)]
 pub fn core_version() -> String {
     env!("CARGO_PKG_VERSION").to_owned()
+}
+
+/// A serial port of this computer.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SerialPortView {
+    /// What to open: `/dev/cu.usbserial-1410`, `/dev/ttyUSB0`, `COM3`.
+    pub path: String,
+    /// What it is, when it says ("FT232R USB UART (FTDI)"); empty
+    /// otherwise.
+    pub description: String,
+    /// A cable or an adapter on USB.
+    pub usb: bool,
 }
 
 #[frb(opaque)]
@@ -249,6 +263,12 @@ impl OpenWard {
                     environment: EnvironmentView::of(&settings.environment),
                     system: h.system.as_ref().map(SystemView::of),
                     favorite: h.favorite,
+                    protocol: ProtocolKind::of(settings.protocol.unwrap_or(Protocol::Ssh)),
+                    serial: (settings.protocol == Some(Protocol::Serial))
+                        .then(|| settings.serial.as_ref().map(SerialLineSpec::of))
+                        .flatten(),
+                    terminal_scheme: settings.terminal_scheme.clone().unwrap_or_default(),
+                    startup_snippet: settings.startup_snippet.clone().unwrap_or_default(),
                 }
             })
             .collect()
@@ -564,14 +584,31 @@ impl OpenWard {
         Ok(())
     }
 
+    /// As [`OpenWard::connect`], over the connection to the host that is
+    /// up already, if one is: no logging in again.
+    pub fn connect_reusing(
+        &self,
+        session: &TerminalSession,
+        host_id: String,
+        events: StreamSink<SessionEvent>,
+    ) -> Result<(), VaultError> {
+        self.app.connect_reusing(
+            &session.term,
+            super::vault::id(&host_id)?,
+            Arc::new(DartSink(events)),
+        )?;
+        Ok(())
+    }
+
     /// As [`OpenWard::connect`], to an address that is not saved, with the
-    /// default settings.
+    /// default settings: by SSH or Telnet.
     pub fn connect_address(
         &self,
         session: &TerminalSession,
         address: String,
         user: Option<String>,
         port: Option<u16>,
+        protocol: ProtocolKind,
         events: StreamSink<SessionEvent>,
     ) -> Result<(), VaultError> {
         self.app.connect_address(
@@ -579,9 +616,50 @@ impl OpenWard {
             address,
             user,
             port,
+            protocol.proto(),
             Arc::new(DartSink(events)),
         )?;
         Ok(())
+    }
+
+    /// The character sets a host can be set to, UTF-8 first, as the
+    /// settings name them.
+    #[frb(sync)]
+    pub fn charsets(&self) -> Vec<String> {
+        openward_app::charset::OFFERED
+            .iter()
+            .map(|c| (*c).to_owned())
+            .collect()
+    }
+
+    /// The serial ports there are now, USB ones (cables, adapters) first.
+    pub fn serial_ports(&self) -> Vec<SerialPortView> {
+        openward_app::serial_ports()
+            .into_iter()
+            .map(|p| SerialPortView {
+                path: p.path,
+                description: p.description,
+                usb: p.usb,
+            })
+            .collect()
+    }
+
+    /// Opens the serial port at `path` in `session`. In Dart this returns
+    /// the stream of its events, as for a host: connected, or closed with
+    /// why.
+    pub fn open_serial(
+        &self,
+        session: &TerminalSession,
+        path: String,
+        line: SerialLineSpec,
+        events: StreamSink<SessionEvent>,
+    ) {
+        self.app.open_serial(
+            &session.term,
+            path,
+            line.line(None),
+            Arc::new(DartSink(events)),
+        );
     }
 
     /// Tries after losing a connection, before giving up.

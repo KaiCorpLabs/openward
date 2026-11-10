@@ -428,6 +428,39 @@ async fn login_path() -> Option<&'static std::ffi::OsStr> {
     .as_deref()
 }
 
+/// Where a program on this computer is (`mosh-client`): in the login
+/// shell's `PATH`, the app's own, or the usual places of package managers
+/// that an app opened from the Finder does not see.
+pub async fn find_program(name: &str) -> Option<PathBuf> {
+    let own = std::env::var_os("PATH").unwrap_or_default();
+    let path = match login_path().await {
+        Some(login) => merge_paths(login, &own).unwrap_or(own),
+        None => own,
+    };
+    let mut dirs: Vec<PathBuf> = std::env::split_paths(&path).collect();
+    for extra in [
+        "/opt/homebrew/bin",
+        "/usr/local/bin",
+        "/usr/bin",
+        "/bin",
+        "/snap/bin",
+        "/run/current-system/sw/bin",
+    ] {
+        dirs.push(PathBuf::from(extra));
+    }
+    if let Some(home) = std::env::var_os("HOME") {
+        dirs.push(PathBuf::from(home).join(".nix-profile/bin"));
+    }
+    let file = if cfg!(windows) {
+        format!("{name}.exe")
+    } else {
+        name.to_owned()
+    };
+    dirs.into_iter()
+        .map(|d| d.join(&file))
+        .find(|p| p.is_file())
+}
+
 /// The login shell's folders, then the app's own that it lacks.
 fn merge_paths(login: &std::ffi::OsStr, own: &std::ffi::OsStr) -> Option<std::ffi::OsString> {
     let mut dirs: Vec<PathBuf> = std::env::split_paths(login).collect();
@@ -645,6 +678,119 @@ pub async fn open(target: &Target, hop: Hop<'_>, opts: &Options) -> anyhow::Resu
     })
 }
 
+/// A plain byte stream, both ways.
+pub trait Duplex: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send + Unpin {}
+
+impl<T: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send + Unpin> Duplex for T {}
+
+/// A connection that is not SSH (Telnet) to `target`, the way an SSH one
+/// would go: straight, through a proxy or a ProxyCommand, or out of a
+/// jump host. A ProxyCommand's program lives as long as the stream.
+pub struct Stream {
+    io: Box<dyn Duplex>,
+    _proxy: Option<Child>,
+}
+
+impl tokio::io::AsyncRead for Stream {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        Pin::new(&mut self.io).poll_read(cx, buf)
+    }
+}
+
+impl tokio::io::AsyncWrite for Stream {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &[u8],
+    ) -> std::task::Poll<std::io::Result<usize>> {
+        Pin::new(&mut self.io).poll_write(cx, buf)
+    }
+
+    fn poll_flush(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        Pin::new(&mut self.io).poll_flush(cx)
+    }
+
+    fn poll_shutdown(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        Pin::new(&mut self.io).poll_shutdown(cx)
+    }
+}
+
+/// Opens a [`Stream`] within `limit`.
+pub async fn open_stream(
+    target: &Target,
+    hop: Hop<'_>,
+    limit: Option<Duration>,
+) -> anyhow::Result<Stream> {
+    let opening = async {
+        Ok(match hop {
+            Hop::Tcp => {
+                let tcp = tokio::net::TcpStream::connect((target.host.as_str(), target.port))
+                    .await
+                    .with_context(|| format!("connecting to {}:{}", target.host, target.port))?;
+                let _ = tcp.set_nodelay(true);
+                Stream {
+                    io: Box::new(tcp),
+                    _proxy: None,
+                }
+            }
+            Hop::ProxyCommand(command) => {
+                let mut child = shell_command(&command)
+                    .await
+                    .stdin(std::process::Stdio::piped())
+                    .stdout(std::process::Stdio::piped())
+                    .stderr(std::process::Stdio::null())
+                    .kill_on_drop(true)
+                    .spawn()
+                    .with_context(|| format!("ProxyCommand {command}"))?;
+                let io = tokio::io::join(
+                    child.stdout.take().context("ProxyCommand stdout")?,
+                    child.stdin.take().context("ProxyCommand stdin")?,
+                );
+                Stream {
+                    io: Box::new(io),
+                    _proxy: Some(child),
+                }
+            }
+            Hop::Proxy(p) => Stream {
+                io: Box::new(crate::proxy::connect(&p, &target.host, target.port).await?),
+                _proxy: None,
+            },
+            Hop::Via(jump) => {
+                let channel = jump
+                    .handle
+                    .channel_open_direct_tcpip(
+                        target.host.as_str(),
+                        u32::from(target.port),
+                        "127.0.0.1",
+                        0,
+                    )
+                    .await
+                    .context("direct-tcpip through the jump host")?;
+                Stream {
+                    io: Box::new(channel.into_stream()),
+                    _proxy: None,
+                }
+            }
+        })
+    };
+    match limit {
+        Some(limit) => tokio::time::timeout(limit, opening)
+            .await
+            .map_err(|_| anyhow::Error::new(NoAnswer(limit)))?,
+        None => opening.await,
+    }
+}
+
 /// The host key was refused; the error carries the verdict.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UntrustedHost(pub Verdict);
@@ -765,7 +911,7 @@ pub enum KeyError {
 
 /// Loads a private key, decrypting it with `passphrase` if it is protected.
 pub fn load_key(path: &Path, passphrase: Option<&str>) -> Result<PrivateKey, KeyError> {
-    match russh::keys::load_secret_key(path, passphrase) {
+    match crate::keyfile::load_secret_key(path, passphrase) {
         Ok(key) => Ok(key),
         Err(russh::keys::Error::KeyIsEncrypted) => Err(KeyError::Encrypted),
         // Without a passphrase an encrypted key says so; with one, a
@@ -901,6 +1047,49 @@ impl russh::Signer for Signing<'_> {
             Err(reason) => {
                 if let Some(refused) = self.refused.take() {
                     let _ = refused.send(reason);
+                }
+                // Unchanged: russh sends nothing.
+                Ok(to_sign)
+            }
+        }
+    }
+}
+
+/// What signs with a key whose secret is elsewhere (a security key): it
+/// gets the data to sign and gives SSH's signature, blocking meanwhile
+/// (a touch).
+pub type SignFn = Arc<dyn Fn(&[u8]) -> anyhow::Result<Vec<u8>> + Send + Sync>;
+
+/// A key signed with by a [`SignFn`]; why it failed goes to `failed`.
+struct ExternalSigning {
+    sign: SignFn,
+    failed: Option<tokio::sync::oneshot::Sender<anyhow::Error>>,
+}
+
+impl russh::Signer for ExternalSigning {
+    type Error = russh::AgentAuthError;
+
+    async fn auth_sign(
+        &mut self,
+        _key: &AgentIdentity,
+        _hash_alg: Option<russh::keys::HashAlg>,
+        mut to_sign: Vec<u8>,
+    ) -> Result<Vec<u8>, Self::Error> {
+        let sign = Arc::clone(&self.sign);
+        let data = to_sign.clone();
+        let signed = tokio::task::spawn_blocking(move || sign(&data))
+            .await
+            .map_err(anyhow::Error::from)
+            .and_then(|r| r);
+        match signed {
+            Ok(blob) => {
+                to_sign.extend((blob.len() as u32).to_be_bytes());
+                to_sign.extend(blob);
+                Ok(to_sign)
+            }
+            Err(reason) => {
+                if let Some(failed) = self.failed.take() {
+                    let _ = failed.send(reason);
                 }
                 // Unchanged: russh sends nothing.
                 Ok(to_sign)
@@ -1071,6 +1260,34 @@ impl Session {
         Ok(self.done(r.into()))
     }
 
+    /// A key whose secret is elsewhere (a security key): `sign` signs, and
+    /// may take a while (it waits for a touch). Why it could not sign is
+    /// this call's error.
+    pub async fn auth_signed(
+        &mut self,
+        user: &str,
+        key: PublicKey,
+        sign: SignFn,
+    ) -> anyhow::Result<Outcome> {
+        self.attempts += 1;
+        let (failed, failure) = tokio::sync::oneshot::channel();
+        let mut signing = ExternalSigning {
+            sign,
+            failed: Some(failed),
+        };
+        let step = async {
+            tokio::select! {
+                r = self.handle.authenticate_publickey_with(user, key, None, &mut signing) => {
+                    r.map_err(anyhow::Error::from)
+                }
+                Ok(reason) = failure => Err(reason),
+            }
+        };
+        // The touch's time, then the server's.
+        let r = Self::answer(self.limit.map(|l| AGENT_TIMEOUT + l), step).await?;
+        Ok(self.done(r.into()))
+    }
+
     pub async fn kbd_start(&mut self, user: &str) -> anyhow::Result<Kbd> {
         self.attempts += 1;
         let r = Self::answer(
@@ -1128,6 +1345,37 @@ impl Session {
     /// that the command is let go.
     pub async fn exec_short(&self, command: &str) -> anyhow::Result<Output> {
         self.run(command, false, &[], EXEC_OUTPUT).await
+    }
+
+    /// A short command whose answer is complete as soon as `done` says so
+    /// (a line it waits for), even if something it left running keeps the
+    /// channel open: what came until then, its status if it ended.
+    pub async fn exec_until(
+        &self,
+        command: &str,
+        done: impl Fn(&str) -> bool,
+    ) -> anyhow::Result<Output> {
+        let mut channel = self.handle.channel_open_session().await?;
+        channel.exec(true, command).await?;
+        let mut out = Output {
+            stdout: Vec::new(),
+            status: None,
+        };
+        while let Some(msg) = channel.wait().await {
+            match msg {
+                ChannelMsg::Data { data } | ChannelMsg::ExtendedData { data, .. } => {
+                    let room = EXEC_OUTPUT - out.stdout.len();
+                    out.stdout.extend_from_slice(&data[..data.len().min(room)]);
+                    if data.len() > room || done(&String::from_utf8_lossy(&out.stdout)) {
+                        break;
+                    }
+                }
+                ChannelMsg::ExitStatus { exit_status } => out.status = Some(exit_status),
+                ChannelMsg::Close => break,
+                _ => {}
+            }
+        }
+        Ok(out)
     }
 
     async fn run(
@@ -1372,6 +1620,8 @@ mod tests {
         );
     }
 
+    // On Unix only: Windows asks no login shell, and its PATH uses `;`.
+    #[cfg(unix)]
     #[test]
     fn the_login_shell_s_folders_go_first() {
         let path = merge_paths(

@@ -7,9 +7,11 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `event_view`, `failure_view`, `into_answer`, `packed`, `prompt_view`
+import 'vault.dart';
+
+// These functions are ignored because they are not marked as `pub`: `event_view`, `failure_view`, `into_answer`, `of`, `packed`, `prompt_view`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DartSink`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `send`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<TerminalSession>>
 abstract class TerminalSession implements RustOpaqueInterface {
@@ -118,6 +120,10 @@ abstract class TerminalSession implements RustOpaqueInterface {
   /// The selected text, for the clipboard; `None` without a selection.
   String? selectionText();
 
+  /// Sends a break down a serial port (a router's ROM monitor waits for
+  /// one); false if this is not a serial port.
+  bool sendBreak();
+
   void setCellPixels({required double width, required double height});
 
   /// The cursor until a program sets its own, and whether it blinks.
@@ -201,6 +207,12 @@ class ClosedView {
 }
 
 class ConnectedView {
+  /// For Telnet the SSH fields are empty (nothing is encrypted); for a
+  /// serial port `host` is the port and `port` 0.
+  final ProtocolKind protocol;
+
+  /// The shell goes over Mosh (SSH only started it).
+  final bool mosh;
   final String host;
   final int port;
   final String kex;
@@ -218,6 +230,8 @@ class ConnectedView {
   final double connectMs;
 
   const ConnectedView({
+    required this.protocol,
+    required this.mosh,
     required this.host,
     required this.port,
     required this.kex,
@@ -233,6 +247,8 @@ class ConnectedView {
 
   @override
   int get hashCode =>
+      protocol.hashCode ^
+      mosh.hashCode ^
       host.hashCode ^
       port.hashCode ^
       kex.hashCode ^
@@ -250,6 +266,8 @@ class ConnectedView {
       identical(this, other) ||
       other is ConnectedView &&
           runtimeType == other.runtimeType &&
+          protocol == other.protocol &&
+          mosh == other.mosh &&
           host == other.host &&
           port == other.port &&
           kex == other.kex &&
@@ -278,6 +296,9 @@ enum FailureKind {
 
   /// The server has no SFTP.
   noSftp,
+
+  /// A serial port: [`FailureView::serial`] says what.
+  serial,
   network,
   other,
 }
@@ -303,7 +324,15 @@ class FailureView {
   final List<PreviousKeyView> previous;
   final CertKind? cert;
   final NetKind? net;
+  final SerialKind? serial;
   final int seconds;
+
+  /// With [`FailureKind::AuthFailed`]: a certificate that had run out
+  /// and was not offered (its path); empty if none.
+  final String expiredCertificate;
+
+  /// With [`FailureKind::AuthFailed`]: a security key that did not sign.
+  final SecurityKeyKind? securityKey;
 
   const FailureView({
     this.kind,
@@ -320,7 +349,10 @@ class FailureView {
     required this.previous,
     this.cert,
     this.net,
+    this.serial,
     required this.seconds,
+    required this.expiredCertificate,
+    this.securityKey,
   });
 
   static Future<FailureView> default_() =>
@@ -342,7 +374,10 @@ class FailureView {
       previous.hashCode ^
       cert.hashCode ^
       net.hashCode ^
-      seconds.hashCode;
+      serial.hashCode ^
+      seconds.hashCode ^
+      expiredCertificate.hashCode ^
+      securityKey.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -363,7 +398,10 @@ class FailureView {
           previous == other.previous &&
           cert == other.cert &&
           net == other.net &&
-          seconds == other.seconds;
+          serial == other.serial &&
+          seconds == other.seconds &&
+          expiredCertificate == other.expiredCertificate &&
+          securityKey == other.securityKey;
 }
 
 /// An answer from the server (after `rtt_ms`, when it was a question's),
@@ -469,6 +507,41 @@ class LogStateView {
           failed == other.failed;
 }
 
+/// Why a session asked to go over Mosh goes over SSH, in tmux.
+enum MoshFallbackKind {
+  /// No `mosh-client` on this computer.
+  noClient,
+
+  /// No `mosh-server` on the server.
+  noServer,
+
+  /// The server's UDP did not get through.
+  noUdp,
+
+  /// `mosh-server` did not start; [`MoshFallbackView::said`] is why.
+  other,
+}
+
+class MoshFallbackView {
+  final MoshFallbackKind kind;
+
+  /// What the server said, with `Other`.
+  final String said;
+
+  const MoshFallbackView({required this.kind, required this.said});
+
+  @override
+  int get hashCode => kind.hashCode ^ said.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MoshFallbackView &&
+          runtimeType == other.runtimeType &&
+          kind == other.kind &&
+          said == other.said;
+}
+
 /// With [`FailureKind::Network`]: what kind of trouble.
 enum NetKind {
   refused,
@@ -571,6 +644,9 @@ enum PromptKind {
 
   /// The proxy's password; first its user when `user` is empty.
   proxyLogin,
+
+  /// The PIN of the security key that holds the key file `key`.
+  securityKeyPin,
 }
 
 /// A question; answer it with `OpenWard.answer(id, …)`.
@@ -767,6 +843,21 @@ class SearchView {
           searching == other.searching;
 }
 
+/// Why a security key did not sign or make a key.
+enum SecurityKeyKind {
+  noKey,
+  tooManyKeys,
+  pinRequired,
+  wrongPin,
+  locked,
+  notTouched,
+  notThisKey,
+
+  /// Windows, without administrator rights: the agent of its OpenSSH.
+  noAccess,
+  other,
+}
+
 /// One visible row's selected columns, both inclusive.
 class SelectedRange {
   final int row;
@@ -792,6 +883,26 @@ class SelectedRange {
           end == other.end;
 }
 
+/// With [`FailureKind::Serial`]: what went wrong with the port
+/// ([`FailureView::host`]).
+enum SerialKind {
+  /// Not there (now).
+  missing,
+
+  /// Another program has it.
+  busy,
+
+  /// Not allowed (on Linux, not in `dialout`).
+  denied,
+
+  /// It does not take these settings; [`FailureView::reason`] says why.
+  settings,
+
+  /// It went while open: the cable was pulled.
+  gone,
+  other,
+}
+
 /// One event; the field named by `kind` is set.
 class SessionEvent {
   final SessionEventKind kind;
@@ -812,6 +923,7 @@ class SessionEvent {
   /// Saved hosts (by id) that do not tell their system and do not read
   /// `/etc/os-release`, with `HostsChanged`.
   final List<String> unknownSystems;
+  final MoshFallbackView? moshFallback;
 
   const SessionEvent({
     required this.kind,
@@ -826,6 +938,7 @@ class SessionEvent {
     this.program,
     this.closed,
     required this.unknownSystems,
+    this.moshFallback,
   });
 
   @override
@@ -841,7 +954,8 @@ class SessionEvent {
       persistent.hashCode ^
       program.hashCode ^
       closed.hashCode ^
-      unknownSystems.hashCode;
+      unknownSystems.hashCode ^
+      moshFallback.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -859,7 +973,8 @@ class SessionEvent {
           persistent == other.persistent &&
           program == other.program &&
           closed == other.closed &&
-          unknownSystems == other.unknownSystems;
+          unknownSystems == other.unknownSystems &&
+          moshFallback == other.moshFallback;
 }
 
 enum SessionEventKind {
@@ -887,12 +1002,23 @@ enum SessionEventKind {
   /// (`persistent`).
   persistent,
 
+  /// Mosh was asked for and the session goes over SSH (`mosh_fallback`).
+  moshFallback,
+
   /// A local program is running (`program`).
   started,
   closed,
 }
 
-enum StageKind { connecting, authenticating, openingShell, openingSftp }
+enum StageKind {
+  connecting,
+  authenticating,
+
+  /// Touch the security key of the key file in `label`.
+  touchKey,
+  openingShell,
+  openingSftp,
+}
 
 class StageView {
   /// From 0; `hops` in total, the target last.
