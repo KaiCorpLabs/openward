@@ -3,7 +3,7 @@ name = "hpkebench"
 version = "0.0.0"
 edition = "2024"
 publish = false
-license = "Apache-2.0"
+license = "LicenseRef-OpenWard-Proprietary"
 description = "Spike S6: which HPKE wraps the vault keys (docs/spikes/S6-hpke.md)"
 
 # The candidates, pinned to the versions measured.

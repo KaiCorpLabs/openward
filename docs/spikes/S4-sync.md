@@ -1,6 +1,6 @@
 # Spike S4 (primera parte) — El sobre v1 y el merge
 
-- **Estado:** cerrado (2026-11-09). Medido en macOS y en la CI de Linux, Windows y macOS. La decisión que propone está en el §7.
+- **Estado:** cerrado (2026-11-09). Medido en macOS y en la CI de Linux, Windows y macOS. La decisión que propone está en el §7, aceptada con ADR-005 el 2026-11-10.
 - **Fecha:** 2026-11-09.
 - **Decide:** el formato del sobre `v: 1` que escribe la v0.4 y el merge de [ADR-005](../adr/ADR-005-sync-por-registros-de-dispositivo.md). Es D2 de la [v0.4](../plan/v0.4.md). La segunda parte de S4 (los backends de verdad, carpeta y S3) es el hito S1 de la v0.5.
 - **Código:** [`spikes/s4-sync/`](../../spikes/s4-sync/).

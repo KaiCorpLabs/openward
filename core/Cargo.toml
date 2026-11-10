@@ -22,7 +22,7 @@ exclude = ["crates/openward-ghostty/bindgen-gen"]
 version = "0.3.4-beta.3"
 edition = "2024"
 rust-version = "1.99"
-license = "Apache-2.0"
+license = "LicenseRef-OpenWard-Proprietary"
 repository = "https://github.com/KaiCorpLabs/openward"
 # Not on crates.io: the app and the CLI ship as binaries.
 publish = false

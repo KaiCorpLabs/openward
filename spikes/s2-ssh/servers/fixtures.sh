@@ -7,6 +7,8 @@
 set -euo pipefail
 
 dir="${1:?usage: fixtures.sh <dir>}"
+# The repository's own test keys (openward-ssh's fixtures), also let in.
+repo_keys="$(cd "$(dirname "$0")/../../../core/crates/openward-ssh/tests/fixtures" && pwd)"
 mkdir -p "$dir"
 cd "$dir"
 
@@ -25,7 +27,9 @@ key ed25519 "" host_ca
 [[ -f id_cert-cert.pub ]] ||
   ssh-keygen -q -s user_ca -I s2-demo -n demo -V -5m:+52w id_cert.pub
 
-cat id_ed25519.pub id_ecdsa.pub id_rsa.pub id_ed25519_pass.pub > authorized_keys
+# ecdsa-p256-short: a P-256 key whose scalar OpenSSH wrote in 31 bytes.
+cat id_ed25519.pub id_ecdsa.pub id_rsa.pub id_ed25519_pass.pub \
+  "$repo_keys/ecdsa-p256-short.pub" > authorized_keys
 printf '@cert-authority * %s\n' "$(cat host_ca.pub)" > known_hosts_ca
 
 # Test-only credentials for the throwaway servers.

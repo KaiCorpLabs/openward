@@ -1,6 +1,6 @@
 # Spike S6 — El envoltorio de claves: HPKE con X-Wing o con X25519
 
-- **Estado:** cerrado (2026-11-09). Medido en macOS y en la CI de Linux y Windows. La decisión que propone está en el §7.
+- **Estado:** cerrado (2026-11-09). Medido en macOS y en la CI de Linux y Windows. La decisión que propone está en el §7, aceptada con ADR-004 el 2026-11-10.
 - **Fecha:** 2026-11-09.
 - **Decide:** la parte del KEM de [ADR-004](../adr/ADR-004-vault-y-jerarquia-de-claves.md). Es D1 de la [v0.4](../plan/v0.4.md).
 - **Código:** [`spikes/s6-hpke/`](../../spikes/s6-hpke/).
