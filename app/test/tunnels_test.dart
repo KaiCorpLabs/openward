@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openward/l10n/app_localizations.dart';
 import 'package:openward/src/rust/api/tunnels.dart';
+import 'package:openward/tunnels/tunnel_editor.dart';
 import 'package:openward/tunnels/tunnels_page.dart';
 
 TunnelView tunnel(
@@ -95,5 +96,16 @@ void main() {
       es.tunnelDidNotOpen('pgAdmin', tunnelErrorText(es, busy)),
       'No se abrió «pgAdmin» al conectar: el puerto 5433 de este equipo está ocupado.',
     );
+  });
+
+  /// AM-5: open to the network, a dynamic tunnel lets anyone there into
+  /// all the server reaches, and says so, not the note of one port.
+  test('a tunnel open to the network says what it lets in', () {
+    expect(
+      lanNote(es, TunnelKind.dynamic_, 'bastion'),
+      es.lanDynamicNote('bastion'),
+    );
+    expect(lanNote(es, TunnelKind.local, 'bastion'), es.lanLocalNote);
+    expect(lanNote(es, TunnelKind.remote, 'bastion'), es.lanRemoteNote);
   });
 }

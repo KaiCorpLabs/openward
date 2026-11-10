@@ -18,6 +18,7 @@ import '../tabs/connection_panels.dart';
 import '../tabs/messages.dart';
 import '../tabs/prompt_card.dart';
 import '../terminal/keys.dart';
+import '../terminal/visible_text.dart';
 import '../ui/announcer.dart';
 import '../ui/confirm.dart';
 import '../ui/move_draggable.dart';
@@ -26,6 +27,7 @@ import '../ui/widgets.dart';
 import '../window/shortcuts.dart';
 import 'dialogs.dart';
 import 'format.dart';
+import 'open_safety.dart';
 import 'queue_view.dart';
 import 'remote_edit.dart';
 import 'sftp_controller.dart';
@@ -227,6 +229,18 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
         if (program == null || program.trim().isEmpty) return;
         opener = (path) => openWithProgram(path, program);
       }
+    } else if (runsWhenOpened(e.name) case final type?) {
+      // The system would run it, and the server wrote it.
+      final run = await confirmAction(
+        context,
+        title: l.openRunsTitle(visibleName(e.name)),
+        body: l.openRunsBody(type),
+        action: l.openRunsAction,
+        danger: true,
+        icon: Icons.warning_amber_rounded,
+        actionKey: const ValueKey('sftp.openRuns.run'),
+      );
+      if (!run || !mounted) return;
     }
     final edits = _c.edits;
     edits.onChangedThere ??= _askChangedThere;
@@ -244,7 +258,7 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
     final program = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(l.openWithTitle(name)),
+        title: Text(l.openWithTitle(visibleName(name))),
         content: SizedBox(
           width: 420,
           child: TextField(
@@ -982,11 +996,20 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
                 Icon(icon, size: 16, color: iconColor),
                 const SizedBox(width: 9),
                 Flexible(
-                  child: Text(
-                    e.name,
+                  // What the name hides, shown: the server picks it, and
+                  // a bidi mark can dress `fdp.exe` as `exe.pdf`.
+                  child: Text.rich(
+                    visibleText(
+                      e.name,
+                      style: TextStyle(color: e.hidden ? c.textMuted : c.text),
+                      mark: TextStyle(
+                        color: c.warn,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      lines: false,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: e.hidden ? c.textMuted : c.text),
                   ),
                 ),
                 if (e.linkTarget != null) ...[

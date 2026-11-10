@@ -1,6 +1,6 @@
 # Camino a la Community: lo básico completo y la sincronización
 
-- **Estado:** en marcha. P0 está en main (2026-11-06) y P1 hecho en código, a falta de probarlo con un cable de verdad. Las decisiones por defecto siguen por confirmar. Como hasta ahora, cada hito con interfaz nueva pasa antes por maquetas en el lienzo.
+- **Estado:** en marcha. La etapa 1 (P0–P7) está hecha y salió en la 0.3.4-beta.1 (2026-11-07); lo que pide hardware de verdad (un cable serie, una llave FIDO2) queda para la guía de prueba. La etapa 2 empieza con D0, el [modelo de amenazas](../THREAT_MODEL.md), que está escrito; los tres arreglos de «Abrir» que salieron de él van en la 0.3.4-beta.2, la misma semana, y los de importar, los túneles y la carpeta de datos, en la 0.3.4-beta.3 (2026-11-09). Las decisiones por defecto siguen por confirmar. Como hasta ahora, cada hito con interfaz nueva pasa antes por maquetas en el lienzo.
 - **Fecha:** 2026-11-06.
 - **Base:** fases 1 y 2 de la hoja de ruta ([ARCHITECTURE §15](../ARCHITECTURE.md#15-hoja-de-ruta-con-puertas)) y los ADR [004](../adr/ADR-004-vault-y-jerarquia-de-claves.md) (vault), [005](../adr/ADR-005-sync-por-registros-de-dispositivo.md) (sync), [006](../adr/ADR-006-servidor-open-core.md) (servidor) y [009](../adr/ADR-009-mosh-clean-room.md) (Mosh). Incluye el plan de la [v0.4](v0.4.md) como etapa 2, con tres ajustes.
 - **Duración estimada:** unas 29 semanas de plan en cinco etapas. Son estimaciones al estilo de los planes anteriores: la 0.2 y la 0.3 fueron bastante más rápidas que lo que decían sus planes.
@@ -32,7 +32,7 @@ Ese mismo día se descartó montar Postgres y Supabase Auth aparte para OpenWard
 | Etapa | Versión | Contenido | Semanas |
 |---|---|---|---|
 | 1 | 0.3.4 y siguientes | [Lo básico completo](#etapa-1--lo-básico-completo) (P0–P7) | ~9 |
-| 2 | 0.4 | [El vault cifrado](#etapa-2--v04-el-vault-cifrado) ([v0.4.md](v0.4.md), D0–D8) | ~8,5 |
+| 2 | 0.4 | [El vault cifrado](#etapa-2--v04-el-vault-cifrado) ([v0.4.md](v0.4.md), D0–D8) | ~9 |
 | 3 | 0.5 | [Sync con tu almacenamiento](#etapa-3--v05-sync-con-tu-almacenamiento) (S1–S6) | ~5 |
 | 4 | 0.6 | [Servidor y cuentas de KaiCorp Labs](#etapa-4--v06-servidor-y-cuentas-de-kaicorp-labs) (C1–C6) | ~5 |
 | 5 | 0.7 | [Abierto: el servidor en producción](#etapa-5--v07-abierto-el-servidor-en-producción) (M1–M3) | ~1,5 |
@@ -308,16 +308,16 @@ Novedades, notas, guía de prueba en los tres sistemas, accesibilidad y galería
 - **Notas** de la 0.3.4-beta.1 en [las de la 0.3](../notas/v0.3.md), y en [la guía](prueba-v0.3.md) los puntos 24 a 30, que se prueban en los tres sistemas.
 - **Accesibilidad:** la prueba recorre también el diálogo de una regla de resaltado, «Nueva clave» en una llave de seguridad y un snippet en varios hosts. Encontró que los interruptores de las reglas no tenían nombre para un lector de pantalla, y ya lo tienen.
 - **Galería:** el terminal de cada tema enseña el resaltado, y Ajustes › Terminal sale en cada tema.
-- **La beta, preparada y sin publicar:** falta subir la versión (`tool/bump-version.sh 0.3.4-beta.1`), la etiqueta, la release y el cask, cuando se revise todo esto.
+- **La beta 0.3.4-beta.1** (2026-11-07): la etiqueta `v0.3.4-beta.1`, el borrador de la release que deja la CI con los paquetes de los tres sistemas, y el `.dmg` en el cask `openward` de `kaicorplabs/tap`. Su borrador no se publica: el paquete de Windows tenía AM-1, y la 0.3.4-beta.2 lo sustituye con los arreglos de D0.
 
 ## Etapa 2 · v0.4, el vault cifrado
 
 El plan de la [v0.4](v0.4.md) tal cual (D0–D8), con tres ajustes que salen de este:
-- **La clave de cuenta piensa en el servidor desde el principio.** D3 guarda, además del vault, un paquete con la clave de cuenta envuelta con la KEK, que es lo que la etapa 4 sube para dar de alta otros equipos. El certificado del dispositivo admite más adelante claves de hardware (Secure Enclave, Keystore).
+- **La clave de cuenta piensa en el servidor desde el principio.** La v0.4 guarda, además del vault, un paquete con la clave de cuenta, que es lo que la etapa 4 sube para dar de alta otros equipos. Va envuelto con la contraseña y con un secreto del kit, no solo con la KEK, para que con el paquete solo no se puedan probar contraseñas ([D0-1](../THREAT_MODEL.md#11-decisiones-que-salen-de-d0)). El certificado del dispositivo admite más adelante claves de hardware (Secure Enclave, Keystore).
 - **Desbloqueo en los tres sistemas:** Windows Hello y el llavero de Linux (libsecret) entran en la v0.4, no después. La Community sale en los tres.
 - **Claves en el Secure Enclave (Touch ID)** junto al desbloqueo con Touch ID en D4. Si el llavero con biometría exige firmar con Developer ID, la cuenta de desarrollador de Apple hará falta antes del lanzamiento, aunque la notarización siga para entonces.
 
-Las decisiones abiertas de la v0.4 (contraseña maestra obligatoria y «Más tarde» durante la beta) siguen pendientes. La sync de la etapa 3 confirma que la contraseña y el kit hacen falta.
+Las decisiones de la v0.4 (contraseña maestra obligatoria y «Más tarde» durante la beta, entre otras) y las tres de su modelo de amenazas están aceptadas desde el 2026-11-10. La sync de la etapa 3 confirma que la contraseña y el kit hacen falta.
 
 ## Etapa 3 · v0.5, sync con tu almacenamiento
 
@@ -383,9 +383,9 @@ Hay tres ventajas:
 - **Guarda:**
   - las claves públicas de la cuenta y los certificados de cada dispositivo;
   - los segmentos cifrados;
-  - el paquete de la clave de cuenta envuelto con la KEK.
+  - el paquete de la clave de cuenta, envuelto con la contraseña y con el secreto del kit ([D0-1](../THREAT_MODEL.md#11-decisiones-que-salen-de-d0)). Nada de lo que guarda se abre con la contraseña sola, así que quien lo robe no puede probar contraseñas.
   
-  Para añadir un equipo nuevo: se entra con la cuenta, se descarga el paquete y se abre con la contraseña maestra o con el kit (o se aprueba desde otro equipo, como en S4).
+  Para añadir un equipo nuevo: se entra con la cuenta, se descarga el paquete y se abre con la contraseña maestra y el kit (o se aprueba desde otro equipo, como en S4). Si hace falta también una copia que abra el kit solo, para recuperar sin contraseña y sin ningún equipo, lo decide C1.
 - **Cada sesión lleva la firma del dispositivo**, un desafío firmado ([ARCHITECTURE §7.1](../ARCHITECTURE.md#71-monolito-modular)). Un equipo revocado no entra aunque conserve el token.
 
 ### Dónde corre
@@ -408,7 +408,7 @@ El servidor sale del tailnet para que entre gente de fuera del equipo, al están
 
 | # | Hito | Semanas |
 |---|---|---|
-| M1 | Dirección pública por el túnel de Cloudflare, con el WebSocket a través de él (pings por debajo del límite de inactividad). Es la dirección estable que guardan los clientes, así que se decide aquí si va bajo `kaicorplabs.com` o bajo un dominio propio de OpenWard | 0,5 |
+| M1 | Dirección pública por el túnel de Cloudflare, con el WebSocket a través de él (pings por debajo del límite de inactividad). Es la dirección estable que guardan los clientes: un dominio propio de OpenWard (decidido el 2026-11-10) | 0,5 |
 | M2 | Al estándar de la casa: copias nocturnas comprobadas, vigilancia, el borrado de una persona también en OpenWard e imágenes firmadas | 0,5 |
 | M3 | Términos y privacidad (hay datos de personas de fuera), la membresía de OpenWard para quien la pida, notas y beta | 0,5 |
 
@@ -416,14 +416,15 @@ El servidor sale del tailnet para que entre gente de fuera del equipo, al están
 
 ## Después de este plan
 
-Lo que queda para lanzar y que este plan no hace:
+Lo que queda para lanzar y que este plan no hace. El [plan de lanzamiento](lanzamiento.md) lo ordena por prioridad junto con las etapas de arriba:
 - **Web y distribución:**
-  - la web (bajo `kaicorplabs.com` o en un dominio propio, la misma decisión que en M1) y la documentación pública;
+  - la web, en el dominio propio de OpenWard que usa M1, y la documentación pública;
   - firma y notarización en macOS y firma en Windows;
   - actualizaciones automáticas (Sparkle, WinSparkle);
   - Flatpak, AppImage y .deb; winget y Scoop.
 - **Repositorio:**
   - el repo público, con la CI completa;
+  - la licencia del lanzamiento (GPL-3.0 en el cliente y AGPL-3.0 en el servidor), la CLA en todo el repositorio y el registro de la marca ([ADR-007](../adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-10));
   - el canal de `SECURITY.md`;
   - la lista «Siempre gratis», cerrada.
 - **Legal:** el análisis de la Ley de Ciberresiliencia (CRA).

@@ -1231,18 +1231,26 @@ async fn shell(
     (exit_code, failure, true)
 }
 
-/// The data directory, readable by its owner only on Unix.
+/// The data directory, readable by its owner only on Unix: made so, and
+/// made so again when it was there already, as the app's folder is made
+/// first by `path_provider`, at 0755 (AM-3). The history, the recent
+/// connections and the logs inside are then the owner's alone, whatever
+/// their own mode. One that cannot be changed opens as it is.
 fn create_private_dir(dir: &Path) -> std::io::Result<()> {
-    if dir.is_dir() {
-        return Ok(());
-    }
     #[cfg(unix)]
     {
-        use std::os::unix::fs::DirBuilderExt;
-        std::fs::DirBuilder::new()
-            .recursive(true)
-            .mode(0o700)
-            .create(dir)
+        use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
+        if !dir.is_dir() {
+            std::fs::DirBuilder::new()
+                .recursive(true)
+                .mode(0o700)
+                .create(dir)?;
+        }
+        if std::fs::metadata(dir)?.permissions().mode() & 0o077 != 0 {
+            // Not its owner's to change (another user's folder): as it is.
+            let _ = std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700));
+        }
+        Ok(())
     }
     #[cfg(not(unix))]
     std::fs::create_dir_all(dir)
@@ -1251,6 +1259,24 @@ fn create_private_dir(dir: &Path) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// AM-3: a data folder made before by someone else, open to all, is
+    /// the owner's alone once the app opens it.
+    #[cfg(unix)]
+    #[test]
+    fn the_data_folder_is_made_private_even_when_there_already() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let mode = |p: &Path| std::fs::metadata(p).unwrap().permissions().mode() & 0o777;
+        let there = tmp.path().join("dev.openward.OpenWard");
+        std::fs::create_dir(&there).unwrap();
+        std::fs::set_permissions(&there, std::fs::Permissions::from_mode(0o755)).unwrap();
+        create_private_dir(&there).unwrap();
+        assert_eq!(mode(&there), 0o700);
+        let new = tmp.path().join("a/b");
+        create_private_dir(&new).unwrap();
+        assert_eq!(mode(&new), 0o700);
+    }
 
     #[test]
     fn reconnect_delays_grow_to_half_a_minute() {

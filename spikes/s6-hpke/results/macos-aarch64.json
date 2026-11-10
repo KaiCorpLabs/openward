@@ -1,0 +1,407 @@
+{
+  "system": "macos aarch64",
+  "checks": [
+    {
+      "library": "hpke-rs 0.8.0 + libcrux",
+      "what": "DHKEM(X25519) HPKE, RFC 9180 A.2, receiver",
+      "ok": true,
+      "detail": "key pair, 257 messages and 3 exports"
+    },
+    {
+      "library": "hpke-rs 0.8.0 + RustCrypto",
+      "what": "DHKEM(X25519) HPKE, RFC 9180 A.2, receiver",
+      "ok": true,
+      "detail": "key pair, 257 messages and 3 exports"
+    },
+    {
+      "library": "hpke 0.15.1 (rozbb)",
+      "what": "DHKEM(X25519) HPKE, RFC 9180 A.2, receiver",
+      "ok": true,
+      "detail": "key pair, 257 messages and 3 exports (its private key comes out clamped, as §7.1.2 says)"
+    },
+    {
+      "library": "hpke-rs 0.8.0 + libcrux",
+      "what": "DHKEM(X25519) HPKE, RFC 9180 A.2, sender",
+      "ok": true,
+      "detail": "enc from ikmE (32 bytes) and 257 messages"
+    },
+    {
+      "library": "hpke 0.15.1 (rozbb)",
+      "what": "DHKEM(X25519) HPKE, RFC 9180 A.2, sender",
+      "ok": true,
+      "detail": "enc from ikmE (32 bytes) and 257 messages"
+    },
+    {
+      "library": "hpke-rs 0.8.0 + RustCrypto",
+      "what": "DHKEM(X25519) HPKE, RFC 9180 A.2, sender",
+      "ok": true,
+      "detail": "not checked: its randomness cannot be fixed from outside"
+    },
+    {
+      "library": "hpke-rs 0.8.0 + libcrux",
+      "what": "X-Wing HPKE, draft-ietf-hpke-pq, receiver",
+      "ok": true,
+      "detail": "key pair, 10 messages and 5 exports"
+    },
+    {
+      "library": "hpke-rs 0.8.0 + RustCrypto",
+      "what": "X-Wing HPKE, draft-ietf-hpke-pq, receiver",
+      "ok": true,
+      "detail": "key pair, 10 messages and 5 exports"
+    },
+    {
+      "library": "hpke 0.15.1 (rozbb)",
+      "what": "X-Wing HPKE, draft-ietf-hpke-pq, receiver",
+      "ok": true,
+      "detail": "key pair, 10 messages and 5 exports"
+    },
+    {
+      "library": "hpke-rs 0.8.0 + libcrux",
+      "what": "X-Wing HPKE, draft-ietf-hpke-pq, sender",
+      "ok": true,
+      "detail": "enc from ikmE (64 bytes) and 10 messages"
+    },
+    {
+      "library": "hpke 0.15.1 (rozbb)",
+      "what": "X-Wing HPKE, draft-ietf-hpke-pq, sender",
+      "ok": true,
+      "detail": "enc from ikmE (64 bytes) and 10 messages"
+    },
+    {
+      "library": "hpke-rs 0.8.0 + RustCrypto",
+      "what": "X-Wing HPKE, draft-ietf-hpke-pq, sender",
+      "ok": true,
+      "detail": "not checked: its randomness cannot be fixed from outside"
+    },
+    {
+      "library": "libcrux-kem 0.0.10",
+      "what": "X-Wing KEM, draft 11 vectors",
+      "ok": true,
+      "detail": "3 vectors: keys, encapsulation and decapsulation"
+    },
+    {
+      "library": "x-wing 0.1.1 (RustCrypto)",
+      "what": "X-Wing KEM, draft 11 vectors",
+      "ok": true,
+      "detail": "3 vectors: keys, encapsulation and decapsulation"
+    },
+    {
+      "library": "hpke-rs 0.8.0 + libcrux",
+      "what": "DHKEM(X25519) interop: opens from hpke-rs 0.8.0 + libcrux",
+      "ok": true,
+      "detail": "opens, and refuses a changed ct, enc, info or aad"
+    },
+    {
+      "library": "hpke-rs 0.8.0 + libcrux",
+      "what": "DHKEM(X25519) interop: opens from hpke-rs 0.8.0 + RustCrypto",
+      "ok": true,
+      "detail": "opens, and refuses a changed ct, enc, info or aad"
+    },
+    {
+      "library": "hpke-rs 0.8.0 + libcrux",
+      "what": "DHKEM(X25519) interop: opens from hpke 0.15.1 (rozbb)",
+      "ok": true,
+      "detail": "opens, and refuses a changed ct, enc, info or aad"
+    },
+    {
+      "library": "hpke-rs 0.8.0 + RustCrypto",
+      "what": "DHKEM(X25519) interop: opens from hpke-rs 0.8.0 + libcrux",
+      "ok": true,
+      "detail": "opens, and refuses a changed ct, enc, info or aad"
+    },
+    {
+      "library": "hpke-rs 0.8.0 + RustCrypto",
+      "what": "DHKEM(X25519) interop: opens from hpke-rs 0.8.0 + RustCrypto",
+      "ok": true,
+      "detail": "opens, and refuses a changed ct, enc, info or aad"
+    },
+    {
+      "library": "hpke-rs 0.8.0 + RustCrypto",
+      "what": "DHKEM(X25519) interop: opens from hpke 0.15.1 (rozbb)",
+      "ok": true,
+      "detail": "opens, and refuses a changed ct, enc, info or aad"
+    },
+    {
+      "library": "hpke 0.15.1 (rozbb)",
+      "what": "DHKEM(X25519) interop: opens from hpke-rs 0.8.0 + libcrux",
+      "ok": true,
+      "detail": "opens, and refuses a changed ct, enc, info or aad"
+    },
+    {
+      "library": "hpke 0.15.1 (rozbb)",
+      "what": "DHKEM(X25519) interop: opens from hpke-rs 0.8.0 + RustCrypto",
+      "ok": true,
+      "detail": "opens, and refuses a changed ct, enc, info or aad"
+    },
+    {
+      "library": "hpke 0.15.1 (rozbb)",
+      "what": "DHKEM(X25519) interop: opens from hpke 0.15.1 (rozbb)",
+      "ok": true,
+      "detail": "opens, and refuses a changed ct, enc, info or aad"
+    },
+    {
+      "library": "hpke-rs 0.8.0 + libcrux",
+      "what": "X-Wing interop: opens from hpke-rs 0.8.0 + libcrux",
+      "ok": true,
+      "detail": "opens, and refuses a changed ct, enc, info or aad"
+    },
+    {
+      "library": "hpke-rs 0.8.0 + libcrux",
+      "what": "X-Wing interop: opens from hpke-rs 0.8.0 + RustCrypto",
+      "ok": true,
+      "detail": "opens, and refuses a changed ct, enc, info or aad"
+    },
+    {
+      "library": "hpke-rs 0.8.0 + libcrux",
+      "what": "X-Wing interop: opens from hpke 0.15.1 (rozbb)",
+      "ok": true,
+      "detail": "opens, and refuses a changed ct, enc, info or aad"
+    },
+    {
+      "library": "hpke-rs 0.8.0 + RustCrypto",
+      "what": "X-Wing interop: opens from hpke-rs 0.8.0 + libcrux",
+      "ok": true,
+      "detail": "opens, and refuses a changed ct, enc, info or aad"
+    },
+    {
+      "library": "hpke-rs 0.8.0 + RustCrypto",
+      "what": "X-Wing interop: opens from hpke-rs 0.8.0 + RustCrypto",
+      "ok": true,
+      "detail": "opens, and refuses a changed ct, enc, info or aad"
+    },
+    {
+      "library": "hpke-rs 0.8.0 + RustCrypto",
+      "what": "X-Wing interop: opens from hpke 0.15.1 (rozbb)",
+      "ok": true,
+      "detail": "opens, and refuses a changed ct, enc, info or aad"
+    },
+    {
+      "library": "hpke 0.15.1 (rozbb)",
+      "what": "X-Wing interop: opens from hpke-rs 0.8.0 + libcrux",
+      "ok": true,
+      "detail": "opens, and refuses a changed ct, enc, info or aad"
+    },
+    {
+      "library": "hpke 0.15.1 (rozbb)",
+      "what": "X-Wing interop: opens from hpke-rs 0.8.0 + RustCrypto",
+      "ok": true,
+      "detail": "opens, and refuses a changed ct, enc, info or aad"
+    },
+    {
+      "library": "hpke 0.15.1 (rozbb)",
+      "what": "X-Wing interop: opens from hpke 0.15.1 (rozbb)",
+      "ok": true,
+      "detail": "opens, and refuses a changed ct, enc, info or aad"
+    }
+  ],
+  "timings": [
+    {
+      "library": "hpke-rs 0.8.0 + libcrux",
+      "kem": "DHKEM(X25519)",
+      "step": "keypair",
+      "median_us": 45.291,
+      "p95_us": 79.0,
+      "iters": 5000
+    },
+    {
+      "library": "hpke-rs 0.8.0 + libcrux",
+      "kem": "DHKEM(X25519)",
+      "step": "derive",
+      "median_us": 40.333,
+      "p95_us": 73.583,
+      "iters": 5000
+    },
+    {
+      "library": "hpke-rs 0.8.0 + libcrux",
+      "kem": "DHKEM(X25519)",
+      "step": "seal",
+      "median_us": 88.958,
+      "p95_us": 158.917,
+      "iters": 5000
+    },
+    {
+      "library": "hpke-rs 0.8.0 + libcrux",
+      "kem": "DHKEM(X25519)",
+      "step": "open",
+      "median_us": 83.583,
+      "p95_us": 156.167,
+      "iters": 5000
+    },
+    {
+      "library": "hpke-rs 0.8.0 + RustCrypto",
+      "kem": "DHKEM(X25519)",
+      "step": "keypair",
+      "median_us": 15.25,
+      "p95_us": 24.75,
+      "iters": 5000
+    },
+    {
+      "library": "hpke-rs 0.8.0 + RustCrypto",
+      "kem": "DHKEM(X25519)",
+      "step": "derive",
+      "median_us": 15.957999999999998,
+      "p95_us": 25.415999999999997,
+      "iters": 5000
+    },
+    {
+      "library": "hpke-rs 0.8.0 + RustCrypto",
+      "kem": "DHKEM(X25519)",
+      "step": "seal",
+      "median_us": 62.542,
+      "p95_us": 111.75,
+      "iters": 5000
+    },
+    {
+      "library": "hpke-rs 0.8.0 + RustCrypto",
+      "kem": "DHKEM(X25519)",
+      "step": "open",
+      "median_us": 61.75,
+      "p95_us": 102.458,
+      "iters": 5000
+    },
+    {
+      "library": "hpke 0.15.1 (rozbb)",
+      "kem": "DHKEM(X25519)",
+      "step": "keypair",
+      "median_us": 17.25,
+      "p95_us": 30.125,
+      "iters": 5000
+    },
+    {
+      "library": "hpke 0.15.1 (rozbb)",
+      "kem": "DHKEM(X25519)",
+      "step": "derive",
+      "median_us": 15.625,
+      "p95_us": 25.415999999999997,
+      "iters": 5000
+    },
+    {
+      "library": "hpke 0.15.1 (rozbb)",
+      "kem": "DHKEM(X25519)",
+      "step": "seal",
+      "median_us": 92.41600000000001,
+      "p95_us": 152.5,
+      "iters": 5000
+    },
+    {
+      "library": "hpke 0.15.1 (rozbb)",
+      "kem": "DHKEM(X25519)",
+      "step": "open",
+      "median_us": 60.625,
+      "p95_us": 109.833,
+      "iters": 5000
+    },
+    {
+      "library": "hpke-rs 0.8.0 + libcrux",
+      "kem": "X-Wing",
+      "step": "keypair",
+      "median_us": 65.375,
+      "p95_us": 105.45800000000001,
+      "iters": 5000
+    },
+    {
+      "library": "hpke-rs 0.8.0 + libcrux",
+      "kem": "X-Wing",
+      "step": "derive",
+      "median_us": 55.208,
+      "p95_us": 75.5,
+      "iters": 5000
+    },
+    {
+      "library": "hpke-rs 0.8.0 + libcrux",
+      "kem": "X-Wing",
+      "step": "seal",
+      "median_us": 92.791,
+      "p95_us": 134.292,
+      "iters": 5000
+    },
+    {
+      "library": "hpke-rs 0.8.0 + libcrux",
+      "kem": "X-Wing",
+      "step": "open",
+      "median_us": 99.542,
+      "p95_us": 135.5,
+      "iters": 5000
+    },
+    {
+      "library": "hpke-rs 0.8.0 + RustCrypto",
+      "kem": "X-Wing",
+      "step": "keypair",
+      "median_us": 55.541999999999994,
+      "p95_us": 79.125,
+      "iters": 5000
+    },
+    {
+      "library": "hpke-rs 0.8.0 + RustCrypto",
+      "kem": "X-Wing",
+      "step": "derive",
+      "median_us": 58.041999999999994,
+      "p95_us": 84.209,
+      "iters": 5000
+    },
+    {
+      "library": "hpke-rs 0.8.0 + RustCrypto",
+      "kem": "X-Wing",
+      "step": "seal",
+      "median_us": 101.875,
+      "p95_us": 135.167,
+      "iters": 5000
+    },
+    {
+      "library": "hpke-rs 0.8.0 + RustCrypto",
+      "kem": "X-Wing",
+      "step": "open",
+      "median_us": 219.583,
+      "p95_us": 271.25,
+      "iters": 5000
+    },
+    {
+      "library": "hpke 0.15.1 (rozbb)",
+      "kem": "X-Wing",
+      "step": "keypair",
+      "median_us": 63.708999999999996,
+      "p95_us": 90.708,
+      "iters": 5000
+    },
+    {
+      "library": "hpke 0.15.1 (rozbb)",
+      "kem": "X-Wing",
+      "step": "derive",
+      "median_us": 58.041999999999994,
+      "p95_us": 78.375,
+      "iters": 5000
+    },
+    {
+      "library": "hpke 0.15.1 (rozbb)",
+      "kem": "X-Wing",
+      "step": "seal",
+      "median_us": 106.334,
+      "p95_us": 150.0,
+      "iters": 5000
+    },
+    {
+      "library": "hpke 0.15.1 (rozbb)",
+      "kem": "X-Wing",
+      "step": "open",
+      "median_us": 219.083,
+      "p95_us": 278.417,
+      "iters": 5000
+    }
+  ],
+  "sizes": [
+    {
+      "kem": "DHKEM(X25519)",
+      "public_key": 32,
+      "private_key": 32,
+      "enc": 32,
+      "ciphertext": 48
+    },
+    {
+      "kem": "X-Wing",
+      "public_key": 1216,
+      "private_key": 32,
+      "enc": 1120,
+      "ciphertext": 48
+    }
+  ]
+}

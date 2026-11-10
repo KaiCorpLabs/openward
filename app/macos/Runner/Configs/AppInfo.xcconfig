@@ -11,4 +11,4 @@ PRODUCT_NAME = OpenWard
 PRODUCT_BUNDLE_IDENTIFIER = dev.openward.OpenWard
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 OpenWard contributors. Apache-2.0.
+PRODUCT_COPYRIGHT = Copyright © 2026 José Manuel Cotarelo Linares (KaiCorp Labs). All rights reserved.

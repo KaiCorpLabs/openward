@@ -24,6 +24,16 @@ Future<bool> showTunnelEditor(
   (_) => _TunnelEditor(tunnel: tunnel, hostId: hostId),
 );
 
+/// What opening a tunnel to the network lets in. A dynamic one is a SOCKS
+/// proxy without a password: anyone there gets into all that `host`
+/// reaches, not just one port (AM-5).
+String lanNote(AppLocalizations l, TunnelKind kind, String host) =>
+    switch (kind) {
+      TunnelKind.remote => l.lanRemoteNote,
+      TunnelKind.dynamic_ => l.lanDynamicNote(host),
+      TunnelKind.local => l.lanLocalNote,
+    };
+
 class _TunnelEditor extends ConsumerStatefulWidget {
   const _TunnelEditor({this.tunnel, this.hostId});
 
@@ -355,7 +365,7 @@ class _TunnelEditorState extends ConsumerState<_TunnelEditor> {
           Padding(
             padding: const EdgeInsets.only(top: OwSpace.s4),
             child: Text(
-              remote ? l.lanRemoteNote : l.lanLocalNote,
+              lanNote(l, _kind, hostLabel),
               style: TextStyle(fontSize: OwText.small, color: c.warn),
             ),
           ),

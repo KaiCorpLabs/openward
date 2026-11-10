@@ -911,7 +911,7 @@ pub enum KeyError {
 
 /// Loads a private key, decrypting it with `passphrase` if it is protected.
 pub fn load_key(path: &Path, passphrase: Option<&str>) -> Result<PrivateKey, KeyError> {
-    match russh::keys::load_secret_key(path, passphrase) {
+    match crate::keyfile::load_secret_key(path, passphrase) {
         Ok(key) => Ok(key),
         Err(russh::keys::Error::KeyIsEncrypted) => Err(KeyError::Encrypted),
         // Without a passphrase an encrypted key says so; with one, a
@@ -1620,6 +1620,8 @@ mod tests {
         );
     }
 
+    // On Unix only: Windows asks no login shell, and its PATH uses `;`.
+    #[cfg(unix)]
     #[test]
     fn the_login_shell_s_folders_go_first() {
         let path = merge_paths(

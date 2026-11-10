@@ -64,17 +64,26 @@ jobs:
       matrix:
         os: ${{ fromJSON(needs.systems.outputs.os) }}
     runs-on: ${{ matrix.os }}
+    # Bash on Windows too: PowerShell does not stop when a command in a
+    # step fails, and the step takes the last one's exit code, so a test
+    # that failed on Windows went by green.
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # openward-ghostty links a prebuilt libghostty-vt, built with Zig at
-      # the pinned Ghostty commit and cached per commit and OS.
+      # the pinned Ghostty commit and cached per OS and everything the
+      # script checks before reusing a build (its .build-key): the commit,
+      # the script and the Zig it installs. A key with the commit alone
+      # kept a stale build that was rebuilt on every run and never saved.
       - name: Cache location
         shell: bash
         run: echo "OPENWARD_CACHE=$RUNNER_TEMP/openward" >> "$GITHUB_ENV"
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/openward/ghostty/build
-          key: libghostty-vt-${{ runner.os }}-${{ hashFiles('core/crates/openward-ghostty/GHOSTTY_COMMIT') }}
+          key: libghostty-vt-${{ runner.os }}-${{ hashFiles('core/crates/openward-ghostty/GHOSTTY_COMMIT', 'core/crates/openward-ghostty/build-libghostty.sh', '.github/scripts/install-zig.sh') }}
       - name: Install Zig
         shell: bash
         run: .github/scripts/install-zig.sh
@@ -179,6 +188,10 @@ jobs:
       matrix:
         os: ${{ fromJSON(needs.systems.outputs.os) }}
     runs-on: ${{ matrix.os }}
+    # Bash on Windows too, as in the core's job.
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install toolchain from rust-toolchain.toml
@@ -207,6 +220,76 @@ jobs:
           S2_RUNTIME: docker
         run: spikes/s2-ssh/servers/down.sh
 
+  hpke:
+    name: Spike S6 HPKE (${{ matrix.os }})
+    needs: systems
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(needs.systems.outputs.os) }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: spikes/s6-hpke/hpkebench
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install toolchain from rust-toolchain.toml
+        run: rustup show
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: spikes/s6-hpke/hpkebench
+      - name: Lint
+        run: |
+          cargo fmt -- --check
+          cargo clippy --all-targets -- -D warnings
+      # A vector or an interop check that fails, fails the job; the timings
+      # are for the results (docs/spikes/S6-hpke.md).
+      - name: Vectors, interop and timings
+        run: cargo run --release -- --json "$RUNNER_TEMP/s6-${{ runner.os }}-${{ runner.arch }}.json"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: s6-hpke-${{ runner.os }}-${{ runner.arch }}
+          path: ${{ runner.temp }}/s6-${{ runner.os }}-${{ runner.arch }}.json
+          retention-days: 14
+
+  sync:
+    name: Spike S4 sync (${{ matrix.os }})
+    needs: systems
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(needs.systems.outputs.os) }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: spikes/s4-sync/syncsim
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install toolchain from rust-toolchain.toml
+        run: rustup show
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: spikes/s4-sync/syncsim
+      - name: Lint
+        run: |
+          cargo fmt -- --check
+          cargo clippy --all-targets -- -D warnings
+      # The envelope, the clock, and convergence with proptest (2,000 random
+      # runs of three devices, with pruned logs and skewed clocks).
+      - name: Tests
+        run: cargo test
+      # A field-clock run that diverges or loses a write fails the job; the
+      # rest is for the results (docs/spikes/S4-sync.md).
+      - name: Sizes, unlock and 10,000 writes
+        run: cargo run --release -- --json "$RUNNER_TEMP/s4-${{ runner.os }}-${{ runner.arch }}.json"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: s4-sync-${{ runner.os }}-${{ runner.arch }}
+          path: ${{ runner.temp }}/s4-${{ runner.os }}-${{ runner.arch }}.json
+          retention-days: 14
+
   app:
     name: App (${{ matrix.os }})
     needs: systems
@@ -233,7 +316,7 @@ jobs:
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/openward/ghostty/build
-          key: libghostty-vt-app-${{ runner.os }}-${{ hashFiles('core/crates/openward-ghostty/GHOSTTY_COMMIT') }}
+          key: libghostty-vt-app-${{ runner.os }}-${{ hashFiles('core/crates/openward-ghostty/GHOSTTY_COMMIT', 'core/crates/openward-ghostty/build-libghostty.sh', '.github/scripts/install-zig.sh') }}
       - name: Install Zig
         run: .github/scripts/install-zig.sh
       - name: Build libghostty-vt
@@ -412,5 +495,8 @@ jobs:
           sed "s#](\.\./#](https://github.com/$GITHUB_REPOSITORY/blob/$TAG/docs/#g" "$notes" > "$RUNNER_TEMP/notes.md"
           pre=()
           [[ "$version" == *-* ]] && pre=(--prerelease)
+          # The packages alone: the .dmg.commit beside the .dmg is for
+          # release-tap.sh. One missing stays unexpanded and stops the draft.
           gh release create "$TAG" --draft "${pre[@]}" --verify-tag \
-            --title "OpenWard $version" --notes-file "$RUNNER_TEMP/notes.md" dist/*/OpenWard-*
+            --title "OpenWard $version" --notes-file "$RUNNER_TEMP/notes.md" \
+            dist/*/OpenWard-*.{dmg,zip,tar.gz}

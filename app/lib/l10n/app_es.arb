@@ -1922,6 +1922,14 @@
       }
     }
   },
+  "lanDynamicNote": "Es un proxy SOCKS sin contraseña: cualquiera de tu red podrá entrar por él en todo lo que alcanza {host} mientras esté abierto.",
+  "@lanDynamicNote": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "lanLocalNote": "Cualquiera de tu red podrá usarlo mientras esté abierto.",
   "lanRemoteNote": "El servidor tiene que permitirlo (GatewayPorts en sshd); si no, escucha solo en sí mismo.",
   "language": "Idioma",
@@ -2833,6 +2841,23 @@
     }
   },
   "openTunnels": "Túneles abiertos",
+  "openRunsAction": "Ejecutarlo",
+  "openRunsBody": "Este ordenador ejecuta los archivos .{type} al abrirlos, y lo que hace este lo decidió quien lo puso en el servidor. Ábrelo solo si te fías; para leerlo, usa «Abrir con…».",
+  "@openRunsBody": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "openRunsTitle": "«{name}» no se abre: se ejecuta",
+  "@openRunsTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "openWithHelp": "Un comando, como code, gedit o kate; se le pasa el archivo al final.",
   "openWithHelpMac": "El nombre de una app (TextEdit, Visual Studio Code) o un comando (/usr/local/bin/subl).",
   "openWithProgram": "Programa",
@@ -4335,6 +4360,14 @@
   },
   "waitingAnswer": "Esperando respuesta…",
   "waitingForYou": "Espera tu respuesta",
+  "warnAgentForward": "{host} reenviaba el agente SSH, con el que ese servidor puede usar tus claves mientras estás conectado; no se ha traído, para no hacerlo porque lo diga el archivo de otro programa.",
+  "@warnAgentForward": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "warnBadValue": "Valor no válido en {subject}{at}: {detail}.",
   "@warnBadValue": {
     "placeholders": {
@@ -4408,6 +4441,17 @@
   "@warnMosh": {
     "placeholders": {
       "host": {
+        "type": "String"
+      }
+    }
+  },
+  "warnOpenTunnel": "El túnel {tunnel} escuchaba en {address}, abierto a otros equipos; llega cerrado a la red, para no abrirlo porque lo diga el archivo de otro programa. Si confías en él, ábrelo en «Quién puede usarlo».",
+  "@warnOpenTunnel": {
+    "placeholders": {
+      "tunnel": {
+        "type": "String"
+      },
+      "address": {
         "type": "String"
       }
     }

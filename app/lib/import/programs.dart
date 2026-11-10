@@ -196,6 +196,8 @@ String warningText(AppLocalizations l, ProgramWarning w) {
     ProgramWarningKind.mosh => l.warnMosh(who),
     ProgramWarningKind.startupCommand => l.warnStartupCommand(who),
     ProgramWarningKind.proxyCommand => l.warnProxyCommand(who, w.detail),
+    ProgramWarningKind.agentForward => l.warnAgentForward(who),
+    ProgramWarningKind.openTunnel => l.warnOpenTunnel(who, w.detail),
     ProgramWarningKind.unsupported =>
       who.isEmpty
           ? l.warnFeatureGeneral(featureName(l, w))

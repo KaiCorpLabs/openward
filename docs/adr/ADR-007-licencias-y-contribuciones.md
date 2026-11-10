@@ -1,6 +1,6 @@
 # ADR-007 — Licencias por componente y régimen de contribuciones
 
-- **Estado:** aceptado (2026-10-08). La licencia de `server/ee/` queda pendiente hasta la fase 4 ([ADR-006](ADR-006-servidor-open-core.md)).
+- **Estado:** aceptado (2026-10-08), [revisado el 2026-11-10](#revisión-del-2026-11-10): todos los derechos reservados hasta el lanzamiento de la Community; desde entonces, el cliente con GPL-3.0 y la CLA en todo el repositorio. La licencia de `server/ee/` queda pendiente hasta la fase 4 ([ADR-006](ADR-006-servidor-open-core.md)).
 - **Fecha:** 2026-10-08.
 - **Alcance:** licencia de cada directorio, CLA/DCO y promesa pública.
 
@@ -46,3 +46,38 @@ Hay que mantener un bot de CLA solo para `server/` y explicar en CONTRIBUTING po
 ## Validación y revisión
 
 Revisión legal de la CLA antes del primer commit de `server/` (fase 2), y de la licencia de `ee/` al entrar en la fase 4. Reabrir solo para abrir más (por ejemplo, EE en FSL), nunca para cerrar.
+
+## Revisión del 2026-11-10
+
+La tabla de arriba era el plan del 2026-10-08. Esta revisión la cambia.
+
+**Decisión:**
+- **Hasta el lanzamiento de la Community, todo el repositorio tiene todos los derechos reservados** ([LICENSE](../../LICENSE)).
+  - Solo se permite ver el código y bifurcarlo dentro de GitHub, como permiten sus Términos de servicio, y usar las versiones compiladas que publicamos.
+  - Se reserva también la minería de textos y datos (artículo 4.3 de la Directiva (UE) 2019/790): nada del repositorio se puede usar para entrenar modelos de IA.
+  - No se aceptan contribuciones de código de fuera.
+- **Al lanzar:**
+
+  | Componente | Licencia | Contribuciones |
+  |---|---|---|
+  | `core/`, `app/`, `spikes/` (el cliente) | **GPL-3.0-only**, en vez de Apache-2.0 | CLA |
+  | `server/` | **AGPL-3.0-only**, autoalojable como dice [ADR-006](ADR-006-servidor-open-core.md) | CLA |
+  | `spec/`, `docs/` | CC-BY-4.0, para que se puedan escribir clientes compatibles ([ADR-005](ADR-005-sync-por-registros-de-dispositivo.md)) | CLA |
+
+- **CLA en todo el repositorio**, no solo en `server/`. Con ella se puede ofrecer el cliente también con otra licencia (la App Store no admite la GPL de terceros) y el servidor con licencia comercial.
+- **GPL y AGPL siguen prohibidas en las dependencias del cliente** por esa misma razón: los derechos de todo su código tienen que ser nuestros.
+- **La marca «OpenWard» se registra** (OEPM o EUIPO) antes del lanzamiento. La licencia no protege el nombre; la marca registrada permite retirar de las tiendas una copia que lo use.
+
+**Por qué:**
+- **Apache-2.0 deja cerrar una copia del cliente,** ponerle otro nombre y venderla, también con una sync de pago propia. La GPL-3.0 no impide copiar, pero sí cerrar: quien distribuya una copia tiene que publicar todo su código con la misma licencia. El cliente sigue siendo open source y auditable, que en una app de credenciales es un argumento de venta.
+- **GPL y no AGPL en el cliente**, porque muchas empresas no permiten software AGPL en sus equipos y son las que van a pagar.
+- **Todos los derechos reservados hasta el lanzamiento**, porque lo más valioso (el vault cifrado, la sync y el servidor) está por escribir. Abrir después siempre se puede; cerrar después, no.
+- **Rompe a propósito la regla de abajo** («reabrir solo para abrir más»), y solo esta vez. El repositorio llevaba cuatro días público, con dos visitas, y nadie más había contribuido. Desde el lanzamiento, la regla vuelve a valer.
+
+**Consecuencias:**
+- Lo publicado hasta el commit `945fbbe` (2026-11-10) salió con Apache-2.0, y esa licencia sigue valiendo para quien tenga esas copias.
+- La promesa «Siempre gratis» vale desde el lanzamiento, no desde ya. El README lo dice.
+- Antes de abrir las contribuciones: el bot de la CLA para todo el repositorio, y la revisión legal de la CLA (ya prevista) y de LICENSE.
+- SignPath firma gratis solo builds con licencia OSI y sin componentes propietarios: sirve desde el lanzamiento, con la GPL. Las betas de antes siguen sin firmar o con una firma de pago.
+- `cargo-deny` y `cargo-about` no comprueban los crates propios, que no se publican (`[licenses.private]` en `core/deny.toml` y `private` en `core/about.toml`).
+

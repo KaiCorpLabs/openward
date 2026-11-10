@@ -130,6 +130,12 @@ pub enum ProgramWarningKind {
     /// A `ProxyCommand` left out (it would run a program here); `detail`
     /// is the command.
     ProxyCommand,
+    /// The agent forwarded to the server, left out (that server could sign
+    /// with your keys).
+    AgentForward,
+    /// A tunnel open to other computers, brought in on loopback; `detail`
+    /// is where it listened.
+    OpenTunnel,
     /// Something OpenWard does not have: `missing`; `detail` is its
     /// name, when it has one.
     Unsupported,
@@ -177,6 +183,8 @@ fn warning(w: &Warning) -> ProgramWarning {
         WarningKind::Mosh => (ProgramWarningKind::Mosh, String::new()),
         WarningKind::StartupCommand => (ProgramWarningKind::StartupCommand, String::new()),
         WarningKind::ProxyCommand(command) => (ProgramWarningKind::ProxyCommand, command.clone()),
+        WarningKind::AgentForward => (ProgramWarningKind::AgentForward, String::new()),
+        WarningKind::OpenTunnel(address) => (ProgramWarningKind::OpenTunnel, address.clone()),
         WarningKind::Unsupported(what) => {
             let (kind, name) = match what {
                 Missing::X11 => (MissingKind::X11, None),

@@ -29,10 +29,15 @@ allow = [
     "Zlib",
     "Unicode-3.0",
     "Unlicense",
-    # File-level copyleft, compatible with distributing under Apache-2.0.
+    # File-level copyleft: fine in a larger work under any license, the
+    # GPL-3.0 the client gets at launch included.
     # Allowed with inventory (expected: hpke-rs, serialport).
     "MPL-2.0",
 ]
+# Our own crates are not published and keep all rights reserved (LICENSE):
+# the list above is for what they pull in.
+[licenses.private]
+ignore = true
 
 [bans]
 multiple-versions = "warn"

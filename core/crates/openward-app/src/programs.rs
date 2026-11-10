@@ -17,8 +17,9 @@ use std::io::Write as _;
 use std::path::{Path, PathBuf};
 
 use openward_import::bundle::{self, Bundle, JumpRef, KeyRef, Program, Warning};
-use openward_ssh::russh::keys::ssh_key::{PrivateKey, PublicKey};
-use openward_ssh::russh::keys::{HashAlg, decode_secret_key};
+use openward_ssh::keyfile::{self, decode_secret_key};
+use openward_ssh::russh::keys::HashAlg;
+use openward_ssh::russh::keys::ssh_key::PublicKey;
 use openward_vault::Vault;
 use openward_vault::proto::{
     Data, Group, Host, Identity, Imported, ItemId, Jump, KnownHost, PortForward, Route, Settings,
@@ -104,7 +105,7 @@ pub fn read(program: Program, bundle: Bundle, local: &Local) -> Read {
 /// The public half of a key in any format the other program kept:
 /// OpenSSH (readable without the passphrase), PEM, PKCS#8 or PuTTY's.
 fn public_key(private: &str, passphrase: Option<&str>) -> Option<PublicKey> {
-    if let Ok(k) = PrivateKey::from_openssh(private) {
+    if let Ok(k) = keyfile::from_openssh(private) {
         return Some(k.public_key().clone());
     }
     decode_secret_key(private, passphrase)
@@ -139,7 +140,7 @@ fn ssh_dir_keys(dir: &Path) -> Vec<(PathBuf, PublicKey)> {
             .any(|g| g.file_name() == Some(format!("{name}.pub").as_ref()))
             && let Ok(text) = fs::read_to_string(f)
             && text.starts_with("-----BEGIN OPENSSH PRIVATE KEY-----")
-            && let Ok(k) = PrivateKey::from_openssh(&text)
+            && let Ok(k) = keyfile::from_openssh(&text)
         {
             out.push((f.clone(), k.public_key().clone()));
         }
@@ -959,8 +960,8 @@ fn sync_dir(dir: &Path) {
 mod tests {
     use super::*;
     use openward_import::bundle::{StoredKey, Tunnel};
-    use openward_ssh::russh::keys::ssh_key::LineEnding;
     use openward_ssh::russh::keys::ssh_key::private::Ed25519Keypair;
+    use openward_ssh::russh::keys::ssh_key::{LineEnding, PrivateKey};
     use openward_vault::proto::ForwardKind;
 
     fn local(dir: &Path) -> Local {
@@ -1190,6 +1191,32 @@ mod tests {
         assert_eq!((r.hosts, r.groups, r.skipped), (0, 0, 2));
         assert_eq!((r.tunnels, r.snippets, r.known_hosts), (0, 0, 0));
         assert_eq!(vault.hosts().len(), 2);
+    }
+
+    /// A key that `ssh-key` alone refuses (ECDSA P-256 with a 31-byte
+    /// scalar, from `openward-ssh`'s fixtures) is read, and found in
+    /// `~/.ssh` without its .pub.
+    #[test]
+    fn an_ecdsa_key_with_a_short_scalar_is_read_and_found() {
+        let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("../openward-ssh/tests/fixtures");
+        let text = |name: &str| fs::read_to_string(fixtures.join(name)).unwrap();
+        let public = PublicKey::from_openssh(text("ecdsa-p256-short.pub").trim()).unwrap();
+        for (name, passphrase) in [
+            ("ecdsa-p256-short", None),
+            ("ecdsa-p256-short-aes256-gcm", Some("openward-test")),
+        ] {
+            let read = public_key(&text(name), passphrase);
+            assert_eq!(
+                read.as_ref().map(PublicKey::key_data),
+                Some(public.key_data()),
+                "{name}"
+            );
+        }
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("mine"), text("ecdsa-p256-short")).unwrap();
+        let found = ssh_dir_keys(dir.path());
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].1.key_data(), public.key_data());
     }
 
     #[test]

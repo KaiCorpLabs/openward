@@ -130,8 +130,15 @@ impl std::fmt::Display for Error {
 impl std::error::Error for Error {}
 
 /// Reads a file or folder, recognizing whose it is. Termius's data asks
-/// the keychain for its key unless `termius_keys` gives it.
+/// the keychain for its key unless `termius_keys` gives it. What the file
+/// could turn against you comes held back ([`Bundle::hold_back`]).
 pub fn read(path: &Path, termius_keys: Option<Vec<[u8; 32]>>) -> Result<(Program, Bundle), Error> {
+    let (program, mut bundle) = read_any(path, termius_keys)?;
+    bundle.hold_back();
+    Ok((program, bundle))
+}
+
+fn read_any(path: &Path, termius_keys: Option<Vec<[u8; 32]>>) -> Result<(Program, Bundle), Error> {
     if path.is_dir() {
         if termius::leveldb_dir(path).is_some() {
             return termius::read(path, termius_keys)
@@ -264,5 +271,25 @@ mod tests {
         fs::create_dir(&sessions).unwrap();
         fs::write(sessions.join("box"), "HostName=box.example.com\n").unwrap();
         assert_eq!(read(&sessions, None).unwrap().0, Program::Putty);
+    }
+
+    /// AM-8: whatever the program, a file read here brings no agent
+    /// forwarded and no tunnel open to the network, and says it.
+    #[test]
+    fn what_a_file_reads_comes_held_back() {
+        use crate::bundle::WarningKind;
+        let dir = tempfile::tempdir().unwrap();
+        let reg = dir.path().join("x.reg");
+        fs::write(
+            &reg,
+            "Windows Registry Editor Version 5.00\n\n[HKEY_CURRENT_USER\\Software\\SimonTatham\\PuTTY\\Sessions\\evil]\n\"HostName\"=\"evil.example.com\"\n\"AgentFwd\"=dword:00000001\n\"LocalPortAcceptAll\"=dword:00000001\n\"PortForwardings\"=\"D1080=\"\n",
+        )
+        .unwrap();
+        let (_, b) = read(&reg, None).unwrap();
+        assert_eq!(b.hosts[0].settings.agent_forward, None);
+        assert_eq!(b.tunnels[0].listen_address, None);
+        let kinds: Vec<_> = b.warnings.iter().map(|w| &w.kind).collect();
+        assert!(kinds.contains(&&WarningKind::AgentForward));
+        assert!(kinds.contains(&&WarningKind::OpenTunnel("0.0.0.0".into())));
     }
 }

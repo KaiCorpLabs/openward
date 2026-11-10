@@ -20,4 +20,4 @@ Incluye, si puedes:
 
 ## Estado actual
 
-OpenWard está en **beta** (0.3, solo escritorio) y **no tiene auditoría externa**. Hasta la v0.4 el vault va sin cifrar en el disco: no guarda secretos (las claves privadas se usan desde su archivo y las contraseñas se piden al conectar), pero sí los hosts, sus direcciones y las claves de host en las que confías. La arquitectura prevé una auditoría externa del núcleo criptográfico antes de lanzar la sincronización.
+OpenWard está en **beta** (0.3, solo escritorio) y **no tiene auditoría externa**. Hasta la v0.4 el vault va sin cifrar en el disco: no guarda secretos (las claves privadas se usan desde su archivo y las contraseñas se piden al conectar), pero sí los hosts, sus direcciones y las claves de host en las que confías. La arquitectura prevé una auditoría externa del núcleo criptográfico antes de lanzar la sincronización. El [modelo de amenazas](docs/THREAT_MODEL.md) dice qué protege OpenWard, de quién y qué queda fuera.

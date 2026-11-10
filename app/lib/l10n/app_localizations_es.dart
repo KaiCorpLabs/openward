@@ -2409,6 +2409,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String lanDynamicNote(String host) {
+    return 'Es un proxy SOCKS sin contraseña: cualquiera de tu red podrá entrar por él en todo lo que alcanza $host mientras esté abierto.';
+  }
+
+  @override
   String get lanLocalNote =>
       'Cualquiera de tu red podrá usarlo mientras esté abierto.';
 
@@ -3801,6 +3806,19 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get openTunnels => 'Túneles abiertos';
+
+  @override
+  String get openRunsAction => 'Ejecutarlo';
+
+  @override
+  String openRunsBody(String type) {
+    return 'Este ordenador ejecuta los archivos .$type al abrirlos, y lo que hace este lo decidió quien lo puso en el servidor. Ábrelo solo si te fías; para leerlo, usa «Abrir con…».';
+  }
+
+  @override
+  String openRunsTitle(String name) {
+    return '«$name» no se abre: se ejecuta';
+  }
 
   @override
   String get openWithHelp =>
@@ -6031,6 +6049,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get waitingForYou => 'Espera tu respuesta';
 
   @override
+  String warnAgentForward(String host) {
+    return '$host reenviaba el agente SSH, con el que ese servidor puede usar tus claves mientras estás conectado; no se ha traído, para no hacerlo porque lo diga el archivo de otro programa.';
+  }
+
+  @override
   String warnBadValue(String subject, String at, String detail) {
     return 'Valor no válido en $subject$at: $detail.';
   }
@@ -6072,6 +6095,11 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String warnMosh(String host) {
     return '$host usaba Mosh: se conectará por SSH.';
+  }
+
+  @override
+  String warnOpenTunnel(String tunnel, String address) {
+    return 'El túnel $tunnel escuchaba en $address, abierto a otros equipos; llega cerrado a la red, para no abrirlo porque lo diga el archivo de otro programa. Si confías en él, ábrelo en «Quién puede usarlo».';
   }
 
   @override
