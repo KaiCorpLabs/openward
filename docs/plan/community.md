@@ -416,7 +416,7 @@ El servidor sale del tailnet para que entre gente de fuera del equipo, al están
 
 ## Después de este plan
 
-Lo que queda para lanzar y que este plan no hace:
+Lo que queda para lanzar y que este plan no hace. El [plan de lanzamiento](lanzamiento.md) lo ordena por prioridad junto con las etapas de arriba:
 - **Web y distribución:**
   - la web (bajo `kaicorplabs.com` o en un dominio propio, la misma decisión que en M1) y la documentación pública;
   - firma y notarización en macOS y firma en Windows;
