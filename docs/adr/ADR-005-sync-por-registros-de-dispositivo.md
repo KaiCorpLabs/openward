@@ -1,6 +1,6 @@
 # ADR-005 — Sync por registros de dispositivo con backends intercambiables
 
-- **Estado:** propuesto. La primera parte de [S4](../spikes/S4-sync.md) (2026-11-09) cambia el merge a relojes de campo y fija el sobre; falta la segunda, con backends de verdad (v0.5, S1).
+- **Estado:** **aceptado** (2026-11-10), con la primera parte de [S4](../spikes/S4-sync.md) (2026-11-09), que cambió el merge a relojes de campo y fijó el sobre. La segunda, con backends de verdad (v0.5, S1), puede reabrirlo ([Validación](#validación-y-revisión)).
 - **Fecha:** 2026-10-08.
 - **Alcance:** protocolo de sincronización, resolución de conflictos y backends.
 

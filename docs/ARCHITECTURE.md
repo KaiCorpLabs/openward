@@ -1,6 +1,6 @@
 # Arquitectura y stack de OpenWard
 
-**Estado:** documento vivo: lo hecho y lo que falta van marcados donde importa (la columna «Estado» de los crates, las listas de seguridad y distribución) · **Revisado:** 2026-10-24 (0.3.2) · [ADRs](adr/)
+**Estado:** documento vivo: lo hecho y lo que falta van marcados donde importa (la columna «Estado» de los crates, las listas de seguridad y distribución) · **Revisado:** 2026-11-10 (§4.2, §5 y §6.1, con S4, S6 y D0) · [ADRs](adr/)
 
 OpenWard es un cliente SSH open-core para Windows, macOS, Linux, iOS y Android. Es local-first y su vault de hosts y credenciales tiene formato abierto. La sincronización está cifrada de extremo a extremo (E2EE) y funciona con el almacenamiento del usuario, con un relay autoalojado o con el servicio alojado de pago. El dinero sale de servicios con coste real en el servidor: sincronización alojada, equipos y funciones enterprise. El cliente es 100 % open source y nunca tiene funciones capadas.
 
@@ -13,8 +13,8 @@ OpenWard es un cliente SSH open-core para Windows, macOS, Linux, iOS y Android. 
 | Reparto | **Núcleo Rust** compartido por todos los clientes, **UI Flutter** para las 5 plataformas y **servidor Go**. Es el mismo patrón que Arveil. | [ADR-001](adr/ADR-001-rust-core-flutter-go.md) |
 | Terminal | Estado VT nativo y render propio en Flutter (atlas de glifos). **`libghostty-vt`**, fijado a un commit: el único que pasa la puerta de memoria y el que trae los codificadores de entrada ([informe S1](spikes/S1-terminal-resultados.md)). `xterm.dart` está descartado: sin versión desde febrero de 2024. | [ADR-002](adr/ADR-002-motor-de-terminal.md) |
 | SSH | `russh` + `russh-sftp`, con un trait `Signer` para claves en software, agente, Secure Enclave, Keystore, TPM y FIDO2 | [ADR-003](adr/ADR-003-ssh-russh-y-firmantes.md) |
-| Vault | Cifrado por ítem (XChaCha20-Poly1305) sobre SQLite. Jerarquía de claves con HPKE y kit de recuperación obligatorio. | [ADR-004](adr/ADR-004-vault-y-jerarquia-de-claves.md) |
-| Sync | Registros inmutables por dispositivo, firmados y cifrados. Sirven para cualquier backend "tonto" (carpeta, S3, WebDAV, Git) y para el relay. | [ADR-005](adr/ADR-005-sync-por-registros-de-dispositivo.md) |
+| Vault | **Aceptado.** Cifrado por ítem (XChaCha20-Poly1305) sobre SQLite. Jerarquía de claves con HPKE (X-Wing, `hpke-rs` y libcrux) y kit de recuperación obligatorio. | [ADR-004](adr/ADR-004-vault-y-jerarquia-de-claves.md) |
+| Sync | **Aceptado** (la segunda parte de S4, con backends, puede reabrirlo). Registros inmutables por dispositivo, firmados y cifrados, con merge por relojes de campo. Sirven para cualquier backend "tonto" (carpeta, S3, WebDAV, Git) y para el relay. | [ADR-005](adr/ADR-005-sync-por-registros-de-dispositivo.md) |
 | Servidor | **Aceptado.** Monolito modular en Go: SQLite para autoalojar y Postgres para el servicio alojado. Open core por fases: todo AGPL en las fases 2 y 3 (ingresos del servicio alojado); `ee/` aparece en la fase 4 solo con funciones nuevas (SAML, SCIM, SIEM, grabaciones). | [ADR-006](adr/ADR-006-servidor-open-core.md) |
 | Licencias | **Aceptado.** Cliente y núcleo con Apache-2.0 y DCO. Servidor con AGPL-3.0 y **CLA desde el primer commit**. La licencia de `ee/` se decide en la fase 4 con datos. Cobros e infraestructura en un repositorio privado. | [ADR-007](adr/ADR-007-licencias-y-contribuciones.md) |
 | IA | Servidor MCP local ("el agente usa SSH, pero nunca ve la clave") y modelos BYOK o locales. No pagamos inferencia. | [ADR-008](adr/ADR-008-ia-mcp-y-byok.md) |
@@ -233,14 +233,14 @@ Vault ─┬─ Group (parent_id, settings parciales)
 
 - **Herencia:** `defaults ← Group raíz ← … ← Group ← Host ← override de conexión`. Se resuelve en el núcleo en `effective_config(host)`, que devuelve qué campo viene de dónde (para la UI).
 - **Identificadores:** UUIDv7 por ítem. Las referencias entre ítems usan el ID y solo pueden apuntar dentro del mismo vault; las referencias a otro vault se copian.
-- **Datos que no son del vault** (preferencias de UI, historial de comandos, grabaciones locales y scrollback guardado): cifrados con una clave del dispositivo; no se sincronizan salvo que se pida. En la fase 1 van en claro, como el vault: `settings.json` y `history.json` en la carpeta de datos.
+- **Datos que no son del vault** (historial de comandos, conexiones recientes, registros de sesión, grabaciones locales y scrollback guardado): cifrados con una clave del vault desde la v0.4 ([D0-2](THREAT_MODEL.md#11-decisiones-que-salen-de-d0)); no se sincronizan salvo que se pida. Las preferencias de UI (`settings.json`) siguen en claro, porque no nombran hosts. En la fase 1 todo va en claro, como el vault: `settings.json`, `history.json`, `recent.json` y `logs/` en la carpeta de datos.
 - **Claves en la fase 1:** archivos de `~/.ssh` que el vault nombra por ruta. El keychain de la app las lista, las crea, las importa y sube la pública a un servidor; el material privado entra en el vault (`Key`) cuando este vaya cifrado.
 
 ### 4.2 Almacenamiento local
 
 - SQLite con una tabla `items(vault_id, item_id, head_rev, envelope BLOB)` más tablas de sync. **No hace falta SQLCipher**: lo que se guarda ya es el sobre cifrado del ítem, que es el mismo formato que se sincroniza.
-- Al desbloquear, los ítems se descifran en memoria y se crea un índice de búsqueda. Con 10.000 ítems de ~1 KB son ~10 MB de AEAD, del orden de decenas de ms.
-- Formato del sobre: `{v, vault_id, item_id, rev, parents[], key_gen, device_id, nonce, ct, sig}` en CBOR canónico. **Tipo, nombres, direcciones y marcas de tiempo van dentro de `ct`.**
+- Al desbloquear, los ítems se descifran en memoria y se crea un índice de búsqueda. [S4](spikes/S4-sync.md) lo midió: con 10.000 hosts, de 92 a 146 ms en la CI de los tres sistemas. Las firmas no se comprueban al desbloquear (lo llevarían a unos 600 ms), sino al recibir cada sobre por la sync.
+- Formato del sobre (`v: 1`, [S4 §5](spikes/S4-sync.md#5-el-sobre-v1)): `{v, vault, item, device, key_gen, parents, nonce, ct, sig}` en CBOR canónico; se rechaza cualquier codificación que no lo sea. La revisión no es un campo: es el SHA-256 del sobre sin la firma. **Tipo, nombres, direcciones, marcas de tiempo y los relojes de campo van dentro de `ct`.**
 - **Fase 1 (sin cifrar):** el sobre es `{v: 0, body}`, con el cuerpo del ítem en claro. La fase 2 escribe sobres `v: 1` en la misma columna y migra fila a fila. El cuerpo (`openward-proto`) no cambia entre fases. Los campos solo se añaden; los desconocidos se conservan al reescribir, y un tipo de ítem desconocido se deja intacto.
 
 ---
@@ -252,7 +252,10 @@ flowchart TB
   PW[Contraseña maestra] -->|Argon2id| KEK[KEK]
   BIO[Biometría / PIN<br/>clave del almacén del SO] --> AK
   RK[Kit de recuperación<br/>clave de 256 bits impresa] --> AK
-  KEK --> AK[Clave de cuenta<br/>Ed25519 firma + X-Wing/X25519 KEM]
+  KEK --> AK[Clave de cuenta<br/>Ed25519 firma + X-Wing KEM]
+  KEK -->|HKDF| PK[Paquete de la cuenta<br/>lo que sube la v0.6]
+  RK -->|HKDF, secreto del kit| PK
+  PK --> AK
   AK -->|firma| DC[Certificados de dispositivo]
   AK -->|HPKE| VK1[Clave de vault personal<br/>generación n]
   M[Manifiesto del vault de equipo<br/>cadena firmada de altas, bajas y rotaciones] -->|HPKE por miembro| VK2[Clave de vault de equipo<br/>generación n]
@@ -260,9 +263,10 @@ flowchart TB
   VK2 -->|XChaCha20-Poly1305| IT2[Ítems]
 ```
 
-- **Primitivas:** XChaCha20-Poly1305 (nonces aleatorios, AAD = `vault_id‖item_id‖rev‖key_gen`), Ed25519, Argon2id con parámetros calibrados por dispositivo (mínimo 64 MiB en escritorio), SHA-256 para direccionar contenido y HPKE (RFC 9180) para envolver claves.
-- **Poscuántico desde el día 1 en el envoltorio de claves:** los blobs sincronizados duran años en servidores ajenos ("guarda ahora, descifra después"). Se usa el KEM híbrido **X-Wing (X25519 + ML-KEM-768)**, con preferencia por `hpke-rs` y backend libcrux, que está verificado formalmente (MPL-2.0). X-Wing sigue siendo un draft del IETF, así que `kem_id` registra la versión del draft y queda prevista la migración a la RFC final. La alternativa es DHKEM(X25519).
+- **Primitivas:** XChaCha20-Poly1305 (nonces aleatorios; AAD = la cabecera del sobre en CBOR canónico: `v`, `vault`, `item`, `device`, `key_gen`, `parents`), Ed25519, Argon2id con parámetros calibrados por dispositivo (mínimo 64 MiB en escritorio), SHA-256 para direccionar contenido y HPKE (RFC 9180) para envolver claves.
+- **Poscuántico desde el día 1 en el envoltorio de claves:** los blobs sincronizados duran años en servidores ajenos ("guarda ahora, descifra después"). Se usa el KEM híbrido **X-Wing (X25519 + ML-KEM-768)** con **`hpke-rs` 0.8.0 y libcrux** (MPL-2.0), que tiene las primitivas verificadas formalmente; la capa HPKE no lo está. Lo eligió [S6](spikes/S6-hpke.md), y `hpke` (rozbb) queda como alternativa que pone los mismos bytes. X-Wing sigue siendo un draft del IETF, así que `kem_id` registra la versión del draft y queda prevista la migración a la RFC final. La alternativa es DHKEM(X25519).
 - **Recuperación primero** (un reinicio de contraseña nunca puede borrar datos en silencio): el alta exige guardar el kit de recuperación. Para cambiar la contraseña hace falta la actual, el kit u otro dispositivo aprobado. En equipos, la **recuperación de cuenta por la organización** es una política opcional (la clave de la cuenta se envuelve también con la clave de recuperación de la org) y se avisa al usuario de forma visible.
+- **El paquete de la clave de cuenta**, que la v0.6 sube para dar de alta otros equipos, va envuelto con una clave que sale de la contraseña y de un secreto del kit, combinados con HKDF ([D0-1](THREAT_MODEL.md#11-decisiones-que-salen-de-d0)). Con el paquete solo no se pueden probar contraseñas, y un equipo nuevo entra con el kit o con la aprobación de otro.
 - **Equipos (sin MLS):** un vault compartido necesita que los miembros nuevos lean el historial, y MLS optimiza lo contrario (secreto hacia delante en mensajería). Por eso se usa un **manifiesto firmado**, una cadena tipo Arveil con el génesis firmado por el creador. Cada entrada la firma un administrador: `add_member(account_pk, role)`, `remove_member`, `rotate(key_gen+1, wraps[])` o `set_role`.
   - **Alta:** el invitado publica su clave. Un cliente administrador comprueba la huella (manual o, en enterprise, por atestación SSO del servidor; queda documentado como confianza en el servidor) y añade la clave del vault envuelta para ese miembro.
   - **Baja:** se rota la clave del vault. Los ítems nuevos usan la generación nueva y los antiguos se vuelven a cifrar de forma perezosa. **La baja no borra lo que el exmiembro ya vio**, así que la UI recomienda rotar credenciales y empuja hacia certificados de corta duración (§8).
@@ -285,9 +289,9 @@ vaults/<vault_id>/
 ```
 
 - **Funciona sobre cualquier almacenamiento que permita escribir un objeto nuevo y listar un prefijo** (carpeta de iCloud, Dropbox o Syncthing, S3/R2/MinIO, WebDAV, Git). Nadie sobrescribe archivos de otro, así que no hacen falta bloqueos ni operaciones *compare-and-swap*.
-- **Merge:** las revisiones de cada ítem forman un DAG (`parents`). Si hay dos cabezas, el núcleo hace un merge a tres bandas por campo (con los datos ya descifrados). Si el conflicto es en el mismo campo, gana la última escritura según un reloj lógico híbrido (dentro del texto cifrado), y la versión perdedora queda en el historial con un aviso en la UI. Los borrados son lápidas.
+- **Merge por relojes de campo** ([ADR-005](adr/ADR-005-sync-por-registros-de-dispositivo.md), medido en [S4](spikes/S4-sync.md)): cada revisión lleva, para cada campo, el reloj lógico híbrido de la escritura que lo puso (dentro del texto cifrado). Si hay dos cabezas, el núcleo se queda, campo a campo, con el reloj más reciente. No necesita el historial, así que podar es seguro; el merge a tres bandas desde el ancestro común perdía escrituras y quedó descartado. Las revisiones siguen formando un DAG por ítem (`parents`), para el historial y para los avisos: si dos equipos escribieron el mismo campo, la versión perdedora queda en el historial con un aviso en la UI. Borrar es escribir el campo `deleted`, que gana o pierde como cualquier otro.
 - **Compactación:** instantáneas periódicas; los segmentos se podan cuando todos los dispositivos activos han confirmado lectura o pasa la ventana de retención.
-- **Pruebas de convergencia** con `proptest`: ediciones concurrentes aleatorias deben converger al mismo estado en todos los dispositivos.
+- **Pruebas de convergencia** con `proptest`: ediciones concurrentes aleatorias deben converger al mismo estado en todos los dispositivos, sin perder ninguna escritura que nadie más vio.
 
 ### 6.2 Backends
 
@@ -383,7 +387,7 @@ Hay dos interfaces en `openward-integrations`:
 
 | Capacidad | Dónde | Plan |
 |---|---|---|
-| Historial de sesiones local (cuándo, host, duración) y reproducción asciicast v2 | Cliente, cifrado con la clave del dispositivo | Gratis |
+| Historial de sesiones local (cuándo, host, duración) y reproducción asciicast v2 | Cliente, cifrado con una clave del vault desde la v0.4 ([D0-2](THREAT_MODEL.md#11-decisiones-que-salen-de-d0)) | Gratis |
 | Historial de comandos (shell history) por host | Cliente, sincronizable en el vault | Gratis |
 | Auditoría de equipo (quién accedió a qué vault, altas y bajas, exportaciones) | Servidor y eventos firmados de los clientes | Team (básica) / Enterprise (SIEM) |
 | **Grabación en modo cumplimiento** | El cliente graba por política, cifra para la org, sube por partes encadenadas con hash y el servidor retiene | Enterprise |

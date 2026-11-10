@@ -1,6 +1,6 @@
 # Modelo de amenazas
 
-- **Estado:** propuesta (D0 de la [v0.4](plan/v0.4.md)), sin auditoría externa. Describe la 0.3.4 tal como es y lo que la v0.4 cambia. Se revisa contra lo hecho en D8, y C1 (etapa 4 del [camino a la Community](plan/community.md)) le añade el servidor y las cuentas.
+- **Estado:** D0 de la [v0.4](plan/v0.4.md), sin auditoría externa. Sus tres decisiones están aceptadas (2026-11-10, [§11](#11-decisiones-que-salen-de-d0)). Describe la 0.3.4 tal como es y lo que la v0.4 cambia. Se revisa contra lo hecho en D8, y C1 (etapa 4 del [camino a la Community](plan/community.md)) le añade el servidor y las cuentas.
 - **Fecha:** 2026-11-07.
 - **Alcance:** el cliente de escritorio en macOS, Windows y Linux. La sync (v0.5), el servidor y las cuentas (v0.6), el móvil y la IA tienen su sitio en el [§8](#8-lo-que-llega-después), con lo que ya se sabe que traerán.
 - **Base:** [ARCHITECTURE §11](ARCHITECTURE.md#11-seguridad-y-cadena-de-suministro), [ADR-003](adr/ADR-003-ssh-russh-y-firmantes.md) (SSH), [ADR-004](adr/ADR-004-vault-y-jerarquia-de-claves.md) (vault y claves) y [ADR-005](adr/ADR-005-sync-por-registros-de-dispositivo.md) (sync).
@@ -39,7 +39,7 @@
 | Amenaza | Defensa hoy (0.3.4) | Con la v0.4 | Lo que queda |
 |---|---|---|---|
 | **Robo del equipo apagado o con la sesión bloqueada** | Solo el cifrado de disco del sistema (FileVault, BitLocker, LUKS), si está activo. Sin él, se lee todo lo del [§4](#4-lo-que-hay-en-el-disco) | El vault, cifrado con la contraseña maestra | Si la sesión del sistema y la app están abiertas, nada. Con «Más tarde» (sin contraseña todavía), quien abra tu sesión del sistema abre el vault ([§5](#5-garantías-de-la-v04-con-sus-condiciones)) |
-| **Una copia del disco o de su copia de seguridad** (Time Machine, una nube que copia la carpeta de la app) | Ninguna: el vault, el historial y los recientes van en claro | Los ítems, cifrados. Se ve cuántos hay, su tamaño y sus fechas | Las copias hechas con la 0.3 siguen en claro (la app no llega a ellas). Una contraseña débil se adivina sin conexión: Argon2id lo encarece, no lo impide |
+| **Una copia del disco o de su copia de seguridad** (Time Machine, una nube que copia la carpeta de la app) | Ninguna: el vault, el historial y los recientes van en claro | Los ítems, el historial, los recientes y los registros, cifrados. Se ve cuántos ítems hay, su tamaño y sus fechas | Las copias hechas con la 0.3 siguen en claro (la app no llega a ellas). Una contraseña débil se adivina sin conexión: Argon2id lo encarece, no lo impide |
 | **Alguien en tu silla con la app abierta** | Ninguna | Bloqueo a los 15 min, al suspender el equipo y con ⌘L | Las sesiones siguen vivas aunque no se vean. Hasta que se bloquea, todo está a su alcance |
 | **Otro usuario del mismo equipo** | `vault.db` y los registros, 0600, y la carpeta de datos, 0700, también si ya estaba ([AM-3](#9-hallazgos-de-d0)): así el historial, los recientes y los ajustes, en 0644, no los lee nadie más | Lo mismo, y además cifrado | Un túnel en 127.0.0.1 lo puede usar cualquier usuario del equipo, también el dinámico, que no pide contraseña (igual que `ssh -D`). Un administrador (root) lo lee todo |
 | **Malware con tus permisos** | Fuera de alcance: lee archivos, memoria y teclado | Con la app bloqueada solo ve sobres cifrados, pero puede esperar a que desbloquees | Fuera de alcance ([§7](#7-fuera-de-alcance)) |
@@ -59,8 +59,8 @@ En la carpeta de datos de la app (en macOS, `~/Library/Application Support/dev.o
 |---|---|---|---|---|
 | `vault.db` (con `-wal`, `-shm` y `.lock`) | Hosts y grupos (etiquetas, direcciones, usuarios, notas, el texto con el que se detectó el sistema), identidades sin secretos, claves de host de confianza, snippets, túneles y espacios de trabajo | 0600 | En claro (sobres `v: 0`) | Cifrado por ítem (D3) |
 | `history.json` | Cada orden, dónde y cuándo se ejecutó (hasta 2000) | 0644, en la carpeta 0700 ([AM-3](#9-hallazgos-de-d0)) | En claro | Cifrado (D6) |
-| `recent.json` | Las conexiones: a dónde, etiqueta y cuándo | 0644, en la carpeta 0700 ([AM-3](#9-hallazgos-de-d0)) | En claro | **No previsto** ([D0-2](#11-decisiones-que-salen-de-d0)) |
-| `logs/` (`.json`, `.cast.gz`, `.txt.gz`) | Cada sesión (quién, a dónde, cuándo) y, si se graba, lo que se vio | 0700 y 0600 | En claro | **No previsto** ([D0-2](#11-decisiones-que-salen-de-d0)) |
+| `recent.json` | Las conexiones: a dónde, etiqueta y cuándo | 0644, en la carpeta 0700 ([AM-3](#9-hallazgos-de-d0)) | En claro | Cifrado (D6, [D0-2](#11-decisiones-que-salen-de-d0)) |
+| `logs/` (`.json`, `.cast.gz`, `.txt.gz`) | Cada sesión (quién, a dónde, cuándo) y, si se graba, lo que se vio | 0700 y 0600 | En claro | Cifrado (D6, [D0-2](#11-decisiones-que-salen-de-d0)) |
 | `settings.json` | Aspecto, reglas de resaltado y el programa de «Abrir con…»; no nombra hosts | 0644 | En claro | Igual |
 | `~/.ssh/<clave>` | Las claves que genera o importa la app; las de una llave FIDO2 solo dicen qué llave usar | 0600 (`.pub` 0644) | Cifradas si tienen frase de paso | Dentro del vault, si se quiere (D6) |
 | `~/.ssh/known_hosts` | Se lee al conectar. Solo se escribe al olvidar una línea, con una copia en `known_hosts.old` | Los que tenía | — | Igual |
@@ -75,14 +75,14 @@ Las contraseñas, las frases de paso y el PIN se piden en cada conexión y no se
 - **Con la app cerrada o bloqueada, una copia del disco no dice qué hosts tienes, ni dónde están, ni qué guardaste.**
   - Condiciones: una contraseña que no se adivine (Argon2id, 64 MiB como mínimo y de 0,5 a 1 s por intento); y que nada fuera del vault nombre un host ([I-5](#6-invariantes-que-se-comprueban), [D0-2](#11-decisiones-que-salen-de-d0)).
   - Mientras se elige «Más tarde» al actualizar (durante la beta), el vault se cifra con una clave del llavero del sistema y sin contraseña: la copia del disco sola no basta, pero quien abra tu sesión del sistema abre el vault, y sin kit no hay recuperación. Un aviso fijo lo recuerda.
-  - Se ve: cuántos ítems hay, su tamaño aproximado, sus identificadores, revisiones y generación de clave, y las fechas de los archivos.
-- **Nadie cambia un ítem sin que se note:** el AAD (`vault_id‖item_id‖rev‖key_gen`) liga cada sobre a su sitio, así que modificarlo o moverlo a otro ítem o a otro vault hace fallar el descifrado.
+  - Se ve: cuántos ítems hay, su tamaño aproximado, sus identificadores, revisiones, padres y generación de clave, qué equipo escribió cada revisión, y las fechas de los archivos.
+- **Nadie cambia un ítem sin que se note:** la cabecera del sobre (`v`, `vault`, `item`, `device`, `key_gen`, `parents`) va como AAD, y la revisión es el SHA-256 del sobre ([S4 §5](spikes/S4-sync.md#5-el-sobre-v1)). Modificarlo o moverlo a otro ítem o a otro vault hace fallar el descifrado. Lo que llega por la sync se comprueba además con la firma del equipo que lo escribió.
   - No se detecta volver a una copia anterior y entera del vault: sus sobres siguen siendo válidos. Tampoco que falte un ítem. La sync de la v0.5 lo detecta entre equipos, con registros firmados y cursores.
 - **Bloqueada, el núcleo no tiene nada del vault en claro.** Las sesiones abiertas siguen vivas, con sus claves de sesión en memoria, pero no se ven ni se escribe en ellas.
 - **Sin la contraseña, con el kit:** el kit (256 bits) lo abre en cualquier equipo. Quien tenga el kit tiene el vault: se guarda como la contraseña, no junto al equipo.
 - **El desbloqueo rápido es tan fuerte como su sistema:**
   - Touch ID y Windows Hello piden tu huella o tu cara. Si en macOS el llavero con biometría exige un Developer ID, el plan pasa a «recordar en este Mac» con el llavero normal, sin biometría, hasta firmar la app;
-  - el llavero de Linux se abre con tu sesión, sin biometría. Cualquiera que llegue a tu sesión abierta abre también el vault ([D0-3](#11-decisiones-que-salen-de-d0)).
+  - el llavero de Linux se abre con tu sesión, sin biometría. Cualquiera que llegue a tu sesión abierta abre también el vault. Por eso viene apagado, y la app lo explica al encenderlo ([D0-3](#11-decisiones-que-salen-de-d0)).
 - **Un secreto copiado se borra del portapapeles a los 60 s.** Además, se marca para que no lo guarden el historial del portapapeles ni su sincronización: el tipo «oculto» en macOS, y en Windows, fuera del historial y de la nube.
 
 ## 6. Invariantes que se comprueban
@@ -93,7 +93,7 @@ Cada una es una prueba que se escribe en su hito.
 |---|---|---|
 | I-1 | Ningún secreto guardado cruza a Dart: el núcleo lo usa y la app solo ve que existe | D3, D6 |
 | I-2 | Bloqueado, el vault no tiene ítems en claro: el índice se vacía y las claves se borran (`zeroize`) | D3, D4 |
-| I-3 | Cambiar `vault_id`, `item_id`, `rev` o `key_gen` en un sobre hace fallar el descifrado (vectores propios) | D1, D3 |
+| I-3 | Cambiar cualquier byte de un sobre (su cabecera: `vault`, `item`, `device`, `key_gen`, `parents`; el nonce o el texto cifrado) hace fallar el descifrado o la firma, y la revisión es el hash del sobre (vectores propios) | D2, D3 |
 | I-4 | La migración no deja la 0.3 en claro: ni la copia que hace la migración (`VACUUM INTO`), ni páginas libres de SQLite, ni el WAL. Se comprueba buscando en los archivos el nombre de un host de prueba. La copia, mientras exista, va con 0600 | D3 |
 | I-5 | Nada fuera del vault nombra un host. Se comprueba buscando en la carpeta de datos, después de una sesión, el nombre de un host de prueba | D3, D6 |
 | I-6 | Una 0.3 no abre un vault de la 0.4 y lo dice, en vez de mostrarlo vacío | D3 |
@@ -119,7 +119,7 @@ Cada una es una prueba que se escribe en su hito.
 - **Revocar un equipo** rota la generación de clave. Lo que ya vio queda visto ([ADR-004](adr/ADR-004-vault-y-jerarquia-de-claves.md)).
 - **El servidor y las cuentas (v0.6):**
   - la identidad de KaiCorp Labs autentica, pero no descifra. Quien la comprometa consigue sobres cifrados y puede negar el servicio;
-  - el paquete de la clave de cuenta que se sube es el punto delicado ([D0-1](#11-decisiones-que-salen-de-d0));
+  - el paquete de la clave de cuenta que se sube es el punto delicado. Va envuelto con la contraseña y con el secreto del kit, así que el servidor no puede probar contraseñas con él ([D0-1](#11-decisiones-que-salen-de-d0));
   - C1 amplía este documento con el servidor.
 - **Vaults de equipo:** la clave pública de un miembro nuevo se puede sustituir. Se defiende con la huella o con una atestación del servidor ([ADR-004](adr/ADR-004-vault-y-jerarquia-de-claves.md)).
 - **Móvil, y la IA con MCP** ([ADR-008](adr/ADR-008-ia-mcp-y-byok.md)): un agente con acceso a las sesiones es otro atacante posible, y tendrá su apartado cuando exista.
@@ -138,7 +138,7 @@ Salieron al repasar el código para escribir este documento.
 | AM-6 | Baja | **Las copias de «Abrir» se quedan** si la app se cierra mal, o en Windows si otro programa las tiene abiertas | `app/lib/sftp/remote_edit.dart:190-200` | Cada carpeta lleva un cerrojo mientras está en uso. Al arrancar se borran las que lo tienen libre, porque su ejecución terminó, y las de antes del cerrojo, pasado un día. Las de otro OpenWard abierto se quedan | **Arreglado** (2026-11-07) |
 | AM-7 | Baja | **El historial guarda los secretos escritos dentro de una orden** (`mysql -pclave`, `export TOKEN=…`), y la grabación de una sesión, lo que se vio. Ya se saltan lo que no se ve en pantalla, las respuestas a preguntas de contraseña, la pantalla alternativa, las órdenes de más de 4000 caracteres y las que empiezan por un espacio. Pero si la orden se edita con Tab o con las flechas, se lee de la pantalla sin el espacio y se guarda | `app/lib/history/line_tracker.dart:126-191` | Recordar el espacio del principio aunque la línea se edite, y cifrar el historial | D6 |
 | AM-8 | Media | **Lo que se importa de otros programas puede encender el reenvío del agente**, además de traer variables de entorno y túneles abiertos a la red. Un archivo hostil (de Termius, PuTTY, SecureCRT, MobaXterm o Tabby) apunta un host a un servidor del atacante con el agente reenviado, y al conectarse este firma con tus claves | `core/crates/openward-import/src/termius/model.rs:303-319,441-443`, `putty.rs:303`, `securecrt.rs:360`, `mobaxterm.rs:236`, `tabby.rs:250` | Al leer el archivo de otro programa, el reenvío del agente se quita y un túnel abierto a la red llega cerrado (en `localhost`), cada uno con un aviso que dice lo que pedía el archivo, como el ProxyCommand. Un reenvío apagado a propósito sigue apagado. `~/.ssh/config` llega tal cual, porque es tuyo | **Arreglado** (2026-11-09) |
-| AM-9 | Baja | **La app promete lo que hoy no es verdad:** la nota de los registros dice que están en una carpeta que solo lee tu usuario (en Linux no, por AM-3) y que irán cifrados con el vault (el plan no lo prevé, [D0-2](#11-decisiones-que-salen-de-d0)) | `app/lib/l10n/app_es.arb:2304` (`logsUnencrypted`) | La carpeta ya es privada (AM-3). Lo de cifrarlos espera a D0-2 | La carpeta, **arreglado** (2026-11-09); el cifrado, con D0-2 |
+| AM-9 | Baja | **La app promete lo que hoy no es verdad:** la nota de los registros dice que están en una carpeta que solo lee tu usuario (en Linux no, por AM-3) y que irán cifrados con el vault (el plan no lo prevé, [D0-2](#11-decisiones-que-salen-de-d0)) | `app/lib/l10n/app_es.arb:2304` (`logsUnencrypted`) | La carpeta ya es privada (AM-3). Lo de cifrarlos espera a D0-2 | La carpeta, **arreglado** (2026-11-09); el cifrado, en D6 (D0-2) |
 
 ## 10. Riesgos abiertos
 
@@ -153,20 +153,22 @@ Lo que impide hacer afirmaciones fuertes hasta que se resuelva:
   La firma y la notarización van con el lanzamiento.
 - **libghostty-vt** (Zig y C) lee todo lo que manda el servidor: es la superficie de análisis más grande. Se construye desde un commit fijado, y el fuzzing de VT está pendiente.
 - **Dependencias SSH:** `russh` tiene un mantenedor principal; `ssh-key` 0.7 sigue en RC; y `rsa` tiene el aviso RUSTSEC-2023-0071 (Marvin), aceptado en [ADR-003](adr/ADR-003-ssh-russh-y-firmantes.md).
-- **X-Wing sigue siendo un borrador del IETF;** D1 decide entre las implementaciones o DHKEM(X25519) con `kem_id` versionado.
+- **X-Wing sigue siendo un borrador del IETF.** [S6](spikes/S6-hpke.md) eligió `hpke-rs` con libcrux; `kem_id` registra la versión, y DHKEM(X25519) queda como alternativa decidida.
 - **Dart no puede borrar una cadena de la memoria:** lo que se escribe en un campo de la app vive ahí hasta que lo recoge el recolector.
 - **Las dependencias de Dart** solo las vigila dependabot: no hay un análisis de avisos de seguridad como el de `cargo-deny` para Rust.
 
 ## 11. Decisiones que salen de D0
 
-Para decidir antes de D3:
+Las tres se decidieron antes de D3, y están **aceptadas** (2026-11-10):
 - **D0-1 · El paquete de la clave de cuenta que sube la v0.6.**
-  - El plan lo envuelve con la KEK, que sale solo de la contraseña. Quien tenga el paquete (el servidor, o quien robe su base de datos) puede probar contraseñas sin límite.
-  - Propuesta: envolverlo con una clave que salga de la contraseña **y** de un secreto de alta entropía del kit. Así, el paquete solo no basta.
+  - El plan lo envolvía con la KEK, que sale solo de la contraseña. Quien tuviera el paquete (el servidor, o quien robe su base de datos) podría probar contraseñas sin límite.
+  - **Decidido:** se envuelve con una clave que sale de la contraseña (Argon2id) **y** de un secreto de alta entropía del kit, combinados con HKDF. Así, el paquete solo no basta. Se crea con el kit, en D5.
   - Consecuencia: dar de alta un equipo nuevo pide el kit o la aprobación de otro equipo, que es justo lo que S4 de la etapa 3 ya plantea («con un código o un QR desde otro que ya está dentro, o con el kit»).
+  - Queda para C1 (etapa 4): el kit solo también abre el vault ([§5](#5-garantías-de-la-v04-con-sus-condiciones)). Para recuperar sin contraseña y sin ningún equipo, el servidor tendría que guardar también una copia que abra el kit solo. Lo que no guarda nunca es algo que se abra con la contraseña sola.
 - **D0-2 · Lo que nombra hosts fuera del vault.**
-  - `recent.json` (encendido por defecto) y los registros de sesión guardan a dónde te conectaste. La v0.4 solo cifra el historial, aunque la app ya dice en Ajustes › Registros que los registros irán cifrados con el vault ([AM-9](#9-hallazgos-de-d0)).
-  - Propuesta: los tres en almacenes cifrados con una clave del vault, en D6. Sin eso, la primera garantía del [§5](#5-garantías-de-la-v04-con-sus-condiciones) no es verdad. Añade unos días.
+  - `recent.json` (encendido por defecto) y los registros de sesión guardan a dónde te conectaste. La v0.4 solo cifraba el historial, aunque la app ya dice en Ajustes › Registros que los registros irán cifrados con el vault ([AM-9](#9-hallazgos-de-d0)).
+  - **Decidido:** los tres en almacenes cifrados con una clave del vault, en D6, que pasa de 1,5 a 2 semanas. Así la primera garantía del [§5](#5-garantías-de-la-v04-con-sus-condiciones) es verdad.
+  - Una sesión sigue viva con la app bloqueada, y su registro también: cada registro lleva su propia clave, envuelta con la del vault al empezar, que vive en memoria lo que dura la sesión, como sus claves SSH.
 - **D0-3 · El llavero de Linux.**
   - Desbloquear con libsecret no pide nada más que la sesión abierta.
-  - Propuesta: apagado por defecto en Linux, con esa explicación al encenderlo.
+  - **Decidido:** apagado por defecto en Linux, con esa explicación al encenderlo.
