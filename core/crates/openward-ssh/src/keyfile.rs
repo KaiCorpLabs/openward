@@ -6,8 +6,8 @@
 //! that `ssh-keygen` makes, takes 31 bytes, not 32 (or 33 with the sign
 //! byte). `ssh-key` (0.7.0-rc.11 and rc.12) asks for at least 32 bytes and
 //! refuses those keys with "length invalid", also once an encrypted one is
-//! decrypted. Here the scalar is padded with zeros to the curve's size and
-//! the key read again.
+//! decrypted (reported upstream: RustCrypto/SSH#620). Here the scalar is
+//! padded with zeros to the curve's size and the key read again.
 //!
 //! P-384 and P-521 keys with a short scalar load as they are (32 bytes is
 //! well below their size), but they are padded the same way should that
