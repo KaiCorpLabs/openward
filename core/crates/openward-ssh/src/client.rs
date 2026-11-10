@@ -911,7 +911,7 @@ pub enum KeyError {
 
 /// Loads a private key, decrypting it with `passphrase` if it is protected.
 pub fn load_key(path: &Path, passphrase: Option<&str>) -> Result<PrivateKey, KeyError> {
-    match russh::keys::load_secret_key(path, passphrase) {
+    match crate::keyfile::load_secret_key(path, passphrase) {
         Ok(key) => Ok(key),
         Err(russh::keys::Error::KeyIsEncrypted) => Err(KeyError::Encrypted),
         // Without a passphrase an encrypted key says so; with one, a
