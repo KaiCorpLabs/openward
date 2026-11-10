@@ -9,10 +9,11 @@ use std::fs;
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
 
+use openward_ssh::keyfile::{self, decode_secret_key};
+use openward_ssh::russh::keys::HashAlg;
 use openward_ssh::russh::keys::ssh_key::{
     Algorithm, EcdsaCurve, LineEnding, PrivateKey, PublicKey,
 };
-use openward_ssh::russh::keys::{HashAlg, decode_secret_key};
 use openward_vault::Vault;
 use openward_vault::proto::{Data, Settings};
 
@@ -174,11 +175,11 @@ fn describe(local: &Local, file: &Path, users: &[(PathBuf, String)]) -> KeyFile 
     let text = fs::read_to_string(file).unwrap_or_default();
     let pub_path = with_suffix(file, ".pub");
     let public = PublicKey::read_openssh_file(&pub_path).ok().or_else(|| {
-        PrivateKey::from_openssh(&text)
+        keyfile::from_openssh(&text)
             .ok()
             .map(|k| k.public_key().clone())
     });
-    let encrypted = match PrivateKey::from_openssh(&text) {
+    let encrypted = match keyfile::from_openssh(&text) {
         Ok(k) => k.is_encrypted(),
         Err(_) => {
             text.contains("ENCRYPTED")
@@ -377,10 +378,9 @@ pub fn change_passphrase(
 ) -> Result<(), KeyError> {
     let file = key_file(local, path)?;
     let text = zeroize::Zeroizing::new(fs::read_to_string(&file).map_err(io)?);
-    let key = PrivateKey::from_openssh(text.as_str()).map_err(|_| KeyError::NotOpenSsh)?;
+    let key = keyfile::from_openssh(text.as_str()).map_err(|_| KeyError::NotOpenSsh)?;
     let key = if key.is_encrypted() {
-        key.decrypt(old.unwrap_or_default())
-            .map_err(|_| KeyError::WrongPassphrase)?
+        keyfile::decrypt(&key, old.unwrap_or_default()).map_err(|_| KeyError::WrongPassphrase)?
     } else {
         key
     };
@@ -488,7 +488,7 @@ pub fn import(
     let path = new_path(local, name)?;
     let text = text.replace("\r\n", "\n");
     let text = text.trim();
-    let openssh = PrivateKey::from_openssh(text).ok();
+    let openssh = keyfile::from_openssh(text).ok();
     // Encrypted PEM and PPK keys cannot be checked without the
     // passphrase: their header has to do.
     let readable = openssh.is_some()
@@ -562,7 +562,7 @@ pub fn public_line(local: &Local, path: &str) -> Result<String, KeyError> {
         return p.to_openssh().map_err(io);
     }
     let text = fs::read_to_string(&file).map_err(io)?;
-    PrivateKey::from_openssh(&text)
+    keyfile::from_openssh(&text)
         .map(|k| k.public_key().clone())
         .or_else(|_| decode_secret_key(&text, None).map(|k| k.public_key().clone()))
         .map_err(|_| KeyError::NotAKey)?
@@ -742,6 +742,68 @@ mod tests {
             k.fingerprint,
             Some(key.public_key().fingerprint(HashAlg::Sha256).to_string())
         );
+    }
+
+    /// A key from `openward-ssh`'s fixtures: ECDSA P-256 made by
+    /// `ssh-keygen` with a 31-byte scalar, which `ssh-key` alone refuses.
+    fn short_scalar(name: &str) -> String {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../openward-ssh/tests/fixtures");
+        fs::read_to_string(dir.join(name)).unwrap()
+    }
+
+    /// About one P-256 key in 512 from `ssh-keygen`: brought in, listed
+    /// without its .pub, its public line, and another passphrase.
+    #[test]
+    fn an_ecdsa_key_with_a_short_scalar() {
+        let dir = tempfile::tempdir().unwrap();
+        let local = local(dir.path());
+        let public = PublicKey::from_openssh(short_scalar("ecdsa-p256-short.pub").trim()).unwrap();
+        let fingerprint = Some(public.fingerprint(HashAlg::Sha256).to_string());
+
+        let k = import(&local, "short", &short_scalar("ecdsa-p256-short"), Vec::new).unwrap();
+        assert_eq!(k.algorithm.as_deref(), Some("ECDSA P-256"));
+        assert_eq!(k.fingerprint, fingerprint);
+        assert!(k.has_public && !k.encrypted);
+        let text = short_scalar("ecdsa-p256-short-aes256-ctr");
+        let e = import(&local, "short_pass", &text, Vec::new).unwrap();
+        assert_eq!(e.fingerprint, fingerprint);
+        assert!(e.has_public && e.encrypted);
+
+        // Without the .pub, what is listed comes from the key itself.
+        for name in ["short", "short_pass"] {
+            fs::remove_file(local.ssh_dir.join(format!("{name}.pub"))).unwrap();
+        }
+        let listed = |name: &str| {
+            list(&local, &Vec::new())
+                .into_iter()
+                .find(|k| k.name == name)
+                .unwrap()
+        };
+        let k = listed("short");
+        assert_eq!(k.fingerprint, fingerprint);
+        assert!(!k.has_public && !k.encrypted);
+        assert_eq!(listed("short_pass").fingerprint, fingerprint);
+        let line = public_line(&local, "~/.ssh/short").unwrap();
+        assert_eq!(line, public.to_openssh().unwrap());
+
+        // Its passphrase: wrong, then taken off; the key written again has
+        // the 32 bytes that `ssh-key` reads by itself.
+        assert_eq!(
+            change_passphrase(&local, "~/.ssh/short_pass", Some("otra"), None),
+            Err(KeyError::WrongPassphrase)
+        );
+        change_passphrase(&local, "~/.ssh/short_pass", Some("openward-test"), None).unwrap();
+        let k = listed("short_pass");
+        assert!(!k.encrypted);
+        let written = fs::read_to_string(local.ssh_dir.join("short_pass")).unwrap();
+        let key = PrivateKey::from_openssh(&written).unwrap();
+        assert_eq!(key.public_key().key_data(), public.key_data());
+        // And one put on, on a key that had none.
+        change_passphrase(&local, "~/.ssh/short", None, Some("frase")).unwrap();
+        assert!(listed("short").encrypted);
+        let path = local.ssh_dir.join("short");
+        let key = openward_ssh::client::load_key(&path, Some("frase")).unwrap();
+        assert_eq!(key.public_key().key_data(), public.key_data());
     }
 
     #[test]

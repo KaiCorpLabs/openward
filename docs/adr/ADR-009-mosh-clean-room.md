@@ -10,7 +10,7 @@ En móvil, las sesiones SSH mueren al cambiar de red o al suspenderse la app (iO
 
 **Verificación del 2026-10-08:**
 
-- **mosh 1.4.0** (octubre de 2022) es **GPL-3.0-or-later con excepción de enlace de OpenSSL**. Enlazarlo obligaría a usar GPL en el cliente, lo que contradice el [ADR-007](ADR-007-licencias-y-contribuciones.md) (Apache-2.0).
+- **mosh 1.4.0** (octubre de 2022) es **GPL-3.0-or-later con excepción de enlace de OpenSSL**. Enlazarlo obligaría a usar GPL en el cliente, lo que contradice el [ADR-007](ADR-007-licencias-y-contribuciones.md) (Apache-2.0). Desde su [revisión del 2026-11-10](ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-10) el cliente sale con GPL-3.0, pero enlazar mosh seguiría impidiendo ofrecerlo también con otra licencia, como pide la App Store.
 - **`mosh-rs` 0.1.0** (agosto de 2026) es el primer cliente Rust que dice ser compatible con `mosh-server`. También es GPL-3.0 y está muy verde (una versión, 0 estrellas), así que **no se puede usar ni leer** para una implementación clean-room.
 - **Eternal Terminal** es **Apache-2.0** y está activo (v7.0.0, julio de 2026), pero exige `etserver` en el servidor. Existe una reimplementación en Rust sobre QUIC (`etr` 0.10.6) cuya compatibilidad con ET no está verificada.
 

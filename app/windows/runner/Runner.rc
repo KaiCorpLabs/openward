@@ -93,7 +93,7 @@ BEGIN
             VALUE "FileDescription", "OpenWard" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "openward" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 OpenWard contributors. Apache-2.0." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Jose Manuel Cotarelo Linares (KaiCorp Labs). All rights reserved." "\0"
             VALUE "OriginalFilename", "openward.exe" "\0"
             VALUE "ProductName", "OpenWard" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"

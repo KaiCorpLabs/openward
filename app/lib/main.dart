@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' show PlatformDispatcher;
 
@@ -10,6 +11,7 @@ import 'core/errors.dart';
 import 'core/fonts.dart';
 import 'core/providers.dart';
 import 'core/settings.dart';
+import 'sftp/remote_edit.dart';
 import 'src/rust/api/app.dart';
 import 'src/rust/frb_generated.dart';
 import 'startup_error.dart';
@@ -33,6 +35,8 @@ Future<void> main() async {
     return runApp(StartupErrorApp(error: e, dataDir: dir));
   }
   PlatformDispatcher.instance.onError = reportUncaught;
+  // The copies of remote files an earlier run left open.
+  unawaited(cleanStaleOpenCopies());
   runApp(
     ProviderScope(
       overrides: [
