@@ -1,6 +1,6 @@
 # ADR-006 — Servidor Go open-core por fases
 
-- **Estado:** aceptado (2026-10-08). La licencia concreta de `ee/` se decide en la fase 4.
+- **Estado:** aceptado (2026-10-08). La licencia concreta de `ee/` se decide en la fase 4. Confirmado el 2026-11-10: el servidor sigue siendo autoalojable con AGPL-3.0, y el servicio alojado va en un dominio propio de OpenWard. Hasta el lanzamiento, el repositorio tiene todos los derechos reservados ([ADR-007](ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-10)).
 - **Fecha:** 2026-10-08.
 - **Alcance:** servidor (relay, equipos y enterprise), persistencia y frontera entre la edición libre y la de pago.
 
