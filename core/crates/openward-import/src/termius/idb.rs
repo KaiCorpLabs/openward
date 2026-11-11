@@ -12,6 +12,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::io;
 use std::path::{Path, PathBuf};
 
+use super::budget::{Budget, invalid};
 use super::leveldb::{self, Reader};
 use super::v8::{self, Value};
 
@@ -73,7 +74,11 @@ impl Idb {
 /// Reads `<origin>.indexeddb.leveldb`; blob files are looked for next to
 /// it, in `<origin>.indexeddb.blob`.
 pub fn read(dir: &Path) -> io::Result<Idb> {
-    let entries = leveldb::read(dir)?;
+    read_with_budget(dir, &mut Budget::default())
+}
+
+pub(super) fn read_with_budget(dir: &Path, budget: &mut Budget) -> io::Result<Idb> {
+    let entries = leveldb::read_with_budget(dir, budget)?;
     let blobs = blob_dir(dir);
     let mut db_names: Vec<(u64, String)> = Vec::new();
     let mut stores: HashMap<u64, BTreeMap<u64, String>> = HashMap::new();
@@ -81,6 +86,11 @@ pub fn read(dir: &Path) -> io::Result<Idb> {
     // External objects (blobs) of each record, by its key.
     let mut externals: HashMap<(u64, u64, Vec<u8>), Vec<u8>> = HashMap::new();
     for (key, value) in entries {
+        // Covers metadata decoding, record keys, map/vector overhead and
+        // the temporary lookup key below, before any of those copies.
+        budget.allocation(1, 256).map_err(invalid)?;
+        budget.buffer(key.len(), 4).map_err(invalid)?;
+        budget.buffer(value.len(), 4).map_err(invalid)?;
         let Ok((prefix, rest)) = Prefix::parse(&key) else {
             continue;
         };
@@ -129,12 +139,19 @@ pub fn read(dir: &Path) -> io::Result<Idb> {
     let mut unreadable: BTreeMap<String, usize> = BTreeMap::new();
     for (db, store, key, value) in data {
         let external = externals.get(&(db, store, key.clone()));
-        match record_value(&value, db, external.map(Vec::as_slice), blobs.as_deref()) {
+        match record_value_with_budget(
+            &value,
+            db,
+            external.map(Vec::as_slice),
+            blobs.as_deref(),
+            budget,
+        ) {
             Ok(Some(v)) => records.entry((db, store)).or_default().push(Record {
                 key: idb_key(&key),
                 value: v,
             }),
             Ok(None) => {}
+            Err(e) if budget.exhausted() => return Err(invalid(e)),
             Err(e) => *unreadable.entry(e).or_default() += 1,
         }
     }
@@ -249,18 +266,29 @@ const COMPRESSED_WITH_SNAPPY: u8 = 0x02;
 
 /// A record: its version, then Blink's serialization. `None` for an
 /// empty value.
+#[cfg(test)]
 fn record_value(
     value: &[u8],
     db: u64,
     external: Option<&[u8]>,
     blobs: Option<&Path>,
 ) -> Result<Option<Value>, String> {
+    record_value_with_budget(value, db, external, blobs, &mut Budget::default())
+}
+
+fn record_value_with_budget(
+    value: &[u8],
+    db: u64,
+    external: Option<&[u8]>,
+    blobs: Option<&Path>,
+    budget: &mut Budget,
+) -> Result<Option<Value>, String> {
     let mut r = Reader::new(value);
     r.varint()?; // the record's version
     if r.done() {
         return Ok(None);
     }
-    unwrap_blink(r.rest(), db, external, blobs, 0).map(Some)
+    unwrap_blink(r.rest(), db, external, blobs, 0, budget).map(Some)
 }
 
 fn unwrap_blink(
@@ -269,6 +297,7 @@ fn unwrap_blink(
     external: Option<&[u8]>,
     blobs: Option<&Path>,
     depth: usize,
+    budget: &mut Budget,
 ) -> Result<Value, String> {
     if depth > 2 {
         return Err("value wrapped too many times".into());
@@ -276,10 +305,15 @@ fn unwrap_blink(
     if let [0xff, REQUIRES_PROCESSING, how, rest @ ..] = data {
         return match *how {
             COMPRESSED_WITH_SNAPPY => {
+                let len = snap::raw::decompress_len(rest).map_err(|e| format!("snappy: {e}"))?;
+                if len as u64 > crate::files::MAX_FILE {
+                    return budget.refuse();
+                }
+                budget.bytes(len)?;
                 let raw = snap::raw::Decoder::new()
                     .decompress_vec(rest)
                     .map_err(|e| format!("snappy: {e}"))?;
-                unwrap_blink(&raw, db, external, blobs, depth + 1)
+                unwrap_blink(&raw, db, external, blobs, depth + 1, budget)
             }
             REPLACE_WITH_BLOB => {
                 let mut r = Reader::new(rest);
@@ -291,9 +325,10 @@ fn unwrap_blink(
                     .join(format!("{db:x}"))
                     .join(format!("{:02x}", number >> 8))
                     .join(format!("{number:x}"));
-                let raw = crate::files::read(&path)
+                let raw = budget
+                    .read(&path)
                     .map_err(|e| format!("blob {}: {e}", path.display()))?;
-                unwrap_blink(&raw, db, None, blobs, depth + 1)
+                unwrap_blink(&raw, db, None, blobs, depth + 1, budget)
             }
             other => Err(format!("unknown value wrapping {other}")),
         };
@@ -310,7 +345,7 @@ fn unwrap_blink(
         }
         r.bytes(12)?;
     }
-    v8::deserialize(r.rest())
+    v8::deserialize_with_budget(r.rest(), budget)
 }
 
 /// The blob number of a record's `index`th external object.
@@ -398,5 +433,134 @@ mod tests {
             record_value(&record, 1, None, None).unwrap(),
             Some(Value::Bool(true))
         );
+    }
+
+    #[test]
+    fn compressed_lengths_are_checked_before_reserving_output() {
+        // A raw Snappy header declares almost 4 GiB, with no payload.
+        let value = [
+            1,
+            0xff,
+            REQUIRES_PROCESSING,
+            COMPRESSED_WITH_SNAPPY,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0x0f,
+        ];
+        let mut budget = Budget::default();
+        assert!(record_value_with_budget(&value, 1, None, None, &mut budget).is_err());
+        assert!(budget.exhausted());
+    }
+
+    fn database_with_values(values: &[Vec<u8>]) -> tempfile::TempDir {
+        let dir = tempfile::tempdir().unwrap();
+        let mut batch = 1u64.to_le_bytes().to_vec();
+        batch.extend((values.len() as u32).to_le_bytes());
+        for (i, value) in values.iter().enumerate() {
+            let key = [0, 1, 1, 1, i as u8];
+            assert!(value.len() < 128);
+            batch.extend([1, key.len() as u8]);
+            batch.extend(key);
+            batch.push(value.len() as u8);
+            batch.extend(value);
+        }
+        let mut log = vec![0; 4];
+        log.extend((batch.len() as u16).to_le_bytes());
+        log.push(1);
+        log.extend(batch);
+        std::fs::write(dir.path().join("000001.log"), log).unwrap();
+        dir
+    }
+
+    #[test]
+    fn budget_exhaustion_aborts_the_import_instead_of_a_partial_warning() {
+        let mut value = vec![1, 0xff, 20, 0xff, 15, b'"', 100];
+        value.extend([b'x'; 100]);
+        let one = database_with_values(&[value.clone()]);
+        assert!(read_with_budget(one.path(), &mut Budget::limited(2500, 10000, 100)).is_ok());
+        let many = database_with_values(&[value.clone(), value.clone(), value]);
+        let mut budget = Budget::limited(2500, 10000, 100);
+        assert!(read_with_budget(many.path(), &mut budget).is_err());
+        assert!(budget.exhausted());
+        assert_eq!(read(many.path()).unwrap().records[&(1, 1)].len(), 3);
+
+        let sparse = vec![1, 0xff, 20, 0xff, 15, b'a', 0x81, 0x80, 4, b'@', 0, 0];
+        let hostile = database_with_values(&[sparse]);
+        assert!(read(hostile.path()).is_err());
+    }
+
+    #[test]
+    fn a_shared_config_is_charged_for_every_output_host() {
+        fn database(hosts: usize) -> Idb {
+            let object = |fields: Vec<(&str, Value)>| {
+                Value::Object(fields.into_iter().map(|(k, v)| (k.into(), v)).collect())
+            };
+            let config = Record {
+                key: Key::Number(1.0),
+                value: object(vec![
+                    ("id", Value::Int(1)),
+                    (
+                        "env_variables",
+                        Value::String(format!("{{\"X\":\"{}\"}}", "x".repeat(512))),
+                    ),
+                ]),
+            };
+            Idb {
+                databases: vec![
+                    Database {
+                        id: 1,
+                        name: "hosts".into(),
+                        stores: [(1, "records".into())].into(),
+                    },
+                    Database {
+                        id: 2,
+                        name: "ssh_configs".into(),
+                        stores: [(1, "records".into())].into(),
+                    },
+                ],
+                records: [
+                    (
+                        (1, 1),
+                        (0..hosts)
+                            .map(|i| Record {
+                                key: Key::Number(i as f64),
+                                value: object(vec![
+                                    ("id", Value::Int(i as i64)),
+                                    ("ssh_config", Value::Int(1)),
+                                ]),
+                            })
+                            .collect(),
+                    ),
+                    ((2, 1), vec![config]),
+                ]
+                .into(),
+                unreadable: BTreeMap::new(),
+            }
+        }
+        let one = database(1);
+        assert!(
+            super::super::model::bundle_with_budget(
+                &one,
+                &[0; 32],
+                &Budget::limited(60_000, 10_000, 100)
+            )
+            .is_ok()
+        );
+        let many = database(10);
+        // A bounded fixture demonstrates amplification without exhausting
+        // process memory: one stored config becomes ten owned settings.
+        let legitimate = super::super::model::bundle(&many, &[0; 32]).unwrap();
+        assert_eq!(legitimate.hosts.len(), 10);
+        assert!(
+            legitimate
+                .hosts
+                .iter()
+                .all(|h| h.settings.env.as_ref().unwrap()["X"].len() == 512)
+        );
+        let budget = Budget::limited(60_000, 10_000, 100);
+        assert!(super::super::model::bundle_with_budget(&many, &[0; 32], &budget).is_err());
+        assert!(budget.exhausted());
     }
 }

@@ -5,6 +5,7 @@
 
 use std::collections::BTreeMap;
 
+use super::budget::{Budget, MAX_ARRAY, MAX_DEPTH};
 use super::leveldb::Reader;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -60,23 +61,27 @@ impl Value {
 
 /// A V8-serialized value, starting at its `0xFF` version header.
 pub fn deserialize(data: &[u8]) -> Result<Value, String> {
+    deserialize_with_budget(data, &mut Budget::default())
+}
+
+pub(super) fn deserialize_with_budget(data: &[u8], budget: &mut Budget) -> Result<Value, String> {
     let mut d = Deserializer {
         r: Reader::new(data),
         objects: Vec::new(),
+        budget,
     };
     d.header()?;
     d.value(0)
 }
 
-const MAX_DEPTH: usize = 64;
-
-struct Deserializer<'a> {
+struct Deserializer<'a, 'b> {
     r: Reader<'a>,
     /// Values that later `^` references point at, by id.
     objects: Vec<Value>,
+    budget: &'b mut Budget,
 }
 
-impl Deserializer<'_> {
+impl Deserializer<'_, '_> {
     fn header(&mut self) -> Result<(), String> {
         if self.r.byte()? != 0xff {
             return Err("no V8 version header".into());
@@ -93,6 +98,7 @@ impl Deserializer<'_> {
     /// The next tag, past any padding.
     fn tag(&mut self) -> Result<u8, String> {
         loop {
+            self.budget.work(1)?;
             match self.r.byte()? {
                 0 => continue,
                 t => return Ok(t),
@@ -109,8 +115,9 @@ impl Deserializer<'_> {
 
     fn value(&mut self, depth: usize) -> Result<Value, String> {
         if depth > MAX_DEPTH {
-            return Err("value nested too deep".into());
+            return self.budget.refuse();
         }
+        self.budget.allocation(1, size_of::<Value>())?;
         let tag = self.tag()?;
         Ok(match tag {
             b'_' => Value::Undefined,
@@ -126,36 +133,40 @@ impl Deserializer<'_> {
             b'"' => {
                 let n = self.r.len()?;
                 // Latin-1: each byte is the code point.
+                self.budget.buffer(n, 2)?;
                 Value::String(self.r.bytes(n)?.iter().map(|&b| b as char).collect())
             }
             b'c' => Value::String(self.two_byte()?),
             b'S' => {
                 let n = self.r.len()?;
+                self.budget.bytes(n)?;
                 Value::String(
                     String::from_utf8(self.r.bytes(n)?.to_vec()).map_err(|_| "bad UTF-8 string")?,
                 )
             }
             b'D' => {
                 let v = Value::Date(self.double()?);
-                self.objects.push(v.clone());
-                v
+                let id = self.reserve()?;
+                self.fill(id, v, depth)?
             }
             b'^' => {
                 let id = self.r.len()?;
-                self.objects
+                let value = self
+                    .objects
                     .get(id)
-                    .cloned()
-                    .ok_or("reference to an unknown object")?
+                    .ok_or("reference to an unknown object")?;
+                copy_value(value, depth, self.budget)?
             }
             b'o' => {
-                let id = self.reserve();
+                let id = self.reserve()?;
                 let map = self.properties(b'{', depth)?;
                 self.r.varint()?; // property count
-                self.fill(id, Value::Object(map))
+                self.fill(id, Value::Object(map), depth)?
             }
             b'A' => {
-                let id = self.reserve();
+                let id = self.reserve()?;
                 let len = self.r.len()?;
+                self.array_slots(len)?;
                 if len > self.r.rest().len() {
                     return Err("array longer than the data".into());
                 }
@@ -172,15 +183,16 @@ impl Deserializer<'_> {
                 self.properties(b'$', depth)?;
                 self.r.varint()?;
                 self.r.varint()?;
-                self.fill(id, Value::Array(items))
+                self.fill(id, Value::Array(items), depth)?
             }
             b'a' => {
-                let id = self.reserve();
+                let id = self.reserve()?;
                 let len = self.r.len()?;
+                self.array_slots(len)?;
                 let props = self.properties(b'@', depth)?;
                 self.r.varint()?;
                 self.r.varint()?;
-                let mut items = vec![Value::Undefined; len.min(1 << 16)];
+                let mut items = vec![Value::Undefined; len];
                 for (k, v) in props {
                     if let Ok(i) = k.parse::<usize>()
                         && i < items.len()
@@ -188,22 +200,22 @@ impl Deserializer<'_> {
                         items[i] = v;
                     }
                 }
-                self.fill(id, Value::Array(items))
+                self.fill(id, Value::Array(items), depth)?
             }
             b'y' | b'x' => {
                 let v = Value::Bool(tag == b'y');
-                self.objects.push(v.clone());
-                v
+                let id = self.reserve()?;
+                self.fill(id, v, depth)?
             }
             b'n' => {
                 let v = Value::Double(self.double()?);
-                self.objects.push(v.clone());
-                v
+                let id = self.reserve()?;
+                self.fill(id, v, depth)?
             }
             b's' => {
-                let id = self.reserve();
+                let id = self.reserve()?;
                 let v = self.value(depth + 1)?;
-                self.fill(id, v)
+                self.fill(id, v, depth)?
             }
             other => {
                 return Err(format!(
@@ -229,19 +241,28 @@ impl Deserializer<'_> {
                 _ => return Err("object key that is not a string or a number".into()),
             };
             let value = self.value(depth + 1)?;
+            self.budget.allocation(1, 128)?;
             map.insert(key, value);
         }
     }
 
     /// Objects get their id before their contents, as V8 numbers them.
-    fn reserve(&mut self) -> usize {
+    fn reserve(&mut self) -> Result<usize, String> {
+        self.budget.allocation(1, size_of::<Value>())?;
         self.objects.push(Value::Undefined);
-        self.objects.len() - 1
+        Ok(self.objects.len() - 1)
     }
 
-    fn fill(&mut self, id: usize, v: Value) -> Value {
-        self.objects[id] = v.clone();
-        v
+    fn fill(&mut self, id: usize, v: Value, depth: usize) -> Result<Value, String> {
+        self.objects[id] = copy_value(&v, depth, self.budget)?;
+        Ok(v)
+    }
+
+    fn array_slots(&mut self, len: usize) -> Result<(), String> {
+        if len > MAX_ARRAY {
+            return self.budget.refuse();
+        }
+        self.budget.allocation(len, size_of::<Value>())
     }
 
     fn double(&mut self) -> Result<f64, String> {
@@ -253,6 +274,7 @@ impl Deserializer<'_> {
         if n % 2 != 0 {
             return Err("odd two-byte string length".into());
         }
+        self.budget.buffer(n, 3)?;
         let units: Vec<u16> = self
             .r
             .bytes(n)?
@@ -261,6 +283,36 @@ impl Deserializer<'_> {
             .collect();
         String::from_utf16(&units).map_err(|_| "bad UTF-16 string".into())
     }
+}
+
+/// Charge the entire expanded tree, including map keys, before Clone allocates.
+/// The depth check also covers shallow wire references to earlier deep values.
+fn copy_value(value: &Value, depth: usize, budget: &mut Budget) -> Result<Value, String> {
+    fn charge(value: &Value, depth: usize, budget: &mut Budget) -> Result<(), String> {
+        if depth > MAX_DEPTH {
+            return budget.refuse();
+        }
+        budget.allocation(1, size_of::<Value>())?;
+        match value {
+            Value::String(s) => budget.bytes(s.len())?,
+            Value::Array(items) => {
+                for item in items {
+                    charge(item, depth + 1, budget)?;
+                }
+            }
+            Value::Object(map) => {
+                for (key, item) in map {
+                    budget.bytes(key.len())?;
+                    budget.allocation(1, 128)?;
+                    charge(item, depth + 1, budget)?;
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+    charge(value, depth, budget)?;
+    Ok(value.clone())
 }
 
 #[cfg(test)]
@@ -346,5 +398,46 @@ mod tests {
     fn a_map_is_refused() {
         let err = deserialize(&[0xff, 15, b';', b':', 0]).unwrap_err();
         assert!(err.contains("';'"), "{err}");
+    }
+
+    fn varint(mut n: usize, out: &mut Vec<u8>) {
+        while n >= 128 {
+            out.push((n as u8 & 127) | 128);
+            n >>= 7;
+        }
+        out.push(n as u8);
+    }
+
+    #[test]
+    fn an_oversized_sparse_array_is_rejected_instead_of_truncated() {
+        let mut data = vec![0xff, 15, b'a'];
+        varint(65_537, &mut data);
+        data.extend([b'@', 0]);
+        varint(65_537, &mut data);
+        assert!(deserialize(&data).is_err());
+    }
+
+    #[test]
+    fn shallow_references_cannot_construct_an_unbounded_tree_height() {
+        // Each child is shallow in the wire format, but points to its predecessor.
+        let mut data = vec![0xff, 15, b'A', 70];
+        data.extend([b'A', 0, b'$', 0, 0]);
+        for previous in 1..70 {
+            data.extend([b'A', 1, b'^', previous, b'$', 0, 1]);
+        }
+        data.extend([b'$', 0, 70]);
+        assert!(deserialize(&data).is_err());
+    }
+
+    #[test]
+    fn reference_expansion_is_charged_before_cloning() {
+        let mut data = vec![0xff, 15, b'A', 18, b'A', 0, b'$', 0, 0];
+        for previous in 1..18 {
+            data.extend([b'A', 2, b'^', previous, b'^', previous, b'$', 0, 2]);
+        }
+        data.extend([b'$', 0, 18]);
+        let mut budget = Budget::limited(128 << 10, 10_000, 10);
+        assert!(deserialize_with_budget(&data, &mut budget).is_err());
+        assert!(budget.exhausted());
     }
 }

@@ -9,6 +9,7 @@
 //! Ordering does not matter here, so Chromium's own key comparator
 //! (`idb_cmp1`) is not needed.
 
+use super::budget::{Budget, invalid};
 use std::collections::{BTreeSet, HashMap};
 use std::fs;
 use std::io;
@@ -22,7 +23,11 @@ type Change = (Vec<u8>, u64, Option<Vec<u8>>);
 
 /// The live entries of a database, in no particular order.
 pub fn read(dir: &Path) -> io::Result<Vec<Entry>> {
-    let files = live_files(dir)?;
+    read_with_budget(dir, &mut Budget::default())
+}
+
+pub(super) fn read_with_budget(dir: &Path, budget: &mut Budget) -> io::Result<Vec<Entry>> {
+    let files = live_files(dir, budget)?;
     let mut newest: HashMap<Vec<u8>, (u64, Option<Vec<u8>>)> = HashMap::new();
     let mut keep = |key: Vec<u8>, seq: u64, value: Option<Vec<u8>>| match newest.get(&key) {
         Some((s, _)) if *s >= seq => {}
@@ -31,16 +36,19 @@ pub fn read(dir: &Path) -> io::Result<Vec<Entry>> {
         }
     };
     for table in &files.tables {
-        let bytes = crate::files::read(table)?;
-        for (internal, value) in table_entries(&bytes).map_err(|e| bad(table, e))? {
+        let bytes = budget.read(table)?;
+        for (internal, value) in table_entries(&bytes, budget).map_err(|e| bad(table, e))? {
             let (key, seq, kind) = split_internal(&internal).map_err(|e| bad(table, e))?;
+            budget.bytes(key.len()).map_err(invalid)?;
+            budget.allocation(1, 128).map_err(invalid)?;
             keep(key.to_vec(), seq, (kind == VALUE).then_some(value));
         }
     }
     for log in &files.logs {
-        let bytes = crate::files::read(log)?;
-        for record in log_records(&bytes).map_err(|e| bad(log, e))? {
-            for (key, seq, value) in batch_entries(&record).map_err(|e| bad(log, e))? {
+        let bytes = budget.read(log)?;
+        for record in log_records(&bytes, budget).map_err(|e| bad(log, e))? {
+            for (key, seq, value) in batch_entries(&record, budget).map_err(|e| bad(log, e))? {
+                budget.allocation(1, 128).map_err(invalid)?;
                 keep(key, seq, value);
             }
         }
@@ -53,7 +61,7 @@ pub fn read(dir: &Path) -> io::Result<Vec<Entry>> {
 
 /// How many table and log files [`read`] reads.
 pub fn file_counts(dir: &Path) -> io::Result<(usize, usize)> {
-    let files = live_files(dir)?;
+    let files = live_files(dir, &mut Budget::default())?;
     Ok((files.tables.len(), files.logs.len()))
 }
 
@@ -75,10 +83,12 @@ struct Files {
 /// The table files the manifest lists as live, and the logs from its log
 /// number on. Without a manifest (a copy without `CURRENT`, say), every
 /// table and log in the folder.
-fn live_files(dir: &Path) -> io::Result<Files> {
+fn live_files(dir: &Path, budget: &mut Budget) -> io::Result<Files> {
     let mut tables = Vec::new();
     let mut logs = Vec::new();
     for entry in fs::read_dir(dir)? {
+        budget.entry().map_err(invalid)?;
+        budget.bytes(128).map_err(invalid)?;
         let path = entry?.path();
         let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
             continue;
@@ -98,10 +108,16 @@ fn live_files(dir: &Path) -> io::Result<Files> {
     tables.sort();
     logs.sort();
     let current = dir.join("CURRENT");
-    if let Ok(name) = crate::files::read_to_string(&current) {
+    let current_bytes = budget.read(&current);
+    if budget.exhausted() {
+        return Err(invalid("Termius file budget exceeded".into()));
+    }
+    if let Ok(name) = current_bytes.and_then(|bytes| {
+        String::from_utf8(bytes).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+    }) {
         let manifest = dir.join(name.trim());
-        let bytes = crate::files::read(&manifest)?;
-        let version = manifest_version(&bytes).map_err(|e| bad(&manifest, e))?;
+        let bytes = budget.read(&manifest)?;
+        let version = manifest_version(&bytes, budget).map_err(|e| bad(&manifest, e))?;
         tables.retain(|(n, _)| version.files.contains(n));
         let from = match version.prev_log {
             Some(prev) if prev != 0 => prev.min(version.log),
@@ -194,7 +210,7 @@ const TABLE_MAGIC: u64 = 0xdb47_7524_8b80_fb57;
 const FOOTER: usize = 48;
 
 /// Every entry of a table file: internal key and value.
-fn table_entries(file: &[u8]) -> Result<Vec<Entry>, String> {
+fn table_entries(file: &[u8], budget: &mut Budget) -> Result<Vec<Entry>, String> {
     if file.len() < FOOTER {
         return Err("table too short".into());
     }
@@ -207,30 +223,34 @@ fn table_entries(file: &[u8]) -> Result<Vec<Entry>, String> {
     let _metaindex = (r.varint()?, r.varint()?);
     let index = (r.varint()?, r.varint()?);
     let mut out = Vec::new();
-    for (_, handle) in block_entries(&block(file, index)?)? {
+    for (_, handle) in block_entries(&block(file, index, budget)?, budget)? {
         let mut h = Reader::new(&handle);
-        let data = block(file, (h.varint()?, h.varint()?))?;
-        out.extend(block_entries(&data)?);
+        let data = block(file, (h.varint()?, h.varint()?), budget)?;
+        out.extend(block_entries(&data, budget)?);
     }
     Ok(out)
 }
 
 /// A block's contents, uncompressed. After it come a compression byte and
 /// a checksum, which is not checked: a damaged block fails to parse.
-fn block(file: &[u8], (offset, size): (u64, u64)) -> Result<Vec<u8>, String> {
+fn block(file: &[u8], (offset, size): (u64, u64), budget: &mut Budget) -> Result<Vec<u8>, String> {
     let start = usize::try_from(offset).map_err(|_| "offset overflow")?;
     let size = usize::try_from(size).map_err(|_| "size overflow")?;
     let end = start.checked_add(size).ok_or("size overflow")?;
     let data = file.get(start..end).ok_or("block out of the file")?;
     match file.get(end) {
-        Some(0) => Ok(data.to_vec()),
+        Some(0) => {
+            budget.bytes(data.len())?;
+            Ok(data.to_vec())
+        }
         Some(1) => {
             // The length it says it unpacks to, from the file: bounded
             // before anything is reserved.
             let len = snap::raw::decompress_len(data).map_err(|e| format!("snappy: {e}"))?;
             if len as u64 > crate::files::MAX_FILE {
-                return Err("block too large".into());
+                return budget.refuse();
             }
+            budget.bytes(len)?;
             snap::raw::Decoder::new()
                 .decompress_vec(data)
                 .map_err(|e| format!("snappy: {e}"))
@@ -240,7 +260,7 @@ fn block(file: &[u8], (offset, size): (u64, u64)) -> Result<Vec<u8>, String> {
     }
 }
 
-fn block_entries(block: &[u8]) -> Result<Vec<Entry>, String> {
+fn block_entries(block: &[u8], budget: &mut Budget) -> Result<Vec<Entry>, String> {
     if block.len() < 4 {
         return Err("block too short".into());
     }
@@ -259,6 +279,12 @@ fn block_entries(block: &[u8]) -> Result<Vec<Entry>, String> {
         if shared > key.len() {
             return Err("bad shared key length".into());
         }
+        budget.work(1)?;
+        budget.bytes(unshared)?;
+        let full = shared.checked_add(unshared).ok_or("key length overflow")?;
+        budget.bytes(full)?;
+        budget.bytes(value_len)?;
+        budget.allocation(1, size_of::<Entry>())?;
         key.truncate(shared);
         key.extend_from_slice(r.bytes(unshared)?);
         out.push((key.clone(), r.bytes(value_len)?.to_vec()));
@@ -274,7 +300,7 @@ const HEADER: usize = 7;
 /// The records of a log file (the write-ahead log or a manifest), put back
 /// together from their fragments. A torn last record is dropped, as
 /// LevelDB does on recovery.
-fn log_records(file: &[u8]) -> Result<Vec<Vec<u8>>, String> {
+fn log_records(file: &[u8], budget: &mut Budget) -> Result<Vec<Vec<u8>>, String> {
     let mut out = Vec::new();
     let mut partial: Option<Vec<u8>> = None;
     for block in file.chunks(BLOCK) {
@@ -290,6 +316,8 @@ fn log_records(file: &[u8]) -> Result<Vec<Vec<u8>>, String> {
                 break;
             };
             pos += HEADER + len;
+            budget.allocation(1, size_of::<Vec<u8>>())?;
+            budget.bytes(data.len())?;
             match kind {
                 1 => out.push(data.to_vec()),
                 2 => partial = Some(data.to_vec()),
@@ -313,22 +341,31 @@ fn log_records(file: &[u8]) -> Result<Vec<Vec<u8>>, String> {
 
 /// A write batch: a sequence number, a count and that many puts or
 /// deletions, numbered from the sequence on.
-fn batch_entries(batch: &[u8]) -> Result<Vec<Change>, String> {
+fn batch_entries(batch: &[u8], budget: &mut Budget) -> Result<Vec<Change>, String> {
     let mut r = Reader::new(batch);
     let seq = r.u64_le()?;
     let count = r.u32_le()?;
     // Each entry takes three bytes or more: the count, read from the
     // file, never reserves more than that.
-    let mut out = Vec::with_capacity((count as usize).min(r.rest().len() / 3));
+    let capacity = (count as usize).min(r.rest().len() / 3);
+    budget.allocation(capacity, size_of::<Change>())?;
+    let mut out = Vec::with_capacity(capacity);
     for i in 0..u64::from(count) {
         let kind = r.byte()?;
-        let key = r.slice()?.to_vec();
+        budget.work(1)?;
+        let key = r.slice()?;
+        budget.bytes(key.len())?;
+        let key = key.to_vec();
         let value = match kind {
-            VALUE => Some(r.slice()?.to_vec()),
+            VALUE => {
+                let value = r.slice()?;
+                budget.bytes(value.len())?;
+                Some(value.to_vec())
+            }
             DELETION => None,
             other => return Err(format!("unknown batch entry {other}")),
         };
-        out.push((key, seq + i, value));
+        out.push((key, seq.checked_add(i).ok_or("sequence overflow")?, value));
     }
     Ok(out)
 }
@@ -342,11 +379,12 @@ struct Version {
     prev_log: Option<u64>,
 }
 
-fn manifest_version(file: &[u8]) -> Result<Version, String> {
+fn manifest_version(file: &[u8], budget: &mut Budget) -> Result<Version, String> {
     let mut v = Version::default();
-    for edit in log_records(file)? {
+    for edit in log_records(file, budget)? {
         let mut r = Reader::new(&edit);
         while !r.done() {
+            budget.work(1)?;
             match r.varint()? {
                 1 => {
                     r.slice()?; // comparator name
@@ -370,6 +408,7 @@ fn manifest_version(file: &[u8]) -> Result<Version, String> {
                     r.varint()?; // size
                     r.slice()?; // smallest and largest keys
                     r.slice()?;
+                    budget.allocation(1, 64)?;
                     v.files.insert(n);
                 }
                 9 => v.prev_log = Some(r.varint()?),
@@ -383,6 +422,25 @@ fn manifest_version(file: &[u8]) -> Result<Version, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn table_entries(file: &[u8]) -> Result<Vec<Entry>, String> {
+        super::table_entries(file, &mut Budget::default())
+    }
+    fn log_records(file: &[u8]) -> Result<Vec<Vec<u8>>, String> {
+        super::log_records(file, &mut Budget::default())
+    }
+    fn batch_entries(file: &[u8]) -> Result<Vec<Change>, String> {
+        super::batch_entries(file, &mut Budget::default())
+    }
+    fn manifest_version(file: &[u8]) -> Result<Version, String> {
+        super::manifest_version(file, &mut Budget::default())
+    }
+    fn block_entries(file: &[u8]) -> Result<Vec<Entry>, String> {
+        super::block_entries(file, &mut Budget::default())
+    }
+    fn live_files(dir: &Path) -> io::Result<Files> {
+        super::live_files(dir, &mut Budget::default())
+    }
 
     proptest::proptest! {
         /// A damaged or hostile LevelDB file is an error, never a panic.
@@ -527,5 +585,72 @@ mod tests {
                 (b"apricot".to_vec(), b"2".to_vec())
             ]
         );
+    }
+
+    fn varint(mut n: usize, out: &mut Vec<u8>) {
+        while n >= 128 {
+            out.push((n as u8 & 127) | 128);
+            n >>= 7;
+        }
+        out.push(n as u8);
+    }
+
+    #[test]
+    fn shared_keys_cannot_expand_past_the_database_budget() {
+        let mut data = Vec::new();
+        data.push(0);
+        varint(1024, &mut data);
+        data.push(0);
+        data.extend([b'k'; 1024]);
+        for _ in 0..100 {
+            varint(1024, &mut data);
+            data.extend([0, 0]);
+        }
+        data.extend([0; 4]);
+        data.extend(1u32.to_le_bytes());
+        assert_eq!(block_entries(&data).unwrap().len(), 101);
+        let mut budget = Budget::limited(4096, 10_000, 10);
+        assert!(super::block_entries(&data, &mut budget).is_err());
+        assert!(budget.exhausted());
+    }
+
+    #[test]
+    fn repeated_block_handles_share_one_budget() {
+        let data = make_block(&[(b"key".to_vec(), vec![42; 100])]);
+        let packed = snap::raw::Encoder::new().compress_vec(&data).unwrap();
+        let mut file = packed.clone();
+        file.extend([1, 0, 0, 0, 0]);
+        let mut handle = vec![0];
+        varint(packed.len(), &mut handle);
+        let index = make_block(
+            &(0..40)
+                .map(|i| (vec![i], handle.clone()))
+                .collect::<Vec<_>>(),
+        );
+        let at = file.len();
+        file.extend(&index);
+        file.extend([0; 5]);
+        let mut footer = vec![0, 0];
+        varint(at, &mut footer);
+        varint(index.len(), &mut footer);
+        footer.resize(40, 0);
+        footer.extend(TABLE_MAGIC.to_le_bytes());
+        file.extend(footer);
+        assert_eq!(table_entries(&file).unwrap().len(), 40);
+        let mut budget = Budget::limited(2048, 10_000, 10);
+        assert!(super::table_entries(&file, &mut budget).is_err());
+        assert!(budget.exhausted());
+    }
+
+    #[test]
+    fn discovery_and_reads_have_a_cumulative_file_limit() {
+        let dir = tempfile::tempdir().unwrap();
+        for i in 0..10 {
+            fs::write(dir.path().join(format!("{i:06}.log")), []).unwrap();
+        }
+        let mut budget = Budget::limited(10_000, 10_000, 5);
+        assert!(read_with_budget(dir.path(), &mut budget).is_err());
+        assert!(budget.exhausted());
+        assert!(read(dir.path()).unwrap().is_empty());
     }
 }
