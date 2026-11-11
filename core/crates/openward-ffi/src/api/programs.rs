@@ -136,6 +136,8 @@ pub enum ProgramWarningKind {
     /// A tunnel open to other computers, brought in on loopback; `detail`
     /// is where it listened.
     OpenTunnel,
+    /// An imported tunnel's automatic startup was disabled.
+    TunnelAutostart,
     /// Something OpenWard does not have: `missing`; `detail` is its
     /// name, when it has one.
     Unsupported,
@@ -185,6 +187,7 @@ fn warning(w: &Warning) -> ProgramWarning {
         WarningKind::ProxyCommand(command) => (ProgramWarningKind::ProxyCommand, command.clone()),
         WarningKind::AgentForward => (ProgramWarningKind::AgentForward, String::new()),
         WarningKind::OpenTunnel(address) => (ProgramWarningKind::OpenTunnel, address.clone()),
+        WarningKind::TunnelAutostart => (ProgramWarningKind::TunnelAutostart, String::new()),
         WarningKind::Unsupported(what) => {
             let (kind, name) = match what {
                 Missing::X11 => (MissingKind::X11, None),

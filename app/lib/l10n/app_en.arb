@@ -1945,6 +1945,7 @@
   "warnShared": "{count, plural, =1{1 item shared from a team cannot be read on this computer.} other{{count} items shared from a team cannot be read on this computer.}}",
   "warnStartupCommand": "{host} ran a command on connect; OpenWard does not do that on its own yet.",
   "warnStricter": "StrictHostKeyChecking no{at}: imported as “accept new”; a changed key is never accepted without asking.",
+  "warnTunnelAutostart": "The tunnel {tunnel} used to start automatically. It will stay stopped until you start it. Review its direction and destination before enabling automatic startup.",
   "warnUnreadable": "{file} could not be read.",
   "warnUnsupported": "{subject}: not imported{at}.",
   "warnValue": "{host}: the value “{value}” of {field} is not valid and did not come along.",

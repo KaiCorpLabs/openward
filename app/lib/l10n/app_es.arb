@@ -4499,6 +4499,14 @@
       }
     }
   },
+  "warnTunnelAutostart": "El túnel {tunnel} se iniciaba automáticamente. Queda detenido hasta que lo inicies. Revisa su dirección y destino antes de activar el inicio automático.",
+  "@warnTunnelAutostart": {
+    "placeholders": {
+      "tunnel": {
+        "type": "String"
+      }
+    }
+  },
   "warnUnreadable": "No se ha podido leer {file}.",
   "@warnUnreadable": {
     "placeholders": {

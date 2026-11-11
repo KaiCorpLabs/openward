@@ -11971,11 +11971,12 @@ impl SseDecode for crate::api::programs::ProgramWarningKind {
             2 => crate::api::programs::ProgramWarningKind::ProxyCommand,
             3 => crate::api::programs::ProgramWarningKind::AgentForward,
             4 => crate::api::programs::ProgramWarningKind::OpenTunnel,
-            5 => crate::api::programs::ProgramWarningKind::Unsupported,
-            6 => crate::api::programs::ProgramWarningKind::BadValue,
-            7 => crate::api::programs::ProgramWarningKind::Shared,
-            8 => crate::api::programs::ProgramWarningKind::HostChain,
-            9 => crate::api::programs::ProgramWarningKind::Unreadable,
+            5 => crate::api::programs::ProgramWarningKind::TunnelAutostart,
+            6 => crate::api::programs::ProgramWarningKind::Unsupported,
+            7 => crate::api::programs::ProgramWarningKind::BadValue,
+            8 => crate::api::programs::ProgramWarningKind::Shared,
+            9 => crate::api::programs::ProgramWarningKind::HostChain,
+            10 => crate::api::programs::ProgramWarningKind::Unreadable,
             _ => unreachable!("Invalid variant for ProgramWarningKind: {}", inner),
         };
     }
@@ -15418,11 +15419,12 @@ impl flutter_rust_bridge::IntoDart for crate::api::programs::ProgramWarningKind 
             Self::ProxyCommand => 2.into_dart(),
             Self::AgentForward => 3.into_dart(),
             Self::OpenTunnel => 4.into_dart(),
-            Self::Unsupported => 5.into_dart(),
-            Self::BadValue => 6.into_dart(),
-            Self::Shared => 7.into_dart(),
-            Self::HostChain => 8.into_dart(),
-            Self::Unreadable => 9.into_dart(),
+            Self::TunnelAutostart => 5.into_dart(),
+            Self::Unsupported => 6.into_dart(),
+            Self::BadValue => 7.into_dart(),
+            Self::Shared => 8.into_dart(),
+            Self::HostChain => 9.into_dart(),
+            Self::Unreadable => 10.into_dart(),
             _ => unreachable!(),
         }
     }
@@ -19106,11 +19108,12 @@ impl SseEncode for crate::api::programs::ProgramWarningKind {
                 crate::api::programs::ProgramWarningKind::ProxyCommand => 2,
                 crate::api::programs::ProgramWarningKind::AgentForward => 3,
                 crate::api::programs::ProgramWarningKind::OpenTunnel => 4,
-                crate::api::programs::ProgramWarningKind::Unsupported => 5,
-                crate::api::programs::ProgramWarningKind::BadValue => 6,
-                crate::api::programs::ProgramWarningKind::Shared => 7,
-                crate::api::programs::ProgramWarningKind::HostChain => 8,
-                crate::api::programs::ProgramWarningKind::Unreadable => 9,
+                crate::api::programs::ProgramWarningKind::TunnelAutostart => 5,
+                crate::api::programs::ProgramWarningKind::Unsupported => 6,
+                crate::api::programs::ProgramWarningKind::BadValue => 7,
+                crate::api::programs::ProgramWarningKind::Shared => 8,
+                crate::api::programs::ProgramWarningKind::HostChain => 9,
+                crate::api::programs::ProgramWarningKind::Unreadable => 10,
                 _ => {
                     unimplemented!("");
                 }

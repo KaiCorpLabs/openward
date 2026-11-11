@@ -390,6 +390,9 @@ enum ProgramWarningKind {
   /// is where it listened.
   openTunnel,
 
+  /// An imported tunnel's automatic startup was disabled.
+  tunnelAutostart,
+
   /// Something OpenWard does not have: `missing`; `detail` is its
   /// name, when it has one.
   unsupported,

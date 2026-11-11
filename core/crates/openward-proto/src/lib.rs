@@ -293,6 +293,31 @@ pub struct PortForward {
     pub extra: Extra,
 }
 
+impl PortForward {
+    /// Imported program data cannot authorize automatic startup, including
+    /// records saved by older versions. Own SSH config and manual tunnels
+    /// retain their behavior. Approval survives a vault round trip.
+    pub fn autostarts(&self) -> bool {
+        self.autostart
+            && self.imported.as_ref().is_none_or(|i| {
+                matches!(
+                    i.extra.get("autostart_approved"),
+                    Some(ciborium::Value::Bool(true))
+                )
+            })
+    }
+
+    /// Called when the user saves the tunnel editor, not by importers.
+    pub fn set_autostart(&mut self, enabled: bool) {
+        self.autostart = enabled;
+        if let Some(imported) = &mut self.imported {
+            imported
+                .extra
+                .insert("autostart_approved".into(), ciborium::Value::Bool(enabled));
+        }
+    }
+}
+
 /// A saved command to send to a terminal. What it writes between `{{` and
 /// `}}` is asked for when it runs (or filled in from the session).
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]

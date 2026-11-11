@@ -58,5 +58,15 @@ void main() {
     );
     expect(tunnel, startsWith('El túnel SOCKS escuchaba en 0.0.0.0'));
     expect(tunnel, contains(l.whoCanUse));
+    final automatic = warningText(
+      l,
+      const ProgramWarning(
+        subject: 'Base de datos',
+        kind: ProgramWarningKind.tunnelAutostart,
+        detail: '',
+      ),
+    );
+    expect(automatic, l.warnTunnelAutostart('Base de datos'));
+    expect(automatic, contains('Queda detenido hasta que lo inicies'));
   });
 }

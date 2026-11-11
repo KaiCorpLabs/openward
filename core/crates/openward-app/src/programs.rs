@@ -745,6 +745,16 @@ pub fn apply(
         if have.tunnels.contains(&key) || !chosen.contains(t.host.as_str()) {
             continue;
         }
+        let mut t = t.clone();
+        let host_name = by_id
+            .get(t.host.as_str())
+            .map_or(t.host.as_str(), |h| h.label.as_str())
+            .to_owned();
+        for warning in t.hold_back(&host_name) {
+            if !report.warnings.contains(&warning) {
+                report.warnings.push(warning);
+            }
+        }
         let label = if t.label.is_empty() {
             format!("{:?} {}", t.kind, t.listen_port)
         } else {
@@ -1191,6 +1201,71 @@ mod tests {
         assert_eq!((r.hosts, r.groups, r.skipped), (0, 0, 2));
         assert_eq!((r.tunnels, r.snippets, r.known_hosts), (0, 0, 0));
         assert_eq!(vault.hosts().len(), 2);
+    }
+
+    /// IM-1: callers can construct Read directly, without the detector.
+    #[test]
+    fn unfiltered_tunnels_are_saved_for_manual_start_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let local = local(dir.path());
+        let mut b = bundle();
+        b.tunnels = [
+            ForwardKind::Local,
+            ForwardKind::Remote,
+            ForwardKind::Dynamic,
+        ]
+        .into_iter()
+        .enumerate()
+        .map(|(i, kind)| Tunnel {
+            host: "h2".into(),
+            label: format!("imported {kind:?}"),
+            kind,
+            listen_address: Some("0.0.0.0".into()),
+            listen_port: 20000 + i as u16,
+            dest_host: Some("127.0.0.1".into()),
+            dest_port: Some(5432),
+            autostart: true,
+        })
+        .collect();
+        let read = read(Program::Termius, b, &local);
+        let mut vault = Vault::open_in_memory().unwrap();
+        let report = apply(
+            &mut vault,
+            &local,
+            &read,
+            &Choice {
+                hosts: vec!["h2".into()],
+                group_name: "Imported".into(),
+                ..Choice::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(report.tunnels, 3);
+        assert_eq!(
+            report
+                .warnings
+                .iter()
+                .filter(|w| w.kind == bundle::WarningKind::TunnelAutostart)
+                .count(),
+            3
+        );
+        for (_, t) in vault.port_forwards() {
+            assert!(
+                !t.autostart,
+                "{:?} must require the user to start it",
+                t.kind
+            );
+            assert_eq!(t.listen_address, None);
+            assert_eq!(t.dest_host.as_deref(), Some("127.0.0.1"));
+            assert_eq!(t.dest_port, Some(5432));
+        }
+        // Explicit enablement after review remains available.
+        let (id, tunnel) = vault.port_forwards()[0];
+        let mut enabled = tunnel.clone();
+        enabled.set_autostart(true);
+        let rev = vault.get(id).unwrap().rev;
+        vault.update(id, rev, Data::PortForward(enabled)).unwrap();
+        assert!(vault.port_forward(id).unwrap().autostarts());
     }
 
     /// A key that `ssh-key` alone refuses (ECDSA P-256 with a 31-byte

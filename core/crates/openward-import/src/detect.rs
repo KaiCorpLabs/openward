@@ -288,6 +288,7 @@ mod tests {
         let (_, b) = read(&reg, None).unwrap();
         assert_eq!(b.hosts[0].settings.agent_forward, None);
         assert_eq!(b.tunnels[0].listen_address, None);
+        assert!(!b.tunnels[0].autostart);
         let kinds: Vec<_> = b.warnings.iter().map(|w| &w.kind).collect();
         assert!(kinds.contains(&&WarningKind::AgentForward));
         assert!(kinds.contains(&&WarningKind::OpenTunnel("0.0.0.0".into())));
