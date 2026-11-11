@@ -11,7 +11,7 @@ use russh_sftp::protocol::{FileAttributes, OpenFlags, StatusCode};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::task::JoinSet;
 
-use crate::entry::{Entry, Kind, kind};
+use crate::entry::{Entry, Kind};
 use crate::flight::InFlight;
 use crate::{Error, Result, is_name, join};
 
@@ -181,10 +181,7 @@ impl Remote {
             let Ok((i, to, attrs)) = done else { continue };
             let e = &mut entries[i];
             e.link_target = to;
-            if let Some(attrs) = attrs {
-                e.link_dir = kind(&attrs) == Kind::Dir;
-                e.size = attrs.size.unwrap_or(0);
-            }
+            e.follow_target(attrs.as_ref());
         }
     }
 
@@ -534,6 +531,20 @@ impl Remote {
             .await
             .map(|h| h.handle)
             .map_err(|e| Error::sftp(path, e))
+    }
+
+    /// Metadata of the opened source, not a path that may now name another file.
+    pub(crate) async fn stat_handle(&self, path: &str, handle: &str) -> Result<Entry> {
+        let attrs = self
+            .raw
+            .fstat(handle)
+            .await
+            .map_err(|e| Error::sftp(path, e))?;
+        Ok(Entry::remote(
+            crate::file_name(path).to_owned(),
+            "",
+            &attrs.attrs,
+        ))
     }
 
     /// Opens `path` for writing, created with `mode` if new; `truncate`
