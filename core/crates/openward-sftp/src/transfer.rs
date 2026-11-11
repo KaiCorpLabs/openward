@@ -286,13 +286,14 @@ struct Job {
 #[derive(Default)]
 struct Directories {
     made: Mutex<BTreeMap<usize, Arc<CreatedDirectory>>>,
+    local: Mutex<HashMap<(u64, u64), Arc<CreatedDirectory>>>,
     work: Mutex<HashMap<usize, tokio::sync::watch::Receiver<Option<Result<bool>>>>>,
 }
 
 enum CreatedDirectory {
     Local {
         dir: LocalDirectory,
-        mode: Option<u32>,
+        mode: Mutex<Option<u32>>,
         modified: Option<i64>,
     },
     Remote {
@@ -309,6 +310,26 @@ enum DirectoryDest {
 }
 
 impl Directories {
+    fn record(&self, i: usize, created: CreatedDirectory) -> Arc<CreatedDirectory> {
+        let created = Arc::new(created);
+        if let CreatedDirectory::Local { dir, .. } = created.as_ref() {
+            lock(&self.local).insert(dir.identity(), Arc::clone(&created));
+        }
+        lock(&self.made).insert(i, Arc::clone(&created));
+        created
+    }
+
+    fn merge_local_mode(&self, local: &LocalRoot, path: &Path, source: Option<u32>) -> Result<()> {
+        let identity = local.directory_identity(path)?;
+        if let Some(owned) = lock(&self.local).get(&identity)
+            && let CreatedDirectory::Local { mode, .. } = owned.as_ref()
+        {
+            let mut mode = lock(mode);
+            *mode = Some(mode.unwrap_or(0o700) & source.unwrap_or(0o700));
+        }
+        Ok(())
+    }
+
     async fn prepare(
         &self,
         i: usize,
@@ -324,17 +345,29 @@ impl Directories {
         } else {
             let created = match dest {
                 DirectoryDest::Local(path) => {
-                    if local.lstat(&path)?.is_some_and(|e| e.is_dir()) {
+                    if download_existing(local, &path, OnConflict::Replace, true)?
+                        .is_some_and(|e| e.is_dir())
+                    {
+                        // Case folding, Unicode normalization and contained
+                        // directory links can name a directory this job made.
+                        // Its final mode must satisfy every source merged into it.
+                        self.merge_local_mode(local, &path, source.mode)?;
                         return Ok(false);
                     }
                     CreatedDirectory::Local {
                         dir: local.mkdir(&path)?,
-                        mode: source.mode,
+                        mode: Mutex::new(source.mode),
                         modified: source.modified,
                     }
                 }
                 DirectoryDest::Remote(path) => {
                     if !fresh && remote.stat(&path).await?.is_some_and(|e| e.is_dir()) {
+                        let ambiguous = lock(&self.made).values().any(|owned| {
+                            matches!(owned.as_ref(), CreatedDirectory::Remote { path: made, .. } if made != &path && made.to_lowercase() == path.to_lowercase())
+                        });
+                        if ambiguous {
+                            return Err(Error::Other(format!("{path}: ambiguous directory name")));
+                        }
                         return Ok(false);
                     }
                     remote.mkdir_private(&path).await?;
@@ -346,9 +379,7 @@ impl Directories {
                     }
                 }
             };
-            let created = Arc::new(created);
-            lock(&self.made).insert(i, Arc::clone(&created));
-            created
+            self.record(i, created)
         };
         if let CreatedDirectory::Remote { path, allowed, .. } = owned.as_ref() {
             let ready = lock(allowed).is_some();
@@ -913,7 +944,7 @@ impl JobRun<'_> {
                     dir,
                     mode,
                     modified,
-                } => dir.finish(*mode, *modified)?,
+                } => dir.finish(self.local, *lock(mode), *modified)?,
                 CreatedDirectory::Remote {
                     path,
                     mode,
@@ -1540,6 +1571,59 @@ mod tests {
         }
         assert_eq!(t.jobs().len(), 512);
         std::fs::File::open(&probe).expect("the waiting queue must leave descriptors available");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn aliases_restrict_new_directory_modes_but_do_not_rewrite_preexisting_directories() {
+        use std::os::unix::fs::{PermissionsExt, symlink};
+        let tmp = tempfile::tempdir().unwrap();
+        let root = LocalRoot::destination(tmp.path()).unwrap();
+        let directories = Directories::default();
+        let created = directories.record(
+            0,
+            CreatedDirectory::Local {
+                dir: root.mkdir(Path::new("A")).unwrap(),
+                mode: Mutex::new(Some(0o755)),
+                modified: None,
+            },
+        );
+        if !tmp.path().join("a").exists() {
+            symlink("A", tmp.path().join("a")).unwrap();
+        }
+        directories
+            .merge_local_mode(&root, Path::new("a"), Some(0o700))
+            .unwrap();
+        if let CreatedDirectory::Local { dir, mode, .. } = created.as_ref() {
+            dir.finish(&root, *lock(mode), None).unwrap();
+        } else {
+            unreachable!();
+        }
+        assert_eq!(
+            std::fs::metadata(tmp.path().join("A"))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o700
+        );
+        std::fs::create_dir(tmp.path().join("preexisting")).unwrap();
+        std::fs::set_permissions(
+            tmp.path().join("preexisting"),
+            std::fs::Permissions::from_mode(0o700),
+        )
+        .unwrap();
+        directories
+            .merge_local_mode(&root, Path::new("preexisting"), Some(0o755))
+            .unwrap();
+        assert_eq!(
+            std::fs::metadata(tmp.path().join("preexisting"))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o700
+        );
     }
 
     fn entry(modified: Option<i64>) -> Entry {

@@ -28,36 +28,52 @@ pub(crate) struct LocalRoot {
     authority: Authority,
 }
 
-/// Only a directory this job created. Hold its identity through restrictive
-/// final permissions, pauses and ancestor renames.
+/// Only a directory this job created. Retain identity, not one descriptor
+/// per directory; reopen through the job's authority before finalization.
 #[derive(Debug)]
 pub(crate) struct LocalDirectory {
-    dir: Dir,
+    rel: PathBuf,
+    identity: (u64, u64),
     display: PathBuf,
     #[cfg(unix)]
     allowed: u32,
 }
 
 impl LocalDirectory {
-    pub(crate) fn finish(&self, mode: Option<u32>, modified: Option<i64>) -> Result<()> {
+    pub(crate) fn identity(&self) -> (u64, u64) {
+        self.identity
+    }
+
+    pub(crate) fn finish(
+        &self,
+        root: &LocalRoot,
+        mode: Option<u32>,
+        modified: Option<i64>,
+    ) -> Result<()> {
         let err = |e| Error::local(&self.display, &e);
+        let dir = root
+            .directory()?
+            .open_dir_nofollow(&self.rel)
+            .map_err(err)?;
+        let meta = dir.dir_metadata().map_err(err)?;
+        if self.identity != (meta.dev(), meta.ino()) {
+            return Err(Error::Changed(self.display.display().to_string()));
+        }
         if let Some(t) = modified.and_then(|t| u64::try_from(t).ok()) {
             let time = UNIX_EPOCH + std::time::Duration::from_secs(t);
-            self.dir
-                .set_mtime(
-                    ".",
-                    SystemTimeSpec::Absolute(cap_std::time::SystemTime::from_std(time)),
-                )
-                .map_err(err)?;
+            dir.set_mtime(
+                ".",
+                SystemTimeSpec::Absolute(cap_std::time::SystemTime::from_std(time)),
+            )
+            .map_err(err)?;
         }
         #[cfg(unix)]
         {
             use cap_std::fs::{Permissions, PermissionsExt};
             let mode = mode.unwrap_or(0o700) & self.allowed & 0o777;
-            self.dir
-                .set_permissions(".", Permissions::from_mode(mode))
+            dir.set_permissions(".", Permissions::from_mode(mode))
                 .map_err(err)?;
-            if self.dir.dir_metadata().map_err(err)?.permissions().mode() & 0o7777 != mode {
+            if dir.dir_metadata().map_err(err)?.permissions().mode() & 0o7777 != mode {
                 return Err(Error::Other(format!(
                     "{}: permissions could not be applied",
                     self.display.display()
@@ -121,6 +137,26 @@ impl LocalRoot {
             Authority::Directory(dir) => Ok(dir),
             Authority::File(_) => Err(Error::Other("not a directory selection".into())),
         }
+    }
+
+    pub(crate) fn directory_identity(&self, rel: &Path) -> Result<(u64, u64)> {
+        #[cfg(unix)]
+        let meta = self
+            .directory()?
+            .metadata(rel)
+            .map_err(|e| self.error(rel, e))?;
+        #[cfg(not(unix))]
+        let meta = {
+            let dir = self
+                .directory()?
+                .open_dir(rel)
+                .map_err(|e| self.error(rel, e))?;
+            dir.dir_metadata().map_err(|e| self.error(rel, e))?
+        };
+        if !meta.is_dir() {
+            return Err(Error::Changed(self.display(rel).display().to_string()));
+        }
+        Ok((meta.dev(), meta.ino()))
     }
 
     pub(crate) fn top(&self) -> Result<Entry> {
@@ -274,8 +310,10 @@ impl LocalRoot {
                 dir.remove_file(probe).map_err(|e| self.error(rel, e))?;
                 meta?.permissions().mode() & 0o777
             };
+            let meta = dir.dir_metadata().map_err(|e| self.error(rel, e))?;
             Ok(LocalDirectory {
-                dir,
+                rel: rel.to_owned(),
+                identity: (meta.dev(), meta.ino()),
                 display: self.display(rel),
                 #[cfg(unix)]
                 allowed,
@@ -600,6 +638,47 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
+    fn many_pending_directories_do_not_exhaust_descriptors() {
+        if std::env::var_os("OPENWARD_TEST_DIRECTORY_NOFILE").is_some() {
+            use rustix::process::{Resource, Rlimit, getrlimit, setrlimit};
+            let tmp = tempfile::tempdir().unwrap();
+            let root = LocalRoot::destination(tmp.path()).unwrap();
+            let old = getrlimit(Resource::Nofile);
+            setrlimit(
+                Resource::Nofile,
+                Rlimit {
+                    current: Some(128),
+                    maximum: old.maximum,
+                },
+            )
+            .unwrap();
+            let pending: Vec<_> = (0..512)
+                .map(|i| root.mkdir(Path::new(&format!("dir-{i}"))).unwrap())
+                .collect();
+            assert_eq!(pending.len(), 512);
+            std::fs::File::open(tmp.path()).unwrap();
+            return;
+        }
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "transfer_local::tests::many_pending_directories_do_not_exhaust_descriptors",
+                "--test-threads=1",
+                "--nocapture",
+            ])
+            .env("OPENWARD_TEST_DIRECTORY_NOFILE", "1")
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
     fn directory_finalization_respects_each_process_umask() {
         use std::os::unix::fs::PermissionsExt;
         if let Ok(mask) = std::env::var("OPENWARD_TEST_DIRECTORY_UMASK") {
@@ -614,7 +693,9 @@ mod tests {
             let mode = || std::fs::metadata(&path).unwrap().permissions().mode() & 0o7777;
             assert_eq!(mode(), 0o700);
             assert!(std::fs::read_dir(&path).unwrap().next().is_none());
-            created.finish(Some(0o4755), Some(1_577_836_800)).unwrap();
+            created
+                .finish(&root, Some(0o4755), Some(1_577_836_800))
+                .unwrap();
             assert_eq!(mode(), 0o755 & !mask);
             assert_eq!(
                 std::fs::metadata(&path)
@@ -651,7 +732,7 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn final_directory_metadata_uses_the_held_identity() {
+    fn final_directory_metadata_rejects_replacement_of_the_recorded_identity() {
         use std::os::unix::fs::{PermissionsExt, symlink};
         let tmp = tempfile::tempdir().unwrap();
         let root = LocalRoot::destination(tmp.path()).unwrap();
@@ -660,14 +741,14 @@ mod tests {
         let outside = tempfile::tempdir().unwrap();
         std::fs::set_permissions(outside.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
         symlink(outside.path(), tmp.path().join("copy")).unwrap();
-        created.finish(Some(0o500), None).unwrap();
+        assert!(created.finish(&root, Some(0o500), None).is_err());
         assert_eq!(
             std::fs::metadata(tmp.path().join("original"))
                 .unwrap()
                 .permissions()
                 .mode()
                 & 0o777,
-            0o500
+            0o700
         );
         assert_eq!(
             std::fs::metadata(outside.path())

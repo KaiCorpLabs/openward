@@ -587,6 +587,29 @@ async fn copies_private_and_readonly_directories_and_retries_final_metadata() {
         assert_eq!(merged.state, JobState::Done, "{port}: {:?}", merged.error);
         assert_eq!(mode_of(&back.path().join("tree")), 0o700);
         assert_eq!(mode_of(&back.path().join("tree/private")), 0o700);
+        // Merging through a directory link contained in the selected root
+        // remains valid; only the newly created child receives metadata.
+        let linked = tempfile::tempdir().unwrap();
+        std::fs::create_dir(linked.path().join("real")).unwrap();
+        set_mode(&linked.path().join("real"), 0o700);
+        std::os::unix::fs::symlink("real", linked.path().join("tree")).unwrap();
+        let merged = copy(
+            &t,
+            &l,
+            Direction::Download,
+            join(&s.dir, "tree"),
+            path_str(linked.path()),
+            OnConflict::Replace,
+        )
+        .await;
+        assert_eq!(merged.state, JobState::Done, "{port}: {:?}", merged.error);
+        assert_eq!(mode_of(&linked.path().join("real")), 0o700);
+        assert_eq!(mode_of(&linked.path().join("real/private")), 0o500);
+        assert_eq!(
+            std::fs::read(linked.path().join("real/private/data")).unwrap(),
+            b"copied inside a readonly folder"
+        );
+        set_mode(&linked.path().join("real/private"), 0o700);
         set_mode(&tree, 0o700);
         set_mode(&tree.join("private"), 0o700);
         s.sh("chmod -R u+rwX tree").await;
@@ -1685,6 +1708,30 @@ async fn names_that_differ_in_case_keep_the_conflict_choice() {
         got(replace.path(), "Twin.txt"),
         if one_name { b"lower" } else { b"upper" }
     );
+    #[cfg(unix)]
+    {
+        s.sh("mkdir -p dirs/A dirs/a && printf secret > dirs/a/secret && chmod 755 dirs/A && chmod 700 dirs/a && chmod 644 dirs/a/secret").await;
+        let folders = tempfile::tempdir().unwrap();
+        let copied = copy(
+            &t,
+            &l,
+            Direction::Download,
+            join(&s.dir, "dirs"),
+            path_str(folders.path()),
+            OnConflict::Replace,
+        )
+        .await;
+        assert_eq!(copied.state, JobState::Done, "{:?}", copied.error);
+        assert_eq!(
+            mode_of(&folders.path().join("dirs/A")),
+            if one_name { 0o700 } else { 0o755 }
+        );
+        assert_eq!(mode_of(&folders.path().join("dirs/a")), 0o700);
+        assert_eq!(
+            std::fs::read(folders.path().join("dirs/a/secret")).unwrap(),
+            b"secret"
+        );
+    }
     s.done().await;
 }
 
