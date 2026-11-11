@@ -3512,7 +3512,12 @@ Host db
     await tester.pump(const Duration(milliseconds: 100));
     await _shot(tester, '31-snippet-editor');
     await tester.tap(find.text('Guardar'));
-    await tester.pump(const Duration(milliseconds: 400));
+    await _until(
+      tester,
+      () => field('snippet.label').evaluate().isEmpty,
+      'the saved snippet editor to close',
+    );
+    await _settle(tester);
     expect(find.text('Saludo'), findsOneWidget);
     await _shot(tester, '32-snippets');
 
@@ -4332,7 +4337,18 @@ Host db
     );
     final pane = tester.state<TerminalPaneState>(find.byType(TerminalPane));
 
+    // Running only means the PTY is open: the login shell can still be
+    // printing its prompt. Give this fixture a known prompt and wait for
+    // it before typing, so the tracker starts at the actual command line.
+    const prompt = 'openward-logs> ';
+    a.session.text(text: "PS1='$prompt'\n");
+
     Future<void> run(String command, String shows) async {
+      await _until(
+        tester,
+        () => a.session.screenText().trimRight().endsWith(prompt.trimRight()),
+        'the log test shell prompt',
+      );
       pane.updateEditingValue(
         TextEditingValue(
           text: '  $command',
