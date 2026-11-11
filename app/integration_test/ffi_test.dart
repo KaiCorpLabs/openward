@@ -376,7 +376,7 @@ Host db
         defaults: [SnippetValue(name: 'líneas', value: '20')],
       ),
     );
-    final s = app.snippets().single;
+    final s = app.snippetsForExecution().single;
     expect(s.id, id);
     expect(s.spec.script, endsWith('# {{host}}'));
     expect(s.variables.asked, ['servicio', 'líneas']);
@@ -399,9 +399,9 @@ Host db
       rev: s.rev,
       spec: const SnippetSpec(label: 'Logs', script: 'uptime', typeOnly: true),
     );
-    expect(app.snippets().single.spec.typeOnly, isTrue);
+    expect(app.snippetsForExecution().single.spec.typeOnly, isTrue);
     await app.delete(id: id);
-    expect(app.snippets(), isEmpty);
+    expect(app.snippetsForExecution(), isEmpty);
   });
 
   test('known hosts: OpenWard\'s and the file\'s, a hashed line, forgetting', () async {

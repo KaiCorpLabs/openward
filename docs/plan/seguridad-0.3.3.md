@@ -6,7 +6,7 @@ Este documento actualiza la evaluación y el trabajo pendiente. **Fusionar esta 
 
 ## Resultado y alcance
 
-| Dictamen actual | Puntos | Significado |
+| Dictamen en `35ab7a6` | Puntos | Significado |
 |---|---:|---|
 | Confirmado por evidencia estática | **25** | Hay un recorrido y una consecuencia dentro del alcance admitido, con las condiciones descritas en la ficha. No implica reproducción nueva. |
 | Necesita revisión | **20** | Falta un hecho concreto de plataforma, permisos, comportamiento o contrato que podría cambiar el resultado. |
@@ -47,14 +47,17 @@ Las prioridades son de trabajo posterior; esta PR no modifica el runtime ni acti
 
 El contraste anterior y las 63 fichas conservan la referencia histórica a
 `35ab7a6`. Este seguimiento registra las correcciones posteriores, sin
-convertir los casos pendientes de revisión en casos cerrados.
+convertir los casos pendientes de revisión en casos cerrados. Para el estado
+actual de estos puntos prevalece este seguimiento sobre las fichas históricas.
 
 | Punto | Cambio posterior |
 |---|---|
 | **CI-3** | Reporte privado de vulnerabilidades habilitado el 11-11-2026. Se comprobó con GET antes (`enabled=false`) y después (`enabled=true`) de cambiar el ajuste de GitHub. |
 | **IM-1** | La importación retira el arranque automático en los tres tipos de túnel, tanto al detectar como al guardar un bundle. Los túneles importados por versiones anteriores requieren aprobación desde el editor antes de arrancar automáticamente. Los túneles manuales y los del `~/.ssh/config` propio conservan su comportamiento. |
 | **DA-3** | Corregido en la [PR #10](https://github.com/KaiCorpLabs/openward/pull/10), con 19 jobs correctos. Cada instalación valida una sola clave antes de E/S remota; los comentarios leídos o escritos por la app no producen líneas adicionales. La regresión SFTP comprueba rechazo sin cambios y autenticación válida posterior. |
-| **CO-1** | La importación exige seleccionar por separado cada entrada de confianza completa, con su alcance y huella. No se preselecciona ninguna al elegir hosts. Las autoridades y patrones con comodines importados antiguamente sin aprobación quedan fuera de las conexiones y de la lista activa hasta revisarlos de nuevo al importar. Se conservan los pins literales anteriores, las revocaciones y las claves propias. |
+| **CO-1** | Corregido en la [PR #11](https://github.com/KaiCorpLabs/openward/pull/11), fusionada con 19 jobs correctos. La importación exige seleccionar por separado cada entrada completa, con su alcance y huella. No se preselecciona ninguna al elegir hosts. Las autoridades y comodines importados antiguamente sin aprobación quedan fuera de las conexiones y de la lista activa hasta revisarlos de nuevo al importar. Se conservan los pins literales anteriores, revocaciones y claves propias. |
+| **IM-3** | `no_change`: el recorrido atribuido al selector de archivos no existe en producción. Selector y drop pasan por `detect::read`, que no admite `ssh_config`; la acción OpenSSH usa `sshConfigFileProvider=null`, es decir, el `~/.ssh/config` propio y confiable del operador. Las rutas de archivo alternativas son overrides de pruebas. Se añade una regresión del límite de importación con `ProxyCommand`, extensión falsa y un CSV válido de control. Se corrige el dictamen anterior; no se presenta como un arreglo de runtime. |
+| **IM-4 y DA-4** | La ejecución manual, el arranque y el envío multihost exigen revisar el comando completo renderizado cuando procede de snippets importados o incluye variables automáticas. El texto aprobado queda congelado; no se vuelve a renderizar tras consentir. Los controles se representan de forma visible y una reconexión invalida aprobaciones de la sesión anterior. Los snippets propios sin variables conservan la ejecución directa. Validación completa registrada en los checks de la PR correspondiente. |
 
 La corrección de IM-1 incorpora regresiones de los tres tipos de túnel,
 persistencia de aprobación y revocación, avisos traducidos y conexiones reales

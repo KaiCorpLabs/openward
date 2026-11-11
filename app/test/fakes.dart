@@ -18,6 +18,8 @@ import 'package:openward/src/rust/api/workspaces.dart';
 
 class FakeSession extends Fake implements TerminalSession {
   final notes = <String>[];
+  final sentTexts = <String>[];
+  final pastedTexts = <String>[];
   bool closed = false;
   bool _disposed = false;
   final _wakes = StreamController<bool>.broadcast();
@@ -27,6 +29,15 @@ class FakeSession extends Fake implements TerminalSession {
 
   @override
   void note({required String text}) => notes.add(text);
+
+  @override
+  void text({required String text}) => sentTexts.add(text);
+
+  @override
+  bool paste({required String text, required bool allowUnsafe}) {
+    pastedTexts.add(text);
+    return true;
+  }
 
   /// No session log is kept.
   @override
@@ -72,7 +83,7 @@ class FakeOpenWard extends Fake implements OpenWard {
   List<WorkspaceView> workspaces() => workspaceList;
 
   @override
-  List<SnippetView> snippets() => snippetList;
+  List<SnippetView> snippetsForExecution() => snippetList;
 
   @override
   TerminalSession terminal({
@@ -101,6 +112,12 @@ class FakeOpenWard extends Fake implements OpenWard {
     required TerminalSession session,
     required String hostId,
   }) => _events(session, 'connect $hostId');
+
+  @override
+  Stream<SessionEvent> connectReusing({
+    required TerminalSession session,
+    required String hostId,
+  }) => _events(session, 'reuse $hostId');
 
   @override
   Stream<SessionEvent> connectAddress({

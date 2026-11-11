@@ -1,15 +1,21 @@
-import 'package:flutter/painting.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/address.dart';
+import '../core/errors.dart' show appNavigator;
 import '../core/providers.dart';
 import '../core/settings.dart';
 import '../l10n/l10n.dart';
 import '../home/recent.dart';
 import '../sftp/sftp_controller.dart';
 import '../sftp/transfers.dart';
-import '../snippets/snippets.dart' show snippetsProvider, startupText;
+import '../snippets/snippets.dart'
+    show
+        SnippetCommand,
+        snippetsProvider,
+        prepareStartupSnippet,
+        reviewSnippetCommands;
 import '../src/rust/api/vault.dart';
 import '../terminal/controller.dart';
 import 'panes.dart';
@@ -230,8 +236,29 @@ class TabsNotifier extends Notifier<TabsState> {
     );
     // Worked out at each new shell: the host's setting may change.
     if (hostId != null) {
-      c.startup = () =>
-          startupText(ref.read(libraryProvider), ref.read(snippetsProvider), c);
+      c.startup = () => prepareStartupSnippet(
+        ref.read(libraryProvider),
+        ref.read(snippetsProvider),
+        c,
+        review: (snippet, text) async {
+          await WidgetsBinding.instance.endOfFrame;
+          final context = appNavigator.currentContext;
+          if (context == null || !context.mounted || c.isDisposed) return false;
+          final connected = c.connected;
+          return reviewSnippetCommands(
+            context,
+            label: snippet.spec.label,
+            commands: [
+              SnippetCommand(
+                destination:
+                    '${c.displayTitle} · ${connected?.host ?? ""}:${connected?.port ?? ""}',
+                text: text,
+              ),
+            ],
+            startup: true,
+          );
+        },
+      );
     }
     return c;
   }

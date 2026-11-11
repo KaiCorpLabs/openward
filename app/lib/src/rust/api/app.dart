@@ -394,7 +394,7 @@ abstract class OpenWard implements RustOpaqueInterface {
   SftpBrowser sftp();
 
   /// Every snippet, by name.
-  List<SnippetView> snippets();
+  List<SnippetView> snippetsForExecution();
 
   List<TagCount> tags();
 

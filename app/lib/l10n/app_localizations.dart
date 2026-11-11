@@ -7346,6 +7346,18 @@ abstract class AppLocalizations {
   /// **'Ejecutar «{name}»'**
   String runSnippetTitle(String name);
 
+  /// No description provided for @snippetReviewHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Se enviará exactamente este texto. Revisa todas las líneas y el destino antes de continuar.'**
+  String get snippetReviewHelp;
+
+  /// No description provided for @snippetStartupReview.
+  ///
+  /// In es, this message translates to:
+  /// **'Snippet al conectar'**
+  String get snippetStartupReview;
+
   /// No description provided for @sameHost.
   ///
   /// In es, this message translates to:
