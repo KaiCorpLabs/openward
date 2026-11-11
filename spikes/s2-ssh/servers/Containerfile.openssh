@@ -4,7 +4,15 @@ ARG BASE=debian:trixie-slim
 FROM docker.io/library/${BASE}
 
 ENV DEBIAN_FRONTEND=noninteractive LANG=C.UTF-8
-RUN apt-get update \
+ARG UBUNTU_MIRROR=http://mirrors.edge.kernel.org/ubuntu
+RUN if grep -q '^ID=ubuntu$' /etc/os-release && ! getent ahostsv4 archive.ubuntu.com >/dev/null; then \
+      for source in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do \
+        [ ! -f "$source" ] || sed -i -E \
+          -e "s#https?://([a-zA-Z0-9-]+\\.)?archive\\.ubuntu\\.com/ubuntu#${UBUNTU_MIRROR}#g" \
+          -e "s#https?://security\\.ubuntu\\.com/ubuntu#${UBUNTU_MIRROR}#g" "$source"; \
+      done; \
+    fi \
+ && apt-get -o APT::Update::Error-Mode=any update \
  && apt-get install -y --no-install-recommends \
       openssh-server libpam-google-authenticator python3 netcat-openbsd procps tmux mosh \
  && rm -rf /var/lib/apt/lists/* \

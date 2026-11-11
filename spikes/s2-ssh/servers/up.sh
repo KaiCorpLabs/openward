@@ -26,7 +26,13 @@ fixtures="${S2_FIXTURES:-$default_fixtures}"
 "$here/fixtures.sh" "$fixtures"
 
 build() { # tag containerfile [base]
-  "$runtime" build -q -t "$1" -f "$here/$2" ${3:+--build-arg "BASE=$3"} "$here" >/dev/null
+  local build_args=(-t "$1" -f "$here/$2")
+  [[ -z "${3:-}" ]] || build_args+=(--build-arg "BASE=$3")
+  if ! "$runtime" build -q "${build_args[@]}" "$here" >/dev/null; then
+    # Keep the fast path quiet; if dependency setup failed, retain its
+    # actual error instead of only BuildKit's final exit-code summary.
+    "$runtime" build "${build_args[@]}" "$here"
+  fi
 }
 build s2-openssh-8.9 Containerfile.openssh ubuntu:22.04
 build s2-openssh-9.2 Containerfile.openssh debian:bookworm-slim
