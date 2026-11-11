@@ -882,6 +882,7 @@ fn a_changed_host_key_is_refused_until_trusted() {
         [PreviousKey {
             fingerprint: "SHA256:OcXwgqVGP3Hoo1XR2bnfs1DJan7drTyBcfSdQo6EdIE".into(),
             source: KeySource::OpenWard,
+            key: fake.to_owned(),
         }]
     );
 

@@ -2788,7 +2788,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String logsDeleteAllHelp(String count, String size) {
-    return '$count y $size, también los guardados. No se puede deshacer.';
+    return '$count y $size, también los guardados y las grabaciones que no aparecen en la lista. Las sesiones abiertas se conservan. No se puede deshacer.';
   }
 
   @override

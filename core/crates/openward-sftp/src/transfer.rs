@@ -240,6 +240,18 @@ struct Item {
     mode: Option<u32>,
 }
 
+/// Also closes when a download is paused/cancelled during metadata or data IO.
+struct SourceHandle<'a> {
+    remote: &'a Remote,
+    handle: String,
+}
+
+impl Drop for SourceHandle<'_> {
+    fn drop(&mut self) {
+        self.remote.close_later(std::mem::take(&mut self.handle));
+    }
+}
+
 /// The `.part` being written, to delete when the job is cancelled.
 #[derive(Clone)]
 enum Part {
@@ -1125,32 +1137,57 @@ impl JobRun<'_> {
             };
         }
         if let Some(e) = &existing
-            && keep_existing(self.req.on_conflict, e, item)
+            && (self.req.on_conflict == OnConflict::Skip
+                || (self.req.on_conflict == OnConflict::Newer && e.kind == Kind::Link))
         {
             return Ok(Done::Skipped);
         }
-        // What the file is now, and the file: asked together.
-        let (source, handle) = tokio::join!(remote.stat(src), remote.open_read(src));
-        let source = match source.and_then(|s| s.ok_or_else(|| Error::NotFound(src.to_owned()))) {
-            Ok(source) => source,
-            Err(e) => {
-                if let Ok(handle) = handle {
-                    remote.close_later(handle);
-                }
-                return Err(e);
-            }
+        let metadata = |source: &Entry| Item {
+            mode: source.mode,
+            modified: source.modified,
+            size: source.size,
+            ..item.clone()
         };
-        let handle = handle?;
+        // Skipping an older source must not require permission to read it.
+        if let Some(existing) = &existing
+            && self.req.on_conflict == OnConflict::Newer
+        {
+            let source = remote
+                .stat(src)
+                .await?
+                .ok_or_else(|| Error::NotFound(src.to_owned()))?;
+            if keep_existing(self.req.on_conflict, existing, &metadata(&source)) {
+                return Ok(Done::Skipped);
+            }
+        }
+        let handle = SourceHandle {
+            remote,
+            handle: remote.open_read(src).await?,
+        };
+        let source = remote.stat_handle(src, &handle.handle).await?;
+        // A nested link, or its target, may have changed since expansion.
+        // Compare and create the copy using the effective file's metadata.
+        let current = metadata(&source);
+        if source.kind != Kind::File {
+            return Err(Error::Changed(src.to_owned()));
+        }
+        if existing
+            .as_ref()
+            .is_some_and(|e| keep_existing(self.req.on_conflict, e, &current))
+        {
+            return Ok(Done::Skipped);
+        }
         let size = source.size;
         let mut part = dest.as_os_str().to_owned();
         part.push(part_suffix(src, size, source.modified));
         let part = PathBuf::from(part);
-        let got = self.download_part(i, item, src, &handle, &part, size).await;
-        remote.close_later(handle);
+        let got = self
+            .download_part(i, current.mode, src, &handle.handle, &part, size)
+            .await;
         let (offset, file) = got?;
         let display = self.local.display(&part);
         let local_err = |e: std::io::Error| Error::local(&display, &e);
-        set_local_mode(&file, item.mode);
+        set_local_mode(&file, current.mode).map_err(local_err)?;
         if let Some(t) = source.modified.and_then(|t| u64::try_from(t).ok()) {
             file.set_modified(UNIX_EPOCH + Duration::from_secs(t))
                 .map_err(local_err)?;
@@ -1168,7 +1205,7 @@ impl JobRun<'_> {
     async fn download_part(
         &self,
         i: usize,
-        item: &Item,
+        mode: Option<u32>,
         src: &str,
         handle: &str,
         part: &Path,
@@ -1179,7 +1216,7 @@ impl JobRun<'_> {
         let local_err = |e: std::io::Error| Error::local(&display, &e);
         // Made here, not on a thread of its own: once the job has stopped,
         // nothing it began makes a part after a cancel deleted it.
-        let (file, had) = self.local.open_part(part, item.mode)?;
+        let (file, had) = self.local.open_part(part, mode)?;
         let offset = if had <= size { had } else { 0 };
         let mut file = tokio::fs::File::from_std(file);
         file.set_len(offset).await.map_err(local_err)?;
@@ -1214,27 +1251,49 @@ impl JobRun<'_> {
 /// and a program stays runnable: execute goes wherever reading is, when
 /// the server's copy had it.
 #[cfg(unix)]
-fn set_local_mode(file: &std::fs::File, remote_mode: Option<u32>) {
+fn set_local_mode(file: &std::fs::File, remote_mode: Option<u32>) -> std::io::Result<()> {
     use std::os::unix::fs::PermissionsExt;
-    let Some(remote) = remote_mode else { return };
-    if let Ok(meta) = file.metadata() {
-        let had = meta.permissions().mode() & 0o777;
-        let mut mode = had & (0o700 | (remote & 0o077));
+    if let Some(remote) = remote_mode {
+        let had = file.metadata()?.permissions().mode() & 0o777;
+        let mut mode = had & (0o600 | (remote & 0o066));
         if remote & 0o100 != 0 {
             mode |= (mode & 0o444) >> 2;
         }
         if mode != had {
-            let _ = file.set_permissions(std::fs::Permissions::from_mode(mode));
+            file.set_permissions(std::fs::Permissions::from_mode(mode))?;
         }
     }
+    Ok(())
 }
 
 #[cfg(not(unix))]
-fn set_local_mode(_: &std::fs::File, _: Option<u32>) {}
+fn set_local_mode(_: &std::fs::File, _: Option<u32>) -> std::io::Result<()> {
+    Ok(())
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn effective_mode_tightens_resumed_parts_without_widening_the_umask() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let root = LocalRoot::destination(tmp.path()).unwrap();
+        let (file, _) = root.open_part(Path::new("part"), Some(0o600)).unwrap();
+        let mode = || file.metadata().unwrap().permissions().mode() & 0o777;
+        // A residual from the link-mode bug must lose execute and public bits.
+        file.set_permissions(std::fs::Permissions::from_mode(0o755))
+            .unwrap();
+        set_local_mode(&file, Some(0o600)).unwrap();
+        assert_eq!(mode(), 0o600);
+        // Group/others blocked by the local mask are never added back.
+        set_local_mode(&file, Some(0o777)).unwrap();
+        assert_eq!(mode(), 0o700);
+        set_local_mode(&file, Some(0o640)).unwrap();
+        assert_eq!(mode(), 0o600);
+    }
 
     #[cfg(unix)]
     #[test]

@@ -39,6 +39,7 @@ zeroize = "1"
 rustix = { version = "1.1.6", features = ["process"] }
 
 [dev-dependencies]
+rusqlite = "0.41"
 rand = { version = "0.10", features = ["thread_rng"] }
 # Hashed known_hosts names in tests.
 data-encoding = "2"

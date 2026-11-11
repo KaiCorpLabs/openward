@@ -27,6 +27,168 @@ fn begin(record: bool) -> Begin {
     }
 }
 
+#[test]
+fn deleting_all_sweeps_managed_orphans_and_preserves_unrelated_files_and_open_sessions() {
+    let dir = tempfile::tempdir().unwrap();
+    let logs = open(dir.path());
+    let live = logs.begin(begin(true)).unwrap();
+    let closed = logs.begin(begin(true)).unwrap();
+    closed.finish(End::Closed);
+    let orphan = crate::vault::proto::ItemId::new().to_string();
+    let corrupt = crate::vault::proto::ItemId::new().to_string();
+    for name in [
+        format!("{orphan}.cast.gz"),
+        format!("{orphan}.txt.gz"),
+        format!("{corrupt}.json"),
+        format!("{corrupt}.json.tmp"),
+    ] {
+        fs::write(dir.path().join(name), b"orphan data").unwrap();
+    }
+    for name in [
+        "config.json",
+        "config.json.tmp",
+        "notes.json",
+        "notes.cast.gz",
+        "backup.tmp",
+    ] {
+        fs::write(dir.path().join(name), b"keep").unwrap();
+    }
+    let folder = format!("{}.json", crate::vault::proto::ItemId::new());
+    fs::create_dir(dir.path().join(&folder)).unwrap();
+    fs::write(dir.path().join(&folder).join("keep"), b"keep").unwrap();
+    assert_eq!(logs.delete_all().unwrap(), 3);
+    for id in [&orphan, &corrupt, &closed.id()] {
+        for ext in ["json", "json.tmp", "cast.gz", "txt.gz"] {
+            assert!(!dir.path().join(format!("{id}.{ext}")).exists());
+        }
+    }
+    for ext in ["json", "cast.gz", "txt.gz"] {
+        assert!(dir.path().join(format!("{}.{ext}", live.id())).exists());
+    }
+    for name in [
+        "config.json",
+        "config.json.tmp",
+        "notes.json",
+        "notes.cast.gz",
+        "backup.tmp",
+    ] {
+        assert_eq!(fs::read(dir.path().join(name)).unwrap(), b"keep");
+    }
+    assert_eq!(
+        fs::read(dir.path().join(folder).join("keep")).unwrap(),
+        b"keep"
+    );
+    live.finish(End::Closed);
+    assert_eq!(logs.delete_all().unwrap(), 1);
+}
+
+#[test]
+fn deleting_all_works_with_no_readable_entries_and_can_retry_partial_failures() {
+    let dir = tempfile::tempdir().unwrap();
+    let id = crate::vault::proto::ItemId::new().to_string();
+    fs::write(dir.path().join(format!("{id}.json")), b"broken JSON").unwrap();
+    fs::write(dir.path().join(format!("{id}.cast.gz")), b"session data").unwrap();
+    let logs = open(dir.path());
+    assert_eq!(logs.usage().entries, 0);
+    assert_eq!(logs.delete_all().unwrap(), 1);
+    assert!(!dir.path().join(format!("{id}.cast.gz")).exists());
+    let failed = logs.begin(begin(false)).unwrap();
+    failed.finish(End::Closed);
+    let good = logs.begin(begin(false)).unwrap();
+    good.finish(End::Closed);
+    let blocking = logs.cast_path(&failed.id());
+    fs::create_dir(&blocking).unwrap();
+    assert!(logs.delete_all().is_err());
+    assert!(
+        logs.entry(&failed.id()).is_some(),
+        "failed deletion remains retryable"
+    );
+    assert!(
+        logs.entry(&good.id()).is_none(),
+        "other entries are still deleted"
+    );
+    assert!(blocking.is_dir());
+    fs::remove_dir(blocking).unwrap();
+    assert_eq!(logs.delete_all().unwrap(), 1);
+    assert!(logs.list().is_empty());
+}
+
+#[cfg(unix)]
+#[test]
+fn deleting_an_orphan_symlink_unlinks_only_the_managed_name() {
+    let dir = tempfile::tempdir().unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    let sentinel = outside.path().join("keep");
+    fs::write(&sentinel, b"outside").unwrap();
+    let id = crate::vault::proto::ItemId::new().to_string();
+    let link = dir.path().join(format!("{id}.cast.gz"));
+    std::os::unix::fs::symlink(&sentinel, &link).unwrap();
+    let logs = open(dir.path());
+    assert_eq!(logs.delete_all().unwrap(), 1);
+    assert!(!link.symlink_metadata().is_ok());
+    assert_eq!(fs::read(&sentinel).unwrap(), b"outside");
+}
+
+#[test]
+fn failed_session_starts_remove_recording_files_and_leave_no_open_entry() {
+    for blocked in ["json.tmp", "txt.gz"] {
+        let dir = tempfile::tempdir().unwrap();
+        let logs = open(dir.path());
+        let id = crate::vault::proto::ItemId::new().to_string();
+        let path = dir.path().join(format!("{id}.{blocked}"));
+        fs::create_dir(&path).unwrap();
+        assert!(logs.begin_with_id(begin(true), id.clone()).is_err());
+        for ext in ["cast.gz", "txt.gz", "json"] {
+            if ext != blocked {
+                assert!(
+                    !dir.path().join(format!("{id}.{ext}")).exists(),
+                    "{blocked}: {ext}"
+                );
+            }
+        }
+        assert!(logs.list().is_empty());
+        assert!(lock(&logs.inner).open.is_empty());
+        assert!(
+            path.is_dir(),
+            "never remove an unrelated directory recursively"
+        );
+    }
+}
+
+#[test]
+fn sweeping_does_not_race_session_registration_finishing_or_metadata_writes() {
+    use std::sync::Barrier;
+    let dir = tempfile::tempdir().unwrap();
+    let logs = open(dir.path());
+    let barrier = Arc::new(Barrier::new(2));
+    let theirs = Arc::clone(&logs);
+    let start = Arc::clone(&barrier);
+    let sessions = std::thread::spawn(move || {
+        start.wait();
+        for _ in 0..64 {
+            let session = theirs.begin(begin(true)).unwrap();
+            let id = session.id();
+            session.output(b"recording\r\n");
+            assert!(theirs.entry(&id).is_some(), "open sessions cannot be swept");
+            session.finish(End::Closed);
+            // A concurrent sweep may already have removed the closed entry.
+            let _ = theirs.save(&id, "saved");
+        }
+    });
+    barrier.wait();
+    for _ in 0..64 {
+        logs.delete_all().unwrap();
+    }
+    sessions.join().unwrap();
+    logs.delete_all().unwrap();
+    assert!(logs.list().is_empty());
+    assert!(
+        fs::read_dir(dir.path())
+            .unwrap()
+            .all(|p| managed_id(p.unwrap().file_name().to_str().unwrap()).is_none())
+    );
+}
+
 fn outputs(rec: &Recording) -> String {
     rec.events
         .iter()

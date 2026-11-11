@@ -354,6 +354,7 @@ pub enum KeySourceKind {
 pub struct PreviousKeyView {
     pub fingerprint: String,
     pub source: KeySourceKind,
+    pub key: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -407,6 +408,7 @@ pub(crate) fn failure_view(f: Failure) -> FailureView {
                 .into_iter()
                 .map(|p| PreviousKeyView {
                     fingerprint: p.fingerprint,
+                    key: p.key,
                     source: match p.source {
                         KeySource::OpenWard => KeySourceKind::OpenWard,
                         KeySource::OpenSsh => KeySourceKind::OpenSsh,

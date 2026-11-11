@@ -598,11 +598,16 @@ enum PointerButton { none, left, middle, right }
 class PreviousKeyView {
   final String fingerprint;
   final KeySourceKind source;
+  final String key;
 
-  const PreviousKeyView({required this.fingerprint, required this.source});
+  const PreviousKeyView({
+    required this.fingerprint,
+    required this.source,
+    required this.key,
+  });
 
   @override
-  int get hashCode => fingerprint.hashCode ^ source.hashCode;
+  int get hashCode => fingerprint.hashCode ^ source.hashCode ^ key.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -610,7 +615,8 @@ class PreviousKeyView {
       other is PreviousKeyView &&
           runtimeType == other.runtimeType &&
           fingerprint == other.fingerprint &&
-          source == other.source;
+          source == other.source &&
+          key == other.key;
 }
 
 class PromptAnswer {
