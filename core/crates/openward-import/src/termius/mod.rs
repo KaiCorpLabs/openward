@@ -9,6 +9,7 @@
 //! The format is Termius's own and undocumented, so it may change with any
 //! version; what does not parse is an error, never a partial import.
 
+mod budget;
 pub mod crypto;
 pub mod idb;
 pub mod keychain;
