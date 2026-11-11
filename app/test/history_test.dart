@@ -182,6 +182,18 @@ void main() {
       expect(t.enter(s, altScreen: false), 'echo public');
     });
 
+    test('Ctrl+D, Ctrl+G and Ctrl+Z retain private-line intent', () {
+      for (final key in [Hid.a + 3, Hid.a + 6, Hid.a + 25]) {
+        final s = _Screen('\$ ');
+        final t = LineTracker();
+        _type(t, s, ' echo PRIVATE');
+        t.key(key, Mods.ctrl, '', s);
+        _type(t, s, 'SUFFIX');
+        t.key(Hid.tab, 0, '', s);
+        expect(t.enter(s, altScreen: false), isNull);
+      }
+    });
+
     test('text after the cursor makes an edited line unclear', () {
       final s = _Screen('\$ ')..after = '[12:00]';
       final t = LineTracker();

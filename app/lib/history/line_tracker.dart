@@ -123,8 +123,9 @@ class LineTracker {
     }
     if (mods & Mods.ctrl != 0 && hid >= Hid.a && hid < Hid.a + 26) {
       switch (String.fromCharCode(0x61 + hid - Hid.a)) {
-        // Interrupt, end of input, suspend, abort: the line is gone.
-        case 'c' || 'd' || 'z' || 'g':
+        // Interrupt discards the line. Other Ctrl chords can retain it:
+        // Ctrl+D at a nonempty line's end and Ctrl+G only ring the bell.
+        case 'c':
           return reset();
         // Searching the shell's history, or clearing the screen.
         case 'r' || 's' || 'l' || 'o':
