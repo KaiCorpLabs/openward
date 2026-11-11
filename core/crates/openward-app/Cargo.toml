@@ -36,6 +36,7 @@ tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "io-util
 zeroize = "1"
 
 [dev-dependencies]
+rusqlite = "0.41"
 rand = { version = "0.10", features = ["thread_rng"] }
 # Hashed known_hosts names in tests.
 data-encoding = "2"

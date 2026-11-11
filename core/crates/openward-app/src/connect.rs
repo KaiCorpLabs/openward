@@ -166,23 +166,88 @@ impl Ctx {
     /// The vault's trusted keys, and `~/.ssh/known_hosts`.
     /// OpenWard's trusted keys, and OpenSSH's in `files`.
     fn known_hosts(&self, files: &[PathBuf]) -> KnownTexts {
-        KnownTexts {
-            openward: lock(&self.vault).known_hosts_text(),
-            openssh: files
-                .iter()
-                .filter_map(|f| std::fs::read_to_string(f).ok())
-                .collect::<Vec<_>>()
-                .join("\n"),
-        }
+        let openssh = read_known_files(files);
+        KnownTexts::of(&lock(&self.vault), openssh)
     }
 }
 
+fn read_known_files(files: &[PathBuf]) -> String {
+    files
+        .iter()
+        .filter_map(|f| std::fs::read_to_string(f).ok())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+#[derive(Debug)]
+enum KeyRefusal {
+    Query(Box<HostKeyQuery>),
+    Changed(Box<HostKeyQuery>, Vec<PreviousKey>),
+    Save(String),
+}
+
+/// Revalidate under the vault's operation lock, after any user prompt.
+/// Learning is not rotation: a stale Unknown snapshot may never replace
+/// a key saved by another connection while this one was asking.
+fn learn_key(vault: &mut Vault, openssh: &str, mut query: HostKeyQuery) -> Result<(), KeyRefusal> {
+    use openward_ssh::russh::keys::PublicKeyOrCertificate;
+    let texts = KnownTexts::of(vault, openssh.to_owned());
+    let mut known = texts.known();
+    let offered = PublicKeyOrCertificate::PublicKey {
+        key: query.key.clone(),
+        hash_alg: None,
+    };
+    let now = known.check(&query.host, query.port, &offered);
+    if now == Verdict::Known {
+        return Ok(());
+    }
+    if !matches!(now, Verdict::Unknown | Verdict::OtherType) || now != query.verdict {
+        let previous =
+            (now == Verdict::Changed).then(|| texts.previous(&query.host, query.port, &query.key));
+        query.verdict = now;
+        return Err(match previous {
+            Some(previous) => KeyRefusal::Changed(Box::new(query), previous),
+            None => KeyRefusal::Query(Box::new(query)),
+        });
+    }
+    let key = query
+        .key
+        .to_openssh()
+        .map_err(|e| KeyRefusal::Save(e.to_string()))?;
+    vault
+        .trust_host_key(&query.host, query.port, &key)
+        .map_err(|e| KeyRefusal::Save(e.to_string()))?;
+    Ok(())
+}
+
+#[derive(Default)]
 struct KnownTexts {
     openward: String,
     openssh: String,
+    local_pins: String,
 }
 
 impl KnownTexts {
+    fn of(vault: &Vault, openssh: String) -> Self {
+        let local_pins = vault
+            .known_hosts()
+            .into_iter()
+            .filter(|(_, k)| {
+                k.imported.is_none() && k.marker.is_none() && k.usable_for_connections()
+            })
+            .map(|(_, k)| k.to_line())
+            .collect::<Vec<_>>()
+            .join("\n");
+        Self {
+            openward: vault.known_hosts_text(),
+            openssh,
+            local_pins,
+        }
+    }
+
+    fn known(&self) -> KnownHosts {
+        KnownHosts::parse(&self.all(), Unknown::Reject).with_local_pins(&self.local_pins)
+    }
     fn all(&self) -> String {
         format!("{}\n{}", self.openward, self.openssh)
     }
@@ -201,6 +266,7 @@ impl KnownTexts {
                     out.push(PreviousKey {
                         fingerprint: k.fingerprint(HashAlg::Sha256).to_string(),
                         source,
+                        key: k.to_openssh().expect("a parsed public key encodes"),
                     });
                 }
             }
@@ -262,7 +328,7 @@ async fn ssh_hops(plan: &Plan, ctx: &Ctx, count: usize) -> Result<Vec<Session>, 
         let last = i + 1 == count;
         let opts = Options {
             user: hop.user.clone(),
-            known_hosts: Arc::new(Mutex::new(KnownHosts::parse(&known, Unknown::Reject))),
+            known_hosts: Arc::new(Mutex::new(texts.known())),
             host_certificates: known.contains("@cert-authority"),
             legacy_host_keys: hop.legacy_host_keys,
             connect_timeout: hop.connect_timeout,
@@ -303,10 +369,12 @@ async fn ssh_hops(plan: &Plan, ctx: &Ctx, count: usize) -> Result<Vec<Session>, 
 
 /// Decides on keys `known_hosts` does not vouch for, by the hop's policy.
 /// Refused queries are kept to explain the failure.
-fn host_key_hook(hop: &Hop, ctx: &Ctx, refused: Arc<Mutex<Option<HostKeyQuery>>>) -> HostKeyHook {
+fn host_key_hook(hop: &Hop, ctx: &Ctx, refused: Arc<Mutex<Option<KeyRefusal>>>) -> HostKeyHook {
     let (ctx, policy, label) = (ctx.clone(), hop.host_key_policy, hop.label.clone());
+    let files = hop.known_hosts.clone();
     Arc::new(move |q: HostKeyQuery| {
         let (ctx, refused, label) = (ctx.clone(), Arc::clone(&refused), label.clone());
+        let files = files.clone();
         Box::pin(async move {
             let ask = |known_types: Vec<String>| Prompt::HostKey {
                 label: label.clone(),
@@ -329,12 +397,13 @@ fn host_key_hook(hop: &Hop, ctx: &Ctx, refused: Arc<Mutex<Option<HostKeyQuery>>>
                 _ => false,
             };
             if accept {
-                if let Ok(key) = q.key.to_openssh() {
-                    // Not saved is not fatal: it is trusted for this session.
-                    let _ = lock(&ctx.vault).trust_host_key(&q.host, q.port, &key);
+                let openssh = read_known_files(&files);
+                if let Err(why) = learn_key(&mut lock(&ctx.vault), &openssh, q) {
+                    *lock(&refused) = Some(why);
+                    return false;
                 }
             } else {
-                *lock(&refused) = Some(q);
+                *lock(&refused) = Some(KeyRefusal::Query(Box::new(q)));
             }
             accept
         })
@@ -366,17 +435,29 @@ async fn proxy_login(
 fn open_failure(
     hop: &Hop,
     error: &anyhow::Error,
-    refused: &Mutex<Option<HostKeyQuery>>,
+    refused: &Mutex<Option<KeyRefusal>>,
     texts: &KnownTexts,
 ) -> Failure {
     let label = hop.label.clone();
     let Some(UntrustedHost(verdict)) = error.downcast_ref::<UntrustedHost>() else {
         return Failure::network(label, error);
     };
-    match (verdict, lock(refused).take()) {
+    let (query, previous) = match lock(refused).take() {
+        Some(KeyRefusal::Save(why)) => {
+            return Failure::Other(format!("{label}: could not save the host key: {why}"));
+        }
+        Some(KeyRefusal::Changed(query, previous)) => (Some(*query), Some(previous)),
+        Some(KeyRefusal::Query(query)) => (Some(*query), None),
+        None => (None, None),
+    };
+    // The revalidation may have superseded the connection's old snapshot.
+    let verdict = query
+        .as_ref()
+        .map_or_else(|| verdict.clone(), |q| q.verdict.clone());
+    match (&verdict, query) {
         (Verdict::Changed, Some(q)) => Failure::HostKeyChanged(Box::new(ChangedKey {
             label,
-            previous: texts.previous(&q.host, q.port, &q.key),
+            previous: previous.unwrap_or_else(|| texts.previous(&q.host, q.port, &q.key)),
             host: q.host,
             port: q.port,
             algorithm: q.key.algorithm().to_string(),
@@ -794,4 +875,439 @@ async fn password(
         last = outcome;
     }
     Ok(last)
+}
+
+#[cfg(test)]
+mod trust_tests {
+    use super::*;
+    use crate::App;
+    use openward_ssh::russh::keys::{PublicKeyOrCertificate, ssh_key::private::Ed25519Keypair};
+    use openward_vault::proto::KnownHost;
+
+    fn key(seed: u8) -> PublicKey {
+        PrivateKey::from(Ed25519Keypair::from_seed(&[seed; 32]))
+            .public_key()
+            .clone()
+    }
+    fn offered(key: PublicKey) -> PublicKeyOrCertificate {
+        PublicKeyOrCertificate::PublicKey {
+            key,
+            hash_alg: None,
+        }
+    }
+
+    struct Sink;
+    impl EventSink for Sink {
+        fn send(&self, _: Event) {}
+    }
+
+    #[test]
+    fn failed_key_persistence_refuses_the_connection() {
+        let temp = tempfile::tempdir().unwrap();
+        let app = App::open_as(temp.path(), Local::from_env()).unwrap();
+        let conn = rusqlite::Connection::open(temp.path().join("vault.db")).unwrap();
+        conn.execute_batch("CREATE TRIGGER reject_key BEFORE INSERT ON items BEGIN SELECT RAISE(FAIL, 'injected storage failure'); END;").unwrap();
+        let sink: Arc<dyn EventSink> = Arc::new(Sink);
+        let ctx = app.ctx(&sink);
+        let mut hop = Plan::for_address(
+            "host.example",
+            None,
+            None,
+            openward_vault::proto::Protocol::Ssh,
+            app.local(),
+        )
+        .hops
+        .remove(0);
+        hop.host_key_policy = HostKeyPolicy::AcceptNew;
+        hop.known_hosts.clear();
+        let refused = Arc::new(Mutex::new(None));
+        let query = HostKeyQuery {
+            host: hop.address.clone(),
+            port: hop.port,
+            key: key(20),
+            verdict: Verdict::Unknown,
+            known_types: vec![],
+        };
+        assert!(
+            !app.runtime
+                .block_on(host_key_hook(&hop, &ctx, Arc::clone(&refused))(query))
+        );
+        assert!(app.vault().known_hosts_text().is_empty());
+        let error = anyhow::Error::new(UntrustedHost(Verdict::Unknown));
+        let failure = open_failure(
+            &hop,
+            &error,
+            &refused,
+            &KnownTexts {
+                openward: String::new(),
+                openssh: String::new(),
+                ..KnownTexts::default()
+            },
+        );
+        assert!(
+            matches!(failure, Failure::Other(message) if message.contains("save the host key") && message.contains("injected storage failure"))
+        );
+    }
+
+    #[test]
+    fn learning_revalidates_stale_queries_instead_of_rotating_them() {
+        let mut vault = Vault::open_in_memory().unwrap();
+        let query = |seed| HostKeyQuery {
+            host: "host.example".into(),
+            port: 2222,
+            key: key(seed),
+            verdict: Verdict::Unknown,
+            known_types: vec![],
+        };
+        learn_key(&mut vault, "", query(21)).unwrap();
+        let saved = vault.known_hosts_text();
+        learn_key(&mut vault, "", query(21)).unwrap(); // another connection, same key
+        assert_eq!(vault.known_hosts_text(), saved);
+        let Err(KeyRefusal::Changed(changed, previous)) = learn_key(&mut vault, "", query(22))
+        else {
+            panic!("a stale query must be refused as a change");
+        };
+        assert_eq!(changed.verdict, Verdict::Changed);
+        assert_eq!(previous.len(), 1);
+        assert_eq!(previous[0].key, key(21).to_openssh().unwrap());
+        assert_eq!(vault.known_hosts_text(), saved);
+        let revoke = format!(
+            "@revoked [host.example]:2222 {}",
+            key(21).to_openssh().unwrap()
+        );
+        assert!(
+            matches!(learn_key(&mut vault, &revoke, query(21)), Err(KeyRefusal::Query(q)) if q.verdict == Verdict::Revoked)
+        );
+    }
+
+    #[test]
+    fn persistence_failure_stops_real_ssh_before_authentication() {
+        use openward_ssh::russh::{self, server};
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        struct Server(Arc<AtomicUsize>);
+        impl server::Handler for Server {
+            type Error = russh::Error;
+            async fn auth_none(&mut self, _: &str) -> Result<server::Auth, Self::Error> {
+                self.0.fetch_add(1, Ordering::SeqCst);
+                Ok(server::Auth::Accept)
+            }
+        }
+        let temp = tempfile::tempdir().unwrap();
+        let app = App::open_as(temp.path(), Local::from_env()).unwrap();
+        let conn = rusqlite::Connection::open(temp.path().join("vault.db")).unwrap();
+        conn.execute_batch("CREATE TRIGGER reject_key BEFORE INSERT ON items BEGIN SELECT RAISE(FAIL, 'injected storage failure'); END;").unwrap();
+        let sink: Arc<dyn EventSink> = Arc::new(Sink);
+        let ctx = app.ctx(&sink);
+        for fail in [true, false] {
+            if !fail {
+                conn.execute_batch("DROP TRIGGER reject_key").unwrap();
+            }
+            let attempts = Arc::new(AtomicUsize::new(0));
+            app.runtime.block_on(async {
+                let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+                let mut plan = Plan::for_address("127.0.0.1", None, Some(listener.local_addr().unwrap().port()), openward_vault::proto::Protocol::Ssh, app.local());
+                plan.hops[0].host_key_policy = HostKeyPolicy::AcceptNew;
+                plan.hops[0].known_hosts.clear();
+                let mut config = server::Config::default();
+                config.keys.push(PrivateKey::from(Ed25519Keypair::from_seed(&[55; 32])));
+                let server_attempts = Arc::clone(&attempts);
+                let task = tokio::spawn(async move {
+                    let (socket, _) = listener.accept().await.unwrap();
+                    if let Ok(session) = server::run_stream(Arc::new(config), socket, Server(server_attempts)).await { let _ = session.await; }
+                });
+                let result = tokio::time::timeout(std::time::Duration::from_secs(10), ssh_hops(&plan, &ctx, 1)).await.unwrap();
+                if fail {
+                    assert!(matches!(result, Err(Failure::Other(message)) if message.contains("injected storage failure")));
+                    assert_eq!(attempts.load(Ordering::SeqCst), 0);
+                    assert!(app.vault().known_hosts_text().is_empty());
+                } else {
+                    let sessions = result.unwrap();
+                    assert_eq!(attempts.load(Ordering::SeqCst), 1);
+                    assert!(!app.vault().known_hosts_text().is_empty());
+                    sessions[0].disconnect().await;
+                }
+                task.abort();
+                let _ = task.await;
+            });
+        }
+    }
+
+    #[test]
+    fn hashed_and_case_variant_keys_are_revoked_without_changing_other_ports() {
+        use hmac::{Hmac, KeyInit, Mac};
+        use sha1::Sha1;
+        let temp = tempfile::tempdir().unwrap();
+        let app = App::open_as(temp.path(), Local::from_env()).unwrap();
+        for port in [22, 2222] {
+            let (old, new) = (key(41), key(42));
+            let spec = if port == 22 {
+                "node.example.org".into()
+            } else {
+                format!("[node.example.org]:{port}")
+            };
+            let mut mac = Hmac::<Sha1>::new_from_slice(b"0123456789abcdefghij").unwrap();
+            mac.update(spec.as_bytes());
+            let b64 = data_encoding::BASE64;
+            let hashed = format!(
+                "|1|{}|{}",
+                b64.encode(b"0123456789abcdefghij"),
+                b64.encode(&mac.finalize().into_bytes())
+            );
+            for hosts in [hashed, spec.to_uppercase()] {
+                app.vault()
+                    .create(Data::KnownHost(KnownHost {
+                        hosts,
+                        key: old.to_openssh().unwrap(),
+                        ..KnownHost::default()
+                    }))
+                    .unwrap();
+            }
+            app.trust_host_key("Node.Example.org", port, &new.to_openssh().unwrap())
+                .unwrap();
+            let mut known = KnownHosts::parse(&app.vault().known_hosts_text(), Unknown::Reject);
+            assert_eq!(
+                known.check("node.example.org", port, &offered(old.clone())),
+                Verdict::Revoked
+            );
+            assert_eq!(
+                known.check("NODE.EXAMPLE.ORG", port, &offered(new.clone())),
+                Verdict::Known
+            );
+            assert_eq!(
+                app.vault()
+                    .known_hosts()
+                    .iter()
+                    .filter(
+                        |(_, k)| k.marker == Some(openward_vault::proto::Marker::Revoked)
+                            && k.hosts.eq_ignore_ascii_case(&spec)
+                    )
+                    .count(),
+                1
+            );
+            // A repeated approval does not duplicate revocations or revoke itself.
+            app.rotate_host_key(
+                "node.example.org",
+                port,
+                &new.to_openssh().unwrap(),
+                &[old.to_openssh().unwrap(), new.to_openssh().unwrap()],
+            )
+            .unwrap();
+            assert_eq!(
+                app.vault()
+                    .known_hosts()
+                    .iter()
+                    .filter(
+                        |(_, k)| k.marker == Some(openward_vault::proto::Marker::Revoked)
+                            && k.hosts.eq_ignore_ascii_case(&spec)
+                    )
+                    .count(),
+                1
+            );
+        }
+    }
+
+    #[test]
+    fn historical_rotation_residues_require_review_without_changing_file_only_policy() {
+        let (old, new) = (key(61), key(62));
+        let external = format!("host.example,other.example {}", old.to_openssh().unwrap());
+        let mut vault = Vault::open_in_memory().unwrap();
+        // This is the persisted state written by the old rotation method:
+        // an exact local pin alongside an old key in another source.
+        vault
+            .trust_host_key("host.example", 22, &new.to_openssh().unwrap())
+            .unwrap();
+        let mut known = KnownTexts::of(&vault, external.clone()).known();
+        assert_eq!(
+            known.check("host.example", 22, &offered(old.clone())),
+            Verdict::Changed
+        );
+        assert_eq!(
+            known.check("host.example", 22, &offered(new.clone())),
+            Verdict::Known
+        );
+        assert_eq!(
+            known.check("other.example", 22, &offered(old.clone())),
+            Verdict::Known
+        );
+        // Conflicting old case variants have no reliable ordering: ask
+        // again for either key instead of silently choosing one.
+        vault
+            .create(Data::KnownHost(KnownHost {
+                hosts: "HOST.EXAMPLE".into(),
+                key: old.to_openssh().unwrap(),
+                ..KnownHost::default()
+            }))
+            .unwrap();
+        let mut ambiguous = KnownTexts::of(&vault, external.clone()).known();
+        assert_eq!(
+            ambiguous.check("host.example", 22, &offered(old.clone())),
+            Verdict::Changed
+        );
+        assert_eq!(
+            ambiguous.check("host.example", 22, &offered(new.clone())),
+            Verdict::Changed
+        );
+        let mut file_only = KnownTexts {
+            openssh: format!("{external}\nhost.example {}", new.to_openssh().unwrap()),
+            ..KnownTexts::default()
+        }
+        .known();
+        assert_eq!(
+            file_only.check("host.example", 22, &offered(old)),
+            Verdict::Known
+        );
+        assert_eq!(
+            file_only.check("host.example", 22, &offered(new)),
+            Verdict::Known
+        );
+    }
+
+    #[test]
+    fn rotation_retires_the_certified_old_subject_but_keeps_ca_validation() {
+        use openward_ssh::russh::keys::ssh_key::certificate::{Builder, CertType};
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let temp = tempfile::tempdir().unwrap();
+        let app = App::open_as(temp.path(), Local::from_env()).unwrap();
+        let (old, new, ca) = (
+            key(71),
+            key(72),
+            PrivateKey::from(Ed25519Keypair::from_seed(&[73; 32])),
+        );
+        app.vault()
+            .create(Data::KnownHost(KnownHost {
+                hosts: "host.example".into(),
+                key: ca.public_key().to_openssh().unwrap(),
+                marker: Some(openward_vault::proto::Marker::CertAuthority),
+                ..KnownHost::default()
+            }))
+            .unwrap();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let certificate = |key: &PublicKey| {
+            let mut builder =
+                Builder::new([7; 16], key.key_data().clone(), now - 60, now + 3600).unwrap();
+            builder.cert_type(CertType::Host).unwrap();
+            builder.valid_principal("host.example").unwrap();
+            PublicKeyOrCertificate::Certificate(builder.sign(&ca).unwrap())
+        };
+        app.rotate_host_key(
+            "host.example",
+            22,
+            &new.to_openssh().unwrap(),
+            &[old.to_openssh().unwrap()],
+        )
+        .unwrap();
+        let mut known = KnownTexts::of(
+            &app.vault(),
+            format!("host.example {}", old.to_openssh().unwrap()),
+        )
+        .known();
+        assert_eq!(
+            known.check("host.example", 22, &certificate(&old)),
+            Verdict::Revoked
+        );
+        assert!(matches!(
+            known.check("host.example", 22, &certificate(&new)),
+            Verdict::Certified { .. }
+        ));
+        // An unlisted subject signed by the configured CA remains valid;
+        // a local pin does not replace the administrator's CA policy.
+        assert!(matches!(
+            known.check("host.example", 22, &certificate(&key(74))),
+            Verdict::Certified { .. }
+        ));
+    }
+
+    #[test]
+    fn rotation_carries_custom_file_keys_and_is_atomic_on_failure() {
+        let temp = tempfile::tempdir().unwrap();
+        let app = App::open_as(temp.path(), Local::from_env()).unwrap();
+        let (old, new) = (key(31), key(32));
+        let line = format!(
+            "[host.example]:2222,other.example {}",
+            old.to_openssh().unwrap()
+        );
+        let file = temp.path().join("custom_known_hosts");
+        std::fs::write(&file, &line).unwrap();
+        let texts = KnownTexts::of(&app.vault(), read_known_files(std::slice::from_ref(&file)));
+        let previous = texts.previous("host.example", 2222, &new);
+        assert_eq!(previous[0].source, KeySource::OpenSsh);
+        app.rotate_host_key(
+            "host.example",
+            2222,
+            &new.to_openssh().unwrap(),
+            &previous.iter().map(|p| p.key.clone()).collect::<Vec<_>>(),
+        )
+        .unwrap();
+        let persisted = app.vault().known_hosts_text();
+        let mut known = KnownHosts::parse(&format!("{persisted}\n{line}"), Unknown::Reject);
+        assert_eq!(
+            known.check("host.example", 2222, &offered(old.clone())),
+            Verdict::Revoked
+        );
+        assert_eq!(
+            known.check("host.example", 2222, &offered(new.clone())),
+            Verdict::Known
+        );
+        assert_eq!(
+            known.check("other.example", 22, &offered(old)),
+            Verdict::Known
+        );
+        // Neither the file nor trust for a different port is rewritten.
+        assert_eq!(
+            known.check("host.example", 22, &offered(new.clone())),
+            Verdict::Unknown
+        );
+        assert_eq!(std::fs::read_to_string(file).unwrap(), line);
+        let conn = rusqlite::Connection::open(temp.path().join("vault.db")).unwrap();
+        conn.execute_batch("CREATE TABLE failures (n INTEGER); INSERT INTO failures VALUES (0); CREATE TRIGGER reject_second BEFORE INSERT ON items BEGIN UPDATE failures SET n=n+1; SELECT CASE WHEN (SELECT n FROM failures)=2 THEN RAISE(FAIL, 'second write failed') END; END;").unwrap();
+        assert!(
+            app.rotate_host_key("HOST.EXAMPLE", 2222, &key(33).to_openssh().unwrap(), &[])
+                .is_err()
+        );
+        assert_eq!(app.vault().known_hosts_text(), persisted);
+        drop(conn);
+        drop(app);
+        assert_eq!(
+            Vault::open(&temp.path().join("vault.db"))
+                .unwrap()
+                .known_hosts_text(),
+            persisted
+        );
+    }
+
+    #[test]
+    fn rotation_revokes_residual_pattern_keys_for_only_the_selected_host() {
+        let temp = tempfile::tempdir().unwrap();
+        let app = App::open_as(temp.path(), Local::from_env()).unwrap();
+        let (old, new) = (key(11), key(12));
+        app.vault()
+            .create(Data::KnownHost(KnownHost {
+                hosts: "*.example.org,!excluded.example.org".into(),
+                key: old.to_openssh().unwrap(),
+                ..KnownHost::default()
+            }))
+            .unwrap();
+        app.trust_host_key("Node.Example.org", 22, &new.to_openssh().unwrap())
+            .unwrap();
+        let mut known = KnownHosts::parse(&app.vault().known_hosts_text(), Unknown::Reject);
+        assert_eq!(
+            known.check("node.example.org", 22, &offered(old.clone())),
+            Verdict::Revoked
+        );
+        assert_eq!(
+            known.check("node.example.org", 22, &offered(new)),
+            Verdict::Known
+        );
+        assert_eq!(
+            known.check("other.example.org", 22, &offered(old.clone())),
+            Verdict::Known
+        );
+        assert_eq!(
+            known.check("excluded.example.org", 22, &offered(old)),
+            Verdict::Unknown
+        );
+    }
 }

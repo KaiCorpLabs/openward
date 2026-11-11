@@ -736,6 +736,18 @@ impl Vault {
     /// the same algorithm trusted for exactly that host before: what
     /// accepting a new key after TOFU, or a change, does.
     pub fn trust_host_key(&mut self, host: &str, port: u16, key: &str) -> Result<ItemId> {
+        self.trust_host_key_replacing(host, port, key, &[])
+    }
+
+    /// Replaces the pin and records host-specific revocations in the same
+    /// transaction. The caller resolves matching keys from every trust source.
+    pub fn trust_host_key_replacing(
+        &mut self,
+        host: &str,
+        port: u16,
+        key: &str,
+        revoked: &[String],
+    ) -> Result<ItemId> {
         let hosts = host_spec(host, port);
         let algorithm = key.split_whitespace().next().unwrap_or_default();
         if algorithm.is_empty() || key.split_whitespace().count() < 2 {
@@ -746,35 +758,53 @@ impl Vault {
             .into_iter()
             .filter(|(_, k)| {
                 k.marker.is_none()
-                    && k.hosts == hosts
+                    && k.hosts.eq_ignore_ascii_case(&hosts)
                     && k.key.split_whitespace().next() == Some(algorithm)
             })
             .map(|(id, _)| id)
             .collect();
         let known = KnownHost {
-            hosts,
+            hosts: hosts.clone(),
             key: key.split_whitespace().take(2).collect::<Vec<_>>().join(" "),
             ..KnownHost::default()
         };
         if !known.is_well_formed() {
             return Err(Error::Invalid("not a host name and a key"));
         }
-        let id = ItemId::new();
+        let mut records = vec![known];
+        for old in revoked {
+            let old = KnownHost {
+                hosts: hosts.clone(),
+                key: old.split_whitespace().take(2).collect::<Vec<_>>().join(" "),
+                marker: Some(proto::Marker::Revoked),
+                ..KnownHost::default()
+            };
+            if !old.is_well_formed() {
+                return Err(Error::Invalid("not a revoked public key"));
+            }
+            records.push(old);
+        }
         let now = now_ms();
-        let item = Item {
-            id,
-            rev: 1,
-            body: Body {
-                created: now,
-                modified: now,
-                data: Data::KnownHost(known),
-            },
-        };
-        self.write(std::slice::from_ref(&item), &replaced)?;
+        let items: Vec<_> = records
+            .into_iter()
+            .map(|known| Item {
+                id: ItemId::new(),
+                rev: 1,
+                body: Body {
+                    created: now,
+                    modified: now,
+                    data: Data::KnownHost(known),
+                },
+            })
+            .collect();
+        let id = items[0].id;
+        self.write(&items, &replaced)?;
         for old in replaced {
             self.items.remove(&old);
         }
-        self.items.insert(id, item);
+        for item in items {
+            self.items.insert(item.id, item);
+        }
         Ok(id)
     }
 
