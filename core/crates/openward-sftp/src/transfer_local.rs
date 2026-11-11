@@ -8,7 +8,9 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
-use cap_fs_ext::{FollowSymlinks, MetadataExt, OpenOptionsFollowExt, Reopen};
+use cap_fs_ext::{
+    DirExt, FollowSymlinks, MetadataExt, OpenOptionsFollowExt, Reopen, SystemTimeSpec,
+};
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, File, Metadata, OpenOptions};
 
@@ -24,6 +26,48 @@ enum Authority {
 pub(crate) struct LocalRoot {
     display: PathBuf,
     authority: Authority,
+}
+
+/// Only a directory this job created. Hold its identity through restrictive
+/// final permissions, pauses and ancestor renames.
+#[derive(Debug)]
+pub(crate) struct LocalDirectory {
+    dir: Dir,
+    display: PathBuf,
+    #[cfg(unix)]
+    allowed: u32,
+}
+
+impl LocalDirectory {
+    pub(crate) fn finish(&self, mode: Option<u32>, modified: Option<i64>) -> Result<()> {
+        let err = |e| Error::local(&self.display, &e);
+        if let Some(t) = modified.and_then(|t| u64::try_from(t).ok()) {
+            let time = UNIX_EPOCH + std::time::Duration::from_secs(t);
+            self.dir
+                .set_mtime(
+                    ".",
+                    SystemTimeSpec::Absolute(cap_std::time::SystemTime::from_std(time)),
+                )
+                .map_err(err)?;
+        }
+        #[cfg(unix)]
+        {
+            use cap_std::fs::{Permissions, PermissionsExt};
+            let mode = mode.unwrap_or(0o700) & self.allowed & 0o777;
+            self.dir
+                .set_permissions(".", Permissions::from_mode(mode))
+                .map_err(err)?;
+            if self.dir.dir_metadata().map_err(err)?.permissions().mode() & 0o7777 != mode {
+                return Err(Error::Other(format!(
+                    "{}: permissions could not be applied",
+                    self.display.display()
+                )));
+            }
+        }
+        #[cfg(not(unix))]
+        let _ = mode;
+        Ok(())
+    }
 }
 
 impl LocalRoot {
@@ -196,10 +240,53 @@ impl LocalRoot {
         }
     }
 
-    pub(crate) fn mkdir(&self, rel: &Path) -> Result<()> {
-        self.directory()?
-            .create_dir(rel)
-            .map_err(|e| self.error(rel, e))
+    pub(crate) fn mkdir(&self, rel: &Path) -> Result<LocalDirectory> {
+        let parent = self.directory()?;
+        let mut builder = cap_std::fs::DirBuilder::new();
+        builder.recursive(false);
+        #[cfg(unix)]
+        {
+            use cap_std::fs::DirBuilderExt;
+            builder.mode(0o700);
+        }
+        parent
+            .create_dir_with(rel, &builder)
+            .map_err(|e| self.error(rel, e))?;
+        let prepared = (|| {
+            #[cfg(unix)]
+            crate::local::set_named_mode(parent, rel, 0o700).map_err(|e| self.error(rel, e))?;
+            let dir = parent
+                .open_dir_nofollow(rel)
+                .map_err(|e| self.error(rel, e))?;
+            #[cfg(unix)]
+            let allowed = {
+                use cap_std::fs::{OpenOptionsExt, PermissionsExt};
+                // Measure the actual creation mask inside the private, empty
+                // directory. Never change the process-wide umask.
+                let probe = ".openward-directory-mode";
+                let mut options = OpenOptions::new();
+                options.write(true).create_new(true).mode(0o777);
+                let file = dir
+                    .open_with(probe, &options)
+                    .map_err(|e| self.error(rel, e))?;
+                let meta = file.metadata().map_err(|e| self.error(rel, e));
+                drop(file);
+                dir.remove_file(probe).map_err(|e| self.error(rel, e))?;
+                meta?.permissions().mode() & 0o777
+            };
+            Ok(LocalDirectory {
+                dir,
+                display: self.display(rel),
+                #[cfg(unix)]
+                allowed,
+            })
+        })();
+        if prepared.is_err() {
+            // No content has been copied. Do not adopt a pre-existing folder
+            // as ours on a later attempt.
+            let _ = parent.remove_dir(rel);
+        }
+        prepared
     }
 
     /// No truncation or writes before inspecting the opened object. A
@@ -493,5 +580,102 @@ mod tests {
         // A directory selected through a top-level link remains supported.
         let explicit = LocalRoot::destination(&selected).unwrap();
         assert!(explicit.exists(Path::new("file.part")).unwrap());
+    }
+    #[cfg(unix)]
+    #[test]
+    fn new_transfer_directories_are_private_before_contents_are_copied() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let root = LocalRoot::destination(tmp.path()).unwrap();
+        root.mkdir(Path::new("copy")).unwrap();
+        assert_eq!(
+            std::fs::metadata(tmp.path().join("copy"))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o700
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn directory_finalization_respects_each_process_umask() {
+        use std::os::unix::fs::PermissionsExt;
+        if let Ok(mask) = std::env::var("OPENWARD_TEST_DIRECTORY_UMASK") {
+            let tmp = tempfile::tempdir().unwrap();
+            let root = LocalRoot::destination(tmp.path()).unwrap();
+            let mask = u32::from_str_radix(&mask, 8).unwrap();
+            rustix::process::umask(rustix::fs::Mode::from_bits_truncate(
+                mask.try_into().unwrap(),
+            ));
+            let created = root.mkdir(Path::new("copy")).unwrap();
+            let path = tmp.path().join("copy");
+            let mode = || std::fs::metadata(&path).unwrap().permissions().mode() & 0o7777;
+            assert_eq!(mode(), 0o700);
+            assert!(std::fs::read_dir(&path).unwrap().next().is_none());
+            created.finish(Some(0o4755), Some(1_577_836_800)).unwrap();
+            assert_eq!(mode(), 0o755 & !mask);
+            assert_eq!(
+                std::fs::metadata(&path)
+                    .unwrap()
+                    .modified()
+                    .unwrap()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
+                1_577_836_800
+            );
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700)).unwrap();
+            return;
+        }
+        for mask in ["000", "027", "077", "777"] {
+            let output = std::process::Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "--exact",
+                    "transfer_local::tests::directory_finalization_respects_each_process_umask",
+                    "--test-threads=1",
+                    "--nocapture",
+                ])
+                .env("OPENWARD_TEST_DIRECTORY_UMASK", mask)
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "umask {mask}: {}{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn final_directory_metadata_uses_the_held_identity() {
+        use std::os::unix::fs::{PermissionsExt, symlink};
+        let tmp = tempfile::tempdir().unwrap();
+        let root = LocalRoot::destination(tmp.path()).unwrap();
+        let created = root.mkdir(Path::new("copy")).unwrap();
+        std::fs::rename(tmp.path().join("copy"), tmp.path().join("original")).unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        std::fs::set_permissions(outside.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+        symlink(outside.path(), tmp.path().join("copy")).unwrap();
+        created.finish(Some(0o500), None).unwrap();
+        assert_eq!(
+            std::fs::metadata(tmp.path().join("original"))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o500
+        );
+        assert_eq!(
+            std::fs::metadata(outside.path())
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o700
+        );
     }
 }

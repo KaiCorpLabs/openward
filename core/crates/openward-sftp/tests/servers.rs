@@ -448,6 +448,215 @@ fn mode_of(p: &Path) -> u32 {
     std::fs::metadata(p).unwrap().permissions().mode() & 0o777
 }
 
+/// Gate one directory creation, or corrupt one final SETSTAT path so the
+/// real server reports a failure after every file has copied.
+#[cfg(unix)]
+async fn directory_faults(
+    ssh: &Session,
+    path: String,
+    mode: Option<u32>,
+    mut hold_create: Option<(
+        tokio::sync::oneshot::Sender<()>,
+        tokio::sync::oneshot::Receiver<()>,
+    )>,
+) -> Arc<Remote> {
+    let stream = ssh.sftp().await.unwrap();
+    let (client, proxy) = tokio::io::duplex(256 << 10);
+    let (mut from_client, mut to_client) = tokio::io::split(proxy);
+    let (mut from_server, mut to_server) = tokio::io::split(stream);
+    tokio::spawn(async move {
+        let _ = tokio::io::copy(&mut from_server, &mut to_client).await;
+    });
+    tokio::spawn(async move {
+        let mut failed = false;
+        while let Ok(len) = from_client.read_u32().await {
+            let mut packet = vec![0; len as usize];
+            if from_client.read_exact(&mut packet).await.is_err() {
+                break;
+            }
+            if packet.first() == Some(&14) && packet.len() >= 9 {
+                let n = u32::from_be_bytes(packet[5..9].try_into().unwrap()) as usize;
+                if packet.get(9..9 + n) == Some(path.as_bytes())
+                    && let Some((entered, release)) = hold_create.take()
+                {
+                    let _ = entered.send(());
+                    let _ = release.await;
+                }
+            }
+            if !failed && packet.first() == Some(&9) && packet.len() >= 9 {
+                let n = u32::from_be_bytes(packet[5..9].try_into().unwrap()) as usize;
+                if packet.get(9..9 + n) == Some(path.as_bytes()) && packet.len() >= 13 + n {
+                    let flags = u32::from_be_bytes(packet[9 + n..13 + n].try_into().unwrap());
+                    let permissions = 13
+                        + n
+                        + if flags & 1 != 0 { 8 } else { 0 }
+                        + if flags & 2 != 0 { 8 } else { 0 };
+                    if flags & 4 != 0
+                        && let Some(mode) = mode
+                        && packet.get(permissions..permissions + 4)
+                            == Some(mode.to_be_bytes().as_slice())
+                    {
+                        packet[8 + n] = b'!';
+                        failed = true;
+                    }
+                }
+            }
+            if to_server.write_u32(len).await.is_err()
+                || to_server.write_all(&packet).await.is_err()
+            {
+                break;
+            }
+        }
+    });
+    Remote::open(client).await.unwrap()
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn copies_private_and_readonly_directories_and_retries_final_metadata() {
+    let fx = servers!();
+    for port in ALL {
+        let s = server(&fx, port, "directory-modes").await;
+        let local = tempfile::tempdir().unwrap();
+        let tree = local.path().join("tree");
+        std::fs::create_dir_all(tree.join("private")).unwrap();
+        std::fs::write(
+            tree.join("private/data"),
+            b"copied inside a readonly folder",
+        )
+        .unwrap();
+        set_mode(&tree, 0o550);
+        set_mode(&tree.join("private"), 0o500);
+        let remote = directory_faults(&s.ssh, join(&s.dir, "tree"), Some(0o550), None).await;
+        let (t, l) = (transfers(), link(&remote));
+        let id = t.add(
+            Arc::clone(&l),
+            Request {
+                direction: Direction::Upload,
+                source: path_str(&tree),
+                dest_dir: s.dir.clone(),
+                on_conflict: OnConflict::Replace,
+            },
+        );
+        let failed = t.wait(id).await.unwrap();
+        assert_eq!(
+            (failed.state, failed.files_done),
+            (JobState::Failed, 1),
+            "{port}: {:?}",
+            failed.error
+        );
+        assert_eq!(s.entry("tree").await.unwrap().mode, Some(0o700));
+        assert_eq!(s.entry("tree/private").await.unwrap().mode, Some(0o500));
+        t.resume(id);
+        let done = t.wait(id).await.unwrap();
+        assert_eq!(
+            (done.state, done.files_done),
+            (JobState::Done, 1),
+            "{port}: {:?}",
+            done.error
+        );
+        assert_eq!(s.entry("tree").await.unwrap().mode, Some(0o550));
+        let back = tempfile::tempdir().unwrap();
+        let down = copy(
+            &t,
+            &l,
+            Direction::Download,
+            join(&s.dir, "tree"),
+            path_str(back.path()),
+            OnConflict::Replace,
+        )
+        .await;
+        assert_eq!(down.state, JobState::Done, "{port}: {:?}", down.error);
+        assert_eq!(mode_of(&back.path().join("tree/private")), 0o500);
+        assert_eq!(
+            std::fs::read(back.path().join("tree/private/data")).unwrap(),
+            b"copied inside a readonly folder"
+        );
+        // A merge into pre-existing directories must not rewrite their modes.
+        set_mode(&back.path().join("tree"), 0o700);
+        set_mode(&back.path().join("tree/private"), 0o700);
+        let merged = copy(
+            &t,
+            &l,
+            Direction::Download,
+            join(&s.dir, "tree"),
+            path_str(back.path()),
+            OnConflict::Replace,
+        )
+        .await;
+        assert_eq!(merged.state, JobState::Done, "{port}: {:?}", merged.error);
+        assert_eq!(mode_of(&back.path().join("tree")), 0o700);
+        assert_eq!(mode_of(&back.path().join("tree/private")), 0o700);
+        set_mode(&tree, 0o700);
+        set_mode(&tree.join("private"), 0o700);
+        s.sh("chmod -R u+rwX tree").await;
+        s.done().await;
+    }
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn directory_creation_keeps_ownership_when_paused_or_cancelled_in_flight() {
+    let fx = servers!();
+    let s = server(&fx, OPENSSH, "directory-create-gate").await;
+    for cancel in [false, true] {
+        let local = tempfile::tempdir().unwrap();
+        let name = if cancel { "cancel" } else { "pause" };
+        let tree = local.path().join(name);
+        std::fs::create_dir(&tree).unwrap();
+        std::fs::write(tree.join("data"), b"copied after resume").unwrap();
+        set_mode(&tree, 0o550);
+        let (entered_tx, entered_rx) = tokio::sync::oneshot::channel();
+        let (release_tx, release_rx) = tokio::sync::oneshot::channel();
+        let remote = directory_faults(
+            &s.ssh,
+            join(&s.dir, name),
+            None,
+            Some((entered_tx, release_rx)),
+        )
+        .await;
+        let (t, l) = (transfers(), link(&remote));
+        let id = t.add(
+            l,
+            Request {
+                direction: Direction::Upload,
+                source: path_str(&tree),
+                dest_dir: s.dir.clone(),
+                on_conflict: OnConflict::Replace,
+            },
+        );
+        tokio::time::timeout(Duration::from_secs(10), entered_rx)
+            .await
+            .unwrap()
+            .unwrap();
+        if cancel {
+            t.cancel(id);
+        } else {
+            t.pause(id);
+        }
+        release_tx.send(()).unwrap();
+        tokio::time::timeout(Duration::from_secs(10), async {
+            while s.entry(name).await.is_none() {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap();
+        assert_eq!(s.entry(name).await.unwrap().mode, Some(0o700));
+        assert!(s.entry(&format!("{name}/data")).await.is_none());
+        if !cancel {
+            t.resume(id);
+            let done = t.wait(id).await.unwrap();
+            assert_eq!(done.state, JobState::Done, "{:?}", done.error);
+            assert_eq!(s.entry(name).await.unwrap().mode, Some(0o550));
+            assert_eq!(s.cat(&format!("{name}/data")).await, b"copied after resume");
+        }
+        set_mode(&tree, 0o700);
+    }
+    s.sh("chmod -R u+rwX pause cancel").await;
+    s.done().await;
+}
+
 #[tokio::test]
 async fn lists_and_changes_files() {
     let fx = servers!();
@@ -1666,6 +1875,11 @@ async fn a_part_in_a_folder_the_job_made_resumes() {
     let len = (RESUME_OVERLAP + (48 << 20)) as usize;
     let big = pattern(len, 5);
     std::fs::write(tree.join("d00/big.bin"), &big).unwrap();
+    #[cfg(unix)]
+    {
+        set_mode(&tree, 0o700);
+        set_mode(&tree.join("d00"), 0o550);
+    }
     let (t, l) = (transfers(), link(&s.remote));
     let id = t.add(
         Arc::clone(&l),
@@ -1681,6 +1895,8 @@ async fn a_part_in_a_folder_the_job_made_resumes() {
     }
     t.pause(id);
     tokio::time::sleep(Duration::from_millis(100)).await;
+    assert_eq!(s.entry("tree").await.unwrap().mode, Some(0o700));
+    assert_eq!(s.entry("tree/d00").await.unwrap().mode, Some(0o700));
     let parts = s.parts("tree/d00").await;
     let part = parts.iter().find(|p| p.starts_with("big.bin")).unwrap();
     let rel = format!("tree/d00/{part}");
@@ -1704,6 +1920,13 @@ async fn a_part_in_a_folder_the_job_made_resumes() {
     assert_eq!(&got[..1024], &[0u8; 1024], "went on from the part");
     assert_eq!(&got[1024..], &big[1024..]);
     assert!(s.parts_below("tree").await.is_empty());
+    #[cfg(unix)]
+    {
+        assert_eq!(s.entry("tree").await.unwrap().mode, Some(0o700));
+        assert_eq!(s.entry("tree/d00").await.unwrap().mode, Some(0o550));
+        set_mode(&tree.join("d00"), 0o700);
+    }
+    s.sh("chmod -R u+rwX tree").await;
     s.done().await;
 }
 
