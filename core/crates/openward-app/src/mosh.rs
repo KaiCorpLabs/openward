@@ -12,12 +12,13 @@ use std::time::Duration;
 /// How long the server has to start and say where to connect.
 pub(crate) const SERVER_START: Duration = Duration::from_secs(15);
 
-/// How long `mosh-client` has to hear from the server before the session
-/// goes over SSH instead. It says so on the screen when nothing came.
-pub(crate) const UDP_WAIT: Duration = Duration::from_secs(20);
+/// Keep SSH through the 15-second handshake and up to 10 seconds of shutdown
+/// retries in Mosh 1.4, with margin for draining the final diagnostic.
+pub(crate) const UDP_WAIT: Duration = Duration::from_secs(30);
 
-/// What `mosh-client` writes when no packet came back.
-pub(crate) const NOTHING_RECEIVED: &str = "Nothing received from server on UDP port";
+/// The client's final failed-handshake diagnostic. Its earlier "Nothing
+/// received" overlay is transient: a slow successful handshake also shows it.
+pub(crate) const CONNECTION_FAILED: &str = "mosh did not make a successful connection to";
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum ClientStart {
@@ -29,12 +30,11 @@ pub(crate) enum ClientStart {
 /// Watch the local client's initial period while SSH can still take over.
 pub(crate) async fn client_start(program: &mut crate::terminal::Program) -> ClientStart {
     tokio::select! {
-        // A queued warning cannot restart SSH after the client has left.
-        // Both channels can be ready; exit must win deterministically.
+        // The reader sends the final diagnostic before the exit notification.
+        // Even when both are ready, a failed handshake must still use SSH.
         biased;
-        ended = &mut program.exited => ClientStart::Exited(ended.ok().flatten()),
-        // The sender also closes on exit; only an actual warning counts.
         Ok(()) = &mut program.seen => ClientStart::NoUdp,
+        ended = &mut program.exited => ClientStart::Exited(ended.ok().flatten()),
         _ = tokio::time::sleep(UDP_WAIT) => ClientStart::KeepMosh,
     }
 }
@@ -117,6 +117,32 @@ mod tests {
     use super::*;
     use crate::events::MoshFallback;
 
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_transient_connecting_banner_does_not_replace_a_working_session() {
+        let term = crate::Terminal::new(100, 8, 100);
+        let mut program = term
+            .run_program(
+                openward_pty::Spawn {
+                    program: Some("/bin/sh".into()),
+                    args: vec![
+                        "-c".into(),
+                        "printf 'Nothing received from server on UDP port 60001.\\r\\n'; sleep 0.1; printf '\\033[2J\\033[Hconnected\\r\\n'; exit 0".into(),
+                    ],
+                    cols: 100,
+                    rows: 8,
+                    ..Default::default()
+                },
+                CONNECTION_FAILED,
+            )
+            .unwrap();
+        assert_eq!(
+            client_start(&mut program).await,
+            ClientStart::Exited(Some(0))
+        );
+        assert!(term.screen_text().contains("connected"));
+    }
+
     fn notifications() -> (
         tokio::sync::oneshot::Sender<()>,
         tokio::sync::oneshot::Sender<Option<u32>>,
@@ -128,15 +154,44 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn an_exited_client_does_not_reopen_ssh_for_a_queued_warning() {
-        // Both notifications can accumulate while the task is scheduled:
-        // the completed process must win regardless of select's RNG.
-        for code in [Some(0), Some(7), None].into_iter().cycle().take(64) {
+    async fn a_failed_handshake_still_falls_back_when_exit_is_already_queued() {
+        for code in [Some(1), Some(7), None].into_iter().cycle().take(64) {
             let (warn, end, mut program) = notifications();
             warn.send(()).unwrap();
             end.send(code).unwrap();
+            assert_eq!(client_start(&mut program).await, ClientStart::NoUdp);
+        }
+    }
+
+    #[tokio::test]
+    async fn an_ended_client_without_a_failed_handshake_does_not_reopen_ssh() {
+        for code in [Some(0), Some(7), None] {
+            let (_warn, end, mut program) = notifications();
+            end.send(code).unwrap();
             assert_eq!(client_start(&mut program).await, ClientStart::Exited(code));
         }
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn the_final_failed_handshake_diagnostic_from_a_process_uses_ssh() {
+        let term = crate::Terminal::new(100, 8, 100);
+        let mut program = term
+            .run_program(
+                openward_pty::Spawn {
+                    program: Some("/bin/sh".into()),
+                    args: vec![
+                        "-c".into(),
+                        format!("printf '%s\\r\\n' '{CONNECTION_FAILED} 127.0.0.1:60001.'; exit 1"),
+                    ],
+                    cols: 100,
+                    rows: 8,
+                    ..Default::default()
+                },
+                CONNECTION_FAILED,
+            )
+            .unwrap();
+        assert_eq!(client_start(&mut program).await, ClientStart::NoUdp);
     }
 
     #[tokio::test(start_paused = true)]
@@ -218,9 +273,9 @@ mod tests {
 
     #[test]
     fn a_needle_cut_in_two_is_seen() {
-        let mut window = b"...mosh: Nothing received from se".to_vec();
-        assert!(!seen(&window, NOTHING_RECEIVED));
-        window.extend(b"rver on UDP port 60001. [To quit: Ctrl-^ .]");
-        assert!(seen(&window, NOTHING_RECEIVED));
+        let mut window = b"...mosh did not make a successful connec".to_vec();
+        assert!(!seen(&window, CONNECTION_FAILED));
+        window.extend(b"tion to 127.0.0.1:60001.");
+        assert!(seen(&window, CONNECTION_FAILED));
     }
 }

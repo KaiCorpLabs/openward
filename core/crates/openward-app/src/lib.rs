@@ -1123,7 +1123,7 @@ async fn mosh_session(
             rows: size.rows,
             ..Spawn::default()
         },
-        mosh::NOTHING_RECEIVED,
+        mosh::CONNECTION_FAILED,
     );
     drop(t);
     let mut program = match run {

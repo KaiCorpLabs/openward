@@ -29,6 +29,8 @@
 
 Detalle en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+Estado actual, PR y criterios de cierre en el [backlog del proyecto](docs/plan/estado.md).
+
 ## Siempre gratis (borrador)
 
 Desde el lanzamiento de la Community, lo siguiente será open source y gratuito, y la lista solo podrá crecer:
