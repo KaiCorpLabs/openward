@@ -1990,6 +1990,7 @@ dependencies = [
  "openward-term",
  "openward-vault",
  "rand",
+ "rusqlite",
  "rustix",
  "serde",
  "serde_json",

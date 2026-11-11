@@ -426,6 +426,7 @@ abstract class OpenWard implements RustOpaqueInterface {
     required String host,
     required int port,
     required String key,
+    List<String>? previousKeys,
   });
 
   List<TunnelView> tunnels();

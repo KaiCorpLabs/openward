@@ -720,7 +720,63 @@ impl App {
     }
 
     pub fn trust_host_key(&self, host: &str, port: u16, key: &str) -> openward_vault::Result<()> {
-        self.vault().trust_host_key(host, port, key).map(|_| ())
+        self.rotate_host_key(host, port, key, &[])
+    }
+
+    /// Rotation after reviewing a changed-key failure. `previous` carries
+    /// the keys from that attempt's actual OpenSSH files (including custom
+    /// per-host files); OpenWard never rewrites those external sources.
+    pub fn rotate_host_key(
+        &self,
+        host: &str,
+        port: u16,
+        key: &str,
+        previous: &[String],
+    ) -> openward_vault::Result<()> {
+        use openward_ssh::known_hosts::{KnownHosts, Unknown, Verdict, same_key};
+        use openward_ssh::russh::keys::{PublicKey, PublicKeyOrCertificate};
+        let invalid = || openward_vault::Error::Invalid("not an OpenSSH public key");
+        let new = PublicKey::from_openssh(key).map_err(|_| invalid())?;
+        let mut vault = self.vault();
+        let mut known = KnownHosts::parse(&vault.known_hosts_text(), Unknown::Reject);
+        let offered = PublicKeyOrCertificate::PublicKey {
+            key: new.clone(),
+            hash_alg: None,
+        };
+        if known.check(host, port, &offered) == Verdict::Revoked {
+            return Err(openward_vault::Error::Invalid(
+                "the host key is revoked; remove its revocation before trusting it",
+            ));
+        }
+        let mut old: Vec<_> = known.listed(host, port).into_iter().cloned().collect();
+        for key in previous {
+            old.push(PublicKey::from_openssh(key).map_err(|_| invalid())?);
+        }
+        let mut revoked: Vec<PublicKey> = Vec::new();
+        for old in old {
+            if old.algorithm() != new.algorithm()
+                || same_key(old.key_data(), new.key_data())
+                || revoked
+                    .iter()
+                    .any(|k| same_key(k.key_data(), old.key_data()))
+            {
+                continue;
+            }
+            let offered = PublicKeyOrCertificate::PublicKey {
+                key: old.clone(),
+                hash_alg: None,
+            };
+            if known.check(host, port, &offered) != Verdict::Revoked {
+                revoked.push(old);
+            }
+        }
+        let revoked: Vec<_> = revoked
+            .iter()
+            .map(|k| k.to_openssh().map_err(|_| invalid()))
+            .collect::<Result<_, _>>()?;
+        vault
+            .trust_host_key_replacing(host, port, key, &revoked)
+            .map(|_| ())
     }
 
     /// What importing `file` (or `~/.ssh/config`) would bring.

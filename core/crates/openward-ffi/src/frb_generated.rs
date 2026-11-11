@@ -5242,6 +5242,7 @@ fn wire__crate__api__app__OpenWard_trust_host_key_impl(
             let api_host = <String>::sse_decode(&mut deserializer);
             let api_port = <u16>::sse_decode(&mut deserializer);
             let api_key = <String>::sse_decode(&mut deserializer);
+            let api_previous_keys = <Option<Vec<String>>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, crate::api::vault::VaultError>((move || {
@@ -5264,6 +5265,7 @@ fn wire__crate__api__app__OpenWard_trust_host_key_impl(
                         api_host,
                         api_port,
                         api_key,
+                        api_previous_keys,
                     )?;
                     std::result::Result::Ok(output_ok)
                 })())
@@ -11797,9 +11799,11 @@ impl SseDecode for crate::api::session::PreviousKeyView {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_fingerprint = <String>::sse_decode(deserializer);
         let mut var_source = <crate::api::session::KeySourceKind>::sse_decode(deserializer);
+        let mut var_key = <String>::sse_decode(deserializer);
         return crate::api::session::PreviousKeyView {
             fingerprint: var_fingerprint,
             source: var_source,
+            key: var_key,
         };
     }
 }
@@ -15229,6 +15233,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::session::PreviousKeyView {
         [
             self.fingerprint.into_into_dart().into_dart(),
             self.source.into_into_dart().into_dart(),
+            self.key.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -19060,6 +19065,7 @@ impl SseEncode for crate::api::session::PreviousKeyView {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.fingerprint, serializer);
         <crate::api::session::KeySourceKind>::sse_encode(self.source, serializer);
+        <String>::sse_encode(self.key, serializer);
     }
 }
 

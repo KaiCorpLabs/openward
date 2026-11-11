@@ -554,6 +554,7 @@ abstract class RustLibApi extends BaseApi {
     required String host,
     required int port,
     required String key,
+    List<String>? previousKeys,
   });
 
   List<TunnelView> crateApiAppOpenWardTunnels({required OpenWard that});
@@ -4468,6 +4469,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     required String host,
     required int port,
     required String key,
+    List<String>? previousKeys,
   }) {
     return handler.executeNormal(
       NormalTask(
@@ -4480,6 +4482,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(host, serializer);
           sse_encode_u_16(port, serializer);
           sse_encode_String(key, serializer);
+          sse_encode_opt_list_String(previousKeys, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
@@ -4492,7 +4495,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_vault_error,
         ),
         constMeta: kCrateApiAppOpenWardTrustHostKeyConstMeta,
-        argValues: [that, host, port, key],
+        argValues: [that, host, port, key, previousKeys],
         apiImpl: this,
       ),
     );
@@ -4501,7 +4504,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiAppOpenWardTrustHostKeyConstMeta =>
       const TaskConstMeta(
         debugName: "OpenWard_trust_host_key",
-        argNames: ["that", "host", "port", "key"],
+        argNames: ["that", "host", "port", "key", "previousKeys"],
       );
 
   @override
@@ -9422,11 +9425,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   PreviousKeyView dco_decode_previous_key_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
     return PreviousKeyView(
       fingerprint: dco_decode_String(arr[0]),
       source: dco_decode_key_source_kind(arr[1]),
+      key: dco_decode_String(arr[2]),
     );
   }
 
@@ -13143,7 +13147,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_fingerprint = sse_decode_String(deserializer);
     var var_source = sse_decode_key_source_kind(deserializer);
-    return PreviousKeyView(fingerprint: var_fingerprint, source: var_source);
+    var var_key = sse_decode_String(deserializer);
+    return PreviousKeyView(
+      fingerprint: var_fingerprint,
+      source: var_source,
+      key: var_key,
+    );
   }
 
   @protected
@@ -16865,6 +16874,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.fingerprint, serializer);
     sse_encode_key_source_kind(self.source, serializer);
+    sse_encode_String(self.key, serializer);
   }
 
   @protected
@@ -18265,11 +18275,13 @@ class OpenWardImpl extends RustOpaque implements OpenWard {
     required String host,
     required int port,
     required String key,
+    List<String>? previousKeys,
   }) => RustLib.instance.api.crateApiAppOpenWardTrustHostKey(
     that: this,
     host: host,
     port: port,
     key: key,
+    previousKeys: previousKeys,
   );
 
   List<TunnelView> tunnels() =>
