@@ -511,6 +511,12 @@ pub fn import(
 }
 
 fn write_pair(path: &Path, private: &[u8], public: Option<&str>) -> Result<(), KeyError> {
+    let public = public
+        .map(|line| {
+            let key = PublicKey::from_openssh(line).map_err(io)?;
+            public_key_line(&key)
+        })
+        .transpose()?;
     if let Some(dir) = path.parent()
         && !dir.is_dir()
     {
@@ -559,20 +565,57 @@ pub fn public_line(local: &Local, path: &str) -> Result<String, KeyError> {
     };
     let file = local.path(path, &t);
     if let Ok(p) = PublicKey::read_openssh_file(with_suffix(&file, ".pub")) {
-        return p.to_openssh().map_err(io);
+        return public_key_line(&p);
     }
     let text = fs::read_to_string(&file).map_err(io)?;
-    keyfile::from_openssh(&text)
+    let public = keyfile::from_openssh(&text)
         .map(|k| k.public_key().clone())
         .or_else(|_| decode_secret_key(&text, None).map(|k| k.public_key().clone()))
-        .map_err(|_| KeyError::NotAKey)?
+        .map_err(|_| KeyError::NotAKey)?;
+    public_key_line(&public)
+}
+
+/// Comments read from key files are data, even when the decoder preserves
+/// line breaks. Every public half written or offered by the app is one line.
+pub(crate) fn public_key_line(key: &PublicKey) -> Result<String, KeyError> {
+    let mut key = key.clone();
+    let comment: String = key
+        .comment()
+        .as_str_lossy()
+        .chars()
+        .map(|c| if line_control(c) { ' ' } else { c })
+        .collect();
+    key.set_comment(comment);
+    key.to_openssh().map_err(io)
+}
+
+fn line_control(c: char) -> bool {
+    c.is_control() || matches!(c, '\u{2028}' | '\u{2029}')
+}
+
+/// Validates direct installation input before any remote operations. A
+/// rejected line is an error, never "the key was already installed".
+pub fn authorized_line(line: &str) -> std::io::Result<String> {
+    let bad = || {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "expected exactly one SSH public key line",
+        )
+    };
+    let line = line.trim();
+    if line.is_empty() || line.chars().any(line_control) {
+        return Err(bad());
+    }
+    PublicKey::from_openssh(line)
+        .map_err(|_| bad())?
         .to_openssh()
-        .map_err(io)
+        .map_err(|_| bad())
 }
 
 /// `authorized_keys` with `line` in it: `None` when the key is there
 /// already (whatever its options or comment).
-pub fn with_authorized(existing: Option<&[u8]>, line: &str) -> Option<Vec<u8>> {
+pub fn with_authorized(existing: Option<&[u8]>, line: &str) -> std::io::Result<Option<Vec<u8>>> {
+    let line = authorized_line(line)?;
     let mut words = line.split_whitespace();
     let (kind, blob) = (words.next().unwrap_or(""), words.next().unwrap_or(""));
     let text = existing.map(String::from_utf8_lossy).unwrap_or_default();
@@ -581,7 +624,7 @@ pub fn with_authorized(existing: Option<&[u8]>, line: &str) -> Option<Vec<u8>> {
         w.windows(2).any(|p| p[0] == kind && p[1] == blob)
     });
     if present {
-        return None;
+        return Ok(None);
     }
     let mut out = text.into_owned();
     if !out.is_empty() && !out.ends_with('\n') {
@@ -589,7 +632,7 @@ pub fn with_authorized(existing: Option<&[u8]>, line: &str) -> Option<Vec<u8>> {
     }
     out.push_str(line.trim());
     out.push('\n');
-    Some(out.into_bytes())
+    Ok(Some(out.into_bytes()))
 }
 
 #[cfg(test)]
@@ -806,17 +849,114 @@ mod tests {
         assert_eq!(key.public_key().key_data(), public.key_data());
     }
 
+    /// DA-3: a public or private key comment is data, never another key.
+    #[test]
+    fn public_lines_do_not_preserve_executable_comment_lines() {
+        let dir = tempfile::tempdir().unwrap();
+        let local = local(dir.path());
+        fs::create_dir_all(&local.ssh_dir).unwrap();
+        let mut rng = rand::rng();
+        let mut key = PrivateKey::random(&mut rng, Algorithm::Ed25519).unwrap();
+        let extra = PrivateKey::random(&mut rng, Algorithm::Ed25519).unwrap();
+        key.set_comment(format!(
+            "deploy\n{}",
+            extra.public_key().to_openssh().unwrap()
+        ));
+        for with_public in [false, true] {
+            let path = if with_public {
+                "with-public"
+            } else {
+                "private-only"
+            };
+            fs::write(
+                local.ssh_dir.join(path),
+                key.to_openssh(LineEnding::LF).unwrap(),
+            )
+            .unwrap();
+            if with_public {
+                fs::write(
+                    local.ssh_dir.join(format!("{path}.pub")),
+                    key.public_key().to_openssh().unwrap(),
+                )
+                .unwrap();
+            }
+            let line = public_line(&local, &format!("~/.ssh/{path}")).unwrap();
+            assert_eq!(line.lines().count(), 1);
+            assert_eq!(
+                PublicKey::from_openssh(&line).unwrap().key_data(),
+                key.public_key().key_data()
+            );
+        }
+    }
+
     #[test]
     fn authorized_keys_gets_the_line_once() {
-        let line = "ssh-ed25519 AAAAC3Nz ana@mac";
-        let added = with_authorized(None, line).unwrap();
-        assert_eq!(added, b"ssh-ed25519 AAAAC3Nz ana@mac\n");
+        let mut key = PrivateKey::random(&mut rand::rng(), Algorithm::Ed25519).unwrap();
+        key.set_comment("ana@mac");
+        let line = key.public_key().to_openssh().unwrap();
+        let added = with_authorized(None, &format!("{line}\r\n"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(added, format!("{line}\n").as_bytes());
         let other = b"ssh-rsa AAAAB3 bob";
-        let both = with_authorized(Some(other), line).unwrap();
-        assert_eq!(both, b"ssh-rsa AAAAB3 bob\nssh-ed25519 AAAAC3Nz ana@mac\n");
+        let both = with_authorized(Some(other), &line).unwrap().unwrap();
+        assert_eq!(both, format!("ssh-rsa AAAAB3 bob\n{line}\n").as_bytes());
         // There already, with options and another comment.
-        let there = b"from=\"10.0.0.0/8\" ssh-ed25519 AAAAC3Nz old comment\n";
-        assert_eq!(with_authorized(Some(there), line), None);
+        let mut public = key.public_key().clone();
+        public.set_comment("old comment");
+        let there = format!("from=\"10.0.0.0/8\" {}\n", public.to_openssh().unwrap());
+        assert_eq!(
+            with_authorized(Some(there.as_bytes()), &line).unwrap(),
+            None
+        );
+    }
+
+    #[test]
+    fn installation_rejects_extra_lines_controls_and_invalid_keys() {
+        let key = PrivateKey::random(&mut rand::rng(), Algorithm::Ed25519).unwrap();
+        let line = key.public_key().to_openssh().unwrap();
+        for separator in [
+            "\n", "\r\n", "\r", "\u{000b}", "\u{0085}", "\u{2028}", "\u{2029}",
+        ] {
+            let injected = format!("{line} deploy{separator}{line} extra");
+            let error = with_authorized(None, &injected).unwrap_err();
+            assert_eq!(error.kind(), std::io::ErrorKind::InvalidInput);
+            // Duplicate detection must not turn an invalid request into success.
+            assert!(with_authorized(Some(line.as_bytes()), &injected).is_err());
+        }
+        for invalid in ["", "ssh-ed25519 !!!", "ssh-ed25519 AAAAC3Nz", "not a key"] {
+            assert!(with_authorized(None, invalid).is_err());
+        }
+    }
+
+    #[test]
+    fn generated_and_imported_public_files_have_safe_comments() {
+        let dir = tempfile::tempdir().unwrap();
+        let local = local(dir.path());
+        let comment = "deployment\r\nsecond\u{2028}third";
+        generate(
+            &local,
+            "generated",
+            NewKey::Ed25519,
+            comment,
+            None,
+            Users::default,
+        )
+        .unwrap();
+        let mut key = PrivateKey::random(&mut rand::rng(), Algorithm::Ed25519).unwrap();
+        key.set_comment(comment);
+        import(
+            &local,
+            "imported",
+            &key.to_openssh(LineEnding::LF).unwrap(),
+            Users::default,
+        )
+        .unwrap();
+        for name in ["generated", "imported"] {
+            let written = fs::read_to_string(local.ssh_dir.join(format!("{name}.pub"))).unwrap();
+            assert_eq!(written.lines().count(), 1);
+            assert!(!written.trim().chars().any(line_control));
+        }
     }
 
     /// Deleting, renaming and another passphrase: only keys in `~/.ssh`, and

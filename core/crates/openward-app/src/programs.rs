@@ -858,7 +858,7 @@ fn stage_key(local: &Local, shown: &str, key: &bundle::StoredKey) -> Result<Stag
     if let Some(public) = public_key(
         &key.private_key,
         key.passphrase.as_ref().map(|p| p.as_str()),
-    ) && let Ok(line) = public.to_openssh()
+    ) && let Ok(line) = crate::keychain::public_key_line(&public)
     {
         let mut pub_path = path.into_os_string();
         pub_path.push(".pub");

@@ -147,6 +147,8 @@ impl Sftp {
     /// once, the file written whole and then put in place (600). False
     /// when the key was there already.
     pub async fn install_public_key(&self, line: String) -> Result<bool, SftpError> {
+        let line =
+            crate::keychain::authorized_line(&line).map_err(|e| SftpError::Other(e.to_string()))?;
         self.on_remote(|r| async move {
             let dir = openward_sftp::join(r.home(), ".ssh");
             if r.stat(&dir).await?.is_none() {
@@ -155,7 +157,9 @@ impl Sftp {
             }
             let path = openward_sftp::join(&dir, "authorized_keys");
             let existing = r.read_small(&path, 1 << 20).await?;
-            let Some(bytes) = crate::keychain::with_authorized(existing.as_deref(), &line) else {
+            let Some(bytes) = crate::keychain::with_authorized(existing.as_deref(), &line)
+                .map_err(|e| SftpError::Other(e.to_string()))?
+            else {
                 return Ok(false);
             };
             let next = format!("{path}.openward");

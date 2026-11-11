@@ -1450,6 +1450,10 @@ fn a_public_key_put_on_the_server_then_used() {
         std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
     }
     let line = key.public_key().to_openssh().unwrap();
+    let extra = PrivateKey::random(&mut rand::rng(), Algorithm::Ed25519).unwrap();
+    let injected = format!("{line}\n{}", extra.public_key().to_openssh().unwrap());
+    let refused = block_on(sftp.install_public_key(injected));
+    let after_refusal = block_on(remote.read_small(file, 1 << 20)).unwrap();
     let added = block_on(sftp.install_public_key(line.clone()));
     let again = block_on(sftp.install_public_key(line));
 
@@ -1476,6 +1480,11 @@ fn a_public_key_put_on_the_server_then_used() {
         block_on(remote.rename(&next, file, true)).unwrap();
     }
     assert!(added.unwrap(), "the key went in");
+    assert!(refused.is_err(), "a second key must be rejected");
+    assert_eq!(
+        after_refusal, original,
+        "invalid input must not change authorized_keys"
+    );
     assert!(!again.unwrap(), "a key already there is not added again");
     logged_in.unwrap();
 }
