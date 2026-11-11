@@ -42,6 +42,7 @@ context="$tmp/context"
 mkdir -p "$context"
 cp app/tool/linux/Containerfile app/tool/linux/install-tools.sh app/tool/linux/toolchain-pins.sh "$context/"
 cp .github/scripts/install-zig.sh "$context/install-zig.sh"
+cp app/tool/linux/serve-tools.py app/tool/linux/*.sha256 "$context/"
 "$runtime" build ${platform[@]+"${platform[@]}"} -t "$image" -f "$context/Containerfile" \
   --build-arg RUST="$rust" --build-arg ZIG="$zig" --build-arg FLUTTER="$flutter" "$context"
 

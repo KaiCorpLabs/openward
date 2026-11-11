@@ -29,8 +29,19 @@ class BootstrapTests(unittest.TestCase):
                           'RUSTUP_SHA256=' + hashlib.sha256(init).hexdigest(), pins)
             if bad == 'rustup':
                 pins = re.sub(r'RUSTUP_SHA256=[0-9a-f]+', 'RUSTUP_SHA256=' + '0' * 64, pins)
+            pins = re.sub(r'RUST_MANIFEST_SHA256=[0-9a-f]+',
+                          'RUST_MANIFEST_SHA256=' + ('0' * 64 if bad == 'rust-manifest'
+                          else hashlib.sha256(archive).hexdigest()), pins)
             (context / 'toolchain-pins.sh').write_text(pins)
             shutil.copy(Path(__file__).with_name('install-tools.sh'), context)
+            shutil.copy(Path(__file__).with_name('serve-tools.py'), context)
+            for source in Path(__file__).parent.glob('*.sha256'):
+                content = source.read_text()
+                content = re.sub(r'^[0-9a-f]{64}', hashlib.sha256(archive).hexdigest(), content, flags=re.M)
+                if bad in ('rust-component', 'dart', 'engine'):
+                    match = {'rust-component': 'rustc-', 'dart': 'dart-sdk-', 'engine': '-release/'}[bad]
+                    content = '\n'.join('0' * 64 + line[64:] if match in line else line for line in content.splitlines()) + '\n'
+                (context / source.name).write_text(content)
             zig = (ROOT / '.github/scripts/install-zig.sh').read_text()
             checksum = '0' * 64 if bad == 'zig' else hashlib.sha256(archive).hexdigest()
             zig = re.sub(r'sha=[0-9a-f]+', 'sha=' + checksum, zig)
@@ -50,6 +61,7 @@ class BootstrapTests(unittest.TestCase):
                        '  printf \'#!/bin/sh\\necho sdk-executed >> "$BOOTSTRAP_TRACE"\\n\' > "${!#}/bin/flutter"\n'
                        '  chmod +x "${!#}/bin/flutter"\n'
                        'else echo "$TEST_FLUTTER_HEAD"; fi',
+                'python3': 'echo http://127.0.0.1:12345 > "$3"\nexec sleep 60',
             }
             if not shutil.which('sha256sum'):
                 fakes['sha256sum'] = 'exec shasum -a 256 "$@"'
@@ -63,7 +75,7 @@ class BootstrapTests(unittest.TestCase):
                        re.search(r'FLUTTER_COMMIT=(\w+)', pins)[1],
                        RUST='wrong' if bad == 'version' else '1.99.0',
                        FLUTTER='3.47.6', ZIG='0.16.0')
-            command = ['bash', '-c', 'bash "$1" "$2" && "$2/flutter/bin/flutter" config',
+            command = ['bash', '-c', 'bash "$1" "$2"',
                        'test', str(context / 'install-tools.sh'), str(root / 'prefix')]
             result = subprocess.run(command, env=env, capture_output=True, text=True)
             return result.returncode, trace.read_text().splitlines() if trace.exists() else [], result.stderr
@@ -73,7 +85,10 @@ class BootstrapTests(unittest.TestCase):
             with self.subTest(arch=arch):
                 code, trace, error = self.run_bootstrap(arch)
                 self.assertEqual(code, 0, error)
-                self.assertEqual(trace, ['curl', 'rustup-executed', 'curl', 'extracted', 'sdk-executed'])
+                self.assertEqual(trace.count('rustup-executed'), 1)
+                self.assertEqual(trace.count('extracted'), 1)
+                self.assertEqual(trace.count('sdk-executed'), 2)
+                self.assertLess(trace.index('rustup-executed'), trace.index('sdk-executed'))
 
     def test_unreviewed_installer_never_executes(self):
         code, trace, _ = self.run_bootstrap(bad='rustup')
@@ -90,6 +105,21 @@ class BootstrapTests(unittest.TestCase):
         code, trace, _ = self.run_bootstrap(bad='flutter')
         self.assertNotEqual(code, 0)
         self.assertNotIn('sdk-executed', trace)
+
+    def test_correct_installer_cannot_bless_a_replaced_manifest_or_compiler(self):
+        for bad in ['rust-manifest', 'rust-component']:
+            with self.subTest(bad=bad):
+                code, trace, _ = self.run_bootstrap(bad=bad)
+                self.assertNotEqual(code, 0)
+                self.assertNotIn('rustup-executed', trace)
+                self.assertNotIn('extracted', trace)
+
+    def test_correct_flutter_commit_cannot_bless_replaced_executables(self):
+        for bad in ['dart', 'engine']:
+            with self.subTest(bad=bad):
+                code, trace, _ = self.run_bootstrap(bad=bad)
+                self.assertNotEqual(code, 0)
+                self.assertNotIn('sdk-executed', trace)
 
     def test_version_drift_fails_before_downloads(self):
         code, trace, _ = self.run_bootstrap(bad='version')
