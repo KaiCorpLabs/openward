@@ -3,6 +3,8 @@
 // common commands). Nothing leaves the device. An AI source would be one
 // more [SuggestionSource] (phase 3, ADR-008).
 
+import '../terminal/visible_text.dart';
+
 /// Commands typed everywhere: what can be suggested before a host has any
 /// history.
 const commonCommands = [
@@ -69,14 +71,17 @@ class SuggestionSource {
 /// and goes on; null when none does. Nothing for a line that starts with
 /// a space (the shells' "keep this out of the history").
 String? suggestFor(String typed, List<SuggestionSource> sources) {
-  if (typed.isEmpty || typed.startsWith(' ')) return null;
+  if (typed.isEmpty ||
+      typed.startsWith(' ') ||
+      hasHidden(typed, lines: false)) {
+    return null;
+  }
   for (final source in sources) {
     if (typed.length < source.minTyped) continue;
     for (final c in source.commands) {
       if (c.length > typed.length &&
           c.startsWith(typed) &&
-          !c.contains('\n') &&
-          !c.contains('\r')) {
+          !hasHidden(c, lines: false)) {
         return c.substring(typed.length);
       }
     }

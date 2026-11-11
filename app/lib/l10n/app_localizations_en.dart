@@ -6258,4 +6258,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String yesterdayAt(String time) {
     return 'yesterday $time';
   }
+
+  @override
+  String get historyReviewTitle => 'Review history command';
+
+  @override
+  String historyReviewFrom(String place) {
+    return 'History from $place';
+  }
+
+  @override
+  String get historyReviewTo => 'Send to:';
+
+  @override
+  String get historyOriginOwn => 'Written on this device.';
+
+  @override
+  String get historyOriginScreen =>
+      'Reconstructed from terminal output; it may contain text supplied by the server.';
+
+  @override
+  String get historyOriginUnknown =>
+      'The origin of this older history entry is unknown.';
 }

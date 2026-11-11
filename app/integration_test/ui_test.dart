@@ -3996,6 +3996,39 @@ Host db
     );
     expect(container.read(historyProvider).first.count, 2);
 
+    // Old history has no own-input evidence. Selecting it must review
+    // before any bytes reach even this same live local shell.
+    final history = container.read(historyProvider.notifier);
+    history.add('echo reviewed-legacy-rg7', a);
+    for (final approve in [false, true]) {
+      await cmdShift(tester, LogicalKeyboardKey.keyP);
+      await tester.enterText(field('palette.query'), 'reviewed-legacy-rg7');
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Revisar comando del historial'), findsOneWidget);
+      expect(a.session.screenText(), isNot(contains('reviewed-legacy-rg7')));
+      await tester.tap(
+        approve ? field('history.review.send') : find.text('Cancelar'),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      if (approve) {
+        await _until(
+          tester,
+          () => a.session.screenText().contains('reviewed-legacy-rg7\n'),
+          'the reviewed legacy command',
+        );
+        expect(
+          container.read(historyProvider).first.origin,
+          CommandOrigin.unknown,
+        );
+        expect(container.read(historyProvider).first.count, 2);
+      } else {
+        expect(container.read(historyProvider).first.count, 1);
+      }
+    }
+    history.remove(container.read(historyProvider).first);
+
     // Its row in Ajustes › Registros.
     final tabs = container.read(tabsProvider.notifier);
     tabs.openPage(PageKind.settings);
@@ -4041,7 +4074,9 @@ Host db
     await _until(tester, () => a.phase == Phase.running, 'the shell');
     await tester.pump(const Duration(milliseconds: 500));
     final pane = tester.state<TerminalPaneState>(find.byType(TerminalPane));
-    container.read(historyProvider.notifier).add(r'echo ghost-$((40+2))', a);
+    container
+        .read(historyProvider.notifier)
+        .add(r'echo ghost-$((40+2))', a, origin: CommandOrigin.own);
     String? ghost() => a.currentRenderer?.ghost?.text;
 
     pane.updateEditingValue(

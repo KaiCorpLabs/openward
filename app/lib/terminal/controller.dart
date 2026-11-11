@@ -231,6 +231,7 @@ class TerminalController extends ConnectionController {
     if (e.kind == SessionEventKind.closed ||
         e.kind == SessionEventKind.reconnecting) {
       _shellGeneration++;
+      this.line.shellChanged();
     }
     final down = phase == Phase.reconnecting;
     final since = stalledSince ?? reconnectingSince;
@@ -267,6 +268,7 @@ class TerminalController extends ConnectionController {
     if (e.kind == SessionEventKind.connected && !isDisposed) {
       final resumed = persistent?.state == PersistenceKind.resumed;
       final generation = ++_shellGeneration;
+      this.line.shellChanged();
       final queued = sendWhenUp;
       sendWhenUp = null;
       unawaited(_startShell(generation, resumed, queued));
