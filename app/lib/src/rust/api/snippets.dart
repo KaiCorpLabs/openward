@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `apply`, `spec_of`, `variables_of`
+// These functions are ignored because they are not marked as `pub`: `apply`, `spec_of`, `variables_of`, `view_of`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`
 
 /// What `script` asks for, as an editor shows it while typing.
@@ -98,17 +98,23 @@ class SnippetView {
   final BigInt rev;
   final SnippetSpec spec;
   final SnippetVariables variables;
+  final bool requiresReview;
 
   const SnippetView({
     required this.id,
     required this.rev,
     required this.spec,
     required this.variables,
+    this.requiresReview = false,
   });
 
   @override
   int get hashCode =>
-      id.hashCode ^ rev.hashCode ^ spec.hashCode ^ variables.hashCode;
+      id.hashCode ^
+      rev.hashCode ^
+      spec.hashCode ^
+      variables.hashCode ^
+      requiresReview.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -118,5 +124,6 @@ class SnippetView {
           id == other.id &&
           rev == other.rev &&
           spec == other.spec &&
-          variables == other.variables;
+          variables == other.variables &&
+          requiresReview == other.requiresReview;
 }

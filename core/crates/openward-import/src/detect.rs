@@ -235,6 +235,26 @@ mod tests {
     use super::*;
 
     #[test]
+    fn a_foreign_ssh_config_is_not_a_program_import() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("ssh_config");
+        // The file picker and drop target use this boundary. The separate
+        // OpenSSH action reads the operator's own configuration instead.
+        fs::write(
+            &file,
+            "Host foreign\n  HostName example.com\n  ProxyCommand sh -c 'echo unexpected'\n",
+        )
+        .unwrap();
+        assert!(matches!(read(&file, None), Err(Error::NotRecognized)));
+        // Renaming the hostile file to a recognized suffix grants no parser.
+        let renamed = dir.path().join("hosts.csv");
+        fs::rename(&file, &renamed).unwrap();
+        assert!(read(&renamed, None).is_err());
+        fs::write(&renamed, "Label,Hostname/IP\nweb,10.0.0.1\n").unwrap();
+        assert_eq!(read(&renamed, None).unwrap().0, Program::Csv);
+    }
+
+    #[test]
     fn files_are_recognized_by_their_contents() {
         let dir = tempfile::tempdir().unwrap();
         let write = |name: &str, text: &str| {

@@ -15,6 +15,8 @@ import 'renderer.dart';
 
 export '../core/connection.dart' show ConnectionController, Phase;
 
+typedef StartupCommand = ({String? text, bool cancelled});
+
 /// One terminal tab: the Rust session, its renderer and what the session
 /// reported. Lives as long as the tab, visible or not.
 class TerminalController extends ConnectionController {
@@ -35,7 +37,10 @@ class TerminalController extends ConnectionController {
 
   /// What to type in each new shell once it is up (the host's startup
   /// snippet), worked out then; null for nothing.
-  String? Function()? startup;
+  FutureOr<StartupCommand?> Function()? startup;
+
+  int _shellGeneration = 0;
+  int get shellGeneration => _shellGeneration;
 
   /// Typed once in the next shell that comes up (a snippet run on several
   /// hosts), after [startup]; with Enter, or left on the line.
@@ -223,6 +228,10 @@ class TerminalController extends ConnectionController {
 
   @override
   void onEvent(SessionEvent e) {
+    if (e.kind == SessionEventKind.closed ||
+        e.kind == SessionEventKind.reconnecting) {
+      _shellGeneration++;
+    }
     final down = phase == Phase.reconnecting;
     final since = stalledSince ?? reconnectingSince;
     super.onEvent(e);
@@ -257,15 +266,37 @@ class TerminalController extends ConnectionController {
     // from before as it was; then what was waiting for it.
     if (e.kind == SessionEventKind.connected && !isDisposed) {
       final resumed = persistent?.state == PersistenceKind.resumed;
-      final first = resumed ? null : startup?.call();
-      if (first != null) session.text(text: '$first\n');
-      if (sendWhenUp case final send?) {
-        sendWhenUp = null;
-        if (send.enter) {
-          session.text(text: '${send.text}\n');
-        } else {
-          session.paste(text: send.text, allowUnsafe: true);
-        }
+      final generation = ++_shellGeneration;
+      final queued = sendWhenUp;
+      sendWhenUp = null;
+      unawaited(_startShell(generation, resumed, queued));
+    }
+  }
+
+  Future<void> _startShell(
+    int generation,
+    bool resumed,
+    ({String text, bool enter})? queued,
+  ) async {
+    StartupCommand? first;
+    try {
+      first = resumed ? null : await startup?.call();
+    } catch (error, stack) {
+      FlutterError.reportError(
+        FlutterErrorDetails(exception: error, stack: stack),
+      );
+      return;
+    }
+    if (isDisposed || generation != _shellGeneration || phase == Phase.closed) {
+      return;
+    }
+    if (first?.cancelled ?? false) return;
+    if (first?.text case final text?) session.text(text: '$text\n');
+    if (queued case final send?) {
+      if (send.enter) {
+        session.text(text: '${send.text}\n');
+      } else {
+        session.paste(text: send.text, allowUnsafe: true);
       }
     }
   }

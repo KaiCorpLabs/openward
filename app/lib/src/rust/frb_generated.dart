@@ -80,7 +80,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 385048966;
+  int get rustContentHash => -1970148551;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -525,7 +525,9 @@ abstract class RustLibApi extends BaseApi {
 
   SftpBrowser crateApiAppOpenWardSftp({required OpenWard that});
 
-  List<SnippetView> crateApiAppOpenWardSnippets({required OpenWard that});
+  List<SnippetView> crateApiAppOpenWardSnippetsForExecution({
+    required OpenWard that,
+  });
 
   List<TagCount> crateApiAppOpenWardTags({required OpenWard that});
 
@@ -4289,7 +4291,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "OpenWard_sftp", argNames: ["that"]);
 
   @override
-  List<SnippetView> crateApiAppOpenWardSnippets({required OpenWard that}) {
+  List<SnippetView> crateApiAppOpenWardSnippetsForExecution({
+    required OpenWard that,
+  }) {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
@@ -4304,15 +4308,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeSuccessData: sse_decode_list_snippet_view,
           decodeErrorData: null,
         ),
-        constMeta: kCrateApiAppOpenWardSnippetsConstMeta,
+        constMeta: kCrateApiAppOpenWardSnippetsForExecutionConstMeta,
         argValues: [that],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiAppOpenWardSnippetsConstMeta =>
-      const TaskConstMeta(debugName: "OpenWard_snippets", argNames: ["that"]);
+  TaskConstMeta get kCrateApiAppOpenWardSnippetsForExecutionConstMeta =>
+      const TaskConstMeta(
+        debugName: "OpenWard_snippets_for_execution",
+        argNames: ["that"],
+      );
 
   @override
   List<TagCount> crateApiAppOpenWardTags({required OpenWard that}) {
@@ -9882,13 +9889,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   SnippetView dco_decode_snippet_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return SnippetView(
       id: dco_decode_String(arr[0]),
       rev: dco_decode_u_64(arr[1]),
       spec: dco_decode_snippet_spec(arr[2]),
       variables: dco_decode_snippet_variables(arr[3]),
+      requiresReview: dco_decode_bool(arr[4]),
     );
   }
 
@@ -13689,11 +13697,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_rev = sse_decode_u_64(deserializer);
     var var_spec = sse_decode_snippet_spec(deserializer);
     var var_variables = sse_decode_snippet_variables(deserializer);
+    var var_requiresReview = sse_decode_bool(deserializer);
     return SnippetView(
       id: var_id,
       rev: var_rev,
       spec: var_spec,
       variables: var_variables,
+      requiresReview: var_requiresReview,
     );
   }
 
@@ -17246,6 +17256,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_64(self.rev, serializer);
     sse_encode_snippet_spec(self.spec, serializer);
     sse_encode_snippet_variables(self.variables, serializer);
+    sse_encode_bool(self.requiresReview, serializer);
   }
 
   @protected
@@ -18207,8 +18218,8 @@ class OpenWardImpl extends RustOpaque implements OpenWard {
       RustLib.instance.api.crateApiAppOpenWardSftp(that: this);
 
   /// Every snippet, by name.
-  List<SnippetView> snippets() =>
-      RustLib.instance.api.crateApiAppOpenWardSnippets(that: this);
+  List<SnippetView> snippetsForExecution() =>
+      RustLib.instance.api.crateApiAppOpenWardSnippetsForExecution(that: this);
 
   List<TagCount> tags() =>
       RustLib.instance.api.crateApiAppOpenWardTags(that: this);

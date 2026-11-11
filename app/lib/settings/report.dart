@@ -35,7 +35,7 @@ String reportText(WidgetRef ref, AppLocalizations l, String locale) {
       library.groups.length,
       app.tunnels().length,
       app.identities().length,
-      app.snippets().length,
+      app.snippetsForExecution().length,
     ),
   ].join('\n');
 }

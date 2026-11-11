@@ -1581,6 +1581,8 @@
   "runSnippetHint": "Fill in what it asks. It is not saved.",
   "runSnippetIn": "In {where}",
   "runSnippetTitle": "Run “{name}”",
+  "snippetReviewHelp": "Exactly this text will be sent. Review every line and destination before continuing.",
+  "snippetStartupReview": "Snippet on connection",
   "sameHost": "the same host",
   "sampleComment": "a grey comment",
   "sampleError": "error:",

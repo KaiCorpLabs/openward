@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openward/src/rust/api/session.dart';
 import 'package:openward/src/rust/api/vault.dart' show ProtocolKind;
@@ -209,4 +211,56 @@ void main() {
     expect(c.error, contains('a loop of jumps'));
     expect(c.errorCause, isA<StateError>());
   });
+
+  test(
+    'pending startup consent holds both startup and queued commands',
+    () async {
+      final decision = Completer<StartupCommand?>();
+      c.startup = () => decision.future;
+      c.sendWhenUp = (text: 'reviewed multi-host command', enter: true);
+      c.start();
+      await send(event(SessionEventKind.connected, connected: _connected));
+      expect(app.sessions.single.sentTexts, isEmpty);
+      decision.complete((text: 'reviewed startup', cancelled: false));
+      await pumpEventQueue();
+      expect(app.sessions.single.sentTexts, [
+        'reviewed startup\n',
+        'reviewed multi-host command\n',
+      ]);
+    },
+  );
+
+  test('denied startup consent drops queued execution as well', () async {
+    final decision = Completer<StartupCommand?>();
+    c.startup = () => decision.future;
+    c.sendWhenUp = (text: 'queued command', enter: true);
+    c.start();
+    await send(event(SessionEventKind.connected, connected: _connected));
+    decision.complete((text: null, cancelled: true));
+    await pumpEventQueue();
+    expect(app.sessions.single.sentTexts, isEmpty);
+    expect(app.sessions.single.pastedTexts, isEmpty);
+  });
+
+  test(
+    'approval for a closed shell cannot execute after reconnecting',
+    () async {
+      final old = Completer<StartupCommand?>();
+      final next = Completer<StartupCommand?>();
+      c.startup = () => old.future;
+      c.sendWhenUp = (text: 'old queued command', enter: true);
+      c.start();
+      await send(event(SessionEventKind.connected, connected: _connected));
+      await send(event(SessionEventKind.closed, closed: const ClosedView()));
+      c.startup = () => next.future;
+      c.start();
+      await send(event(SessionEventKind.connected, connected: _connected));
+      old.complete((text: 'old approval', cancelled: false));
+      await pumpEventQueue();
+      expect(app.sessions.single.sentTexts, isEmpty);
+      next.complete((text: 'new approval', cancelled: false));
+      await pumpEventQueue();
+      expect(app.sessions.single.sentTexts, ['new approval\n']);
+    },
+  );
 }

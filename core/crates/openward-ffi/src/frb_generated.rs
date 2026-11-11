@@ -44,7 +44,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 385048966;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1970148551;
 
 // Section: executor
 
@@ -4950,14 +4950,14 @@ fn wire__crate__api__app__OpenWard_sftp_impl(
         },
     )
 }
-fn wire__crate__api__app__OpenWard_snippets_impl(
+fn wire__crate__api__app__OpenWard_snippets_for_execution_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
     data_len_: i32,
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "OpenWard_snippets",
+            debug_name: "OpenWard_snippets_for_execution",
             port: None,
             mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
         },
@@ -4990,7 +4990,9 @@ fn wire__crate__api__app__OpenWard_snippets_impl(
                     }
                 }
                 let api_that_guard = api_that_guard.unwrap();
-                let output_ok = Ok::<_, ()>(crate::api::app::OpenWard::snippets(&*api_that_guard))?;
+                let output_ok = Ok::<_, ()>(crate::api::app::OpenWard::snippets_for_execution(
+                    &*api_that_guard,
+                ))?;
                 std::result::Result::Ok(output_ok)
             })())
         },
@@ -12495,11 +12497,13 @@ impl SseDecode for crate::api::snippets::SnippetView {
         let mut var_rev = <u64>::sse_decode(deserializer);
         let mut var_spec = <crate::api::snippets::SnippetSpec>::sse_decode(deserializer);
         let mut var_variables = <crate::api::snippets::SnippetVariables>::sse_decode(deserializer);
+        let mut var_requiresReview = <bool>::sse_decode(deserializer);
         return crate::api::snippets::SnippetView {
             id: var_id,
             rev: var_rev,
             spec: var_spec,
             variables: var_variables,
+            requires_review: var_requiresReview,
         };
     }
 }
@@ -13355,7 +13359,9 @@ fn pde_ffi_dispatcher_sync_impl(
             data_len,
         ),
         94 => wire__crate__api__app__OpenWard_sftp_impl(ptr, rust_vec_len, data_len),
-        95 => wire__crate__api__app__OpenWard_snippets_impl(ptr, rust_vec_len, data_len),
+        95 => {
+            wire__crate__api__app__OpenWard_snippets_for_execution_impl(ptr, rust_vec_len, data_len)
+        }
         96 => wire__crate__api__app__OpenWard_tags_impl(ptr, rust_vec_len, data_len),
         97 => wire__crate__api__app__OpenWard_terminal_impl(ptr, rust_vec_len, data_len),
         98 => wire__crate__api__app__OpenWard_transfer_impl(ptr, rust_vec_len, data_len),
@@ -16111,6 +16117,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::snippets::SnippetView {
             self.rev.into_into_dart().into_dart(),
             self.spec.into_into_dart().into_dart(),
             self.variables.into_into_dart().into_dart(),
+            self.requires_review.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -19580,6 +19587,7 @@ impl SseEncode for crate::api::snippets::SnippetView {
         <u64>::sse_encode(self.rev, serializer);
         <crate::api::snippets::SnippetSpec>::sse_encode(self.spec, serializer);
         <crate::api::snippets::SnippetVariables>::sse_encode(self.variables, serializer);
+        <bool>::sse_encode(self.requires_review, serializer);
     }
 }
 
