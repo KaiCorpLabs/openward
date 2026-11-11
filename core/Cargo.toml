@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
     "crates/openward-app",
+    "crates/openward-crypto",
     "crates/openward-ffi",
     "crates/openward-fido",
     "crates/openward-ghostty",
