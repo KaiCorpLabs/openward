@@ -5,6 +5,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/providers.dart';
@@ -13,6 +14,7 @@ import '../l10n/l10n.dart';
 import '../src/rust/api/snippets.dart';
 import '../src/rust/api/vault.dart';
 import '../tabs/tabs.dart';
+import '../terminal/visible_text.dart';
 import '../ui/tokens.dart';
 import 'snippets.dart';
 
@@ -25,30 +27,29 @@ Future<void> showRunOnHosts(
   ProviderContainer container,
   SnippetView s,
 ) async {
-  final picked = await showDialog<(List<HostView>, Map<String, String>)>(
+  final picked = await showDialog<List<_ApprovedHost>>(
     context: context,
     useRootNavigator: true,
     builder: (_) => _HostsDialog(snippet: s),
   );
   if (picked == null) return;
-  runOnHosts(container, s, picked.$1, picked.$2);
+  _runApprovedHosts(container, s, picked);
 }
 
-/// A tab with `hosts` in a grid, `s` (with `asked` filled in) typed in
-/// each once its shell is up.
-void runOnHosts(
+typedef _ApprovedHost = ({HostView host, String text});
+
+/// Only the immutable commands displayed before the user approved them.
+void _runApprovedHosts(
   ProviderContainer container,
   SnippetView s,
-  List<HostView> hosts,
-  Map<String, String> asked,
+  List<_ApprovedHost> commands,
 ) {
-  if (hosts.isEmpty) return;
+  if (commands.isEmpty) return;
   final tabs = container.read(tabsProvider.notifier);
   final panes = <Pane>[];
-  for (final h in hosts.take(runOnHostsMax)) {
-    final c = tabs.startSession(host: h, reuse: true);
-    final text = renderFor(container, s, c, asked);
-    c.sendWhenUp = (text: text, enter: !s.spec.typeOnly);
+  for (final command in commands.take(runOnHostsMax)) {
+    final c = tabs.startSession(host: command.host, reuse: true);
+    c.sendWhenUp = (text: command.text, enter: !s.spec.typeOnly);
     panes.add(Pane(c));
   }
   final root = gridOf(panes);
@@ -86,6 +87,8 @@ class _HostsDialog extends ConsumerStatefulWidget {
 class _HostsDialogState extends ConsumerState<_HostsDialog> {
   final _filter = TextEditingController();
   final Set<String> _chosen = {};
+  Map<String, String> _shownValues = {};
+  List<_ApprovedHost> _shownCommands = [];
   late final Map<String, TextEditingController> _values = {
     for (final name in widget.snippet.variables.asked)
       name: TextEditingController(),
@@ -129,6 +132,15 @@ class _HostsDialogState extends ConsumerState<_HostsDialog> {
         h.tags.any((t) => t.toLowerCase().contains(f));
   }
 
+  void _send() {
+    final values = {for (final e in _values.entries) e.key: e.value.text};
+    if (!mapEquals(values, _shownValues)) {
+      setState(() {});
+      return;
+    }
+    Navigator.of(context).pop(_shownCommands);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
@@ -138,8 +150,25 @@ class _HostsDialogState extends ConsumerState<_HostsDialog> {
     final shown = hosts.where(_matches).toList();
     final chosen = hosts.where((h) => _chosen.contains(h.id)).toList();
     final tooMany = chosen.length > runOnHostsMax;
+    _shownValues = {for (final e in _values.entries) e.key: e.value.text};
+    _shownCommands = [
+      for (final h in chosen)
+        (
+          host: h,
+          text: renderSnippet(
+            script: widget.snippet.spec.script,
+            values: [
+              for (final e in {
+                ...builtinValuesForHost(h),
+                ..._shownValues,
+              }.entries)
+                SnippetValue(name: e.key, value: e.value),
+            ],
+          ),
+        ),
+    ];
     return AlertDialog(
-      title: Text(l.runOnHostsTitle(widget.snippet.spec.label)),
+      title: Text(l.runOnHostsTitle(visibleName(widget.snippet.spec.label))),
       content: SizedBox(
         width: 520,
         height: 460,
@@ -157,6 +186,7 @@ class _HostsDialogState extends ConsumerState<_HostsDialog> {
                 child: TextField(
                   key: ValueKey('runOnHosts.value.$key'),
                   controller: value,
+                  onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(labelText: key),
                 ),
               ),
@@ -202,14 +232,15 @@ class _HostsDialogState extends ConsumerState<_HostsDialog> {
                       dense: true,
                       value: _chosen.contains(h.id),
                       controlAffinity: ListTileControlAffinity.leading,
-                      title: Text(h.label),
+                      title: Text(visibleName(h.label)),
                       subtitle: Text(
-                        [
-                          hostAddress(h),
-                          if (h.groupId != null)
-                            ?library.group(h.groupId!)?.name,
-                        ].join(' · '),
-                        overflow: TextOverflow.ellipsis,
+                        visibleName(
+                          [
+                            hostAddress(h),
+                            if (h.groupId != null)
+                              ?library.group(h.groupId!)?.name,
+                          ].join(' · '),
+                        ),
                       ),
                       onChanged: (v) => setState(
                         () => v == true
@@ -220,6 +251,28 @@ class _HostsDialogState extends ConsumerState<_HostsDialog> {
                 ],
               ),
             ),
+            if (chosen.isNotEmpty && !tooMany) ...[
+              Text(l.snippetReviewHelp),
+              const SizedBox(height: OwSpace.s2),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final command in _shownCommands)
+                        snippetCommandPreview(
+                          context,
+                          SnippetCommand(
+                            destination:
+                                '${command.host.label} · ${hostAddress(command.host)}',
+                            text: command.text,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             if (tooMany)
               Text(
                 l.runOnHostsMax(runOnHostsMax),
@@ -235,12 +288,7 @@ class _HostsDialogState extends ConsumerState<_HostsDialog> {
         ),
         FilledButton(
           key: const ValueKey('runOnHosts.run'),
-          onPressed: chosen.isEmpty || tooMany
-              ? null
-              : () => Navigator.of(context).pop((
-                  chosen,
-                  {for (final e in _values.entries) e.key: e.value.text},
-                )),
+          onPressed: chosen.isEmpty || tooMany ? null : _send,
           child: Text(l.runOnHostsAction(chosen.length)),
         ),
       ],

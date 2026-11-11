@@ -3522,6 +3522,8 @@
     }
   },
   "runSnippetTitle": "Ejecutar «{name}»",
+  "snippetReviewHelp": "Se enviará exactamente este texto. Revisa todas las líneas y el destino antes de continuar.",
+  "snippetStartupReview": "Snippet al conectar",
   "@runSnippetTitle": {
     "placeholders": {
       "name": {

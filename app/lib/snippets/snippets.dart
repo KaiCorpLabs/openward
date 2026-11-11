@@ -1,12 +1,16 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/providers.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/snippets.dart';
+import '../src/rust/api/vault.dart' show HostView;
+import '../terminal/visible_text.dart';
 import '../tabs/tabs.dart';
 import '../terminal/controller.dart';
 import '../ui/confirm.dart';
@@ -16,9 +20,10 @@ import '../ui/widgets.dart';
 /// The saved snippets, by name.
 class SnippetsNotifier extends Notifier<List<SnippetView>> {
   @override
-  List<SnippetView> build() => ref.read(openWardProvider).snippets();
+  List<SnippetView> build() =>
+      ref.read(openWardProvider).snippetsForExecution();
 
-  void refresh() => state = ref.read(openWardProvider).snippets();
+  void refresh() => state = ref.read(openWardProvider).snippetsForExecution();
 }
 
 final snippetsProvider = NotifierProvider<SnippetsNotifier, List<SnippetView>>(
@@ -65,6 +70,20 @@ Map<String, String> builtinValuesIn(Library library, TerminalController c) {
   };
 }
 
+Map<String, String> builtinValuesForHost(HostView host) => {
+  'host': host.label,
+  'address': host.address,
+  'user': host.user,
+  'port': '${host.port}',
+};
+
+String snippetDestination(TerminalController c) {
+  final connected = c.connected;
+  return connected == null
+      ? c.displayTitle
+      : '${c.displayTitle} · ${connected.host}:${connected.port}';
+}
+
 String renderFor(
   ProviderContainer ref,
   SnippetView s,
@@ -84,24 +103,33 @@ bool asksNothing(SnippetView s) => s.variables.asked.isEmpty;
 
 /// The startup snippet of `c`'s host (its own or its groups'), filled in
 /// for it; null for none, one deleted since, or one that asks for values.
-String? startupText(
+FutureOr<StartupCommand?> prepareStartupSnippet(
   Library library,
   List<SnippetView> snippets,
-  TerminalController c,
-) {
+  TerminalController c, {
+  Future<bool> Function(SnippetView snippet, String text)? review,
+}) {
   final hostId = c.hostId;
   if (hostId == null) return null;
   final id = library.host(hostId)?.startupSnippet ?? '';
   if (id.isEmpty) return null;
   final s = snippets.where((s) => s.id == id).firstOrNull;
   if (s == null || !asksNothing(s)) return null;
-  return renderSnippet(
+  final text = renderSnippet(
     script: s.spec.script,
     values: [
       for (final e in builtinValuesIn(library, c).entries)
         SnippetValue(name: e.key, value: e.value),
     ],
   );
+  if (s.requiresReview || s.variables.builtins.isNotEmpty) {
+    if (review == null) return (text: null, cancelled: true);
+    return review(
+      s,
+      text,
+    ).then((approved) => (text: approved ? text : null, cancelled: !approved));
+  }
+  return (text: text, cancelled: false);
 }
 
 /// Sends `s` to the front tab: the panes that receive while broadcasting,
@@ -117,19 +145,51 @@ Future<void> runSnippet(
   final targets = snippetTargets(ref);
   if (targets.isEmpty) return;
   final only = typeOnly ?? s.spec.typeOnly;
-  var values = const <String, String>{};
-  if (s.variables.asked.isNotEmpty || targets.length > 1) {
-    final answered = await showDialog<Map<String, String>>(
+  List<_SnippetSend> approved;
+  if (s.variables.asked.isNotEmpty) {
+    final answered = await showDialog<List<_SnippetSend>>(
       context: context,
       builder: (_) => _RunDialog(snippet: s, targets: targets, typeOnly: only),
       useRootNavigator: true,
     );
     if (answered == null) return;
-    values = answered;
+    approved = answered;
+  } else {
+    approved = [
+      for (final c in targets)
+        (
+          target: c,
+          generation: c.shellGeneration,
+          text: renderFor(ref, s, c, const {}),
+        ),
+    ];
+    if (s.requiresReview ||
+        s.variables.builtins.isNotEmpty ||
+        targets.length > 1) {
+      if (!await reviewSnippetCommands(
+        context,
+        label: s.spec.label,
+        commands: [
+          for (final command in approved)
+            SnippetCommand(
+              destination: snippetDestination(command.target),
+              text: command.text,
+            ),
+        ],
+        typeOnly: only,
+      )) {
+        return;
+      }
+    }
   }
-  for (final c in targets) {
-    if (c.isDisposed) continue;
-    final text = renderFor(ref, s, c, values);
+  for (final command in approved) {
+    final c = command.target;
+    if (c.isDisposed ||
+        c.shellGeneration != command.generation ||
+        c.phase == Phase.closed) {
+      continue;
+    }
+    final text = command.text;
     if (only) {
       c.session.paste(text: text, allowUnsafe: true);
     } else {
@@ -138,6 +198,91 @@ Future<void> runSnippet(
   }
   targets.first.focusTerminal?.call();
 }
+
+typedef _SnippetSend = ({
+  TerminalController target,
+  int generation,
+  String text,
+});
+
+/// The exact command reviewed for a destination, never rendered again after consent.
+class SnippetCommand {
+  const SnippetCommand({required this.destination, required this.text});
+  final String destination;
+  final String text;
+}
+
+Widget snippetCommandPreview(BuildContext context, SnippetCommand command) {
+  final c = context.ow.colors;
+  return Padding(
+    padding: const EdgeInsets.all(OwSpace.s4),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          visibleName(command.destination),
+          style: TextStyle(color: c.textMuted),
+        ),
+        const SizedBox(height: 6),
+        Text.rich(
+          visibleText(
+            command.text,
+            style: monoStyle(context, size: 12, color: c.text),
+            mark: monoStyle(context, size: 12, color: c.warn),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Future<bool> reviewSnippetCommands(
+  BuildContext context, {
+  required String label,
+  required List<SnippetCommand> commands,
+  bool typeOnly = false,
+  bool startup = false,
+}) async =>
+    await showDialog<bool>(
+      context: context,
+      useRootNavigator: true,
+      builder: (context) {
+        final l = context.l10n;
+        return AlertDialog(
+          title: Text(
+            startup
+                ? l.snippetStartupReview
+                : l.runSnippetTitle(visibleName(label)),
+          ),
+          content: SizedBox(
+            width: 540,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(l.snippetReviewHelp),
+                  for (final command in commands)
+                    snippetCommandPreview(context, command),
+                  Text(typeOnly ? l.snippetTypeOnlyNote : l.snippetWithEnter),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(l.cancel),
+            ),
+            FilledButton(
+              key: const ValueKey('snippet.review.run'),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l.sendAction),
+            ),
+          ],
+        );
+      },
+    ) ??
+    false;
 
 /// What a snippet asks for, and the command each pane gets.
 class _RunDialog extends StatefulWidget {
@@ -156,6 +301,8 @@ class _RunDialog extends StatefulWidget {
 }
 
 class _RunDialogState extends State<_RunDialog> {
+  Map<String, String> _shownValues = const {};
+  List<_SnippetSend> _shownCommands = const [];
   late final Map<String, TextEditingController> _fields = {
     for (final name in widget.snippet.variables.asked)
       name: TextEditingController(
@@ -179,7 +326,13 @@ class _RunDialogState extends State<_RunDialog> {
       if (e.value.text.isNotEmpty) e.key: e.value.text,
   };
 
-  void _send() => Navigator.pop(context, _values);
+  void _send() {
+    if (!mapEquals(_shownValues, _values)) {
+      setState(() {});
+      return;
+    }
+    Navigator.pop(context, _shownCommands);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -189,8 +342,19 @@ class _RunDialogState extends State<_RunDialog> {
     final many = widget.targets.length > 1;
     final values = _values;
     final ref = ProviderScope.containerOf(context);
+    _shownValues = Map.of(values);
+    _shownCommands = [
+      for (final t in widget.targets)
+        (
+          target: t,
+          generation: t.shellGeneration,
+          text: renderFor(ref, widget.snippet, t, values),
+        ),
+    ];
     Widget preview(TerminalController t) {
-      final text = renderFor(ref, widget.snippet, t, values);
+      final text = _shownCommands
+          .firstWhere((command) => identical(command.target, t))
+          .text;
       return Container(
         padding: const EdgeInsets.symmetric(
           horizontal: OwSpace.s5,
@@ -206,15 +370,17 @@ class _RunDialogState extends State<_RunDialog> {
               SizedBox(
                 width: 90,
                 child: Text(
-                  t.displayTitle,
-                  overflow: TextOverflow.ellipsis,
+                  visibleName(snippetDestination(t)),
                   style: TextStyle(fontSize: OwText.small, color: c.textMuted),
                 ),
               ),
             Expanded(
-              child: Text(
-                text,
-                style: monoStyle(context, size: 12, color: c.text),
+              child: Text.rich(
+                visibleText(
+                  text,
+                  style: monoStyle(context, size: 12, color: c.text),
+                  mark: monoStyle(context, size: 12, color: c.warn),
+                ),
               ),
             ),
           ],
@@ -280,7 +446,11 @@ class _RunDialogState extends State<_RunDialog> {
                       child: Text(
                         many
                             ? l.runSnippetBroadcast(widget.targets.length)
-                            : l.runSnippetIn(widget.targets.first.displayTitle),
+                            : l.runSnippetIn(
+                                visibleName(
+                                  snippetDestination(widget.targets.first),
+                                ),
+                              ),
                         style: TextStyle(
                           fontSize: OwText.small,
                           fontWeight: FontWeight.w600,

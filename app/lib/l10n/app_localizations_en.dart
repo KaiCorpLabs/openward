@@ -4774,6 +4774,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get snippetReviewHelp =>
+      'Exactly this text will be sent. Review every line and destination before continuing.';
+
+  @override
+  String get snippetStartupReview => 'Snippet on connection';
+
+  @override
   String get sameHost => 'the same host';
 
   @override

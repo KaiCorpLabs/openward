@@ -29,12 +29,15 @@ pub struct SnippetSpec {
     pub type_only: bool,
 }
 
+#[frb(non_opaque)]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SnippetView {
     pub id: String,
     pub rev: u64,
     pub spec: SnippetSpec,
     pub variables: SnippetVariables,
+    #[frb(default = "false")]
+    pub requires_review: bool,
 }
 
 /// What a script asks for, and which session values it uses.
@@ -70,6 +73,16 @@ fn spec_of(s: &Snippet) -> SnippetSpec {
     }
 }
 
+fn view_of(id: String, rev: u64, s: &Snippet) -> SnippetView {
+    SnippetView {
+        id,
+        rev,
+        spec: spec_of(s),
+        variables: variables_of(&s.script),
+        requires_review: s.imported.is_some(),
+    }
+}
+
 /// Writes `spec` over `s`, keeping what OpenWard does not know.
 fn apply(spec: &SnippetSpec, s: &mut Snippet) {
     s.label = spec.label.trim().to_owned();
@@ -86,17 +99,12 @@ fn apply(spec: &SnippetSpec, s: &mut Snippet) {
 impl OpenWard {
     /// Every snippet, by name.
     #[frb(sync)]
-    pub fn snippets(&self) -> Vec<SnippetView> {
+    pub fn snippets_for_execution(&self) -> Vec<SnippetView> {
         let vault = self.app.vault();
         vault
             .snippets()
             .into_iter()
-            .map(|(sid, s)| SnippetView {
-                id: sid.to_string(),
-                rev: vault.get(sid).map_or(0, |i| i.rev),
-                spec: spec_of(s),
-                variables: variables_of(&s.script),
-            })
+            .map(|(sid, s)| view_of(sid.to_string(), vault.get(sid).map_or(0, |i| i.rev), s))
             .collect()
     }
 
@@ -137,6 +145,29 @@ pub fn render_snippet(script: String, values: Vec<SnippetValue>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn imported_snippets_require_review_even_after_editing() {
+        use openward_app::vault::proto::Imported;
+
+        let spec = SnippetSpec {
+            label: "Own".into(),
+            script: "echo ok".into(),
+            defaults: vec![],
+            type_only: false,
+        };
+        let mut own = Snippet::default();
+        apply(&spec, &mut own);
+        assert!(!view_of("own".into(), 1, &own).requires_review);
+        let mut imported = Snippet {
+            imported: Some(Imported::new("termius", "source-id")),
+            script: "echo ok; unexpected-command".into(),
+            ..Snippet::default()
+        };
+        assert!(view_of("imported".into(), 1, &imported).requires_review);
+        apply(&spec, &mut imported);
+        assert!(view_of("imported".into(), 2, &imported).requires_review);
+    }
 
     #[test]
     fn a_snippet_round_trips_through_its_spec() {

@@ -29,6 +29,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:openward/app.dart';
 import 'package:openward/core/providers.dart';
+import 'package:openward/core/errors.dart' show appNavigator;
 import 'package:openward/core/settings.dart';
 import 'package:openward/history/history.dart';
 import 'package:openward/identities/identities.dart';
@@ -1579,23 +1580,45 @@ Host web-1 web-2
     final first = container.read(tabsProvider).currentSession!;
     await _until(
       tester,
+      () => find
+          .byKey(const ValueKey('snippet.review.run'))
+          .evaluate()
+          .isNotEmpty,
+      'the startup command review',
+    );
+    expect(first.session.screenText(), isNot(contains('startup-42 ninetwo')));
+    await tester.tap(find.byKey(const ValueKey('snippet.review.run')));
+    await _until(
+      tester,
       () => first.session.screenText().contains('startup-42 ninetwo'),
       'the startup snippet',
     );
 
     // On both, from the snippets' page: a tab with a pane each.
-    final library = container.read(libraryProvider);
     final s = container
         .read(snippetsProvider)
         .firstWhere((s) => s.spec.label == 'En todos');
-    runOnHosts(container, s, [
-      for (final label in ['ninetwo', 'tenzero'])
-        library.hosts.firstWhere((h) => h.label == label),
-    ], const {});
+    final running = showRunOnHosts(appNavigator.currentContext!, container, s);
+    await _settle(tester);
+    for (final label in ['ninetwo', 'tenzero']) {
+      await tester.tap(find.byKey(ValueKey('runOnHosts.host.$label')));
+      await _settle(tester);
+    }
+    await tester.tap(find.byKey(const ValueKey('runOnHosts.run')));
+    await running;
     await tester.pump(const Duration(milliseconds: 300));
     final tab = container.read(tabsProvider).current as SessionTab;
     final panes = tab.panes.controllers.toList();
     expect(panes.map((c) => c.label), ['ninetwo', 'tenzero']);
+    await _until(
+      tester,
+      () => find
+          .byKey(const ValueKey('snippet.review.run'))
+          .evaluate()
+          .isNotEmpty,
+      'the new pane startup review',
+    );
+    await tester.tap(find.byKey(const ValueKey('snippet.review.run')));
     for (final c in panes) {
       await _until(
         tester,
@@ -3549,12 +3572,12 @@ Host db
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.text('Eliminar'));
     await tester.pump(const Duration(milliseconds: 400));
-    expect(app.snippets(), isEmpty);
+    expect(app.snippetsForExecution(), isEmpty);
     expect(find.text('Snippet «Saludo» eliminado'), findsOneWidget);
     await tester.tap(find.text('Deshacer'));
     await _until(
       tester,
-      () => app.snippets().any((s) => s.spec.label == 'Saludo'),
+      () => app.snippetsForExecution().any((s) => s.spec.label == 'Saludo'),
       'the snippet back',
     );
 
