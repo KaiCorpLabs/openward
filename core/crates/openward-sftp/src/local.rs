@@ -78,28 +78,146 @@ pub fn remove(path: &Path) -> Result<()> {
 /// As `Remote::chmod`: files keep execute only if they had it.
 #[cfg(unix)]
 pub fn chmod(path: &Path, mode: u32, recursive: bool) -> Result<u64> {
-    use std::os::unix::fs::PermissionsExt;
-    let set = |p: &Path, m: u32| {
-        std::fs::set_permissions(p, std::fs::Permissions::from_mode(m & 0o7777)).map_err(err(p))
-    };
-    let meta = path.symlink_metadata().map_err(err(path))?;
-    set(path, mode)?;
-    let mut changed = 1;
-    if recursive && meta.is_dir() {
-        for (rel, e) in walk(path)? {
-            let p = path.join(&rel);
-            match e.kind {
-                Kind::Dir => set(&p, mode)?,
-                Kind::File => {
-                    let had_x = e.mode.unwrap_or(0) & 0o111 != 0;
-                    set(&p, if had_x { mode } else { mode & !0o111 })?;
-                }
-                _ => continue,
-            }
-            changed += 1;
-        }
+    chmod_with_options(path, mode, recursive, false)
+}
+
+/// A checkbox/rwx edit keeps each object's own special bits. An explicit
+/// four-digit mode can change the selected root's bits; never inherit
+/// that root's setuid/setgid/sticky bits into its descendants.
+#[cfg(unix)]
+pub fn chmod_with_options(
+    path: &Path,
+    mode: u32,
+    recursive: bool,
+    preserve_special: bool,
+) -> Result<u64> {
+    use cap_std::{ambient_authority, fs::Dir};
+    // Following the explicitly selected root link is intentional. Descendants
+    // stay confined to held directories; observed links are skipped.
+    let root = std::fs::canonicalize(path).map_err(err(path))?;
+    let parent = root.parent().unwrap_or(&root);
+    let name = Path::new(root.file_name().unwrap_or(std::ffi::OsStr::new(".")));
+    let parent = Dir::open_ambient_dir(parent, ambient_authority()).map_err(err(path))?;
+    chmod_entry(
+        &parent,
+        name,
+        path,
+        mode,
+        recursive,
+        preserve_special,
+        false,
+    )
+}
+
+#[cfg(unix)]
+fn chmod_entry(
+    parent: &cap_std::fs::Dir,
+    name: &Path,
+    display: &Path,
+    requested: u32,
+    recursive: bool,
+    preserve_special: bool,
+    child: bool,
+) -> Result<u64> {
+    use cap_fs_ext::{DirExt, MetadataExt};
+    use cap_std::fs::{Permissions, PermissionsExt};
+    let meta = parent.symlink_metadata(name).map_err(err(display))?;
+    if meta.is_symlink() {
+        return if child {
+            Ok(0)
+        } else {
+            Err(Error::Changed(display.display().to_string()))
+        };
     }
-    Ok(changed)
+    if child && !meta.is_dir() && !meta.is_file() {
+        return Ok(0);
+    }
+    let had = meta.permissions().mode() & 0o7777;
+    let mut mode = (requested & 0o777)
+        | if child || preserve_special {
+            had & 0o7000
+        } else {
+            requested & 0o7000
+        };
+    if child && meta.is_file() && had & 0o111 == 0 {
+        mode &= !0o111;
+    }
+    if recursive && meta.is_dir() {
+        // Make only owner access explicitly requested by this operation
+        // available for traversal. Restrictive final modes apply bottom up.
+        let temporary = had | (mode & 0o700);
+        if temporary != had {
+            set_named_mode(parent, name, temporary).map_err(err(display))?;
+        }
+        let dir = parent.open_dir_nofollow(name).map_err(err(display))?;
+        let opened = dir.dir_metadata().map_err(err(display))?;
+        if (opened.dev(), opened.ino()) != (meta.dev(), meta.ino()) {
+            return Err(Error::Changed(display.display().to_string()));
+        }
+        let mut names = dir
+            .entries()
+            .map_err(err(display))?
+            .map(|e| e.map(|e| e.file_name()))
+            .collect::<std::io::Result<Vec<_>>>()
+            .map_err(err(display))?;
+        names.sort();
+        let mut changed = 1;
+        for name in names {
+            changed += chmod_entry(
+                &dir,
+                Path::new(&name),
+                &display.join(&name),
+                requested,
+                true,
+                true,
+                true,
+            )?;
+        }
+        dir.set_permissions(".", Permissions::from_mode(mode))
+            .map_err(err(display))?;
+        if dir
+            .dir_metadata()
+            .map_err(err(display))?
+            .permissions()
+            .mode()
+            & 0o7777
+            != mode
+        {
+            return Err(Error::Other(format!(
+                "{}: permissions could not be applied",
+                display.display()
+            )));
+        }
+        Ok(changed)
+    } else {
+        set_named_mode(parent, name, mode).map_err(err(display))?;
+        let after = parent.symlink_metadata(name).map_err(err(display))?;
+        if (after.dev(), after.ino()) != (meta.dev(), meta.ino()) || after.is_symlink() {
+            return Err(Error::Changed(display.display().to_string()));
+        }
+        if after.permissions().mode() & 0o7777 != mode {
+            return Err(Error::Other(format!(
+                "{}: permissions could not be applied",
+                display.display()
+            )));
+        }
+        Ok(1)
+    }
+}
+
+#[cfg(unix)]
+fn set_named_mode(parent: &cap_std::fs::Dir, name: &Path, mode: u32) -> std::io::Result<()> {
+    use cap_std::fs::{Permissions, PermissionsExt};
+    // rustix's Linux chmodat rejects SYMLINK_NOFOLLOW. Its confined
+    // setter uses an O_PATH descriptor instead. On macOS the no-follow
+    // setter also permits chmod of owned objects with no read/write access.
+    #[cfg(target_os = "linux")]
+    return parent.set_permissions(name, Permissions::from_mode(mode));
+    #[cfg(not(target_os = "linux"))]
+    {
+        use cap_fs_ext::DirExt;
+        parent.set_symlink_permissions(name, Permissions::from_mode(mode))
+    }
 }
 
 #[cfg(not(unix))]
@@ -108,6 +226,16 @@ pub fn chmod(path: &Path, _mode: u32, _recursive: bool) -> Result<u64> {
         "{}: permissions are Unix only",
         path.display()
     )))
+}
+
+#[cfg(not(unix))]
+pub fn chmod_with_options(
+    path: &Path,
+    mode: u32,
+    recursive: bool,
+    _preserve_special: bool,
+) -> Result<u64> {
+    chmod(path, mode, recursive)
 }
 
 /// Everything under `dir`, directories before what they hold, as paths
@@ -149,6 +277,67 @@ pub fn home() -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn explicitly_selected_directory_links_recurse_without_propagating_special_bits() {
+        use std::os::unix::fs::{PermissionsExt, symlink};
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("root");
+        std::fs::create_dir_all(root.join("child")).unwrap();
+        std::fs::write(root.join("child/file"), b"").unwrap();
+        // Some macOS temp roots inherit wheel rather than the test user's
+        // primary group; that would make the kernel silently strip setgid.
+        for path in [root.join("child"), root.join("child/file")] {
+            rustix::fs::chown(path, None, Some(rustix::process::getegid())).unwrap();
+        }
+        std::fs::set_permissions(root.join("child"), std::fs::Permissions::from_mode(0o2775))
+            .unwrap();
+        std::fs::set_permissions(
+            root.join("child/file"),
+            std::fs::Permissions::from_mode(0o4755),
+        )
+        .unwrap();
+        let outside = tmp.path().join("outside");
+        std::fs::write(&outside, b"untouched").unwrap();
+        std::fs::set_permissions(&outside, std::fs::Permissions::from_mode(0o640)).unwrap();
+        symlink(&outside, root.join("skip-link")).unwrap();
+        let selected = tmp.path().join("selected");
+        symlink(&root, &selected).unwrap();
+        let mode = |path: &Path| std::fs::metadata(path).unwrap().permissions().mode() & 0o7777;
+        assert_eq!(mode(&root.join("child")), 0o2775);
+        assert_eq!(mode(&root.join("child/file")), 0o4755);
+        assert_eq!(chmod(&selected, 0o750, true).unwrap(), 3);
+        assert_eq!(mode(&root), 0o750);
+        assert_eq!(mode(&root.join("child")), 0o2750);
+        assert_eq!(mode(&root.join("child/file")), 0o4750);
+        assert_eq!(mode(&outside), 0o640);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rwx_edits_keep_current_special_bits_and_explicit_modes_only_change_the_root() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("root");
+        std::fs::create_dir(&root).unwrap();
+        let plain = root.join("plain");
+        std::fs::write(&plain, b"private").unwrap();
+        std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o1777)).unwrap();
+        std::fs::set_permissions(&plain, std::fs::Permissions::from_mode(0o4640)).unwrap();
+        let mode = |path: &Path| std::fs::metadata(path).unwrap().permissions().mode() & 0o7777;
+        assert_eq!(chmod_with_options(&root, 0o750, true, true).unwrap(), 2);
+        assert_eq!(mode(&root), 0o1750);
+        assert_eq!(mode(&plain), 0o4640); // No execute added to a non-executable child.
+        assert_eq!(chmod(&root, 0o700, true).unwrap(), 2);
+        assert_eq!(mode(&root), 0o700);
+        assert_eq!(mode(&plain), 0o4600); // The root's explicit clearing is not inherited.
+        assert_eq!(chmod(&root, 0o000, true).unwrap(), 2);
+        assert_eq!(mode(&root), 0o000);
+        // Owner access requested by the operation permits traversal again.
+        assert_eq!(chmod(&root, 0o700, true).unwrap(), 2);
+        assert_eq!(mode(&plain), 0o4600);
+    }
 
     #[test]
     fn lists_walks_renames_and_removes() {

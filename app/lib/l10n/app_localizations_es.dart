@@ -4027,6 +4027,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get permOctal => 'En octal';
 
   @override
+  String get permUnavailable => 'No se han podido leer los permisos actuales.';
+
+  @override
+  String get permLinkTarget => 'Los cambios se aplican al destino del enlace.';
+
+  @override
+  String get permSpecialNote =>
+      'Tres dígitos conservan los bits especiales; cuatro los fijan en este elemento. Al aplicar recursivamente se conservan los bits especiales de cada hijo.';
+
+  @override
   String get permOthers => 'Otros';
 
   @override

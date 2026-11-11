@@ -538,6 +538,47 @@ async fn lists_and_changes_files() {
     s.done().await;
 }
 
+#[tokio::test]
+async fn chmod_selected_links_preserves_each_objects_special_bits() {
+    let fx = servers!();
+    for port in ALL {
+        let s = server(&fx, port, "chmod-special").await;
+        s.sh("mkdir -p root/child && printf run > root/child/run && printf data > root/plain && printf outside > outside && chmod 640 outside && chmod 1777 root && chmod 2775 root/child && chmod 4755 root/child/run && chmod 4640 root/plain && ln -s ../outside root/skip && ln -s root selected").await;
+        let selected = join(&s.dir, "selected");
+        assert_eq!(s.entry("root/child").await.unwrap().mode, Some(0o2775));
+        assert_eq!(s.entry("root/child/run").await.unwrap().mode, Some(0o4755));
+        assert_eq!(
+            s.remote
+                .chmod_with_options(&selected, 0o750, true, true)
+                .await
+                .unwrap(),
+            4
+        );
+        for (path, mode) in [
+            ("root", 0o1750),
+            ("root/child", 0o2750),
+            ("root/child/run", 0o4750),
+            ("root/plain", 0o4640),
+            ("outside", 0o640),
+        ] {
+            assert_eq!(
+                s.entry(path).await.unwrap().mode,
+                Some(mode),
+                "{port}: {path}"
+            );
+        }
+        assert_eq!(s.remote.chmod(&selected, 0o000, true).await.unwrap(), 4);
+        assert_eq!(s.entry("root").await.unwrap().mode, Some(0));
+        // Requested owner access allows changing an initially inaccessible tree.
+        assert_eq!(s.remote.chmod(&selected, 0o700, true).await.unwrap(), 4);
+        assert_eq!(s.entry("root").await.unwrap().mode, Some(0o700));
+        assert_eq!(s.entry("root/child").await.unwrap().mode, Some(0o2700));
+        assert_eq!(s.entry("root/plain").await.unwrap().mode, Some(0o4600));
+        assert_eq!(s.entry("outside").await.unwrap().mode, Some(0o640));
+        s.done().await;
+    }
+}
+
 /// Walking a folder, what a download does first, on every server of the
 /// matrix; and far away, with several listings at once.
 #[tokio::test]

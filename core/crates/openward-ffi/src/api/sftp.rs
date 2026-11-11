@@ -263,8 +263,17 @@ impl SftpBrowser {
 
     /// With `recursive`, files keep execute only if they had it. Returns
     /// how many entries changed.
-    pub async fn chmod(&self, path: String, mode: u32, recursive: bool) -> Result<i64> {
-        Ok(self.sftp.chmod(path, mode, recursive).await? as i64)
+    pub async fn chmod(
+        &self,
+        path: String,
+        mode: u32,
+        recursive: bool,
+        preserve_special: Option<bool>,
+    ) -> Result<i64> {
+        Ok(self
+            .sftp
+            .chmod_with_options(path, mode, recursive, preserve_special.unwrap_or(false))
+            .await? as i64)
     }
 
     /// Which of `sources` already exist in `dest_dir` (on the other side).
@@ -322,8 +331,18 @@ pub fn local_remove(paths: Vec<String>) -> Result<()> {
     Ok(())
 }
 
-pub fn local_chmod(path: String, mode: u32, recursive: bool) -> Result<i64> {
-    Ok(local::chmod(&PathBuf::from(path), mode, recursive)? as i64)
+pub fn local_chmod(
+    path: String,
+    mode: u32,
+    recursive: bool,
+    preserve_special: Option<bool>,
+) -> Result<i64> {
+    Ok(local::chmod_with_options(
+        &PathBuf::from(path),
+        mode,
+        recursive,
+        preserve_special.unwrap_or(false),
+    )? as i64)
 }
 
 pub(crate) fn transfer(

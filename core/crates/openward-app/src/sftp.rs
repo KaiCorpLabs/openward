@@ -130,6 +130,20 @@ impl Sftp {
             .await
     }
 
+    pub async fn chmod_with_options(
+        &self,
+        path: String,
+        mode: u32,
+        recursive: bool,
+        preserve_special: bool,
+    ) -> Result<u64, SftpError> {
+        self.on_remote(|r| async move {
+            r.chmod_with_options(&path, mode, recursive, preserve_special)
+                .await
+        })
+        .await
+    }
+
     pub async fn conflicts(
         &self,
         direction: Direction,

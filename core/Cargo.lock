@@ -2090,6 +2090,7 @@ dependencies = [
  "cap-std",
  "openward-ssh",
  "russh-sftp",
+ "rustix",
  "tempfile",
  "thiserror 2.0.21",
  "tokio",

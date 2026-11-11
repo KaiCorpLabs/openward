@@ -6104,6 +6104,7 @@ fn wire__crate__api__sftp__SftpBrowser_chmod_impl(
             let api_path = <String>::sse_decode(&mut deserializer);
             let api_mode = <u32>::sse_decode(&mut deserializer);
             let api_recursive = <bool>::sse_decode(&mut deserializer);
+            let api_preserve_special = <Option<bool>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, crate::api::sftp::FileError>(
@@ -6130,6 +6131,7 @@ fn wire__crate__api__sftp__SftpBrowser_chmod_impl(
                             api_path,
                             api_mode,
                             api_recursive,
+                            api_preserve_special,
                         )
                         .await?;
                         std::result::Result::Ok(output_ok)
@@ -8831,11 +8833,16 @@ fn wire__crate__api__sftp__local_chmod_impl(
             let api_path = <String>::sse_decode(&mut deserializer);
             let api_mode = <u32>::sse_decode(&mut deserializer);
             let api_recursive = <bool>::sse_decode(&mut deserializer);
+            let api_preserve_special = <Option<bool>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, crate::api::sftp::FileError>((move || {
-                    let output_ok =
-                        crate::api::sftp::local_chmod(api_path, api_mode, api_recursive)?;
+                    let output_ok = crate::api::sftp::local_chmod(
+                        api_path,
+                        api_mode,
+                        api_recursive,
+                        api_preserve_special,
+                    )?;
                     std::result::Result::Ok(output_ok)
                 })())
             }

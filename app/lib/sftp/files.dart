@@ -16,6 +16,9 @@ abstract class FileSystem {
   /// Where browsing starts.
   Future<String> home();
   Future<List<FileEntry>> list(String dir);
+
+  /// Effective target metadata, following an explicitly selected root link.
+  Future<FileEntry?> stat(String path);
   Future<void> mkdir(String path);
 
   /// Never over something that exists.
@@ -23,7 +26,12 @@ abstract class FileSystem {
   Future<void> remove(List<String> paths);
 
   /// Returns how many entries changed.
-  Future<int> chmod(String path, int mode, {required bool recursive});
+  Future<int> chmod(
+    String path,
+    int mode, {
+    required bool recursive,
+    bool preserveSpecial = true,
+  });
 }
 
 class LocalFileSystem implements FileSystem {
@@ -39,6 +47,9 @@ class LocalFileSystem implements FileSystem {
   Future<List<FileEntry>> list(String dir) => localList(path: dir);
 
   @override
+  Future<FileEntry?> stat(String path) => localStat(path: path);
+
+  @override
   Future<void> mkdir(String path) => localMkdir(path: path);
 
   @override
@@ -49,8 +60,17 @@ class LocalFileSystem implements FileSystem {
   Future<void> remove(List<String> paths) => localRemove(paths: paths);
 
   @override
-  Future<int> chmod(String path, int mode, {required bool recursive}) async =>
-      (await localChmod(path: path, mode: mode, recursive: recursive)).toInt();
+  Future<int> chmod(
+    String path,
+    int mode, {
+    required bool recursive,
+    bool preserveSpecial = true,
+  }) async => (await localChmod(
+    path: path,
+    mode: mode,
+    recursive: recursive,
+    preserveSpecial: preserveSpecial,
+  )).toInt();
 }
 
 class RemoteFileSystem implements FileSystem {
@@ -68,6 +88,9 @@ class RemoteFileSystem implements FileSystem {
   Future<List<FileEntry>> list(String dir) => browser.list(path: dir);
 
   @override
+  Future<FileEntry?> stat(String path) => browser.stat(path: path);
+
+  @override
   Future<void> mkdir(String path) => browser.mkdir(path: path);
 
   @override
@@ -78,12 +101,17 @@ class RemoteFileSystem implements FileSystem {
   Future<void> remove(List<String> paths) => browser.remove(paths: paths);
 
   @override
-  Future<int> chmod(String path, int mode, {required bool recursive}) async =>
-      (await browser.chmod(
-        path: path,
-        mode: mode,
-        recursive: recursive,
-      )).toInt();
+  Future<int> chmod(
+    String path,
+    int mode, {
+    required bool recursive,
+    bool preserveSpecial = true,
+  }) async => (await browser.chmod(
+    path: path,
+    mode: mode,
+    recursive: recursive,
+    preserveSpecial: preserveSpecial,
+  )).toInt();
 }
 
 enum SortBy { name, size, modified }

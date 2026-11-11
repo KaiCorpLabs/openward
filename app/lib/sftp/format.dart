@@ -46,13 +46,20 @@ String formatMode(int mode) {
   const letters = 'rwx';
   final b = StringBuffer();
   for (var i = 8; i >= 0; i--) {
-    b.write(mode & (1 << i) != 0 ? letters[(8 - i) % 3] : '-');
+    final executable = mode & (1 << i) != 0;
+    if (i == 6 && mode & 0x800 != 0 || i == 3 && mode & 0x400 != 0) {
+      b.write(executable ? 's' : 'S');
+    } else if (i == 0 && mode & 0x200 != 0) {
+      b.write(executable ? 't' : 'T');
+    } else {
+      b.write(executable ? letters[(8 - i) % 3] : '-');
+    }
   }
   return b.toString();
 }
 
 /// `754`.
-String octal(int mode) => (mode & 0x1ff).toRadixString(8).padLeft(3, '0');
+String octal(int mode) => (mode & 0xfff).toRadixString(8).padLeft(3, '0');
 
 /// `19 s`, `1 min 5 s`, `2 h 3 min`.
 String formatDuration(Duration d) {
