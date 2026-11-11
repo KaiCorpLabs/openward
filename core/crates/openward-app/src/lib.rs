@@ -1282,7 +1282,9 @@ fn create_private_dir(dir: &Path) -> std::io::Result<PathBuf> {
         let canonical = std::fs::canonicalize(&absolute)?;
         check_parents(&canonical)?;
         let before = std::fs::metadata(&canonical)?;
-        if !before.is_dir() || before.uid() != uid || before.mode() & 0o1000 != 0 {
+        // A previously writable root may already contain another user's
+        // links to data outside it. Tightening its mode cannot undo that.
+        if !before.is_dir() || before.uid() != uid || before.mode() & 0o1022 != 0 {
             return Err(denied());
         }
         // The name is now protected by the checked parents. This also
@@ -1419,6 +1421,26 @@ mod tests {
         assert_eq!(
             std::fs::metadata(tmp.path()).unwrap().permissions().mode() & 0o7777,
             0o1777
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_writable_existing_root_cannot_launder_preplanted_data_links() {
+        use std::os::unix::fs::{PermissionsExt, symlink};
+        let tmp = tempfile::tempdir().unwrap();
+        let data = tmp.path().join("data");
+        std::fs::create_dir(&data).unwrap();
+        std::fs::set_permissions(&data, std::fs::Permissions::from_mode(0o777)).unwrap();
+        let outside = tmp.path().join("outside.db");
+        std::fs::write(&outside, []).unwrap();
+        std::fs::set_permissions(&outside, std::fs::Permissions::from_mode(0o666)).unwrap();
+        symlink(&outside, data.join("vault.db")).unwrap();
+        assert!(App::open_as(&data, Local::from_env()).is_err());
+        assert_eq!(std::fs::metadata(&outside).unwrap().len(), 0);
+        assert_eq!(
+            std::fs::metadata(&data).unwrap().permissions().mode() & 0o7777,
+            0o777
         );
     }
 
