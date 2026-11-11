@@ -234,7 +234,8 @@ impl Logs {
     /// exit are closed as such, and what is past the limits goes. The
     /// limits are the ones kept there, or `config` the first time.
     pub fn open(dir: &Path, config: Config) -> std::io::Result<Arc<Self>> {
-        crate::create_private_dir(dir)?;
+        let private_dir = crate::create_private_dir(dir)?;
+        let dir = private_dir.as_path();
         let config = fs::read(dir.join(CONFIG_FILE))
             .ok()
             .and_then(|b| serde_json::from_slice(&b).ok())
