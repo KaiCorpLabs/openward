@@ -129,6 +129,7 @@ enum Patterns {
 #[derive(Clone, Debug)]
 pub struct KnownHosts {
     entries: Vec<Entry>,
+    local_pins: Vec<Entry>,
     pub unknown: Unknown,
 }
 
@@ -220,6 +221,7 @@ impl KnownHosts {
     pub fn new(unknown: Unknown) -> Self {
         Self {
             entries: Vec::new(),
+            local_pins: Vec::new(),
             unknown,
         }
     }
@@ -236,6 +238,28 @@ impl KnownHosts {
             })
             .collect();
         hosts
+    }
+
+    /// Pins learned or explicitly selected by this client, separate from
+    /// imported/file policy. A conflicting residual key must be reviewed
+    /// again after upgrading from versions that did not retire old pins.
+    /// Unlisted keys certified by a trusted CA keep their normal validation.
+    pub fn with_local_pins(mut self, text: &str) -> Self {
+        self.local_pins = lines(text)
+            .into_iter()
+            .filter(|l| {
+                l.marker.is_none()
+                    && l.hosts
+                        .as_ref()
+                        .is_some_and(|h| !h.contains(['*', '?', '!', ',']))
+            })
+            .map(|l| Entry {
+                patterns: l.patterns,
+                marker: None,
+                key: l.key,
+            })
+            .collect();
+        self
     }
 
     /// Remembers a host key (what TOFU does after the first connection).
@@ -288,6 +312,27 @@ impl KnownHosts {
         };
         if revoked {
             return Verdict::Revoked;
+        }
+        let subject = match offered {
+            PublicKeyOrCertificate::Certificate(cert) => cert.public_key(),
+            PublicKeyOrCertificate::PublicKey { key, .. } => key.key_data(),
+        };
+        let pins: Vec<_> = self
+            .local_pins
+            .iter()
+            .filter(|e| e.patterns.matches(&spec) && e.key.algorithm() == subject.algorithm())
+            .collect();
+        if let Some(pin) = pins.first() {
+            let ambiguous = pins
+                .iter()
+                .any(|p| !same_key(p.key.key_data(), pin.key.key_data()));
+            let listed_subject = self
+                .listed(host, port)
+                .iter()
+                .any(|k| same_key(k.key_data(), subject));
+            if listed_subject && (ambiguous || !same_key(pin.key.key_data(), subject)) {
+                return Verdict::Changed;
+            }
         }
         match offered {
             PublicKeyOrCertificate::Certificate(cert) => self.check_certificate(host, &spec, cert),

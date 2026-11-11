@@ -230,6 +230,8 @@ pub struct ChangedKey {
 pub struct PreviousKey {
     pub fingerprint: String,
     pub source: KeySource,
+    /// Canonical OpenSSH text to revoke this exact key when rotating.
+    pub key: String,
 }
 
 /// Where a trusted key is written down.

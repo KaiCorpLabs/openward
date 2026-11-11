@@ -477,7 +477,12 @@ Future<void> showHostKeyChanged(
   try {
     await ref
         .read(openWardProvider)
-        .trustHostKey(host: f.host, port: f.port, key: f.key);
+        .trustHostKey(
+          host: f.host,
+          port: f.port,
+          key: f.key,
+          previousKeys: f.previous.map((p) => p.key).toList(),
+        );
   } catch (e) {
     if (context.mounted) {
       showErrorNotice(

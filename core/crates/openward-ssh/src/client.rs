@@ -262,9 +262,13 @@ impl client::Handler for Handler {
         if own.trusted() {
             verdict = own.clone();
         }
-        let plain_key =
-            plain.is_some() || matches!(offered, PublicKeyOrCertificate::PublicKey { .. });
-        if let (false, Some(hook), true) = (own.trusted(), &self.on_untrusted, plain_key) {
+        // A certified subject held for rotation needs the same failure
+        // context as a changed plain key. The app still refuses Changed;
+        // trusting it requires the separate explicit rotation flow.
+        let reviewable_key = plain.is_some()
+            || matches!(offered, PublicKeyOrCertificate::PublicKey { .. })
+            || own == Verdict::Changed;
+        if let (false, Some(hook), true) = (own.trusted(), &self.on_untrusted, reviewable_key) {
             let query = HostKeyQuery {
                 host: host.clone(),
                 port,
@@ -1552,6 +1556,73 @@ pub async fn send(channel: &Channel<client::Msg>, data: &[u8]) -> anyhow::Result
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn a_changed_certified_subject_reaches_the_rotation_callback() {
+        use crate::known_hosts::Unknown;
+        use russh::keys::{
+            Algorithm, PrivateKey,
+            ssh_key::certificate::{Builder, CertType},
+        };
+        let mut rng = rand::rng();
+        let (old, new, ca) = (
+            PrivateKey::random(&mut rng, Algorithm::Ed25519).unwrap(),
+            PrivateKey::random(&mut rng, Algorithm::Ed25519).unwrap(),
+            PrivateKey::random(&mut rng, Algorithm::Ed25519).unwrap(),
+        );
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let mut builder = Builder::new(
+            [5; 16],
+            old.public_key().key_data().clone(),
+            now - 60,
+            now + 3600,
+        )
+        .unwrap();
+        builder.cert_type(CertType::Host).unwrap();
+        builder.valid_principal("host.example").unwrap();
+        let certificate = PublicKeyOrCertificate::Certificate(builder.sign(&ca).unwrap());
+        let pin = format!("host.example {}", new.public_key().to_openssh().unwrap());
+        let text = format!(
+            "{pin}\nhost.example {}\n@cert-authority host.example {}",
+            old.public_key().to_openssh().unwrap(),
+            ca.public_key().to_openssh().unwrap()
+        );
+        let query = Arc::new(Mutex::new(None));
+        let captured = Arc::clone(&query);
+        let mut handler = Handler {
+            target: Target::new("host.example", 22),
+            known_hosts: Arc::new(Mutex::new(
+                KnownHosts::parse(&text, Unknown::Reject).with_local_pins(&pin),
+            )),
+            agent_forward: None,
+            on_untrusted: Some(Arc::new(move |q| {
+                *captured.lock().unwrap() = Some(q);
+                Box::pin(async { false })
+            })),
+            shared: Arc::new(Mutex::new(Shared {
+                info: Info::default(),
+                remote_forwards: HashMap::new(),
+                started: Instant::now(),
+                asking: false,
+                asked: Duration::ZERO,
+            })),
+        };
+        assert!(
+            !client::Handler::check_server_key(&mut handler, &certificate)
+                .await
+                .unwrap()
+        );
+        let q = query
+            .lock()
+            .unwrap()
+            .take()
+            .expect("changed certificate must explain the rotation");
+        assert_eq!(q.verdict, Verdict::Changed);
+        assert_eq!(q.key, *old.public_key());
+    }
 
     /// The limit is the server's time: what goes asking the user about the
     /// host key is added to it.

@@ -548,8 +548,19 @@ impl OpenWard {
 
     /// Trusts a key the user checked, replacing the old one of its type
     /// (after a changed host key).
-    pub fn trust_host_key(&self, host: String, port: u16, key: String) -> Result<(), VaultError> {
-        Ok(self.app.trust_host_key(&host, port, &key)?)
+    pub fn trust_host_key(
+        &self,
+        host: String,
+        port: u16,
+        key: String,
+        previous_keys: Option<Vec<String>>,
+    ) -> Result<(), VaultError> {
+        Ok(self.app.rotate_host_key(
+            &host,
+            port,
+            &key,
+            previous_keys.as_deref().unwrap_or_default(),
+        )?)
     }
 
     /// A new terminal tab, connected to nothing yet: pass it to
