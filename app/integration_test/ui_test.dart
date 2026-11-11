@@ -3359,10 +3359,10 @@ Host db
       );
       final container = await launch(tester);
       Finder field(String key) => find.byKey(ValueKey(key));
-      IdentityView? named(String label) => container
-          .read(identitiesProvider)
-          .where((i) => i.spec.label == label)
-          .firstOrNull;
+      IdentityView? named(String label) =>
+          (container.read(identitiesProvider).value ?? const <IdentityView>[])
+              .where((i) => i.spec.label == label)
+              .firstOrNull;
 
       await tester.tap(field('library.identities'));
       await tester.pump(const Duration(milliseconds: 300));
@@ -3698,7 +3698,7 @@ Host db
     await tester.tap(field('newKey.make'));
     await _until(
       tester,
-      () => container.read(keysProvider).isNotEmpty,
+      () => container.read(keysProvider).value?.isNotEmpty ?? false,
       'the new key',
     );
     await tester.pump(const Duration(milliseconds: 300));
@@ -3717,7 +3717,7 @@ Host db
     await tester.tap(field('importKey.save'));
     await _until(
       tester,
-      () => container.read(keysProvider).length == 2,
+      () => container.read(keysProvider).value?.length == 2,
       'the key brought in',
     );
     await tester.pump(const Duration(milliseconds: 300));
@@ -3737,7 +3737,9 @@ Host db
     await tester.tap(field('key.rename.save'));
     await _until(
       tester,
-      () => container.read(keysProvider).any((k) => k.name == 'copia2'),
+      () =>
+          container.read(keysProvider).value?.any((k) => k.name == 'copia2') ??
+          false,
       'the key renamed',
     );
     expect(File('${home.path}/.ssh/copia').existsSync(), isFalse);
@@ -3748,9 +3750,12 @@ Host db
     await tester.tap(field('key.passphrase.save'));
     await _until(
       tester,
-      () => container
-          .read(keysProvider)
-          .any((k) => k.name == 'copia2' && k.encrypted),
+      () =>
+          container
+              .read(keysProvider)
+              .value
+              ?.any((k) => k.name == 'copia2' && k.encrypted) ??
+          false,
       'the key behind a passphrase',
     );
     await menu('copia2', 'Eliminar…');
@@ -3759,7 +3764,7 @@ Host db
     await tester.tap(field('key.delete.confirm'));
     await _until(
       tester,
-      () => container.read(keysProvider).length == 1,
+      () => container.read(keysProvider).value?.length == 1,
       'the key deleted',
     );
     expect(File('${home.path}/.ssh/copia2').existsSync(), isFalse);

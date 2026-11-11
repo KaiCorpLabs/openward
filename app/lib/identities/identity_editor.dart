@@ -14,6 +14,7 @@ import '../ui/confirm.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import 'identities.dart';
+import 'key_inspection.dart';
 
 /// Creates (no `id`) or edits an identity in the side panel. Returns the
 /// id of what was saved, or null.
@@ -22,18 +23,26 @@ Future<String?> showIdentityEditor(
   WidgetRef ref, {
   String? id,
 }) async {
+  IdentityView? initial;
+  try {
+    if (id != null) initial = await ref.read(openWardProvider).identity(id: id);
+  } catch (error) {
+    if (context.mounted) await showErrorDetails(context, error);
+    return null;
+  }
+  if (!context.mounted) return null;
   String? saved;
   await showSidePanel(
     context,
-    (_) => _IdentityEditor(id: id, onSaved: (s) => saved = s),
+    (_) => _IdentityEditor(initial: initial, onSaved: (s) => saved = s),
   );
   return saved;
 }
 
 class _IdentityEditor extends ConsumerStatefulWidget {
-  const _IdentityEditor({this.id, required this.onSaved});
+  const _IdentityEditor({this.initial, required this.onSaved});
 
-  final String? id;
+  final IdentityView? initial;
   final ValueChanged<String> onSaved;
 
   @override
@@ -41,9 +50,7 @@ class _IdentityEditor extends ConsumerStatefulWidget {
 }
 
 class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
-  late final IdentityView? _old = widget.id == null
-      ? null
-      : ref.read(openWardProvider).identity(id: widget.id!);
+  late final IdentityView? _old = widget.initial;
   late final _label = TextEditingController(text: _old?.spec.label ?? '');
   late final _user = TextEditingController(text: _old?.spec.user ?? '');
   late final _socket = TextEditingController(
@@ -123,6 +130,7 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
 
   Future<void> _save() async {
     final l = context.l10n;
+    final app = ref.read(openWardProvider);
     _cause = null;
     if (_label.text.trim().isEmpty) {
       return setState(() => _error = l.identityNeedsName);
@@ -130,7 +138,6 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
     if (_agent == AgentKind.socket && _socket.text.trim().isEmpty) {
       return setState(() => _error = l.missingSocket);
     }
-    final app = ref.read(openWardProvider);
     try {
       final old = _old;
       final String id;
@@ -175,7 +182,6 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
     final ow = context.ow;
     final c = ow.colors;
     final l = context.l10n;
-    final app = ref.read(openWardProvider);
     final mono = monoStyle(context, size: 13, color: c.text);
     final old = _old;
     Widget labelled(String text, Widget field, {String? hint}) =>
@@ -270,13 +276,10 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
                     itemCount: _keys.length,
                     onReorderItem: (from, to) =>
                         setState(() => _keys.insert(to, _keys.removeAt(from))),
-                    itemBuilder: (context, i) => _KeyItem(
+                    itemBuilder: (context, i) => _InspectKeyItem(
                       key: ValueKey(_keys[i]),
                       index: i,
-                      info: app.keyInfo(
-                        path: _keys[i],
-                        certificateFiles: _certs,
-                      ),
+                      query: KeyInspectionQuery(_keys[i], _certs),
                       onRemove: () => setState(() => _keys.removeAt(i)),
                       onAddCert: _addCert,
                       onRemoveCert: (path) =>
@@ -404,9 +407,50 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
 
 /// A key of the list: its path and what it is, its certificate, and a
 /// handle to move it.
+class _InspectKeyItem extends ConsumerWidget {
+  const _InspectKeyItem({
+    super.key,
+    required this.index,
+    required this.query,
+    required this.onRemove,
+    required this.onAddCert,
+    required this.onRemoveCert,
+  });
+  final int index;
+  final KeyInspectionQuery query;
+  final VoidCallback onRemove;
+  final VoidCallback onAddCert;
+  final ValueChanged<String> onRemoveCert;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final result = ref.watch(keyInspectionProvider(query));
+    final info = result.value;
+    if (info != null) {
+      return _KeyItem(
+        index: index,
+        info: info,
+        onRemove: onRemove,
+        onAddCert: onAddCert,
+        onRemoveCert: onRemoveCert,
+      );
+    }
+    return ListTile(
+      title: Text(query.path),
+      subtitle: result.hasError
+          ? Text(context.l10n.errInternal)
+          : const LinearProgressIndicator(),
+      trailing: IconButton(
+        tooltip: context.l10n.removeKey,
+        onPressed: onRemove,
+        icon: const Icon(Icons.close),
+      ),
+    );
+  }
+}
+
 class _KeyItem extends StatelessWidget {
   const _KeyItem({
-    super.key,
     required this.index,
     required this.info,
     required this.onRemove,

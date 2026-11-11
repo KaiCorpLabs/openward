@@ -35,8 +35,19 @@ Widget _labelled(BuildContext context, String text, Widget field) {
 }
 
 /// "Nueva clave": the key made, or null.
-Future<SshKey?> showNewKeyDialog(BuildContext context) =>
-    showDialog<SshKey>(context: context, builder: (_) => const _NewKey());
+Future<SshKey?> showNewKeyDialog(BuildContext context) async {
+  try {
+    await ProviderScope.containerOf(context).read(keysProvider.future);
+    if (!context.mounted) return null;
+    return await showDialog<SshKey>(
+      context: context,
+      builder: (_) => const _NewKey(),
+    );
+  } catch (error) {
+    if (context.mounted) await showErrorDetails(context, error);
+    return null;
+  }
+}
 
 class _NewKey extends ConsumerStatefulWidget {
   const _NewKey();
@@ -87,7 +98,7 @@ class _NewKeyState extends ConsumerState<_NewKey> {
 
   String _freeName() => freeKeyName(
     _type,
-    ref.read(keysProvider).map((k) => k.name),
+    (ref.read(keysProvider).value ?? const <SshKey>[]).map((k) => k.name),
     securityKey: _onKey,
   );
 
@@ -397,10 +408,13 @@ class _ImportKeyState extends ConsumerState<_ImportKey> {
     if (file == null || !mounted) return;
     try {
       final text = await File(file.path).readAsString();
+      final taken = (await ref.read(keysProvider.future))
+          .map((k) => k.name)
+          .toSet();
+      if (!mounted) return;
       setState(() {
         _text.text = text;
         if (_name.text.trim().isEmpty) {
-          final taken = ref.read(keysProvider).map((k) => k.name).toSet();
           var name = file.name.replaceAll(RegExp(r'[^A-Za-z0-9._@-]'), '_');
           if (name.endsWith('.pem') || name.endsWith('.ppk')) {
             name = name.substring(0, name.length - 4);

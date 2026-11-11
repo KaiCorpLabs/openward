@@ -17,7 +17,7 @@ use openward_ssh::russh::keys::ssh_key::{
 use openward_vault::Vault;
 use openward_vault::proto::{Data, Settings};
 
-use crate::keys::algorithm;
+use crate::keys::{MAX_METADATA, MAX_PRIVATE, algorithm, read_text};
 use crate::local::{Local, Tokens};
 
 /// A private key in `~/.ssh`.
@@ -120,7 +120,7 @@ fn looks_like_key(f: &Path) -> bool {
     }
     let small = fs::metadata(f).is_ok_and(|m| m.is_file() && m.len() < 64 * 1024);
     small
-        && fs::read_to_string(f).is_ok_and(|t| {
+        && read_text(f, MAX_PRIVATE).is_ok_and(|t| {
             let t = t.trim_start();
             (t.starts_with("-----BEGIN") && t.contains("PRIVATE KEY"))
                 || t.starts_with("PuTTY-User-Key-File-")
@@ -172,13 +172,16 @@ pub fn users(local: &Local, vault: &Vault) -> Users {
 }
 
 fn describe(local: &Local, file: &Path, users: &[(PathBuf, String)]) -> KeyFile {
-    let text = fs::read_to_string(file).unwrap_or_default();
+    let text = read_text(file, MAX_PRIVATE).unwrap_or_default();
     let pub_path = with_suffix(file, ".pub");
-    let public = PublicKey::read_openssh_file(&pub_path).ok().or_else(|| {
-        keyfile::from_openssh(&text)
-            .ok()
-            .map(|k| k.public_key().clone())
-    });
+    let public = read_text(&pub_path, MAX_METADATA)
+        .ok()
+        .and_then(|text| PublicKey::from_openssh(&text).ok())
+        .or_else(|| {
+            keyfile::from_openssh(&text)
+                .ok()
+                .map(|k| k.public_key().clone())
+        });
     let encrypted = match keyfile::from_openssh(&text) {
         Ok(k) => k.is_encrypted(),
         Err(_) => {
@@ -217,11 +220,12 @@ fn describe(local: &Local, file: &Path, users: &[(PathBuf, String)]) -> KeyFile 
         }),
         has_public: pub_path.is_file(),
         certificate: with_suffix(file, "-cert.pub").is_file(),
-        certificate_until: openward_ssh::russh::keys::ssh_key::Certificate::read_file(
-            &with_suffix(file, "-cert.pub"),
-        )
-        .ok()
-        .and_then(|c| c.valid_before_time()),
+        certificate_until: read_text(&with_suffix(file, "-cert.pub"), MAX_METADATA)
+            .ok()
+            .and_then(|text| {
+                openward_ssh::russh::keys::ssh_key::Certificate::from_openssh(&text).ok()
+            })
+            .and_then(|c| c.valid_before_time()),
         used_by,
     }
 }
@@ -377,7 +381,7 @@ pub fn change_passphrase(
     new: Option<&str>,
 ) -> Result<(), KeyError> {
     let file = key_file(local, path)?;
-    let text = zeroize::Zeroizing::new(fs::read_to_string(&file).map_err(io)?);
+    let text = zeroize::Zeroizing::new(read_text(&file, MAX_PRIVATE).map_err(io)?);
     let key = keyfile::from_openssh(text.as_str()).map_err(|_| KeyError::NotOpenSsh)?;
     let key = if key.is_encrypted() {
         keyfile::decrypt(&key, old.unwrap_or_default()).map_err(|_| KeyError::WrongPassphrase)?
@@ -564,10 +568,13 @@ pub fn public_line(local: &Local, path: &str) -> Result<String, KeyError> {
         alias: "",
     };
     let file = local.path(path, &t);
-    if let Ok(p) = PublicKey::read_openssh_file(with_suffix(&file, ".pub")) {
+    if let Some(p) = read_text(&with_suffix(&file, ".pub"), MAX_METADATA)
+        .ok()
+        .and_then(|text| PublicKey::from_openssh(&text).ok())
+    {
         return public_key_line(&p);
     }
-    let text = fs::read_to_string(&file).map_err(io)?;
+    let text = read_text(&file, MAX_PRIVATE).map_err(io)?;
     let public = keyfile::from_openssh(&text)
         .map(|k| k.public_key().clone())
         .or_else(|_| decode_secret_key(&text, None).map(|k| k.public_key().clone()))

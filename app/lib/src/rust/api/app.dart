@@ -157,9 +157,9 @@ abstract class OpenWard implements RustOpaqueInterface {
   List<HostView> hosts();
 
   /// Every identity, by name.
-  List<IdentityView> identities();
+  Future<List<IdentityView>> identities();
 
-  IdentityView identity({required String id});
+  Future<IdentityView> identity({required String id});
 
   /// Groups (by name) and hosts (by label) for the "use on…" dialog, as
   /// they would be if exactly `choosers` chose `identity_id`.
@@ -204,13 +204,13 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   /// What the key at `path` is on this machine, and which of
   /// `certificate_files` (or `<key>-cert.pub`) goes with it.
-  KeyView keyInfo({
+  Future<KeyView> keyInfo({
     required String path,
     required List<String> certificateFiles,
   });
 
   /// The private keys in `~/.ssh`, by name.
-  List<SshKey> keys();
+  Future<List<SshKey>> keys();
 
   /// How many rows [`OpenWard::known_host_rows`] would list with no
   /// query, without working out their hosts: for a counter.
@@ -322,7 +322,7 @@ abstract class OpenWard implements RustOpaqueInterface {
   Future<List<ImportPreview>> previewSshConfig({String? file});
 
   /// A key's public half, as an `authorized_keys` line.
-  String? publicKeyLine({required String path});
+  Future<String?> publicKeyLine({required String path});
 
   /// From now on, reads a host's `/etc/os-release` after connecting, and
   /// now over its connection if one is up. False when there is none: it

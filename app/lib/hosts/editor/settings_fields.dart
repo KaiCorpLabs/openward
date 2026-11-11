@@ -212,9 +212,12 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
           );
   }
 
-  String _identityLabel(String id) =>
-      identityById(ref.read(identitiesProvider), id)?.spec.label ??
-      context.l10n.deletedIdentity;
+  String _identityLabel(String id) {
+    final all = ref.read(identitiesProvider);
+    if (!all.hasValue) return all.hasError ? context.l10n.errInternal : '…';
+    return identityById(all.value!, id)?.spec.label ??
+        context.l10n.deletedIdentity;
+  }
 
   /// The identity in force with what the form says now.
   String? get _identityInForce {
@@ -431,7 +434,16 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
     final c = context.ow.colors;
     const none = '';
     const create = '+';
-    final identities = ref.watch(identitiesProvider);
+    final result = ref.watch(identitiesProvider);
+    if (!result.hasValue) {
+      return result.hasError
+          ? TextButton(
+              onPressed: () => ref.read(identitiesProvider.notifier).refresh(),
+              child: Text(l.retry),
+            )
+          : const LinearProgressIndicator();
+    }
+    final identities = result.value!;
     final value = f.identity == IdentityChoice.use ? f.identityId : none;
     Widget title(String text) => Row(
       children: [

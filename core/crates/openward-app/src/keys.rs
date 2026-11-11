@@ -2,6 +2,8 @@
 //! certificate. Only public halves are read (`<key>.pub`, certificates);
 //! private keys are never opened here.
 
+use std::fs::File;
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -9,6 +11,44 @@ use openward_ssh::russh::keys::ssh_key::public::KeyData;
 use openward_ssh::russh::keys::{Algorithm, Certificate, EcdsaCurve, HashAlg, PublicKey};
 
 use crate::local::{Local, Tokens};
+
+/// Public keys and certificates can carry many principals or a comment;
+/// one MiB is deliberately generous while preventing unbounded reads.
+pub(crate) const MAX_METADATA: u64 = 1 << 20;
+pub(crate) const MAX_PRIVATE: u64 = 64 * 1024 - 1;
+
+pub(crate) fn read_text(path: &Path, limit: u64) -> io::Result<String> {
+    #[cfg(unix)]
+    let file = File::from(rustix::fs::open(
+        path,
+        rustix::fs::OFlags::RDONLY | rustix::fs::OFlags::CLOEXEC | rustix::fs::OFlags::NONBLOCK,
+        rustix::fs::Mode::empty(),
+    )?);
+    #[cfg(not(unix))]
+    let file = File::open(path)?;
+    let metadata = file.metadata()?;
+    if !metadata.is_file() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "not a regular key file",
+        ));
+    }
+    if metadata.len() > limit {
+        return Err(io::Error::new(
+            io::ErrorKind::FileTooLarge,
+            "key metadata is too large",
+        ));
+    }
+    let mut text = String::new();
+    file.take(limit + 1).read_to_string(&mut text)?;
+    if text.len() as u64 > limit {
+        return Err(io::Error::new(
+            io::ErrorKind::FileTooLarge,
+            "key metadata is too large",
+        ));
+    }
+    Ok(text)
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum KeyState {
@@ -69,7 +109,9 @@ pub fn key_info(local: &Local, path: &str, certificates: &[String]) -> KeyInfo {
     if !file.is_file() {
         return info;
     }
-    let public = PublicKey::read_openssh_file(with_suffix(&file, ".pub")).ok();
+    let public = read_text(&with_suffix(&file, ".pub"), MAX_METADATA)
+        .ok()
+        .and_then(|text| PublicKey::from_openssh(&text).ok());
     info.state = match &public {
         Some(_) => KeyState::Found,
         None => KeyState::NoPublicHalf,
@@ -86,7 +128,10 @@ pub fn key_info(local: &Local, path: &str, certificates: &[String]) -> KeyInfo {
         .map(|c| (c.clone(), local.path(c, &t), false))
         .chain([(display(path, "-cert.pub"), implicit, true)]);
     for (shown, cert_path, implicit) in candidates {
-        let Ok(cert) = Certificate::read_file(&cert_path) else {
+        let Some(cert) = read_text(&cert_path, MAX_METADATA)
+            .ok()
+            .and_then(|text| Certificate::from_openssh(&text).ok())
+        else {
             continue;
         };
         // Without the `.pub`, only the certificate named after the key.
@@ -158,6 +203,68 @@ mod tests {
             system_ssh_dir: home.join("etc-ssh"),
             agent: None,
         }
+    }
+
+    #[test]
+    fn oversized_public_metadata_is_not_loaded_into_the_view() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("key");
+        std::fs::write(&file, "private half is not read here").unwrap();
+        let public =
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILg+ccEU+buKk8f5ORMPyzCAzWM04Omv+MOaI8CvGd7f";
+        std::fs::write(
+            with_suffix(&file, ".pub"),
+            format!("{public} {}", "x".repeat(2 << 20)),
+        )
+        .unwrap();
+        let info = key_info(&local(dir.path()), file.to_str().unwrap(), &[]);
+        assert_eq!(info.state, KeyState::NoPublicHalf);
+        assert!(info.comment.is_none());
+    }
+
+    #[test]
+    fn metadata_reader_accepts_regular_files_within_the_limit() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("metadata");
+        std::fs::write(&file, "x".repeat(1024)).unwrap();
+        assert_eq!(read_text(&file, 1024).unwrap().len(), 1024);
+        assert_eq!(
+            read_text(&file, 1023).unwrap_err().kind(),
+            io::ErrorKind::FileTooLarge
+        );
+        assert!(read_text(dir.path(), 1024).is_err());
+        #[cfg(unix)]
+        {
+            let alias = dir.path().join("alias");
+            std::os::unix::fs::symlink(&file, &alias).unwrap();
+            assert_eq!(read_text(&alias, 1024).unwrap().len(), 1024);
+            assert_eq!(
+                read_text(Path::new("/dev/zero"), 1024).unwrap_err().kind(),
+                io::ErrorKind::InvalidInput
+            );
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_fifo_is_rejected_without_waiting_for_a_writer() {
+        let dir = tempfile::tempdir().unwrap();
+        let fifo = dir.path().join("cert.pub");
+        assert!(
+            Command::new("mkfifo")
+                .arg(&fifo)
+                .status()
+                .unwrap()
+                .success()
+        );
+        let (send, receive) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let _ = send.send(read_text(&fifo, MAX_METADATA));
+        });
+        let result = receive
+            .recv_timeout(Duration::from_secs(2))
+            .expect("metadata read blocked on a FIFO");
+        assert_eq!(result.unwrap_err().kind(), io::ErrorKind::InvalidInput);
     }
 
     fn keygen(args: &[&str], dir: &Path) -> bool {

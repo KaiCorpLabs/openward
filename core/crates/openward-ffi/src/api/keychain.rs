@@ -128,7 +128,6 @@ fn result(r: Result<KeyFile, keychain::KeyError>) -> SshKeyResult {
 
 impl OpenWard {
     /// The private keys in `~/.ssh`, by name.
-    #[frb(sync)]
     pub fn keys(&self) -> Vec<SshKey> {
         let users = keychain::users(self.app.local(), &self.app.vault());
         keychain::list(self.app.local(), &users)
@@ -241,7 +240,6 @@ impl OpenWard {
     }
 
     /// A key's public half, as an `authorized_keys` line.
-    #[frb(sync)]
     pub fn public_key_line(&self, path: String) -> Option<String> {
         keychain::public_line(self.app.local(), &path).ok()
     }

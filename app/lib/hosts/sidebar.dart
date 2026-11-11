@@ -1233,14 +1233,14 @@ List<LibraryEntry> libraryEntries(BuildContext context, WidgetRef ref) {
       page: PageKind.identities,
       icon: Icons.badge_outlined,
       label: l.identities,
-      count: ref.watch(identitiesProvider).length,
+      count: ref.watch(identitiesProvider).value?.length ?? 0,
       open: 0,
     ),
     (
       page: PageKind.keys,
       icon: Icons.key_outlined,
       label: l.keys,
-      count: ref.watch(keysProvider).length,
+      count: ref.watch(keysProvider).value?.length ?? 0,
       open: 0,
     ),
     (

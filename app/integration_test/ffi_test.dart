@@ -227,7 +227,7 @@ Host db
     );
     expect(none.effective.user, 'ops');
 
-    final view = app.identities().single;
+    final view = (await app.identities()).single;
     expect(view.hostCount, 1);
     expect(view.groups, ['prod']);
     expect(view.keys.single.state, KeyStateKind.missing);
@@ -238,11 +238,11 @@ Host db
     final dbRow = rows.firstWhere((r) => r.label == 'db');
     expect((dbRow.after, dbRow.nowIsThis, dbRow.now), (true, false, null));
     expect(await app.useIdentity(identityId: id, choosers: [group, db]), 1);
-    expect(app.identity(id: id).hostCount, 2);
+    expect((await app.identity(id: id)).hostCount, 2);
     expect(app.hosts().firstWhere((h) => h.id == db).user, 'deploy');
 
     await app.delete(id: id);
-    expect(app.identities(), isEmpty);
+    expect(await app.identities(), isEmpty);
     expect(app.host(id: web).effective.user, 'ops');
   });
 
@@ -557,7 +557,7 @@ Host db
       dataDir: '${dir.path}/keys-data',
       home: home.path,
     );
-    expect(mine.keys(), isEmpty);
+    expect(await mine.keys(), isEmpty);
     final made = await mine.generateKey(
       name: 'id_ed25519',
       kind: SshKeyType.ed25519,
@@ -569,7 +569,7 @@ Host db
     expect(made.key!.fingerprint, startsWith('SHA256:'));
     final private = File('${home.path}/.ssh/id_ed25519');
     expect(private.statSync().modeString(), 'rw-------');
-    final line = mine.publicKeyLine(path: '~/.ssh/id_ed25519')!;
+    final line = (await mine.publicKeyLine(path: '~/.ssh/id_ed25519'))!;
     expect(line, startsWith('ssh-ed25519 '));
     expect(line, endsWith(' ana@portatil'));
 
@@ -587,6 +587,6 @@ Host db
     expect(copy.key!.fingerprint, made.key!.fingerprint);
     final junk = await mine.importKey(name: 'otra', text: 'hola');
     expect(junk.failure!.kind, SshKeyFailureKind.notAKey);
-    expect(mine.keys().map((k) => k.name), ['copia', 'id_ed25519']);
+    expect((await mine.keys()).map((k) => k.name), ['copia', 'id_ed25519']);
   });
 }
