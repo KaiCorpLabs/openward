@@ -9697,6 +9697,42 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'ayer {time}'**
   String yesterdayAt(String time);
+
+  /// No description provided for @historyReviewTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisar comando del historial'**
+  String get historyReviewTitle;
+
+  /// No description provided for @historyReviewFrom.
+  ///
+  /// In es, this message translates to:
+  /// **'Historial de {place}'**
+  String historyReviewFrom(String place);
+
+  /// No description provided for @historyReviewTo.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar a:'**
+  String get historyReviewTo;
+
+  /// No description provided for @historyOriginOwn.
+  ///
+  /// In es, this message translates to:
+  /// **'Escrito en este dispositivo.'**
+  String get historyOriginOwn;
+
+  /// No description provided for @historyOriginScreen.
+  ///
+  /// In es, this message translates to:
+  /// **'Reconstruido de la salida del terminal; puede incluir texto del servidor.'**
+  String get historyOriginScreen;
+
+  /// No description provided for @historyOriginUnknown.
+  ///
+  /// In es, this message translates to:
+  /// **'Se desconoce el origen de esta entrada antigua del historial.'**
+  String get historyOriginUnknown;
 }
 
 class _AppLocalizationsDelegate

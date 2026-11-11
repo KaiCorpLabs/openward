@@ -4612,5 +4612,12 @@
         "type": "String"
       }
     }
-  }
+  },
+  "historyReviewTitle": "Revisar comando del historial",
+  "historyReviewFrom": "Historial de {place}",
+  "@historyReviewFrom": {"placeholders": {"place": {"type": "String"}}},
+  "historyReviewTo": "Enviar a:",
+  "historyOriginOwn": "Escrito en este dispositivo.",
+  "historyOriginScreen": "Reconstruido de la salida del terminal; puede incluir texto del servidor.",
+  "historyOriginUnknown": "Se desconoce el origen de esta entrada antigua del historial."
 }

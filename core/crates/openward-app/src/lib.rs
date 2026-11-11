@@ -311,6 +311,7 @@ impl App {
             let failure = match opened {
                 Ok(port) => {
                     let connected = events::Connected {
+                        user: None,
                         protocol: Protocol::Serial,
                         mosh: false,
                         host: path.clone(),
@@ -998,6 +999,7 @@ async fn telnet_session(
     let pump = pipe.pump_telnet(Box::new(stream), &plan.term, &target.label);
     drop(pipe);
     sink.send(Event::Connected(events::Connected {
+        user: None,
         protocol: Protocol::Telnet,
         mosh: false,
         host: target.address.clone(),

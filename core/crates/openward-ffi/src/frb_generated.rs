@@ -9469,6 +9469,7 @@ impl SseDecode for crate::api::sftp::ConflictView {
 impl SseDecode for crate::api::session::ConnectedView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_user = <Option<String>>::sse_decode(deserializer);
         let mut var_protocol = <crate::api::vault::ProtocolKind>::sse_decode(deserializer);
         let mut var_mosh = <bool>::sse_decode(deserializer);
         let mut var_host = <String>::sse_decode(deserializer);
@@ -9483,6 +9484,7 @@ impl SseDecode for crate::api::session::ConnectedView {
         let mut var_hops = <u32>::sse_decode(deserializer);
         let mut var_connectMs = <f64>::sse_decode(deserializer);
         return crate::api::session::ConnectedView {
+            user: var_user,
             protocol: var_protocol,
             mosh: var_mosh,
             host: var_host,
@@ -13757,6 +13759,7 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::sftp::ConflictView>
 impl flutter_rust_bridge::IntoDart for crate::api::session::ConnectedView {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
+            self.user.into_into_dart().into_dart(),
             self.protocol.into_into_dart().into_dart(),
             self.mosh.into_into_dart().into_dart(),
             self.host.into_into_dart().into_dart(),
@@ -17135,6 +17138,7 @@ impl SseEncode for crate::api::sftp::ConflictView {
 impl SseEncode for crate::api::session::ConnectedView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Option<String>>::sse_encode(self.user, serializer);
         <crate::api::vault::ProtocolKind>::sse_encode(self.protocol, serializer);
         <bool>::sse_encode(self.mosh, serializer);
         <String>::sse_encode(self.host, serializer);

@@ -10,8 +10,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/address.dart';
 import '../core/match.dart';
 import '../core/providers.dart';
-import '../core/settings.dart';
 import '../history/history.dart';
+import '../history/replay.dart';
 import '../home/recent.dart';
 import '../hosts/editors.dart';
 import '../hosts/host_actions.dart' show hostAddress, overSsh;
@@ -260,7 +260,9 @@ class _PaletteState extends ConsumerState<_Palette> {
             icon: Icons.history,
             pill: named(h),
             history: h,
-            run: (alt) async => _send(container, h.command, typeOnly: alt),
+            run: (alt) async {
+              await replayHistory(window, container, h, typeOnly: alt);
+            },
           ),
         );
       }
@@ -923,27 +925,6 @@ class _PaletteState extends ConsumerState<_Palette> {
       ),
     );
   }
-}
-
-/// Types `command` in the front tab's terminal (and the panes that
-/// receive while broadcasting), running it unless `typeOnly`.
-void _send(ProviderContainer ref, String command, {required bool typeOnly}) {
-  final targets = snippetTargets(ref);
-  if (!typeOnly &&
-      targets.isNotEmpty &&
-      ref.read(settingsProvider).commandHistory) {
-    ref.read(historyProvider.notifier).add(command, targets.first);
-  }
-  for (final c in targets) {
-    if (c.isDisposed) continue;
-    c.line.reset();
-    if (typeOnly) {
-      c.session.paste(text: command, allowUnsafe: true);
-    } else {
-      c.session.text(text: '$command\n');
-    }
-  }
-  targets.firstOrNull?.focusTerminal?.call();
 }
 
 extension<T extends Object> on T? {

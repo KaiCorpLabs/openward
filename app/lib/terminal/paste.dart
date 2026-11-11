@@ -16,6 +16,7 @@ Future<bool> confirmPaste(
   BuildContext context,
   String text, {
   String? fontFamily,
+  String? destination,
 }) async {
   final l = context.l10n;
   final ow = context.ow;
@@ -34,6 +35,8 @@ Future<bool> confirmPaste(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (destination != null)
+                Text('${l.historyReviewTo} ${visibleName(destination)}'),
               if (lines > 1 || !hasHidden(text)) Text(l.pasteMultiBody),
               const SizedBox(height: 12),
               PastePreview(text, fontFamily: fontFamily),

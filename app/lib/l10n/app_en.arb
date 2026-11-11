@@ -2014,5 +2014,12 @@
   "wrongPassword": "Wrong password.",
   "wrongPin": "That is not the key's PIN.",
   "yes": "Yes",
-  "yesterdayAt": "yesterday {time}"
+  "yesterdayAt": "yesterday {time}",
+  "historyReviewTitle": "Review history command",
+  "historyReviewFrom": "History from {place}",
+  "@historyReviewFrom": {"placeholders": {"place": {"type": "String"}}},
+  "historyReviewTo": "Send to:",
+  "historyOriginOwn": "Written on this device.",
+  "historyOriginScreen": "Reconstructed from terminal output; it may contain text supplied by the server.",
+  "historyOriginUnknown": "The origin of this older history entry is unknown."
 }

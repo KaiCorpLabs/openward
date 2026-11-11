@@ -10,6 +10,7 @@ import 'package:openward/history/history.dart';
 import 'package:openward/history/line_tracker.dart';
 import 'package:openward/history/suggest.dart';
 import 'package:openward/terminal/keys.dart';
+import 'package:openward/src/rust/api/session.dart';
 
 /// A screen of one prompt row: the prompt, what the shell echoed, and
 /// what shows after the cursor.
@@ -47,6 +48,43 @@ void _type(LineTracker t, _Screen s, String text, {bool echo = true}) {
 
 void main() {
   group('LineTracker', () {
+    test('plain input is own; reconstructed output is screen provenance', () {
+      final s = _Screen('\$ ');
+      final t = LineTracker();
+      _type(t, s, 'echo own');
+      expect(t.enterCommand(s, altScreen: false), (
+        text: 'echo own',
+        origin: CommandOrigin.own,
+      ));
+      s.echoed = '';
+      _type(t, s, 'e');
+      t.key(Hid.tab, 0, '', s);
+      s.echoed = 'server supplied command';
+      expect(t.enterCommand(s, altScreen: false), (
+        text: 'server supplied command',
+        origin: CommandOrigin.screen,
+      ));
+    });
+
+    test(
+      'replayed input or a changed shell cannot become a new own command',
+      () {
+        final s = _Screen('\$ ');
+        final t = LineTracker();
+        t.untrackedInput();
+        _type(t, s, 'legacy command');
+        expect(t.enterCommand(s, altScreen: false), isNull);
+        s.echoed = '';
+        _type(t, s, ' private');
+        t.shellChanged();
+        _type(t, s, 'suffix');
+        expect(t.enterCommand(s, altScreen: false), isNull);
+        s.echoed = '';
+        t.shellChanged();
+        _type(t, s, 'echo own');
+        expect(t.enterCommand(s, altScreen: false)?.origin, CommandOrigin.own);
+      },
+    );
     test('keeps a command typed as is', () {
       final s = _Screen('ana@web:~\$ ');
       final t = LineTracker();
@@ -279,10 +317,43 @@ void main() {
         ]),
         isNull,
       );
+      for (final hidden in ['\u001b', '\t', '\u202e', '\u200b']) {
+        expect(
+          suggestFor('git st', [
+            SuggestionSource(['git status$hidden']),
+          ]),
+          isNull,
+        );
+      }
     });
   });
 
   group('history', () {
+    test('old, absent and malformed provenance stay unknown', () {
+      for (final provenance in [null, 'unexpected', 1]) {
+        final old = HistoryEntry.fromJson({
+          'command': 'echo old',
+          'where': 'local',
+          'at': 1,
+          'origin': ?provenance,
+        })!;
+        expect(old.origin, CommandOrigin.unknown);
+        expect(old.binding, isNull);
+        expect(historyIsOwnHere(old, 'local', 'local'), isFalse);
+      }
+      const screen = HistoryEntry(
+        command: 'echo screen',
+        where: 'local',
+        label: 'Local',
+        at: 1,
+        origin: CommandOrigin.screen,
+        binding: 'local',
+      );
+      expect(
+        HistoryEntry.fromJson(screen.toJson())!.origin,
+        CommandOrigin.screen,
+      );
+    });
     late Directory dir;
     late ProviderContainer container;
 
@@ -359,4 +430,6 @@ class _Place extends Fake implements ConnectionController {
   final String? hostId;
   @override
   QuickTarget? get target => null;
+  @override
+  ConnectedView? get connected => null;
 }

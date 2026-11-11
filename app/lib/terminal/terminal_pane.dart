@@ -30,6 +30,7 @@ import 'keys.dart';
 import 'links.dart';
 import 'paste.dart';
 import 'renderer.dart';
+import 'send_target.dart';
 import 'visible_text.dart';
 
 class TerminalPane extends ConsumerStatefulWidget {
@@ -208,6 +209,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
       if (oldWidget.controller.wakePane == _wake) {
         oldWidget.controller.wakePane = null;
       }
+      _setGhost(null);
       _c.wakePane = _wake;
       _c.visible = true;
       _c.focusTerminal = _focusSoon;
@@ -289,13 +291,18 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
         SuggestionSource(
           ref
               .read(historyProvider)
-              .where((e) => e.where == place)
+              .where((e) => historyIsOwnHere(e, place, historyBinding(_c)))
               .map((e) => e.command),
         ),
         SuggestionSource(
           ref
               .read(snippetsProvider)
-              .where((v) => v.variables.asked.isEmpty)
+              .where(
+                (v) =>
+                    !v.requiresReview &&
+                    v.variables.asked.isEmpty &&
+                    v.variables.builtins.isEmpty,
+              )
               .map((v) => v.spec.script),
         ),
         const SuggestionSource(commonCommands, minTyped: 2),
@@ -317,6 +324,8 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
 
   /// → or End with a suggestion shown: it is typed.
   void _takeGhost(String rest) {
+    _suggest();
+    if (_ghost != rest || !TerminalSendTarget(_c).current) return;
     _setGhost(null);
     _c.line.text(rest, _screen);
     _session.text(text: rest);
@@ -355,10 +364,10 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   // -------------------------------------------------------------- keyboard
 
   /// This session and, while broadcasting, the others that receive.
-  List<TerminalSession> get _targets => [
-    _session,
+  List<TerminalController> get _targets => [
+    _c,
     for (final c in widget.mirrors?.call() ?? const <TerminalController>[])
-      if (!c.isDisposed) c.session,
+      if (!c.isDisposed) c,
   ];
 
   void _key({
@@ -368,9 +377,12 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     required String text,
     required int unshifted,
   }) {
-    if (kind != KeyKind.up) _track(hidUsage, mods, text);
-    for (final s in _targets) {
-      s.key(
+    final here = _c;
+    for (final c in _targets) {
+      if (kind != KeyKind.up) {
+        _track(c, hidUsage, mods, text, record: identical(c, here));
+      }
+      c.session.key(
         hidUsage: hidUsage,
         kind: kind,
         mods: mods,
@@ -381,22 +393,31 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   }
 
   /// The screen as the command line tracker reads it.
-  late final LineScreen _screen = _SessionScreen(_session);
+  LineScreen get _screen => _SessionScreen(_session);
 
   /// Follows the command line, and at Enter keeps what ran in the history
   /// and marks it in the session's recording.
-  void _track(int hid, int mods, String text) {
-    final line = _c.line;
+  void _track(
+    TerminalController target,
+    int hid,
+    int mods,
+    String text, {
+    required bool record,
+  }) {
+    final line = target.line;
+    final screen = _SessionScreen(target.session);
     final held = mods & (Mods.shift | Mods.ctrl | Mods.alt | Mods.superKey);
     if (hid != Hid.enter || held != 0) {
-      line.key(hid, mods, text, _screen);
+      line.key(hid, mods, text, screen);
       return;
     }
-    final command = line.enter(_screen, altScreen: _c.altScreen);
-    if (command == null) return;
-    _session.logCommand(command: command);
+    final command = line.enterCommand(screen, altScreen: target.altScreen);
+    if (command == null || !record) return;
+    target.session.logCommand(command: command.text);
     if (ref.read(settingsProvider).commandHistory) {
-      ref.read(historyProvider.notifier).add(command, _c);
+      ref
+          .read(historyProvider.notifier)
+          .add(command.text, target, origin: command.origin);
     }
   }
 
@@ -587,49 +608,54 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   // ------------------------------------------------------------------ paste
 
   Future<void> _paste() async {
+    final here = TerminalSendTarget(_c);
+    final also = [
+      for (final c in widget.mirrors?.call() ?? <TerminalController>[])
+        TerminalSendTarget(c),
+    ];
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final text = data?.text;
-    if (text == null || text.isEmpty || !mounted) return;
-    final also = widget.mirrors?.call() ?? const <TerminalController>[];
-    if (also.isNotEmpty) return _pasteBroadcast(text, also);
-    // Into the history only what is sent, not a paste called off. What
-    // hides characters asks first even on one line.
-    if (!hasHidden(text) && _session.paste(text: text, allowUnsafe: false)) {
-      return _c.line.text(text, _screen);
+    if (text == null || text.isEmpty || !mounted || !here.current) return;
+    if (also.isNotEmpty) return _pasteBroadcast(text, here, also);
+    if (!hasHidden(text) && here.paste(text, allowUnsafe: false)) {
+      here.controller.line.text(text, _SessionScreen(here.session));
+      return;
     }
     final ok = await confirmPaste(
       context,
       text,
       fontFamily: _renderer?.metrics.fontFamily,
+      destination: here.destination,
     );
-    if (ok) {
-      _session.paste(text: text, allowUnsafe: true);
-      _c.line.text(text, _screen);
+    if (ok && here.paste(text, allowUnsafe: true)) {
+      here.controller.line.text(text, _SessionScreen(here.session));
     }
-    focusNode.requestFocus();
+    if (mounted) focusNode.requestFocus();
   }
 
-  /// With broadcast, a paste always asks first: where it goes, and what.
+  /// Names, sessions and shell generations are frozen before any await.
   Future<void> _pasteBroadcast(
     String text,
-    List<TerminalController> also,
+    TerminalSendTarget here,
+    List<TerminalSendTarget> also,
   ) async {
     final choice = await confirmBroadcastPaste(
       context,
       text,
-      here: _c.displayTitle,
-      names: [_c, ...also].map((s) => s.displayTitle).toList(),
+      here: here.destination,
+      names: [here, ...also].map((s) => s.destination).toList(),
       fontFamily: _renderer?.metrics.fontFamily,
     );
-    if (choice == null) return focusNode.requestFocus();
-    final targets = choice
-        ? [_session, ...also.map((s) => s.session)]
-        : [_session];
-    for (final s in targets) {
-      s.paste(text: text, allowUnsafe: true);
+    if (choice != null && mounted) {
+      final targets = choice ? [here, ...also] : [here];
+      for (final target in targets) {
+        final sent = target.paste(text, allowUnsafe: true);
+        if (sent) {
+          target.controller.line.text(text, _SessionScreen(target.session));
+        }
+      }
     }
-    _c.line.text(text, _screen);
-    focusNode.requestFocus();
+    if (mounted) focusNode.requestFocus();
   }
 
   // ---------------------------------------------------------- input method
@@ -705,9 +731,9 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     }
     final typed = text.substring(common);
     if (typed.isNotEmpty) {
-      _c.line.text(typed, _screen);
-      for (final s in _targets) {
-        s.text(text: typed);
+      for (final c in _targets) {
+        c.line.text(typed, _SessionScreen(c.session));
+        c.session.text(text: typed);
       }
     }
     _value = _idle;

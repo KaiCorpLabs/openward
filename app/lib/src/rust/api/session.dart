@@ -207,6 +207,9 @@ class ClosedView {
 }
 
 class ConnectedView {
+  /// Account actually used by the connection; not mutable saved settings.
+  final String? user;
+
   /// For Telnet the SSH fields are empty (nothing is encrypted); for a
   /// serial port `host` is the port and `port` 0.
   final ProtocolKind protocol;
@@ -230,6 +233,7 @@ class ConnectedView {
   final double connectMs;
 
   const ConnectedView({
+    this.user,
     required this.protocol,
     required this.mosh,
     required this.host,
@@ -247,6 +251,7 @@ class ConnectedView {
 
   @override
   int get hashCode =>
+      user.hashCode ^
       protocol.hashCode ^
       mosh.hashCode ^
       host.hashCode ^
@@ -266,6 +271,7 @@ class ConnectedView {
       identical(this, other) ||
       other is ConnectedView &&
           runtimeType == other.runtimeType &&
+          user == other.user &&
           protocol == other.protocol &&
           mosh == other.mosh &&
           host == other.host &&

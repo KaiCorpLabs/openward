@@ -8044,22 +8044,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ConnectedView dco_decode_connected_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 13)
-      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
+    if (arr.length != 14)
+      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
     return ConnectedView(
-      protocol: dco_decode_protocol_kind(arr[0]),
-      mosh: dco_decode_bool(arr[1]),
-      host: dco_decode_String(arr[2]),
-      port: dco_decode_u_16(arr[3]),
-      kex: dco_decode_String(arr[4]),
-      postQuantum: dco_decode_bool(arr[5]),
-      cipher: dco_decode_String(arr[6]),
-      hostKeyAlgorithm: dco_decode_String(arr[7]),
-      fingerprint: dco_decode_String(arr[8]),
-      trust: dco_decode_trust_kind(arr[9]),
-      ca: dco_decode_String(arr[10]),
-      hops: dco_decode_u_32(arr[11]),
-      connectMs: dco_decode_f_64(arr[12]),
+      user: dco_decode_opt_String(arr[0]),
+      protocol: dco_decode_protocol_kind(arr[1]),
+      mosh: dco_decode_bool(arr[2]),
+      host: dco_decode_String(arr[3]),
+      port: dco_decode_u_16(arr[4]),
+      kex: dco_decode_String(arr[5]),
+      postQuantum: dco_decode_bool(arr[6]),
+      cipher: dco_decode_String(arr[7]),
+      hostKeyAlgorithm: dco_decode_String(arr[8]),
+      fingerprint: dco_decode_String(arr[9]),
+      trust: dco_decode_trust_kind(arr[10]),
+      ca: dco_decode_String(arr[11]),
+      hops: dco_decode_u_32(arr[12]),
+      connectMs: dco_decode_f_64(arr[13]),
     );
   }
 
@@ -11047,6 +11048,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   ConnectedView sse_decode_connected_view(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_user = sse_decode_opt_String(deserializer);
     var var_protocol = sse_decode_protocol_kind(deserializer);
     var var_mosh = sse_decode_bool(deserializer);
     var var_host = sse_decode_String(deserializer);
@@ -11061,6 +11063,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_hops = sse_decode_u_32(deserializer);
     var var_connectMs = sse_decode_f_64(deserializer);
     return ConnectedView(
+      user: var_user,
       protocol: var_protocol,
       mosh: var_mosh,
       host: var_host,
@@ -15032,6 +15035,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   void sse_encode_connected_view(ConnectedView self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_String(self.user, serializer);
     sse_encode_protocol_kind(self.protocol, serializer);
     sse_encode_bool(self.mosh, serializer);
     sse_encode_String(self.host, serializer);

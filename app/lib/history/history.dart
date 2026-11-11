@@ -12,6 +12,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/connection.dart';
 import '../core/json_file.dart';
 import '../core/settings.dart';
+import 'origin.dart';
+
+export 'origin.dart';
 
 @immutable
 class HistoryEntry {
@@ -21,6 +24,8 @@ class HistoryEntry {
     required this.label,
     required this.at,
     this.count = 1,
+    this.origin = CommandOrigin.unknown,
+    this.binding,
   });
 
   final String command;
@@ -36,6 +41,11 @@ class HistoryEntry {
 
   /// Times run there.
   final int count;
+  final CommandOrigin origin;
+
+  /// The transport endpoint/key seen when it ran, or local. Missing context
+  /// stays reviewable; an old entry is never promoted merely by loading it.
+  final String? binding;
 
   Map<String, Object> toJson() => {
     'command': command,
@@ -43,6 +53,8 @@ class HistoryEntry {
     'label': label,
     'at': at,
     if (count > 1) 'count': count,
+    'origin': origin.name,
+    'binding': ?binding,
   };
 
   static HistoryEntry? fromJson(Object? json) {
@@ -59,6 +71,12 @@ class HistoryEntry {
       label: label is String ? label : '',
       at: at,
       count: count is int && count > 0 ? count : 1,
+      origin:
+          CommandOrigin.values
+              .where((v) => v.name == json['origin'])
+              .firstOrNull ??
+          CommandOrigin.unknown,
+      binding: json['binding'] is String ? json['binding'] as String : null,
     );
   }
 }
@@ -71,6 +89,32 @@ String historyPlace(ConnectionController c) {
   if (t != null) return 'address:${t.label}';
   return 'local';
 }
+
+String? historyBinding(ConnectionController c) {
+  if (c.hostId == null && c.target == null) return 'local';
+  final connected = c.connected;
+  if (connected == null || connected.user == null) return null;
+  return jsonEncode([
+    connected.protocol.name,
+    connected.host,
+    connected.port,
+    connected.fingerprint,
+    connected.user,
+  ]);
+}
+
+String historyLabel(ConnectionController c) {
+  final connected = c.connected;
+  if (connected == null) return c.label;
+  final user = connected.user;
+  return '${c.label} · ${user == null ? '' : '$user@'}${connected.host}:${connected.port}';
+}
+
+bool historyIsOwnHere(HistoryEntry entry, String where, String? binding) =>
+    entry.origin == CommandOrigin.own &&
+    entry.where == where &&
+    binding != null &&
+    entry.binding == binding;
 
 /// `history.json`, beside the settings.
 final historyFileProvider = Provider<File>(
@@ -103,15 +147,22 @@ class HistoryNotifier extends Notifier<List<HistoryEntry>> {
   }
 
   /// `command` ran in `c`: first in the list, once per place.
-  void add(String command, ConnectionController c, {DateTime? now}) {
+  void add(
+    String command,
+    ConnectionController c, {
+    DateTime? now,
+    CommandOrigin origin = CommandOrigin.unknown,
+  }) {
     final where = historyPlace(c);
     final old = state.where((e) => e.command == command && e.where == where);
     final next = HistoryEntry(
       command: command,
       where: where,
-      label: c.label,
+      label: historyLabel(c),
       at: (now ?? DateTime.now()).millisecondsSinceEpoch,
       count: (old.firstOrNull?.count ?? 0) + 1,
+      origin: origin,
+      binding: historyBinding(c),
     );
     state = [
       next,

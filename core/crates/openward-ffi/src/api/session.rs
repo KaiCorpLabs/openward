@@ -226,6 +226,8 @@ pub struct ReconnectingView {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ConnectedView {
+    /// Account actually used by the connection; not mutable saved settings.
+    pub user: Option<String>,
     /// For Telnet the SSH fields are empty (nothing is encrypted); for a
     /// serial port `host` is the port and `port` 0.
     pub protocol: super::vault::ProtocolKind,
@@ -647,6 +649,7 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
             v.prompt = Some(prompt_view(id, prompt));
         }
         Event::Connected(Connected {
+            user,
             protocol,
             mosh,
             host,
@@ -667,6 +670,7 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
                 Trust::New => (TrustKind::New, String::new()),
             };
             v.connected = Some(ConnectedView {
+                user,
                 protocol: super::vault::ProtocolKind::of(protocol),
                 mosh,
                 host,
@@ -1220,4 +1224,31 @@ pub struct LogStateView {
 /// `0xRRGGBB`.
 fn packed([r, g, b]: [u8; 3]) -> u32 {
     (r as u32) << 16 | (g as u32) << 8 | b as u32
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn connected_view_preserves_the_effective_account_and_unknown_accounts() {
+        for user in [Some("ops"), Some("root"), None] {
+            let event = Event::Connected(Connected {
+                user: user.map(str::to_owned),
+                protocol: openward_app::events::Protocol::Ssh,
+                mosh: false,
+                host: "server.example".into(),
+                port: 22,
+                kex: String::new(),
+                post_quantum: false,
+                cipher: String::new(),
+                host_key_algorithm: "ssh-ed25519".into(),
+                fingerprint: "SHA256:same-key".into(),
+                trust: Trust::Known,
+                hops: 1,
+                connect_ms: 0.0,
+            });
+            assert_eq!(event_view(event).connected.unwrap().user.as_deref(), user);
+        }
+    }
 }

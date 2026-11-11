@@ -190,6 +190,20 @@ class TerminalController extends ConnectionController {
   }
 
   @override
+  void start() {
+    _shellGeneration++;
+    line.shellChanged();
+    super.start();
+  }
+
+  @override
+  void cancel() {
+    _shellGeneration++;
+    line.shellChanged();
+    super.cancel();
+  }
+
+  @override
   Stream<SessionEvent> open() {
     final hostId = this.hostId;
     final target = this.target;
@@ -229,8 +243,10 @@ class TerminalController extends ConnectionController {
   @override
   void onEvent(SessionEvent e) {
     if (e.kind == SessionEventKind.closed ||
-        e.kind == SessionEventKind.reconnecting) {
+        e.kind == SessionEventKind.reconnecting ||
+        e.kind == SessionEventKind.started) {
       _shellGeneration++;
+      this.line.shellChanged();
     }
     final down = phase == Phase.reconnecting;
     final since = stalledSince ?? reconnectingSince;
@@ -267,6 +283,7 @@ class TerminalController extends ConnectionController {
     if (e.kind == SessionEventKind.connected && !isDisposed) {
       final resumed = persistent?.state == PersistenceKind.resumed;
       final generation = ++_shellGeneration;
+      this.line.shellChanged();
       final queued = sendWhenUp;
       sendWhenUp = null;
       unawaited(_startShell(generation, resumed, queued));

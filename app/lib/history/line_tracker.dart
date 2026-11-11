@@ -3,6 +3,7 @@
 // terminal does not echo (a password) never is.
 
 import '../terminal/keys.dart';
+import 'origin.dart';
 
 /// What the tracker reads from the screen.
 abstract interface class LineScreen {
@@ -33,6 +34,21 @@ class LineTracker {
   /// Null means an editing key made the cursor position uncertain.
   bool? _atStart = true;
   bool _private = false;
+  bool get privateLine => _private;
+
+  /// Externally replayed text is not evidence of a new own command, even
+  /// when later edited. Keep any existing private-line intent until Enter.
+  void untrackedInput() => _lost = true;
+
+  /// A resumed/replacement shell cannot turn an old partial input into a
+  /// new own command. Keep privacy until that line is finished or cancelled.
+  void shellChanged() {
+    if (_active || _lost) {
+      _lost = true;
+    } else {
+      reset();
+    }
+  }
 
   String _typed = '';
   int _row = 0;
@@ -145,9 +161,14 @@ class LineTracker {
 
   /// Enter: the command run, if it can be told and kept; then a new line.
   String? enter(LineScreen s, {required bool altScreen}) {
+    return enterCommand(s, altScreen: altScreen)?.text;
+  }
+
+  TrackedCommand? enterCommand(LineScreen s, {required bool altScreen}) {
     final command = altScreen ? null : _command(s);
+    final origin = _edited ? CommandOrigin.screen : CommandOrigin.own;
     reset();
-    return command;
+    return command == null ? null : (text: command, origin: origin);
   }
 
   String? _command(LineScreen s) {
