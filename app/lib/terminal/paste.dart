@@ -10,9 +10,6 @@ import 'visible_text.dart';
 
 int _lines(String text) => '\n'.allMatches(text.trimRight()).length + 1;
 
-String _cut(String text, int max) =>
-    text.length > max ? '${text.substring(0, max)}…' : text;
-
 /// Asks before pasting `text` into one terminal: true to paste. Enter
 /// pastes: it was pasted on purpose.
 Future<bool> confirmPaste(
@@ -30,16 +27,19 @@ Future<bool> confirmPaste(
       title: Text(
         lines > 1 || !hasHidden(text) ? l.pasteMultiTitle : l.pasteHiddenTitle,
       ),
-      content: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (lines > 1 || !hasHidden(text)) Text(l.pasteMultiBody),
-            const SizedBox(height: 12),
-            PastePreview(_cut(text, 400), fontFamily: fontFamily),
-            if (hasHidden(text)) _HiddenNote(color: ow.colors.warn),
-          ],
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 360),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (lines > 1 || !hasHidden(text)) Text(l.pasteMultiBody),
+              const SizedBox(height: 12),
+              PastePreview(text, fontFamily: fontFamily),
+              if (hasHidden(text)) _HiddenNote(color: ow.colors.warn),
+            ],
+          ),
         ),
       ),
       actions: [
@@ -75,6 +75,7 @@ Future<bool?> confirmBroadcastPaste(
     context: context,
     builder: (context) => AlertDialog(
       icon: Icon(Icons.podcasts, color: c.warn),
+      scrollable: true,
       title: Text(l.broadcastPasteTitle(names.length)),
       content: SizedBox(
         width: 520,
@@ -91,7 +92,7 @@ Future<bool?> confirmBroadcastPaste(
               constraints: const BoxConstraints(maxHeight: 220),
               child: SingleChildScrollView(
                 child: PastePreview(
-                  _cut(text, 600),
+                  text,
                   fontFamily: fontFamily,
                   fontSize: OwText.small,
                 ),
