@@ -949,7 +949,7 @@
   "logsDeleteAll": "Delete every log",
   "logsDeleteAllAction": "Delete all",
   "logsDeleteAllEllipsis": "Delete all…",
-  "logsDeleteAllHelp": "{count} and {size}, saved ones too. It cannot be undone.",
+  "logsDeleteAllHelp": "{count} and {size}, saved ones and recordings missing from the list too. Open sessions are kept. It cannot be undone.",
   "@logsDeleteAllHelp": {
     "placeholders": {
       "count": {

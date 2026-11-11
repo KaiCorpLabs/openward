@@ -78,6 +78,17 @@ impl Recorder {
         text_path: &Path,
         header: &Header,
     ) -> std::io::Result<Self> {
+        let result = Self::start_writer(cast_path, text_path, header);
+        if result.is_err() {
+            // A failed second file, header or thread start must not leave
+            // the first recording as an unindexed session on disk.
+            let _ = std::fs::remove_file(cast_path);
+            let _ = std::fs::remove_file(text_path);
+        }
+        result
+    }
+
+    fn start_writer(cast_path: &Path, text_path: &Path, header: &Header) -> std::io::Result<Self> {
         let mut cast = GzEncoder::new(
             BufWriter::new(super::create(cast_path)?),
             Compression::fast(),
