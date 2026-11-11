@@ -93,14 +93,21 @@ String historyPlace(ConnectionController c) {
 String? historyBinding(ConnectionController c) {
   if (c.hostId == null && c.target == null) return 'local';
   final connected = c.connected;
-  if (connected == null) return null;
+  if (connected == null || connected.user == null) return null;
   return jsonEncode([
     connected.protocol.name,
     connected.host,
     connected.port,
     connected.fingerprint,
-    c.target?.user,
+    connected.user,
   ]);
+}
+
+String historyLabel(ConnectionController c) {
+  final connected = c.connected;
+  if (connected == null) return c.label;
+  final user = connected.user;
+  return '${c.label} · ${user == null ? '' : '$user@'}${connected.host}:${connected.port}';
 }
 
 bool historyIsOwnHere(HistoryEntry entry, String where, String? binding) =>
@@ -151,7 +158,7 @@ class HistoryNotifier extends Notifier<List<HistoryEntry>> {
     final next = HistoryEntry(
       command: command,
       where: where,
-      label: c.label,
+      label: historyLabel(c),
       at: (now ?? DateTime.now()).millisecondsSinceEpoch,
       count: (old.firstOrNull?.count ?? 0) + 1,
       origin: origin,

@@ -29,6 +29,7 @@ impl Live {
         let hop = plan.hops.last().expect("a plan has hops");
         let info = target.info();
         let connected = Connected {
+            user: Some(hop.user.clone()),
             protocol: crate::events::Protocol::Ssh,
             mosh: false,
             host: hop.address.clone(),

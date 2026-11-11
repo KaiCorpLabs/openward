@@ -113,6 +113,9 @@ pub enum Stage {
 /// What the status bar shows about a live connection.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Connected {
+    /// The account actually selected by the connection plan, including
+    /// inherited/OpenSSH settings. Unknown for interactive Telnet/serial.
+    pub user: Option<String>,
     /// SSH, Telnet (nothing encrypted: the SSH fields are empty) or a
     /// serial port (`host` is the port, `port` 0).
     pub protocol: Protocol,

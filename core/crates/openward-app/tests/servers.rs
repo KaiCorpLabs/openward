@@ -235,6 +235,7 @@ fn a_key_learns_the_host_and_runs_a_shell() {
     let (term, rx) = f.connect(host, |_| Answer::Cancel);
     let (connected, prompts) = outcome(&rx);
     let connected = connected.unwrap();
+    assert_eq!(connected.user.as_deref(), Some("demo"));
     assert!(prompts.is_empty());
     assert_eq!(connected.trust, Trust::New);
     assert!(

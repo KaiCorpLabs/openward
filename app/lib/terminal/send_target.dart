@@ -9,7 +9,7 @@ class TerminalSendTarget {
       generation = controller.shellGeneration,
       destination = controller.connected == null
           ? controller.displayTitle
-          : '${controller.displayTitle} · ${controller.connected!.host}:${controller.connected!.port}';
+          : '${controller.displayTitle} · ${controller.connected!.user == null ? '' : '${controller.connected!.user}@'}${controller.connected!.host}:${controller.connected!.port}';
 
   final TerminalController controller;
   final TerminalSession session;

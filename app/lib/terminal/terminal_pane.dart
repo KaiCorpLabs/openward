@@ -364,10 +364,10 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   // -------------------------------------------------------------- keyboard
 
   /// This session and, while broadcasting, the others that receive.
-  List<TerminalSession> get _targets => [
-    _session,
+  List<TerminalController> get _targets => [
+    _c,
     for (final c in widget.mirrors?.call() ?? const <TerminalController>[])
-      if (!c.isDisposed) c.session,
+      if (!c.isDisposed) c,
   ];
 
   void _key({
@@ -377,9 +377,12 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     required String text,
     required int unshifted,
   }) {
-    if (kind != KeyKind.up) _track(hidUsage, mods, text);
-    for (final s in _targets) {
-      s.key(
+    final here = _c;
+    for (final c in _targets) {
+      if (kind != KeyKind.up) {
+        _track(c, hidUsage, mods, text, record: identical(c, here));
+      }
+      c.session.key(
         hidUsage: hidUsage,
         kind: kind,
         mods: mods,
@@ -394,20 +397,27 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
 
   /// Follows the command line, and at Enter keeps what ran in the history
   /// and marks it in the session's recording.
-  void _track(int hid, int mods, String text) {
-    final line = _c.line;
+  void _track(
+    TerminalController target,
+    int hid,
+    int mods,
+    String text, {
+    required bool record,
+  }) {
+    final line = target.line;
+    final screen = _SessionScreen(target.session);
     final held = mods & (Mods.shift | Mods.ctrl | Mods.alt | Mods.superKey);
     if (hid != Hid.enter || held != 0) {
-      line.key(hid, mods, text, _screen);
+      line.key(hid, mods, text, screen);
       return;
     }
-    final command = line.enterCommand(_screen, altScreen: _c.altScreen);
-    if (command == null) return;
-    _session.logCommand(command: command.text);
+    final command = line.enterCommand(screen, altScreen: target.altScreen);
+    if (command == null || !record) return;
+    target.session.logCommand(command: command.text);
     if (ref.read(settingsProvider).commandHistory) {
       ref
           .read(historyProvider.notifier)
-          .add(command.text, _c, origin: command.origin);
+          .add(command.text, target, origin: command.origin);
     }
   }
 
@@ -640,8 +650,8 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
       final targets = choice ? [here, ...also] : [here];
       for (final target in targets) {
         final sent = target.paste(text, allowUnsafe: true);
-        if (sent && identical(target, here)) {
-          here.controller.line.text(text, _SessionScreen(here.session));
+        if (sent) {
+          target.controller.line.text(text, _SessionScreen(target.session));
         }
       }
     }
@@ -721,9 +731,9 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     }
     final typed = text.substring(common);
     if (typed.isNotEmpty) {
-      _c.line.text(typed, _screen);
-      for (final s in _targets) {
-        s.text(text: typed);
+      for (final c in _targets) {
+        c.line.text(typed, _SessionScreen(c.session));
+        c.session.text(text: typed);
       }
     }
     _value = _idle;

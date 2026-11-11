@@ -190,6 +190,20 @@ class TerminalController extends ConnectionController {
   }
 
   @override
+  void start() {
+    _shellGeneration++;
+    line.shellChanged();
+    super.start();
+  }
+
+  @override
+  void cancel() {
+    _shellGeneration++;
+    line.shellChanged();
+    super.cancel();
+  }
+
+  @override
   Stream<SessionEvent> open() {
     final hostId = this.hostId;
     final target = this.target;
@@ -229,7 +243,8 @@ class TerminalController extends ConnectionController {
   @override
   void onEvent(SessionEvent e) {
     if (e.kind == SessionEventKind.closed ||
-        e.kind == SessionEventKind.reconnecting) {
+        e.kind == SessionEventKind.reconnecting ||
+        e.kind == SessionEventKind.started) {
       _shellGeneration++;
       this.line.shellChanged();
     }

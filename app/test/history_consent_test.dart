@@ -10,6 +10,7 @@ import 'package:openward/tabs/tabs.dart';
 import 'package:openward/terminal/controller.dart';
 import 'package:openward/terminal/send_target.dart';
 import 'package:openward/src/rust/api/session.dart';
+import 'package:openward/src/rust/api/vault.dart';
 import 'package:openward/ui/themes.dart';
 
 import 'fakes.dart';
@@ -58,6 +59,54 @@ HistoryEntry saved(
 }
 
 void main() {
+  testWidgets('saved-host effective account changes require review', (
+    tester,
+  ) async {
+    final app = FakeOpenWard();
+    final ref = fakeContainer(app);
+    final host = HostView(
+      id: 'saved',
+      label: 'server',
+      tags: const [],
+      address: 'server.example',
+      user: 'ops',
+      port: 22,
+      protocol: ProtocolKind.ssh,
+      terminalScheme: '',
+      startupSnippet: '',
+    );
+    app.hostList = [host];
+    ref.read(tabsProvider.notifier).openHost(host);
+    final ops = ref.read(tabsProvider).currentSession!..phase = Phase.connected;
+    ops.connected = connectedAs('ops');
+    final entry = saved(
+      ref,
+      ops,
+      'echo own account',
+      origin: CommandOrigin.own,
+    );
+    ref.read(tabsProvider.notifier).openHost(host);
+    final root = ref.read(tabsProvider).currentSession!
+      ..phase = Phase.connected;
+    // The effective result can differ through host, group or OpenSSH config;
+    // the source is Connected, never the mutable host record above.
+    root.connected = connectedAs('root');
+    expect(root.target, isNull);
+    expect(
+      historyIsOwnHere(entry, historyPlace(root), historyBinding(root)),
+      isFalse,
+    );
+    final context = await window(tester, ref);
+    final pending = replayHistory(context, ref, entry);
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(shown(tester), contains('ops@server.example:22'));
+    expect(shown(tester), contains('root@server.example:22'));
+    expect(app.sessions.last.sentTexts, isEmpty);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(await pending, 0);
+  });
   testWidgets('replay respects an existing private-line opt-out', (
     tester,
   ) async {
@@ -261,7 +310,41 @@ void main() {
     expect(app.sessions.single.sentTexts, isEmpty);
     expect(app.sessions.single.pastedTexts, ['text']);
   });
+
+  test('local restart and cancellation invalidate captured deliveries', () {
+    final app = FakeOpenWard();
+    final c = TerminalController(app: app, label: 'local')
+      ..phase = Phase.running;
+    final old = TerminalSendTarget(c);
+    c.start();
+    c.onEvent(event(SessionEventKind.started));
+    expect(old.execute('old shell'), isFalse);
+    final beforeCancel = TerminalSendTarget(c);
+    c.cancel();
+    c.start();
+    c.onEvent(event(SessionEventKind.started));
+    expect(beforeCancel.paste('old paste', allowUnsafe: true), isFalse);
+    expect(app.sessions.single.sentTexts, isEmpty);
+    c.dispose();
+  });
 }
+
+ConnectedView connectedAs(String user) => ConnectedView(
+  user: user,
+  protocol: ProtocolKind.ssh,
+  mosh: false,
+  host: 'server.example',
+  port: 22,
+  kex: 'test',
+  postQuantum: false,
+  cipher: 'test',
+  hostKeyAlgorithm: 'ssh-ed25519',
+  fingerprint: 'SHA256:same-key',
+  trust: TrustKind.known,
+  ca: '',
+  hops: 1,
+  connectMs: 1,
+);
 
 class _Screen implements LineScreen {
   @override
