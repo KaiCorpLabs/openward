@@ -29,6 +29,11 @@ class LineTracker {
   /// newline): nothing is kept.
   bool _lost = false;
 
+  /// An own leading space opts the whole line out, including later edits.
+  /// Null means an editing key made the cursor position uncertain.
+  bool? _atStart = true;
+  bool _private = false;
+
   String _typed = '';
   int _row = 0;
 
@@ -55,7 +60,9 @@ class LineTracker {
   /// What was typed on this line, for a suggestion: null once the line
   /// was edited (arrows, Tab) or lost, and where a secret is asked.
   String? get plainTyped =>
-      _active && !_lost && !_edited && !_looksSecret(_prompt) ? _typed : null;
+      _active && !_lost && !_edited && !_private && !_looksSecret(_prompt)
+      ? _typed
+      : null;
 
   /// Whether the screen shows the prompt and what was typed, the cursor
   /// at its end, and nothing new after it (a shell's own suggestion, the
@@ -75,6 +82,8 @@ class LineTracker {
     _active = false;
     _edited = false;
     _lost = false;
+    _atStart = true;
+    _private = false;
     _typed = '';
     _prompt = '';
     _after = '';
@@ -83,6 +92,12 @@ class LineTracker {
   /// Text typed or pasted.
   void text(String t, LineScreen s) {
     _begin(s);
+    if (t.isNotEmpty) {
+      // When an editor key obscured the cursor, do not risk recording an
+      // own space that may have been inserted at the start of the command.
+      if (_atStart != false && t.startsWith(' ')) _private = true;
+      _atStart = false;
+    }
     if (t.contains('\n') || t.contains('\r')) {
       _lost = true;
       return;
@@ -103,6 +118,7 @@ class LineTracker {
         final runes = _typed.runes.toList()..removeLast();
         _typed = String.fromCharCodes(runes);
       }
+      _atStart = !_edited ? _typed.isEmpty : (_atStart == true ? true : null);
       return;
     }
     if (mods & Mods.ctrl != 0 && hid >= Hid.a && hid < Hid.a + 26) {
@@ -119,6 +135,11 @@ class LineTracker {
     }
     _begin(s);
     _edited = true;
+    _atStart =
+        (hid == Hid.home && chord == 0) ||
+            (mods & Mods.ctrl != 0 && (hid == Hid.a || hid == Hid.a + 20))
+        ? true
+        : null;
   }
 
   /// Enter: the command run, if it can be told and kept; then a new line.
@@ -129,7 +150,7 @@ class LineTracker {
   }
 
   String? _command(LineScreen s) {
-    if (!_active || _lost) return null;
+    if (!_active || _lost || _private) return null;
     if (_looksSecret(_prompt)) return null;
     // The prompt where it was, or a few rows up if the screen scrolled.
     ({String text, String after})? line;
@@ -143,8 +164,6 @@ class LineTracker {
     if (line == null) return null;
     final String command;
     if (!_edited) {
-      // A space in front: the shells' way of saying "do not keep this".
-      if (_typed.startsWith(' ')) return null;
       final typed = _typed.trim();
       // The screen shows what was typed, though maybe not its last keys
       // yet. A password does not show at all.

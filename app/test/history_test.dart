@@ -127,6 +127,61 @@ void main() {
       expect(t.enter(s, altScreen: false), 'make test');
     });
 
+    test('leading-space exclusion survives editing and reconstruction', () {
+      for (final hid in [Hid.tab, Hid.arrowLeft, Hid.arrowUp]) {
+        final s = _Screen('\$ ');
+        final t = LineTracker();
+        _type(t, s, ' export TOKEN=private');
+        t.key(hid, 0, '', s);
+        expect(t.enter(s, altScreen: false), isNull);
+        s.echoed = '';
+        _type(t, s, 'echo public');
+        expect(t.enter(s, altScreen: false), 'echo public');
+      }
+    });
+
+    test('a leading space inserted at Home also excludes the edited line', () {
+      final s = _Screen('\$ ');
+      final t = LineTracker();
+      _type(t, s, 'export TOKEN=private');
+      t.key(Hid.home, 0, '', s);
+      t.text(' ', s);
+      s.echoed = ' export TOKEN=private';
+      expect(t.enter(s, altScreen: false), isNull);
+    });
+
+    test(
+      'spaces after cursor-uncertain editing stay private conservatively',
+      () {
+        for (final key in [Hid.arrowUp, Hid.a, Hid.a + 20]) {
+          final s = _Screen('\$ ');
+          final t = LineTracker();
+          _type(t, s, 'export TOKEN=private');
+          t.key(key, key == Hid.arrowUp ? 0 : Mods.ctrl, '', s);
+          t.text(' ', s);
+          s.echoed = ' export TOKEN=private';
+          expect(t.enter(s, altScreen: false), isNull);
+        }
+      },
+    );
+
+    test('private-line intent stays until Enter or cancellation', () {
+      final s = _Screen('\$ ');
+      final t = LineTracker();
+      _type(t, s, ' ');
+      t.key(Hid.backspace, 0, '', s);
+      s.echoed = '';
+      _type(t, s, 'export TOKEN=private');
+      t.key(Hid.tab, 0, '', s);
+      expect(t.enter(s, altScreen: false), isNull);
+      s.echoed = '';
+      _type(t, s, ' private');
+      t.key(Hid.a + 2, Mods.ctrl, '', s);
+      s.echoed = '';
+      _type(t, s, 'echo public');
+      expect(t.enter(s, altScreen: false), 'echo public');
+    });
+
     test('text after the cursor makes an edited line unclear', () {
       final s = _Screen('\$ ')..after = '[12:00]';
       final t = LineTracker();
