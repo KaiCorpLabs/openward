@@ -451,9 +451,13 @@ fn open_failure(
         None => (None, None),
     };
     // The revalidation may have superseded the connection's old snapshot.
-    let verdict = query
-        .as_ref()
-        .map_or_else(|| verdict.clone(), |q| q.verdict.clone());
+    let verdict = match query.as_ref() {
+        Some(q) if matches!(q.verdict, Verdict::Changed | Verdict::Revoked) => q.verdict.clone(),
+        // A refused plain-key fallback must retain the certificate's
+        // original validation problem. Only a fresh change/revocation
+        // supersedes that reason.
+        _ => verdict.clone(),
+    };
     match (&verdict, query) {
         (Verdict::Changed, Some(q)) => Failure::HostKeyChanged(Box::new(ChangedKey {
             label,
@@ -1239,6 +1243,39 @@ mod trust_tests {
                 .is_err()
         );
         assert_eq!(app.vault().known_hosts_text(), before);
+    }
+
+    #[test]
+    fn refusing_a_plain_key_fallback_keeps_the_certificate_problem() {
+        use openward_ssh::known_hosts::CertProblem;
+        let local = Local::from_env();
+        let hop = Plan::for_address(
+            "host.example",
+            None,
+            None,
+            openward_vault::proto::Protocol::Ssh,
+            &local,
+        )
+        .hops
+        .remove(0);
+        let query = HostKeyQuery {
+            host: hop.address.clone(),
+            port: hop.port,
+            key: key(91),
+            verdict: Verdict::Unknown,
+            known_types: vec![],
+        };
+        let refused = Mutex::new(Some(KeyRefusal::Query(Box::new(query))));
+        let error = anyhow::Error::new(UntrustedHost(Verdict::BadCertificate(
+            CertProblem::Untrusted,
+        )));
+        assert!(matches!(
+            open_failure(&hop, &error, &refused, &KnownTexts::default()),
+            Failure::BadCertificate {
+                problem: CertProblem::Untrusted,
+                ..
+            }
+        ));
     }
 
     #[test]
