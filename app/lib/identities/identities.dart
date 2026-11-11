@@ -10,18 +10,18 @@ import '../ui/widgets.dart';
 
 /// The identities, with their keys as this machine has them. Loaded again
 /// with the library, whose hosts they count.
-class IdentitiesNotifier extends Notifier<List<IdentityView>> {
+class IdentitiesNotifier extends AsyncNotifier<List<IdentityView>> {
   @override
-  List<IdentityView> build() {
+  Future<List<IdentityView>> build() {
     ref.watch(libraryProvider);
     return ref.read(openWardProvider).identities();
   }
 
-  void refresh() => state = ref.read(openWardProvider).identities();
+  void refresh() => ref.invalidateSelf();
 }
 
 final identitiesProvider =
-    NotifierProvider<IdentitiesNotifier, List<IdentityView>>(
+    AsyncNotifierProvider<IdentitiesNotifier, List<IdentityView>>(
       IdentitiesNotifier.new,
     );
 

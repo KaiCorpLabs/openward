@@ -208,7 +208,6 @@ fn hosts_per_group(vault: &Vault) -> HashMap<ItemId, u32> {
 impl OpenWard {
     fn identity_view(&self, vault: &Vault, iid: ItemId, i: &Identity) -> IdentityView {
         let spec = spec_of(i);
-        let local = self.app.local();
         let mut groups = Vec::new();
         let mut hosts = Vec::new();
         let choosers = vault.identity_choosers(iid);
@@ -224,11 +223,7 @@ impl OpenWard {
         IdentityView {
             id: iid.to_string(),
             rev: vault.get(iid).map_or(0, |i| i.rev),
-            keys: spec
-                .identity_files
-                .iter()
-                .map(|p| key_view(p, key_info(local, p, &spec.certificate_files)))
-                .collect(),
+            keys: Vec::new(),
             spec,
             groups,
             hosts,
@@ -237,23 +232,45 @@ impl OpenWard {
         }
     }
 
+    fn inspect_identity(&self, mut view: IdentityView) -> IdentityView {
+        view.keys = view
+            .spec
+            .identity_files
+            .iter()
+            .map(|p| {
+                key_view(
+                    p,
+                    key_info(self.app.local(), p, &view.spec.certificate_files),
+                )
+            })
+            .collect();
+        view
+    }
+
     /// Every identity, by name.
-    #[frb(sync)]
     pub fn identities(&self) -> Vec<IdentityView> {
-        let vault = self.app.vault();
-        vault
-            .identities()
+        let views: Vec<_> = {
+            let vault = self.app.vault();
+            vault
+                .identities()
+                .into_iter()
+                .map(|(iid, i)| self.identity_view(&vault, iid, i))
+                .collect()
+        };
+        views
             .into_iter()
-            .map(|(iid, i)| self.identity_view(&vault, iid, i))
+            .map(|view| self.inspect_identity(view))
             .collect()
     }
 
-    #[frb(sync)]
     pub fn identity(&self, id: String) -> Result<IdentityView, VaultError> {
         let iid = super::vault::id(&id)?;
-        let vault = self.app.vault();
-        let i = vault.identity(iid)?;
-        Ok(self.identity_view(&vault, iid, i))
+        let view = {
+            let vault = self.app.vault();
+            let i = vault.identity(iid)?;
+            self.identity_view(&vault, iid, i)
+        };
+        Ok(self.inspect_identity(view))
     }
 
     pub fn create_identity(&self, spec: IdentitySpec) -> Result<String, VaultError> {
@@ -278,7 +295,6 @@ impl OpenWard {
 
     /// What the key at `path` is on this machine, and which of
     /// `certificate_files` (or `<key>-cert.pub`) goes with it.
-    #[frb(sync)]
     pub fn key_info(&self, path: String, certificate_files: Vec<String>) -> KeyView {
         key_view(&path, key_info(self.app.local(), &path, &certificate_files))
     }

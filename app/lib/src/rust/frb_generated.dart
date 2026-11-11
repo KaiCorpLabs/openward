@@ -273,9 +273,11 @@ abstract class RustLibApi extends BaseApi {
 
   List<HostView> crateApiAppOpenWardHosts({required OpenWard that});
 
-  List<IdentityView> crateApiAppOpenWardIdentities({required OpenWard that});
+  Future<List<IdentityView>> crateApiAppOpenWardIdentities({
+    required OpenWard that,
+  });
 
-  IdentityView crateApiAppOpenWardIdentity({
+  Future<IdentityView> crateApiAppOpenWardIdentity({
     required OpenWard that,
     required String id,
   });
@@ -322,13 +324,13 @@ abstract class RustLibApi extends BaseApi {
     required String path,
   });
 
-  KeyView crateApiAppOpenWardKeyInfo({
+  Future<KeyView> crateApiAppOpenWardKeyInfo({
     required OpenWard that,
     required String path,
     required List<String> certificateFiles,
   });
 
-  List<SshKey> crateApiAppOpenWardKeys({required OpenWard that});
+  Future<List<SshKey>> crateApiAppOpenWardKeys({required OpenWard that});
 
   Future<int> crateApiAppOpenWardKnownHostCount({required OpenWard that});
 
@@ -436,7 +438,7 @@ abstract class RustLibApi extends BaseApi {
     String? file,
   });
 
-  String? crateApiAppOpenWardPublicKeyLine({
+  Future<String?> crateApiAppOpenWardPublicKeyLine({
     required OpenWard that,
     required String path,
   });
@@ -2358,16 +2360,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "OpenWard_hosts", argNames: ["that"]);
 
   @override
-  List<IdentityView> crateApiAppOpenWardIdentities({required OpenWard that}) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
+  Future<List<IdentityView>> crateApiAppOpenWardIdentities({
+    required OpenWard that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 40)!;
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 40,
+            port: port_,
+          );
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_identity_view,
@@ -2384,20 +2393,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "OpenWard_identities", argNames: ["that"]);
 
   @override
-  IdentityView crateApiAppOpenWardIdentity({
+  Future<IdentityView> crateApiAppOpenWardIdentity({
     required OpenWard that,
     required String id,
   }) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
             that,
             serializer,
           );
           sse_encode_String(id, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 41)!;
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 41,
+            port: port_,
+          );
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_identity_view,
@@ -2710,14 +2724,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  KeyView crateApiAppOpenWardKeyInfo({
+  Future<KeyView> crateApiAppOpenWardKeyInfo({
     required OpenWard that,
     required String path,
     required List<String> certificateFiles,
   }) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
             that,
@@ -2725,7 +2739,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
           sse_encode_String(path, serializer);
           sse_encode_list_String(certificateFiles, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 50)!;
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 50,
+            port: port_,
+          );
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_key_view,
@@ -2744,16 +2763,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   );
 
   @override
-  List<SshKey> crateApiAppOpenWardKeys({required OpenWard that}) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
+  Future<List<SshKey>> crateApiAppOpenWardKeys({required OpenWard that}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 51)!;
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 51,
+            port: port_,
+          );
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_ssh_key,
@@ -3652,20 +3676,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  String? crateApiAppOpenWardPublicKeyLine({
+  Future<String?> crateApiAppOpenWardPublicKeyLine({
     required OpenWard that,
     required String path,
   }) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerOpenWard(
             that,
             serializer,
           );
           sse_encode_String(path, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 77)!;
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 77,
+            port: port_,
+          );
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_opt_String,
@@ -17898,10 +17927,10 @@ class OpenWardImpl extends RustOpaque implements OpenWard {
       RustLib.instance.api.crateApiAppOpenWardHosts(that: this);
 
   /// Every identity, by name.
-  List<IdentityView> identities() =>
+  Future<List<IdentityView>> identities() =>
       RustLib.instance.api.crateApiAppOpenWardIdentities(that: this);
 
-  IdentityView identity({required String id}) =>
+  Future<IdentityView> identity({required String id}) =>
       RustLib.instance.api.crateApiAppOpenWardIdentity(that: this, id: id);
 
   /// Groups (by name) and hosts (by label) for the "use on…" dialog, as
@@ -17975,7 +18004,7 @@ class OpenWardImpl extends RustOpaque implements OpenWard {
 
   /// What the key at `path` is on this machine, and which of
   /// `certificate_files` (or `<key>-cert.pub`) goes with it.
-  KeyView keyInfo({
+  Future<KeyView> keyInfo({
     required String path,
     required List<String> certificateFiles,
   }) => RustLib.instance.api.crateApiAppOpenWardKeyInfo(
@@ -17985,7 +18014,7 @@ class OpenWardImpl extends RustOpaque implements OpenWard {
   );
 
   /// The private keys in `~/.ssh`, by name.
-  List<SshKey> keys() =>
+  Future<List<SshKey>> keys() =>
       RustLib.instance.api.crateApiAppOpenWardKeys(that: this);
 
   /// How many rows [`OpenWard::known_host_rows`] would list with no
@@ -18124,7 +18153,7 @@ class OpenWardImpl extends RustOpaque implements OpenWard {
       .crateApiAppOpenWardPreviewSshConfig(that: this, file: file);
 
   /// A key's public half, as an `authorized_keys` line.
-  String? publicKeyLine({required String path}) => RustLib.instance.api
+  Future<String?> publicKeyLine({required String path}) => RustLib.instance.api
       .crateApiAppOpenWardPublicKeyLine(that: this, path: path);
 
   /// From now on, reads a host's `/etc/os-release` after connecting, and

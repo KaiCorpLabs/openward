@@ -15,14 +15,14 @@ import '../src/rust/api/sftp.dart';
 import '../tabs/messages.dart' show securityKeyReason;
 
 /// The private keys in `~/.ssh`, by name.
-class KeysNotifier extends Notifier<List<SshKey>> {
+class KeysNotifier extends AsyncNotifier<List<SshKey>> {
   @override
-  List<SshKey> build() => ref.read(openWardProvider).keys();
+  Future<List<SshKey>> build() => ref.read(openWardProvider).keys();
 
-  void refresh() => state = ref.read(openWardProvider).keys();
+  void refresh() => ref.invalidateSelf();
 }
 
-final keysProvider = NotifierProvider<KeysNotifier, List<SshKey>>(
+final keysProvider = AsyncNotifierProvider<KeysNotifier, List<SshKey>>(
   KeysNotifier.new,
 );
 
@@ -162,7 +162,7 @@ KeyInstall startKeyInstall(
 
 /// A key's public half for copying, or null when there is none to read
 /// (an encrypted key without its `.pub`).
-String? publicLineOf(WidgetRef ref, SshKey key) =>
+Future<String?> publicLineOf(WidgetRef ref, SshKey key) =>
     ref.read(openWardProvider).publicKeyLine(path: key.path);
 
 /// The key's type as people say it.

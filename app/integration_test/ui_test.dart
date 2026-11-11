@@ -3359,12 +3359,17 @@ Host db
       );
       final container = await launch(tester);
       Finder field(String key) => find.byKey(ValueKey(key));
-      IdentityView? named(String label) => container
-          .read(identitiesProvider)
-          .where((i) => i.spec.label == label)
-          .firstOrNull;
+      IdentityView? named(String label) =>
+          (container.read(identitiesProvider).value ?? const <IdentityView>[])
+              .where((i) => i.spec.label == label)
+              .firstOrNull;
 
       await tester.tap(field('library.identities'));
+      await _until(
+        tester,
+        () => container.read(identitiesProvider).hasValue,
+        'the identity list',
+      );
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('Aún no hay identidades'), findsOneWidget);
 
@@ -3375,6 +3380,11 @@ Host db
       await tester.enterText(field('identity.user'), 'demo');
       await tester.enterText(field('identity.keyPath'), '$fixtures/id_cert');
       await tester.testTextInput.receiveAction(TextInputAction.done);
+      await _until(
+        tester,
+        () => find.textContaining('Ed25519 · SHA256:').evaluate().isNotEmpty,
+        'the key metadata and fingerprint',
+      );
       await tester.pump(const Duration(milliseconds: 200));
       expect(find.text(tildePath('$fixtures/id_cert')), findsOneWidget);
       expect(find.textContaining('Ed25519 · SHA256:'), findsOneWidget);
@@ -3383,6 +3393,11 @@ Host db
       await tester.pump(const Duration(milliseconds: 200));
       await _shot(tester, '26-identity-editor');
       await tester.tap(find.text('Guardar'));
+      await _until(
+        tester,
+        () => field('identity.demo en S2').evaluate().isNotEmpty,
+        'the saved identity',
+      );
       await tester.pump(const Duration(milliseconds: 400));
       expect(named('demo en S2')?.spec.identitiesOnly, isTrue);
       expect(find.text('Nadie la usa todavía'), findsOneWidget);
@@ -3401,6 +3416,11 @@ Host db
       );
       await _shot(tester, '27-identity-use');
       await tester.tap(field('identity.use.apply'));
+      await _until(
+        tester,
+        () => named('demo en S2')?.hostCount == 2,
+        'the identity host count',
+      );
       await tester.pump(const Duration(milliseconds: 400));
       expect(named('demo en S2')!.hostCount, 2);
       expect(find.text('Grupo Producción · 2 hosts'), findsOneWidget);
@@ -3455,11 +3475,21 @@ Host db
       container.read(tabsProvider.notifier).close(1);
       await _settle(tester);
       await tester.tap(field('identity.demo en S2'));
+      await _until(
+        tester,
+        () => field('identity.label').evaluate().isNotEmpty,
+        'the identity editor',
+      );
       await tester.pump(const Duration(milliseconds: 400));
       await tester.tap(find.text('Eliminar'));
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('¿Eliminar «demo en S2»?'), findsOneWidget);
       await tester.tap(field('identity.delete.confirm'));
+      await _until(
+        tester,
+        () => find.text('Aún no hay identidades').evaluate().isNotEmpty,
+        'the deleted identity',
+      );
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('Aún no hay identidades'), findsOneWidget);
       expect(app.host(id: app.hosts().first.id).spec.settings.identity, isNull);
@@ -3687,6 +3717,11 @@ Host db
     );
     final container = await launch(tester);
     await tester.tap(field('library.keys'));
+    await _until(
+      tester,
+      () => container.read(keysProvider).hasValue,
+      'the key list',
+    );
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('No hay claves en ~/.ssh'), findsOneWidget);
 
@@ -3698,7 +3733,7 @@ Host db
     await tester.tap(field('newKey.make'));
     await _until(
       tester,
-      () => container.read(keysProvider).isNotEmpty,
+      () => container.read(keysProvider).value?.isNotEmpty ?? false,
       'the new key',
     );
     await tester.pump(const Duration(milliseconds: 300));
@@ -3717,7 +3752,7 @@ Host db
     await tester.tap(field('importKey.save'));
     await _until(
       tester,
-      () => container.read(keysProvider).length == 2,
+      () => container.read(keysProvider).value?.length == 2,
       'the key brought in',
     );
     await tester.pump(const Duration(milliseconds: 300));
@@ -3737,7 +3772,9 @@ Host db
     await tester.tap(field('key.rename.save'));
     await _until(
       tester,
-      () => container.read(keysProvider).any((k) => k.name == 'copia2'),
+      () =>
+          container.read(keysProvider).value?.any((k) => k.name == 'copia2') ??
+          false,
       'the key renamed',
     );
     expect(File('${home.path}/.ssh/copia').existsSync(), isFalse);
@@ -3748,9 +3785,12 @@ Host db
     await tester.tap(field('key.passphrase.save'));
     await _until(
       tester,
-      () => container
-          .read(keysProvider)
-          .any((k) => k.name == 'copia2' && k.encrypted),
+      () =>
+          container
+              .read(keysProvider)
+              .value
+              ?.any((k) => k.name == 'copia2' && k.encrypted) ??
+          false,
       'the key behind a passphrase',
     );
     await menu('copia2', 'Eliminar…');
@@ -3759,7 +3799,7 @@ Host db
     await tester.tap(field('key.delete.confirm'));
     await _until(
       tester,
-      () => container.read(keysProvider).length == 1,
+      () => container.read(keysProvider).value?.length == 1,
       'the key deleted',
     );
     expect(File('${home.path}/.ssh/copia2').existsSync(), isFalse);

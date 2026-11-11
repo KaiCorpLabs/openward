@@ -52,7 +52,8 @@ class _IdentitiesPageState extends ConsumerState<IdentitiesPage> {
   Widget build(BuildContext context) {
     final c = context.ow.colors;
     final l = context.l10n;
-    final all = ref.watch(identitiesProvider);
+    final result = ref.watch(identitiesProvider);
+    final all = result.value ?? const <IdentityView>[];
     final shown = all.where(_matches).toList();
     final inUse = all.where((i) => i.hostCount > 0 || i.chooserIds.isNotEmpty);
     return ColoredBox(
@@ -71,13 +72,25 @@ class _IdentitiesPageState extends ConsumerState<IdentitiesPage> {
             ),
           ),
           const SizedBox(height: 16),
-          if (all.isEmpty)
+          if (result.isLoading) const LinearProgressIndicator(),
+          if (result.hasError)
+            Row(
+              children: [
+                Expanded(child: Text(l.errInternal)),
+                TextButton(
+                  onPressed: () =>
+                      ref.read(identitiesProvider.notifier).refresh(),
+                  child: Text(l.retry),
+                ),
+              ],
+            ),
+          if (result.hasValue && all.isEmpty)
             OwEmptyState(
               icon: Icons.badge_outlined,
               title: l.noIdentities,
               body: l.noIdentitiesBody,
             )
-          else ...[
+          else if (all.isNotEmpty) ...[
             OwFilterField(
               controller: _filter,
               hint: l.filterIdentities,

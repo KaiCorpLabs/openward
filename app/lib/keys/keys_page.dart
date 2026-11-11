@@ -55,20 +55,23 @@ class _KeysPageState extends ConsumerState<KeysPage> {
     announce(context, _note!);
   }
 
-  void _copy(SshKey key) {
+  Future<void> _copy(SshKey key) async {
     final l = context.l10n;
-    final line = publicLineOf(ref, key);
+    final line = await publicLineOf(ref, key);
+    if (!mounted) return;
     if (line == null) {
       setState(() => _note = l.noPublicKey(key.name));
       return;
     }
-    Clipboard.setData(ClipboardData(text: line));
+    await Clipboard.setData(ClipboardData(text: line));
+    if (!mounted) return;
     setState(() => _note = l.publicKeyCopied(key.name));
     announce(context, _note!);
   }
 
   Future<void> _upload(SshKey key) async {
-    final line = publicLineOf(ref, key);
+    final line = await publicLineOf(ref, key);
+    if (!mounted) return;
     if (line == null) {
       setState(() => _note = context.l10n.noPublicKey(key.name));
       return;
@@ -80,7 +83,8 @@ class _KeysPageState extends ConsumerState<KeysPage> {
   Widget build(BuildContext context) {
     final c = context.ow.colors;
     final l = context.l10n;
-    final all = ref.watch(keysProvider);
+    final result = ref.watch(keysProvider);
+    final all = result.value ?? const <SshKey>[];
     final q = _query.text.trim().toLowerCase();
     final shown = q.isEmpty
         ? all
@@ -137,18 +141,29 @@ class _KeysPageState extends ConsumerState<KeysPage> {
               child: Text(_note!, style: TextStyle(color: c.textMuted)),
             ),
           const SizedBox(height: 12),
-          if (all.isEmpty)
+          if (result.isLoading) const LinearProgressIndicator(),
+          if (result.hasError)
+            Row(
+              children: [
+                Expanded(child: Text(l.errInternal)),
+                TextButton(
+                  onPressed: () => ref.read(keysProvider.notifier).refresh(),
+                  child: Text(l.retry),
+                ),
+              ],
+            ),
+          if (result.hasValue && all.isEmpty)
             OwEmptyState(
               icon: Icons.key_outlined,
               title: l.noKeys,
               body: l.noKeysBody,
             )
-          else if (shown.isEmpty)
+          else if (result.hasValue && shown.isEmpty)
             OwEmptyState.noMatch(
               filter: _query.text.trim(),
               onClear: () => setState(_query.clear),
             )
-          else
+          else if (shown.isNotEmpty)
             OwDataTable(
               widths: _widths,
               headings: [

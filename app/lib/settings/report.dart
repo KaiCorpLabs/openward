@@ -15,7 +15,11 @@ import '../ui/widgets.dart';
 
 /// What a problem report carries: versions, the system, the look and how
 /// much is saved. Never hosts, addresses, users or keys.
-String reportText(WidgetRef ref, AppLocalizations l, String locale) {
+Future<String> reportText(
+  WidgetRef ref,
+  AppLocalizations l,
+  String locale,
+) async {
   final app = ref.read(openWardProvider);
   final s = ref.read(settingsProvider);
   final library = ref.read(libraryProvider);
@@ -34,17 +38,18 @@ String reportText(WidgetRef ref, AppLocalizations l, String locale) {
       library.hosts.length,
       library.groups.length,
       app.tunnels().length,
-      app.identities().length,
+      (await app.identities()).length,
       app.snippetsForExecution().length,
     ),
   ].join('\n');
 }
 
 /// Shows what a report would copy, and copies it.
-Future<void> showReport(BuildContext context, WidgetRef ref) {
+Future<void> showReport(BuildContext context, WidgetRef ref) async {
   final l = context.l10n;
   final locale = Localizations.maybeLocaleOf(context)?.languageCode ?? '';
-  final text = reportText(ref, l, locale);
+  final text = await reportText(ref, l, locale);
+  if (!context.mounted) return;
   return showDialog<void>(
     context: context,
     builder: (context) {
