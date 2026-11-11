@@ -17,6 +17,7 @@ pub mod transfer;
 
 mod flight;
 mod pipe;
+mod transfer_local;
 
 pub use entry::{Entry, Kind};
 pub use remote::Remote;

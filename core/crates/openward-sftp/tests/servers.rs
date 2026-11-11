@@ -924,6 +924,211 @@ async fn uploads_and_downloads_resume_from_the_part() {
 }
 
 #[tokio::test]
+async fn downloads_refuse_prepared_local_parts_without_touching_their_targets() {
+    let fx = servers!();
+    let s = server(&fx, OPENSSH, "local-part-boundary").await;
+    s.sh("printf remote-bytes > file").await;
+    let source = join(&s.dir, "file");
+    let meta = s.remote.stat(&source).await.unwrap().unwrap();
+    let part = part_path("file", &source, meta.size, meta.modified);
+    let (t, l) = (transfers(), link(&s.remote));
+    let outside = tempfile::tempdir().unwrap();
+    let sentinel = outside.path().join("keep");
+    std::fs::write(&sentinel, b"outside sentinel must remain whole").unwrap();
+    let before = std::fs::metadata(&sentinel).unwrap();
+    // Hardlinks work on Windows as well and are not stopped by nofollow.
+    let dest = tempfile::tempdir().unwrap();
+    std::fs::hard_link(&sentinel, dest.path().join(&part)).unwrap();
+    let down = copy(
+        &t,
+        &l,
+        Direction::Download,
+        &source,
+        path_str(dest.path()),
+        OnConflict::Replace,
+    )
+    .await;
+    assert_eq!(down.state, JobState::Failed, "{:?}", down.error);
+    assert!(!dest.path().join("file").exists());
+    #[cfg(unix)]
+    {
+        let dest = tempfile::tempdir().unwrap();
+        std::os::unix::fs::symlink(&sentinel, dest.path().join(&part)).unwrap();
+        let down = copy(
+            &t,
+            &l,
+            Direction::Download,
+            &source,
+            path_str(dest.path()),
+            OnConflict::Replace,
+        )
+        .await;
+        assert_eq!(down.state, JobState::Failed, "{:?}", down.error);
+        assert!(!dest.path().join("file").exists());
+    }
+    let after = std::fs::metadata(&sentinel).unwrap();
+    assert_eq!(
+        std::fs::read(&sentinel).unwrap(),
+        b"outside sentinel must remain whole"
+    );
+    assert_eq!(before.permissions(), after.permissions());
+    assert_eq!(before.modified().unwrap(), after.modified().unwrap());
+    #[cfg(unix)]
+    {
+        let dest = tempfile::tempdir().unwrap();
+        std::os::unix::fs::symlink(&sentinel, dest.path().join("file")).unwrap();
+        let conflicts = openward_sftp::conflicts(
+            &s.remote,
+            Direction::Download,
+            std::slice::from_ref(&source),
+            &path_str(dest.path()),
+        )
+        .await
+        .unwrap();
+        assert_eq!(conflicts.len(), 1);
+        assert_eq!(conflicts[0].theirs.kind, Kind::Link);
+        let skip = copy(
+            &t,
+            &l,
+            Direction::Download,
+            &source,
+            path_str(dest.path()),
+            OnConflict::Skip,
+        )
+        .await;
+        assert_eq!(skip.state, JobState::Done, "{:?}", skip.error);
+        assert_eq!(skip.skipped, 1);
+        let both = copy(
+            &t,
+            &l,
+            Direction::Download,
+            &source,
+            path_str(dest.path()),
+            OnConflict::KeepBoth,
+        )
+        .await;
+        assert_eq!(both.state, JobState::Done, "{:?}", both.error);
+        assert_eq!(
+            std::fs::read(dest.path().join("file (1)")).unwrap(),
+            b"remote-bytes"
+        );
+        let replace = copy(
+            &t,
+            &l,
+            Direction::Download,
+            &source,
+            path_str(dest.path()),
+            OnConflict::Replace,
+        )
+        .await;
+        assert_eq!(replace.state, JobState::Done, "{:?}", replace.error);
+        assert_eq!(
+            std::fs::read(dest.path().join("file")).unwrap(),
+            b"remote-bytes"
+        );
+        assert_eq!(
+            std::fs::read(&sentinel).unwrap(),
+            b"outside sentinel must remain whole"
+        );
+    }
+    s.done().await;
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn transfers_reject_escaping_links_but_accept_an_explicit_selection() {
+    use std::os::unix::fs::symlink;
+    let fx = servers!();
+    let s = server(&fx, OPENSSH, "local-link-boundary").await;
+    s.sh("mkdir tree; printf remote > tree/child").await;
+    let (t, l) = (transfers(), link(&s.remote));
+    let local = tempfile::tempdir().unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    let sentinel = outside.path().join("child");
+    std::fs::write(&sentinel, b"outside").unwrap();
+    let before = std::fs::metadata(&sentinel).unwrap();
+    symlink(outside.path(), local.path().join("tree")).unwrap();
+    let down = copy(
+        &t,
+        &l,
+        Direction::Download,
+        join(&s.dir, "tree"),
+        path_str(local.path()),
+        OnConflict::Replace,
+    )
+    .await;
+    assert_eq!(down.state, JobState::Failed, "{:?}", down.error);
+    assert_eq!(std::fs::read(&sentinel).unwrap(), b"outside");
+    let after = std::fs::metadata(&sentinel).unwrap();
+    assert_eq!(before.permissions(), after.permissions());
+    assert_eq!(before.modified().unwrap(), after.modified().unwrap());
+
+    let selection = local.path().join("selection");
+    std::fs::create_dir(&selection).unwrap();
+    symlink(&sentinel, selection.join("leak")).unwrap();
+    let up = copy(
+        &t,
+        &l,
+        Direction::Upload,
+        path_str(&selection),
+        &s.dir,
+        OnConflict::Replace,
+    )
+    .await;
+    assert_eq!(up.state, JobState::Failed, "{:?}", up.error);
+    assert!(
+        s.remote
+            .lstat(&join(&s.dir, "selection"))
+            .await
+            .unwrap()
+            .is_none()
+    );
+    // Explicitly choosing the link grants that one target; ordinary file
+    // selection, whole-file resume and source hashing keep their behavior.
+    let up = copy(
+        &t,
+        &l,
+        Direction::Upload,
+        path_str(&selection.join("leak")),
+        &s.dir,
+        OnConflict::Replace,
+    )
+    .await;
+    assert_eq!(up.state, JobState::Done, "{:?}", up.error);
+    assert_eq!(s.cat("leak").await, b"outside");
+    s.done().await;
+}
+
+#[tokio::test]
+async fn a_failed_local_acquisition_can_be_retried_after_the_path_is_available() {
+    let fx = servers!();
+    let s = server(&fx, OPENSSH, "local-retry").await;
+    s.sh("printf remote > file").await;
+    let (t, l) = (transfers(), link(&s.remote));
+    let local = tempfile::tempdir().unwrap();
+    let dest = local.path().join("later");
+    let down = t.add(
+        Arc::clone(&l),
+        Request {
+            direction: Direction::Download,
+            source: join(&s.dir, "file"),
+            dest_dir: path_str(&dest),
+            on_conflict: OnConflict::Replace,
+        },
+    );
+    assert_eq!(t.wait(down).await.unwrap().state, JobState::Failed);
+    std::fs::create_dir(&dest).unwrap();
+    t.resume(down);
+    let done = t.wait(down).await.unwrap();
+    assert_eq!(done.state, JobState::Done, "{:?}", done.error);
+    assert_eq!(std::fs::read(dest.join("file")).unwrap(), b"remote");
+    // A finished download releases its directory authority, including on
+    // Windows, where that handle deliberately disallows directory deletion.
+    std::fs::remove_dir_all(&dest).unwrap();
+    s.done().await;
+}
+
+#[tokio::test]
 async fn pause_resume_and_cancel() {
     let fx = servers!();
     let s = server(&fx, OPENSSH, "pause").await;

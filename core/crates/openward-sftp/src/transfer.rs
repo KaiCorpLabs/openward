@@ -38,6 +38,7 @@ use tokio::task::JoinHandle;
 use crate::entry::{Entry, Kind};
 use crate::flight::InFlight;
 use crate::remote::Remote;
+use crate::transfer_local::LocalRoot;
 use crate::{Error, Result, is_name, join, local, pipe};
 
 /// Jobs running at once.
@@ -174,7 +175,8 @@ pub async fn conflicts(
                     continue;
                 };
                 let name = crate::file_name(source);
-                let theirs = local::stat(&Path::new(dest_dir).join(name))?;
+                let root = LocalRoot::destination(Path::new(dest_dir))?;
+                let theirs = root.lstat(&local_join(Path::new(""), name)?)?;
                 (ours, theirs)
             }
         };
@@ -242,13 +244,14 @@ struct Item {
 #[derive(Clone)]
 enum Part {
     Remote(String),
-    Local(PathBuf),
+    Local(Arc<LocalRoot>, PathBuf),
 }
 
 struct Job {
     view: JobView,
     request: Request,
     link: Arc<Link>,
+    local: Option<Arc<LocalRoot>>,
     items: Option<Arc<Vec<Item>>>,
     /// The first item not finished.
     next: usize,
@@ -331,6 +334,7 @@ impl Transfers {
             view,
             request,
             link,
+            local: None,
             items: None,
             next: 0,
             ahead: BTreeSet::new(),
@@ -426,6 +430,7 @@ impl Transfers {
                 t.abort();
             }
             j.view.state = JobState::Cancelled;
+            j.local = None;
             j.view.ended_at = Some(now_secs());
             let parts = std::mem::take(&mut j.parts);
             if !parts.is_empty() {
@@ -489,8 +494,8 @@ async fn delete_part(link: &Link, part: Part) {
                 let _ = remote.remove_file(&path).await;
             }
         }
-        Part::Local(path) => {
-            let _ = std::fs::remove_file(path);
+        Part::Local(root, path) => {
+            let _ = root.remove_part(&path);
         }
     }
 }
@@ -532,6 +537,7 @@ fn finish(inner: &Arc<Inner>, id: u64, result: Result<()>) {
                 Ok(()) => {
                     j.view.state = JobState::Done;
                     j.parts.clear();
+                    j.local = None;
                 }
                 Err(e) => {
                     j.view.state = JobState::Failed;
@@ -547,6 +553,7 @@ fn finish(inner: &Arc<Inner>, id: u64, result: Result<()>) {
 struct Snapshot {
     request: Request,
     link: Arc<Link>,
+    local: Option<Arc<LocalRoot>>,
     items: Option<Arc<Vec<Item>>>,
     next: usize,
     ahead: BTreeSet<usize>,
@@ -565,6 +572,7 @@ async fn run(inner: &Arc<Inner>, id: u64) -> Result<()> {
     let Some(s) = with_job(inner, id, |j| Snapshot {
         request: j.request.clone(),
         link: Arc::clone(&j.link),
+        local: j.local.clone(),
         items: j.items.clone(),
         next: j.next,
         ahead: j.ahead.clone(),
@@ -576,11 +584,32 @@ async fn run(inner: &Arc<Inner>, id: u64) -> Result<()> {
     let remote = s.link.get().ok_or(Error::Lost)?;
     let req = &s.request;
     let up = req.direction == Direction::Upload;
+    // Waiting jobs consume no local descriptors. Acquire once when a job
+    // first runs, and retain that authority through failure/pause/resume.
+    // An unsuccessful acquisition is not cached, so retry can recover.
+    let local = match s.local {
+        Some(local) => local,
+        None => {
+            let local = Arc::new(if up {
+                LocalRoot::source(Path::new(&req.source))?
+            } else {
+                LocalRoot::destination(Path::new(&req.dest_dir))?
+            });
+            with_job(inner, id, |j| {
+                if j.view.state.finished() {
+                    return None;
+                }
+                Some(Arc::clone(j.local.get_or_insert(local)))
+            })
+            .flatten()
+            .ok_or_else(|| Error::Other("stopped".into()))?
+        }
+    };
 
     let items = match s.items {
         Some(items) => items,
         None => {
-            let items = Arc::new(expand(&remote, req).await?);
+            let items = Arc::new(expand(&remote, req, Arc::clone(&local)).await?);
             let files = items.iter().filter(|i| !i.dir).count() as u32;
             let total = items.iter().map(|i| i.size).sum();
             with_job(inner, id, |j| {
@@ -598,10 +627,10 @@ async fn run(inner: &Arc<Inner>, id: u64) -> Result<()> {
         None => {
             let name = with_job(inner, id, |j| j.view.name.clone()).unwrap_or_default();
             let top_dir = items.first().is_some_and(|i| i.dir);
-            let exists = dest_exists(&remote, up, &req.dest_dir, &name).await?;
+            let exists = dest_exists(&remote, up, &req.dest_dir, &name, &local).await?;
             let name = match (exists, req.on_conflict) {
                 (true, OnConflict::KeepBoth) => {
-                    free_name(&remote, up, &req.dest_dir, &name).await?
+                    free_name(&remote, up, &req.dest_dir, &name, &local).await?
                 }
                 (true, OnConflict::Skip) if top_dir => {
                     let files = items.iter().filter(|i| !i.dir).count() as u32;
@@ -631,6 +660,7 @@ async fn run(inner: &Arc<Inner>, id: u64) -> Result<()> {
         inner,
         id,
         remote: &remote,
+        local: &local,
         req,
         dest_name: &dest_name,
         progress: &s.progress,
@@ -720,6 +750,7 @@ struct JobRun<'a> {
     inner: &'a Inner,
     id: u64,
     remote: &'a Remote,
+    local: &'a Arc<LocalRoot>,
     req: &'a Request,
     dest_name: &'a str,
     progress: &'a AtomicU64,
@@ -731,15 +762,12 @@ impl JobRun<'_> {
     async fn copy(&self, i: usize, item: &Item, fresh: bool) -> Result<Done> {
         let rel = item.rel.as_str();
         if self.req.direction == Direction::Upload {
-            let src = local_join(Path::new(&self.req.source), rel)?;
+            let src = local_join(Path::new(""), rel)?;
             let dest = join(&self.req.dest_dir, &rel_join(self.dest_name, rel));
             self.upload(i, item, &src, &dest, fresh).await
         } else {
             let src = rel_join(&self.req.source, rel);
-            let dest = local_join(
-                Path::new(&self.req.dest_dir),
-                &rel_join(self.dest_name, rel),
-            )?;
+            let dest = local_join(Path::new(""), &rel_join(self.dest_name, rel))?;
             self.download(i, item, &src, &dest).await
         }
     }
@@ -837,7 +865,7 @@ fn local_join(base: &Path, rel: &str) -> Result<PathBuf> {
 }
 
 /// The files and folders a request copies, the item itself first.
-async fn expand(remote: &Remote, req: &Request) -> Result<Vec<Item>> {
+async fn expand(remote: &Remote, req: &Request, local: Arc<LocalRoot>) -> Result<Vec<Item>> {
     let item = |rel: String, e: &Entry| Item {
         rel,
         dir: e.kind == Kind::Dir,
@@ -849,12 +877,10 @@ async fn expand(remote: &Remote, req: &Request) -> Result<Vec<Item>> {
         Direction::Upload => {
             // A big folder takes a while to walk: off the runtime's threads,
             // which every connection shares.
-            let path = PathBuf::from(&req.source);
-            let source = req.source.clone();
             let walked = tokio::task::spawn_blocking(move || {
-                let top = local::stat(&path)?.ok_or(Error::NotFound(source))?;
+                let top = local.top()?;
                 let below = if top.kind == Kind::Dir {
-                    local::walk(&path)?
+                    local.walk()?
                 } else {
                     Vec::new()
                 };
@@ -890,23 +916,35 @@ async fn expand(remote: &Remote, req: &Request) -> Result<Vec<Item>> {
     }
 }
 
-async fn dest_exists(remote: &Remote, up: bool, dir: &str, name: &str) -> Result<bool> {
+async fn dest_exists(
+    remote: &Remote,
+    up: bool,
+    dir: &str,
+    name: &str,
+    local: &LocalRoot,
+) -> Result<bool> {
     if up {
         Ok(remote.lstat(&join(dir, name)).await?.is_some())
     } else {
-        Ok(Path::new(dir).join(name).symlink_metadata().is_ok())
+        local.exists(&local_join(Path::new(""), name)?)
     }
 }
 
 /// `name (1).ext`, `name (2).ext`… whichever is free.
-async fn free_name(remote: &Remote, up: bool, dir: &str, name: &str) -> Result<String> {
+async fn free_name(
+    remote: &Remote,
+    up: bool,
+    dir: &str,
+    name: &str,
+    local: &LocalRoot,
+) -> Result<String> {
     let (stem, ext) = match name.rfind('.') {
         Some(i) if i > 0 => (&name[..i], &name[i..]),
         _ => (name, ""),
     };
     for n in 1.. {
         let candidate = format!("{stem} ({n}){ext}");
-        if !dest_exists(remote, up, dir, &candidate).await? {
+        if !dest_exists(remote, up, dir, &candidate, local).await? {
             return Ok(candidate);
         }
     }
@@ -917,6 +955,7 @@ async fn free_name(remote: &Remote, up: bool, dir: &str, name: &str) -> Result<S
 fn keep_existing(on_conflict: OnConflict, existing: &Entry, item: &Item) -> bool {
     match on_conflict {
         OnConflict::Skip => true,
+        OnConflict::Newer if existing.kind == Kind::Link => true,
         OnConflict::Newer => match (item.modified, existing.modified) {
             (Some(ours), Some(theirs)) => ours <= theirs,
             _ => true,
@@ -949,21 +988,19 @@ impl JobRun<'_> {
             remote.mkdir(dest).await?;
             return Ok(Done::Dir { made: true });
         }
-        let name = src.display().to_string();
-        let source = local::stat(src)?;
+        let name = self.local.display(src).display().to_string();
+        // The validated source handle is acquired before any remote write or
+        // truncation, including the ownership-preserving fallback.
+        let (file, source) = self.local.open_source(src)?;
+        let mut file = tokio::fs::File::from_std(file);
         let part_of = |dest: &str, s: &Entry| part_path(dest, &name, s.size, s.modified);
         let mut dest = dest.to_owned();
         let (mut existing, mut had) = (None, None);
         if !fresh {
             // What has the name, and the part an earlier copy left: asked
             // together.
-            let part = source.as_ref().map(|s| part_of(&dest, s));
-            let (there, part_there) = tokio::join!(remote.lstat(&dest), async {
-                match &part {
-                    Some(part) => remote.lstat(part).await,
-                    None => Ok(None),
-                }
-            });
+            let part = part_of(&dest, &source);
+            let (there, part_there) = tokio::join!(remote.lstat(&dest), remote.lstat(&part));
             let there = there?;
             let link = there.as_ref().is_some_and(|e| e.kind == Kind::Link);
             existing = if link {
@@ -980,13 +1017,9 @@ impl JobRun<'_> {
             // A link stays a link: what is replaced is the file it leads to.
             if link && existing.is_some() {
                 dest = remote.realpath(&dest).await?;
-                had = match &source {
-                    Some(s) => remote.lstat(&part_of(&dest, s)).await?,
-                    None => None,
-                };
+                had = remote.lstat(&part_of(&dest, &source)).await?;
             }
         }
-        let source = source.ok_or_else(|| Error::NotFound(name.clone()))?;
         let size = source.size;
         let had = had.map(|e| e.size).filter(|&s| s <= size);
         let part = part_of(&dest, &source);
@@ -996,7 +1029,7 @@ impl JobRun<'_> {
         let mode = existing
             .as_ref()
             .and_then(|e| e.mode)
-            .or(item.mode)
+            .or(source.mode)
             .map(|m| m & 0o7777);
         let handle = remote.open_write(&part, had.is_none(), mode).await?;
         // Someone else's file, or another group's: put in its place, ours
@@ -1007,13 +1040,12 @@ impl JobRun<'_> {
                 remote.close(&part, handle).await?;
                 remote.remove_file(&part).await?;
                 with_job(self.inner, self.id, |j| j.parts.remove(&i));
-                return self.upload_in_place(src, &dest, size, item.modified).await;
+                return self
+                    .upload_in_place(&mut file, &dest, size, source.modified)
+                    .await;
             }
         }
         self.progress.fetch_add(offset, Ordering::Relaxed);
-        let mut file = tokio::fs::File::open(src)
-            .await
-            .map_err(|e| Error::local(src, &e))?;
         let sent = pipe::upload(
             remote,
             &part,
@@ -1031,7 +1063,7 @@ impl JobRun<'_> {
         // acknowledged, on a part that had at least `offset` bytes and at
         // most `size` (or was emptied). Its date stays the one it had here,
         // so "only if newer" means something next time.
-        remote.set_attrs(&part, mode, item.modified).await?;
+        remote.set_attrs(&part, mode, source.modified).await?;
         remote.rename(&part, &dest, true).await?;
         Ok(Done::Copied {
             size,
@@ -1039,21 +1071,18 @@ impl JobRun<'_> {
         })
     }
 
-    /// Writes `src` over `dest` where it is, keeping its owner, group and
+    /// Writes the already opened source over `dest`, keeping its owner, group and
     /// links. Not resumable, as with `sftp`'s `put`.
     async fn upload_in_place(
         &self,
-        src: &Path,
+        file: &mut tokio::fs::File,
         dest: &str,
         size: u64,
         modified: Option<i64>,
     ) -> Result<Done> {
         let remote = self.remote;
         let handle = remote.open_write(dest, true, None).await?;
-        let mut file = tokio::fs::File::open(src)
-            .await
-            .map_err(|e| Error::local(src, &e))?;
-        let sent = pipe::upload(remote, dest, &handle, &mut file, 0, size, self.progress).await;
+        let sent = pipe::upload(remote, dest, &handle, file, 0, size, self.progress).await;
         let closed = remote.close(dest, handle).await;
         sent?;
         closed?;
@@ -1065,12 +1094,16 @@ impl JobRun<'_> {
     /// Copies one item down.
     async fn download(&self, i: usize, item: &Item, src: &str, dest: &Path) -> Result<Done> {
         let remote = self.remote;
-        let existing = local::stat(dest)?;
+        let existing = if item.dir {
+            self.local.stat(dest)?
+        } else {
+            self.local.lstat(dest)?
+        };
         if item.dir {
             return match existing {
                 Some(e) if e.is_dir() => Ok(Done::Dir { made: false }),
                 _ => {
-                    local::mkdir(dest)?;
+                    self.local.mkdir(dest)?;
                     Ok(Done::Dir { made: true })
                 }
             };
@@ -1098,21 +1131,16 @@ impl JobRun<'_> {
         let part = PathBuf::from(part);
         let got = self.download_part(i, item, src, &handle, &part, size).await;
         remote.close_later(handle);
-        let offset = got?;
-        let local_err = |e: std::io::Error| Error::local(&part, &e);
-        set_local_mode(&part, item.mode);
-        if let Some(t) = item.modified.and_then(|t| u64::try_from(t).ok()) {
-            let file = std::fs::File::options()
-                .write(true)
-                .open(&part)
-                .map_err(local_err)?;
+        let (offset, file) = got?;
+        let display = self.local.display(&part);
+        let local_err = |e: std::io::Error| Error::local(&display, &e);
+        set_local_mode(&file, item.mode);
+        if let Some(t) = source.modified.and_then(|t| u64::try_from(t).ok()) {
             file.set_modified(UNIX_EPOCH + Duration::from_secs(t))
                 .map_err(local_err)?;
         }
-        if cfg!(windows) && dest.exists() {
-            std::fs::remove_file(dest).map_err(|e| Error::local(dest, &e))?;
-        }
-        std::fs::rename(&part, dest).map_err(|e| Error::local(dest, &e))?;
+        drop(file);
+        self.local.install(&part, dest)?;
         Ok(Done::Copied {
             size,
             sent: size - offset,
@@ -1129,29 +1157,15 @@ impl JobRun<'_> {
         handle: &str,
         part: &Path,
         size: u64,
-    ) -> Result<u64> {
-        self.hold(i, Part::Local(part.to_owned()))?;
-        let offset = std::fs::metadata(part)
-            .map(|m| m.len())
-            .ok()
-            .filter(|&s| s <= size)
-            .unwrap_or(0);
-        let local_err = |e: std::io::Error| Error::local(part, &e);
-        let mut open = std::fs::OpenOptions::new();
-        open.create(true).write(true).truncate(false);
-        // Born as private as the server's copy: a key is never readable by
-        // others here, not even while it downloads.
-        #[cfg(unix)]
-        std::os::unix::fs::OpenOptionsExt::mode(
-            &mut open,
-            item.mode.map_or(0o666, |m| 0o600 | (m & 0o066)),
-        );
-        // Windows files have no mode to give them.
-        #[cfg(not(unix))]
-        let _ = item;
+    ) -> Result<(u64, std::fs::File)> {
+        self.hold(i, Part::Local(Arc::clone(self.local), part.to_owned()))?;
+        let display = self.local.display(part);
+        let local_err = |e: std::io::Error| Error::local(&display, &e);
         // Made here, not on a thread of its own: once the job has stopped,
         // nothing it began makes a part after a cancel deleted it.
-        let mut file = tokio::fs::File::from_std(open.open(part).map_err(local_err)?);
+        let (file, had) = self.local.open_part(part, item.mode)?;
+        let offset = if had <= size { had } else { 0 };
+        let mut file = tokio::fs::File::from_std(file);
         file.set_len(offset).await.map_err(local_err)?;
         tokio::io::AsyncSeekExt::seek(&mut file, std::io::SeekFrom::Start(offset))
             .await
@@ -1171,11 +1185,11 @@ impl JobRun<'_> {
             .await
             .map_err(local_err)?;
         file.sync_all().await.map_err(local_err)?;
-        drop(file);
-        if std::fs::metadata(part).map_err(local_err)?.len() != size {
+        let file = file.into_std().await;
+        if file.metadata().map_err(local_err)?.len() != size {
             return Err(Error::Changed(src.to_owned()));
         }
-        Ok(offset)
+        Ok((offset, file))
     }
 }
 
@@ -1184,27 +1198,53 @@ impl JobRun<'_> {
 /// and a program stays runnable: execute goes wherever reading is, when
 /// the server's copy had it.
 #[cfg(unix)]
-fn set_local_mode(path: &Path, remote_mode: Option<u32>) {
+fn set_local_mode(file: &std::fs::File, remote_mode: Option<u32>) {
     use std::os::unix::fs::PermissionsExt;
     let Some(remote) = remote_mode else { return };
-    if let Ok(meta) = std::fs::metadata(path) {
+    if let Ok(meta) = file.metadata() {
         let had = meta.permissions().mode() & 0o777;
         let mut mode = had & (0o700 | (remote & 0o077));
         if remote & 0o100 != 0 {
             mode |= (mode & 0o444) >> 2;
         }
         if mode != had {
-            let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode));
+            let _ = file.set_permissions(std::fs::Permissions::from_mode(mode));
         }
     }
 }
 
 #[cfg(not(unix))]
-fn set_local_mode(_: &Path, _: Option<u32>) {}
+fn set_local_mode(_: &std::fs::File, _: Option<u32>) {}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn queued_files_do_not_exhaust_open_descriptors() {
+        let dir = tempfile::tempdir().unwrap();
+        let probe = dir.path().join("probe");
+        std::fs::write(&probe, b"probe").unwrap();
+        let t = Transfers::new(Handle::current());
+        let link = Link::new("not connected yet");
+        // No yield: two jobs have slots, all the others must wait without
+        // consuming a source descriptor. Also run with a low ulimit.
+        for n in 0..512 {
+            let source = dir.path().join(format!("file-{n}"));
+            std::fs::write(&source, b"file").unwrap();
+            t.add(
+                Arc::clone(&link),
+                Request {
+                    direction: Direction::Upload,
+                    source: source.display().to_string(),
+                    dest_dir: "/remote".into(),
+                    on_conflict: OnConflict::Replace,
+                },
+            );
+        }
+        assert_eq!(t.jobs().len(), 512);
+        std::fs::File::open(&probe).expect("the waiting queue must leave descriptors available");
+    }
 
     fn entry(modified: Option<i64>) -> Entry {
         Entry {
