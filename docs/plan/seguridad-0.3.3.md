@@ -2,7 +2,7 @@
 
 Revisión del **11 de noviembre de 2026** de los 63 puntos de la [PR #8](https://github.com/KaiCorpLabs/openward/pull/8), frente a [main `35ab7a6`](https://github.com/KaiCorpLabs/openward/commit/35ab7a63187a58aae132a31bd000ab0858164dff). Se conserva cada ID y su orden. La [versión original del informe](https://github.com/KaiCorpLabs/openward/blob/377492780338bfd120c85b55a4d15efae20d9263/docs/plan/seguridad-0.3.3.md) examinaba `b6b0012` (0.3.3-beta.2); sus estados y cifras ya no describen por sí solos main.
 
-Las fichas conservan el contraste inicial; los apartados de seguimiento de S0 y S1 registran las correcciones posteriores, sus pruebas y sus PR. Para el estado actual prevalecen esos seguimientos. La fusión de este informe no acredita el cierre de los puntos que continúan abiertos.
+Las fichas conservan el contraste inicial; los apartados de seguimiento de S0, S1 y S2 registran las correcciones posteriores, sus pruebas y sus PR. Para el estado actual prevalecen esos seguimientos. La fusión de este informe no acredita el cierre de los puntos que continúan abiertos.
 
 ## Resultado y alcance
 
@@ -31,7 +31,7 @@ La gravedad mostrada en cada ficha es la **del informe de entrada**, para conser
 
 ## Plan de remediación actualizado S0–S3
 
-Las prioridades ordenan la remediación; su avance y sus límites se registran debajo. S2 y S3 quedan pendientes.
+Las prioridades ordenan la remediación; su avance y sus límites se registran debajo. S2 está en validación; S3 conserva su planificación.
 
 | Etapa | Trabajo | Condición para darlo por terminado |
 |---|---|---|
@@ -40,7 +40,7 @@ Las prioridades ordenan la remediación; su avance y sus límites se registran d
 | **S1 — política SSH y permisos** | CO-3…CO-6, SF-2, SF-3, SF-9; resolver CO-2 y DA-1 | Algoritmo recibido sujeto a la política; revocación canónica; rotación y fallos de persistencia seguros; permisos aplicados al objeto correcto. |
 | **S1 — consentimiento e historial** | RG-1, RG-7, RG-8, TE-1 | Exclusión de historial consistente; texto/origen revisables antes de reenviar; borrado que incluya residuos administrados; pegado completo revisable. |
 | **S2 — presupuestos de entrada y build** | IM-5, IM-6, DA-7, CI-1, CI-7 | Importación/lectura acotadas y herramientas/resolución de build ligadas a contenido revisado. |
-| **S2 — hechos pendientes** | Las 20 fichas «Necesita revisión» | Obtener el dato mínimo indicado y convertir cada caso en confirmado o descartado con evidencia; no cerrar por ausencia de una PoC. |
+| **S2 — hechos pendientes** | Las fichas que conservan hechos sin comprobar, según sus seguimientos | Obtener el dato mínimo indicado y convertir cada caso en confirmado o descartado con evidencia; no cerrar por ausencia de una PoC. Las 20 iniciales no son un recuento actual. |
 | **S3 — D3/D6 y distribución** | DA-2, DA-5, RG-4, CI-4…CI-6, CI-8, CI-10…CI-12 y demás deuda documentada | Preparar migraciones y manejo de secretos, acordar la puerta de publicación, aislar builds y verificar procedencia antes de ampliar garantías. |
 
 ## Seguimiento de S0
@@ -131,7 +131,30 @@ conservan análisis, pruebas de widget, núcleo y empaquetado según la CI.
 Las validaciones locales acumuladas incluyen 310 pruebas Flutter, 115 nativas
 de app y 11 FFI. Dos pruebas nativas de medición se omiten deliberadamente;
 no sustituyen regresiones de seguridad. El detalle reproducible de cambios,
-pruebas y CI está en cada PR. S2 y S3 no se han iniciado.
+pruebas y CI está en cada PR. El avance posterior de S2 se registra debajo;
+S3 conserva su planificación.
+
+## Seguimiento de S2
+
+El contraste parte de `main 60f1be3`, después de S0/S1 y de la
+preparación de la beta. Las fichas siguientes conservan su referencia histórica;
+este seguimiento prevalece para el estado de estos cinco puntos. Las PR de
+código siguen en validación: las pruebas locales o una revisión no sustituyen
+la CI completa ni la fusión.
+
+| Punto | Resultado del contraste y corrección |
+|---|---|
+| **CI-1** | [PR #28](https://github.com/KaiCorpLabs/openward/pull/28). Índice multiarch de Ubuntu y commit Flutter fijados; rustup y Zig se verifican antes de ejecutar/descomprimir. La revisión detectó que faltaban los payloads posteriores: se fijan también el manifiesto/componentes mínimos de Rust y los archivos Dart/engine de Flutter para ambos Linux. Los scripts consumen un espejo local cerrado con esos archivos verificados; las descargas adicionales de engine fallan. Ocho pruebas incluyen instalador correcto con manifiesto/compilador cambiado y fuente Flutter correcta con Dart/engine cambiado. La construcción real detectó un error de ruta del espejo de Rust, corregido con regresión. [Bootstrap y paquetes x86_64/aarch64 correctos](https://github.com/KaiCorpLabs/openward/actions/runs/43106171668); falta cerrar la [matriz general](https://github.com/KaiCorpLabs/openward/actions/runs/43106171551) y fusionar. Esto no cierra la descarga del SDK mediante la acción alojada ni el resto de CI-12. |
+| **CI-7** | [PR #29](https://github.com/KaiCorpLabs/openward/pull/29). Lockfile específico del runner con las versiones transitivas existentes y sus hashes, exigido antes de compilar en ambas copias de Cargokit y en la recuperación 253. Se conserva la dependencia por ruta original que necesita Android. La caché incluye bytes de fuentes, manifiesto, lock y SDK; una caché antigua, un kernel ausente o una resolución/compilación fallida no se acepta. El bloqueo de preparación se libera antes de ejecutar, permitiendo el linker recursivo. Once casos por copia, dos runners reales en frío/caliente con Pub inaccesible y revisión independiente correctos; la revisión comprobó también recursión sin bloqueo. La [CI vigente](https://github.com/KaiCorpLabs/openward/actions/runs/43107533986) incluye ejecución real de cmd en Windows. |
+| **IM-5** | [PR #30](https://github.com/KaiCorpLabs/openward/pull/30). Presupuesto acumulado de bytes, trabajo y archivos desde LevelDB hasta blobs, Snappy, V8 y el bundle final. Se contabilizan copias y referencias expandidas antes de reservar, y se limita tanto la profundidad del formato como la del árbol expandido. Las matrices excesivas se rechazan, sin truncar. El agotamiento aborta la importación, sin convertirlo en una advertencia parcial. Dos regresiones fallan en la base: matriz dispersa truncada y referencias poco profundas que producen árboles altos. Se prueban también bloques repetidos, prefijos compartidos, archivos/registros acumulados y cabeceras comprimidas enormes. La revisión señaló amplificación posterior por configuraciones compartidas: el padre la confirmó con una fixture acotada y extendió el mismo presupuesto a cada uso de texto/JSON y a los joins. La revisión se interrumpió por una restricción de herramienta antes del informe final; no se atribuye una revisión independiente limpia. Las fixtures válidas y clippy pasan; la CI completa y la fusión siguen pendientes. |
+| **DA-7** | [PR #31](https://github.com/KaiCorpLabs/openward/pull/31). Lector por descriptor de archivo regular, límite de 1 MiB para metadatos públicos/certificados y límite previo de 64 KiB para claves privadas del gestor. La lectura sigue acotada si el archivo crece; en Unix abre sin bloquear y rechaza FIFO/dispositivos, conservando enlaces a archivos regulares. Inspección y extracción pública pasan a FFI asíncrona; el vault se libera antes de E/S. La interfaz representa carga/error y usa consultas con listas de certificados inmutables para evitar lecturas por redibujado. La regresión de comentario público de 2 MiB falla en la base y pasa corregida; FIFO, tamaños, alias y certificados normales pasan. Análisis, pruebas nativas/FFI y 312 Flutter correctos; revisión independiente sin hallazgos concretos. La CI de escritorio sigue pendiente. |
+| **IM-6** | `no_change`: no se confirma una entrada ajena dentro del alcance. El selector/drop usa `detect::read`, que rechaza `ssh_config`; la importación OpenSSH del producto usa `sshConfigFileProvider=null` y el archivo propio del operador. Los importadores ajenos no rellenan las rutas de `known_hosts`. Las lecturas acumulativas de Include y de confianza siguen siendo una oportunidad de endurecimiento sobre configuración propia, sin atribuirles la autoridad de un archivo ajeno. Se conserva la regresión de S0 que rechaza un ssh_config extranjero disfrazado y acepta un CSV válido. |
+
+Las garantías quedan limitadas al recorrido probado. No se acredita privacidad
+por DACL de Windows, ausencia de ACL extendidas, ausencia general de carreras
+remotas SFTP ni integridad de toda la cadena de build. Las fichas con hechos de
+plataforma, UX o publicación pendientes conservan sus pruebas/contexto
+solicitados. S3 y D3–D8 se siguen en el [estado del proyecto](estado.md).
 
 ## Fichas contrastadas
 
