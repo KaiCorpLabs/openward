@@ -167,4 +167,4 @@ Publicarla es una decisión aparte, como hasta ahora. Antes, se decide qué hace
 
 ## Fuera de la ruta
 
-- [RustCrypto/SSH#620](https://github.com/RustCrypto/SSH/issues/620) sigue esperando. Cuando lo arreglen y salga una versión de `ssh-key`, se quita el apaño de las claves ECDSA con el escalar corto en `openward-ssh` (`keyfile.rs`).
+- [RustCrypto/SSH#620](https://github.com/RustCrypto/SSH/issues/620) está resuelto desde el 2026-11-10 por la [PR #623](https://github.com/RustCrypto/SSH/pull/623). Falta una versión publicada con el arreglo y compatible con `russh`: comprobado el 2026-11-11, `ssh-key` llega hasta `0.7.0-rc.12` (anterior al arreglo) y `russh` 0.64.1 y 0.65.1 fijan la `rc.11`. Hasta entonces se conserva `openward-ssh::keyfile`, con el mínimo de 24 bytes de magnitud aplicado también a claves con ceros iniciales y cifradas. Al actualizar, cambiar también las dependencias directas de `openward-app` y `openward-fido`, retirar el relleno local y mantener las pruebas de claves cortas y del mínimo ([ADR-003](../adr/ADR-003-ssh-russh-y-firmantes.md)).

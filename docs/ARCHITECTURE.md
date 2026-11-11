@@ -516,7 +516,7 @@ Comprobado el 2026-10-08 en crates.io, pub.dev, go.dev, el canal estable de Rust
 | `flutter_rust_bridge` | 2.13.0 (2026-08-23) | MIT | La misma que usa Arveil; 2.14 en beta |
 | `russh` | 0.64.1 (2026-10-05) | Apache-2.0 | **Elegido para escritorio** (S2: 83 de 83 en la matriz de interoperabilidad); sin CI móvil propia |
 | `russh-sftp` | 3.0.1 (2026-09-28) | Apache-2.0 | Activo |
-| `ssh-key` | 0.7.0-rc.11 (fijada por `russh`); estable 0.6.7 | Apache/MIT | Verifica `sk-*` pero no firma |
+| `ssh-key` | 0.7.0-rc.11 (fijada por `russh`); estable 0.6.7 | Apache/MIT | Verifica `sk-*` pero no firma. #620 resuelto por #623, aún sin versión publicada con el arreglo a 2026-11-11; lectura local de escalares cortos con mínimo de 24 bytes de magnitud (ADR-003) |
 | `alacritty_terminal` | 0.26.0 (2026-04-06) | Apache-2.0 | **Descartado** como motor (S1); solo referencia de pruebas |
 | `libghostty-vt` | Commit `05dcf887` de Ghostty (main, 2026-10-12) | MIT | **Elegido** (ADR-002). API C "work-in-progress"; Zig 0.16.0 |
 | `xterm` (Dart) | 4.0.0 (2024-02-27) | MIT | **Descartado:** sin versiones desde 2024 |

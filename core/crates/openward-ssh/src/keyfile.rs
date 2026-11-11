@@ -6,15 +6,19 @@
 //! that `ssh-keygen` makes, takes 31 bytes, not 32 (or 33 with the sign
 //! byte). `ssh-key` (0.7.0-rc.11 and rc.12) asks for at least 32 bytes and
 //! refuses those keys with "length invalid", also once an encrypted one is
-//! decrypted (reported upstream: RustCrypto/SSH#620). Here the scalar is
-//! padded with zeros to the curve's size and the key read again.
+//! decrypted. RustCrypto/SSH#620 was fixed in PR #623 on 2026-11-10, but
+//! the fix is not published yet (checked 2026-11-11: rc.12 is latest), and
+//! `russh` pins rc.11. Here the scalar is padded with zeros to the curve's
+//! size and the key read again, with the same 24-byte minimum as upstream.
 //!
 //! P-384 and P-521 keys with a short scalar load as they are (32 bytes is
 //! well below their size), but they are padded the same way should that
 //! change. PEM, PKCS#8 and PuTTY keys keep a scalar `ssh-key` reads.
 //!
-//! Every function here first does what `ssh-key` does; the fix only runs
-//! when it fails for that reason, so no other key takes another path.
+//! Every function here first does what `ssh-key` does; the padding only
+//! runs when it fails for that reason. After a successful read or
+//! decryption, ECDSA scalars are checked too: leading zeros do not count
+//! towards the minimum, including in keys the old parser already accepts.
 
 use std::path::Path;
 
@@ -27,28 +31,33 @@ use zeroize::Zeroizing;
 /// The start of OpenSSH's private key format (`PROTOCOL.key`).
 const MAGIC: &[u8; 15] = b"openssh-key-v1\0";
 
+/// Matches `elliptic_curve::SecretKey::MIN_SIZE` and RustCrypto/SSH#623.
+const MIN_ECDSA_SCALAR_SIZE: usize = 24;
+
 /// [`PrivateKey::from_openssh`], also for an unencrypted key with a short
 /// ECDSA scalar. An encrypted key is read without decrypting it.
 pub fn from_openssh(text: impl AsRef<[u8]>) -> ssh_key::Result<PrivateKey> {
     let text = text.as_ref();
-    match PrivateKey::from_openssh(text) {
+    let key = match PrivateKey::from_openssh(text) {
         Err(e) if too_short(&e) => padded_pem(text, None).ok_or(e),
         other => other,
-    }
+    }?;
+    validate_scalar(key)
 }
 
 /// [`PrivateKey::decrypt`], also when the decrypted key has a short ECDSA
 /// scalar.
 pub fn decrypt(key: &PrivateKey, passphrase: impl AsRef<[u8]>) -> ssh_key::Result<PrivateKey> {
     let passphrase = passphrase.as_ref();
-    match key.decrypt(passphrase) {
+    let key = match key.decrypt(passphrase) {
         Err(e) if too_short(&e) => key
             .to_bytes()
             .ok()
             .and_then(|bytes| padded(&bytes, Some(passphrase)))
             .ok_or(e),
         other => other,
-    }
+    }?;
+    validate_scalar(key)
 }
 
 /// [`russh::keys::decode_secret_key`] (OpenSSH, PEM, PKCS#8 or PuTTY's
@@ -58,13 +67,14 @@ pub fn decode_secret_key(
     text: &str,
     passphrase: Option<&str>,
 ) -> Result<PrivateKey, russh::keys::Error> {
-    match russh::keys::decode_secret_key(text, passphrase) {
+    let key = match russh::keys::decode_secret_key(text, passphrase) {
         Err(russh::keys::Error::SshKey(e)) if too_short(&e) => {
             padded_pem(text.trim().as_bytes(), passphrase.map(str::as_bytes))
                 .ok_or(russh::keys::Error::SshKey(e))
         }
         other => other,
-    }
+    }?;
+    validate_scalar(key).map_err(russh::keys::Error::SshKey)
 }
 
 /// [`russh::keys::load_secret_key`]: [`decode_secret_key`] on the file at
@@ -80,6 +90,23 @@ pub fn load_secret_key(
 /// How `ssh-key` refuses a scalar shorter than it wants.
 fn too_short(e: &ssh_key::Error) -> bool {
     matches!(e, ssh_key::Error::Encoding(encoding::Error::Length))
+}
+
+/// Count the magnitude, not the encoded width or an mpint's sign byte.
+fn scalar_has_minimum_size(scalar: &[u8]) -> bool {
+    scalar
+        .iter()
+        .position(|&byte| byte != 0)
+        .is_some_and(|first| scalar.len() - first >= MIN_ECDSA_SCALAR_SIZE)
+}
+
+fn validate_scalar(key: PrivateKey) -> ssh_key::Result<PrivateKey> {
+    if let Some(ecdsa) = key.key_data().ecdsa()
+        && !scalar_has_minimum_size(ecdsa.private_key_bytes())
+    {
+        return Err(encoding::Error::Length.into());
+    }
+    Ok(key)
 }
 
 /// The bytes of an OpenSSH private key file, its PEM armor removed.
@@ -167,8 +194,10 @@ fn padded_private(private: &[u8]) -> Option<Zeroizing<Vec<u8>>> {
     let curve = Vec::<u8>::decode(r).ok()?;
     let point = Vec::<u8>::decode(r).ok()?;
     let scalar = Zeroizing::new(Vec::<u8>::decode(r).ok()?);
-    // A positive mpint shorter than the curve: one `ssh-key` may refuse.
-    if scalar.is_empty() || scalar.len() >= size || scalar[0] & 0x80 != 0 {
+    // A positive mpint shorter than the curve, with upstream's size floor
+    // enforced before padding. Redundant zeros cannot make a weak scalar
+    // meet the minimum.
+    if !scalar_has_minimum_size(&scalar) || scalar.len() >= size || scalar[0] & 0x80 != 0 {
         return None;
     }
     let comment = Vec::<u8>::decode(r).ok()?;
@@ -196,7 +225,18 @@ fn padded_private(private: &[u8]) -> Option<Zeroizing<Vec<u8>>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use russh::keys::ssh_key::encoding::{EncodePem, Writer};
     use russh::keys::ssh_key::{EcdsaCurve, LineEnding, PublicKey};
+
+    impl Encode for Armored {
+        fn encoded_len(&self) -> encoding::Result<usize> {
+            Ok(self.0.len())
+        }
+
+        fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
+            writer.write(&self.0)
+        }
+    }
 
     /// Keys made by `ssh-keygen` (OpenSSH 10.5) whose ECDSA scalar is short:
     /// 31 bytes for P-256, 47 for P-384, 64 for P-521. Test material only.
@@ -209,6 +249,116 @@ mod tests {
 
     fn p256_public() -> PublicKey {
         PublicKey::from_openssh(fixture("ecdsa-p256-short.pub").trim()).unwrap()
+    }
+
+    /// Parser inputs with a chosen scalar encoding. Reuse a fixture's
+    /// public point: these synthetic keys are not used to sign anything.
+    fn scalar_pem(name: &str, scalar: &[u8], cipher: Cipher) -> Zeroizing<String> {
+        let key = from_openssh(fixture(name)).unwrap();
+        let ecdsa = key.key_data().ecdsa().unwrap();
+        let mut private = Zeroizing::new(Vec::new());
+        1u32.encode(&mut *private).unwrap();
+        1u32.encode(&mut *private).unwrap();
+        key.algorithm().as_str().encode(&mut *private).unwrap();
+        ecdsa.curve().as_str().encode(&mut *private).unwrap();
+        ecdsa.public_key_bytes().encode(&mut *private).unwrap();
+        scalar.encode(&mut *private).unwrap();
+        "scalar boundary test".encode(&mut *private).unwrap();
+        let padding = cipher.padding_len(private.len());
+        private.extend((1..=16u8).take(padding));
+
+        let kdf = if cipher.is_some() {
+            Kdf::Bcrypt {
+                salt: vec![0; 16],
+                rounds: 1,
+            }
+        } else {
+            Kdf::None
+        };
+        let tag = if cipher.is_some() {
+            let (key, iv) = kdf
+                .derive_key_and_iv(cipher, PASSPHRASE.as_bytes())
+                .unwrap();
+            cipher.encrypt(&key, &iv, &mut private).unwrap()
+        } else {
+            None
+        };
+        let mut bytes = Zeroizing::new(Vec::new());
+        bytes.extend_from_slice(MAGIC);
+        cipher.as_str().encode(&mut *bytes).unwrap();
+        kdf.encode(&mut *bytes).unwrap();
+        1u32.encode(&mut *bytes).unwrap();
+        key.public_key()
+            .to_bytes()
+            .unwrap()
+            .encode(&mut *bytes)
+            .unwrap();
+        private.encode(&mut *bytes).unwrap();
+        if let Some(tag) = tag {
+            bytes.extend_from_slice(&tag);
+        }
+        Zeroizing::new(Armored(bytes).encode_pem_string(LineEnding::LF).unwrap())
+    }
+
+    #[test]
+    fn ecdsa_scalars_below_24_bytes_are_rejected_even_with_leading_zeros() {
+        for (name, size) in [
+            ("ecdsa-p256-short", 32),
+            ("ecdsa-p384-short", 48),
+            ("ecdsa-p521-short", 66),
+        ] {
+            for len in [0, 1, 23] {
+                for width in [len, size, size + 1] {
+                    let mut scalar = vec![0; width - len];
+                    scalar.extend(vec![0x42; len]);
+                    for cipher in [Cipher::None, Cipher::Aes256Ctr] {
+                        let text = scalar_pem(name, &scalar, cipher);
+                        if cipher.is_none() {
+                            assert!(
+                                from_openssh(text.as_bytes()).is_err(),
+                                "{name}: {len}/{width}"
+                            );
+                        } else {
+                            let encrypted = from_openssh(text.as_bytes()).unwrap();
+                            assert!(
+                                decrypt(&encrypted, PASSPHRASE).is_err(),
+                                "{name}: {len}/{width}"
+                            );
+                        }
+                        assert!(
+                            decode_secret_key(&text, Some(PASSPHRASE)).is_err(),
+                            "{name}: {len}/{width}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn ecdsa_scalars_at_the_24_byte_floor_load_with_or_without_padding() {
+        for (name, size) in [
+            ("ecdsa-p256-short", 32),
+            ("ecdsa-p384-short", 48),
+            ("ecdsa-p521-short", 66),
+        ] {
+            for width in [24, size] {
+                let mut scalar = vec![0; width - 24];
+                scalar.extend([0x42; 24]);
+                for cipher in [Cipher::None, Cipher::Aes256Ctr] {
+                    let text = scalar_pem(name, &scalar, cipher);
+                    let key = from_openssh(text.as_bytes()).unwrap();
+                    let key = if key.is_encrypted() {
+                        decrypt(&key, PASSPHRASE).unwrap()
+                    } else {
+                        key
+                    };
+                    let bytes = key.key_data().ecdsa().unwrap().private_key_bytes();
+                    assert_eq!(&bytes[size - 24..], &[0x42; 24]);
+                    assert!(decode_secret_key(&text, Some(PASSPHRASE)).is_ok());
+                }
+            }
+        }
     }
 
     #[test]
