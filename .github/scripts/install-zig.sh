@@ -8,6 +8,9 @@ case "$(uname -s)-$(uname -m)" in
   Linux-x86_64)
     name="zig-x86_64-linux-$version" ext=tar.xz
     sha=70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00 ;;
+  Linux-aarch64)
+    name="zig-aarch64-linux-$version" ext=tar.xz
+    sha=ea4b09bfb22ec6f6c6ceac57ab63efb6b46e17ab08d21f69f3a48b38e1534f17 ;;
   Darwin-arm64)
     name="zig-aarch64-macos-$version" ext=tar.xz
     sha=b23d70deaa879b5c2d486ed3316f7eaa53e84acf6fc9cc747de152450d401489 ;;

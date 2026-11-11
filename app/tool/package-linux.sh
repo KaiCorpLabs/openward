@@ -38,8 +38,13 @@ rust="$(sed -n 's/^channel = "\(.*\)"/\1/p' core/rust-toolchain.toml)"
 flutter="$(jq -r .flutter .fvmrc)"
 zig=0.16.0
 image="openward-linux-build:flutter-$flutter-rust-$rust-zig-$zig-$arch"
-"$runtime" build ${platform[@]+"${platform[@]}"} -t "$image" -f app/tool/linux/Containerfile \
-  --build-arg RUST="$rust" --build-arg ZIG="$zig" --build-arg FLUTTER="$flutter" app/tool/linux
+context="$tmp/context"
+mkdir -p "$context"
+cp app/tool/linux/Containerfile app/tool/linux/install-tools.sh app/tool/linux/toolchain-pins.sh "$context/"
+cp .github/scripts/install-zig.sh "$context/install-zig.sh"
+cp app/tool/linux/serve-tools.py app/tool/linux/*.sha256 "$context/"
+"$runtime" build ${platform[@]+"${platform[@]}"} -t "$image" -f "$context/Containerfile" \
+  --build-arg RUST="$rust" --build-arg ZIG="$zig" --build-arg FLUTTER="$flutter" "$context"
 
 version="$(sed -n 's/^version: *\([^+]*\).*/\1/p' app/pubspec.yaml)"
 name="$version"
