@@ -44,7 +44,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1021699651;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 385048966;
 
 // Section: executor
 
@@ -2316,7 +2316,7 @@ fn wire__crate__api__app__OpenWard_import_key_impl(
         },
     )
 }
-fn wire__crate__api__app__OpenWard_import_program_impl(
+fn wire__crate__api__app__OpenWard_import_program_selection_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -2324,7 +2324,7 @@ fn wire__crate__api__app__OpenWard_import_program_impl(
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "OpenWard_import_program",
+            debug_name: "OpenWard_import_program_selection",
             port: Some(port_),
             mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
         },
@@ -2368,7 +2368,7 @@ fn wire__crate__api__app__OpenWard_import_program_impl(
                     }
                     let api_that_guard = api_that_guard.unwrap();
                     let api_data_guard = api_data_guard.unwrap();
-                    let output_ok = crate::api::app::OpenWard::import_program(
+                    let output_ok = crate::api::app::OpenWard::import_program_selection(
                         &*api_that_guard,
                         &*api_data_guard,
                         api_choice,
@@ -10555,6 +10555,20 @@ impl SseDecode for Vec<crate::api::programs::ProgramKey> {
     }
 }
 
+impl SseDecode for Vec<crate::api::programs::ProgramKnownHost> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::programs::ProgramKnownHost>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::programs::ProgramWarning> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -11794,10 +11808,12 @@ impl SseDecode for crate::api::programs::ProgramChoice {
         let mut var_hosts = <Vec<String>>::sse_decode(deserializer);
         let mut var_groupName = <String>::sse_decode(deserializer);
         let mut var_saveKeys = <Vec<String>>::sse_decode(deserializer);
+        let mut var_knownHosts = <Vec<String>>::sse_decode(deserializer);
         return crate::api::programs::ProgramChoice {
             hosts: var_hosts,
             group_name: var_groupName,
             save_keys: var_saveKeys,
+            known_hosts: var_knownHosts,
         };
     }
 }
@@ -11869,6 +11885,20 @@ impl SseDecode for crate::api::programs::ProgramKind {
     }
 }
 
+impl SseDecode for crate::api::programs::ProgramKnownHost {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <String>::sse_decode(deserializer);
+        let mut var_line = <String>::sse_decode(deserializer);
+        let mut var_fingerprint = <String>::sse_decode(deserializer);
+        return crate::api::programs::ProgramKnownHost {
+            id: var_id,
+            line: var_line,
+            fingerprint: var_fingerprint,
+        };
+    }
+}
+
 impl SseDecode for crate::api::programs::ProgramPreview {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -11880,6 +11910,8 @@ impl SseDecode for crate::api::programs::ProgramPreview {
         let mut var_newTunnels = <u32>::sse_decode(deserializer);
         let mut var_newSnippets = <u32>::sse_decode(deserializer);
         let mut var_newKnownHosts = <u32>::sse_decode(deserializer);
+        let mut var_knownHosts =
+            <Vec<crate::api::programs::ProgramKnownHost>>::sse_decode(deserializer);
         let mut var_keys = <Vec<crate::api::programs::ProgramKey>>::sse_decode(deserializer);
         let mut var_warnings =
             <Vec<crate::api::programs::ProgramWarning>>::sse_decode(deserializer);
@@ -11894,6 +11926,7 @@ impl SseDecode for crate::api::programs::ProgramPreview {
             new_tunnels: var_newTunnels,
             new_snippets: var_newSnippets,
             new_known_hosts: var_newKnownHosts,
+            known_hosts: var_knownHosts,
             keys: var_keys,
             warnings: var_warnings,
             passwords: var_passwords,
@@ -13111,9 +13144,12 @@ fn pde_ffi_dispatcher_primary_impl(
             data_len,
         ),
         43 => wire__crate__api__app__OpenWard_import_key_impl(port, ptr, rust_vec_len, data_len),
-        44 => {
-            wire__crate__api__app__OpenWard_import_program_impl(port, ptr, rust_vec_len, data_len)
-        }
+        44 => wire__crate__api__app__OpenWard_import_program_selection_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
         45 => wire__crate__api__app__OpenWard_import_ssh_config_impl(
             port,
             ptr,
@@ -15209,6 +15245,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::programs::ProgramChoice {
             self.hosts.into_into_dart().into_dart(),
             self.group_name.into_into_dart().into_dart(),
             self.save_keys.into_into_dart().into_dart(),
+            self.known_hosts.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -15306,6 +15343,28 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::programs::ProgramKind>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::programs::ProgramKnownHost {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.line.into_into_dart().into_dart(),
+            self.fingerprint.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::programs::ProgramKnownHost
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::programs::ProgramKnownHost>
+    for crate::api::programs::ProgramKnownHost
+{
+    fn into_into_dart(self) -> crate::api::programs::ProgramKnownHost {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::programs::ProgramPreview {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -15317,6 +15376,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::programs::ProgramPreview {
             self.new_tunnels.into_into_dart().into_dart(),
             self.new_snippets.into_into_dart().into_dart(),
             self.new_known_hosts.into_into_dart().into_dart(),
+            self.known_hosts.into_into_dart().into_dart(),
             self.keys.into_into_dart().into_dart(),
             self.warnings.into_into_dart().into_dart(),
             self.passwords.into_into_dart().into_dart(),
@@ -17917,6 +17977,16 @@ impl SseEncode for Vec<crate::api::programs::ProgramKey> {
     }
 }
 
+impl SseEncode for Vec<crate::api::programs::ProgramKnownHost> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::programs::ProgramKnownHost>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::programs::ProgramWarning> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -18992,6 +19062,7 @@ impl SseEncode for crate::api::programs::ProgramChoice {
         <Vec<String>>::sse_encode(self.hosts, serializer);
         <String>::sse_encode(self.group_name, serializer);
         <Vec<String>>::sse_encode(self.save_keys, serializer);
+        <Vec<String>>::sse_encode(self.known_hosts, serializer);
     }
 }
 
@@ -19045,6 +19116,15 @@ impl SseEncode for crate::api::programs::ProgramKind {
     }
 }
 
+impl SseEncode for crate::api::programs::ProgramKnownHost {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.id, serializer);
+        <String>::sse_encode(self.line, serializer);
+        <String>::sse_encode(self.fingerprint, serializer);
+    }
+}
+
 impl SseEncode for crate::api::programs::ProgramPreview {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -19056,6 +19136,7 @@ impl SseEncode for crate::api::programs::ProgramPreview {
         <u32>::sse_encode(self.new_tunnels, serializer);
         <u32>::sse_encode(self.new_snippets, serializer);
         <u32>::sse_encode(self.new_known_hosts, serializer);
+        <Vec<crate::api::programs::ProgramKnownHost>>::sse_encode(self.known_hosts, serializer);
         <Vec<crate::api::programs::ProgramKey>>::sse_encode(self.keys, serializer);
         <Vec<crate::api::programs::ProgramWarning>>::sse_encode(self.warnings, serializer);
         <u32>::sse_encode(self.passwords, serializer);

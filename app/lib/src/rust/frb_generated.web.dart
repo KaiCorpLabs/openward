@@ -594,6 +594,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ProgramKey> dco_decode_list_program_key(dynamic raw);
 
   @protected
+  List<ProgramKnownHost> dco_decode_list_program_known_host(dynamic raw);
+
+  @protected
   List<ProgramWarning> dco_decode_list_program_warning(dynamic raw);
 
   @protected
@@ -895,6 +898,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ProgramKind dco_decode_program_kind(dynamic raw);
+
+  @protected
+  ProgramKnownHost dco_decode_program_known_host(dynamic raw);
 
   @protected
   ProgramPreview dco_decode_program_preview(dynamic raw);
@@ -1703,6 +1709,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ProgramKey> sse_decode_list_program_key(SseDeserializer deserializer);
 
   @protected
+  List<ProgramKnownHost> sse_decode_list_program_known_host(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<ProgramWarning> sse_decode_list_program_warning(
     SseDeserializer deserializer,
   );
@@ -2102,6 +2113,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ProgramKind sse_decode_program_kind(SseDeserializer deserializer);
+
+  @protected
+  ProgramKnownHost sse_decode_program_known_host(SseDeserializer deserializer);
 
   @protected
   ProgramPreview sse_decode_program_preview(SseDeserializer deserializer);
@@ -3117,6 +3131,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_program_known_host(
+    List<ProgramKnownHost> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_program_warning(
     List<ProgramWarning> self,
     SseSerializer serializer,
@@ -3617,6 +3637,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_program_kind(ProgramKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_program_known_host(
+    ProgramKnownHost self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_program_preview(

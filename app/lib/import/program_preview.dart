@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../hosts/editors.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/programs.dart';
+import '../terminal/visible_text.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import 'programs.dart';
@@ -38,6 +39,7 @@ class _PreviewState extends State<_Preview> {
   );
   late final Set<String> _picked = {for (final h in _pickable) h.id};
   final Set<String> _saveKeys = {};
+  final Set<String> _knownHosts = {};
   final Set<String> _closed = {};
 
   ProgramPreview get _p => widget.preview;
@@ -164,6 +166,7 @@ class _PreviewState extends State<_Preview> {
             ? programName(_p.program)
             : _group.text.trim(),
         saveKeys: _saveKeys.toList(),
+        knownHosts: _knownHosts.toList(),
       ),
     );
     Navigator.pop(context, true);
@@ -177,7 +180,7 @@ class _PreviewState extends State<_Preview> {
     final hosts = _hosts.length;
     final groups = _p.items.where((i) => i.isGroup).length;
     final extras =
-        _p.newSnippets + _p.newKnownHosts + _p.newTunnels + _p.newIdentities;
+        _p.newSnippets + _p.newTunnels + _p.newIdentities + _knownHosts.length;
     final canImport = _picked.isNotEmpty || extras > 0;
     return EditorFrame(
       title: l.previewTitle(programName(_p.program)),
@@ -262,6 +265,44 @@ class _PreviewState extends State<_Preview> {
               child: SectionLabel(l.previewKeys),
             ),
             for (final k in _p.keys) _key(context, k),
+          ]),
+        ],
+        if (_p.knownHosts.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _box(context, [
+            Padding(
+              padding: const EdgeInsets.all(OwSpace.s6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SectionLabel(l.previewTrustTitle),
+                  const SizedBox(height: 8),
+                  Text(l.previewTrustHelp),
+                ],
+              ),
+            ),
+            for (final k in _p.knownHosts)
+              CheckboxListTile(
+                key: ValueKey('import.known.${k.id}'),
+                value: _knownHosts.contains(k.id),
+                controlAffinity: ListTileControlAffinity.leading,
+                onChanged: (on) => setState(() {
+                  if (on == true) {
+                    _knownHosts.add(k.id);
+                  } else {
+                    _knownHosts.remove(k.id);
+                  }
+                }),
+                title: Text.rich(
+                  visibleText(
+                    k.line,
+                    style: monoStyle(context, size: 12, color: c.text),
+                    mark: monoStyle(context, size: 12, color: c.warn),
+                    lines: false,
+                  ),
+                ),
+                subtitle: Text(k.fingerprint),
+              ),
           ]),
         ],
         if (_p.passwords + _p.passphrases > 0) ...[

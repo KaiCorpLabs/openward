@@ -724,7 +724,7 @@ impl Vault {
         // One that is not a single line (written before the vault checked)
         // is left out rather than read as several.
         for (_, k) in self.known_hosts() {
-            if k.is_well_formed() {
+            if k.usable_for_connections() {
                 text.push_str(&k.to_line());
                 text.push('\n');
             }

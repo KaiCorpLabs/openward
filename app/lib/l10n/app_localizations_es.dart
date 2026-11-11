@@ -4154,6 +4154,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get previewIntoGroup => 'Dentro del grupo';
 
   @override
+  String get previewTrustTitle => 'Claves de host: revisar antes de confiar';
+
+  @override
+  String get previewTrustHelp =>
+      'Selecciona solo las claves que hayas verificado. Esta confianza se aplica a todo el vault, incluso a hosts que no importes. Una autoridad o un patrón con comodines puede dar confianza a muchos servidores.';
+
+  @override
   String previewKeyFound(String path) {
     return '→ $path · la misma clave pública';
   }

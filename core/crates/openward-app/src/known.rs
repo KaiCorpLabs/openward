@@ -108,7 +108,7 @@ impl Ours {
         let keys = vault
             .known_hosts_with_dates()
             .into_iter()
-            .filter(|(_, k, _)| k.is_well_formed())
+            .filter(|(_, k, _)| k.usable_for_connections())
             .map(|(id, k, added)| (id, k.to_line(), added))
             .collect();
         Self { saved, keys }

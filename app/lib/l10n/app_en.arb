@@ -1431,6 +1431,8 @@
   "previewIdentities": "{count, plural, =1{1 identity} other{{count} identities}}",
   "previewIntoExisting": "In “{name}”, the group of the earlier import",
   "previewIntoGroup": "In the group",
+  "previewTrustTitle": "Host keys: review before trusting",
+  "previewTrustHelp": "Select only keys you have verified. This trust applies to the whole vault, including hosts you do not import. An authority or wildcard pattern can grant trust to many servers.",
   "previewKeyFound": "→ {path} · the same public key",
   "previewKeyMissing": "{count, plural, =0{It is not in ~/.ssh.} =1{It is not in ~/.ssh. Without it, what uses it has no key.} other{It is not in ~/.ssh. Without it, the {count} that use it have no key.}}",
   "previewKeys": "Keys",

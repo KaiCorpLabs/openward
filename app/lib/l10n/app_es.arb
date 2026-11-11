@@ -3059,6 +3059,8 @@
     }
   },
   "previewIntoGroup": "Dentro del grupo",
+  "previewTrustTitle": "Claves de host: revisar antes de confiar",
+  "previewTrustHelp": "Selecciona solo las claves que hayas verificado. Esta confianza se aplica a todo el vault, incluso a hosts que no importes. Una autoridad o un patrón con comodines puede dar confianza a muchos servidores.",
   "previewKeyFound": "→ {path} · la misma clave pública",
   "@previewKeyFound": {
     "placeholders": {

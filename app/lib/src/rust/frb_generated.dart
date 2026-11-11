@@ -80,7 +80,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 1021699651;
+  int get rustContentHash => 385048966;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -292,7 +292,7 @@ abstract class RustLibApi extends BaseApi {
     required String text,
   });
 
-  Future<ProgramReport> crateApiAppOpenWardImportProgram({
+  Future<ProgramReport> crateApiAppOpenWardImportProgramSelection({
     required OpenWard that,
     required ProgramData data,
     required ProgramChoice choice,
@@ -2487,7 +2487,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<ProgramReport> crateApiAppOpenWardImportProgram({
+  Future<ProgramReport> crateApiAppOpenWardImportProgramSelection({
     required OpenWard that,
     required ProgramData data,
     required ProgramChoice choice,
@@ -2516,16 +2516,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeSuccessData: sse_decode_program_report,
           decodeErrorData: sse_decode_vault_error,
         ),
-        constMeta: kCrateApiAppOpenWardImportProgramConstMeta,
+        constMeta: kCrateApiAppOpenWardImportProgramSelectionConstMeta,
         argValues: [that, data, choice],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiAppOpenWardImportProgramConstMeta =>
+  TaskConstMeta get kCrateApiAppOpenWardImportProgramSelectionConstMeta =>
       const TaskConstMeta(
-        debugName: "OpenWard_import_program",
+        debugName: "OpenWard_import_program_selection",
         argNames: ["that", "data", "choice"],
       );
 
@@ -8731,6 +8731,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<ProgramKnownHost> dco_decode_list_program_known_host(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_program_known_host).toList();
+  }
+
+  @protected
   List<ProgramWarning> dco_decode_list_program_warning(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_program_warning).toList();
@@ -9421,12 +9427,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ProgramChoice dco_decode_program_choice(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
     return ProgramChoice(
       hosts: dco_decode_list_String(arr[0]),
       groupName: dco_decode_String(arr[1]),
       saveKeys: dco_decode_list_String(arr[2]),
+      knownHosts: dco_decode_list_String(arr[3]),
     );
   }
 
@@ -9474,11 +9481,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ProgramKnownHost dco_decode_program_known_host(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return ProgramKnownHost(
+      id: dco_decode_String(arr[0]),
+      line: dco_decode_String(arr[1]),
+      fingerprint: dco_decode_String(arr[2]),
+    );
+  }
+
+  @protected
   ProgramPreview dco_decode_program_preview(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 12)
-      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
+    if (arr.length != 13)
+      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
     return ProgramPreview(
       program: dco_decode_program_kind(arr[0]),
       group: dco_decode_opt_String(arr[1]),
@@ -9488,10 +9508,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       newTunnels: dco_decode_u_32(arr[5]),
       newSnippets: dco_decode_u_32(arr[6]),
       newKnownHosts: dco_decode_u_32(arr[7]),
-      keys: dco_decode_list_program_key(arr[8]),
-      warnings: dco_decode_list_program_warning(arr[9]),
-      passwords: dco_decode_u_32(arr[10]),
-      passphrases: dco_decode_u_32(arr[11]),
+      knownHosts: dco_decode_list_program_known_host(arr[8]),
+      keys: dco_decode_list_program_key(arr[9]),
+      warnings: dco_decode_list_program_warning(arr[10]),
+      passwords: dco_decode_u_32(arr[11]),
+      passphrases: dco_decode_u_32(arr[12]),
     );
   }
 
@@ -11971,6 +11992,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<ProgramKnownHost> sse_decode_list_program_known_host(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ProgramKnownHost>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_program_known_host(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<ProgramWarning> sse_decode_list_program_warning(
     SseDeserializer deserializer,
   ) {
@@ -13109,10 +13144,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_hosts = sse_decode_list_String(deserializer);
     var var_groupName = sse_decode_String(deserializer);
     var var_saveKeys = sse_decode_list_String(deserializer);
+    var var_knownHosts = sse_decode_list_String(deserializer);
     return ProgramChoice(
       hosts: var_hosts,
       groupName: var_groupName,
       saveKeys: var_saveKeys,
+      knownHosts: var_knownHosts,
     );
   }
 
@@ -13172,6 +13209,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ProgramKnownHost sse_decode_program_known_host(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_line = sse_decode_String(deserializer);
+    var var_fingerprint = sse_decode_String(deserializer);
+    return ProgramKnownHost(
+      id: var_id,
+      line: var_line,
+      fingerprint: var_fingerprint,
+    );
+  }
+
+  @protected
   ProgramPreview sse_decode_program_preview(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_program = sse_decode_program_kind(deserializer);
@@ -13182,6 +13232,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_newTunnels = sse_decode_u_32(deserializer);
     var var_newSnippets = sse_decode_u_32(deserializer);
     var var_newKnownHosts = sse_decode_u_32(deserializer);
+    var var_knownHosts = sse_decode_list_program_known_host(deserializer);
     var var_keys = sse_decode_list_program_key(deserializer);
     var var_warnings = sse_decode_list_program_warning(deserializer);
     var var_passwords = sse_decode_u_32(deserializer);
@@ -13195,6 +13246,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       newTunnels: var_newTunnels,
       newSnippets: var_newSnippets,
       newKnownHosts: var_newKnownHosts,
+      knownHosts: var_knownHosts,
       keys: var_keys,
       warnings: var_warnings,
       passwords: var_passwords,
@@ -15705,6 +15757,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_program_known_host(
+    List<ProgramKnownHost> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_program_known_host(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_program_warning(
     List<ProgramWarning> self,
     SseSerializer serializer,
@@ -16799,6 +16863,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_list_String(self.hosts, serializer);
     sse_encode_String(self.groupName, serializer);
     sse_encode_list_String(self.saveKeys, serializer);
+    sse_encode_list_String(self.knownHosts, serializer);
   }
 
   @protected
@@ -16835,6 +16900,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_program_known_host(
+    ProgramKnownHost self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.line, serializer);
+    sse_encode_String(self.fingerprint, serializer);
+  }
+
+  @protected
   void sse_encode_program_preview(
     ProgramPreview self,
     SseSerializer serializer,
@@ -16848,6 +16924,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_32(self.newTunnels, serializer);
     sse_encode_u_32(self.newSnippets, serializer);
     sse_encode_u_32(self.newKnownHosts, serializer);
+    sse_encode_list_program_known_host(self.knownHosts, serializer);
     sse_encode_list_program_key(self.keys, serializer);
     sse_encode_list_program_warning(self.warnings, serializer);
     sse_encode_u_32(self.passwords, serializer);
@@ -17817,10 +17894,10 @@ class OpenWardImpl extends RustOpaque implements OpenWard {
     text: text,
   );
 
-  Future<ProgramReport> importProgram({
+  Future<ProgramReport> importProgramSelection({
     required ProgramData data,
     required ProgramChoice choice,
-  }) => RustLib.instance.api.crateApiAppOpenWardImportProgram(
+  }) => RustLib.instance.api.crateApiAppOpenWardImportProgramSelection(
     that: this,
     data: data,
     choice: choice,

@@ -53,11 +53,14 @@ convertir los casos pendientes de revisión en casos cerrados.
 |---|---|
 | **CI-3** | Reporte privado de vulnerabilidades habilitado el 11-11-2026. Se comprobó con GET antes (`enabled=false`) y después (`enabled=true`) de cambiar el ajuste de GitHub. |
 | **IM-1** | La importación retira el arranque automático en los tres tipos de túnel, tanto al detectar como al guardar un bundle. Los túneles importados por versiones anteriores requieren aprobación desde el editor antes de arrancar automáticamente. Los túneles manuales y los del `~/.ssh/config` propio conservan su comportamiento. |
+| **DA-3** | Corregido en la [PR #10](https://github.com/KaiCorpLabs/openward/pull/10), con 19 jobs correctos. Cada instalación valida una sola clave antes de E/S remota; los comentarios leídos o escritos por la app no producen líneas adicionales. La regresión SFTP comprueba rechazo sin cambios y autenticación válida posterior. |
+| **CO-1** | La importación exige seleccionar por separado cada entrada de confianza completa, con su alcance y huella. No se preselecciona ninguna al elegir hosts. Las autoridades y patrones con comodines importados antiguamente sin aprobación quedan fuera de las conexiones y de la lista activa hasta revisarlos de nuevo al importar. Se conservan los pins literales anteriores, las revocaciones y las claves propias. |
 
 La corrección de IM-1 incorpora regresiones de los tres tipos de túnel,
 persistencia de aprobación y revocación, avisos traducidos y conexiones reales
 por terminal/SFTP. El estado de la validación completa queda en los checks de
-la PR que introduce el cambio.
+la [PR #9](https://github.com/KaiCorpLabs/openward/pull/9), fusionada con 19 jobs
+correctos, incluida la regresión real de terminal y SFTP.
 
 ## Fichas contrastadas
 

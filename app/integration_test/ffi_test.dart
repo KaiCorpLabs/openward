@@ -472,7 +472,7 @@ Host db
         if (!i.isGroup) i,
     ];
     expect(hosts.map((h) => h.label), ['web-1', 'db']);
-    final report = await app.importProgram(
+    final report = await app.importProgramSelection(
       data: data,
       choice: ProgramChoice(
         hosts: [for (final h in hosts) h.id],
