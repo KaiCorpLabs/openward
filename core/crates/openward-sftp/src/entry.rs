@@ -32,6 +32,13 @@ pub struct Entry {
 }
 
 impl Entry {
+    /// Copy metadata of a link's target, preserving its link identity.
+    pub(crate) fn follow_target(&mut self, attrs: Option<&FileAttributes>) {
+        self.link_dir = attrs.is_some_and(|a| kind(a) == Kind::Dir);
+        self.size = attrs.and_then(|a| a.size).unwrap_or(0);
+        self.mode = attrs.and_then(|a| a.permissions).map(|m| m & 0o7777);
+        self.modified = attrs.and_then(|a| a.mtime).map(i64::from);
+    }
     /// Opens as a folder: a directory, or a link to one.
     pub fn is_dir(&self) -> bool {
         self.kind == Kind::Dir || self.link_dir
@@ -126,6 +133,43 @@ fn owners(longname: &str) -> (Option<String>, Option<String>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn followed_links_use_the_targets_permissions_and_date() {
+        let link = FileAttributes {
+            permissions: Some(0o120777),
+            mtime: Some(300),
+            size: Some(12),
+            ..FileAttributes::empty()
+        };
+        let target = FileAttributes {
+            permissions: Some(0o100600),
+            mtime: Some(100),
+            size: Some(40),
+            ..FileAttributes::empty()
+        };
+        let mut entry = Entry::remote("link".into(), "", &link);
+        entry.link_target = Some("private".into());
+        entry.follow_target(Some(&target));
+        assert_eq!(
+            (entry.mode, entry.modified, entry.size),
+            (Some(0o600), Some(100), 40)
+        );
+        assert_eq!(entry.kind, Kind::Link);
+        assert_eq!(entry.link_target.as_deref(), Some("private"));
+        entry.follow_target(Some(&FileAttributes {
+            permissions: Some(0o040750),
+            mtime: Some(200),
+            ..FileAttributes::empty()
+        }));
+        assert!(entry.link_dir);
+        assert_eq!((entry.mode, entry.modified), (Some(0o750), Some(200)));
+        entry.follow_target(None);
+        assert_eq!(
+            (entry.mode, entry.modified, entry.size, entry.link_dir),
+            (None, None, 0, false)
+        );
+    }
 
     #[test]
     fn owners_from_ls_lines() {

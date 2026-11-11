@@ -1240,6 +1240,80 @@ async fn a_link_without_a_session_fails_and_resumes_later() {
     s.done().await;
 }
 
+/// Nested links use the file they copy, not the symlink's mode/date.
+#[cfg(unix)]
+#[tokio::test]
+async fn nested_remote_links_copy_target_permissions_and_compare_target_dates() {
+    use std::time::UNIX_EPOCH;
+    let fx = servers!();
+    for port in ALL {
+        let s = server(&fx, port, "link-meta").await;
+        s.sh("mkdir tree && printf private > secret && chmod 600 secret && touch -m -t 202001010000 secret && ln -s ../secret tree/link").await;
+        let source = s
+            .remote
+            .stat(&join(&s.dir, "secret"))
+            .await
+            .unwrap()
+            .unwrap();
+        let listed = s.remote.list(&join(&s.dir, "tree")).await.unwrap();
+        assert_eq!(
+            (listed[0].kind, listed[0].mode, listed[0].modified),
+            (Kind::Link, Some(0o600), source.modified)
+        );
+        let back = tempfile::tempdir().unwrap();
+        let (t, l) = (transfers(), link(&s.remote));
+        let down = |on| {
+            copy(
+                &t,
+                &l,
+                Direction::Download,
+                join(&s.dir, "tree"),
+                path_str(back.path()),
+                on,
+            )
+        };
+        let first = down(OnConflict::Replace).await;
+        assert_eq!(
+            first.state,
+            JobState::Done,
+            "port {port}: {:?}",
+            first.error
+        );
+        let file = back.path().join("tree/link");
+        assert_eq!(std::fs::read(&file).unwrap(), b"private");
+        assert_eq!(
+            mode_of(&file),
+            0o600,
+            "a private non-executable target stays private"
+        );
+        std::fs::write(&file, b"keep newer local copy").unwrap();
+        std::fs::File::options()
+            .write(true)
+            .open(&file)
+            .unwrap()
+            .set_modified(UNIX_EPOCH + Duration::from_secs(source.modified.unwrap() as u64 + 60))
+            .unwrap();
+        s.sh("chmod 000 secret").await;
+        let skipped = down(OnConflict::Newer).await;
+        assert_eq!((skipped.state, skipped.skipped), (JobState::Done, 1));
+        assert_eq!(std::fs::read(&file).unwrap(), b"keep newer local copy");
+        assert_eq!(mode_of(&file), 0o600);
+        s.sh("chmod 700 secret && printf updated > secret && touch -m -t 202201010000 secret")
+            .await;
+        let replaced = down(OnConflict::Newer).await;
+        assert_eq!(
+            (replaced.state, replaced.files_done),
+            (JobState::Done, 1),
+            "{:?}",
+            replaced.error
+        );
+        assert_eq!(std::fs::read(&file).unwrap(), b"updated");
+        assert_eq!(mode_of(&file), 0o700);
+        assert!(local_parts(back.path()).is_empty());
+        s.done().await;
+    }
+}
+
 /// A folder of a few hundred small files, several at once, on every
 /// server: up, again with each conflict choice, and back down.
 #[tokio::test]
