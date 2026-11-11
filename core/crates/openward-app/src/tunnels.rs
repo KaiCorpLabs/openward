@@ -306,7 +306,7 @@ impl Tunnels {
     /// not open yet. Their failures stay in their state.
     pub async fn autostart(&self, live: &Arc<Live>, forwards: Vec<(ItemId, PortForward)>) {
         for (id, spec) in forwards {
-            if !spec.autostart {
+            if !spec.autostarts() {
                 continue;
             }
             let Some(ticket) = self.begin(id) else {

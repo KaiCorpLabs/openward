@@ -6141,6 +6141,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String warnTunnelAutostart(String tunnel) {
+    return 'El túnel $tunnel se iniciaba automáticamente. Queda detenido hasta que lo inicies. Revisa su dirección y destino antes de activar el inicio automático.';
+  }
+
+  @override
   String warnUnreadable(String file) {
     return 'No se ha podido leer $file.';
   }

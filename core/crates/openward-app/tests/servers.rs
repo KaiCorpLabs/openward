@@ -1956,6 +1956,60 @@ fn tunnels_open_with_the_terminal() {
     drop(taken);
 }
 
+/// IM-1: old foreign-program records cannot start tunnels through either
+/// connection entry point. Ordinary autostart and explicit opening remain.
+#[test]
+fn imported_tunnels_wait_for_review_in_terminal_and_sftp_connections() {
+    use openward_app::vault::proto::Imported;
+
+    for browser in [false, true] {
+        let f = Fixture::new(servers!());
+        let host = f.bastion();
+        let mut imported = Vec::new();
+        for kind in [
+            ForwardKind::Local,
+            ForwardKind::Remote,
+            ForwardKind::Dynamic,
+        ] {
+            let id = f.tunnel(host, kind, free_port(), Some(("127.0.0.1", 22)), true);
+            let mut vault = f.app.vault();
+            let mut spec = vault.port_forward(id).unwrap().clone();
+            spec.imported = Some(Imported {
+                from: "termius".into(),
+                id: format!("legacy-{kind:?}"),
+                extra: Default::default(),
+            });
+            let rev = vault.get(id).unwrap().rev;
+            vault.update(id, rev, Data::PortForward(spec)).unwrap();
+            imported.push(id);
+        }
+        let control = f.tunnel(
+            host,
+            ForwardKind::Local,
+            free_port(),
+            Some(("127.0.0.1", 22)),
+            true,
+        );
+        let (_terminal, _browser) = if browser {
+            let (sftp, events) = f.sftp(host, |p| panic!("unexpected prompt: {p:?}"));
+            outcome(&events).0.unwrap();
+            (None, Some(sftp))
+        } else {
+            let (terminal, events) = f.connect(host, |p| panic!("unexpected prompt: {p:?}"));
+            outcome(&events).0.unwrap();
+            (Some(terminal), None)
+        };
+        // Connected is emitted after all autostart attempts finish.
+        assert!(matches!(f.state(control), TunnelState::Open { .. }));
+        for id in &imported {
+            assert_eq!(f.state(*id), TunnelState::Closed, "browser={browser}");
+        }
+        let opened = f.open_tunnel(imported[0], |p| panic!("asked again: {p:?}"));
+        outcome(&opened).0.unwrap();
+        assert!(matches!(f.state(imported[0]), TunnelState::Open { .. }));
+    }
+}
+
 /// A tiny HTTP CONNECT proxy that wants ana:secreto; its port.
 fn login_proxy() -> u16 {
     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();

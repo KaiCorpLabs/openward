@@ -182,6 +182,31 @@ pub struct Tunnel {
     pub autostart: bool,
 }
 
+impl Tunnel {
+    /// A foreign file cannot authorize opening a listener or starting a
+    /// tunnel. Used again when saving, independently of format detection.
+    pub fn hold_back(&mut self, host: &str) -> Vec<Warning> {
+        let address = self.listen_address.take_if(|a| !loopback(a));
+        let autostart = std::mem::take(&mut self.autostart);
+        if address.is_none() && !autostart {
+            return Vec::new();
+        }
+        let name = if self.label.trim().is_empty() {
+            format!("{host} :{}", self.listen_port)
+        } else {
+            self.label.clone()
+        };
+        let mut warnings = Vec::new();
+        if let Some(address) = address {
+            warnings.push(Warning::about(&name, WarningKind::OpenTunnel(address)));
+        }
+        if autostart {
+            warnings.push(Warning::about(name, WarningKind::TunnelAutostart));
+        }
+        warnings
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Snippet {
     pub id: String,
@@ -223,6 +248,8 @@ pub enum WarningKind {
     /// A tunnel that listened at this address, open to other computers: it
     /// comes in listening on loopback. See [`Bundle::hold_back`].
     OpenTunnel(String),
+    /// Automatic startup requested by a foreign file, left disabled.
+    TunnelAutostart,
     /// Something OpenWard does not have; the rest of the item came in.
     Unsupported(Missing),
     /// A value that made no sense (`port`, `70000`); left out.
@@ -293,7 +320,8 @@ impl Bundle {
     /// says so, as with a `ProxyCommand`: the agent forwarded to a server
     /// (whoever runs it signs with your keys while you are connected) and
     /// tunnels open to the network (anyone there goes through them). The
-    /// file's word is not enough for either; whoever trusts it sets them
+    /// file's word is not enough for either or for automatic tunnel
+    /// startup; whoever trusts it sets them
     /// by hand. An agent turned off on purpose stays off.
     pub fn hold_back(&mut self) {
         let mut said = Vec::new();
@@ -313,17 +341,11 @@ impl Bundle {
             }
         }
         for t in &mut self.tunnels {
-            let Some(address) = t.listen_address.take_if(|a| !loopback(a)) else {
-                continue;
-            };
-            let name = if t.label.trim().is_empty() {
-                let host = self.hosts.iter().find(|h| h.id == t.host);
-                let host = host.map_or(t.host.as_str(), |h| h.label.as_str());
-                format!("{host} :{}", t.listen_port)
-            } else {
-                t.label.clone()
-            };
-            said.push(Warning::about(name, WarningKind::OpenTunnel(address)));
+            let host = self.hosts.iter().find(|h| h.id == t.host);
+            let host = host
+                .map_or(t.host.as_str(), |h| h.label.as_str())
+                .to_owned();
+            said.extend(t.hold_back(&host));
         }
         self.warnings.extend(said);
     }
@@ -367,6 +389,35 @@ mod tests {
         }
     }
 
+    #[test]
+    fn imported_tunnels_never_start_on_the_files_authority() {
+        let mut b = Bundle {
+            hosts: vec![host("web", None)],
+            tunnels: [
+                ForwardKind::Local,
+                ForwardKind::Remote,
+                ForwardKind::Dynamic,
+            ]
+            .into_iter()
+            .map(|kind| Tunnel {
+                kind,
+                ..tunnel("database", Some("127.0.0.1"))
+            })
+            .collect(),
+            ..Bundle::default()
+        };
+        b.hold_back();
+        assert!(b.tunnels.iter().all(|t| !t.autostart));
+        assert!(
+            b.tunnels
+                .iter()
+                .all(|t| t.listen_address.as_deref() == Some("127.0.0.1"))
+        );
+        let once = b.clone();
+        b.hold_back();
+        assert_eq!(b, once, "filtering twice must not duplicate warnings");
+    }
+
     /// AM-8: a file that points a host at a server with your agent, or
     /// opens a tunnel to the network, brings neither.
     #[test]
@@ -399,6 +450,10 @@ mod tests {
             ],
             ..Bundle::default()
         };
+        // This case isolates the network bind and agent policy.
+        for t in &mut b.tunnels {
+            t.autostart = false;
+        }
         b.hold_back();
 
         assert_eq!(b.groups[0].settings.agent_forward, None);

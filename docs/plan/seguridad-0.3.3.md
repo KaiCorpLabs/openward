@@ -43,6 +43,22 @@ Las prioridades son de trabajo posterior; esta PR no modifica el runtime ni acti
 | **S2 — hechos pendientes** | Las 20 fichas «Necesita revisión» | Obtener el dato mínimo indicado y convertir cada caso en confirmado o descartado con evidencia; no cerrar por ausencia de una PoC. |
 | **S3 — D3/D6 y distribución** | DA-2, DA-5, RG-4, CI-4…CI-6, CI-8, CI-10…CI-12 y demás deuda documentada | Preparar migraciones y manejo de secretos, acordar la puerta de publicación, aislar builds y verificar procedencia antes de ampliar garantías. |
 
+## Seguimiento de S0
+
+El contraste anterior y las 63 fichas conservan la referencia histórica a
+`35ab7a6`. Este seguimiento registra las correcciones posteriores, sin
+convertir los casos pendientes de revisión en casos cerrados.
+
+| Punto | Cambio posterior |
+|---|---|
+| **CI-3** | Reporte privado de vulnerabilidades habilitado el 11-11-2026. Se comprobó con GET antes (`enabled=false`) y después (`enabled=true`) de cambiar el ajuste de GitHub. |
+| **IM-1** | La importación retira el arranque automático en los tres tipos de túnel, tanto al detectar como al guardar un bundle. Los túneles importados por versiones anteriores requieren aprobación desde el editor antes de arrancar automáticamente. Los túneles manuales y los del `~/.ssh/config` propio conservan su comportamiento. |
+
+La corrección de IM-1 incorpora regresiones de los tres tipos de túnel,
+persistencia de aprobación y revocación, avisos traducidos y conexiones reales
+por terminal/SFTP. El estado de la validación completa queda en los checks de
+la PR que introduce el cambio.
+
 ## Fichas contrastadas
 
 ### Conexión y confianza SSH

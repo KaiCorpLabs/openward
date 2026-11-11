@@ -101,7 +101,7 @@ fn spec_view(f: &PortForward) -> TunnelSpec {
         listen_address: f.listen_address.clone(),
         dest_host: f.dest_host.clone(),
         dest_port: f.dest_port,
-        autostart: f.autostart,
+        autostart: f.autostarts(),
     }
 }
 
@@ -122,7 +122,7 @@ fn apply(spec: &TunnelSpec, f: &mut PortForward) -> anyhow::Result<()> {
         .clone()
         .filter(|h| !dynamic && !h.trim().is_empty());
     f.dest_port = spec.dest_port.filter(|_| !dynamic);
-    f.autostart = spec.autostart;
+    f.set_autostart(spec.autostart);
     Ok(())
 }
 
@@ -283,5 +283,66 @@ impl OpenWard {
     #[frb(sync)]
     pub fn free_port_near(&self, port: u16) -> Option<u16> {
         self.app.free_port_near(port)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use openward_app::vault::proto::{Body, Imported, ItemId};
+
+    #[test]
+    fn legacy_imports_need_editor_approval_but_manual_tunnels_keep_autostart() {
+        for kind in [
+            ForwardKind::Local,
+            ForwardKind::Remote,
+            ForwardKind::Dynamic,
+        ] {
+            let mut f = PortForward {
+                label: "Database".into(),
+                host: ItemId::new(),
+                kind,
+                listen_port: 5433,
+                listen_address: None,
+                dest_host: Some("127.0.0.1".into()),
+                dest_port: Some(5432),
+                autostart: true,
+                source: None,
+                imported: None,
+                extra: Default::default(),
+            };
+            assert!(spec_view(&f).autostart, "manual tunnels keep their setting");
+            f.imported = Some(Imported {
+                from: "termius".into(),
+                id: "legacy-tunnel".into(),
+                extra: Default::default(),
+            });
+            assert!(!f.autostarts());
+            assert!(
+                !spec_view(&f).autostart,
+                "the editor must show the effective state"
+            );
+
+            let mut spec = spec_view(&f);
+            spec.autostart = true;
+            apply(&spec, &mut f).unwrap();
+            assert!(f.autostarts(), "explicit editor approval enables it");
+            let body = Body {
+                created: 1,
+                modified: 2,
+                data: Data::PortForward(f),
+            };
+            let Data::PortForward(mut restored) = Body::from_cbor(&body.to_cbor()).unwrap().data
+            else {
+                panic!("expected a tunnel");
+            };
+            assert!(restored.autostarts(), "approval must survive storage");
+            spec.autostart = false;
+            apply(&spec, &mut restored).unwrap();
+            assert!(!restored.autostarts());
+            // Setting only the old bit cannot resurrect a revoked approval.
+            restored.autostart = true;
+            assert!(!restored.autostarts());
+        }
     }
 }

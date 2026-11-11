@@ -81,7 +81,7 @@ impl Ctx {
         let forwards: Vec<_> = lock(&self.vault)
             .port_forwards()
             .into_iter()
-            .filter(|(_, f)| f.host == host && f.autostart)
+            .filter(|(_, f)| f.host == host && f.autostarts())
             .map(|(id, f)| (id, f.clone()))
             .collect();
         if !forwards.is_empty() {

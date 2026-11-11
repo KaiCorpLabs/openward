@@ -6116,6 +6116,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String warnTunnelAutostart(String tunnel) {
+    return 'The tunnel $tunnel used to start automatically. It will stay stopped until you start it. Review its direction and destination before enabling automatic startup.';
+  }
+
+  @override
   String warnUnreadable(String file) {
     return '$file could not be read.';
   }

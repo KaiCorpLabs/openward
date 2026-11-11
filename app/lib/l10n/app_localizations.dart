@@ -9488,6 +9488,12 @@ abstract class AppLocalizations {
   /// **'StrictHostKeyChecking no{at}: se importa como «aceptar nuevas»; una clave que cambia nunca se acepta sin preguntar.'**
   String warnStricter(String at);
 
+  /// No description provided for @warnTunnelAutostart.
+  ///
+  /// In es, this message translates to:
+  /// **'El túnel {tunnel} se iniciaba automáticamente. Queda detenido hasta que lo inicies. Revisa su dirección y destino antes de activar el inicio automático.'**
+  String warnTunnelAutostart(String tunnel);
+
   /// No description provided for @warnUnreadable.
   ///
   /// In es, this message translates to:
