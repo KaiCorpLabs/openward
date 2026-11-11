@@ -684,10 +684,9 @@ mod tests {
         if let Ok(mask) = std::env::var("OPENWARD_TEST_DIRECTORY_UMASK") {
             let tmp = tempfile::tempdir().unwrap();
             let root = LocalRoot::destination(tmp.path()).unwrap();
+            let process_mask = rustix::fs::RawMode::from_str_radix(&mask, 8).unwrap();
             let mask = u32::from_str_radix(&mask, 8).unwrap();
-            rustix::process::umask(rustix::fs::Mode::from_bits_truncate(
-                mask.try_into().unwrap(),
-            ));
+            rustix::process::umask(rustix::fs::Mode::from_bits_truncate(process_mask));
             let created = root.mkdir(Path::new("copy")).unwrap();
             let path = tmp.path().join("copy");
             let mode = || std::fs::metadata(&path).unwrap().permissions().mode() & 0o7777;
