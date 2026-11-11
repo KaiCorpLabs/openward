@@ -92,8 +92,8 @@ pub fn chmod_with_options(
     preserve_special: bool,
 ) -> Result<u64> {
     use cap_std::{ambient_authority, fs::Dir};
-    // Following the explicitly selected root link is intentional. Every
-    // descendant is resolved from the held directory and never follows links.
+    // Following the explicitly selected root link is intentional. Descendants
+    // stay confined to held directories; observed links are skipped.
     let root = std::fs::canonicalize(path).map_err(err(path))?;
     let parent = root.parent().unwrap_or(&root);
     let name = Path::new(root.file_name().unwrap_or(std::ffi::OsStr::new(".")));
@@ -148,7 +148,7 @@ fn chmod_entry(
         let temporary = had | (mode & 0o700);
         if temporary != had {
             parent
-                .set_symlink_permissions(name, Permissions::from_mode(temporary))
+                .set_permissions(name, Permissions::from_mode(temporary))
                 .map_err(err(display))?;
         }
         let dir = parent.open_dir_nofollow(name).map_err(err(display))?;
@@ -193,7 +193,7 @@ fn chmod_entry(
         Ok(changed)
     } else {
         parent
-            .set_symlink_permissions(name, Permissions::from_mode(mode))
+            .set_permissions(name, Permissions::from_mode(mode))
             .map_err(err(display))?;
         let after = parent.symlink_metadata(name).map_err(err(display))?;
         if (after.dev(), after.ino()) != (meta.dev(), meta.ino()) || after.is_symlink() {
