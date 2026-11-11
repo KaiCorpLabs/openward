@@ -4254,6 +4254,34 @@ Host db
     );
   });
 
+  testWidgets('logs: erase orphan recordings even when the list is empty', (
+    tester,
+  ) async {
+    const id = '0190f0f0-0000-7000-8000-000000000001';
+    final orphan = File('${dir.path}/data/logs/$id.cast.gz');
+    await orphan.writeAsString('orphan recording');
+    final configuration = File('${dir.path}/data/logs/config.json.tmp');
+    await configuration.writeAsString('keep configuration');
+    expect(app.logsUsage().entries, 0);
+    final container = await launch(tester);
+    container.read(tabsProvider.notifier).openPage(PageKind.settings);
+    await _settle(tester);
+    Finder field(String key) => find.byKey(ValueKey(key));
+    await tester.tap(field('settings.section.logs'));
+    await _settle(tester);
+    await tester.ensureVisible(field('settings.logDeleteAll'));
+    await tester.tap(field('settings.logDeleteAll'));
+    await _settle(tester);
+    await tester.tap(field('settings.logDeleteAll.confirm'));
+    await _until(
+      tester,
+      () => !orphan.existsSync(),
+      'orphan recording removal',
+    );
+    expect(await configuration.readAsString(), 'keep configuration');
+    expect(app.logsUsage().entries, 0);
+  });
+
   testWidgets('logs: turned on in Ajustes, paused and opened from the pane, '
       'and a group that records', (tester) async {
     final group = await app.createGroup(
