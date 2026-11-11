@@ -1,7 +1,7 @@
 name: openward
 description: "OpenWard, cliente SSH"
 publish_to: 'none'
-version: 0.3.4-beta.3+29
+version: 0.3.4-beta.4+30
 
 environment:
   sdk: ^3.13.5

@@ -19,10 +19,10 @@
 | [notas/v0.3.md](notas/v0.3.md) | Notas de la versión 0.3 |
 | [plan/foco-y-pulido.md](plan/foco-y-pulido.md) | Foco y pulido: barra plegable, ⌘K, latencia y pulido (0.3.0-beta.3); editor e inicio (0.3.0-beta.4); entorno, sistema y favoritos (v0.3.1) |
 | [plan/temas.md](plan/temas.md) | Las siete familias de temas (Monitor, Berenjena, Búnker, Marino, Catppuccin, Dracula y Tokyo Night), hechas en 0.3.1-beta.5 |
-| [plan/auditoria-0.3.md](plan/auditoria-0.3.md) | Auditoría de la 0.3.1: 128 hallazgos y el plan de remediación R0–R6 (R0 y R1 hechos) |
+| [plan/auditoria-0.3.md](plan/auditoria-0.3.md) | Auditoría histórica de la 0.3.1: 128 entradas, seguimiento R0–R6 y mediciones; consultar el detalle de cada hito, no sus totales iniciales como deuda actual |
 | [plan/registros.md](plan/registros.md) | Registros de sesión: lo que se vio en cada sesión, para buscarlo, volver a verlo y exportarlo (maquetas aprobadas, hitos L1–L4) |
-| [plan/seguridad-0.3.3.md](plan/seguridad-0.3.3.md) | Seguridad de la 0.3.3 contrastada con main: 63 puntos, 25 confirmados, 20 pendientes de revisión y 18 no accionables en el alcance actual; plan S0–S3 actualizado |
-| [plan/community.md](plan/community.md) | Camino a la Community: lo básico completo (Telnet, serie, Mosh, FIDO2, terminal, autocompletado), el vault cifrado, la sync con tu almacenamiento, el servidor con las cuentas de KaiCorp Labs y su paso a producción (en marcha) |
+| [plan/seguridad-0.3.3.md](plan/seguridad-0.3.3.md) | 63 fichas históricas y seguimiento posterior: S0 integrado, doce S1 confirmados corregidos y CI enlazada; S2/S3 y casos pendientes de evidencia conservan sus propios estados |
+| [plan/community.md](plan/community.md) | Camino a la Community: etapa 1 implementada con pruebas manuales pendientes; vault cifrado, sync con tu almacenamiento, servidor y producción por completar |
 | [plan/v0.4.md](plan/v0.4.md) | v0.4: el vault cifrado (contraseña maestra, kit de recuperación, desbloqueo con biometría, secretos y copia de seguridad), etapa 2 del camino a la Community (en marcha) |
 | [plan/lanzamiento.md](plan/lanzamiento.md) | Lanzamiento: lo que queda para salir con la Community, por prioridad (los planes de la v0.4 a la v0.7, distribución, web, legal y la prueba final) (propuesta) |
 
