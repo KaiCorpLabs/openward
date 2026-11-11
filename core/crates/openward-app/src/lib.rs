@@ -739,6 +739,15 @@ impl App {
         let new = PublicKey::from_openssh(key).map_err(|_| invalid())?;
         let mut vault = self.vault();
         let mut known = KnownHosts::parse(&vault.known_hosts_text(), Unknown::Reject);
+        let offered = PublicKeyOrCertificate::PublicKey {
+            key: new.clone(),
+            hash_alg: None,
+        };
+        if known.check(host, port, &offered) == Verdict::Revoked {
+            return Err(openward_vault::Error::Invalid(
+                "the host key is revoked; remove its revocation before trusting it",
+            ));
+        }
         let mut old: Vec<_> = known.listed(host, port).into_iter().cloned().collect();
         for key in previous {
             old.push(PublicKey::from_openssh(key).map_err(|_| invalid())?);

@@ -1221,6 +1221,27 @@ mod trust_tests {
     }
 
     #[test]
+    fn rotation_cannot_report_success_for_an_explicitly_revoked_key() {
+        let temp = tempfile::tempdir().unwrap();
+        let app = App::open_as(temp.path(), Local::from_env()).unwrap();
+        let revoked = key(81).to_openssh().unwrap();
+        app.vault()
+            .create(Data::KnownHost(KnownHost {
+                hosts: "host.example".into(),
+                key: revoked.clone(),
+                marker: Some(openward_vault::proto::Marker::Revoked),
+                ..KnownHost::default()
+            }))
+            .unwrap();
+        let before = app.vault().known_hosts_text();
+        assert!(
+            app.rotate_host_key("host.example", 22, &revoked, &[])
+                .is_err()
+        );
+        assert_eq!(app.vault().known_hosts_text(), before);
+    }
+
+    #[test]
     fn rotation_carries_custom_file_keys_and_is_atomic_on_failure() {
         let temp = tempfile::tempdir().unwrap();
         let app = App::open_as(temp.path(), Local::from_env()).unwrap();
