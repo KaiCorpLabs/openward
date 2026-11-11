@@ -323,36 +323,73 @@ impl Remote {
     /// Sets the permission bits of `path`. With `recursive`, also of all it
     /// holds; files keep execute only if they had it (`chmod -R` with `X`).
     pub async fn chmod(&self, path: &str, mode: u32, recursive: bool) -> Result<u64> {
-        let Some(top) = self.lstat(path).await? else {
-            return Err(Error::NotFound(path.to_owned()));
-        };
-        let mut changed = 0;
-        self.set_mode(path, mode).await?;
-        changed += 1;
-        if recursive && top.kind == Kind::Dir {
-            changed += Box::pin(self.chmod_inside(path, mode)).await?;
-        }
-        Ok(changed)
+        self.chmod_with_options(path, mode, recursive, false).await
     }
 
-    async fn chmod_inside(&self, dir: &str, mode: u32) -> Result<u64> {
-        let mut changed = 0;
-        for e in self.read_dir(dir).await? {
-            let path = join(dir, &e.name);
-            match e.kind {
-                Kind::Dir => {
-                    self.set_mode(&path, mode).await?;
-                    changed += 1 + Box::pin(self.chmod_inside(&path, mode)).await?;
-                }
-                Kind::File => {
-                    let had_x = e.mode.unwrap_or(0) & 0o111 != 0;
-                    let m = if had_x { mode } else { mode & !0o111 };
-                    self.set_mode(&path, m).await?;
-                    changed += 1;
-                }
-                // Links have no permissions of their own.
-                Kind::Link | Kind::Other => {}
+    /// As local chmod: special bits belong to each object. Only an explicit
+    /// root mode may replace them; rwx edits preserve them.
+    pub async fn chmod_with_options(
+        &self,
+        path: &str,
+        mode: u32,
+        recursive: bool,
+        preserve_special: bool,
+    ) -> Result<u64> {
+        let root = self.realpath(path).await?;
+        self.chmod_entry(&root, mode, recursive, preserve_special, false)
+            .await
+    }
+
+    async fn chmod_entry(
+        &self,
+        path: &str,
+        requested: u32,
+        recursive: bool,
+        preserve_special: bool,
+        child: bool,
+    ) -> Result<u64> {
+        let top = if child {
+            self.lstat(path).await?
+        } else {
+            self.stat(path).await?
+        }
+        .ok_or_else(|| Error::NotFound(path.to_owned()))?;
+        if top.kind == Kind::Link || (child && top.kind == Kind::Other) {
+            return Ok(0);
+        }
+        let had = top
+            .mode
+            .ok_or_else(|| Error::Other(format!("{path}: permissions are unavailable")))?;
+        let mut mode = (requested & 0o777)
+            | if child || preserve_special {
+                had & 0o7000
+            } else {
+                requested & 0o7000
+            };
+        if child && top.kind == Kind::File && had & 0o111 == 0 {
+            mode &= !0o111;
+        }
+        let mut changed = 1;
+        if recursive && top.kind == Kind::Dir {
+            let temporary = had | (mode & 0o700);
+            if temporary != had {
+                self.set_mode(path, temporary).await?;
             }
+            let mut entries = self.read_dir(path).await?;
+            entries.sort_by(|a, b| a.name.cmp(&b.name));
+            for e in entries {
+                // Recheck each child's own attributes. Descendant links are
+                // never followed, including links to directories.
+                changed +=
+                    Box::pin(self.chmod_entry(&join(path, &e.name), requested, true, true, true))
+                        .await?;
+            }
+        }
+        self.set_mode(path, mode).await?;
+        if self.stat(path).await?.and_then(|e| e.mode) != Some(mode) {
+            return Err(Error::Other(format!(
+                "{path}: permissions could not be applied"
+            )));
         }
         Ok(changed)
     }

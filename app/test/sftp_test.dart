@@ -32,7 +32,9 @@ FileEntry entry(
 
 /// A server in memory: folder paths and what is in them.
 class FakeFiles implements FileSystem {
-  FakeFiles(this.tree);
+  FakeFiles(this.tree, {this.statResult});
+
+  Future<FileEntry?> Function(String)? statResult;
 
   final Map<String, List<FileEntry>> tree;
 
@@ -52,6 +54,15 @@ class FakeFiles implements FileSystem {
   }
 
   @override
+  Future<FileEntry?> stat(String path) async {
+    if (statResult case final result?) return result(path);
+    for (final e in tree[paths.dirname(path)] ?? <FileEntry>[]) {
+      if (e.name == paths.basename(path)) return e;
+    }
+    return null;
+  }
+
+  @override
   Future<void> mkdir(String path) async {}
 
   @override
@@ -61,12 +72,17 @@ class FakeFiles implements FileSystem {
   Future<void> remove(List<String> paths) async {}
 
   @override
-  Future<int> chmod(String path, int mode, {required bool recursive}) async {
-    chmods.add((path, mode, recursive));
+  Future<int> chmod(
+    String path,
+    int mode, {
+    required bool recursive,
+    bool preserveSpecial = true,
+  }) async {
+    chmods.add((path, mode, recursive, preserveSpecial));
     return 1;
   }
 
-  final chmods = <(String, int, bool)>[];
+  final chmods = <(String, int, bool, bool)>[];
 }
 
 /// A server whose `/slow` answers only when told to.
@@ -294,6 +310,10 @@ void main() {
     expect(formatSize(es, 940 * 1024 * 1024), '940 MB');
     expect(formatMode(0x1ec), 'rwxr-xr--');
     expect(octal(0x1ec), '754');
+    expect(formatMode(0x3ff), 'rwxrwxrwt'); // 01777
+    expect(octal(0x3ff), '1777');
+    expect(formatMode(0x5fd), 'rwxrwsr-x'); // 02775
+    expect(formatMode(0x9ed), 'rwsr-xr-x'); // 04755
     expect(formatDuration(const Duration(seconds: 19)), '19 s');
     expect(formatDuration(const Duration(seconds: 65)), '1 min 5 s');
     expect(formatDuration(const Duration(minutes: 123)), '2 h 3 min');
@@ -384,7 +404,9 @@ void main() {
   });
 
   testWidgets('permissions: boxes and octal agree, and apply', (tester) async {
-    final fs = FakeFiles({});
+    final fs = FakeFiles({
+      '/srv': [entry('run.sh', mode: 0x1ed, owner: 'deploy')],
+    });
     await _showPermissions(tester, fs);
     expect(find.text('Permisos de run.sh'), findsOneWidget);
     expect(find.textContaining('deploy', findRichText: true), findsOneWidget);
@@ -414,12 +436,148 @@ void main() {
     expect(find.widgetWithText(TextField, '640'), findsOneWidget);
     await tester.tap(find.text('Aplicar'));
     await tester.pumpAndSettle();
-    expect(fs.chmods, [('/srv/run.sh', 0x1a0, false)]);
+    expect(fs.chmods, [('/srv/run.sh', 0x1a0, false, true)]);
+  });
+
+  for (final mode in [0x3ff, 0x5fd, 0x9ed]) {
+    testWidgets('permissions keep special bits in rwx edits: $mode', (
+      tester,
+    ) async {
+      final fs = FakeFiles({
+        '/srv': [entry('run.sh', mode: mode)],
+      });
+      await _showPermissions(tester, fs);
+      expect(
+        find.widgetWithText(TextField, mode.toRadixString(8)),
+        findsOneWidget,
+      );
+      await tester.enterText(find.byKey(const ValueKey('perm.octal')), '640');
+      await tester.pump();
+      await tester.tap(find.text('Aplicar'));
+      await tester.pumpAndSettle();
+      expect(fs.chmods, [('/srv/run.sh', (mode & 0xe00) | 0x1a0, false, true)]);
+    });
+  }
+
+  testWidgets('four digits explicitly clear root special bits', (tester) async {
+    final fs = FakeFiles({
+      '/srv': [entry('run.sh', mode: 0x9ed)],
+    });
+    await _showPermissions(tester, fs);
+    await tester.enterText(find.byKey(const ValueKey('perm.octal')), '0640');
+    await tester.pump();
+    // Checkbox edits keep the explicit special-bit choice.
+    await tester.tap(find.byType(Checkbox).at(5));
+    await tester.pump();
+    expect(find.widgetWithText(TextField, '0650'), findsOneWidget);
+    await tester.tap(find.text('Aplicar'));
+    await tester.pumpAndSettle();
+    expect(fs.chmods, [('/srv/run.sh', 0x1a8, false, false)]);
+  });
+
+  testWidgets(
+    'link permissions use the current target and allow directory recursion',
+    (tester) async {
+      final fs = FakeFiles(
+        {},
+        statResult: (_) async =>
+            entry('run.sh', kind: FileKind.dir, mode: 0x3ff),
+      );
+      await _showPermissions(
+        tester,
+        fs,
+        selected: entry('run.sh', kind: FileKind.link, mode: 0x1ff),
+      );
+      expect(find.widgetWithText(TextField, '1777'), findsOneWidget);
+      expect(find.byType(CheckboxListTile), findsOneWidget);
+      await tester.ensureVisible(find.byType(CheckboxListTile));
+      await tester.tap(find.byType(CheckboxListTile));
+      await tester.ensureVisible(find.byKey(const ValueKey('perm.octal')));
+      await tester.enterText(find.byKey(const ValueKey('perm.octal')), '750');
+      await tester.pump();
+      await tester.tap(find.text('Aplicar'));
+      await tester.pumpAndSettle();
+      expect(fs.chmods, [('/srv/run.sh', 0x3e8, true, true)]);
+    },
+  );
+
+  testWidgets(
+    'permission loading, absent attributes and errors never guess a mode',
+    (tester) async {
+      final pending = Completer<FileEntry?>();
+      final fs = FakeFiles({}, statResult: (_) => pending.future);
+      await _showPermissions(tester, fs, settle: false);
+      expect(
+        tester
+            .widget<FilledButton>(find.widgetWithText(FilledButton, 'Aplicar'))
+            .onPressed,
+        isNull,
+      );
+      pending.complete(entry('run.sh'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('perm.octal')), findsNothing);
+      expect(
+        tester
+            .widget<FilledButton>(find.widgetWithText(FilledButton, 'Aplicar'))
+            .onPressed,
+        isNull,
+      );
+      expect(fs.chmods, isEmpty);
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+      for (final missing in [true, false]) {
+        fs.statResult = (_) async {
+          if (missing) return null;
+          throw const FileError(
+            kind: FileErrorKind.denied,
+            path: '/srv/run.sh',
+            message: '',
+          );
+        };
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<FilledButton>(
+                find.widgetWithText(FilledButton, 'Aplicar'),
+              )
+              .onPressed,
+          isNull,
+        );
+        expect(find.byKey(const ValueKey('perm.octal')), findsNothing);
+        await tester.tap(find.text('Cancelar'));
+        await tester.pumpAndSettle();
+      }
+      expect(fs.chmods, isEmpty);
+    },
+  );
+
+  testWidgets('incomplete octal input cannot apply the previous mode', (
+    tester,
+  ) async {
+    final fs = FakeFiles({
+      '/srv': [entry('run.sh', mode: 0x180)],
+    });
+    await _showPermissions(tester, fs);
+    await tester.enterText(find.byKey(const ValueKey('perm.octal')), '7');
+    await tester.pump();
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Aplicar'))
+          .onPressed,
+      isNull,
+    );
+    expect(fs.chmods, isEmpty);
   });
 }
 
 /// The permissions dialog, in the app's theme.
-Future<void> _showPermissions(WidgetTester tester, FileSystem fs) async {
+Future<void> _showPermissions(
+  WidgetTester tester,
+  FileSystem fs, {
+  FileEntry? selected,
+  bool settle = true,
+}) async {
   await tester.pumpWidget(
     MaterialApp(
       theme: materialTheme(OwThemes.grafito),
@@ -431,7 +589,7 @@ Future<void> _showPermissions(WidgetTester tester, FileSystem fs) async {
           body: TextButton(
             onPressed: () => showPermissions(
               context,
-              entry: entry('run.sh', mode: 0x1ed, owner: 'deploy'),
+              entry: selected ?? entry('run.sh', mode: 0x1ed, owner: 'deploy'),
               path: '/srv/run.sh',
               fs: fs,
             ),
@@ -442,5 +600,9 @@ Future<void> _showPermissions(WidgetTester tester, FileSystem fs) async {
     ),
   );
   await tester.tap(find.text('open'));
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    await tester.pump();
+  }
 }

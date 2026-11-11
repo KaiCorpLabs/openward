@@ -35,10 +35,12 @@ Future<PlatformInt64> localChmod({
   required String path,
   required int mode,
   required bool recursive,
+  bool? preserveSpecial,
 }) => RustLib.instance.api.crateApiSftpLocalChmod(
   path: path,
   mode: mode,
   recursive: recursive,
+  preserveSpecial: preserveSpecial,
 );
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<SftpBrowser>>
@@ -49,6 +51,7 @@ abstract class SftpBrowser implements RustOpaqueInterface {
     required String path,
     required int mode,
     required bool recursive,
+    bool? preserveSpecial,
   });
 
   /// Stops connecting or watching the connection.

@@ -4013,6 +4013,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get permOctal => 'Octal';
 
   @override
+  String get permUnavailable => 'The current permissions could not be read.';
+
+  @override
+  String get permLinkTarget => 'These changes apply to the link’s target.';
+
+  @override
+  String get permSpecialNote =>
+      'Three digits keep special bits; four set them on this item. Recursive changes keep each child’s special bits.';
+
+  @override
   String get permOthers => 'Others';
 
   @override

@@ -1,6 +1,8 @@
 // The browser's questions: what to do with files that exist, permissions,
 // a name, and whether to delete.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -355,8 +357,13 @@ class _PermissionsDialog extends StatefulWidget {
 }
 
 class _PermissionsDialogState extends State<_PermissionsDialog> {
-  late int _mode = (widget.entry.mode ?? 0x1a4) & 0x1ff;
-  late final _octal = TextEditingController(text: octal(_mode));
+  int _mode = 0;
+  final _octal = TextEditingController();
+  FileEntry? _effective;
+  bool _loading = true;
+  bool _unavailable = false;
+  bool _numericValid = true;
+  bool _preserveSpecial = true;
   bool _recursive = false;
   bool _busy = false;
   String? _error;
@@ -364,18 +371,61 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
   /// Behind [_error], for «Detalles» when the core's words say more.
   FileError? _cause;
 
-  void _set(int mode) => setState(() {
-    _mode = mode & 0x1ff;
-    final text = octal(_mode);
-    if (_octal.text != text) {
-      _octal.value = TextEditingValue(
-        text: text,
-        selection: TextSelection.collapsed(offset: text.length),
-      );
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    try {
+      final effective = await widget.fs.stat(widget.path);
+      if (!mounted) return;
+      if (effective == null) {
+        throw FileError(
+          kind: FileErrorKind.notFound,
+          path: widget.path,
+          message: '',
+        );
+      }
+      setState(() {
+        _effective = effective;
+        _loading = false;
+        _unavailable = effective.mode == null;
+        if (effective.mode case final mode?) {
+          _mode = mode & 0xfff;
+          _octal.text = octal(_mode);
+        }
+      });
+    } on FileError catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _cause = e;
+        _error = fileErrorText(context.l10n, e);
+      });
     }
-  });
+  }
+
+  void _set(int mode, {bool? preserveSpecial, bool rewrite = true}) =>
+      setState(() {
+        _mode = mode & 0xfff;
+        _numericValid = true;
+        _preserveSpecial = preserveSpecial ?? _preserveSpecial;
+        if (!rewrite) return;
+        final text = _preserveSpecial
+            ? octal(_mode)
+            : _mode.toRadixString(8).padLeft(4, '0');
+        if (_octal.text != text) {
+          _octal.value = TextEditingValue(
+            text: text,
+            selection: TextSelection.collapsed(offset: text.length),
+          );
+        }
+      });
 
   Future<void> _apply() async {
+    if (_loading || _effective?.mode == null || !_numericValid || _busy) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -386,6 +436,7 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
         widget.path,
         _mode,
         recursive: _recursive,
+        preserveSpecial: _preserveSpecial,
       );
       if (mounted) Navigator.pop(context, n);
     } on FileError catch (e) {
@@ -409,12 +460,14 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
     final ow = context.ow;
     final c = ow.colors;
     final l = context.l10n;
-    final e = widget.entry;
+    final e = _effective ?? widget.entry;
     final dir = e.isDir;
-    final before = (e.mode ?? 0) & 0x1ff;
+    final before = (e.mode ?? 0) & 0xfff;
     Widget bit(int mask) => Checkbox(
       value: _mode & mask != 0,
-      onChanged: (v) => _set(v == true ? _mode | mask : _mode & ~mask),
+      onChanged: _busy
+          ? null
+          : (v) => _set(v == true ? _mode | mask : _mode & ~mask),
     );
     TableRow row(String who, String? name, int shift) => TableRow(
       decoration: BoxDecoration(
@@ -459,6 +512,7 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
         dir ? Icons.folder_outlined : Icons.insert_drive_file_outlined,
         color: c.textMuted,
       ),
+      scrollable: true,
       title: Text(l.permissionsOf(e.name)),
       content: SizedBox(
         width: 480,
@@ -466,97 +520,122 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: c.border),
-                borderRadius: BorderRadius.circular(ow.shape.radius),
-              ),
-              child: Table(
-                columnWidths: const {
-                  0: FlexColumnWidth(),
-                  1: FixedColumnWidth(76),
-                  2: FixedColumnWidth(76),
-                  3: FixedColumnWidth(76),
-                },
-                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                children: [
-                  TableRow(
-                    decoration: BoxDecoration(color: c.sunken),
-                    children: [
-                      const SizedBox(),
-                      for (final h in [
-                        l.permRead,
-                        l.permWrite,
-                        dir ? l.permEnter : l.permExecute,
-                      ])
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: OwSpace.s4,
-                          ),
-                          child: Text(
-                            h.toUpperCase(),
-                            textAlign: TextAlign.center,
-                            style: head,
-                          ),
-                        ),
-                    ],
-                  ),
-                  row(l.permOwner, e.owner, 6),
-                  row(l.permGroup, e.group, 3),
-                  row(l.permOthers, null, 0),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Text(l.permOctal, style: TextStyle(color: c.textMuted)),
-                const SizedBox(width: 10),
-                SizedBox(
-                  width: 72,
-                  child: TextField(
-                    key: const ValueKey('perm.octal'),
-                    controller: _octal,
-                    style: monoStyle(context, size: 14, color: c.text),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp('[0-7]')),
-                      LengthLimitingTextInputFormatter(3),
-                    ],
-                    decoration: const InputDecoration(isDense: true),
-                    onChanged: (v) {
-                      if (v.length == 3) _set(int.parse(v, radix: 8));
-                    },
-                  ),
+            if (_loading) const Center(child: CircularProgressIndicator()),
+            if (_unavailable) Text(l.permUnavailable),
+            if (!_loading && _effective?.mode != null) ...[
+              if (widget.entry.kind == FileKind.link) ...[
+                Text(l.permLinkTarget),
+                const SizedBox(height: 12),
+              ],
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: c.border),
+                  borderRadius: BorderRadius.circular(ow.shape.radius),
                 ),
-                const SizedBox(width: 12),
-                Text(formatMode(_mode), style: monoStyle(context, size: 12)),
-                const Spacer(),
-                if (e.mode != null)
-                  Text(
-                    l.permBefore(octal(before)),
-                    style: TextStyle(
-                      fontSize: OwText.small,
-                      color: c.textSubtle,
+                child: Table(
+                  columnWidths: const {
+                    0: FlexColumnWidth(),
+                    1: FixedColumnWidth(76),
+                    2: FixedColumnWidth(76),
+                    3: FixedColumnWidth(76),
+                  },
+                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                  children: [
+                    TableRow(
+                      decoration: BoxDecoration(color: c.sunken),
+                      children: [
+                        const SizedBox(),
+                        for (final h in [
+                          l.permRead,
+                          l.permWrite,
+                          dir ? l.permEnter : l.permExecute,
+                        ])
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: OwSpace.s4,
+                            ),
+                            child: Text(
+                              h.toUpperCase(),
+                              textAlign: TextAlign.center,
+                              style: head,
+                            ),
+                          ),
+                      ],
+                    ),
+                    row(l.permOwner, e.owner, 6),
+                    row(l.permGroup, e.group, 3),
+                    row(l.permOthers, null, 0),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Text(l.permOctal, style: TextStyle(color: c.textMuted)),
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: 72,
+                    child: TextField(
+                      key: const ValueKey('perm.octal'),
+                      controller: _octal,
+                      enabled: !_busy,
+                      style: monoStyle(context, size: 14, color: c.text),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp('[0-7]')),
+                        LengthLimitingTextInputFormatter(4),
+                      ],
+                      decoration: const InputDecoration(isDense: true),
+                      onChanged: (v) {
+                        if (v.length == 3 || v.length == 4) {
+                          final keep = v.length == 3;
+                          _set(
+                            int.parse(v, radix: 8) | (keep ? _mode & 0xe00 : 0),
+                            preserveSpecial: keep,
+                            rewrite: false,
+                          );
+                        } else {
+                          setState(() => _numericValid = false);
+                        }
+                      },
                     ),
                   ),
+                  const SizedBox(width: 12),
+                  Text(formatMode(_mode), style: monoStyle(context, size: 12)),
+                  const Spacer(),
+                  if (e.mode != null)
+                    Text(
+                      l.permBefore(octal(before)),
+                      style: TextStyle(
+                        fontSize: OwText.small,
+                        color: c.textSubtle,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l.permSpecialNote,
+                style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
+              ),
+              if (dir) ...[
+                const SizedBox(height: 14),
+                CheckboxListTile(
+                  value: _recursive,
+                  onChanged: _busy
+                      ? null
+                      : (v) => setState(() => _recursive = v ?? false),
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: Text(l.permRecursive),
+                  subtitle: Text(l.permRecursiveNote),
+                ),
               ],
-            ),
-            if (dir) ...[
-              const SizedBox(height: 14),
-              CheckboxListTile(
-                value: _recursive,
-                onChanged: (v) => setState(() => _recursive = v ?? false),
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                title: Text(l.permRecursive),
-                subtitle: Text(l.permRecursiveNote),
+              const SizedBox(height: 8),
+              Text(
+                l.permOwnerNote,
+                style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
               ),
             ],
-            const SizedBox(height: 8),
-            Text(
-              l.permOwnerNote,
-              style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
-            ),
             if (_error != null) ...[
               const SizedBox(height: 10),
               Text(_error!, style: TextStyle(color: c.danger)),
@@ -574,7 +653,13 @@ class _PermissionsDialogState extends State<_PermissionsDialog> {
           onPressed: () => Navigator.pop(context),
           child: Text(l.cancel),
         ),
-        FilledButton(onPressed: _busy ? null : _apply, child: Text(l.apply)),
+        FilledButton(
+          onPressed:
+              _busy || _loading || _effective?.mode == null || !_numericValid
+              ? null
+              : _apply,
+          child: Text(l.apply),
+        ),
       ],
     );
   }

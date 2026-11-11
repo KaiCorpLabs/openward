@@ -6278,6 +6278,24 @@ abstract class AppLocalizations {
   /// **'En octal'**
   String get permOctal;
 
+  /// No description provided for @permUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'No se han podido leer los permisos actuales.'**
+  String get permUnavailable;
+
+  /// No description provided for @permLinkTarget.
+  ///
+  /// In es, this message translates to:
+  /// **'Los cambios se aplican al destino del enlace.'**
+  String get permLinkTarget;
+
+  /// No description provided for @permSpecialNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Tres dígitos conservan los bits especiales; cuatro los fijan en este elemento. Al aplicar recursivamente se conservan los bits especiales de cada hijo.'**
+  String get permSpecialNote;
+
   /// No description provided for @permOthers.
   ///
   /// In es, this message translates to:

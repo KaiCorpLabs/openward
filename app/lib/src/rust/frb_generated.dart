@@ -630,6 +630,7 @@ abstract class RustLibApi extends BaseApi {
     required String path,
     required int mode,
     required bool recursive,
+    bool? preserveSpecial,
   });
 
   void crateApiSftpSftpBrowserClose({required SftpBrowser that});
@@ -879,6 +880,7 @@ abstract class RustLibApi extends BaseApi {
     required String path,
     required int mode,
     required bool recursive,
+    bool? preserveSpecial,
   });
 
   String crateApiSftpLocalHome();
@@ -5085,6 +5087,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     required String path,
     required int mode,
     required bool recursive,
+    bool? preserveSpecial,
   }) {
     return handler.executeNormal(
       NormalTask(
@@ -5097,6 +5100,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(path, serializer);
           sse_encode_u_32(mode, serializer);
           sse_encode_bool(recursive, serializer);
+          sse_encode_opt_box_autoadd_bool(preserveSpecial, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
@@ -5109,7 +5113,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_file_error,
         ),
         constMeta: kCrateApiSftpSftpBrowserChmodConstMeta,
-        argValues: [that, path, mode, recursive],
+        argValues: [that, path, mode, recursive, preserveSpecial],
         apiImpl: this,
       ),
     );
@@ -5118,7 +5122,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiSftpSftpBrowserChmodConstMeta =>
       const TaskConstMeta(
         debugName: "SftpBrowser_chmod",
-        argNames: ["that", "path", "mode", "recursive"],
+        argNames: ["that", "path", "mode", "recursive", "preserveSpecial"],
       );
 
   @override
@@ -7055,6 +7059,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     required String path,
     required int mode,
     required bool recursive,
+    bool? preserveSpecial,
   }) {
     return handler.executeNormal(
       NormalTask(
@@ -7063,6 +7068,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(path, serializer);
           sse_encode_u_32(mode, serializer);
           sse_encode_bool(recursive, serializer);
+          sse_encode_opt_box_autoadd_bool(preserveSpecial, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
@@ -7075,7 +7081,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_file_error,
         ),
         constMeta: kCrateApiSftpLocalChmodConstMeta,
-        argValues: [path, mode, recursive],
+        argValues: [path, mode, recursive, preserveSpecial],
         apiImpl: this,
       ),
     );
@@ -7083,7 +7089,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiSftpLocalChmodConstMeta => const TaskConstMeta(
     debugName: "local_chmod",
-    argNames: ["path", "mode", "recursive"],
+    argNames: ["path", "mode", "recursive", "preserveSpecial"],
   );
 
   @override
@@ -18457,11 +18463,13 @@ class SftpBrowserImpl extends RustOpaque implements SftpBrowser {
     required String path,
     required int mode,
     required bool recursive,
+    bool? preserveSpecial,
   }) => RustLib.instance.api.crateApiSftpSftpBrowserChmod(
     that: this,
     path: path,
     mode: mode,
     recursive: recursive,
+    preserveSpecial: preserveSpecial,
   );
 
   /// Stops connecting or watching the connection.
