@@ -33,10 +33,11 @@ stage() {
 init="$tmp/rustup-init"
 checked_download "https://static.rust-lang.org/rustup/archive/$RUSTUP_VERSION/$RUSTUP_TARGET/rustup-init" "$RUSTUP_SHA256" "$init"
 dist="$tmp/dist"
+rust_dist="$dist/rust/dist"
 manifest="channel-rust-$RUST.toml"
-checked_download "https://static.rust-lang.org/dist/$manifest" "$RUST_MANIFEST_SHA256" "$dist/rust/$manifest"
-echo "$RUST_MANIFEST_SHA256  $manifest" > "$dist/rust/$manifest.sha256"
-stage "$here/rust-$(uname -m).sha256" https://static.rust-lang.org/dist "$dist/rust"
+checked_download "https://static.rust-lang.org/dist/$manifest" "$RUST_MANIFEST_SHA256" "$rust_dist/$manifest"
+echo "$RUST_MANIFEST_SHA256  $manifest" > "$rust_dist/$manifest.sha256"
+stage "$here/rust-$(uname -m).sha256" https://static.rust-lang.org/dist "$rust_dist"
 arch=x64
 [[ "$(uname -m)" == aarch64 ]] && arch=arm64
 stage "$here/flutter-$arch.sha256" https://storage.googleapis.com "$dist"

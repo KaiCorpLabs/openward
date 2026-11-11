@@ -22,7 +22,7 @@ class BootstrapTests(unittest.TestCase):
             context.mkdir()
             tools.mkdir()
             trace = root / 'trace'
-            init = b'#!/bin/sh\necho rustup-executed >> "$BOOTSTRAP_TRACE"\n'
+            init = b'#!/bin/sh\nset -e\ntest -f "$(dirname "$0")/dist/rust/dist/channel-rust-1.99.0.toml"\necho rustup-executed >> "$BOOTSTRAP_TRACE"\n'
             archive = b'a controlled archive fixture\n'
             pins = PINS.read_text()
             pins = re.sub(r'RUSTUP_SHA256=[0-9a-f]+',
