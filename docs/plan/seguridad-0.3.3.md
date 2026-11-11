@@ -66,6 +66,23 @@ por terminal/SFTP. El estado de la validación completa queda en los checks de
 la [PR #9](https://github.com/KaiCorpLabs/openward/pull/9), fusionada con 19 jobs
 correctos, incluida la regresión real de terminal y SFTP.
 
+## Seguimiento de S1
+
+Contraste posterior contra `main 0bc4c39`, una vez fusionado S0. Las fichas
+originales conservan su referencia histórica; este seguimiento registra los
+cambios de S1 y prevalece para su estado actual.
+
+Los recorridos de CO-3…CO-6, SF-2, SF-3, SF-9, RG-1, RG-7, RG-8 y TE-1
+siguen presentes en esa base. DA-1 confirma un fallo de garantía ante
+ubicaciones inseguras/personalizadas o un endurecimiento fallido; no demuestra
+exposición de la carpeta propia normal. CO-2 sigue pendiente de evidencia
+de propietario y DACL de Windows con privilegios separados; no se declara
+confirmado por la mera ausencia de un check.
+
+| Punto | Cambio posterior |
+|---|---|
+| **CO-4** | Pins, revocación de clave/sujeto/CA e identificación de autoridades comparan ECDSA por su punto SEC1 canónico en las tres curvas. Las claves SK conservan también su aplicación. No se reescriben los bytes firmados del certificado y se mantienen firma, validez y principal. Regresiones de codificación, certificados y conexiones SSH reales; la validación completa consta en los checks de la PR correspondiente. |
+
 ## Fichas contrastadas
 
 ### Conexión y confianza SSH
