@@ -6,12 +6,12 @@ comprometidas.
 
 | Área | Estado y evidencia |
 |---|---|
-| Copia local | `main 60f1be3`, limpio y actualizado tras las PR #26/#27. |
+| Integración | Base del balance: `main 2118736`, tras las PR #26–#29. Cada fusión posterior exige revisión exacta probada y actualización local por avance rápido. |
 | CI de Mosh | [#26](https://github.com/KaiCorpLabs/openward/pull/26) fusionada: 19 trabajos correctos y árbol integrado igual al probado. Corrige la selección entre salida del cliente y aviso UDP pendiente. |
 | Beta | [#27](https://github.com/KaiCorpLabs/openward/pull/27) fusionada con 19 trabajos correctos: `0.3.4-beta.4+30` y notas preparadas. Etiqueta/borrador/artefactos finales pendientes de cerrar S2. |
 | Distribución | La última etiqueta anterior es `v0.3.4-beta.3`; sus binarios no incluyen por sí solos las correcciones posteriores. No hay release pública; no se ha actualizado el cask en este trabajo. |
-| Seguridad | S0/S1 integrados; S2 en validación en [#28](https://github.com/KaiCorpLabs/openward/pull/28), [#29](https://github.com/KaiCorpLabs/openward/pull/29), [#30](https://github.com/KaiCorpLabs/openward/pull/30) y [#31](https://github.com/KaiCorpLabs/openward/pull/31). [Seguimiento y límites](seguridad-0.3.3.md#seguimiento-de-s2). |
-| v0.4 | D0–D2 completados y ADR-004/005 aceptados. D3–D8 conservan sus criterios de cierre abajo. |
+| Seguridad | S0/S1 integrados. Cuatro correcciones de S2, con sus puertas de CI y fusión, en [#28](https://github.com/KaiCorpLabs/openward/pull/28), [#29](https://github.com/KaiCorpLabs/openward/pull/29), [#30](https://github.com/KaiCorpLabs/openward/pull/30) y [#31](https://github.com/KaiCorpLabs/openward/pull/31). [Seguimiento y límites](seguridad-0.3.3.md#seguimiento-de-s2). |
+| v0.4 | D0–D2 completados y ADR-004/005 aceptados. D3 iniciado en [#43](https://github.com/KaiCorpLabs/openward/pull/43): sobre canónico autenticado y ocho pruebas; queda fuera de esta beta. D3–D8 conservan sus criterios de cierre abajo. |
 | Uso real | Etapa 1 implementada; pruebas con hardware y dos semanas de uso pendientes. CI no las sustituye. |
 
 ## Hito v0.4
