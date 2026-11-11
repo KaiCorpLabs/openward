@@ -464,6 +464,7 @@ impl KnownHost {
             |s: &str| !s.is_empty() && !s.chars().any(|c| c.is_whitespace() || c.is_control());
         let mut key = self.key.split(' ');
         token(&self.hosts)
+            && !self.hosts.starts_with('@')
             && matches!(
                 (key.next(), key.next(), key.next()),
                 (Some(kind), Some(data), None) if token(kind) && token(data)
@@ -472,6 +473,33 @@ impl KnownHost {
                 .comment
                 .as_deref()
                 .is_none_or(|c| !c.chars().any(char::is_control))
+    }
+
+    /// Old foreign authorities and wildcard pins were never individually
+    /// approved. Keep ordinary pins and revocations, but do not let that
+    /// legacy state grant broad trust. Own configuration is unaffected.
+    pub fn usable_for_connections(&self) -> bool {
+        if !self.is_well_formed() {
+            return false;
+        }
+        let broad = self.marker == Some(Marker::CertAuthority) || self.hosts.contains(['*', '?']);
+        !broad
+            || self.marker == Some(Marker::Revoked)
+            || self.imported.as_ref().is_none_or(|i| {
+                matches!(
+                    i.extra.get("trust_approved"),
+                    Some(ciborium::Value::Bool(true))
+                )
+            })
+    }
+
+    /// Only called after the user selects this exact preview entry.
+    pub fn approve_import(&mut self) {
+        if let Some(imported) = &mut self.imported {
+            imported
+                .extra
+                .insert("trust_approved".into(), ciborium::Value::Bool(true));
+        }
     }
 
     /// The entry as a `known_hosts` line.

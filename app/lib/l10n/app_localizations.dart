@@ -6482,6 +6482,18 @@ abstract class AppLocalizations {
   /// **'Dentro del grupo'**
   String get previewIntoGroup;
 
+  /// No description provided for @previewTrustTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Claves de host: revisar antes de confiar'**
+  String get previewTrustTitle;
+
+  /// No description provided for @previewTrustHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Selecciona solo las claves que hayas verificado. Esta confianza se aplica a todo el vault, incluso a hosts que no importes. Una autoridad o un patrón con comodines puede dar confianza a muchos servidores.'**
+  String get previewTrustHelp;
+
   /// No description provided for @previewKeyFound.
   ///
   /// In es, this message translates to:

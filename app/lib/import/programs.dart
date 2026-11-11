@@ -65,7 +65,7 @@ Future<void> importFromProgram(
     if (chosen == null || !context.mounted) return;
     choice = chosen;
     try {
-      report = await app.importProgram(data: data, choice: choice);
+      report = await app.importProgramSelection(data: data, choice: choice);
     } catch (e) {
       if (context.mounted) {
         showErrorNotice(

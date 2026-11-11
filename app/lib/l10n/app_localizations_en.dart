@@ -4139,6 +4139,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get previewIntoGroup => 'In the group';
 
   @override
+  String get previewTrustTitle => 'Host keys: review before trusting';
+
+  @override
+  String get previewTrustHelp =>
+      'Select only keys you have verified. This trust applies to the whole vault, including hosts you do not import. An authority or wildcard pattern can grant trust to many servers.';
+
+  @override
   String previewKeyFound(String path) {
     return '→ $path · the same public key';
   }

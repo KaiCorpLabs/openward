@@ -226,6 +226,7 @@ fn warning(w: &Warning) -> ProgramWarning {
     }
 }
 
+#[frb(non_opaque)]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProgramPreview {
     pub program: ProgramKind,
@@ -238,11 +239,20 @@ pub struct ProgramPreview {
     pub new_tunnels: u32,
     pub new_snippets: u32,
     pub new_known_hosts: u32,
+    #[frb(default = "const []")]
+    pub known_hosts: Vec<ProgramKnownHost>,
     pub keys: Vec<ProgramKey>,
     pub warnings: Vec<ProgramWarning>,
     /// Saved passwords and key passphrases, never imported.
     pub passwords: u32,
     pub passphrases: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProgramKnownHost {
+    pub id: String,
+    pub line: String,
+    pub fingerprint: String,
 }
 
 fn item(i: PreviewItem) -> ProgramItem {
@@ -283,6 +293,15 @@ impl From<Preview> for ProgramPreview {
             new_tunnels: p.new_tunnels as u32,
             new_snippets: p.new_snippets as u32,
             new_known_hosts: p.new_known_hosts as u32,
+            known_hosts: p
+                .known_hosts
+                .into_iter()
+                .map(|k| ProgramKnownHost {
+                    id: k.id,
+                    line: k.line,
+                    fingerprint: k.fingerprint,
+                })
+                .collect(),
             keys: p.keys.into_iter().map(key).collect(),
             warnings: p.warnings.iter().map(warning).collect(),
             passwords: p.passwords as u32,
@@ -292,6 +311,7 @@ impl From<Preview> for ProgramPreview {
 }
 
 /// What the user picked.
+#[frb(non_opaque)]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProgramChoice {
     /// Hosts to bring, by the program's id; the hosts they jump through
@@ -301,6 +321,8 @@ pub struct ProgramChoice {
     pub group_name: String,
     /// Stored keys to write to `~/.ssh`, by id.
     pub save_keys: Vec<String>,
+    #[frb(default = "const []")]
+    pub known_hosts: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -412,7 +434,7 @@ impl OpenWard {
         self.app.preview_program(&data.read).into()
     }
 
-    pub fn import_program(
+    pub fn import_program_selection(
         &self,
         data: &ProgramData,
         choice: ProgramChoice,
@@ -421,6 +443,7 @@ impl OpenWard {
             hosts: choice.hosts,
             group_name: choice.group_name,
             save_keys: choice.save_keys,
+            known_hosts: choice.known_hosts,
         };
         Ok(self.app.import_program(&data.read, &choice)?.into())
     }

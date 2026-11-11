@@ -221,10 +221,20 @@ pub struct Preview {
     pub new_tunnels: usize,
     pub new_snippets: usize,
     pub new_known_hosts: usize,
+    pub known_hosts: Vec<KnownHostPreview>,
     pub keys: Vec<KeyMatch>,
     pub warnings: Vec<Warning>,
     pub passwords: usize,
     pub passphrases: usize,
+}
+
+/// An exact trust entry, identified by its position in the retained read,
+/// not an id controlled by the source file.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KnownHostPreview {
+    pub id: String,
+    pub line: String,
+    pub fingerprint: String,
 }
 
 /// Items of `program` already in the vault, by type and program id.
@@ -280,11 +290,13 @@ impl Existing {
             known: vault
                 .known_hosts()
                 .into_iter()
+                .filter(|(_, k)| k.usable_for_connections())
                 .map(|(_, k)| (k.hosts.clone(), k.key.clone()))
                 .collect(),
             known_ids: vault
                 .known_hosts()
                 .into_iter()
+                .filter(|(_, k)| k.usable_for_connections())
                 .filter_map(|(_, k)| mine(&k.imported))
                 .collect(),
             top,
@@ -387,6 +399,24 @@ pub fn preview(vault: &Vault, read: &Read) -> Preview {
             tags: h.tags.clone(),
         });
     }
+    let known_hosts: Vec<_> = b
+        .known_hosts
+        .iter()
+        .enumerate()
+        .filter(|(_, k)| !have.known_host(k))
+        .filter_map(|(i, k)| {
+            let known = imported_known_host(k)?;
+            let fingerprint = PublicKey::from_openssh(&known.key)
+                .ok()?
+                .fingerprint(HashAlg::Sha256)
+                .to_string();
+            Some(KnownHostPreview {
+                id: i.to_string(),
+                line: known.to_line(),
+                fingerprint,
+            })
+        })
+        .collect();
     Preview {
         program: read.program,
         group: have
@@ -406,7 +436,8 @@ pub fn preview(vault: &Vault, read: &Read) -> Preview {
             .filter(|t| !have.tunnels.contains(&tunnel_id(t)))
             .count(),
         new_snippets: b.snippets.iter().filter(|s| !have.snippet(&s.id)).count(),
-        new_known_hosts: b.known_hosts.iter().filter(|k| !have.known_host(k)).count(),
+        new_known_hosts: known_hosts.len(),
+        known_hosts,
         keys: read.keys.clone(),
         warnings: b.warnings.clone(),
         passwords: b.passwords,
@@ -453,6 +484,8 @@ pub struct Choice {
     pub group_name: String,
     /// Stored keys to write to `~/.ssh`, by id.
     pub save_keys: Vec<String>,
+    /// Individually approved positions from the retained trust preview.
+    pub known_hosts: Vec<String>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -791,35 +824,15 @@ pub fn apply(
         ));
         report.snippets += 1;
     }
-    for k in b.known_hosts.iter().filter(|k| !have.known_host(k)) {
-        // The key's own comment (`… user@host`) and line breaks go; what
-        // is still not one known_hosts line is left out.
-        let mut key = k.key.split_whitespace();
-        let known = KnownHost {
-            hosts: k.hosts.trim().to_owned(),
-            key: [key.next(), key.next()]
-                .into_iter()
-                .flatten()
-                .collect::<Vec<_>>()
-                .join(" "),
-            marker: k.marker,
-            comment: k
-                .comment
-                .as_deref()
-                .map(|c| {
-                    c.split(char::is_control)
-                        .collect::<Vec<_>>()
-                        .join(" ")
-                        .trim()
-                        .to_owned()
-                })
-                .filter(|c| !c.is_empty()),
-            imported: imported(&k.id),
-            ..KnownHost::default()
-        };
-        if !known.is_well_formed() {
+    for (i, k) in b.known_hosts.iter().enumerate() {
+        if !choice.known_hosts.contains(&i.to_string()) || have.known_host(k) {
             continue;
         }
+        let Some(mut known) = imported_known_host(k) else {
+            continue;
+        };
+        known.imported = imported(&k.id);
+        known.approve_import();
         items.push((ItemId::new(), Data::KnownHost(known)));
         report.known_hosts += 1;
     }
@@ -832,6 +845,30 @@ pub fn apply(
         report.saved_keys.push(key.place()?);
     }
     Ok(report)
+}
+
+/// Shared by preview and apply, so approval binds to the exact line used.
+fn imported_known_host(k: &bundle::KnownHost) -> Option<KnownHost> {
+    let mut public = PublicKey::from_openssh(k.key.trim()).ok()?;
+    public.set_comment("");
+    let known = KnownHost {
+        hosts: k.hosts.trim().to_owned(),
+        key: public.to_openssh().ok()?,
+        marker: k.marker,
+        comment: k
+            .comment
+            .as_deref()
+            .map(|c| {
+                c.split(char::is_control)
+                    .collect::<Vec<_>>()
+                    .join(" ")
+                    .trim()
+                    .to_owned()
+            })
+            .filter(|c| !c.is_empty()),
+        ..KnownHost::default()
+    };
+    known.is_well_formed().then_some(known)
 }
 
 /// A stored key written to `~/.ssh` as the other program kept it,
@@ -1131,6 +1168,7 @@ mod tests {
             hosts: vec!["h2".into(), "h3".into()],
             group_name: "Termius".into(),
             save_keys: vec!["k2".into()],
+            known_hosts: vec!["0".into()],
         };
         let r = apply(&mut vault, &local, &read, &choice).unwrap();
         assert_eq!((r.hosts, r.groups, r.identities), (2, 3, 1));
@@ -1201,6 +1239,160 @@ mod tests {
         assert_eq!((r.hosts, r.groups, r.skipped), (0, 0, 2));
         assert_eq!((r.tunnels, r.snippets, r.known_hosts), (0, 0, 0));
         assert_eq!(vault.hosts().len(), 2);
+    }
+
+    /// CO-1: old imported authorities must not silently remain global trust.
+    #[test]
+    fn legacy_imported_authorities_are_held_for_review() {
+        let mut vault = Vault::open_in_memory().unwrap();
+        vault
+            .create(Data::KnownHost(KnownHost {
+                hosts: "*".into(),
+                key: key(3).public_key().to_openssh().unwrap(),
+                marker: Some(openward_vault::proto::Marker::CertAuthority),
+                imported: Some(Imported {
+                    from: "termius".into(),
+                    id: "ca".into(),
+                    extra: Default::default(),
+                }),
+                ..KnownHost::default()
+            }))
+            .unwrap();
+        assert!(vault.known_hosts_text().is_empty());
+    }
+
+    #[test]
+    fn imported_trust_requires_individual_approval_not_file_controlled_ids() {
+        let dir = tempfile::tempdir().unwrap();
+        let local = local(dir.path());
+        let mut b = bundle();
+        let mut ordinary = b.known_hosts[0].clone();
+        ordinary.id = "duplicate".into();
+        let mut authority = ordinary.clone();
+        authority.hosts = "*".into();
+        authority.marker = Some(openward_vault::proto::Marker::CertAuthority);
+        b.known_hosts = vec![ordinary, authority];
+        let read = read(Program::Termius, b, &local);
+        let mut vault = Vault::open_in_memory().unwrap();
+        let p = preview(&vault, &read);
+        assert_eq!(
+            p.known_hosts
+                .iter()
+                .map(|k| k.id.as_str())
+                .collect::<Vec<_>>(),
+            ["0", "1"]
+        );
+        assert!(p.known_hosts[1].line.starts_with("@cert-authority * "));
+        let choice = Choice {
+            hosts: vec!["h1".into()],
+            ..Choice::default()
+        };
+        let report = apply(&mut vault, &local, &read, &choice).unwrap();
+        assert_eq!(
+            report.known_hosts, 0,
+            "choosing hosts must not approve trust"
+        );
+        let report = apply(
+            &mut vault,
+            &local,
+            &read,
+            &Choice {
+                known_hosts: vec!["0".into()],
+                ..choice
+            },
+        )
+        .unwrap();
+        assert_eq!(report.known_hosts, 1);
+        assert!(!vault.known_hosts_text().contains("@cert-authority"));
+        assert_eq!(
+            vault.known_hosts().len(),
+            1,
+            "a duplicate file id must not approve another entry"
+        );
+
+        // A separate explicit selection can authorize the complete CA scope.
+        let mut vault = Vault::open_in_memory().unwrap();
+        let report = apply(
+            &mut vault,
+            &local,
+            &read,
+            &Choice {
+                known_hosts: vec!["1".into()],
+                ..Choice::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(report.known_hosts, 1);
+        assert!(vault.known_hosts_text().starts_with("@cert-authority * "));
+    }
+
+    #[test]
+    fn marker_in_the_hosts_field_cannot_become_a_hidden_authority() {
+        let dir = tempfile::tempdir().unwrap();
+        let local = local(dir.path());
+        let public = key(3).public_key().to_openssh().unwrap();
+        let mut fields = public.split_whitespace();
+        let kind = fields.next().unwrap();
+        let data = fields.next().unwrap();
+        let forged = KnownHost {
+            hosts: "@cert-authority".into(),
+            key: format!("* {kind}"),
+            comment: Some(data.into()),
+            ..KnownHost::default()
+        };
+        assert!(!forged.is_well_formed());
+        let mut vault = Vault::open_in_memory().unwrap();
+        assert!(vault.create(Data::KnownHost(forged)).is_err());
+        let mut b = bundle();
+        b.known_hosts[0].hosts = "@cert-authority".into();
+        b.known_hosts[0].key = format!("* {kind}");
+        b.known_hosts[0].comment = Some(data.into());
+        let read = read(Program::Termius, b, &local);
+        assert!(preview(&vault, &read).known_hosts.is_empty());
+        let report = apply(
+            &mut vault,
+            &local,
+            &read,
+            &Choice {
+                known_hosts: vec!["0".into()],
+                ..Choice::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(report.known_hosts, 0);
+        assert!(vault.known_hosts_text().is_empty());
+    }
+
+    #[test]
+    fn own_authorities_revocations_and_legacy_specific_pins_keep_working() {
+        use openward_vault::proto::Marker;
+        let public = key(3).public_key().to_openssh().unwrap();
+        let imported = Some(Imported {
+            from: "termius".into(),
+            id: "old".into(),
+            extra: Default::default(),
+        });
+        for (hosts, marker, source, active) in [
+            ("*", Some(Marker::CertAuthority), None, true),
+            ("*", Some(Marker::Revoked), imported.clone(), true),
+            ("bastion.example.com", None, imported.clone(), true),
+            ("*", None, imported.clone(), false),
+            (
+                "*.example.com",
+                Some(Marker::CertAuthority),
+                imported.clone(),
+                false,
+            ),
+        ] {
+            let known = KnownHost {
+                hosts: hosts.into(),
+                key: public.clone(),
+                marker,
+                imported: source,
+                ..KnownHost::default()
+            };
+            assert_eq!(known.usable_for_connections(), active, "{hosts} {marker:?}");
+        }
     }
 
     /// IM-1: callers can construct Read directly, without the detector.

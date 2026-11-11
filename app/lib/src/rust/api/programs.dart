@@ -8,7 +8,7 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `failure`, `item`, `key`, `read`, `warning`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<ProgramData>>
 abstract class ProgramData implements RustOpaqueInterface {
@@ -67,15 +67,21 @@ class ProgramChoice {
 
   /// Stored keys to write to `~/.ssh`, by id.
   final List<String> saveKeys;
+  final List<String> knownHosts;
 
   const ProgramChoice({
     required this.hosts,
     required this.groupName,
     required this.saveKeys,
+    this.knownHosts = const [],
   });
 
   @override
-  int get hashCode => hosts.hashCode ^ groupName.hashCode ^ saveKeys.hashCode;
+  int get hashCode =>
+      hosts.hashCode ^
+      groupName.hashCode ^
+      saveKeys.hashCode ^
+      knownHosts.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -84,7 +90,8 @@ class ProgramChoice {
           runtimeType == other.runtimeType &&
           hosts == other.hosts &&
           groupName == other.groupName &&
-          saveKeys == other.saveKeys;
+          saveKeys == other.saveKeys &&
+          knownHosts == other.knownHosts;
 }
 
 class ProgramItem {
@@ -197,6 +204,30 @@ class ProgramKey {
 
 enum ProgramKind { termius, putty, kitty, mobaXterm, tabby, secureCrt, csv }
 
+class ProgramKnownHost {
+  final String id;
+  final String line;
+  final String fingerprint;
+
+  const ProgramKnownHost({
+    required this.id,
+    required this.line,
+    required this.fingerprint,
+  });
+
+  @override
+  int get hashCode => id.hashCode ^ line.hashCode ^ fingerprint.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ProgramKnownHost &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          line == other.line &&
+          fingerprint == other.fingerprint;
+}
+
 class ProgramPreview {
   final ProgramKind program;
 
@@ -210,6 +241,7 @@ class ProgramPreview {
   final int newTunnels;
   final int newSnippets;
   final int newKnownHosts;
+  final List<ProgramKnownHost> knownHosts;
   final List<ProgramKey> keys;
   final List<ProgramWarning> warnings;
 
@@ -226,6 +258,7 @@ class ProgramPreview {
     required this.newTunnels,
     required this.newSnippets,
     required this.newKnownHosts,
+    this.knownHosts = const [],
     required this.keys,
     required this.warnings,
     required this.passwords,
@@ -242,6 +275,7 @@ class ProgramPreview {
       newTunnels.hashCode ^
       newSnippets.hashCode ^
       newKnownHosts.hashCode ^
+      knownHosts.hashCode ^
       keys.hashCode ^
       warnings.hashCode ^
       passwords.hashCode ^
@@ -260,6 +294,7 @@ class ProgramPreview {
           newTunnels == other.newTunnels &&
           newSnippets == other.newSnippets &&
           newKnownHosts == other.newKnownHosts &&
+          knownHosts == other.knownHosts &&
           keys == other.keys &&
           warnings == other.warnings &&
           passwords == other.passwords &&

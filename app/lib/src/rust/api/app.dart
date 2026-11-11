@@ -171,7 +171,7 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// Saves a private key given as text as `~/.ssh/<name>`.
   Future<SshKeyResult> importKey({required String name, required String text});
 
-  Future<ProgramReport> importProgram({
+  Future<ProgramReport> importProgramSelection({
     required ProgramData data,
     required ProgramChoice choice,
   });
