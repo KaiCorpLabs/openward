@@ -80,7 +80,7 @@ impl App {
 
     /// As [`App::open`], for a given local user (tests).
     pub fn open_as(data_dir: &Path, local: Local) -> anyhow::Result<Self> {
-        create_private_dir(data_dir)?;
+        let data_dir = create_private_dir(data_dir)?;
         let vault = Vault::open(&data_dir.join("vault.db"))?;
         let logs = Logs::open(&data_dir.join("logs"), logs::Config::default())?;
         let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -1282,25 +1282,75 @@ async fn shell(
 /// made so again when it was there already, as the app's folder is made
 /// first by `path_provider`, at 0755 (AM-3). The history, the recent
 /// connections and the logs inside are then the owner's alone, whatever
-/// their own mode. One that cannot be changed opens as it is.
-fn create_private_dir(dir: &Path) -> std::io::Result<()> {
+/// their own mode. Refuse an unowned or replaceable location, and propagate
+/// failures to tighten it before opening any application data.
+fn create_private_dir(dir: &Path) -> std::io::Result<PathBuf> {
     #[cfg(unix)]
     {
-        use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
-        if !dir.is_dir() {
-            std::fs::DirBuilder::new()
-                .recursive(true)
-                .mode(0o700)
-                .create(dir)?;
+        use std::io::{Error, ErrorKind};
+        use std::os::unix::fs::{DirBuilderExt, MetadataExt, PermissionsExt};
+        let uid = rustix::process::geteuid().as_raw();
+        let denied = || {
+            Error::new(
+                ErrorKind::PermissionDenied,
+                "application data requires a private directory owned by the current user, under trusted directories",
+            )
+        };
+        // Validate from the root down: once a parent is trusted, another
+        // user cannot replace its entries. A sticky shared parent is fine
+        // only while the next entry (including a symlink) has a trusted owner.
+        let check_parents = |path: &Path| -> std::io::Result<()> {
+            let parents: Vec<_> = path.ancestors().skip(1).collect();
+            for parent in parents.into_iter().rev() {
+                let entry = std::fs::symlink_metadata(parent)?;
+                if entry.uid() != 0 && entry.uid() != uid {
+                    return Err(denied());
+                }
+                let meta = std::fs::metadata(parent)?;
+                if !meta.is_dir()
+                    || (meta.uid() != 0 && meta.uid() != uid)
+                    || (meta.mode() & 0o022 != 0 && meta.mode() & 0o1000 == 0)
+                {
+                    return Err(denied());
+                }
+            }
+            Ok(())
+        };
+        std::fs::DirBuilder::new()
+            .recursive(true)
+            .mode(0o700)
+            .create(dir)?;
+        let absolute = std::path::absolute(dir)?;
+        check_parents(&absolute)?;
+        let entry = std::fs::symlink_metadata(&absolute)?;
+        if entry.uid() != 0 && entry.uid() != uid {
+            return Err(denied());
         }
-        if std::fs::metadata(dir)?.permissions().mode() & 0o077 != 0 {
-            // Not its owner's to change (another user's folder): as it is.
-            let _ = std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700));
+        let canonical = std::fs::canonicalize(&absolute)?;
+        check_parents(&canonical)?;
+        let before = std::fs::metadata(&canonical)?;
+        // A previously writable root may already contain another user's
+        // links to data outside it. Tightening its mode cannot undo that.
+        if !before.is_dir() || before.uid() != uid || before.mode() & 0o1022 != 0 {
+            return Err(denied());
         }
-        Ok(())
+        // The name is now protected by the checked parents. This also
+        // repairs an owned mode-000 directory that cannot yet be opened.
+        std::fs::set_permissions(&canonical, std::fs::Permissions::from_mode(0o700))?;
+        let after = std::fs::File::open(&canonical)?.metadata()?;
+        if after.uid() != uid
+            || after.mode() & 0o7777 != 0o700
+            || (after.dev(), after.ino()) != (before.dev(), before.ino())
+        {
+            return Err(denied());
+        }
+        Ok(canonical)
     }
     #[cfg(not(unix))]
-    std::fs::create_dir_all(dir)
+    {
+        std::fs::create_dir_all(dir)?;
+        Ok(dir.to_path_buf())
+    }
 }
 
 #[cfg(test)]
@@ -1323,6 +1373,122 @@ mod tests {
         let new = tmp.path().join("a/b");
         create_private_dir(&new).unwrap();
         assert_eq!(mode(&new), 0o700);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_unowned_data_folder_is_refused_before_writing() {
+        use std::os::unix::fs::MetadataExt;
+        let shared = std::fs::canonicalize("/tmp").unwrap();
+        let metadata = std::fs::metadata(&shared).unwrap();
+        // The machine's shared temporary directory belongs to root. Never
+        // change it, even if this test is run as root on a CI runner.
+        if metadata.uid() == rustix::process::geteuid().as_raw() {
+            return;
+        }
+        let before = (metadata.uid(), metadata.mode());
+        assert_eq!(
+            create_private_dir(&shared).unwrap_err().kind(),
+            std::io::ErrorKind::PermissionDenied
+        );
+        let after = std::fs::metadata(&shared).unwrap();
+        assert_eq!((after.uid(), after.mode()), before);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn replaceable_parents_and_aliases_are_refused_before_app_data() {
+        use std::os::unix::fs::{PermissionsExt, symlink};
+        let tmp = tempfile::tempdir().unwrap();
+        let shared = tmp.path().join("shared");
+        let data = shared.join("data");
+        std::fs::create_dir_all(&data).unwrap();
+        std::fs::set_permissions(&shared, std::fs::Permissions::from_mode(0o777)).unwrap();
+        assert!(App::open_as(&data, Local::from_env()).is_err());
+        assert!(!data.join("vault.db").exists());
+        assert!(!data.join("logs").exists());
+        let private = tmp.path().join("private");
+        std::fs::create_dir(&private).unwrap();
+        let alias = shared.join("alias");
+        symlink(&private, &alias).unwrap();
+        assert!(create_private_dir(&alias).is_err());
+        // A protected alias pointing through a replaceable ancestor is also unsafe.
+        let alias = tmp.path().join("alias");
+        symlink(&data, &alias).unwrap();
+        assert!(create_private_dir(&alias).is_err());
+        assert_eq!(
+            std::fs::metadata(&shared).unwrap().permissions().mode() & 0o7777,
+            0o777
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn owned_sticky_parents_and_protected_aliases_keep_working() {
+        use std::os::unix::fs::{PermissionsExt, symlink};
+        let tmp = tempfile::tempdir().unwrap();
+        let shared = tmp.path().join("sticky");
+        std::fs::create_dir(&shared).unwrap();
+        std::fs::set_permissions(&shared, std::fs::Permissions::from_mode(0o1777)).unwrap();
+        let data = shared.join("data");
+        std::fs::create_dir(&data).unwrap();
+        std::fs::set_permissions(&data, std::fs::Permissions::from_mode(0o000)).unwrap();
+        assert_eq!(
+            create_private_dir(&data).unwrap(),
+            std::fs::canonicalize(&data).unwrap()
+        );
+        assert_eq!(
+            std::fs::metadata(&data).unwrap().permissions().mode() & 0o7777,
+            0o700
+        );
+        assert_eq!(
+            std::fs::metadata(&shared).unwrap().permissions().mode() & 0o7777,
+            0o1777
+        );
+        let alias = tmp.path().join("alias");
+        symlink(&data, &alias).unwrap();
+        assert_eq!(
+            create_private_dir(&alias).unwrap(),
+            std::fs::canonicalize(&data).unwrap()
+        );
+        let app = App::open_as(&alias, Local::from_env()).unwrap();
+        assert!(data.join("vault.db").is_file());
+        assert!(data.join("logs").is_dir());
+        drop(app);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_sticky_data_root_is_never_repurposed_as_private_storage() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::set_permissions(tmp.path(), std::fs::Permissions::from_mode(0o1777)).unwrap();
+        assert!(create_private_dir(tmp.path()).is_err());
+        assert!(Logs::open(tmp.path(), logs::Config::default()).is_err());
+        assert_eq!(
+            std::fs::metadata(tmp.path()).unwrap().permissions().mode() & 0o7777,
+            0o1777
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_writable_existing_root_cannot_launder_preplanted_data_links() {
+        use std::os::unix::fs::{PermissionsExt, symlink};
+        let tmp = tempfile::tempdir().unwrap();
+        let data = tmp.path().join("data");
+        std::fs::create_dir(&data).unwrap();
+        std::fs::set_permissions(&data, std::fs::Permissions::from_mode(0o777)).unwrap();
+        let outside = tmp.path().join("outside.db");
+        std::fs::write(&outside, []).unwrap();
+        std::fs::set_permissions(&outside, std::fs::Permissions::from_mode(0o666)).unwrap();
+        symlink(&outside, data.join("vault.db")).unwrap();
+        assert!(App::open_as(&data, Local::from_env()).is_err());
+        assert_eq!(std::fs::metadata(&outside).unwrap().len(), 0);
+        assert_eq!(
+            std::fs::metadata(&data).unwrap().permissions().mode() & 0o7777,
+            0o777
+        );
     }
 
     #[test]
