@@ -964,6 +964,26 @@ fn keep_existing(on_conflict: OnConflict, existing: &Entry, item: &Item) -> bool
     }
 }
 
+fn download_existing(
+    local: &LocalRoot,
+    dest: &Path,
+    on_conflict: OnConflict,
+    directory: bool,
+) -> Result<Option<Entry>> {
+    if directory {
+        return local.stat(dest);
+    }
+    let existing = local.lstat(dest)?;
+    if on_conflict == OnConflict::Newer && existing.as_ref().is_some_and(|e| e.kind == Kind::Link) {
+        // Compare a contained target as before (a dangling link is absent).
+        // A target we cannot inspect safely stays a Link, which Newer skips.
+        if let Ok(target) = local.stat(dest) {
+            return Ok(target);
+        }
+    }
+    Ok(existing)
+}
+
 impl JobRun<'_> {
     /// Copies one item up.
     async fn upload(
@@ -1094,11 +1114,7 @@ impl JobRun<'_> {
     /// Copies one item down.
     async fn download(&self, i: usize, item: &Item, src: &str, dest: &Path) -> Result<Done> {
         let remote = self.remote;
-        let existing = if item.dir {
-            self.local.stat(dest)?
-        } else {
-            self.local.lstat(dest)?
-        };
+        let existing = download_existing(self.local, dest, self.req.on_conflict, item.dir)?;
         if item.dir {
             return match existing {
                 Some(e) if e.is_dir() => Ok(Done::Dir { made: false }),
@@ -1219,6 +1235,47 @@ fn set_local_mode(_: &std::fs::File, _: Option<u32>) {}
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn newer_compares_contained_links_and_skips_uninspectable_targets() {
+        use std::os::unix::fs::symlink;
+        let dir = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let inside = dir.path().join("inside");
+        std::fs::write(&inside, b"older").unwrap();
+        std::fs::File::options()
+            .write(true)
+            .open(&inside)
+            .unwrap()
+            .set_modified(UNIX_EPOCH + Duration::from_secs(1))
+            .unwrap();
+        std::fs::write(outside.path().join("outside"), b"keep").unwrap();
+        symlink("inside", dir.path().join("contained")).unwrap();
+        symlink("missing", dir.path().join("dangling")).unwrap();
+        symlink(outside.path().join("outside"), dir.path().join("escaping")).unwrap();
+        let root = LocalRoot::destination(dir.path()).unwrap();
+        let item = Item {
+            rel: String::new(),
+            dir: false,
+            size: 3,
+            modified: Some(2),
+            mode: None,
+        };
+        let contained = download_existing(&root, Path::new("contained"), OnConflict::Newer, false)
+            .unwrap()
+            .unwrap();
+        assert!(!keep_existing(OnConflict::Newer, &contained, &item));
+        let escaping = download_existing(&root, Path::new("escaping"), OnConflict::Newer, false)
+            .unwrap()
+            .unwrap();
+        assert!(keep_existing(OnConflict::Newer, &escaping, &item));
+        assert!(
+            download_existing(&root, Path::new("dangling"), OnConflict::Newer, false)
+                .unwrap()
+                .is_none()
+        );
+    }
 
     #[tokio::test]
     async fn queued_files_do_not_exhaust_open_descriptors() {

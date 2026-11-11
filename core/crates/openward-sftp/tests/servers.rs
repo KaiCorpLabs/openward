@@ -1030,6 +1030,32 @@ async fn downloads_refuse_prepared_local_parts_without_touching_their_targets() 
             std::fs::read(&sentinel).unwrap(),
             b"outside sentinel must remain whole"
         );
+        let inside = dest.path().join("inside");
+        std::fs::write(&inside, b"older contained target").unwrap();
+        std::fs::File::options()
+            .write(true)
+            .open(&inside)
+            .unwrap()
+            .set_modified(std::time::UNIX_EPOCH + Duration::from_secs(1))
+            .unwrap();
+        std::fs::remove_file(dest.path().join("file")).unwrap();
+        std::os::unix::fs::symlink("inside", dest.path().join("file")).unwrap();
+        let newer = copy(
+            &t,
+            &l,
+            Direction::Download,
+            &source,
+            path_str(dest.path()),
+            OnConflict::Newer,
+        )
+        .await;
+        assert_eq!(newer.state, JobState::Done, "{:?}", newer.error);
+        assert_eq!(newer.files_done, 1);
+        assert_eq!(
+            std::fs::read(dest.path().join("file")).unwrap(),
+            b"remote-bytes"
+        );
+        assert_eq!(std::fs::read(&inside).unwrap(), b"older contained target");
     }
     s.done().await;
 }
