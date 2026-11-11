@@ -2101,6 +2101,7 @@ dependencies = [
  "data-encoding",
  "hmac",
  "proptest",
+ "rand",
  "russh",
  "sha1",
  "thiserror 2.0.21",
