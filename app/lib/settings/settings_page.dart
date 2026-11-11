@@ -779,27 +779,23 @@ class _Logs extends ConsumerWidget {
               foregroundColor: c.danger,
               side: BorderSide(color: c.dangerLine),
             ),
-            onPressed: usage.entries == 0
-                ? null
-                : () async {
-                    final sure = await confirmDestructive(
-                      context,
-                      title: l.logsDeleteAllTitle,
-                      body: l.logsDeleteAllHelp(
-                        l.logsCount(usage.entries),
-                        formatSize(l, used),
-                      ),
-                      action: l.logsDeleteAllAction,
-                      actionKey: const ValueKey(
-                        'settings.logDeleteAll.confirm',
-                      ),
-                    );
-                    if (!sure || !context.mounted) return;
-                    await runAction(context, () async {
-                      await app.deleteAllLogs();
-                    });
-                    ref.read(logsProvider.notifier).refresh();
-                  },
+            onPressed: () async {
+              final sure = await confirmDestructive(
+                context,
+                title: l.logsDeleteAllTitle,
+                body: l.logsDeleteAllHelp(
+                  l.logsCount(usage.entries),
+                  formatSize(l, used),
+                ),
+                action: l.logsDeleteAllAction,
+                actionKey: const ValueKey('settings.logDeleteAll.confirm'),
+              );
+              if (!sure || !context.mounted) return;
+              await runAction(context, () async {
+                await app.deleteAllLogs();
+              });
+              ref.read(logsProvider.notifier).refresh();
+            },
             icon: const Icon(Icons.delete_outline, size: 16),
             label: Text(l.logsDeleteAllEllipsis),
           ),

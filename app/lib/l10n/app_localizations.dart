@@ -4337,7 +4337,7 @@ abstract class AppLocalizations {
   /// No description provided for @logsDeleteAllHelp.
   ///
   /// In es, this message translates to:
-  /// **'{count} y {size}, también los guardados. No se puede deshacer.'**
+  /// **'{count} y {size}, también los guardados y las grabaciones que no aparecen en la lista. Las sesiones abiertas se conservan. No se puede deshacer.'**
   String logsDeleteAllHelp(String count, String size);
 
   /// No description provided for @logsDeleteAllTitle.

@@ -23,7 +23,7 @@ mod text;
 pub use player::Player;
 pub(crate) use sink::LogSink;
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
@@ -215,6 +215,9 @@ pub(crate) fn create(path: &Path) -> std::io::Result<File> {
 
 pub struct Logs {
     dir: PathBuf,
+    /// File mutations precede `inner` in the lock order. In particular a
+    /// sweep cannot see a session between file creation and registration.
+    files: Mutex<()>,
     inner: Mutex<Inner>,
     waker: Mutex<Option<Waker>>,
 }
@@ -272,6 +275,7 @@ impl Logs {
         }
         let logs = Arc::new(Self {
             dir: dir.to_owned(),
+            files: Mutex::new(()),
             inner: Mutex::new(Inner {
                 config,
                 entries,
@@ -352,6 +356,11 @@ impl Logs {
     /// Starts a session's entry, and its recording if `begin.record`.
     pub fn begin(self: &Arc<Self>, begin: Begin) -> std::io::Result<Arc<Session>> {
         let id = crate::vault::proto::ItemId::new().to_string();
+        self.begin_with_id(begin, id)
+    }
+
+    fn begin_with_id(self: &Arc<Self>, begin: Begin, id: String) -> std::io::Result<Arc<Session>> {
+        let files = lock(&self.files);
         let started_ms = now_ms();
         let entry = Entry {
             id: id.clone(),
@@ -385,12 +394,19 @@ impl Logs {
         } else {
             None
         };
-        write_entry(&self.dir, &entry)?;
+        if let Err(error) = write_entry(&self.dir, &entry) {
+            // Join the recorder before removing files, so no late writer
+            // can leave output behind after a failed session start.
+            drop(recorder);
+            let _ = self.remove_files(&id);
+            return Err(error);
+        }
         {
             let mut inner = lock(&self.inner);
             inner.open.insert(id.clone());
             inner.entries.insert(id.clone(), entry.clone());
         }
+        drop(files);
         self.changed();
         Ok(Arc::new(Session {
             logs: Arc::clone(self),
@@ -417,6 +433,7 @@ impl Logs {
     }
 
     fn update(&self, id: &str, change: impl FnOnce(&mut Entry)) -> std::io::Result<()> {
+        let files = lock(&self.files);
         let entry = {
             let mut inner = lock(&self.inner);
             let entry = inner
@@ -427,6 +444,7 @@ impl Logs {
             entry.clone()
         };
         write_entry(&self.dir, &entry)?;
+        drop(files);
         self.changed();
         Ok(())
     }
@@ -434,61 +452,105 @@ impl Logs {
     /// Deletes an entry and its recording; false for a session still
     /// going on, or one that is not there.
     pub fn delete(&self, id: &str) -> std::io::Result<bool> {
+        let files = lock(&self.files);
         {
-            let mut inner = lock(&self.inner);
-            if inner.open.contains(id) || inner.entries.remove(id).is_none() {
+            let inner = lock(&self.inner);
+            if inner.open.contains(id) || !inner.entries.contains_key(id) {
                 return Ok(false);
             }
         }
         self.remove_files(id)?;
+        lock(&self.inner).entries.remove(id);
+        drop(files);
         self.changed();
         Ok(true)
     }
 
-    /// Deletes every entry but those of sessions going on, saved ones too.
-    /// Returns how many went.
+    /// Deletes closed sessions, saved ones and managed orphans. Active
+    /// sessions, configuration and unrelated names/directories stay.
+    /// Returns sessions removed (an orphan's files count as one session).
     pub fn delete_all(&self) -> std::io::Result<u32> {
-        let ids: Vec<String> = {
-            let mut inner = lock(&self.inner);
-            let open = inner.open.clone();
-            let ids: Vec<String> = inner
-                .entries
-                .keys()
-                .filter(|id| !open.contains(*id))
-                .cloned()
-                .collect();
-            for id in &ids {
-                inner.entries.remove(id);
-            }
-            ids
+        let files = lock(&self.files);
+        let (open, mut ids) = {
+            let inner = lock(&self.inner);
+            (
+                inner.open.clone(),
+                inner.entries.keys().cloned().collect::<BTreeSet<_>>(),
+            )
         };
-        for id in &ids {
-            self.remove_files(id)?;
+        let mut error = None;
+        match fs::read_dir(&self.dir) {
+            Ok(entries) => {
+                for entry in entries {
+                    let result = entry.and_then(|entry| {
+                        let kind = entry.file_type()?;
+                        if (kind.is_file() || kind.is_symlink())
+                            && let Some(name) = entry.file_name().to_str()
+                            && let Some(id) = managed_id(name)
+                        {
+                            ids.insert(id.to_owned());
+                        }
+                        Ok(())
+                    });
+                    if let Err(e) = result
+                        && error.is_none()
+                    {
+                        error = Some(e);
+                    }
+                }
+            }
+            Err(e) => error = Some(e),
         }
+        let mut removed = 0;
+        for id in ids.into_iter().filter(|id| !open.contains(id)) {
+            match self.remove_files(&id) {
+                Ok(()) => {
+                    lock(&self.inner).entries.remove(&id);
+                    removed += 1;
+                }
+                Err(e) => {
+                    if error.is_none() {
+                        error = Some(e);
+                    }
+                }
+            }
+        }
+        drop(files);
         self.changed();
-        Ok(ids.len() as u32)
+        match error {
+            Some(error) => Err(error),
+            None => Ok(removed),
+        }
     }
 
     fn remove_files(&self, id: &str) -> std::io::Result<()> {
+        let mut error = None;
         for path in [
             self.cast_path(id),
             self.text_path(id),
             self.dir.join(format!("{id}.json")),
+            self.dir.join(format!("{id}.json.tmp")),
         ] {
             match fs::remove_file(&path) {
-                Err(e) if e.kind() != std::io::ErrorKind::NotFound => return Err(e),
+                Err(e) if e.kind() != std::io::ErrorKind::NotFound && error.is_none() => {
+                    error = Some(e)
+                }
                 _ => {}
             }
         }
-        Ok(())
+        match error {
+            Some(error) => Err(error),
+            None => Ok(()),
+        }
     }
 
     /// Deletes what is past the limits: entries older than the days kept,
     /// then the oldest until the space fits. Never a saved one, nor one
     /// going on.
     pub fn prune(&self) {
+        let files = lock(&self.files);
         let doomed: Vec<String> = {
-            let mut inner = lock(&self.inner);
+            let inner = lock(&self.inner);
             let Config {
                 keep_days,
                 max_bytes,
@@ -511,17 +573,17 @@ impl Logs {
                     doomed.push(e.id.clone());
                 }
             }
-            for id in &doomed {
-                inner.entries.remove(id);
-            }
             doomed
         };
         if doomed.is_empty() {
             return;
         }
         for id in &doomed {
-            let _ = self.remove_files(id);
+            if self.remove_files(id).is_ok() {
+                lock(&self.inner).entries.remove(id);
+            }
         }
+        drop(files);
         self.changed();
     }
 
@@ -752,6 +814,8 @@ impl Logs {
 
     fn finished(&self, entry: Entry) {
         {
+            let _files = lock(&self.files);
+            let _ = write_entry(&self.dir, &entry);
             let mut inner = lock(&self.inner);
             inner.open.remove(&entry.id);
             inner.entries.insert(entry.id.clone(), entry);
@@ -759,6 +823,16 @@ impl Logs {
         self.prune();
         self.changed();
     }
+}
+
+/// Only this module's complete session filenames belong to the sweep.
+/// Canonical UUID spelling also excludes traversal and configuration names.
+fn managed_id(name: &str) -> Option<&str> {
+    let id = [".json.tmp", ".cast.gz", ".txt.gz", ".json"]
+        .into_iter()
+        .find_map(|suffix| name.strip_suffix(suffix))?;
+    let parsed = id.parse::<crate::vault::proto::ItemId>().ok()?;
+    (parsed.to_string() == id).then_some(id)
 }
 
 fn write_entry(dir: &Path, entry: &Entry) -> std::io::Result<()> {
@@ -891,7 +965,6 @@ impl Session {
             entry.bytes = files_size(&self.logs.dir, &entry.id);
             entry.clone()
         };
-        let _ = write_entry(&self.logs.dir, &entry);
         self.logs.finished(entry);
     }
 }
