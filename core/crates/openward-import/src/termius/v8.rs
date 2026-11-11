@@ -438,6 +438,6 @@ mod tests {
         data.extend([b'$', 0, 18]);
         let mut budget = Budget::limited(128 << 10, 10_000, 10);
         assert!(deserialize_with_budget(&data, &mut budget).is_err());
-        assert!(budget.exhausted);
+        assert!(budget.exhausted());
     }
 }

@@ -109,7 +109,7 @@ fn live_files(dir: &Path, budget: &mut Budget) -> io::Result<Files> {
     logs.sort();
     let current = dir.join("CURRENT");
     let current_bytes = budget.read(&current);
-    if budget.exhausted {
+    if budget.exhausted() {
         return Err(invalid("Termius file budget exceeded".into()));
     }
     if let Ok(name) = current_bytes.and_then(|bytes| {
@@ -611,7 +611,7 @@ mod tests {
         assert_eq!(block_entries(&data).unwrap().len(), 101);
         let mut budget = Budget::limited(4096, 10_000, 10);
         assert!(super::block_entries(&data, &mut budget).is_err());
-        assert!(budget.exhausted);
+        assert!(budget.exhausted());
     }
 
     #[test]
@@ -639,7 +639,7 @@ mod tests {
         assert_eq!(table_entries(&file).unwrap().len(), 40);
         let mut budget = Budget::limited(2048, 10_000, 10);
         assert!(super::table_entries(&file, &mut budget).is_err());
-        assert!(budget.exhausted);
+        assert!(budget.exhausted());
     }
 
     #[test]
@@ -650,7 +650,7 @@ mod tests {
         }
         let mut budget = Budget::limited(10_000, 10_000, 5);
         assert!(read_with_budget(dir.path(), &mut budget).is_err());
-        assert!(budget.exhausted);
+        assert!(budget.exhausted());
         assert!(read(dir.path()).unwrap().is_empty());
     }
 }

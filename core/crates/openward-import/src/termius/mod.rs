@@ -89,7 +89,8 @@ impl std::error::Error for Error {}
 /// keychain, which makes the system ask the user first.
 pub fn read(data_dir: &Path, keys: Option<Vec<[u8; 32]>>) -> Result<crate::bundle::Bundle, Error> {
     let leveldb = leveldb_dir(data_dir).ok_or(Error::NotFound)?;
-    let db = idb::read(&leveldb).map_err(Error::Io)?;
+    let mut budget = budget::Budget::default();
+    let db = idb::read_with_budget(&leveldb, &mut budget).map_err(Error::Io)?;
     let keys = match keys {
         Some(k) => k,
         None => keychain::local_keys().map_err(Error::Keychain)?,
@@ -102,7 +103,8 @@ pub fn read(data_dir: &Path, keys: Option<Vec<[u8; 32]>>) -> Result<crate::bundl
     } else {
         keys[0]
     };
-    let mut bundle = model::bundle(&db, &key);
+    let mut bundle =
+        model::bundle_with_budget(&db, &key, &budget).map_err(|e| Error::Io(budget::invalid(e)))?;
     if !db.unreadable.is_empty() {
         let why: Vec<_> = db
             .unreadable

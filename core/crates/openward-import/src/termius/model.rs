@@ -16,6 +16,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use openward_proto::{ForwardKind, HostKeyPolicy, Marker, Proxy, ProxyServer, Settings};
 
+use super::budget::Budget;
 use super::crypto;
 use super::idb::{Idb, Key, Record};
 use super::v8::Value;
@@ -37,6 +38,7 @@ struct Row<'a> {
     local_id: Option<i64>,
     /// The decrypted `content` JSON, if any.
     content: Option<serde_json::Value>,
+    budget: Budget,
 }
 
 /// What reading the fields of a record ran into.
@@ -46,16 +48,23 @@ struct Trouble {
 }
 
 impl<'a> Table<'a> {
-    fn new(db: &'a Idb, name: &str, key: &[u8; 32], trouble: &mut Trouble) -> Self {
+    fn new(
+        db: &'a Idb,
+        name: &str,
+        key: &[u8; 32],
+        trouble: &mut Trouble,
+        budget: &Budget,
+    ) -> Result<Self, String> {
         let mut records = Vec::new();
         let Some(database) = db.database(name) else {
-            return Self {
+            return Ok(Self {
                 records,
                 by_id: HashMap::new(),
                 by_local: HashMap::new(),
-            };
+            });
         };
         for record in db.records(database, None) {
+            budget.allocation(1, 256)?;
             let v = &record.value;
             if v.get("status").and_then(Value::as_str) == Some("deleted") {
                 continue;
@@ -64,6 +73,11 @@ impl<'a> Table<'a> {
             if v.get("encrypted_with").is_some_and(|e| !e.is_unset()) {
                 trouble.shared += 1;
                 continue;
+            }
+            if let Some(c) = v.get("content").and_then(Value::as_str) {
+                // Includes decryption buffers and JSON's owned nodes, even
+                // when the content is malformed and will be discarded.
+                budget.buffer(c.len(), 64)?;
             }
             let content = v
                 .get("content")
@@ -82,6 +96,7 @@ impl<'a> Table<'a> {
                 id: v.get("id").and_then(Value::as_i64),
                 local_id,
                 content,
+                budget: budget.clone(),
             });
         }
         // The newest version wins when an entity was written twice.
@@ -93,7 +108,14 @@ impl<'a> Table<'a> {
                 .unwrap_or("")
                 .to_owned()
         };
-        records.sort_by_key(|r| std::cmp::Reverse(at(r)));
+        for r in &records {
+            budget.bytes(
+                r.raw("updated_at")
+                    .and_then(Value::as_str)
+                    .map_or(0, str::len),
+            )?;
+        }
+        records.sort_by_cached_key(|r| std::cmp::Reverse(at(r)));
         let mut seen_id = std::collections::HashSet::new();
         let mut seen_local = std::collections::HashSet::new();
         records.retain(|r| {
@@ -112,11 +134,11 @@ impl<'a> Table<'a> {
                 by_local.insert(l, i);
             }
         }
-        Self {
+        Ok(Self {
             records,
             by_id,
             by_local,
-        }
+        })
     }
 
     /// The record a `{id, local_id}` reference (or a bare number) points at.
@@ -143,16 +165,35 @@ impl Row<'_> {
     /// A text field, decrypted if it is encrypted; from `content` if the
     /// record has no such field. `None` when unset or empty.
     fn text(&self, field: &str, key: &[u8; 32]) -> Option<String> {
+        self.budget.work(1).ok()?;
+        // Charge every use of either representation, including a content
+        // fallback after a direct encrypted field fails to decrypt.
+        let text = |s: &str| {
+            self.budget.buffer(s.len(), 8).ok()?;
+            Some(s.to_owned())
+        };
         let direct = match self.raw(field) {
-            Some(Value::String(s)) if crypto::is_encrypted(s) => crypto::decrypt(key, s).ok(),
-            Some(Value::String(s)) => Some(s.clone()),
-            Some(Value::Int(n)) => Some(n.to_string()),
+            Some(Value::String(s)) => {
+                self.budget.buffer(s.len(), 8).ok()?;
+                if crypto::is_encrypted(s) {
+                    crypto::decrypt(key, s).ok()
+                } else {
+                    Some(s.clone())
+                }
+            }
+            Some(Value::Int(n)) => {
+                self.budget.bytes(32).ok()?;
+                Some(n.to_string())
+            }
             _ => None,
         };
         direct
             .or_else(|| match self.content.as_ref()?.get(field)? {
-                serde_json::Value::String(s) => Some(s.clone()),
-                serde_json::Value::Number(n) => Some(n.to_string()),
+                serde_json::Value::String(s) => text(s),
+                serde_json::Value::Number(n) => {
+                    self.budget.bytes(32).ok()?;
+                    Some(n.to_string())
+                }
                 _ => None,
             })
             .map(|s| s.trim().to_owned())
@@ -160,6 +201,10 @@ impl Row<'_> {
     }
 
     fn number(&self, field: &str, key: &[u8; 32]) -> Option<i64> {
+        self.budget.work(1).ok()?;
+        if let Some(s) = self.raw(field).and_then(Value::as_str) {
+            self.budget.bytes(s.len()).ok()?;
+        }
         match self.raw(field) {
             Some(v) if v.as_i64().is_some() => v.as_i64(),
             _ => self
@@ -197,23 +242,31 @@ fn both(row: &Row) -> String {
 }
 
 /// Reads Termius's tables with its local key.
-pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
+pub fn bundle(db: &Idb, key: &[u8; 32]) -> Result<Bundle, String> {
+    bundle_with_budget(db, key, &Budget::default())
+}
+
+pub(super) fn bundle_with_budget(
+    db: &Idb,
+    key: &[u8; 32],
+    budget: &Budget,
+) -> Result<Bundle, String> {
     let mut trouble = Trouble::default();
-    let mut t = |name| Table::new(db, name, key, &mut trouble);
-    let hosts = t("hosts");
-    let groups = t("groups");
-    let configs = t("ssh_configs");
-    let telnets = t("telnet_configs");
-    let config_identities = t("ssh_config_identities");
-    let identities = t("ssh_identities");
-    let keys = t("keys");
-    let proxies = t("proxies");
-    let rules = t("pf_rules");
-    let snippets = t("snippets");
-    let tags = t("tags");
-    let tag_hosts = t("tag_hosts");
-    let known = t("known_hosts");
-    let chains = t("host_chains");
+    let mut t = |name| Table::new(db, name, key, &mut trouble, budget);
+    let hosts = t("hosts")?;
+    let groups = t("groups")?;
+    let configs = t("ssh_configs")?;
+    let telnets = t("telnet_configs")?;
+    let config_identities = t("ssh_config_identities")?;
+    let identities = t("ssh_identities")?;
+    let keys = t("keys")?;
+    let proxies = t("proxies")?;
+    let rules = t("pf_rules")?;
+    let snippets = t("snippets")?;
+    let tags = t("tags")?;
+    let tag_hosts = t("tag_hosts")?;
+    let known = t("known_hosts")?;
+    let chains = t("host_chains")?;
     drop(t);
 
     let mut out = Bundle::default();
@@ -229,6 +282,7 @@ pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
     // Keys, and the identities that have a name.
     let mut stored = std::collections::BTreeSet::new();
     for k in &keys.records {
+        budget.work(1)?;
         let Some(private_key) = k.text("private_key", key) else {
             continue;
         };
@@ -254,6 +308,7 @@ pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
     };
     let visible = |i: &Row| i.flag("is_visible").unwrap_or(false) && i.text("label", key).is_some();
     for i in &identities.records {
+        budget.work(1)?;
         if i.text("password", key).is_some() {
             out.passwords += 1;
         }
@@ -276,7 +331,11 @@ pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
         mosh: bool,
         startup: bool,
     }
-    let config = |row: Option<&Row>, subject: &str, warnings: &mut Vec<Warning>| -> Config {
+    let config = |row: Option<&Row>,
+                  subject: &str,
+                  warnings: &mut Vec<Warning>|
+     -> Result<Config, String> {
+        budget.work(1)?;
         let mut c = Config {
             settings: Settings::default(),
             identity: None,
@@ -285,7 +344,7 @@ pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
             startup: false,
         };
         let Some(row) = row else {
-            return c;
+            return Ok(c);
         };
         let s = &mut c.settings;
         if let Some(port) = row.number("port", key) {
@@ -313,6 +372,7 @@ pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
             s.keepalive_secs = Some(secs);
         }
         if let Some(env) = row.text("env_variables", key) {
+            budget.buffer(env.len(), 64)?;
             let vars = env_variables(&env);
             if !vars.is_empty() {
                 s.env = Some(vars);
@@ -327,13 +387,18 @@ pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
         c.mosh = row.flag("use_mosh") == Some(true);
         c.startup = row.raw("startup_snippet").is_some();
         // The config's identity, or the first linked through the join table.
-        let identity = identities.get(row.raw("identity")).or_else(|| {
-            config_identities
-                .records
-                .iter()
-                .filter(|j| configs.get(j.raw("ssh_config")).map(Row::key) == Some(row.key()))
-                .find_map(|j| identities.get(j.raw("identity")))
-        });
+        let mut identity = identities.get(row.raw("identity"));
+        if identity.is_none() {
+            for join in &config_identities.records {
+                budget.work(1)?;
+                if configs.get(join.raw("ssh_config")).map(Row::key) == Some(row.key()) {
+                    identity = identities.get(join.raw("identity"));
+                    if identity.is_some() {
+                        break;
+                    }
+                }
+            }
+        }
         if let Some(i) = identity {
             if i.raw("hardware_key").is_some() {
                 warnings.push(Warning::about(
@@ -348,12 +413,14 @@ pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
                 c.keys = key_ref(i);
             }
         }
-        c
+        budget.work(0)?;
+        Ok(c)
     };
 
     for g in &groups.records {
+        budget.work(1)?;
         let name = g.text("label", key).unwrap_or_else(|| "Termius".into());
-        let c = config(configs.get(g.raw("ssh_config")), &name, &mut out.warnings);
+        let c = config(configs.get(g.raw("ssh_config")), &name, &mut out.warnings)?;
         out.groups.push(Group {
             id: both(g),
             name,
@@ -366,6 +433,7 @@ pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
 
     let mut host_tags: HashMap<String, Vec<String>> = HashMap::new();
     for th in &tag_hosts.records {
+        budget.work(1)?;
         if let (Some(h), Some(tag)) = (hosts.get(th.raw("host")), tags.get(th.raw("tag")))
             && let Some(label) = tag.text("label", key)
         {
@@ -374,6 +442,7 @@ pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
     }
 
     for h in &hosts.records {
+        budget.work(1)?;
         let address = h.text("address", key).map(|a| expand_packed_ipv4(&a));
         let label = h
             .text("label", key)
@@ -381,7 +450,7 @@ pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
             .unwrap_or_else(|| "Termius".into());
         let ssh = configs.get(h.raw("ssh_config"));
         let telnet = ssh.is_none() && h.raw("telnet_config").is_some();
-        let mut c = config(ssh, &label, &mut out.warnings);
+        let mut c = config(ssh, &label, &mut out.warnings)?;
         // A Telnet config and no SSH one: Telnet, on the port its config
         // says (`telnet_configs`, when the table is there).
         if telnet {
@@ -417,6 +486,7 @@ pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
     }
 
     for r in &rules.records {
+        budget.work(1)?;
         let Some(host) = hosts.get(r.raw("host")).map(both) else {
             continue;
         };
@@ -456,6 +526,7 @@ pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
     }
 
     for s in &snippets.records {
+        budget.work(1)?;
         if let Some(script) = s.text("script", key) {
             out.snippets.push(Snippet {
                 id: both(s),
@@ -468,6 +539,7 @@ pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
     }
 
     for k in &known.records {
+        budget.work(1)?;
         let (Some(hosts), Some(public)) = (k.text("hostnames", key), k.text("key", key)) else {
             continue;
         };
@@ -483,7 +555,8 @@ pub fn bundle(db: &Idb, key: &[u8; 32]) -> Bundle {
             comment: k.text("comment", key),
         });
     }
-    out
+    budget.work(0)?;
+    Ok(out)
 }
 
 /// A proxy of an SSH config: HTTP or SOCKS (any version here is 5).
@@ -569,5 +642,29 @@ mod tests {
             want
         );
         assert!(env_variables("{}").is_empty());
+    }
+
+    #[test]
+    fn a_failed_direct_field_cannot_bypass_the_content_copy_budget() {
+        let record = Record {
+            key: Key::Number(1.0),
+            value: Value::Object(
+                [(
+                    "label".into(),
+                    Value::String(crypto::encrypt(&[1; 32], &[2; 24], "wrong key")),
+                )]
+                .into(),
+            ),
+        };
+        let budget = Budget::limited(10_000, 100, 10);
+        let row = Row {
+            record: &record,
+            id: Some(1),
+            local_id: None,
+            content: Some(serde_json::json!({"label": "x".repeat(2000)})),
+            budget: budget.clone(),
+        };
+        assert!(row.text("label", &[3; 32]).is_none());
+        assert!(budget.exhausted());
     }
 }

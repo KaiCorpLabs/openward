@@ -1,78 +1,91 @@
 //! One cumulative allocation/work budget for a complete foreign database.
+use std::cell::Cell;
 use std::fs;
 use std::io::{self, Read};
 use std::path::Path;
+use std::rc::Rc;
 
 pub(super) const MAX_DEPTH: usize = 64;
 pub(super) const MAX_ARRAY: usize = 65_536;
 
-pub(super) struct Budget {
-    bytes: usize,
-    work: usize,
-    files: usize,
-    pub exhausted: bool,
+#[derive(Clone)]
+pub(super) struct Budget(Rc<Remaining>);
+
+struct Remaining {
+    bytes: Cell<usize>,
+    work: Cell<usize>,
+    files: Cell<usize>,
+    exhausted: Cell<bool>,
 }
 
 impl Default for Budget {
     fn default() -> Self {
-        Self {
-            bytes: 256 << 20,
-            work: 1_000_000,
-            files: 4096,
-            exhausted: false,
-        }
+        Self::new(256 << 20, 1_000_000, 4096)
     }
 }
 
 impl Budget {
+    fn new(bytes: usize, work: usize, files: usize) -> Self {
+        Self(Rc::new(Remaining {
+            bytes: bytes.into(),
+            work: work.into(),
+            files: files.into(),
+            exhausted: false.into(),
+        }))
+    }
     #[cfg(test)]
     pub fn limited(bytes: usize, work: usize, files: usize) -> Self {
-        Self {
-            bytes,
-            work,
-            files,
-            exhausted: false,
-        }
+        Self::new(bytes, work, files)
     }
 
-    pub fn refuse<T>(&mut self) -> Result<T, String> {
-        self.exhausted = true;
+    pub fn exhausted(&self) -> bool {
+        self.0.exhausted.get()
+    }
+
+    pub fn refuse<T>(&self) -> Result<T, String> {
+        self.0.exhausted.set(true);
         Err("Termius import exceeds its resource budget".into())
     }
 
-    pub fn bytes(&mut self, n: usize) -> Result<(), String> {
-        match self.bytes.checked_sub(n) {
+    pub fn bytes(&self, n: usize) -> Result<(), String> {
+        if self.exhausted() {
+            return self.refuse();
+        }
+        match self.0.bytes.get().checked_sub(n) {
             Some(left) => {
-                self.bytes = left;
+                self.0.bytes.set(left);
                 Ok(())
             }
             None => self.refuse(),
         }
     }
 
-    pub fn work(&mut self, n: usize) -> Result<(), String> {
-        match self.work.checked_sub(n) {
+    pub fn work(&self, n: usize) -> Result<(), String> {
+        if self.exhausted() {
+            return self.refuse();
+        }
+        match self.0.work.get().checked_sub(n) {
             Some(left) => {
-                self.work = left;
+                self.0.work.set(left);
                 Ok(())
             }
             None => self.refuse(),
         }
     }
 
-    pub fn allocation(&mut self, count: usize, size: usize) -> Result<(), String> {
+    pub fn allocation(&self, count: usize, size: usize) -> Result<(), String> {
         self.work(count)?;
         self.buffer(count, size)
     }
 
-    pub fn buffer(&mut self, count: usize, size: usize) -> Result<(), String> {
+    pub fn buffer(&self, count: usize, size: usize) -> Result<(), String> {
         let Some(bytes) = count.checked_mul(size) else {
             return self.refuse();
         };
         self.bytes(bytes)
     }
 
-    pub fn read(&mut self, path: &Path) -> io::Result<Vec<u8>> {
+    pub fn read(&self, path: &Path) -> io::Result<Vec<u8>> {
         self.entry().map_err(invalid)?;
         if !fs::metadata(path)?.is_file() {
             return Err(io::Error::new(io::ErrorKind::InvalidInput, "not a file"));
@@ -81,7 +94,7 @@ impl Budget {
         if !file.metadata()?.is_file() {
             return Err(io::Error::new(io::ErrorKind::InvalidInput, "not a file"));
         }
-        let limit = self.bytes.min(crate::files::MAX_FILE as usize);
+        let limit = self.0.bytes.get().min(crate::files::MAX_FILE as usize);
         let mut out = Vec::new();
         file.take(limit as u64 + 1).read_to_end(&mut out)?;
         if out.len() > limit {
@@ -91,11 +104,11 @@ impl Budget {
         Ok(out)
     }
 
-    pub fn entry(&mut self) -> Result<(), String> {
-        if self.files == 0 {
+    pub fn entry(&self) -> Result<(), String> {
+        if self.0.files.get() == 0 {
             return self.refuse();
         }
-        self.files -= 1;
+        self.0.files.set(self.0.files.get() - 1);
         self.work(1)
     }
 }

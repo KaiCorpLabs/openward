@@ -77,7 +77,7 @@ pub fn read(dir: &Path) -> io::Result<Idb> {
     read_with_budget(dir, &mut Budget::default())
 }
 
-fn read_with_budget(dir: &Path, budget: &mut Budget) -> io::Result<Idb> {
+pub(super) fn read_with_budget(dir: &Path, budget: &mut Budget) -> io::Result<Idb> {
     let entries = leveldb::read_with_budget(dir, budget)?;
     let blobs = blob_dir(dir);
     let mut db_names: Vec<(u64, String)> = Vec::new();
@@ -151,7 +151,7 @@ fn read_with_budget(dir: &Path, budget: &mut Budget) -> io::Result<Idb> {
                 value: v,
             }),
             Ok(None) => {}
-            Err(e) if budget.exhausted => return Err(invalid(e)),
+            Err(e) if budget.exhausted() => return Err(invalid(e)),
             Err(e) => *unreadable.entry(e).or_default() += 1,
         }
     }
@@ -451,7 +451,7 @@ mod tests {
         ];
         let mut budget = Budget::default();
         assert!(record_value_with_budget(&value, 1, None, None, &mut budget).is_err());
-        assert!(budget.exhausted);
+        assert!(budget.exhausted());
     }
 
     fn database_with_values(values: &[Vec<u8>]) -> tempfile::TempDir {
@@ -483,11 +483,84 @@ mod tests {
         let many = database_with_values(&[value.clone(), value.clone(), value]);
         let mut budget = Budget::limited(2500, 10000, 100);
         assert!(read_with_budget(many.path(), &mut budget).is_err());
-        assert!(budget.exhausted);
+        assert!(budget.exhausted());
         assert_eq!(read(many.path()).unwrap().records[&(1, 1)].len(), 3);
 
         let sparse = vec![1, 0xff, 20, 0xff, 15, b'a', 0x81, 0x80, 4, b'@', 0, 0];
         let hostile = database_with_values(&[sparse]);
         assert!(read(hostile.path()).is_err());
+    }
+
+    #[test]
+    fn a_shared_config_is_charged_for_every_output_host() {
+        fn database(hosts: usize) -> Idb {
+            let object = |fields: Vec<(&str, Value)>| {
+                Value::Object(fields.into_iter().map(|(k, v)| (k.into(), v)).collect())
+            };
+            let config = Record {
+                key: Key::Number(1.0),
+                value: object(vec![
+                    ("id", Value::Int(1)),
+                    (
+                        "env_variables",
+                        Value::String(format!("{{\"X\":\"{}\"}}", "x".repeat(512))),
+                    ),
+                ]),
+            };
+            Idb {
+                databases: vec![
+                    Database {
+                        id: 1,
+                        name: "hosts".into(),
+                        stores: [(1, "records".into())].into(),
+                    },
+                    Database {
+                        id: 2,
+                        name: "ssh_configs".into(),
+                        stores: [(1, "records".into())].into(),
+                    },
+                ],
+                records: [
+                    (
+                        (1, 1),
+                        (0..hosts)
+                            .map(|i| Record {
+                                key: Key::Number(i as f64),
+                                value: object(vec![
+                                    ("id", Value::Int(i as i64)),
+                                    ("ssh_config", Value::Int(1)),
+                                ]),
+                            })
+                            .collect(),
+                    ),
+                    ((2, 1), vec![config]),
+                ]
+                .into(),
+                unreadable: BTreeMap::new(),
+            }
+        }
+        let one = database(1);
+        assert!(
+            super::super::model::bundle_with_budget(
+                &one,
+                &[0; 32],
+                &Budget::limited(60_000, 10_000, 100)
+            )
+            .is_ok()
+        );
+        let many = database(10);
+        // A bounded fixture demonstrates amplification without exhausting
+        // process memory: one stored config becomes ten owned settings.
+        let legitimate = super::super::model::bundle(&many, &[0; 32]).unwrap();
+        assert_eq!(legitimate.hosts.len(), 10);
+        assert!(
+            legitimate
+                .hosts
+                .iter()
+                .all(|h| h.settings.env.as_ref().unwrap()["X"].len() == 512)
+        );
+        let budget = Budget::limited(60_000, 10_000, 100);
+        assert!(super::super::model::bundle_with_budget(&many, &[0; 32], &budget).is_err());
+        assert!(budget.exhausted());
     }
 }
