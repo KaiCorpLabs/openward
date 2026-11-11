@@ -1135,26 +1135,18 @@ async fn mosh_session(
     sink.send(Event::Connected(connected));
     // The connection stays while the first packets may still not come:
     // without them, the session goes on over it.
-    let first = tokio::time::timeout(mosh::UDP_WAIT, async {
-        tokio::select! {
-            ended = &mut program.exited => Some(ended.ok().flatten()),
-            // Only when it was seen: the program's end closes it too.
-            Ok(()) = &mut program.seen => None,
-        }
-    })
-    .await;
-    match first {
+    match mosh::client_start(&mut program).await {
         // It ended early (it could not start, or the user left at once).
-        Ok(Some(exit_code)) => return (exit_code, None, true),
+        mosh::ClientStart::Exited(exit_code) => return (exit_code, None, true),
         // Nothing came back over UDP.
-        Ok(None) => {
+        mosh::ClientStart::NoUdp => {
             // Not detach: that would end this very session.
             if let Some(t) = term.upgrade() {
                 t.end_program();
             }
             return over_ssh(MoshFallback::NoUdp).await;
         }
-        Err(_) => {}
+        mosh::ClientStart::KeepMosh => {}
     }
     // Mosh has it now: the connection goes, unless a browser uses it.
     drop(live);

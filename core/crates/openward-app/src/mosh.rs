@@ -19,6 +19,26 @@ pub(crate) const UDP_WAIT: Duration = Duration::from_secs(20);
 /// What `mosh-client` writes when no packet came back.
 pub(crate) const NOTHING_RECEIVED: &str = "Nothing received from server on UDP port";
 
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum ClientStart {
+    Exited(Option<u32>),
+    NoUdp,
+    KeepMosh,
+}
+
+/// Watch the local client's initial period while SSH can still take over.
+pub(crate) async fn client_start(program: &mut crate::terminal::Program) -> ClientStart {
+    tokio::select! {
+        // A queued warning cannot restart SSH after the client has left.
+        // Both channels can be ready; exit must win deterministically.
+        biased;
+        ended = &mut program.exited => ClientStart::Exited(ended.ok().flatten()),
+        // The sender also closes on exit; only an actual warning counts.
+        Ok(()) = &mut program.seen => ClientStart::NoUdp,
+        _ = tokio::time::sleep(UDP_WAIT) => ClientStart::KeepMosh,
+    }
+}
+
 /// A server left with nobody (the laptop never woke up) ends after a week
 /// without word from its client.
 const NETWORK_TIMEOUT_SECS: u32 = 7 * 24 * 3600;
@@ -96,6 +116,59 @@ pub(crate) fn seen(window: &[u8], needle: &str) -> bool {
 mod tests {
     use super::*;
     use crate::events::MoshFallback;
+
+    fn notifications() -> (
+        tokio::sync::oneshot::Sender<()>,
+        tokio::sync::oneshot::Sender<Option<u32>>,
+        crate::terminal::Program,
+    ) {
+        let (warn, seen) = tokio::sync::oneshot::channel();
+        let (end, exited) = tokio::sync::oneshot::channel();
+        (warn, end, crate::terminal::Program { seen, exited })
+    }
+
+    #[tokio::test]
+    async fn an_exited_client_does_not_reopen_ssh_for_a_queued_warning() {
+        // Both notifications can accumulate while the task is scheduled:
+        // the completed process must win regardless of select's RNG.
+        for code in [Some(0), Some(7), None].into_iter().cycle().take(64) {
+            let (warn, end, mut program) = notifications();
+            warn.send(()).unwrap();
+            end.send(code).unwrap();
+            assert_eq!(client_start(&mut program).await, ClientStart::Exited(code));
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_running_client_without_udp_still_falls_back_at_once() {
+        let (warn, _end, mut program) = notifications();
+        let started = tokio::time::Instant::now();
+        warn.send(()).unwrap();
+        assert_eq!(client_start(&mut program).await, ClientStart::NoUdp);
+        assert_eq!(started.elapsed(), Duration::ZERO);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn no_warning_keeps_mosh_after_the_initial_wait() {
+        let (_warn, _end, mut program) = notifications();
+        let started = tokio::time::Instant::now();
+        assert_eq!(client_start(&mut program).await, ClientStart::KeepMosh);
+        assert_eq!(started.elapsed(), UDP_WAIT);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_closed_warning_channel_is_not_a_udp_failure() {
+        let (warn, end, mut program) = notifications();
+        drop(warn);
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            end.send(Some(0)).unwrap();
+        });
+        assert_eq!(
+            client_start(&mut program).await,
+            ClientStart::Exited(Some(0))
+        );
+    }
 
     #[test]
     fn the_server_says_where_to_connect() {
