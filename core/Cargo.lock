@@ -495,6 +495,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "chacha20poly1305"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b89e1c441e926b9c82a8d023f6e1b7ae0adcfaa7d621814e4d60789bac751cb"
+dependencies = [
+ "aead 0.6.1",
+ "chacha20",
+ "cipher 0.5.2",
+ "poly1305 0.9.1",
+ "zeroize",
+]
+
+[[package]]
 name = "chrono"
 version = "0.4.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2000,6 +2013,20 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.21",
  "tokio",
+ "zeroize",
+]
+
+[[package]]
+name = "openward-crypto"
+version = "0.3.4-beta.4"
+dependencies = [
+ "chacha20poly1305",
+ "ed25519-dalek",
+ "getrandom 0.4.3",
+ "proptest",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.21",
  "zeroize",
 ]
 
