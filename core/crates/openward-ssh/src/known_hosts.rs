@@ -10,6 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use hmac::{Hmac, KeyInit, Mac};
 use russh::keys::ssh_key::certificate::CertType;
+use russh::keys::ssh_key::public::{EcdsaPublicKey, KeyData};
 use russh::keys::{Algorithm, HashAlg, PublicKey, PublicKeyOrCertificate};
 use sha1::Sha1;
 
@@ -191,6 +192,30 @@ impl Patterns {
     }
 }
 
+/// Public-key identity, independent of the SEC1 wire encoding. The signed
+/// certificate itself is never rewritten. Security-key applications remain
+/// part of the identity, as they are part of what the key authenticates.
+pub fn same_key(a: &KeyData, b: &KeyData) -> bool {
+    match (a, b) {
+        (
+            KeyData::Ecdsa(EcdsaPublicKey::NistP256(a)),
+            KeyData::Ecdsa(EcdsaPublicKey::NistP256(b)),
+        ) => a.compress() == b.compress(),
+        (
+            KeyData::Ecdsa(EcdsaPublicKey::NistP384(a)),
+            KeyData::Ecdsa(EcdsaPublicKey::NistP384(b)),
+        ) => a.compress() == b.compress(),
+        (
+            KeyData::Ecdsa(EcdsaPublicKey::NistP521(a)),
+            KeyData::Ecdsa(EcdsaPublicKey::NistP521(b)),
+        ) => a.compress() == b.compress(),
+        (KeyData::SkEcdsaSha2NistP256(a), KeyData::SkEcdsaSha2NistP256(b)) => {
+            a.ec_point().compress() == b.ec_point().compress() && a.application() == b.application()
+        }
+        _ => a == b,
+    }
+}
+
 impl KnownHosts {
     pub fn new(unknown: Unknown) -> Self {
         Self {
@@ -245,9 +270,11 @@ impl KnownHosts {
     }
 
     /// `key` is marked `@revoked` for `spec`.
-    fn revoked(&self, spec: &str, key: &russh::keys::ssh_key::public::KeyData) -> bool {
+    fn revoked(&self, spec: &str, key: &KeyData) -> bool {
         self.entries.iter().any(|e| {
-            e.marker == Some(Marker::Revoked) && e.key.key_data() == key && e.patterns.matches(spec)
+            e.marker == Some(Marker::Revoked)
+                && same_key(e.key.key_data(), key)
+                && e.patterns.matches(spec)
         })
     }
 
@@ -266,7 +293,10 @@ impl KnownHosts {
             PublicKeyOrCertificate::Certificate(cert) => self.check_certificate(host, &spec, cert),
             PublicKeyOrCertificate::PublicKey { key, .. } => {
                 let listed = self.listed(host, port);
-                if listed.iter().any(|k| k.key_data() == key.key_data()) {
+                if listed
+                    .iter()
+                    .any(|k| same_key(k.key_data(), key.key_data()))
+                {
                     Verdict::Known
                 } else if listed.iter().any(|k| k.algorithm() == key.algorithm()) {
                     // Same algorithm, different key: the classic warning.
@@ -301,7 +331,17 @@ impl KnownHosts {
         if cas.is_empty() {
             return Verdict::BadCertificate(CertProblem::NoAuthority);
         }
-        let fingerprints: Vec<_> = cas.iter().map(|k| k.fingerprint(HashAlg::Sha256)).collect();
+        let Some(ca) = cas
+            .iter()
+            .find(|k| same_key(k.key_data(), cert.signature_key()))
+        else {
+            return Verdict::BadCertificate(CertProblem::Untrusted);
+        };
+        // validate_at compares fingerprints of the serialized signature key.
+        // Only authorize that representation after checking canonical identity
+        // against a listed CA; signature, validity and principals still hold.
+        let signer = PublicKey::from(cert.signature_key().clone()).fingerprint(HashAlg::Sha256);
+        let fingerprints = [signer];
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map(|d| d.as_secs())
@@ -322,13 +362,8 @@ impl KnownHosts {
         if !principals.is_empty() && !principals.iter().any(|p| p.eq_ignore_ascii_case(host)) {
             return Verdict::BadCertificate(CertProblem::NotForHost);
         }
-        let ca = cas
-            .iter()
-            .find(|k| k.key_data() == cert.signature_key())
-            .map(|k| k.fingerprint(HashAlg::Sha256).to_string())
-            .unwrap_or_default();
         Verdict::Certified {
-            ca,
+            ca: ca.fingerprint(HashAlg::Sha256).to_string(),
             key_id: cert.key_id().to_owned(),
         }
     }
@@ -393,6 +428,254 @@ pub fn lines(text: &str) -> Vec<Line> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn compressed(key: &PublicKey) -> PublicKey {
+        use russh::keys::ssh_key::public::{EcdsaPublicKey, KeyData, SkEcdsaSha2NistP256};
+        let data = match key.key_data() {
+            KeyData::Ecdsa(EcdsaPublicKey::NistP256(p)) => {
+                KeyData::Ecdsa(EcdsaPublicKey::NistP256(p.compress()))
+            }
+            KeyData::Ecdsa(EcdsaPublicKey::NistP384(p)) => {
+                KeyData::Ecdsa(EcdsaPublicKey::NistP384(p.compress()))
+            }
+            KeyData::Ecdsa(EcdsaPublicKey::NistP521(p)) => {
+                KeyData::Ecdsa(EcdsaPublicKey::NistP521(p.compress()))
+            }
+            KeyData::SkEcdsaSha2NistP256(k) => KeyData::SkEcdsaSha2NistP256(
+                SkEcdsaSha2NistP256::new(k.ec_point().compress(), k.application()),
+            ),
+            other => other.clone(),
+        };
+        PublicKey::from(data)
+    }
+
+    #[test]
+    fn equivalent_ecdsa_encodings_cannot_evade_revocation_or_change_a_pin() {
+        use russh::keys::PrivateKey;
+        use russh::keys::ssh_key::EcdsaCurve;
+        for curve in [
+            EcdsaCurve::NistP256,
+            EcdsaCurve::NistP384,
+            EcdsaCurve::NistP521,
+        ] {
+            let private = PrivateKey::random(&mut rand::rng(), Algorithm::Ecdsa { curve }).unwrap();
+            let plain = private.public_key().clone();
+            let compact = compressed(&plain);
+            assert_ne!(
+                plain.key_data(),
+                compact.key_data(),
+                "different wire encodings"
+            );
+            for (listed, offered) in [(&plain, &compact), (&compact, &plain)] {
+                let key = PublicKeyOrCertificate::PublicKey {
+                    key: offered.clone(),
+                    hash_alg: None,
+                };
+                let line = listed.to_openssh().unwrap();
+                let mut revoked = KnownHosts::parse(
+                    &format!(
+                        "host {}\n@revoked * {line}\n",
+                        offered.to_openssh().unwrap()
+                    ),
+                    Unknown::Learn,
+                );
+                assert_eq!(revoked.check("host", 22, &key), Verdict::Revoked);
+                let mut known = KnownHosts::parse(&format!("host {line}\n"), Unknown::Reject);
+                assert_eq!(known.check("host", 22, &key), Verdict::Known);
+            }
+        }
+    }
+
+    #[test]
+    fn security_key_points_are_canonical_but_applications_remain_distinct() {
+        use russh::keys::PrivateKey;
+        use russh::keys::ssh_key::{
+            EcdsaCurve,
+            public::{EcdsaPublicKey, SkEcdsaSha2NistP256},
+        };
+        let private = PrivateKey::random(
+            &mut rand::rng(),
+            Algorithm::Ecdsa {
+                curve: EcdsaCurve::NistP256,
+            },
+        )
+        .unwrap();
+        let EcdsaPublicKey::NistP256(point) = private.public_key().key_data().ecdsa().unwrap()
+        else {
+            unreachable!()
+        };
+        let key = PublicKey::from(SkEcdsaSha2NistP256::new(*point, "ssh:one"));
+        let compact = compressed(&key);
+        let other = PublicKey::from(SkEcdsaSha2NistP256::new(point.compress(), "ssh:two"));
+        let mut known = KnownHosts::parse(
+            &format!(
+                "host {}\n@revoked * {}\n",
+                compact.to_openssh().unwrap(),
+                key.to_openssh().unwrap()
+            ),
+            Unknown::Reject,
+        );
+        let offered = |key| PublicKeyOrCertificate::PublicKey {
+            key,
+            hash_alg: None,
+        };
+        assert_eq!(known.check("host", 22, &offered(compact)), Verdict::Revoked);
+        assert_ne!(known.check("host", 22, &offered(other)), Verdict::Revoked);
+    }
+
+    #[tokio::test]
+    async fn a_compressed_server_key_obeys_the_same_pin_and_revocation_over_ssh() {
+        use crate::client::{self, Hop, Options, Target, UntrustedHost};
+        use russh::keys::{
+            PrivateKey,
+            ssh_key::{EcdsaCurve, private::EcdsaKeypair},
+        };
+        use std::sync::{Arc, Mutex};
+        use std::time::Duration;
+        struct Server;
+        impl russh::server::Handler for Server {
+            type Error = russh::Error;
+        }
+        for curve in [
+            EcdsaCurve::NistP256,
+            EcdsaCurve::NistP384,
+            EcdsaCurve::NistP521,
+        ] {
+            let plain = PrivateKey::random(&mut rand::rng(), Algorithm::Ecdsa { curve }).unwrap();
+            let pair = match plain.key_data().ecdsa().unwrap() {
+                EcdsaKeypair::NistP256 { public, private } => EcdsaKeypair::NistP256 {
+                    public: public.compress(),
+                    private: private.clone(),
+                },
+                EcdsaKeypair::NistP384 { public, private } => EcdsaKeypair::NistP384 {
+                    public: public.compress(),
+                    private: private.clone(),
+                },
+                EcdsaKeypair::NistP521 { public, private } => EcdsaKeypair::NistP521 {
+                    public: public.compress(),
+                    private: private.clone(),
+                },
+            };
+            let compact = PrivateKey::from(pair);
+            assert_ne!(
+                plain.public_key().key_data(),
+                compact.public_key().key_data()
+            );
+            for revoked in [false, true] {
+                let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+                let port = listener.local_addr().unwrap().port();
+                let config = Arc::new(russh::server::Config {
+                    keys: vec![compact.clone()],
+                    ..Default::default()
+                });
+                let server = tokio::spawn(async move {
+                    let (stream, _) = listener.accept().await.unwrap();
+                    if let Ok(session) = russh::server::run_stream(config, stream, Server).await {
+                        let _ = session.await;
+                    }
+                });
+                let key = plain.public_key().to_openssh().unwrap();
+                let text = format!(
+                    "[127.0.0.1]:{port} {key}\n{}",
+                    if revoked {
+                        format!("@revoked * {key}\n")
+                    } else {
+                        String::new()
+                    }
+                );
+                let opts = Options {
+                    user: "test".into(),
+                    known_hosts: Arc::new(Mutex::new(KnownHosts::parse(&text, Unknown::Reject))),
+                    host_certificates: false,
+                    legacy_host_keys: false,
+                    connect_timeout: Some(Duration::from_secs(3)),
+                    keepalive: None,
+                    agent_forward: None,
+                    on_untrusted: None,
+                };
+                let result = client::open(&Target::new("127.0.0.1", port), Hop::Tcp, &opts).await;
+                if revoked {
+                    let error = result.err().expect("a revoked encoding must not connect");
+                    assert!(
+                        matches!(
+                            error.downcast_ref::<UntrustedHost>(),
+                            Some(UntrustedHost(Verdict::Revoked))
+                        ),
+                        "{error:#}"
+                    );
+                } else {
+                    let session = result.unwrap();
+                    assert_eq!(session.info().verdict, Some(Verdict::Known));
+                    session.disconnect().await;
+                }
+                server.abort();
+                let _ = server.await;
+            }
+        }
+    }
+
+    #[test]
+    fn certificates_check_canonical_subjects_and_authorities_without_changing_signed_bytes() {
+        use russh::keys::PrivateKey;
+        use russh::keys::ssh_key::{EcdsaCurve, certificate::Builder};
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let private = || {
+            PrivateKey::random(
+                &mut rand::rng(),
+                Algorithm::Ecdsa {
+                    curve: EcdsaCurve::NistP256,
+                },
+            )
+            .unwrap()
+        };
+        let (ca, subject) = (private(), private());
+        let compact_ca = compressed(ca.public_key());
+        let compact_subject = compressed(subject.public_key());
+        let mut builder = Builder::new(
+            [7; 16],
+            subject.public_key().key_data().clone(),
+            now - 60,
+            now + 3600,
+        )
+        .unwrap();
+        builder.cert_type(CertType::Host).unwrap();
+        builder.valid_principal("host").unwrap();
+        let cert = PublicKeyOrCertificate::Certificate(builder.sign(&ca).unwrap());
+        let authority = format!(
+            "@cert-authority host {}\n",
+            compact_ca.to_openssh().unwrap()
+        );
+        let mut known = KnownHosts::parse(&authority, Unknown::Reject);
+        assert!(matches!(
+            known.check("host", 22, &cert),
+            Verdict::Certified { .. }
+        ));
+        for revoked in [&compact_ca, &compact_subject] {
+            let mut known = KnownHosts::parse(
+                &format!(
+                    "{authority}@revoked host {}\n",
+                    revoked.to_openssh().unwrap()
+                ),
+                Unknown::Learn,
+            );
+            assert_eq!(known.check("host", 22, &cert), Verdict::Revoked);
+        }
+        let stranger = private();
+        let mut known = KnownHosts::parse(
+            &format!(
+                "@cert-authority host {}\n",
+                stranger.public_key().to_openssh().unwrap()
+            ),
+            Unknown::Reject,
+        );
+        assert_eq!(
+            known.check("host", 22, &cert),
+            Verdict::BadCertificate(CertProblem::Untrusted)
+        );
+    }
 
     mod hostile {
         use super::*;

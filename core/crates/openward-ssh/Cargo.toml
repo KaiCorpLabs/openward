@@ -27,6 +27,7 @@ zeroize = "1"
 test-auth = []
 
 [dev-dependencies]
+rand = { version = "0.10", features = ["thread_rng"] }
 tokio = { version = "1", features = ["full", "test-util"] }
 # known_hosts files that are not what they say.
 proptest = { version = "1", default-features = false, features = ["std"] }
