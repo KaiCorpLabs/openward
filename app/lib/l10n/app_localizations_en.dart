@@ -2783,7 +2783,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String logsDeleteAllHelp(String count, String size) {
-    return '$count and $size, saved ones too. It cannot be undone.';
+    return '$count and $size, saved ones and recordings missing from the list too. Open sessions are kept. It cannot be undone.';
   }
 
   @override
