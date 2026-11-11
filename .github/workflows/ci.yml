@@ -347,6 +347,27 @@ jobs:
           flutter pub get
           flutter analyze
           flutter test test/
+      - name: Locked Cargokit bootstrap regressions
+        run: |
+          dart app/rust_builder/cargokit/bootstrap_test.dart
+          dart spikes/s1-terminal/render_harness/rust_builder/cargokit/bootstrap_test.dart
+      - name: Real Cargokit runner (Unix)
+        if: runner.os != 'Windows'
+        env:
+          CARGOKIT_TOOL_TEMP_DIR: ${{ runner.temp }}/Cargokit reviewed runner
+        run: |
+          app/rust_builder/cargokit/run_build_tool.sh --help
+          PUB_HOSTED_URL=https://127.0.0.1:9 app/rust_builder/cargokit/run_build_tool.sh --help
+      - name: Real Cargokit runner (Windows cmd)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          set "CARGOKIT_TOOL_TEMP_DIR=%RUNNER_TEMP%\Cargokit reviewed runner"
+          call app\rust_builder\cargokit\run_build_tool.cmd --help
+          if errorlevel 1 exit /b %ERRORLEVEL%
+          set "PUB_HOSTED_URL=https://127.0.0.1:9"
+          call app\rust_builder\cargokit\run_build_tool.cmd --help
+          if errorlevel 1 exit /b %ERRORLEVEL%
       # The SSH cases of the window tests run against the S2 servers too.
       - name: Start SSH test servers
         if: runner.os == 'Linux'
