@@ -147,9 +147,7 @@ fn chmod_entry(
         // available for traversal. Restrictive final modes apply bottom up.
         let temporary = had | (mode & 0o700);
         if temporary != had {
-            parent
-                .set_permissions(name, Permissions::from_mode(temporary))
-                .map_err(err(display))?;
+            set_named_mode(parent, name, temporary).map_err(err(display))?;
         }
         let dir = parent.open_dir_nofollow(name).map_err(err(display))?;
         let opened = dir.dir_metadata().map_err(err(display))?;
@@ -192,9 +190,7 @@ fn chmod_entry(
         }
         Ok(changed)
     } else {
-        parent
-            .set_permissions(name, Permissions::from_mode(mode))
-            .map_err(err(display))?;
+        set_named_mode(parent, name, mode).map_err(err(display))?;
         let after = parent.symlink_metadata(name).map_err(err(display))?;
         if (after.dev(), after.ino()) != (meta.dev(), meta.ino()) || after.is_symlink() {
             return Err(Error::Changed(display.display().to_string()));
@@ -206,6 +202,21 @@ fn chmod_entry(
             )));
         }
         Ok(1)
+    }
+}
+
+#[cfg(unix)]
+fn set_named_mode(parent: &cap_std::fs::Dir, name: &Path, mode: u32) -> std::io::Result<()> {
+    use cap_std::fs::{Permissions, PermissionsExt};
+    // rustix's Linux chmodat rejects SYMLINK_NOFOLLOW. Its confined
+    // setter uses an O_PATH descriptor instead. On macOS the no-follow
+    // setter also permits chmod of owned objects with no read/write access.
+    #[cfg(target_os = "linux")]
+    return parent.set_permissions(name, Permissions::from_mode(mode));
+    #[cfg(not(target_os = "linux"))]
+    {
+        use cap_fs_ext::DirExt;
+        parent.set_symlink_permissions(name, Permissions::from_mode(mode))
     }
 }
 
