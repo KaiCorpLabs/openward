@@ -7,7 +7,7 @@ comprometidas.
 | Área | Estado y evidencia |
 |---|---|
 | Integración | Base del balance: `main 2118736`, tras las PR #26–#29. Cada fusión posterior exige revisión exacta probada y actualización local por avance rápido. |
-| CI de Mosh | [#26](https://github.com/KaiCorpLabs/openward/pull/26) fusionada: 19 trabajos correctos y árbol integrado igual al probado. Corrige la selección entre salida del cliente y aviso UDP pendiente. |
+| CI de Mosh | [#26](https://github.com/KaiCorpLabs/openward/pull/26) fusionada con 19 trabajos correctos. La CI posterior encontró un aviso transitorio durante conexiones válidas; [#44](https://github.com/KaiCorpLabs/openward/pull/44) lo reproduce por PTY y cambia el fallback al diagnóstico final de fallo de handshake. Once casos focalizados y las conexiones UDP/SSH reales forman la puerta. |
 | Beta | [#27](https://github.com/KaiCorpLabs/openward/pull/27) fusionada con 19 trabajos correctos: `0.3.4-beta.4+30` y notas preparadas. Etiqueta/borrador/artefactos finales pendientes de cerrar S2. |
 | Distribución | La última etiqueta anterior es `v0.3.4-beta.3`; sus binarios no incluyen por sí solos las correcciones posteriores. No hay release pública; no se ha actualizado el cask en este trabajo. |
 | Seguridad | S0/S1 integrados. Cuatro correcciones de S2, con sus puertas de CI y fusión, en [#28](https://github.com/KaiCorpLabs/openward/pull/28), [#29](https://github.com/KaiCorpLabs/openward/pull/29), [#30](https://github.com/KaiCorpLabs/openward/pull/30) y [#31](https://github.com/KaiCorpLabs/openward/pull/31). [Seguimiento y límites](seguridad-0.3.3.md#seguimiento-de-s2). |
