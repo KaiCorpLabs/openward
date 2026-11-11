@@ -177,14 +177,14 @@ dependencies = [
 
 [[package]]
 name = "openward-ghostty"
-version = "0.3.4-beta.3"
+version = "0.3.4-beta.4"
 dependencies = [
  "openward-term",
 ]
 
 [[package]]
 name = "openward-term"
-version = "0.3.4-beta.3"
+version = "0.3.4-beta.4"
 dependencies = [
  "alacritty_terminal",
 ]

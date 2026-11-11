@@ -1971,7 +1971,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "openward-app"
-version = "0.3.4-beta.3"
+version = "0.3.4-beta.4"
 dependencies = [
  "anyhow",
  "data-encoding",
@@ -2005,7 +2005,7 @@ dependencies = [
 
 [[package]]
 name = "openward-ffi"
-version = "0.3.4-beta.3"
+version = "0.3.4-beta.4"
 dependencies = [
  "anyhow",
  "flutter_rust_bridge",
@@ -2017,7 +2017,7 @@ dependencies = [
 
 [[package]]
 name = "openward-fido"
-version = "0.3.4-beta.3"
+version = "0.3.4-beta.4"
 dependencies = [
  "anyhow",
  "ctap-hid-fido2",
@@ -2029,14 +2029,14 @@ dependencies = [
 
 [[package]]
 name = "openward-ghostty"
-version = "0.3.4-beta.3"
+version = "0.3.4-beta.4"
 dependencies = [
  "openward-term",
 ]
 
 [[package]]
 name = "openward-import"
-version = "0.3.4-beta.3"
+version = "0.3.4-beta.4"
 dependencies = [
  "base64 0.23.1",
  "crypto_secretbox",
@@ -2056,7 +2056,7 @@ dependencies = [
 
 [[package]]
 name = "openward-proto"
-version = "0.3.4-beta.3"
+version = "0.3.4-beta.4"
 dependencies = [
  "ciborium",
  "serde",
@@ -2066,7 +2066,7 @@ dependencies = [
 
 [[package]]
 name = "openward-pty"
-version = "0.3.4-beta.3"
+version = "0.3.4-beta.4"
 dependencies = [
  "anyhow",
  "nix 0.31.3",
@@ -2075,7 +2075,7 @@ dependencies = [
 
 [[package]]
 name = "openward-serial"
-version = "0.3.4-beta.3"
+version = "0.3.4-beta.4"
 dependencies = [
  "openward-proto",
  "serialport",
@@ -2084,7 +2084,7 @@ dependencies = [
 
 [[package]]
 name = "openward-sftp"
-version = "0.3.4-beta.3"
+version = "0.3.4-beta.4"
 dependencies = [
  "cap-fs-ext",
  "cap-std",
@@ -2098,7 +2098,7 @@ dependencies = [
 
 [[package]]
 name = "openward-ssh"
-version = "0.3.4-beta.3"
+version = "0.3.4-beta.4"
 dependencies = [
  "anyhow",
  "data-encoding",
@@ -2114,18 +2114,18 @@ dependencies = [
 
 [[package]]
 name = "openward-telnet"
-version = "0.3.4-beta.3"
+version = "0.3.4-beta.4"
 
 [[package]]
 name = "openward-term"
-version = "0.3.4-beta.3"
+version = "0.3.4-beta.4"
 dependencies = [
  "alacritty_terminal",
 ]
 
 [[package]]
 name = "openward-vault"
-version = "0.3.4-beta.3"
+version = "0.3.4-beta.4"
 dependencies = [
  "ciborium",
  "openward-proto",

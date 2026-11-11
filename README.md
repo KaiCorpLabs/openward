@@ -22,8 +22,8 @@
 | Fase | Contenido | Estado |
 |---|---|---|
 | 0 · Spikes | Motor de terminal, SSH en las 5 plataformas, firma con hardware, formato de sync | Escritorio hecho ([S1 terminal](docs/spikes/S1-terminal.md), S2 SSH); móvil y sync, con la fase 2 |
-| 1 · MVP local | Cliente completo en escritorio, sin cuenta | **En curso**: [alfa](docs/plan/alfa-escritorio.md), [v0.2](docs/plan/v0.2.md) y [v0.3](docs/plan/v0.3.md) hechas; lo que falta, en la etapa 1 del [camino a la Community](docs/plan/community.md) |
-| 2 · Vault y sync | Cifrado, recuperación, sync con almacenamiento propio, servidor autoalojable; Android e iOS, al final | Planificada en el [camino a la Community](docs/plan/community.md) (etapas 2–5) |
+| 1 · MVP local | Cliente completo en escritorio, sin cuenta | Funcionalidad de la [etapa 1](docs/plan/community.md#etapa-1--lo-básico-completo) implementada; quedan las pruebas manuales de hardware y uso prolongado |
+| 2 · Vault y sync | Cifrado, recuperación, sync con almacenamiento propio, servidor autoalojable; Android e iOS, después del lanzamiento | D0–D2 de la [v0.4](docs/plan/v0.4.md) completados; D3–D8 y las etapas de sync/servidor pendientes |
 | 3 · Equipos e IA | Vaults compartidos, OIDC, servidor MCP, IA con tu propia clave o modelo local | — |
 | 4 · Enterprise | SAML, SCIM, auditoría, grabación de sesiones, integraciones | — |
 
