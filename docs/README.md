@@ -2,6 +2,7 @@
 
 | Documento | Contenido |
 |---|---|
+| [plan/estado.md](plan/estado.md) | Estado actual, PR, beta y backlog con hitos/issues y puertas comprobables |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Arquitectura, stack, fases y riesgos |
 | [THREAT_MODEL.md](THREAT_MODEL.md) | Modelo de amenazas: qué se protege, de quién, lo que hay en el disco, las garantías de la v0.4 y lo que queda fuera (D0; sus decisiones, aceptadas) |
 | [adr/](adr/) | Decisiones de arquitectura (ADR-001 a ADR-009) |
@@ -21,7 +22,7 @@
 | [plan/temas.md](plan/temas.md) | Las siete familias de temas (Monitor, Berenjena, Búnker, Marino, Catppuccin, Dracula y Tokyo Night), hechas en 0.3.1-beta.5 |
 | [plan/auditoria-0.3.md](plan/auditoria-0.3.md) | Auditoría histórica de la 0.3.1: 128 entradas, seguimiento R0–R6 y mediciones; consultar el detalle de cada hito, no sus totales iniciales como deuda actual |
 | [plan/registros.md](plan/registros.md) | Registros de sesión: lo que se vio en cada sesión, para buscarlo, volver a verlo y exportarlo (maquetas aprobadas, hitos L1–L4) |
-| [plan/seguridad-0.3.3.md](plan/seguridad-0.3.3.md) | 63 fichas históricas y seguimiento posterior: S0 integrado, doce S1 confirmados corregidos y CI enlazada; S2/S3 y casos pendientes de evidencia conservan sus propios estados |
+| [plan/seguridad-0.3.3.md](plan/seguridad-0.3.3.md) | 63 fichas históricas y seguimientos S0/S1/S2 con pruebas, PR, CI y límites; los casos pendientes conservan su evidencia solicitada |
 | [plan/community.md](plan/community.md) | Camino a la Community: etapa 1 implementada con pruebas manuales pendientes; vault cifrado, sync con tu almacenamiento, servidor y producción por completar |
 | [plan/v0.4.md](plan/v0.4.md) | v0.4: el vault cifrado (contraseña maestra, kit de recuperación, desbloqueo con biometría, secretos y copia de seguridad), etapa 2 del camino a la Community (en marcha) |
 | [plan/lanzamiento.md](plan/lanzamiento.md) | Lanzamiento: lo que queda para salir con la Community, por prioridad (los planes de la v0.4 a la v0.7, distribución, web, legal y la prueba final) (propuesta) |
