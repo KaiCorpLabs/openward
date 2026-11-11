@@ -229,6 +229,44 @@ impl LocalRoot {
                 self.display(rel).display()
             )));
         }
+        #[cfg(unix)]
+        {
+            use cap_std::fs::PermissionsExt as _;
+            use std::os::unix::fs::PermissionsExt as _;
+            let mut file = file;
+            if let Some(mode) = mode {
+                let allowed = 0o600 | (mode & 0o066);
+                if meta.permissions().mode() & !allowed & 0o077 != 0 {
+                    // chmod cannot revoke an old reader's open descriptor.
+                    // Restart in a private inode before adding any new bytes.
+                    let dir = self.directory()?;
+                    dir.remove_file(rel).map_err(|e| self.error(rel, e))?;
+                    options.create_new(true);
+                    file = dir
+                        .open_with(rel, &options)
+                        .map_err(|e| self.error(rel, e))?;
+                    let fresh = file.metadata().map_err(|e| self.error(rel, e))?;
+                    if !fresh.is_file() || fresh.nlink() != 1 {
+                        return Err(Error::Other(format!(
+                            "{}: unsafe transfer part",
+                            self.display(rel).display()
+                        )));
+                    }
+                }
+            }
+            let file = file.into_std();
+            let meta = file.metadata().map_err(|e| self.error(rel, e))?;
+            if let Some(mode) = mode {
+                // Retain the effective creation mask; parts are not executable.
+                let limited = meta.permissions().mode() & (0o600 | (mode & 0o066));
+                if meta.permissions().mode() & 0o7777 != limited {
+                    file.set_permissions(std::fs::Permissions::from_mode(limited))
+                        .map_err(|e| self.error(rel, e))?;
+                }
+            }
+            Ok((file, meta.len()))
+        }
+        #[cfg(not(unix))]
         Ok((file.into_std(), meta.len()))
     }
 
@@ -286,12 +324,46 @@ mod tests {
     use super::*;
     use std::io::{Read, Seek, SeekFrom, Write};
 
+    #[cfg(unix)]
+    #[test]
+    fn a_public_part_is_replaced_before_any_private_bytes_are_written() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("private.part");
+        std::fs::write(&path, b"old public bytes").unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
+        let mut old_reader = std::fs::File::open(&path).unwrap();
+        let old_inode = old_reader.metadata().unwrap().ino();
+        let root = LocalRoot::destination(dir.path()).unwrap();
+        let (mut file, had) = root
+            .open_part(Path::new("private.part"), Some(0o600))
+            .unwrap();
+        assert_eq!(file.metadata().unwrap().permissions().mode() & 0o777, 0o600);
+        assert_eq!(had, 0, "unsafe historical parts must restart");
+        assert_ne!(file.metadata().unwrap().ino(), old_inode);
+        file.write_all(b"new private bytes").unwrap();
+        file.flush().unwrap();
+        let mut exposed = Vec::new();
+        old_reader.read_to_end(&mut exposed).unwrap();
+        assert_eq!(exposed, b"old public bytes");
+        assert_eq!(std::fs::read(&path).unwrap(), b"new private bytes");
+    }
+
     #[test]
     fn regular_parts_resume_and_install_without_changing_their_names() {
         let dir = tempfile::tempdir().unwrap();
         let root = LocalRoot::destination(dir.path()).unwrap();
         let part = Path::new("file.ow-example.part");
         std::fs::write(dir.path().join(part), b"first").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(
+                dir.path().join(part),
+                std::fs::Permissions::from_mode(0o600),
+            )
+            .unwrap();
+        }
         let (mut file, had) = root.open_part(part, Some(0o600)).unwrap();
         assert_eq!(had, 5);
         file.seek(SeekFrom::Start(had)).unwrap();
