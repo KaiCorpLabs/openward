@@ -5,6 +5,7 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 
+import '../../core/address.dart' show defaultSerialLine;
 import '../../l10n/l10n.dart';
 import '../../src/rust/api/vault.dart';
 
@@ -35,6 +36,8 @@ class SettingsForm extends ChangeNotifier {
         text: original.proxyPort == 0 ? '' : '${original.proxyPort}',
       ),
       proxyUser = TextEditingController(text: original.proxyUser),
+      moshServer = TextEditingController(text: original.moshServer ?? ''),
+      mosh = original.mosh,
       proxy = original.proxy,
       agent = original.agent,
       route = original.route,
@@ -51,6 +54,12 @@ class SettingsForm extends ChangeNotifier {
       envShort = original.environmentShort,
       envColor = original.environmentColor,
       readOsRelease = original.readOsRelease,
+      protocol = original.protocol,
+      serial = original.serial,
+      encoding = original.encoding,
+      backspace = original.backspace,
+      terminalScheme = original.terminalScheme,
+      startupSnippet = original.startupSnippet,
       jumps = [...original.jumps],
       setHere = {
         if (original.identity != null) 'identity',
@@ -68,11 +77,37 @@ class SettingsForm extends ChangeNotifier {
         if (original.connectTimeoutSecs != null) 'connect_timeout_secs',
         if (original.environment != null) 'environment',
         if (original.readOsRelease != null) 'read_os_release',
+        if (original.protocol != null) 'protocol',
+        if (original.serial != null) 'serial',
+        if (original.mosh != null) 'mosh',
+        if (original.moshServer != null) 'mosh_server',
+        if (original.encoding != null) 'encoding',
+        if (original.backspace != null) 'backspace',
+        if (original.terminalScheme != null) 'terminal_scheme',
+        if (original.startupSnippet != null) 'startup_snippet',
       };
 
   final SettingsSpec original;
   final TextEditingController user, port, keys, socket, command;
   final TextEditingController proxyHost, proxyPort, proxyUser;
+
+  /// Where mosh-server is on the server, when not on its PATH.
+  final TextEditingController moshServer;
+
+  /// The shell over Mosh.
+  bool? mosh;
+
+  /// The host's character set (`utf-8`, `iso-8859-1`…).
+  String? encoding;
+
+  /// What Backspace sends.
+  BackspaceKind? backspace;
+
+  /// The terminal's scheme, by id; empty for the app's own colors.
+  String? terminalScheme;
+
+  /// The snippet typed in each new shell, by id; empty for none.
+  String? startupSnippet;
   AgentKind? agent;
   RouteKind? route;
   ProxyKind? proxy;
@@ -91,6 +126,12 @@ class SettingsForm extends ChangeNotifier {
   EnvironmentKind? envKind;
   String envName, envShort, envColor;
   bool? readOsRelease;
+
+  /// SSH, Telnet or a serial port.
+  ProtocolKind? protocol;
+
+  /// A serial port's settings.
+  SerialLineSpec? serial;
 
   /// The jump chain, first hop first.
   final List<JumpSpec> jumps;
@@ -129,6 +170,7 @@ class SettingsForm extends ChangeNotifier {
       proxyHost,
       proxyPort,
       proxyUser,
+      moshServer,
     ]) {
       c.dispose();
     }
@@ -194,9 +236,31 @@ class SettingsForm extends ChangeNotifier {
         envColor = inherited.environmentColor;
       case 'read_os_release':
         readOsRelease = inherited.readOsRelease ?? false;
+      case 'protocol':
+        protocol = inherited.protocol ?? ProtocolKind.ssh;
+      case 'serial':
+        serial = inherited.serial ?? defaultSerialLine;
+      case 'mosh':
+        mosh = inherited.mosh ?? false;
+      case 'mosh_server':
+        moshServer.text = inherited.moshServer ?? 'mosh-server';
+      case 'encoding':
+        encoding = inherited.encoding ?? 'utf-8';
+      case 'backspace':
+        backspace = inherited.backspace ?? BackspaceKind.delete;
+      case 'terminal_scheme':
+        terminalScheme = inherited.terminalScheme ?? '';
+      case 'startup_snippet':
+        startupSnippet = inherited.startupSnippet ?? '';
     }
     notifyListeners();
   }
+
+  /// The protocol in force with what the form says now: its own, or the
+  /// one it inherits.
+  ProtocolKind protocolWith(SettingsSpec inherited) =>
+      (setHere.contains('protocol') ? protocol : inherited.protocol) ??
+      ProtocolKind.ssh;
 
   /// Goes back to inheriting `field`.
   void drop(String field) {
@@ -240,6 +304,22 @@ class SettingsForm extends ChangeNotifier {
         envName = envShort = envColor = '';
       case 'read_os_release':
         readOsRelease = null;
+      case 'protocol':
+        protocol = null;
+      case 'serial':
+        serial = null;
+      case 'mosh':
+        mosh = null;
+      case 'mosh_server':
+        moshServer.clear();
+      case 'encoding':
+        encoding = null;
+      case 'backspace':
+        backspace = null;
+      case 'terminal_scheme':
+        terminalScheme = null;
+      case 'startup_snippet':
+        startupSnippet = null;
     }
     notifyListeners();
   }
@@ -255,6 +335,12 @@ class SettingsForm extends ChangeNotifier {
     proxyHost.text,
     proxyPort.text,
     proxyUser.text,
+    moshServer.text,
+    mosh,
+    encoding,
+    backspace,
+    terminalScheme,
+    startupSnippet,
     jumpAddress.text,
     agent,
     route,
@@ -272,6 +358,11 @@ class SettingsForm extends ChangeNotifier {
     envShort,
     envColor,
     readOsRelease,
+    protocol,
+    serial == null
+        ? null
+        : '${serial!.baud}|${serial!.dataBits}|${serial!.parity}|'
+              '${serial!.stopBits}|${serial!.flow}',
     for (final j in jumps) '${j.hostId}|${j.address}|${j.user}|${j.port}',
   ].join('\u0000');
 
@@ -330,6 +421,9 @@ class SettingsForm extends ChangeNotifier {
         return (field: 'proxy', text: l.missingProxy);
       }
     }
+    if (setHere.contains('serial') && (serial?.baud ?? 0) < 1) {
+      return (field: 'serial', text: l.serialBaudMissing);
+    }
     return null;
   }
 
@@ -382,6 +476,18 @@ class SettingsForm extends ChangeNotifier {
       environmentShort: envMark?.short ?? '',
       environmentColor: envMark?.color ?? '',
       readOsRelease: setHere.contains('read_os_release') ? readOsRelease : null,
+      protocol: setHere.contains('protocol') ? protocol : null,
+      serial: setHere.contains('serial') ? serial : null,
+      mosh: setHere.contains('mosh') ? mosh : null,
+      moshServer: text('mosh_server', moshServer),
+      encoding: setHere.contains('encoding') ? encoding : null,
+      backspace: setHere.contains('backspace') ? backspace : null,
+      terminalScheme: setHere.contains('terminal_scheme')
+          ? terminalScheme
+          : null,
+      startupSnippet: setHere.contains('startup_snippet')
+          ? startupSnippet
+          : null,
     );
   }
 }

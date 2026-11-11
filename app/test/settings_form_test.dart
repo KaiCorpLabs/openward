@@ -48,6 +48,82 @@ void main() {
     expect(f.envMark, isNull);
   });
 
+  /// The protocol and the port's settings are fields like the rest: an
+  /// imported Telnet host edited here stays Telnet.
+  test('the protocol and a serial line, kept and inherited', () {
+    final telnet = SettingsForm(
+      const SettingsSpec(protocol: ProtocolKind.telnet),
+    );
+    addTearDown(telnet.dispose);
+    expect(telnet.toSpec().protocol, ProtocolKind.telnet);
+    expect(telnet.toSpec().serial, isNull);
+
+    final f = SettingsForm(const SettingsSpec());
+    addTearDown(f.dispose);
+    const fromGroup = SettingsSpec(
+      protocol: ProtocolKind.serial,
+      serial: SerialLineSpec(
+        baud: 115200,
+        dataBits: 8,
+        parity: ParityKind.none,
+        stopBits: 1,
+        flow: FlowKind.none,
+      ),
+    );
+    expect(f.protocolWith(fromGroup), ProtocolKind.serial);
+    expect(f.protocolWith(const SettingsSpec()), ProtocolKind.ssh);
+    f.take('serial', fromGroup);
+    expect(f.toSpec().serial?.baud, 115200);
+    expect(f.toSpec().protocol, isNull, reason: 'still inherited');
+    f.take('protocol', const SettingsSpec());
+    expect(f.toSpec().protocol, ProtocolKind.ssh);
+    expect(f.protocolWith(fromGroup), ProtocolKind.ssh, reason: 'its own');
+    f.drop('serial');
+    expect(f.toSpec().serial, isNull);
+  });
+
+  test('Mosh, and where its server is, set here or inherited', () {
+    final f = SettingsForm(const SettingsSpec(mosh: true));
+    addTearDown(f.dispose);
+    expect(f.setHere, contains('mosh'));
+    expect(f.toSpec().mosh, isTrue);
+    expect(f.toSpec().moshServer, isNull);
+    f.take('mosh_server', const SettingsSpec());
+    expect(f.moshServer.text, 'mosh-server');
+    f.moshServer.text = '/opt/homebrew/bin/mosh-server';
+    expect(f.toSpec().moshServer, '/opt/homebrew/bin/mosh-server');
+    f
+      ..drop('mosh')
+      ..drop('mosh_server');
+    expect(f.toSpec().mosh, isNull);
+    expect(f.toSpec().moshServer, isNull);
+  });
+
+  test('the character set, Backspace and the colors, here or inherited', () {
+    final f = SettingsForm(const SettingsSpec(encoding: 'cp437'));
+    addTearDown(f.dispose);
+    expect(f.setHere, contains('encoding'));
+    expect(f.toSpec().encoding, 'cp437');
+    expect(f.toSpec().backspace, isNull);
+    f
+      ..take('backspace', const SettingsSpec())
+      ..take('terminal_scheme', const SettingsSpec(terminalScheme: 'nord'));
+    expect(f.toSpec().backspace, BackspaceKind.delete);
+    expect(f.toSpec().terminalScheme, 'nord');
+    f.update(() => f.backspace = BackspaceKind.controlH);
+    // The app's own colors over a group's scheme: empty, but set here.
+    f.update(() => f.terminalScheme = '');
+    expect(f.toSpec().backspace, BackspaceKind.controlH);
+    expect(f.toSpec().terminalScheme, '');
+    f
+      ..drop('encoding')
+      ..drop('backspace')
+      ..drop('terminal_scheme');
+    expect(f.toSpec().encoding, isNull);
+    expect(f.toSpec().backspace, isNull);
+    expect(f.toSpec().terminalScheme, isNull);
+  });
+
   test('what stops it from saving, on its field', () {
     final f = SettingsForm(const SettingsSpec());
     addTearDown(f.dispose);

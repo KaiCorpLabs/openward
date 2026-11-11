@@ -9,8 +9,9 @@ use std::str::FromStr;
 use flutter_rust_bridge::frb;
 use openward_app::vault::Origin;
 use openward_app::vault::proto::{
-    Agent, Environment, EnvironmentMark, HostKeyPolicy, ItemId, Jump, Proxy, ProxyServer, Route,
-    Settings, System, SystemSource, UseIdentity,
+    Agent, Backspace, Environment, EnvironmentMark, FlowControl, HostKeyPolicy, ItemId, Jump,
+    Parity, Protocol, Proxy, ProxyServer, Route, SerialLine, Settings, System, SystemSource,
+    UseIdentity,
 };
 
 /// What went wrong with a change to the vault, for the app to say it in
@@ -141,6 +142,127 @@ pub enum ProxyKind {
     Off,
     Http,
     Socks5,
+}
+
+/// How a host is reached.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ProtocolKind {
+    Ssh,
+    /// Unencrypted.
+    Telnet,
+    /// A serial port of this computer: the host's address is the port.
+    Serial,
+}
+
+/// What the Backspace key sends.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BackspaceKind {
+    /// `^?`, as systems of today expect.
+    Delete,
+    /// `^H`, for old systems and some network gear.
+    ControlH,
+}
+
+impl BackspaceKind {
+    pub(crate) fn of(b: Backspace) -> Self {
+        match b {
+            Backspace::Delete => Self::Delete,
+            Backspace::ControlH => Self::ControlH,
+        }
+    }
+
+    pub(crate) fn proto(self) -> Backspace {
+        match self {
+            Self::Delete => Backspace::Delete,
+            Self::ControlH => Backspace::ControlH,
+        }
+    }
+}
+
+impl ProtocolKind {
+    pub(crate) fn of(p: Protocol) -> Self {
+        match p {
+            Protocol::Ssh => Self::Ssh,
+            Protocol::Telnet => Self::Telnet,
+            Protocol::Serial => Self::Serial,
+        }
+    }
+
+    pub(crate) fn proto(self) -> Protocol {
+        match self {
+            Self::Ssh => Protocol::Ssh,
+            Self::Telnet => Protocol::Telnet,
+            Self::Serial => Protocol::Serial,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ParityKind {
+    None,
+    Odd,
+    Even,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FlowKind {
+    None,
+    /// XON/XOFF.
+    Software,
+    /// RTS/CTS.
+    Hardware,
+}
+
+/// A serial port's settings.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SerialLineSpec {
+    pub baud: u32,
+    /// 5 to 8.
+    pub data_bits: u8,
+    pub parity: ParityKind,
+    /// 1 or 2.
+    pub stop_bits: u8,
+    pub flow: FlowKind,
+}
+
+impl SerialLineSpec {
+    pub(crate) fn of(l: &SerialLine) -> Self {
+        Self {
+            baud: l.baud,
+            data_bits: l.data_bits,
+            parity: match l.parity {
+                Parity::None => ParityKind::None,
+                Parity::Odd => ParityKind::Odd,
+                Parity::Even => ParityKind::Even,
+            },
+            stop_bits: l.stop_bits,
+            flow: match l.flow {
+                FlowControl::None => FlowKind::None,
+                FlowControl::Software => FlowKind::Software,
+                FlowControl::Hardware => FlowKind::Hardware,
+            },
+        }
+    }
+
+    /// As the vault keeps it, with what a newer version wrote in `old`.
+    pub(crate) fn line(&self, old: Option<&SerialLine>) -> SerialLine {
+        SerialLine {
+            baud: self.baud,
+            data_bits: self.data_bits,
+            parity: match self.parity {
+                ParityKind::None => Parity::None,
+                ParityKind::Odd => Parity::Odd,
+                ParityKind::Even => Parity::Even,
+            },
+            stop_bits: self.stop_bits,
+            flow: match self.flow {
+                FlowKind::None => FlowControl::None,
+                FlowKind::Software => FlowControl::Software,
+                FlowKind::Hardware => FlowControl::Hardware,
+            },
+            extra: old.map(|o| o.extra.clone()).unwrap_or_default(),
+        }
+    }
 }
 
 /// How a group or host is marked; `None` overrides a mark inherited.
@@ -304,6 +426,31 @@ pub struct SettingsSpec {
     /// Record what comes out on the screen in the session log.
     #[frb(default = "null")]
     pub session_log: Option<bool>,
+    /// SSH, Telnet or a serial port.
+    #[frb(default = "null")]
+    pub protocol: Option<ProtocolKind>,
+    /// With a serial port.
+    #[frb(default = "null")]
+    pub serial: Option<SerialLineSpec>,
+    /// The shell over Mosh (SSH only).
+    #[frb(default = "null")]
+    pub mosh: Option<bool>,
+    /// What starts `mosh-server`, when it is not on the server's `PATH`.
+    #[frb(default = "null")]
+    pub mosh_server: Option<String>,
+    /// The host's character set, as `encoding_rs` names it (`utf-8`,
+    /// `iso-8859-1`, `cp437`…).
+    #[frb(default = "null")]
+    pub encoding: Option<String>,
+    #[frb(default = "null")]
+    pub backspace: Option<BackspaceKind>,
+    /// The terminal's colors: a scheme's name.
+    #[frb(default = "null")]
+    pub terminal_scheme: Option<String>,
+    /// A snippet's id, typed in each new shell; empty here for none, over
+    /// a group's.
+    #[frb(default = "null")]
+    pub startup_snippet: Option<String>,
 }
 
 /// The `identity` setting of a spec.
@@ -377,6 +524,14 @@ impl SettingsSpec {
             environment_color: mark.map(|m| m.color.clone()).unwrap_or_default(),
             read_os_release: s.read_os_release,
             session_log: s.session_log,
+            protocol: s.protocol.map(ProtocolKind::of),
+            serial: s.serial.as_ref().map(SerialLineSpec::of),
+            mosh: s.mosh,
+            mosh_server: s.mosh_server.clone(),
+            encoding: s.encoding.clone(),
+            backspace: s.backspace.map(BackspaceKind::of),
+            terminal_scheme: s.terminal_scheme.clone(),
+            startup_snippet: s.startup_snippet.clone(),
             legacy_host_keys: s.legacy_host_keys,
             proxy,
             proxy_host: server.map(|s| s.host.clone()).unwrap_or_default(),
@@ -527,6 +682,20 @@ impl SettingsSpec {
         s.read_os_release = self.read_os_release;
         s.session_log = self.session_log;
         s.legacy_host_keys = self.legacy_host_keys;
+        s.protocol = self.protocol.map(ProtocolKind::proto);
+        s.serial = self.serial.map(|l| l.line(s.serial.as_ref()));
+        s.mosh = self.mosh;
+        s.mosh_server = self.mosh_server.clone().filter(|m| !m.trim().is_empty());
+        s.encoding = self
+            .encoding
+            .as_deref()
+            .map(str::trim)
+            .filter(|e| !e.is_empty())
+            .map(str::to_lowercase);
+        s.backspace = self.backspace.map(BackspaceKind::proto);
+        // Empty here is the app's own colors, over a group's scheme.
+        s.terminal_scheme = self.terminal_scheme.as_deref().map(|t| t.trim().to_owned());
+        s.startup_snippet = self.startup_snippet.as_deref().map(|t| t.trim().to_owned());
         Ok(())
     }
 }
@@ -549,6 +718,15 @@ pub struct HostView {
     pub system: Option<SystemView>,
     /// Its place among the favorites (lower first), if it is one.
     pub favorite: Option<u32>,
+    /// How it is reached, its own or its groups'.
+    pub protocol: ProtocolKind,
+    /// With a serial port: its settings.
+    pub serial: Option<SerialLineSpec>,
+    /// Its terminal's scheme, its own or its groups'; empty for the app's.
+    pub terminal_scheme: String,
+    /// The snippet typed in each new shell, its own or its groups'; empty
+    /// for none.
+    pub startup_snippet: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -726,6 +904,22 @@ impl SettingsSpec {
                 theirs.read_os_release,
             )?,
             session_log: pick(&base.session_log, mine.session_log, theirs.session_log)?,
+            protocol: pick(&base.protocol, mine.protocol, theirs.protocol)?,
+            serial: pick(&base.serial, mine.serial, theirs.serial)?,
+            mosh: pick(&base.mosh, mine.mosh, theirs.mosh)?,
+            mosh_server: pick(&base.mosh_server, mine.mosh_server, theirs.mosh_server)?,
+            encoding: pick(&base.encoding, mine.encoding, theirs.encoding)?,
+            backspace: pick(&base.backspace, mine.backspace, theirs.backspace)?,
+            terminal_scheme: pick(
+                &base.terminal_scheme,
+                mine.terminal_scheme,
+                theirs.terminal_scheme,
+            )?,
+            startup_snippet: pick(
+                &base.startup_snippet,
+                mine.startup_snippet,
+                theirs.startup_snippet,
+            )?,
         })
     }
 }

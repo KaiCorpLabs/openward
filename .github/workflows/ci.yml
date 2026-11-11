@@ -1,41 +1,89 @@
 name: CI
 
-# While the repository is private, Actions minutes are billed: macOS counts
-# 10x and Windows 2x. Pushes and PRs therefore run on Linux only (including
-# the iOS/Android compile check), and the macOS/Windows matrix runs weekly or
-# on demand. Pushing a tag (v…) runs nothing; «Run workflow» on a tag runs
-# the full matrix and leaves a draft release with the three packages. When
-# the repository goes public, run the full matrix on every push again.
+# The `systems` job decides where the matrix runs. While the repository is
+# public, Actions minutes are free: the three systems on every push and PR.
+# If it goes private again, minutes are billed (macOS counts 10x, Windows
+# 2x), and it falls back by itself to:
+# - pushes to main and PRs: Linux only (with the iOS/Android compile check);
+# - a version tag (v…): Linux and Windows, so every version is tried on
+#   Windows; macOS has gone through `make ci` on the Mac before the tag;
+# - the weekly run: the three systems.
+# «Run workflow» runs on the systems chosen (the three by default); on a tag
+# with the three, it also leaves a draft release with the three packages.
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
   schedule:
     - cron: "0 5 * * 1"
   workflow_dispatch:
+    inputs:
+      systems:
+        description: Systems to run on
+        type: choice
+        options: [all, linux-windows, linux]
+        default: all
 
 permissions:
   contents: read
 
 jobs:
+  systems:
+    name: Which systems
+    runs-on: ubuntu-latest
+    outputs:
+      os: ${{ steps.pick.outputs.os }}
+    steps:
+      - id: pick
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          ASKED: ${{ inputs.systems }}
+          # Empty in the weekly run's event: it runs the three anyway.
+          PRIVATE: ${{ github.event.repository.private }}
+        run: |
+          all='["ubuntu-latest","macos-latest","windows-latest"]'
+          some='["ubuntu-latest","windows-latest"]'
+          linux='["ubuntu-latest"]'
+          [[ "$PRIVATE" == false && "$EVENT" != workflow_dispatch ]] && EVENT=public
+          case "$EVENT:$ASKED" in
+            public:*) os="$all" ;;
+            schedule:* | workflow_dispatch:all | workflow_dispatch:) os="$all" ;;
+            workflow_dispatch:linux-windows) os="$some" ;;
+            push:*) if [[ "$REF" == refs/tags/v* ]]; then os="$some"; else os="$linux"; fi ;;
+            *) os="$linux" ;;
+          esac
+          echo "os=$os" | tee -a "$GITHUB_OUTPUT"
+
   core:
     name: Rust core (${{ matrix.os }})
+    needs: systems
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
+        os: ${{ fromJSON(needs.systems.outputs.os) }}
     runs-on: ${{ matrix.os }}
+    # Bash on Windows too: PowerShell does not stop when a command in a
+    # step fails, and the step takes the last one's exit code, so a test
+    # that failed on Windows went by green.
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # openward-ghostty links a prebuilt libghostty-vt, built with Zig at
-      # the pinned Ghostty commit and cached per commit and OS.
+      # the pinned Ghostty commit and cached per OS and everything the
+      # script checks before reusing a build (its .build-key): the commit,
+      # the script and the Zig it installs. A key with the commit alone
+      # kept a stale build that was rebuilt on every run and never saved.
       - name: Cache location
         shell: bash
         run: echo "OPENWARD_CACHE=$RUNNER_TEMP/openward" >> "$GITHUB_ENV"
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/openward/ghostty/build
-          key: libghostty-vt-${{ runner.os }}-${{ hashFiles('core/crates/openward-ghostty/GHOSTTY_COMMIT') }}
+          key: libghostty-vt-${{ runner.os }}-${{ hashFiles('core/crates/openward-ghostty/GHOSTTY_COMMIT', 'core/crates/openward-ghostty/build-libghostty.sh', '.github/scripts/install-zig.sh') }}
       - name: Install Zig
         shell: bash
         run: .github/scripts/install-zig.sh
@@ -45,7 +93,11 @@ jobs:
       - name: Install toolchain from rust-toolchain.toml
         working-directory: core
         run: rustup show
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      # hidapi's C (security keys) finds devices with libudev.
+      - name: Linux build dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends libudev-dev
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: core
       - name: Format
@@ -55,12 +107,14 @@ jobs:
         working-directory: core
         run: cargo clippy --workspace --all-targets -- -D warnings
       # openward-app's connection tests run against the S2 servers; without
-      # them (macOS, Windows) they skip.
+      # them (macOS, Windows) they skip. mosh-client for its Mosh cases.
       - name: Start SSH test servers
         if: runner.os == 'Linux'
         env:
           S2_RUNTIME: docker
-        run: spikes/s2-ssh/servers/up.sh
+        run: |
+          sudo apt-get install -y --no-install-recommends mosh >/dev/null
+          spikes/s2-ssh/servers/up.sh
       - name: Test
         working-directory: core
         env:
@@ -83,7 +137,8 @@ jobs:
     # cargo check does not link, so Linux is enough. Left out: crates that
     # build C for the target (openward-ssh: aws-lc; openward-vault: SQLite)
     # or need a prebuilt library (openward-ghostty), the desktop-only
-    # openward-pty, and openward-app and openward-ffi, which use them all.
+    # openward-pty, openward-serial and openward-fido (HID), and
+    # openward-app and openward-ffi, which use them all.
     # Their mobile builds come with phase 2.
     runs-on: ubuntu-latest
     steps:
@@ -93,7 +148,7 @@ jobs:
         run: |
           rustup show
           rustup target add aarch64-apple-ios aarch64-apple-ios-sim aarch64-linux-android x86_64-linux-android
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: core
       - name: Check
@@ -102,6 +157,7 @@ jobs:
           for target in aarch64-apple-ios aarch64-apple-ios-sim aarch64-linux-android x86_64-linux-android; do
             cargo check --workspace --target "$target" \
               --exclude openward-ghostty --exclude openward-ssh --exclude openward-pty \
+              --exclude openward-serial --exclude openward-fido \
               --exclude openward-vault --exclude openward-app --exclude openward-ffi
           done
 
@@ -113,7 +169,7 @@ jobs:
       - name: Install toolchain from rust-toolchain.toml
         working-directory: spikes/s1-terminal/termbench
         run: rustup show
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: spikes/s1-terminal/termbench
       - name: Lint
@@ -126,17 +182,22 @@ jobs:
 
   ssh:
     name: Spike S2 SSH (${{ matrix.os }})
+    needs: systems
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
+        os: ${{ fromJSON(needs.systems.outputs.os) }}
     runs-on: ${{ matrix.os }}
+    # Bash on Windows too, as in the core's job.
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install toolchain from rust-toolchain.toml
         working-directory: spikes/s2-ssh/sshprobe
         run: rustup show
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: spikes/s2-ssh/sshprobe
       - name: Lint and unit tests
@@ -159,14 +220,86 @@ jobs:
           S2_RUNTIME: docker
         run: spikes/s2-ssh/servers/down.sh
 
-  app:
-    name: App (${{ matrix.os }})
-    # Linux on every push: analysis, tests (integration ones under Xvfb) and
-    # a release build. macOS (.dmg) and Windows (.zip) with the weekly run.
+  hpke:
+    name: Spike S6 HPKE (${{ matrix.os }})
+    needs: systems
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
+        os: ${{ fromJSON(needs.systems.outputs.os) }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: spikes/s6-hpke/hpkebench
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install toolchain from rust-toolchain.toml
+        run: rustup show
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: spikes/s6-hpke/hpkebench
+      - name: Lint
+        run: |
+          cargo fmt -- --check
+          cargo clippy --all-targets -- -D warnings
+      # A vector or an interop check that fails, fails the job; the timings
+      # are for the results (docs/spikes/S6-hpke.md).
+      - name: Vectors, interop and timings
+        run: cargo run --release -- --json "$RUNNER_TEMP/s6-${{ runner.os }}-${{ runner.arch }}.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: s6-hpke-${{ runner.os }}-${{ runner.arch }}
+          path: ${{ runner.temp }}/s6-${{ runner.os }}-${{ runner.arch }}.json
+          retention-days: 14
+
+  sync:
+    name: Spike S4 sync (${{ matrix.os }})
+    needs: systems
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(needs.systems.outputs.os) }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: spikes/s4-sync/syncsim
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install toolchain from rust-toolchain.toml
+        run: rustup show
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: spikes/s4-sync/syncsim
+      - name: Lint
+        run: |
+          cargo fmt -- --check
+          cargo clippy --all-targets -- -D warnings
+      # The envelope, the clock, and convergence with proptest (2,000 random
+      # runs of three devices, with pruned logs and skewed clocks).
+      - name: Tests
+        run: cargo test
+      # A field-clock run that diverges or loses a write fails the job; the
+      # rest is for the results (docs/spikes/S4-sync.md).
+      - name: Sizes, unlock and 10,000 writes
+        run: cargo run --release -- --json "$RUNNER_TEMP/s4-${{ runner.os }}-${{ runner.arch }}.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: s4-sync-${{ runner.os }}-${{ runner.arch }}
+          path: ${{ runner.temp }}/s4-${{ runner.os }}-${{ runner.arch }}.json
+          retention-days: 14
+
+  app:
+    name: App (${{ matrix.os }})
+    needs: systems
+    # Linux on every push: analysis, tests (integration ones under Xvfb) and
+    # a release build. Windows (.zip) on every version tag too, and macOS
+    # (.dmg) with the weekly run.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(needs.systems.outputs.os) }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     defaults:
@@ -183,7 +316,7 @@ jobs:
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/openward/ghostty/build
-          key: libghostty-vt-app-${{ runner.os }}-${{ hashFiles('core/crates/openward-ghostty/GHOSTTY_COMMIT') }}
+          key: libghostty-vt-app-${{ runner.os }}-${{ hashFiles('core/crates/openward-ghostty/GHOSTTY_COMMIT', 'core/crates/openward-ghostty/build-libghostty.sh', '.github/scripts/install-zig.sh') }}
       - name: Install Zig
         run: .github/scripts/install-zig.sh
       - name: Build libghostty-vt
@@ -208,7 +341,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y clang cmake ninja-build pkg-config \
-            libgtk-3-dev liblzma-dev libstdc++-12-dev xvfb
+            libgtk-3-dev liblzma-dev libstdc++-12-dev libudev-dev xvfb
       - name: Analyze and unit tests
         working-directory: app
         run: |
@@ -250,7 +383,8 @@ jobs:
             want="$(grep -cE '^\s*(testWidgets|test)\(' "$1")"
             got="$(grep -cE '^(✅|⏭️)' "$log" || true)"
             echo "$1: $got of $want tests passed or skipped"
-            ! grep -q "❌" "$log" && [ "$got" -eq "$want" ]
+            # At least one per testWidgets in the file: a loop makes more.
+            ! grep -q "❌" "$log" && [ "$got" -gt 0 ] && [ "$got" -ge "$want" ]
           }
           itest() {
             once "$1" && return 0
@@ -282,7 +416,7 @@ jobs:
       - name: List screenshots
         if: always()
         run: ls -R "$OPENWARD_SHOTS" 2>/dev/null | head -50 || echo "no screenshots"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: OpenWard-screenshots-${{ runner.os }}
@@ -312,7 +446,7 @@ jobs:
               ;;
           esac
           ls -la build/OpenWard-*
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: OpenWard-${{ runner.os }}
           path: app/build/OpenWard-*
@@ -335,10 +469,10 @@ jobs:
 
   release:
     name: Draft release
-    # Only when run on a version tag («Run workflow» on it), once the three
-    # packages are built. It stays a draft: publishing it is a person's
-    # decision.
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Only when run by hand on a version tag with the three systems, once
+    # the three packages are built. It stays a draft: publishing it is a
+    # person's decision.
+    if: github.event_name == 'workflow_dispatch' && inputs.systems == 'all' && startsWith(github.ref, 'refs/tags/v')
     needs: app
     runs-on: ubuntu-latest
     permissions:
@@ -361,5 +495,8 @@ jobs:
           sed "s#](\.\./#](https://github.com/$GITHUB_REPOSITORY/blob/$TAG/docs/#g" "$notes" > "$RUNNER_TEMP/notes.md"
           pre=()
           [[ "$version" == *-* ]] && pre=(--prerelease)
+          # The packages alone: the .dmg.commit beside the .dmg is for
+          # release-tap.sh. One missing stays unexpanded and stops the draft.
           gh release create "$TAG" --draft "${pre[@]}" --verify-tag \
-            --title "OpenWard $version" --notes-file "$RUNNER_TEMP/notes.md" dist/*/OpenWard-*
+            --title "OpenWard $version" --notes-file "$RUNNER_TEMP/notes.md" \
+            dist/*/OpenWard-*.{dmg,zip,tar.gz}

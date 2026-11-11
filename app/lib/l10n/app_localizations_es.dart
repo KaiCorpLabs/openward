@@ -49,7 +49,15 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get advancedList =>
-      'proxy, claves del host, sesión persistente, comprobación y agente';
+      'proxy, claves del host, sesión persistente, Mosh, terminal, snippet al conectar, comprobación y agente';
+
+  @override
+  String get advancedListSerial =>
+      'terminal, snippet al conectar y registro de sesión';
+
+  @override
+  String get advancedListTelnet =>
+      'proxy, terminal, snippet al conectar, registro de sesión y tiempo para conectar';
 
   @override
   String advancedSetHere(int count) {
@@ -186,6 +194,17 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get autocomplete => 'Sugerir mientras escribes';
+
+  @override
+  String get autocompleteHelp =>
+      'En gris, lo que sigue: del historial de este host, de los snippets y de unos comandos comunes. → o Fin lo acepta. Todo en este equipo, sin red; nada en los editores ni cuando se pide una contraseña.';
+
+  @override
+  String get autocompleteNeedsHistory =>
+      'Necesita el historial de comandos (Ajustes › Registros).';
+
+  @override
   String awayFor(String time) {
     return '$time fuera';
   }
@@ -197,6 +216,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String backAgain(String host) {
     return 'Conectado de nuevo a $host';
   }
+
+  @override
+  String get backspaceControlH => 'Control-H (^H)';
+
+  @override
+  String get backspaceDelete => 'DEL (^?), el de hoy';
+
+  @override
+  String get backspaceLabel => 'Retroceso';
+
+  @override
+  String get backspaceNote =>
+      'Si al borrar el servidor escribe ^? o ^H en vez de borrar, cambia este.';
 
   @override
   String get badgeChanges => 'cambia';
@@ -314,6 +346,17 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String certExpiredOn(String date) {
     return 'caducó el $date';
+  }
+
+  @override
+  String certExpiresIn(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days días',
+      one: '1 día',
+    );
+    return 'caduca en $_temp0';
   }
 
   @override
@@ -519,10 +562,34 @@ class AppLocalizationsEs extends AppLocalizations {
   String get colorBlue => 'Azul';
 
   @override
+  String get colorBrightBlue => 'Azul claro';
+
+  @override
+  String get colorBrightCyan => 'Cian claro';
+
+  @override
+  String get colorBrightGreen => 'Verde claro';
+
+  @override
+  String get colorBrightMagenta => 'Magenta claro';
+
+  @override
+  String get colorBrightRed => 'Rojo claro';
+
+  @override
+  String get colorBrightYellow => 'Amarillo claro';
+
+  @override
+  String get colorCyan => 'Cian';
+
+  @override
   String get colorGray => 'Gris';
 
   @override
   String get colorGreen => 'Verde';
+
+  @override
+  String get colorMagenta => 'Magenta';
 
   @override
   String get colorOrange => 'Naranja';
@@ -708,6 +775,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String copyOfName(String name) {
     return '$name (copia)';
   }
+
+  @override
+  String get copyOnSelect => 'Copiar al seleccionar';
+
+  @override
+  String get copyOnSelectHelp =>
+      'Lo que seleccionas con el ratón va al portapapeles, sin pulsar copiar.';
 
   @override
   String get copyPath => 'Copiar la ruta';
@@ -1050,6 +1124,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get emptyPane => 'panel vacío';
 
   @override
+  String get encodingLabel => 'Codificación';
+
+  @override
+  String get encodingNote =>
+      'Para equipos y sistemas antiguos que no escriben en UTF-8: si salen letras raras en vez de tildes o líneas, prueba Latin-1 o CP437.';
+
+  @override
+  String get encodingNoteMosh =>
+      'Para equipos y sistemas antiguos que no escriben en UTF-8: si salen letras raras en vez de tildes o líneas, prueba Latin-1 o CP437. Por Mosh siempre es UTF-8.';
+
+  @override
   String get envColor => 'Color';
 
   @override
@@ -1187,8 +1272,18 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String failureAuthCertExpired(String user, String host, String path) {
+    return 'No se pudo entrar como $user en $host: el certificado $path ha caducado; pide uno nuevo.';
+  }
+
+  @override
   String failureAuthMethods(String user, String label, String methods) {
     return '$user@$label no ha podido autenticarse (el servidor acepta: $methods).';
+  }
+
+  @override
+  String failureAuthSecurityKey(String user, String host, String why) {
+    return 'No se pudo entrar como $user en $host: $why.';
   }
 
   @override
@@ -1218,6 +1313,41 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get failureOther => 'Algo ha fallado (más en «Detalles»).';
+
+  @override
+  String failureSerialBusy(String port) {
+    return '$port está abierto en otro programa, o en otra pestaña.';
+  }
+
+  @override
+  String failureSerialDenied(String port) {
+    return 'Tu usuario no puede abrir $port.';
+  }
+
+  @override
+  String failureSerialDeniedLinux(String port) {
+    return 'Tu usuario no puede abrir $port: añádelo al grupo dialout (sudo usermod -aG dialout, con tu usuario) y vuelve a entrar en la sesión.';
+  }
+
+  @override
+  String failureSerialGone(String port) {
+    return 'Se ha desconectado $port: ¿se ha soltado el cable?';
+  }
+
+  @override
+  String failureSerialMissing(String port) {
+    return 'No hay ningún puerto $port: ¿está conectado el cable?';
+  }
+
+  @override
+  String failureSerialOther(String port) {
+    return 'No se ha podido abrir $port (más en «Detalles»).';
+  }
+
+  @override
+  String failureSerialSettings(String port) {
+    return '$port no admite esa velocidad o ese formato.';
+  }
 
   @override
   String get favorite => 'Favorito';
@@ -1383,6 +1513,15 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get flowHardware => 'RTS/CTS (hardware)';
+
+  @override
+  String get flowNone => 'Ninguno';
+
+  @override
+  String get flowSoftware => 'XON/XOFF (software)';
+
+  @override
   String get foldSidebar => 'Plegar la barra lateral';
 
   @override
@@ -1530,6 +1669,67 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get hideQueue => 'Ocultar';
+
+  @override
+  String get highlightAdd => 'Añadir una regla…';
+
+  @override
+  String get highlightCase => 'Distinguir mayúsculas';
+
+  @override
+  String get highlightColor => 'Color';
+
+  @override
+  String get highlightColorNote =>
+      'Los colores son los del terminal: cambian con su tema.';
+
+  @override
+  String get highlightEdit => 'Cambiar';
+
+  @override
+  String get highlightError => 'Errores (error, failed, denied…)';
+
+  @override
+  String get highlightIp => 'Direcciones IP';
+
+  @override
+  String get highlightMac => 'Direcciones MAC';
+
+  @override
+  String get highlightName => 'Nombre';
+
+  @override
+  String get highlightNewTitle => 'Nueva regla de resaltado';
+
+  @override
+  String get highlightOk => 'Bien (ok, success, done…)';
+
+  @override
+  String get highlightOn => 'Resaltar palabras y direcciones';
+
+  @override
+  String get highlightOnHelp =>
+      'Solo al pintar, y solo en el texto que el programa deja sin color: no cambia lo que llega, lo que copias ni los registros. En los editores y en less, nada.';
+
+  @override
+  String get highlightPattern => 'Qué resaltar';
+
+  @override
+  String get highlightPatternBad =>
+      'No se lee como expresión regular, o no resaltaría nada.';
+
+  @override
+  String get highlightPatternHelp =>
+      'Una palabra o una expresión regular. \\b marca el borde de una palabra.';
+
+  @override
+  String get highlightRemove => 'Quitar';
+
+  @override
+  String get highlightReset => 'Volver a las de la app';
+
+  @override
+  String get highlightWarning => 'Avisos (warning, deprecated, timeout)';
 
   @override
   String get host => 'Host';
@@ -2156,6 +2356,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'Para servidores antiguos que no aceptan nada más nuevo. Tarda unos segundos en crearse.';
 
   @override
+  String get keyTypeSecurityEcdsa =>
+      'ECDSA P-256 en la llave: la tienen todas las llaves FIDO2.';
+
+  @override
+  String get keyTypeSecurityEd25519 =>
+      'Ed25519 en la llave: la mejor opción si tu llave la tiene (casi todas desde 2020).';
+
+  @override
   String get keys => 'Claves';
 
   @override
@@ -2198,6 +2406,11 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String knownHostsIntro(String file) {
     return 'Las claves de servidor en las que confías. Al conectar se miran las de OpenWard y las de $file; las nuevas se guardan en OpenWard.';
+  }
+
+  @override
+  String lanDynamicNote(String host) {
+    return 'Es un proxy SOCKS sin contraseña: cualquiera de tu red podrá entrar por él en todo lo que alcanza $host mientras esté abierto.';
   }
 
   @override
@@ -2941,6 +3154,44 @@ class AppLocalizationsEs extends AppLocalizations {
   String get moreOptions => 'Más opciones';
 
   @override
+  String get moshFallbackNoClient =>
+      'sin Mosh: falta mosh-client en este equipo (brew install mosh, o apt install mosh) · sigue por SSH';
+
+  @override
+  String get moshFallbackNoServer =>
+      'sin Mosh: el servidor no tiene mosh-server · sigue por SSH';
+
+  @override
+  String get moshFallbackNoUdp =>
+      'sin Mosh: no llega el UDP del servidor (un cortafuegos, o una red que no lo deja pasar) · sigue por SSH, en tmux';
+
+  @override
+  String moshFallbackOther(String said) {
+    return 'sin Mosh: $said · sigue por SSH';
+  }
+
+  @override
+  String get moshFallbackWindows =>
+      'sin Mosh: en Windows todavía no · sigue por SSH';
+
+  @override
+  String get moshNote =>
+      'Hace falta mosh-server en el servidor y mosh-client en este equipo (macOS: brew install mosh; Linux: apt o dnf install mosh). El UDP va directo: los saltos solo sirven para arrancarlo. Si no llega, la sesión sigue por SSH, en tmux.';
+
+  @override
+  String get moshOff => 'Apagado: SSH';
+
+  @override
+  String get moshOn => 'Encendido: por Mosh cuando se pueda';
+
+  @override
+  String get moshServer => 'Servidor de Mosh';
+
+  @override
+  String get moshServerHelp =>
+      'Dónde está mosh-server en el servidor, si no está en su PATH: /opt/homebrew/bin/mosh-server';
+
+  @override
   String get moveEarlier => 'Mover antes';
 
   @override
@@ -3133,6 +3384,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get newsLatencyTitle => 'La latencia, siempre a la vista';
 
   @override
+  String get newsLinesBody =>
+      'Un host puede ser SSH, Telnet o un puerto serie de este equipo, para la consola de un switch o un router. «Puerto serie» en el inicio abre uno a mano. Telnet avisa de que no cifra.';
+
+  @override
+  String get newsLinesTitle => 'Telnet y puerto serie';
+
+  @override
   String get newsLogoBody =>
       'Umbral, una O abierta con un chevrón: en el icono de la app y, dentro, en la bienvenida, el inicio, Acerca de y aquí, en el color de tu tema.';
 
@@ -3148,11 +3406,25 @@ class AppLocalizationsEs extends AppLocalizations {
   String get newsLogsTitle => 'Registros de sesión';
 
   @override
+  String get newsManyHostsBody =>
+      'Un snippet en los hosts que elijas, cada uno en su panel; un snippet al conectar, heredable; y en SFTP, «Abrir con…»: lo editas aquí y se sube al guardarlo.';
+
+  @override
+  String get newsManyHostsTitle => 'Snippets en varios hosts';
+
+  @override
   String get newsMoreThemesBody =>
       'Monitor, con letras verdes de verdad; Berenjena, con el terminal morado; Búnker, todo en un solo fósforo; Marino, verde sobre azul marino; y Catppuccin, Dracula y Tokyo Night para toda la ventana. En Ajustes › Apariencia.';
 
   @override
   String get newsMoreThemesTitle => 'Siete familias de temas más';
+
+  @override
+  String get newsMoshBody =>
+      'En «Avanzado» de un host: la sesión sigue aunque cambies de red o duermas el portátil. Usa el mosh-client que tengas instalado, y si no llega el UDP, sigue por SSH.';
+
+  @override
+  String get newsMoshTitle => 'Mosh, si lo quieres';
 
   @override
   String newsPaletteBody(String shortcut) {
@@ -3185,6 +3457,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get newsSearchTitle => 'Un atajo para buscarlo todo';
+
+  @override
+  String get newsSecurityKeysBody =>
+      'Claves en una YubiKey u otra llave FIDO2: se crean en «Nueva clave», y al conectar la app pide el toque y el PIN. Los certificados que caducan avisan la última semana.';
+
+  @override
+  String get newsSecurityKeysTitle => 'Llaves de seguridad';
 
   @override
   String newsSftpBody(String shortcut) {
@@ -3226,11 +3505,25 @@ class AppLocalizationsEs extends AppLocalizations {
   String get newsStartTitle => 'Un inicio para volver a lo de siempre';
 
   @override
+  String get newsSuggestBody =>
+      'Lo que sigue sale en gris, del historial de ese host, de tus snippets y de comandos comunes; → lo escribe. Todo en este equipo.';
+
+  @override
+  String get newsSuggestTitle => 'Sugerencias mientras escribes';
+
+  @override
   String get newsSystemBody2 =>
       'Debian, Ubuntu, Fedora, Alpine y 22 sistemas más, con su logo del color de su entorno; macOS y Windows, con un icono propio. Para los que no lo dicen al conectar, como los de Tailscale SSH, «Averiguar el sistema» en su menú lee /etc/os-release; o en todos, desde Ajustes › General.';
 
   @override
   String get newsSystemTitle2 => 'El sistema de cada servidor, con su logo';
+
+  @override
+  String get newsTerminalBody =>
+      'Copiar al seleccionar, pegar con clic derecho, errores y direcciones en color, atajos de Mac o de PC. Por host: la codificación (Latin-1, CP437…), el retroceso y sus propios colores.';
+
+  @override
+  String get newsTerminalTitle => 'El terminal a tu manera';
 
   @override
   String get newsThemesBody =>
@@ -3416,6 +3709,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get onExitNever => 'Dejarla abierta';
 
   @override
+  String get onSecurityKey => 'En una llave de seguridad (FIDO2)';
+
+  @override
+  String get onSecurityKeyNote =>
+      'Toca la llave cuando parpadee. El archivo no guarda ningún secreto: sin la llave no sirve, y nadie puede sacarla de ella.';
+
+  @override
   String get onSend => 'Al enviar';
 
   @override
@@ -3472,6 +3772,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get openOtherHere => 'Abrir otra cosa aquí…';
 
   @override
+  String get openRemote => 'Abrir';
+
+  @override
+  String openRemoteFollowing(String name) {
+    return '$name abierto aquí: se sube al servidor cada vez que lo guardes.';
+  }
+
+  @override
+  String get openRemoteWith => 'Abrir con…';
+
+  @override
   String get openSection => 'Abiertas';
 
   @override
@@ -3495,6 +3806,35 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get openTunnels => 'Túneles abiertos';
+
+  @override
+  String get openRunsAction => 'Ejecutarlo';
+
+  @override
+  String openRunsBody(String type) {
+    return 'Este ordenador ejecuta los archivos .$type al abrirlos, y lo que hace este lo decidió quien lo puso en el servidor. Ábrelo solo si te fías; para leerlo, usa «Abrir con…».';
+  }
+
+  @override
+  String openRunsTitle(String name) {
+    return '«$name» no se abre: se ejecuta';
+  }
+
+  @override
+  String get openWithHelp =>
+      'Un comando, como code, gedit o kate; se le pasa el archivo al final.';
+
+  @override
+  String get openWithHelpMac =>
+      'El nombre de una app (TextEdit, Visual Studio Code) o un comando (/usr/local/bin/subl).';
+
+  @override
+  String get openWithProgram => 'Programa';
+
+  @override
+  String openWithTitle(String name) {
+    return 'Abrir «$name» con';
+  }
 
   @override
   String get optionAltBoth => 'Las dos';
@@ -3587,6 +3927,15 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get paneWhat => '¿Qué abres en este panel?';
+
+  @override
+  String get parityEven => 'Par';
+
+  @override
+  String get parityNone => 'Ninguna';
+
+  @override
+  String get parityOdd => 'Impar';
 
   @override
   String get partNote =>
@@ -3719,6 +4068,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get pickIdentity => 'Elige una identidad o «Ninguna».';
+
+  @override
+  String get pinField => 'PIN';
 
   @override
   String get pinSidebar => 'Dejar la barra abierta';
@@ -3903,6 +4255,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get protection => 'Protección';
+
+  @override
+  String get protocol => 'Protocolo';
+
+  @override
+  String get protocolSerial => 'Puerto serie';
 
   @override
   String get proxy => 'Proxy';
@@ -4126,6 +4484,36 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reload => 'Recargar';
 
   @override
+  String get remoteChangedBody =>
+      'Alguien lo cambió desde que lo abriste aquí. Si subes tu versión, lo que cambiaron se pierde; si cancelas, tu copia sigue aquí y se vuelve a preguntar al guardar.';
+
+  @override
+  String remoteChangedTitle(String name) {
+    return '«$name» cambió en el servidor';
+  }
+
+  @override
+  String get remoteChangedUpload => 'Subir el mío encima';
+
+  @override
+  String remoteEditFailed(String name) {
+    return '$name: no se pudo subir (más en la cola)';
+  }
+
+  @override
+  String get remoteEditStop => 'Dejar de subirlo';
+
+  @override
+  String remoteEditUploaded(String name, String time) {
+    return '$name: subido a las $time';
+  }
+
+  @override
+  String remoteEditWatching(String name) {
+    return '$name: se sube al guardarlo';
+  }
+
+  @override
   String remoteSentence(String host, String port, String dest) {
     return 'Lo que se conecte en $host al puerto $port llega a $dest de este equipo.';
   }
@@ -4315,6 +4703,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reviewKey => 'Revisar la clave…';
 
   @override
+  String get rightClickPaste => 'Pegar con clic derecho';
+
+  @override
+  String get rightClickPasteHelp =>
+      'Como en PuTTY. El menú del terminal sigue con Ctrl y clic derecho.';
+
+  @override
   String get route => 'Cómo llegar';
 
   @override
@@ -4331,6 +4726,45 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get runIn => 'Ejecutar en…';
+
+  @override
+  String runOnHostsAction(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n hosts',
+      one: '1 host',
+      zero: 'ningún host',
+    );
+    return 'Ejecutar en $_temp0';
+  }
+
+  @override
+  String get runOnHostsAll => 'Todos los mostrados';
+
+  @override
+  String get runOnHostsFilter =>
+      'Filtrar por nombre, dirección, grupo o etiqueta';
+
+  @override
+  String runOnHostsMax(int max) {
+    return 'Hasta $max a la vez.';
+  }
+
+  @override
+  String get runOnHostsMenu => 'En varios hosts…';
+
+  @override
+  String get runOnHostsNone => 'Ninguno';
+
+  @override
+  String get runOnHostsNote =>
+      'Cada host en su panel de una pestaña nueva, donde se ve su resultado. Los que ya están conectados no vuelven a iniciar sesión.';
+
+  @override
+  String runOnHostsTitle(String snippet) {
+    return '«$snippet» en varios hosts';
+  }
 
   @override
   String runSnippetBroadcast(int count) {
@@ -4448,6 +4882,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sectionSystem => 'Sistema';
 
   @override
+  String get securityKeyPill => 'Llave de seguridad';
+
+  @override
+  String securityKeyPinBody(String key) {
+    return 'La clave $key pide el PIN de su llave.';
+  }
+
+  @override
+  String get securityKeyPinOptional => 'PIN de la llave (si tiene)';
+
+  @override
+  String get securityKeyPinTitle => 'PIN de la llave de seguridad';
+
+  @override
   String seenFrom(String host) {
     return 'visto desde $host';
   }
@@ -4500,6 +4948,68 @@ class AppLocalizationsEs extends AppLocalizations {
   String get separatePanes => 'Separar los paneles en pestañas';
 
   @override
+  String get serialBaud => 'Velocidad';
+
+  @override
+  String get serialBaudMissing => 'Pon una velocidad.';
+
+  @override
+  String serialBaudUnit(int baud) {
+    return '$baud baudios';
+  }
+
+  @override
+  String get serialDataBits => 'Bits de datos';
+
+  @override
+  String get serialFlow => 'Control de flujo';
+
+  @override
+  String get serialLine => 'Velocidad y formato';
+
+  @override
+  String get serialOpenEllipsis => 'Abrir un puerto serie…';
+
+  @override
+  String get serialOpenNote =>
+      'Para la consola de un router o un switch, con su cable: casi siempre 9600 baudios, 8N1.';
+
+  @override
+  String get serialOpenTitle => 'Abrir un puerto serie';
+
+  @override
+  String get serialParity => 'Paridad';
+
+  @override
+  String get serialPortMissing => 'Elige el puerto.';
+
+  @override
+  String get serialPortsAgain => 'Buscar otra vez';
+
+  @override
+  String get serialPortsNone => 'No hay ningún puerto serie conectado.';
+
+  @override
+  String get serialPortsTooltip => 'Los puertos de este equipo';
+
+  @override
+  String get serialSendBreak => 'Enviar un break por el puerto serie';
+
+  @override
+  String get serialShort => 'Serie';
+
+  @override
+  String get serialStopBits => 'Bits de parada';
+
+  @override
+  String serialSummary(int baud, String frame, String flow) {
+    return '$baud baudios, $frame, $flow';
+  }
+
+  @override
+  String get serialSummaryNoFlow => 'sin control de flujo';
+
+  @override
   String get sessionClosed => 'Sesión cerrada.';
 
   @override
@@ -4546,7 +5056,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsGeneral => 'General';
 
   @override
+  String get settingsHighlight => 'Resaltado';
+
+  @override
   String get settingsLogs => 'Registros';
+
+  @override
+  String get settingsMouse => 'Ratón';
+
+  @override
+  String get settingsShortcuts => 'Atajos';
 
   @override
   String get settingsTerminal => 'Terminal';
@@ -4619,6 +5138,22 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get shortcutPreviousTab => 'Pestaña anterior';
+
+  @override
+  String get shortcutProfile => 'Atajos de';
+
+  @override
+  String get shortcutProfileHelp =>
+      'Los de Mac van con ⌘ (en Windows y Linux, la tecla del sistema); los de PC, con Ctrl+Mayús.';
+
+  @override
+  String get shortcutProfileMac => 'Mac';
+
+  @override
+  String get shortcutProfilePc => 'PC';
+
+  @override
+  String get shortcutProfileSystem => 'Este equipo';
 
   @override
   String get shortcutSearch => 'Busca entre tus hosts';
@@ -4726,6 +5261,40 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get skLocked =>
+      'la llave está bloqueada por demasiados PIN incorrectos: desconéctala y vuelve a conectarla';
+
+  @override
+  String get skNoAccess =>
+      'Windows no deja a OpenWard hablar con la llave: usa el agente de OpenSSH de Windows (ssh-add) para las llaves de seguridad';
+
+  @override
+  String get skNoAccessLinux =>
+      'Linux no deja a OpenWard abrir la llave: falta la regla de udev que da acceso a /dev/hidraw* (la instalan los paquetes libfido2 o u2f-udev)';
+
+  @override
+  String get skNoKey => 'no hay ninguna llave de seguridad conectada';
+
+  @override
+  String get skNotThisKey => 'la llave conectada no es la de esta clave';
+
+  @override
+  String get skNotTouched => 'no se tocó la llave a tiempo';
+
+  @override
+  String get skOther => 'la llave de seguridad ha fallado (más en «Detalles»)';
+
+  @override
+  String get skPinRequired => 'la llave pide su PIN';
+
+  @override
+  String get skTooManyKeys =>
+      'hay más de una llave de seguridad conectada: deja solo la de esta clave';
+
+  @override
+  String get skWrongPin => 'el PIN no es el de la llave';
+
+  @override
   String get skipGuide => 'Saltar la guía';
 
   @override
@@ -4820,6 +5389,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String stageTouchKey(String key) {
+    return 'Toca la llave de seguridad ($key)…';
+  }
+
+  @override
   String get start => 'Empezar';
 
   @override
@@ -4877,6 +5451,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get startupShowFolder => 'Mostrar la carpeta de datos';
 
   @override
+  String get startupSnippet => 'Snippet al conectar';
+
+  @override
+  String get startupSnippetGone =>
+      'Un snippet que ya no está, o que ahora pregunta algo';
+
+  @override
+  String get startupSnippetNone => 'Ninguno';
+
+  @override
+  String get startupSnippetNote =>
+      'Se escribe en cada shell nuevo en cuanto está listo: al conectar y al reconectar, no al volver a una sesión persistente tal como estaba. Solo los que no preguntan nada.';
+
+  @override
   String get state => 'Estado';
 
   @override
@@ -4900,6 +5488,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get statusStalled => 'Sin respuesta · comprobando…';
 
   @override
+  String get statusUnencrypted => 'Sin cifrar';
+
+  @override
   String get stepAppearance => 'Apariencia';
 
   @override
@@ -4919,6 +5510,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get stepReady => 'Listo';
+
+  @override
+  String get stepTouchKey => 'toca la llave de seguridad…';
 
   @override
   String get stopAction => 'Detener';
@@ -4981,6 +5575,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get tags => 'Etiquetas';
 
   @override
+  String get telnetUnencrypted => 'Telnet, sin cifrar';
+
+  @override
+  String get telnetUnencryptedNote =>
+      'Telnet no cifra nada: lo que escribes, contraseñas incluidas, viaja tal cual por la red. Para los equipos que no admiten SSH.';
+
+  @override
   String get terminalAlwaysDark => 'Siempre oscuro';
 
   @override
@@ -4996,6 +5597,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get terminalFont => 'Fuente del terminal';
 
   @override
+  String get terminalKeysFirst => 'Las teclas, para el terminal';
+
+  @override
+  String get terminalKeysFirstHelp =>
+      'En un terminal, Ctrl+Tab, Ctrl+=, Ctrl+−, Ctrl+0, Ctrl+, y Ctrl+Alt+número llegan al programa. Los atajos con Ctrl+Mayús siguen siendo de la ventana.';
+
+  @override
   String get terminalMenuHint =>
       'Arrastra aquí una pestaña o un host para abrirlo en una mitad de este panel.';
 
@@ -5008,6 +5616,16 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get terminalScheme => 'Esquema propio';
+
+  @override
+  String get terminalSchemeApp => 'Los del tema de la app';
+
+  @override
+  String get terminalSchemeLabel => 'Colores del terminal';
+
+  @override
+  String get terminalSchemeNote =>
+      'Otros colores para este host, sea cual sea el tema: para reconocer de un vistazo, por ejemplo, los de producción.';
 
   @override
   String terminalShortcuts(String key) {
@@ -5130,6 +5748,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get toggleSidebar => 'Plegar o abrir la barra lateral';
+
+  @override
+  String get touchKeyNow => 'Toca la llave de seguridad…';
 
   @override
   String get transfers => 'Transferencias';
@@ -5414,6 +6035,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get verificationTitle => 'Verificación';
 
   @override
+  String get verifyRequired => 'Pedir el PIN cada vez que se use';
+
+  @override
   String via(String hops) {
     return 'vía $hops';
   }
@@ -5423,6 +6047,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get waitingForYou => 'Espera tu respuesta';
+
+  @override
+  String warnAgentForward(String host) {
+    return '$host reenviaba el agente SSH, con el que ese servidor puede usar tus claves mientras estás conectado; no se ha traído, para no hacerlo porque lo diga el archivo de otro programa.';
+  }
 
   @override
   String warnBadValue(String subject, String at, String detail) {
@@ -5466,6 +6095,11 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String warnMosh(String host) {
     return '$host usaba Mosh: se conectará por SSH.';
+  }
+
+  @override
+  String warnOpenTunnel(String tunnel, String address) {
+    return 'El túnel $tunnel escuchaba en $address, abierto a otros equipos; llega cerrado a la red, para no abrirlo porque lo diga el archivo de otro programa. Si confías en él, ábrelo en «Quién puede usarlo».';
   }
 
   @override
@@ -5609,6 +6243,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get wrongPassword => 'Contraseña incorrecta.';
+
+  @override
+  String get wrongPin => 'El PIN no es el de la llave.';
 
   @override
   String get yes => 'Sí';

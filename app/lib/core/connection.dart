@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../src/rust/api/app.dart';
 import '../src/rust/api/session.dart';
+import '../src/rust/api/vault.dart' show ProtocolKind;
 import 'errors.dart';
 import 'address.dart';
 
@@ -122,6 +123,13 @@ abstract class ConnectionController extends ChangeNotifier {
   /// A shell on this machine: neither a saved host nor an address.
   bool get isLocal => hostId == null && target == null;
 
+  /// Reached by SSH, as far as is known (what connecting said, or the
+  /// address typed): what files, tunnels and the like need.
+  bool get overSsh =>
+      !isLocal &&
+      (connected?.protocol ?? target?.protocol ?? ProtocolKind.ssh) ==
+          ProtocolKind.ssh;
+
   bool get isDisposed => _disposed;
 
   /// Starts the session in Rust: its events.
@@ -162,6 +170,9 @@ abstract class ConnectionController extends ChangeNotifier {
     switch (e.kind) {
       case SessionEventKind.route:
         route = e.route;
+      // The terminal says it in a line of its own (TerminalController).
+      case SessionEventKind.moshFallback:
+        break;
       case SessionEventKind.stage:
         stage = e.stage;
         reconnectAt = null;

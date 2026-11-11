@@ -9,6 +9,8 @@ FailureView _failure(
   CertKind? cert,
   int seconds = 0,
   String reason = '',
+  String expired = '',
+  SecurityKeyKind? securityKey,
 }) => FailureView(
   kind: kind,
   message: 'db: $reason',
@@ -25,6 +27,8 @@ FailureView _failure(
   cert: cert,
   net: net,
   seconds: seconds,
+  expiredCertificate: expired,
+  securityKey: securityKey,
 );
 
 FailureView _network(NetKind net, {int seconds = 0, String reason = ''}) =>
@@ -85,5 +89,64 @@ void main() {
     final l = AppLocalizationsEs();
     final f = _failure(FailureKind.other, reason: 'opening the shell: boom');
     expect(failureText(l, f), l.failureOther);
+  });
+
+  test('a serial port says what happened to it, by kind', () {
+    final l = AppLocalizationsEs();
+    String say(SerialKind kind) {
+      final f = FailureView(
+        kind: FailureKind.serial,
+        message: 'COM3 went away',
+        label: 'COM3',
+        host: 'COM3',
+        port: 0,
+        user: '',
+        algorithm: '',
+        fingerprint: '',
+        key: '',
+        methods: const [],
+        reason: '',
+        previous: const [],
+        serial: kind,
+        seconds: 0,
+        expiredCertificate: '',
+      );
+      return failureText(l, f);
+    }
+
+    expect(say(SerialKind.missing), l.failureSerialMissing('COM3'));
+    expect(say(SerialKind.busy), l.failureSerialBusy('COM3'));
+    expect(say(SerialKind.gone), l.failureSerialGone('COM3'));
+    expect(say(SerialKind.settings), l.failureSerialSettings('COM3'));
+    expect(say(SerialKind.denied), contains('COM3'));
+    for (final k in SerialKind.values) {
+      expect(say(k), isNot(contains('went away')), reason: '$k');
+    }
+  });
+
+  test('a login that failed says first what likely made it fail', () {
+    final l = AppLocalizationsEs();
+    final plain = failureText(l, _failure(FailureKind.authFailed));
+    final key = failureText(
+      l,
+      _failure(
+        FailureKind.authFailed,
+        securityKey: SecurityKeyKind.notThisKey,
+        expired: '~/.ssh/id_ed25519-cert.pub',
+      ),
+    );
+    // The security key before the certificate: it is what was tried.
+    expect(key, contains(l.skNotThisKey));
+    expect(key, isNot(equals(plain)));
+    final cert = failureText(
+      l,
+      _failure(FailureKind.authFailed, expired: '~/.ssh/id_ed25519-cert.pub'),
+    );
+    expect(cert, contains('id_ed25519-cert.pub'));
+    // Every kind has its own words, none the core's English.
+    final said = {
+      for (final k in SecurityKeyKind.values) securityKeyReason(l, k),
+    };
+    expect(said, hasLength(SecurityKeyKind.values.length));
   });
 }

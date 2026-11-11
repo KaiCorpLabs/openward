@@ -17,8 +17,13 @@ pub struct SshKey {
     pub fingerprint: Option<String>,
     pub comment: Option<String>,
     pub encrypted: bool,
+    /// A security key's (FIDO2): no passphrase needed, it asks for a touch.
+    pub security_key: bool,
     pub has_public: bool,
     pub certificate: bool,
+    /// When the certificate runs out, in milliseconds since the epoch;
+    /// `None` if it never does (or there is none).
+    pub certificate_until_ms: Option<i64>,
     /// Hosts, groups and identities that use it.
     pub used_by: Vec<String>,
 }
@@ -32,8 +37,13 @@ impl From<KeyFile> for SshKey {
             fingerprint: k.fingerprint,
             comment: k.comment,
             encrypted: k.encrypted,
+            security_key: k.security_key,
             has_public: k.has_public,
             certificate: k.certificate,
+            certificate_until_ms: k.certificate_until.map(|t| {
+                t.duration_since(std::time::UNIX_EPOCH)
+                    .map_or(0, |d| d.as_millis() as i64)
+            }),
             used_by: k.used_by,
         }
     }
@@ -56,12 +66,23 @@ pub enum SshKeyFailureKind {
     WrongPassphrase,
     /// PEM and PuTTY keys change their passphrase with their program.
     NotOpenSsh,
+    /// The security key did not make it (`security_key` says why).
+    SecurityKey,
+}
+
+/// Which kind of key to make on a security key.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SecurityKeyType {
+    Ed25519,
+    /// ECDSA on P-256: every FIDO2 key has it.
+    Ecdsa,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SshKeyFailure {
     pub kind: SshKeyFailureKind,
     pub message: String,
+    pub security_key: Option<super::session::SecurityKeyKind>,
 }
 
 /// A key made or brought in, or why not.
@@ -73,6 +94,12 @@ pub struct SshKeyResult {
 fn failure(e: keychain::KeyError) -> SshKeyFailure {
     SshKeyFailure {
         message: e.to_string(),
+        security_key: match &e {
+            keychain::KeyError::SecurityKey(f) => Some(super::session::SecurityKeyKind::of(
+                openward_app::events::SecurityKeyProblem::of(f),
+            )),
+            _ => None,
+        },
         kind: match e {
             keychain::KeyError::Exists(_) => SshKeyFailureKind::Exists,
             keychain::KeyError::BadName(_) => SshKeyFailureKind::BadName,
@@ -81,6 +108,7 @@ fn failure(e: keychain::KeyError) -> SshKeyFailure {
             keychain::KeyError::Make(_) => SshKeyFailureKind::Make,
             keychain::KeyError::WrongPassphrase => SshKeyFailureKind::WrongPassphrase,
             keychain::KeyError::NotOpenSsh => SshKeyFailureKind::NotOpenSsh,
+            keychain::KeyError::SecurityKey(_) => SshKeyFailureKind::SecurityKey,
         },
     }
 }
@@ -129,6 +157,34 @@ impl OpenWard {
             kind,
             &comment,
             passphrase.as_deref(),
+            || keychain::users(self.app.local(), &self.app.vault()),
+        ))
+    }
+
+    /// Makes `~/.ssh/<name>` on the security key plugged in: it waits
+    /// for the touch. `verify`: its PIN at every use (`verify-required`).
+    pub fn generate_security_key(
+        &self,
+        name: String,
+        kind: SecurityKeyType,
+        comment: String,
+        pin: Option<String>,
+        verify: bool,
+    ) -> SshKeyResult {
+        let keys = self.app.security_keys();
+        result(keychain::generate_security_key(
+            self.app.local(),
+            &name,
+            &*keys,
+            keychain::NewSecurityKey {
+                kind: match kind {
+                    SecurityKeyType::Ed25519 => openward_fido::Kind::Ed25519,
+                    SecurityKeyType::Ecdsa => openward_fido::Kind::Ecdsa,
+                },
+                comment: &comment,
+                pin: pin.as_deref(),
+                verify,
+            },
             || keychain::users(self.app.local(), &self.app.vault()),
         ))
     }

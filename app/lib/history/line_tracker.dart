@@ -52,6 +52,25 @@ class LineTracker {
     _after = t?.after ?? '';
   }
 
+  /// What was typed on this line, for a suggestion: null once the line
+  /// was edited (arrows, Tab) or lost, and where a secret is asked.
+  String? get plainTyped =>
+      _active && !_lost && !_edited && !_looksSecret(_prompt) ? _typed : null;
+
+  /// Whether the screen shows the prompt and what was typed, the cursor
+  /// at its end, and nothing new after it (a shell's own suggestion, the
+  /// rest of a line): where a suggestion can go.
+  bool showsTyped(LineScreen s) {
+    if (!_active || _lost) return false;
+    final t = s.typedFrom(_row);
+    if (t == null || t.after != _after || !t.text.startsWith(_prompt)) {
+      return false;
+    }
+    // The prompt was read without its last space; the screen's text
+    // comes without the line's.
+    return t.text.substring(_prompt.length).trimLeft() == _typed.trimRight();
+  }
+
   void reset() {
     _active = false;
     _edited = false;

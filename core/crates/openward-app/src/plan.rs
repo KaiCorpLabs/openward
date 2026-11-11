@@ -9,7 +9,7 @@
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use openward_vault::proto::{Agent, HostKeyPolicy, ItemId, Jump, Proxy, Route, Settings};
+use openward_vault::proto::{Agent, HostKeyPolicy, ItemId, Jump, Protocol, Proxy, Route, Settings};
 use openward_vault::{Vault, defaults};
 
 use crate::local::{Local, Tokens};
@@ -53,14 +53,21 @@ pub struct Hop {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Plan {
-    /// Jump hosts first, the target last.
+    /// Jump hosts first, the target last. The jumps are always SSH.
     pub hops: Vec<Hop>,
+    /// How the target is reached: SSH or Telnet. A serial host has no
+    /// plan: nothing goes over a network.
+    pub protocol: Protocol,
     pub term: String,
     pub env: Vec<(String, String)>,
     /// Forward the target's agent requests to the last hop's agent.
     pub agent_forward: bool,
     /// The shell goes inside tmux, to come back to it.
     pub persistent: bool,
+    /// The shell goes over Mosh, started with this program (SSH only).
+    pub mosh: Option<String>,
+    /// The target's character set and Backspace.
+    pub coding: crate::charset::Coding,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -75,12 +82,24 @@ pub enum PlanError {
     /// shell would run.
     #[error("the ProxyCommand of {label} would pass %{token} with characters a shell runs")]
     UnsafeToken { label: String, token: char },
+    /// What only SSH does (files, tunnels, a jump) asked of a Telnet or
+    /// serial host.
+    #[error("{0} is not reached by SSH")]
+    NotSsh(String),
 }
 
 impl Plan {
     /// Who connects where, and through what. Plans with the same key can
     /// share one connection: a terminal and the SFTP browser of a host.
     pub fn key(&self) -> String {
+        let key = self.ssh_key();
+        match self.protocol {
+            Protocol::Ssh => key,
+            _ => format!("telnet {key}"),
+        }
+    }
+
+    fn ssh_key(&self) -> String {
         let hops: Vec<String> = self
             .hops
             .iter()
@@ -103,29 +122,54 @@ impl Plan {
         address: &str,
         user: Option<String>,
         port: Option<u16>,
+        protocol: Protocol,
         local: &Local,
     ) -> Self {
         let settings = defaults();
         let bare = Settings {
             user,
-            port,
+            port: port.or((protocol == Protocol::Telnet).then_some(openward_vault::TELNET_PORT)),
             ..defaults()
         };
         let target = hop(address, None, address, &bare, local, true)
             .expect("an address alone has no ProxyCommand");
+        let coding = crate::charset::Coding::of(&settings);
         Self {
             term: settings.term.unwrap_or_else(|| "xterm-256color".into()),
             env: settings.env.unwrap_or_default().into_iter().collect(),
-            agent_forward: settings.agent_forward.unwrap_or(false) && target.agent.is_some(),
-            persistent: settings.persistent_session.unwrap_or(false),
+            agent_forward: settings.agent_forward.unwrap_or(false)
+                && target.agent.is_some()
+                && protocol == Protocol::Ssh,
+            persistent: settings.persistent_session.unwrap_or(false) && protocol == Protocol::Ssh,
             hops: vec![target],
+            protocol,
+            mosh: None,
+            coding,
+        }
+    }
+
+    /// This plan, if it is SSH: for what Telnet cannot do (files,
+    /// tunnels, the server's system).
+    pub fn ssh(self) -> Result<Self, PlanError> {
+        match self.protocol {
+            Protocol::Ssh => Ok(self),
+            _ => Err(PlanError::NotSsh(
+                self.hops
+                    .last()
+                    .map(|h| h.label.clone())
+                    .unwrap_or_default(),
+            )),
         }
     }
 
     pub fn for_host(vault: &Vault, host: ItemId, local: &Local) -> Result<Self, PlanError> {
+        let settings = vault.effective(host)?.settings;
+        let protocol = settings.protocol.unwrap_or(Protocol::Ssh);
+        if protocol == Protocol::Serial {
+            return Err(PlanError::NotSsh(vault.host(host)?.label.clone()));
+        }
         let mut hops = Vec::new();
         chain(vault, host, local, &mut Vec::new(), &mut hops)?;
-        let settings = vault.effective(host)?.settings;
         // The proxy goes in front of the first connection: the first hop's,
         // or else the target's (a group with a proxy whose hosts jump).
         if let Some(first) = hops.first_mut()
@@ -139,12 +183,24 @@ impl Plan {
             first.proxy = chosen.and_then(proxy_of);
         }
         let target = hops.last().expect("the chain ends with the host");
+        let coding = crate::charset::Coding::of(&settings);
         Ok(Self {
             term: settings.term.unwrap_or_else(|| "xterm-256color".into()),
             env: settings.env.unwrap_or_default().into_iter().collect(),
-            agent_forward: settings.agent_forward.unwrap_or(false) && target.agent.is_some(),
-            persistent: settings.persistent_session.unwrap_or(false),
+            agent_forward: settings.agent_forward.unwrap_or(false)
+                && target.agent.is_some()
+                && protocol == Protocol::Ssh,
+            persistent: settings.persistent_session.unwrap_or(false) && protocol == Protocol::Ssh,
+            mosh: (settings.mosh == Some(true) && protocol == Protocol::Ssh).then(|| {
+                settings
+                    .mosh_server
+                    .clone()
+                    .filter(|s| !s.trim().is_empty())
+                    .unwrap_or_else(|| "mosh-server".into())
+            }),
+            coding,
             hops,
+            protocol,
         })
     }
 }
@@ -165,7 +221,13 @@ fn chain(
     if let Some(Route::Jump(jumps)) = &settings.route {
         for jump in jumps {
             match jump {
-                Jump::Host(jid) => chain(vault, *jid, local, visiting, hops)?,
+                Jump::Host(jid) => {
+                    let through = vault.effective(*jid)?.settings.protocol;
+                    if through.is_some_and(|p| p != Protocol::Ssh) {
+                        return Err(PlanError::NotSsh(vault.host(*jid)?.label.clone()));
+                    }
+                    chain(vault, *jid, local, visiting, hops)?;
+                }
                 Jump::Address {
                     host, user, port, ..
                 } => {
@@ -322,7 +384,13 @@ mod tests {
 
     #[test]
     fn an_address_gets_one_hop_with_the_defaults() {
-        let plan = Plan::for_address("10.0.0.7", Some("root".into()), Some(2222), &local());
+        let plan = Plan::for_address(
+            "10.0.0.7",
+            Some("root".into()),
+            Some(2222),
+            Protocol::Ssh,
+            &local(),
+        );
         let [hop] = plan.hops.as_slice() else {
             panic!("one hop: {plan:?}")
         };
@@ -341,7 +409,7 @@ mod tests {
             PathBuf::from("/home/ana/.ssh/id_ed25519")
         );
 
-        let bare = Plan::for_address("db", None, None, &local());
+        let bare = Plan::for_address("db", None, None, Protocol::Ssh, &local());
         assert_eq!((bare.hops[0].user.as_str(), bare.hops[0].port), ("ana", 22));
     }
 
@@ -624,5 +692,78 @@ mod tests {
             Plan::for_host(&v, b, &local()),
             Err(PlanError::JumpLoop(_))
         ));
+    }
+
+    /// A switch over Telnet behind an SSH bastion: the jump is SSH, the
+    /// target Telnet on port 23, with nothing of SSH's that would not go.
+    #[test]
+    fn telnet_goes_through_ssh_jumps() {
+        let mut v = Vault::open_in_memory().unwrap();
+        let bastion = host(&mut v, "bastion", None, Settings::default());
+        let switch = host(
+            &mut v,
+            "switch",
+            None,
+            Settings {
+                protocol: Some(Protocol::Telnet),
+                route: Some(Route::Jump(vec![Jump::Host(bastion)])),
+                agent_forward: Some(true),
+                persistent_session: Some(true),
+                ..Settings::default()
+            },
+        );
+        let plan = Plan::for_host(&v, switch, &local()).unwrap();
+        assert_eq!(plan.protocol, Protocol::Telnet);
+        assert_eq!(plan.hops.len(), 2);
+        assert_eq!(plan.hops[0].port, 22);
+        assert_eq!(plan.hops[1].port, 23);
+        assert!(!plan.agent_forward && !plan.persistent);
+        assert!(plan.key().starts_with("telnet "));
+        assert!(matches!(plan.ssh(), Err(PlanError::NotSsh(l)) if l == "switch"));
+        let quick = Plan::for_address("sw", None, None, Protocol::Telnet, &local());
+        assert_eq!(quick.hops[0].port, 23);
+    }
+
+    /// Only SSH hosts are jumped through, and a serial host has no plan.
+    #[test]
+    fn jumps_and_plans_are_ssh_only() {
+        let mut v = Vault::open_in_memory().unwrap();
+        let telnet = host(
+            &mut v,
+            "old",
+            None,
+            Settings {
+                protocol: Some(Protocol::Telnet),
+                ..Settings::default()
+            },
+        );
+        let behind = host(
+            &mut v,
+            "behind",
+            None,
+            Settings {
+                route: Some(Route::Jump(vec![Jump::Host(telnet)])),
+                ..Settings::default()
+            },
+        );
+        assert!(matches!(
+            Plan::for_host(&v, behind, &local()),
+            Err(PlanError::NotSsh(l)) if l == "old"
+        ));
+        let console = host(
+            &mut v,
+            "console",
+            None,
+            Settings {
+                protocol: Some(Protocol::Serial),
+                ..Settings::default()
+            },
+        );
+        assert!(matches!(
+            Plan::for_host(&v, console, &local()),
+            Err(PlanError::NotSsh(_))
+        ));
+        let ssh = host(&mut v, "web", None, Settings::default());
+        assert!(Plan::for_host(&v, ssh, &local()).unwrap().ssh().is_ok());
     }
 }

@@ -6,16 +6,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/address.dart';
 import '../../core/providers.dart';
+import '../../core/settings.dart';
 import '../../identities/identities.dart';
 import '../../identities/identity_editor.dart';
 import '../../l10n/l10n.dart';
 import '../../src/rust/api/vault.dart';
+import '../../settings/appearance_page.dart' show themeName;
+import '../../snippets/snippets.dart' show asksNothing, snippetsProvider;
+import '../../src/rust/api/snippets.dart' show SnippetView;
+import '../../terminal/schemes.dart';
+import '../../ui/themes.dart';
 import '../../ui/tokens.dart';
 import '../../ui/widgets.dart';
 
 import 'form.dart';
 import 'environment_fields.dart';
 import 'rows.dart';
+import 'serial_fields.dart';
 
 /// The connection settings, each set here or inherited, and where the
 /// inherited ones come from.
@@ -103,20 +110,84 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
     }
   }
 
-  /// Fields under «Advanced», folded unless one is set here.
-  List<String> get _advanced => [
-    'proxy',
-    'host_key_policy',
-    'legacy_host_keys',
-    'persistent_session',
-    'session_log',
-    'keepalive_secs',
-    'connect_timeout_secs',
-    'agent',
-    if (widget.system == null) 'read_os_release',
+  /// Fields under «Advanced», folded unless one is set here: those the
+  /// protocol in force uses.
+  List<String> get _advanced => switch (_protocol) {
+    ProtocolKind.ssh => [
+      'proxy',
+      'host_key_policy',
+      'legacy_host_keys',
+      'persistent_session',
+      'mosh',
+      'mosh_server',
+      ..._terminalFields,
+      'session_log',
+      'keepalive_secs',
+      'connect_timeout_secs',
+      'agent',
+      if (widget.system == null) 'read_os_release',
+    ],
+    ProtocolKind.telnet => [
+      'proxy',
+      ..._terminalFields,
+      'session_log',
+      'connect_timeout_secs',
+    ],
+    ProtocolKind.serial => [..._terminalFields, 'session_log'],
+  };
+
+  /// How the terminal reads and shows the host, whatever reaches it.
+  static const _terminalFields = [
+    'encoding',
+    'backspace',
+    'terminal_scheme',
+    'startup_snippet',
   ];
 
+  /// How the item is reached with what the form says now.
+  ProtocolKind get _protocol {
+    _resolve();
+    return f.protocolWith(_from);
+  }
+
+  String _protocolName(AppLocalizations l, ProtocolKind p) => switch (p) {
+    ProtocolKind.ssh => 'SSH',
+    ProtocolKind.telnet => 'Telnet',
+    ProtocolKind.serial => l.protocolSerial,
+  };
+
   SettingsForm get f => widget.form;
+
+  /// The colors a host can have of its own, by id and name: the themes'
+  /// terminals, the gallery's schemes and those imported.
+  List<(String, String)> get _schemes {
+    final l = context.l10n;
+    return [
+      for (final t in OwThemes.all.values) ('theme:${t.id}', themeName(l, t)),
+      for (final s in [...knownSchemes, ...ref.watch(settingsProvider).schemes])
+        (s.id, s.name),
+    ];
+  }
+
+  /// The snippets a shell can start with: those that ask nothing.
+  List<SnippetView> get _startupSnippets => [
+    for (final s in ref.watch(snippetsProvider))
+      if (asksNothing(s)) s,
+  ];
+
+  String _snippetName(AppLocalizations l, String id) => id.isEmpty
+      ? l.startupSnippetNone
+      : ref
+                .watch(snippetsProvider)
+                .where((s) => s.id == id)
+                .firstOrNull
+                ?.spec
+                .label ??
+            l.startupSnippetGone;
+
+  String _schemeName(AppLocalizations l, String id) => id.isEmpty
+      ? l.terminalSchemeApp
+      : _schemes.where((s) => s.$1 == id).firstOrNull?.$2 ?? id;
 
   /// What the item inherits before its own identity choice (for the
   /// identity row), and with it (for the rest).
@@ -218,7 +289,21 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
     final e = _from;
     return switch (field) {
       'user' => e.user ?? l.localUser,
-      'port' => '${e.port ?? 22}',
+      // Telnet's own port when only the defaults set one (as the core
+      // does), also while the protocol is chosen here and not saved.
+      'port' =>
+        _protocol == ProtocolKind.telnet &&
+                _originOf('port')?.origin == OriginKind.default_
+            ? '23'
+            : '${e.port ?? 22}',
+      'protocol' => _protocolName(l, e.protocol ?? ProtocolKind.ssh),
+      'mosh' => e.mosh ?? false ? l.moshOn : l.moshOff,
+      'mosh_server' => e.moshServer ?? 'mosh-server',
+      'encoding' => charsetLabel(e.encoding ?? 'utf-8'),
+      'backspace' => backspaceLabel(l, e.backspace ?? BackspaceKind.delete),
+      'terminal_scheme' => _schemeName(l, e.terminalScheme ?? ''),
+      'startup_snippet' => _snippetName(l, e.startupSnippet ?? ''),
+      'serial' => serialSummary(l, e.serial ?? defaultSerialLine),
       'identity_files' => e.identityFiles?.join(', ') ?? l.defaultKeys,
       'agent' => switch (e.agent) {
         AgentKind.off => l.agentNone,
@@ -334,6 +419,7 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
       noteAction: noteAction,
       onChange: () => setState(() {
         f.take(field, field == 'identity' ? _base.effective : _from);
+        if (field == 'port') f.port.text = _inheritedValue('port');
         _justTook = field;
       }),
       onClear: () => f.drop(field),
@@ -432,18 +518,21 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
           EditorSection(l.sectionSystem),
           system,
           const SizedBox(height: 10),
-          _osReleaseRow(l),
-          Padding(
-            padding: const EdgeInsets.only(
-              left: editorLabelWidth,
-              right: editorResetWidth,
-              bottom: OwSpace.s3,
+          // It runs a command over SSH.
+          if (_protocol == ProtocolKind.ssh) ...[
+            _osReleaseRow(l),
+            Padding(
+              padding: const EdgeInsets.only(
+                left: editorLabelWidth,
+                right: editorResetWidth,
+                bottom: OwSpace.s3,
+              ),
+              child: Text(
+                l.readOsReleaseNote,
+                style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
+              ),
             ),
-            child: Text(
-              l.readOsReleaseNote,
-              style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
-            ),
-          ),
+          ],
         ],
         EditorSection(l.sectionEnvironment),
         if (widget.system == null)
@@ -482,300 +571,409 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
           ),
         EditorSection(widget.connectionTitle),
         _row(
-          field: 'identity',
-          label: l.identity,
-          editor: _identityPicker(context),
-          noteAction: inForce == null
-              ? null
-              : (l.editTheIdentity, () => _editIdentity(inForce)),
-        ),
-        _row(
-          field: 'user',
-          label: l.user,
-          mono: true,
-          editor: TextField(
-            key: const ValueKey('settings.user'),
-            controller: f.user,
-            autofocus: focusFor('user'),
-            style: monoStyle(context, size: 13, color: ow.colors.text),
-          ),
-        ),
-        _row(
-          field: 'port',
-          label: l.port,
-          mono: true,
-          editor: TextField(
-            key: const ValueKey('settings.port'),
-            controller: f.port,
-            focusNode: f.focus['port'],
-            autofocus: focusFor('port'),
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            onChanged: (_) => f.edited('port'),
-            style: monoStyle(context, size: 13, color: ow.colors.text),
-            decoration: InputDecoration(errorText: f.errorOn('port')),
-          ),
-        ),
-        _row(
-          field: 'identity_files',
-          label: l.keys,
-          mono: true,
-          editor: TextField(
-            key: const ValueKey('settings.keys'),
-            controller: f.keys,
-            autofocus: focusFor('identity_files'),
-            minLines: 1,
-            maxLines: 4,
-            style: monoStyle(context, size: 13, color: ow.colors.text),
-            decoration: InputDecoration(helperText: l.keysHelp),
-          ),
-        ),
-        _row(
-          field: 'route',
-          label: l.route,
-          editor: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              DropdownButtonFormField<RouteKind>(
-                style: fieldTextStyle(context),
-                key: const ValueKey('settings.route'),
-                autofocus: focusFor('route'),
-                initialValue: f.route ?? RouteKind.direct,
-                items: [
-                  DropdownMenuItem(
-                    value: RouteKind.direct,
-                    child: Text(l.routeDirect),
-                  ),
-                  DropdownMenuItem(
-                    value: RouteKind.jump,
-                    child: Text(l.routeJump),
-                  ),
-                  const DropdownMenuItem(
-                    value: RouteKind.command,
-                    child: Text('ProxyCommand'),
-                  ),
-                ],
-                onChanged: (v) => f.update(() => f.route = v),
-              ),
-              if (f.route == RouteKind.jump) ...[
-                const SizedBox(height: 10),
-                JumpChain(
-                  jumps: f.jumps,
-                  hosts: widget.hosts,
-                  address: f.jumpAddress,
-                  label: _jumpLabel,
-                  onChanged: () => setState(() {}),
-                ),
-              ],
-              if (f.route == RouteKind.command) ...[
-                const SizedBox(height: 10),
-                TextField(
-                  controller: f.command,
-                  focusNode: f.focus['command'],
-                  onChanged: (_) => f.edited('command'),
-                  style: monoStyle(context, size: 13, color: ow.colors.text),
-                  decoration: InputDecoration(
-                    hintText: 'cloudflared access ssh --hostname %h',
-                    errorText: f.errorOn('command'),
-                  ),
-                ),
-              ],
+          field: 'protocol',
+          label: l.protocol,
+          editor: DropdownButtonFormField<ProtocolKind>(
+            style: fieldTextStyle(context),
+            key: const ValueKey('settings.protocol'),
+            autofocus: focusFor('protocol'),
+            initialValue: f.protocol ?? ProtocolKind.ssh,
+            isExpanded: true,
+            items: [
+              for (final p in ProtocolKind.values)
+                DropdownMenuItem(value: p, child: Text(_protocolName(l, p))),
             ],
+            onChanged: (v) => f.update(() => f.protocol = v),
           ),
         ),
-        AdvancedToggle(
-          open: _more,
-          setHere: _advanced.where(f.setHere.contains).length,
-          onTap: () => setState(() => _more = !_more),
-        ),
-        if (_more) ...[
+        if (_protocol == ProtocolKind.telnet)
+          Padding(
+            padding: const EdgeInsets.only(
+              left: editorLabelWidth,
+              right: editorResetWidth,
+              bottom: OwSpace.s5,
+            ),
+            child: Text(
+              l.telnetUnencryptedNote,
+              key: const ValueKey('settings.telnetNote'),
+              style: TextStyle(fontSize: OwText.small, color: c.warn),
+            ),
+          ),
+        if (_protocol == ProtocolKind.serial)
           _row(
-            field: 'proxy',
-            label: l.proxy,
+            field: 'serial',
+            label: l.serialLine,
+            editor: SerialLineFields(
+              line: f.serial ?? defaultSerialLine,
+              autofocus: focusFor('serial'),
+              onChanged: (v) => f.update(() => f.serial = v),
+            ),
+          ),
+        if (_protocol == ProtocolKind.ssh) ...[
+          _row(
+            field: 'identity',
+            label: l.identity,
+            editor: _identityPicker(context),
+            noteAction: inForce == null
+                ? null
+                : (l.editTheIdentity, () => _editIdentity(inForce)),
+          ),
+          _row(
+            field: 'user',
+            label: l.user,
+            mono: true,
+            editor: TextField(
+              key: const ValueKey('settings.user'),
+              controller: f.user,
+              autofocus: focusFor('user'),
+              style: monoStyle(context, size: 13, color: ow.colors.text),
+            ),
+          ),
+        ],
+        if (_protocol != ProtocolKind.serial)
+          _row(
+            field: 'port',
+            label: l.port,
+            mono: true,
+            editor: TextField(
+              key: const ValueKey('settings.port'),
+              controller: f.port,
+              focusNode: f.focus['port'],
+              autofocus: focusFor('port'),
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onChanged: (_) => f.edited('port'),
+              style: monoStyle(context, size: 13, color: ow.colors.text),
+              decoration: InputDecoration(errorText: f.errorOn('port')),
+            ),
+          ),
+        if (_protocol == ProtocolKind.ssh)
+          _row(
+            field: 'identity_files',
+            label: l.keys,
+            mono: true,
+            editor: TextField(
+              key: const ValueKey('settings.keys'),
+              controller: f.keys,
+              autofocus: focusFor('identity_files'),
+              minLines: 1,
+              maxLines: 4,
+              style: monoStyle(context, size: 13, color: ow.colors.text),
+              decoration: InputDecoration(helperText: l.keysHelp),
+            ),
+          ),
+        if (_protocol != ProtocolKind.serial)
+          _row(
+            field: 'route',
+            label: l.route,
             editor: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                DropdownButtonFormField<ProxyKind>(
+                DropdownButtonFormField<RouteKind>(
                   style: fieldTextStyle(context),
-                  key: const ValueKey('settings.proxy'),
-                  autofocus: focusFor('proxy'),
-                  initialValue: f.proxy ?? ProxyKind.off,
+                  key: const ValueKey('settings.route'),
+                  autofocus: focusFor('route'),
+                  initialValue: f.route ?? RouteKind.direct,
                   items: [
                     DropdownMenuItem(
-                      value: ProxyKind.off,
-                      child: Text(l.proxyNone),
+                      value: RouteKind.direct,
+                      child: Text(l.routeDirect),
+                    ),
+                    DropdownMenuItem(
+                      value: RouteKind.jump,
+                      child: Text(l.routeJump),
                     ),
                     const DropdownMenuItem(
-                      value: ProxyKind.http,
-                      child: Text('HTTP (CONNECT)'),
-                    ),
-                    const DropdownMenuItem(
-                      value: ProxyKind.socks5,
-                      child: Text('SOCKS5'),
+                      value: RouteKind.command,
+                      child: Text('ProxyCommand'),
                     ),
                   ],
-                  onChanged: (v) => f.update(() => f.proxy = v),
+                  onChanged: (v) => f.update(() => f.route = v),
                 ),
-                if (f.proxyServer) ...[
+                if (f.route == RouteKind.jump) ...[
                   const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          key: const ValueKey('settings.proxyHost'),
-                          controller: f.proxyHost,
-                          focusNode: f.focus['proxy'],
-                          onChanged: (_) {
-                            f.edited('proxy');
-                            setState(() {});
-                          },
-                          style: monoStyle(
-                            context,
-                            size: 13,
-                            color: ow.colors.text,
-                          ),
-                          decoration: InputDecoration(
-                            labelText: l.proxyServer,
-                            errorText: f.errorOn('proxy'),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      SizedBox(
-                        width: 96,
-                        child: TextField(
-                          key: const ValueKey('settings.proxyPort'),
-                          controller: f.proxyPort,
-                          onChanged: (_) => setState(() {}),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                          ],
-                          style: monoStyle(
-                            context,
-                            size: 13,
-                            color: ow.colors.text,
-                          ),
-                          decoration: InputDecoration(labelText: l.port),
-                        ),
-                      ),
-                    ],
+                  JumpChain(
+                    jumps: f.jumps,
+                    hosts: widget.hosts,
+                    address: f.jumpAddress,
+                    label: _jumpLabel,
+                    onChanged: () => setState(() {}),
                   ),
+                ],
+                if (f.route == RouteKind.command) ...[
                   const SizedBox(height: 10),
                   TextField(
-                    key: const ValueKey('settings.proxyUser'),
-                    controller: f.proxyUser,
+                    controller: f.command,
+                    focusNode: f.focus['command'],
+                    onChanged: (_) => f.edited('command'),
                     style: monoStyle(context, size: 13, color: ow.colors.text),
                     decoration: InputDecoration(
-                      labelText: l.proxyUser,
-                      helperText: l.proxyUserHelp,
-                      helperMaxLines: 2,
+                      hintText: 'cloudflared access ssh --hostname %h',
+                      errorText: f.errorOn('command'),
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    l.proxyRouteTitle,
-                    style: TextStyle(
-                      fontSize: OwText.small,
-                      color: ow.colors.textMuted,
+                ],
+              ],
+            ),
+          ),
+        AdvancedToggle(
+          open: _more,
+          setHere: _advanced.where(f.setHere.contains).length,
+          list: switch (_protocol) {
+            ProtocolKind.ssh => null,
+            ProtocolKind.telnet => l.advancedListTelnet,
+            ProtocolKind.serial => l.advancedListSerial,
+          },
+          onTap: () => setState(() => _more = !_more),
+        ),
+        if (_more) ...[
+          if (_protocol != ProtocolKind.serial)
+            _row(
+              field: 'proxy',
+              label: l.proxy,
+              editor: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  DropdownButtonFormField<ProxyKind>(
+                    style: fieldTextStyle(context),
+                    key: const ValueKey('settings.proxy'),
+                    autofocus: focusFor('proxy'),
+                    initialValue: f.proxy ?? ProxyKind.off,
+                    items: [
+                      DropdownMenuItem(
+                        value: ProxyKind.off,
+                        child: Text(l.proxyNone),
+                      ),
+                      const DropdownMenuItem(
+                        value: ProxyKind.http,
+                        child: Text('HTTP (CONNECT)'),
+                      ),
+                      const DropdownMenuItem(
+                        value: ProxyKind.socks5,
+                        child: Text('SOCKS5'),
+                      ),
+                    ],
+                    onChanged: (v) => f.update(() => f.proxy = v),
+                  ),
+                  if (f.proxyServer) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            key: const ValueKey('settings.proxyHost'),
+                            controller: f.proxyHost,
+                            focusNode: f.focus['proxy'],
+                            onChanged: (_) {
+                              f.edited('proxy');
+                              setState(() {});
+                            },
+                            style: monoStyle(
+                              context,
+                              size: 13,
+                              color: ow.colors.text,
+                            ),
+                            decoration: InputDecoration(
+                              labelText: l.proxyServer,
+                              errorText: f.errorOn('proxy'),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        SizedBox(
+                          width: 96,
+                          child: TextField(
+                            key: const ValueKey('settings.proxyPort'),
+                            controller: f.proxyPort,
+                            onChanged: (_) => setState(() {}),
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            style: monoStyle(
+                              context,
+                              size: 13,
+                              color: ow.colors.text,
+                            ),
+                            decoration: InputDecoration(labelText: l.port),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _proxyRoute(l),
-                    style: monoStyle(context, size: 12, color: ow.colors.text),
-                  ),
-                  if ((f.setHere.contains('route') ? f.route : _from.route) ==
-                      RouteKind.command) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      l.proxyNotWithCommand,
-                      style: TextStyle(
-                        fontSize: OwText.small,
-                        color: ow.colors.warn,
+                    const SizedBox(height: 10),
+                    TextField(
+                      key: const ValueKey('settings.proxyUser'),
+                      controller: f.proxyUser,
+                      style: monoStyle(
+                        context,
+                        size: 13,
+                        color: ow.colors.text,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: l.proxyUser,
+                        helperText: l.proxyUserHelp,
+                        helperMaxLines: 2,
                       ),
                     ),
-                  ],
-                  if (f.proxy == ProxyKind.http) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     Text(
-                      l.proxyHttpNote,
+                      l.proxyRouteTitle,
                       style: TextStyle(
                         fontSize: OwText.small,
                         color: ow.colors.textMuted,
                       ),
                     ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _proxyRoute(l),
+                      style: monoStyle(
+                        context,
+                        size: 12,
+                        color: ow.colors.text,
+                      ),
+                    ),
+                    if ((f.setHere.contains('route') ? f.route : _from.route) ==
+                        RouteKind.command) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        l.proxyNotWithCommand,
+                        style: TextStyle(
+                          fontSize: OwText.small,
+                          color: ow.colors.warn,
+                        ),
+                      ),
+                    ],
+                    if (f.proxy == ProxyKind.http) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        l.proxyHttpNote,
+                        style: TextStyle(
+                          fontSize: OwText.small,
+                          color: ow.colors.textMuted,
+                        ),
+                      ),
+                    ],
                   ],
                 ],
-              ],
+              ),
             ),
-          ),
-          _row(
-            field: 'host_key_policy',
-            label: l.hostKeys,
-            editor: DropdownButtonFormField<KeyPolicy>(
-              style: fieldTextStyle(context),
-              key: const ValueKey('settings.policy'),
-              autofocus: focusFor('host_key_policy'),
-              initialValue: f.policy ?? KeyPolicy.ask,
-              items: [
-                for (final p in KeyPolicy.values)
-                  DropdownMenuItem(value: p, child: Text(_policy(l, p))),
-              ],
-              onChanged: (v) => f.update(() => f.policy = v),
+          if (_protocol == ProtocolKind.ssh) ...[
+            _row(
+              field: 'host_key_policy',
+              label: l.hostKeys,
+              editor: DropdownButtonFormField<KeyPolicy>(
+                style: fieldTextStyle(context),
+                key: const ValueKey('settings.policy'),
+                autofocus: focusFor('host_key_policy'),
+                initialValue: f.policy ?? KeyPolicy.ask,
+                items: [
+                  for (final p in KeyPolicy.values)
+                    DropdownMenuItem(value: p, child: Text(_policy(l, p))),
+                ],
+                onChanged: (v) => f.update(() => f.policy = v),
+              ),
             ),
-          ),
-          _row(
-            field: 'legacy_host_keys',
-            label: l.legacyHostKeys,
-            editor: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                DropdownButtonFormField<bool>(
-                  style: fieldTextStyle(context),
-                  key: const ValueKey('settings.legacyHostKeys'),
-                  autofocus: focusFor('legacy_host_keys'),
-                  initialValue: f.legacyHostKeys ?? false,
-                  isExpanded: true,
-                  items: [
-                    DropdownMenuItem(
-                      value: true,
-                      child: Text(l.legacyHostKeysOn),
+            _row(
+              field: 'legacy_host_keys',
+              label: l.legacyHostKeys,
+              editor: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DropdownButtonFormField<bool>(
+                    style: fieldTextStyle(context),
+                    key: const ValueKey('settings.legacyHostKeys'),
+                    autofocus: focusFor('legacy_host_keys'),
+                    initialValue: f.legacyHostKeys ?? false,
+                    isExpanded: true,
+                    items: [
+                      DropdownMenuItem(
+                        value: true,
+                        child: Text(l.legacyHostKeysOn),
+                      ),
+                      DropdownMenuItem(
+                        value: false,
+                        child: Text(l.legacyHostKeysOff),
+                      ),
+                    ],
+                    onChanged: (v) => f.update(() => f.legacyHostKeys = v),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    l.legacyHostKeysNote,
+                    style: TextStyle(
+                      fontSize: OwText.small,
+                      color: ow.colors.textMuted,
                     ),
-                    DropdownMenuItem(
-                      value: false,
-                      child: Text(l.legacyHostKeysOff),
+                  ),
+                ],
+              ),
+            ),
+            _row(
+              field: 'persistent_session',
+              label: l.persistentSession,
+              editor: DropdownButtonFormField<bool>(
+                style: fieldTextStyle(context),
+                key: const ValueKey('settings.persistent'),
+                autofocus: focusFor('persistent_session'),
+                initialValue: f.persistent ?? false,
+                isExpanded: true,
+                items: [
+                  DropdownMenuItem(value: true, child: Text(l.persistentOn)),
+                  DropdownMenuItem(value: false, child: Text(l.persistentOff)),
+                ],
+                onChanged: (v) => f.update(() => f.persistent = v),
+              ),
+            ),
+          ],
+          if (_protocol == ProtocolKind.ssh) ...[
+            _row(
+              field: 'mosh',
+              label: 'Mosh',
+              editor: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DropdownButtonFormField<bool>(
+                    style: fieldTextStyle(context),
+                    key: const ValueKey('settings.mosh'),
+                    autofocus: focusFor('mosh'),
+                    initialValue: f.mosh ?? false,
+                    isExpanded: true,
+                    items: [
+                      DropdownMenuItem(value: true, child: Text(l.moshOn)),
+                      DropdownMenuItem(value: false, child: Text(l.moshOff)),
+                    ],
+                    onChanged: (v) => f.update(() => f.mosh = v),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    l.moshNote,
+                    style: TextStyle(
+                      fontSize: OwText.small,
+                      color: ow.colors.textMuted,
                     ),
-                  ],
-                  onChanged: (v) => f.update(() => f.legacyHostKeys = v),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  l.legacyHostKeysNote,
-                  style: TextStyle(
-                    fontSize: OwText.small,
-                    color: ow.colors.textMuted,
+                  ),
+                ],
+              ),
+            ),
+            // Where its server is: only while Mosh is on.
+            if ((f.setHere.contains('mosh') ? f.mosh : _from.mosh) ?? false)
+              _row(
+                field: 'mosh_server',
+                label: l.moshServer,
+                mono: true,
+                editor: TextField(
+                  key: const ValueKey('settings.moshServer'),
+                  controller: f.moshServer,
+                  autofocus: focusFor('mosh_server'),
+                  style: monoStyle(context, size: 13, color: ow.colors.text),
+                  decoration: InputDecoration(
+                    hintText: 'mosh-server',
+                    helperText: l.moshServerHelp,
+                    helperMaxLines: 2,
                   ),
                 ),
-              ],
-            ),
-          ),
-          _row(
-            field: 'persistent_session',
-            label: l.persistentSession,
-            editor: DropdownButtonFormField<bool>(
-              style: fieldTextStyle(context),
-              key: const ValueKey('settings.persistent'),
-              autofocus: focusFor('persistent_session'),
-              initialValue: f.persistent ?? false,
-              isExpanded: true,
-              items: [
-                DropdownMenuItem(value: true, child: Text(l.persistentOn)),
-                DropdownMenuItem(value: false, child: Text(l.persistentOff)),
-              ],
-              onChanged: (v) => f.update(() => f.persistent = v),
-            ),
-          ),
+              ),
+          ],
           _row(
             field: 'session_log',
             label: l.sessionLog,
@@ -809,86 +1007,263 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
             ),
           ),
           _row(
-            field: 'keepalive_secs',
-            label: l.keepaliveLabel,
-            editor: DropdownButtonFormField<int>(
-              style: fieldTextStyle(context),
-              key: const ValueKey('settings.keepalive'),
-              autofocus: focusFor('keepalive_secs'),
-              initialValue: f.keepalive ?? 10,
-              isExpanded: true,
-              items: [
-                for (final k in {..._keepalives, ?f.keepalive})
-                  DropdownMenuItem(value: k, child: Text(_keepalive(l, k))),
-              ],
-              onChanged: (v) => f.update(() => f.keepalive = v),
-            ),
-          ),
-          _row(
-            field: 'connect_timeout_secs',
-            label: l.connectTimeoutLabel,
-            editor: DropdownButtonFormField<int>(
-              style: fieldTextStyle(context),
-              key: const ValueKey('settings.connectTimeout'),
-              autofocus: focusFor('connect_timeout_secs'),
-              initialValue: f.connectTimeout ?? 15,
-              isExpanded: true,
-              items: [
-                for (final t in {..._connectTimeouts, ?f.connectTimeout})
-                  DropdownMenuItem(
-                    value: t,
-                    child: Text(l.connectTimeoutAfter(t)),
-                  ),
-              ],
-              onChanged: (v) => f.update(() => f.connectTimeout = v),
-            ),
-          ),
-          _row(
-            field: 'agent',
-            label: l.agent,
+            field: 'encoding',
+            label: l.encodingLabel,
             editor: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                DropdownButtonFormField<AgentKind>(
+                DropdownButtonFormField<String>(
                   style: fieldTextStyle(context),
-                  key: const ValueKey('settings.agent'),
-                  autofocus: focusFor('agent'),
-                  initialValue: f.agent ?? AgentKind.system,
+                  key: const ValueKey('settings.encoding'),
+                  autofocus: focusFor('encoding'),
+                  initialValue: f.encoding ?? 'utf-8',
+                  isExpanded: true,
+                  items: [
+                    for (final c in {
+                      ...ref.read(openWardProvider).charsets(),
+                      ?f.encoding,
+                    })
+                      DropdownMenuItem(value: c, child: Text(charsetLabel(c))),
+                  ],
+                  onChanged: (v) => f.update(() => f.encoding = v),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _protocol == ProtocolKind.ssh
+                      ? l.encodingNoteMosh
+                      : l.encodingNote,
+                  style: TextStyle(
+                    fontSize: OwText.small,
+                    color: ow.colors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _row(
+            field: 'backspace',
+            label: l.backspaceLabel,
+            editor: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<BackspaceKind>(
+                  style: fieldTextStyle(context),
+                  key: const ValueKey('settings.backspace'),
+                  autofocus: focusFor('backspace'),
+                  initialValue: f.backspace ?? BackspaceKind.delete,
+                  isExpanded: true,
+                  items: [
+                    for (final b in BackspaceKind.values)
+                      DropdownMenuItem(
+                        value: b,
+                        child: Text(backspaceLabel(l, b)),
+                      ),
+                  ],
+                  onChanged: (v) => f.update(() => f.backspace = v),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l.backspaceNote,
+                  style: TextStyle(
+                    fontSize: OwText.small,
+                    color: ow.colors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _row(
+            field: 'terminal_scheme',
+            label: l.terminalSchemeLabel,
+            editor: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<String>(
+                  style: fieldTextStyle(context),
+                  key: const ValueKey('settings.terminalScheme'),
+                  autofocus: focusFor('terminal_scheme'),
+                  initialValue: f.terminalScheme ?? '',
+                  isExpanded: true,
                   items: [
                     DropdownMenuItem(
-                      value: AgentKind.system,
-                      child: Text(l.agentSystem),
+                      value: '',
+                      child: Text(l.terminalSchemeApp),
                     ),
-                    DropdownMenuItem(
-                      value: AgentKind.off,
-                      child: Text(l.agentNone),
-                    ),
-                    DropdownMenuItem(
-                      value: AgentKind.socket,
-                      child: Text(l.agentSocket),
-                    ),
+                    for (final (id, name) in _schemes)
+                      DropdownMenuItem(value: id, child: Text(name)),
+                    // One that is gone (an imported scheme deleted).
+                    if (f.terminalScheme case final id?
+                        when id.isNotEmpty && !_schemes.any((s) => s.$1 == id))
+                      DropdownMenuItem(value: id, child: Text(id)),
                   ],
-                  onChanged: (v) => f.update(() => f.agent = v),
+                  onChanged: (v) => f.update(() => f.terminalScheme = v),
                 ),
-                if (f.agent == AgentKind.socket) ...[
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: f.socket,
-                    focusNode: f.focus['socket'],
-                    onChanged: (_) => f.edited('socket'),
-                    style: monoStyle(context, size: 13, color: ow.colors.text),
-                    decoration: InputDecoration(
-                      hintText: agentSocketExample,
-                      errorText: f.errorOn('socket'),
-                    ),
+                const SizedBox(height: 8),
+                Text(
+                  l.terminalSchemeNote,
+                  style: TextStyle(
+                    fontSize: OwText.small,
+                    color: ow.colors.textMuted,
                   ),
-                ],
+                ),
               ],
             ),
           ),
-          if (widget.system == null) _osReleaseRow(l),
+          _row(
+            field: 'startup_snippet',
+            label: l.startupSnippet,
+            editor: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<String>(
+                  style: fieldTextStyle(context),
+                  key: const ValueKey('settings.startupSnippet'),
+                  autofocus: focusFor('startup_snippet'),
+                  initialValue: f.startupSnippet ?? '',
+                  isExpanded: true,
+                  items: [
+                    DropdownMenuItem(
+                      value: '',
+                      child: Text(l.startupSnippetNone),
+                    ),
+                    for (final s in _startupSnippets)
+                      DropdownMenuItem(value: s.id, child: Text(s.spec.label)),
+                    // One deleted since, or that asks for values now.
+                    if (f.startupSnippet case final id?
+                        when id.isNotEmpty &&
+                            !_startupSnippets.any((s) => s.id == id))
+                      DropdownMenuItem(
+                        value: id,
+                        child: Text(l.startupSnippetGone),
+                      ),
+                  ],
+                  onChanged: (v) => f.update(() => f.startupSnippet = v),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l.startupSnippetNote,
+                  style: TextStyle(
+                    fontSize: OwText.small,
+                    color: ow.colors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_protocol == ProtocolKind.ssh)
+            _row(
+              field: 'keepalive_secs',
+              label: l.keepaliveLabel,
+              editor: DropdownButtonFormField<int>(
+                style: fieldTextStyle(context),
+                key: const ValueKey('settings.keepalive'),
+                autofocus: focusFor('keepalive_secs'),
+                initialValue: f.keepalive ?? 10,
+                isExpanded: true,
+                items: [
+                  for (final k in {..._keepalives, ?f.keepalive})
+                    DropdownMenuItem(value: k, child: Text(_keepalive(l, k))),
+                ],
+                onChanged: (v) => f.update(() => f.keepalive = v),
+              ),
+            ),
+          if (_protocol != ProtocolKind.serial)
+            _row(
+              field: 'connect_timeout_secs',
+              label: l.connectTimeoutLabel,
+              editor: DropdownButtonFormField<int>(
+                style: fieldTextStyle(context),
+                key: const ValueKey('settings.connectTimeout'),
+                autofocus: focusFor('connect_timeout_secs'),
+                initialValue: f.connectTimeout ?? 15,
+                isExpanded: true,
+                items: [
+                  for (final t in {..._connectTimeouts, ?f.connectTimeout})
+                    DropdownMenuItem(
+                      value: t,
+                      child: Text(l.connectTimeoutAfter(t)),
+                    ),
+                ],
+                onChanged: (v) => f.update(() => f.connectTimeout = v),
+              ),
+            ),
+          if (_protocol == ProtocolKind.ssh) ...[
+            _row(
+              field: 'agent',
+              label: l.agent,
+              editor: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  DropdownButtonFormField<AgentKind>(
+                    style: fieldTextStyle(context),
+                    key: const ValueKey('settings.agent'),
+                    autofocus: focusFor('agent'),
+                    initialValue: f.agent ?? AgentKind.system,
+                    items: [
+                      DropdownMenuItem(
+                        value: AgentKind.system,
+                        child: Text(l.agentSystem),
+                      ),
+                      DropdownMenuItem(
+                        value: AgentKind.off,
+                        child: Text(l.agentNone),
+                      ),
+                      DropdownMenuItem(
+                        value: AgentKind.socket,
+                        child: Text(l.agentSocket),
+                      ),
+                    ],
+                    onChanged: (v) => f.update(() => f.agent = v),
+                  ),
+                  if (f.agent == AgentKind.socket) ...[
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: f.socket,
+                      focusNode: f.focus['socket'],
+                      onChanged: (_) => f.edited('socket'),
+                      style: monoStyle(
+                        context,
+                        size: 13,
+                        color: ow.colors.text,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: agentSocketExample,
+                        errorText: f.errorOn('socket'),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (widget.system == null) _osReleaseRow(l),
+          ],
         ],
       ],
     );
   }
 }
+
+/// A character set's name as people know it.
+String charsetLabel(String label) => switch (label.toLowerCase()) {
+  'utf-8' => 'UTF-8',
+  'iso-8859-1' => 'Latin-1 (ISO-8859-1)',
+  'iso-8859-15' => 'Latin-9 (ISO-8859-15)',
+  'windows-1252' => 'Windows-1252',
+  'cp437' => 'CP437 (IBM PC)',
+  'iso-8859-2' => 'Latin-2 (ISO-8859-2)',
+  'windows-1250' => 'Windows-1250',
+  'windows-1251' => 'Windows-1251',
+  'koi8-r' => 'KOI8-R',
+  'ibm866' => 'CP866',
+  'shift_jis' => 'Shift-JIS',
+  'euc-jp' => 'EUC-JP',
+  'big5' => 'Big5',
+  'gb18030' => 'GB18030',
+  'euc-kr' => 'EUC-KR',
+  _ => label,
+};
+
+String backspaceLabel(AppLocalizations l, BackspaceKind b) => switch (b) {
+  BackspaceKind.delete => l.backspaceDelete,
+  BackspaceKind.controlH => l.backspaceControlH,
+};

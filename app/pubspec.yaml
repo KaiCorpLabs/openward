@@ -1,7 +1,7 @@
 name: openward
-description: "OpenWard, cliente SSH de código abierto"
+description: "OpenWard, cliente SSH"
 publish_to: 'none'
-version: 0.3.3-beta.2+26
+version: 0.3.4-beta.3+29
 
 environment:
   sdk: ^3.13.5
@@ -31,6 +31,8 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  # A launcher that only takes note, for the tests of «Abrir».
+  url_launcher_platform_interface: ^2.3.2
 
 flutter:
   uses-material-design: true

@@ -4,10 +4,12 @@ import 'dart:ui' show Color;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 
+import '../core/address.dart';
 import '../core/connection.dart';
 import '../history/line_tracker.dart';
 import '../src/rust/api/session.dart';
 import 'frame.dart';
+import 'highlight.dart';
 import 'palette.dart';
 import 'renderer.dart';
 
@@ -22,9 +24,22 @@ class TerminalController extends ConnectionController {
     super.hostId,
     super.target,
     int scrollback = 0,
+    this.reuse = false,
   }) : session = app.terminal(cols: 80, rows: 24, scrollback: scrollback) {
     _wakes = session.watch().listen((_) => _onWake());
   }
+
+  /// Over the connection to its host that is up already, if one is
+  /// (snippets run on several hosts): no logging in again.
+  final bool reuse;
+
+  /// What to type in each new shell once it is up (the host's startup
+  /// snippet), worked out then; null for nothing.
+  String? Function()? startup;
+
+  /// Typed once in the next shell that comes up (a snippet run on several
+  /// hosts), after [startup]; with Enter, or left on the line.
+  ({String text, bool enter})? sendWhenUp;
 
   /// A recording played back into `session` (its player's): drawn like
   /// any terminal, never connected nor typed into.
@@ -32,7 +47,7 @@ class TerminalController extends ConnectionController {
     required super.app,
     required super.label,
     required this.session,
-  }) {
+  }) : reuse = false {
     _wakes = session.watch().listen((_) => _onWake());
   }
 
@@ -60,6 +75,16 @@ class TerminalController extends ConnectionController {
 
   /// A full-screen program (an editor, a pager) is on view.
   bool altScreen = false;
+
+  /// Keyword highlighting, from the settings (null when off).
+  Highlighter? highlighter;
+
+  /// Paints the screen again with `h`, when it is another.
+  void setHighlighter(Highlighter? h) {
+    if (identical(h, highlighter)) return;
+    highlighter = h;
+    if (!isDisposed) session.redraw();
+  }
 
   /// What is being typed at the prompt, for the command history.
   final LineTracker line = LineTracker();
@@ -164,15 +189,24 @@ class TerminalController extends ConnectionController {
     final hostId = this.hostId;
     final target = this.target;
     return hostId != null
-        ? app.connect(session: session, hostId: hostId)
-        : target != null
-        ? app.connectAddress(
+        ? reuse
+              ? app.connectReusing(session: session, hostId: hostId)
+              : app.connect(session: session, hostId: hostId)
+        : target == null
+        ? app.openLocal(session: session)
+        : target.isSerial
+        ? app.openSerial(
+            session: session,
+            path: target.address,
+            line: target.serial ?? defaultSerialLine,
+          )
+        : app.connectAddress(
             session: session,
             address: target.address,
             user: target.user,
             port: target.port,
-          )
-        : app.openLocal(session: session);
+            protocol: target.protocol,
+          );
   }
 
   @override
@@ -182,6 +216,10 @@ class TerminalController extends ConnectionController {
   /// cut, set by the pane (it knows the language): when, and after how
   /// long away.
   String Function(DateTime at, Duration away)? comebackLine;
+
+  /// The words of the line that says why the session goes over SSH when
+  /// Mosh was asked for, set by the pane.
+  String Function(MoshFallbackView why)? moshFallbackLine;
 
   @override
   void onEvent(SessionEvent e) {
@@ -197,6 +235,11 @@ class TerminalController extends ConnectionController {
       PersistenceKind.new_ || PersistenceKind.resumed => true,
       _ => false,
     };
+    if (e.moshFallback case final why?) {
+      if (moshFallbackLine case final words?) {
+        session.note(text: '\r\n\x1b[2m── ${words(why)} ──\x1b[0m\r\n');
+      }
+    }
     final line = comebackLine;
     if (down &&
         !inTmux &&
@@ -209,6 +252,21 @@ class TerminalController extends ConnectionController {
         since == null ? Duration.zero : now.difference(since),
       );
       session.note(text: '\r\n\x1b[2m── $text ──\x1b[0m\r\n');
+    }
+    // A new shell: its startup snippet, unless tmux brings back the one
+    // from before as it was; then what was waiting for it.
+    if (e.kind == SessionEventKind.connected && !isDisposed) {
+      final resumed = persistent?.state == PersistenceKind.resumed;
+      final first = resumed ? null : startup?.call();
+      if (first != null) session.text(text: '$first\n');
+      if (sendWhenUp case final send?) {
+        sendWhenUp = null;
+        if (send.enter) {
+          session.text(text: '${send.text}\n');
+        } else {
+          session.paste(text: send.text, allowUnsafe: true);
+        }
+      }
     }
   }
 
@@ -349,6 +407,7 @@ class TerminalController extends ConnectionController {
       session.redraw();
       return false;
     }
+    renderer.highlighter = f.altScreen ? null : highlighter;
     renderer.apply(frame);
     renderer.setSelection([
       for (final r in f.selection) (row: r.row, start: r.start, end: r.end),

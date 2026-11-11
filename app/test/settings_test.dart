@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openward/welcome/whats_new.dart';
 import 'package:openward/core/settings.dart';
+import 'package:openward/terminal/highlight.dart';
 import 'package:openward/terminal/schemes.dart';
 
 void main() {
@@ -121,5 +124,46 @@ void main() {
       Settings.fromJson({'option_as_alt': 'odd'}).optionAsAlt,
       OptionAltChoice.off,
     );
+  });
+
+  test('the mouse, highlighting and shortcut choices come back', () {
+    final rules = [
+      ...defaultHighlights.map(
+        (r) => r.id == 'ok' ? r.copyWith(enabled: false) : r,
+      ),
+      const HighlightRule(
+        id: 'custom:1',
+        name: 'Reintentos',
+        pattern: r'\bretry\b',
+        color: 11,
+        caseSensitive: true,
+      ),
+    ];
+    final s = const Settings().copyWith(
+      copyOnSelect: true,
+      rightClickPaste: true,
+      highlight: false,
+      highlightRules: rules,
+      shortcutProfile: ShortcutProfile.pc,
+      terminalKeysFirst: true,
+    );
+    final back = Settings.fromJson(
+      jsonDecode(jsonEncode(s.toJson())) as Map<String, Object?>,
+    );
+    expect(back, s);
+    expect(back.highlightRules, rules);
+    expect(back.macShortcuts, isFalse);
+    // The defaults: highlighting on with the app's rules, written as none.
+    expect(const Settings().toJson().containsKey('highlight_rules'), isFalse);
+    expect(Settings.fromJson(const {}).highlightRules, defaultHighlights);
+    expect(Settings.fromJson(const {}).highlight, isTrue);
+    // A broken rule is left out, not the rest.
+    final odd = Settings.fromJson({
+      'highlight_rules': [
+        {'id': 'x', 'pattern': 'a', 'color': 99},
+        defaultHighlights.first.toJson(),
+      ],
+    });
+    expect(odd.highlightRules, [defaultHighlights.first]);
   });
 }

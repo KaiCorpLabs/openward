@@ -10,6 +10,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 pub use openward_ssh::known_hosts::CertProblem;
+pub use openward_vault::proto::Protocol;
 use tokio::sync::oneshot;
 use zeroize::Zeroizing;
 
@@ -65,6 +66,11 @@ pub enum Event {
         session: String,
         state: Persistence,
     },
+    /// Mosh was asked for and could not be: the session goes on over SSH
+    /// (in tmux, to come back to it), for this reason.
+    MoshFallback {
+        reason: MoshFallback,
+    },
     /// A local program is running: input goes to it from now on.
     Started {
         program: String,
@@ -98,6 +104,8 @@ pub enum Persistence {
 pub enum Stage {
     Connecting,
     Authenticating,
+    /// Waiting for the security key of `label`'s key file to be touched.
+    TouchKey,
     OpeningShell,
     OpeningSftp,
 }
@@ -105,6 +113,12 @@ pub enum Stage {
 /// What the status bar shows about a live connection.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Connected {
+    /// SSH, Telnet (nothing encrypted: the SSH fields are empty) or a
+    /// serial port (`host` is the port, `port` 0).
+    pub protocol: Protocol,
+    /// The shell goes over Mosh: SSH only started it (its fields are those
+    /// of that SSH connection).
+    pub mosh: bool,
     /// The target, as the vault has it.
     pub host: String,
     pub port: u16,
@@ -148,6 +162,12 @@ pub enum Prompt {
         known_types: Vec<String>,
     },
     Passphrase {
+        key: String,
+        retry: bool,
+    },
+    /// The PIN of the security key that holds `key` (a key made with
+    /// `verify-required`). Not kept.
+    SecurityKeyPin {
         key: String,
         retry: bool,
     },
@@ -247,11 +267,22 @@ pub enum Failure {
         user: String,
         /// What the server would still accept.
         methods: Vec<String>,
+        /// A certificate that went with one of the keys had run out, and
+        /// was not offered: likely why (its path).
+        expired_certificate: Option<String>,
+        /// A security key's file was among the keys and its key did not
+        /// sign: why (not plugged in, not touched…).
+        security_key: Option<SecurityKeyProblem>,
     },
     Cancelled,
     /// The server has no SFTP (a Dropbear without `sftp-server`, a router).
     NoSftp {
         label: String,
+    },
+    /// A serial port that did not open, or went (the cable was pulled).
+    Serial {
+        port: String,
+        problem: SerialProblem,
     },
     /// Could not reach the host, or the connection broke.
     Network {
@@ -262,6 +293,86 @@ pub enum Failure {
         cause: NetCause,
     },
     Other(String),
+}
+
+/// Why a security key did not sign or make a key.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SecurityKeyProblem {
+    /// None is plugged in.
+    NoKey,
+    /// More than one: which is not clear.
+    TooManyKeys,
+    /// Its PIN is needed (and was not given).
+    PinRequired,
+    WrongPin,
+    /// Too many wrong PINs.
+    Locked,
+    NotTouched,
+    /// The key plugged in is not the one this file is for.
+    NotThisKey,
+    /// The system does not let OpenWard talk to it (Windows, without
+    /// administrator rights: use the agent of Windows' OpenSSH).
+    NoAccess,
+    Other,
+}
+
+impl SecurityKeyProblem {
+    pub fn of(e: &openward_fido::FidoError) -> Self {
+        use openward_fido::FidoError as F;
+        match e {
+            F::NoKey => Self::NoKey,
+            F::TooManyKeys => Self::TooManyKeys,
+            F::PinRequired => Self::PinRequired,
+            F::WrongPin => Self::WrongPin,
+            F::Locked => Self::Locked,
+            F::NotTouched => Self::NotTouched,
+            F::NotThisKey => Self::NotThisKey,
+            F::NoAccess => Self::NoAccess,
+            F::Other(_) => Self::Other,
+        }
+    }
+}
+
+/// Why a session asked to go over Mosh goes over SSH instead.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum MoshFallback {
+    /// `mosh-client` is not installed on this computer.
+    NoClient,
+    /// The server has no `mosh-server` (where it was looked for).
+    NoServer,
+    /// The server's UDP did not get through (a firewall, a NAT, a jump).
+    NoUdp,
+    /// `mosh-server` did not start: what it said.
+    Other(String),
+}
+
+/// What went wrong with a serial port.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum SerialProblem {
+    /// There is no such port (now): unplugged, or another name.
+    Missing,
+    /// Another program (or tab) has it open.
+    Busy,
+    /// This user may not open it (on Linux, not in `dialout`).
+    Denied,
+    /// The port does not take these settings.
+    Settings(String),
+    /// It went while open: the cable or the adapter was pulled.
+    Gone,
+    Other(String),
+}
+
+impl SerialProblem {
+    pub fn of(e: &openward_serial::OpenError) -> Self {
+        use openward_serial::OpenError as E;
+        match e {
+            E::Missing(_) => Self::Missing,
+            E::Busy(_) => Self::Busy,
+            E::Denied(_) => Self::Denied,
+            E::Settings(_, why) => Self::Settings(why.clone()),
+            E::Other(_, why) => Self::Other(why.clone()),
+        }
+    }
 }
 
 /// What kind of network trouble a [`Failure::Network`] is.
@@ -397,6 +508,7 @@ impl std::fmt::Display for Failure {
                 label,
                 user,
                 methods,
+                ..
             } => write!(
                 f,
                 "{label}: authentication failed for {user} (server accepts {})",
@@ -404,6 +516,14 @@ impl std::fmt::Display for Failure {
             ),
             Self::Cancelled => write!(f, "cancelled"),
             Self::NoSftp { label } => write!(f, "{label}: the server has no SFTP"),
+            Self::Serial { port, problem } => match problem {
+                SerialProblem::Missing => write!(f, "{port}: no such serial port"),
+                SerialProblem::Busy => write!(f, "{port} is in use by another program"),
+                SerialProblem::Denied => write!(f, "not allowed to open {port}"),
+                SerialProblem::Settings(why) => write!(f, "{port}: {why}"),
+                SerialProblem::Gone => write!(f, "{port} went away"),
+                SerialProblem::Other(why) => write!(f, "{port}: {why}"),
+            },
             Self::Network { label, message, .. } => write!(f, "{label}: {message}"),
             Self::Other(message) => write!(f, "{message}"),
         }

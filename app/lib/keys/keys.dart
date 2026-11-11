@@ -12,6 +12,7 @@ import '../src/rust/api/app.dart';
 import '../src/rust/api/keychain.dart';
 import '../src/rust/api/session.dart';
 import '../src/rust/api/sftp.dart';
+import '../tabs/messages.dart' show securityKeyReason;
 
 /// The private keys in `~/.ssh`, by name.
 class KeysNotifier extends Notifier<List<SshKey>> {
@@ -35,15 +36,28 @@ String keyFailureText(AppLocalizations l, SshKeyFailure f, String name) =>
       SshKeyFailureKind.io || SshKeyFailureKind.make => l.keyFailed,
       SshKeyFailureKind.wrongPassphrase => l.wrongPassphrase,
       SshKeyFailureKind.notOpenSsh => l.keyNotOpenSsh,
+      SshKeyFailureKind.securityKey => _capital(
+        securityKeyReason(l, f.securityKey ?? SecurityKeyKind.other),
+      ),
     };
 
+String _capital(String s) =>
+    s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}.';
+
 /// A name for a new key of `type` that no file in `~/.ssh` has.
-String freeKeyName(SshKeyType type, Iterable<String> taken) {
-  final base = switch (type) {
-    SshKeyType.ed25519 => 'id_ed25519',
-    SshKeyType.ecdsa => 'id_ecdsa',
-    SshKeyType.rsa => 'id_rsa',
-  };
+/// On a security key (`securityKey`), OpenSSH's `_sk` names.
+String freeKeyName(
+  SshKeyType type,
+  Iterable<String> taken, {
+  bool securityKey = false,
+}) {
+  final base =
+      switch (type) {
+        SshKeyType.ed25519 => 'id_ed25519',
+        SshKeyType.ecdsa => 'id_ecdsa',
+        SshKeyType.rsa => 'id_rsa',
+      } +
+      (securityKey ? '_sk' : '');
   final names = taken.toSet();
   if (!names.contains(base)) return base;
   for (var i = 2; ; i++) {

@@ -886,6 +886,14 @@ class ThemeFamily {
   OwTheme? variant(Brightness b) => b == Brightness.light ? light : dark;
 }
 
+/// A host's own terminal colors, by the id its settings keep: a theme's
+/// terminal (`theme:<id>`), or a scheme of the gallery or imported. Null
+/// for the theme's own (an empty id) and for one that is gone.
+TermPalette? hostTerminal(String id, Settings s) {
+  if (id.startsWith('theme:')) return OwThemes.all[id.substring(6)]?.terminal;
+  return schemeById(id, s.schemes)?.palette;
+}
+
 /// The theme to use for `brightness`, as the settings choose it: the
 /// family picked for that brightness, with the layers taken from other
 /// themes where the user changed them.

@@ -12,9 +12,11 @@ import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 
 import 'editor/form.dart';
+import 'editor/serial_fields.dart';
 import 'editor/settings_fields.dart';
 import 'editor/rows.dart';
 import 'editor/frame.dart';
+import 'host_actions.dart' show overSsh;
 
 export 'editor/environment_fields.dart' show showEnvDialog;
 export 'editor/form.dart' show FieldProblem, agentSocketExample;
@@ -185,7 +187,12 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
     final FieldProblem? problem = label.isEmpty
         ? (field: 'label', text: l.hostNeedsName)
         : address.isEmpty
-        ? (field: 'address', text: l.missingAddress)
+        ? (
+            field: 'address',
+            text: _protocol == ProtocolKind.serial
+                ? l.serialPortMissing
+                : l.missingAddress,
+          )
         : _settings.validate(l);
     _cause = null;
     _settings.problem.value = problem;
@@ -235,6 +242,15 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
     }
   }
 
+  /// How the host is reached with what the form says now: its own
+  /// protocol, or its group's.
+  ProtocolKind get _protocol => _settings.protocolWith(
+    ref
+        .read(openWardProvider)
+        .inherited(groupId: _group, identity: null, identityId: '')
+        .effective,
+  );
+
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
@@ -267,19 +283,34 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
             decoration: InputDecoration(errorText: _settings.errorOn('label')),
           ),
         ),
-        EditorFieldRow(
-          l.address,
-          TextField(
-            key: const ValueKey('host.address'),
-            controller: _address,
-            focusNode: _addressFocus,
-            onChanged: (_) => _edited('address'),
-            style: mono,
-            decoration: InputDecoration(
-              hintText: l.addressHint,
-              errorText: _settings.errorOn('address'),
-            ),
-          ),
+        // A serial host's address is its port, picked from this
+        // computer's.
+        ListenableBuilder(
+          listenable: _settings,
+          builder: (context, _) => _protocol == ProtocolKind.serial
+              ? EditorFieldRow(
+                  l.protocolSerial,
+                  SerialPortField(
+                    controller: _address,
+                    focusNode: _addressFocus,
+                    errorText: _settings.errorOn('address'),
+                    onChanged: () => _edited('address'),
+                  ),
+                )
+              : EditorFieldRow(
+                  l.address,
+                  TextField(
+                    key: const ValueKey('host.address'),
+                    controller: _address,
+                    focusNode: _addressFocus,
+                    onChanged: (_) => _edited('address'),
+                    style: mono,
+                    decoration: InputDecoration(
+                      hintText: l.addressHint,
+                      errorText: _settings.errorOn('address'),
+                    ),
+                  ),
+                ),
         ),
         EditorFieldRow(
           l.group,
@@ -304,8 +335,9 @@ class _HostEditorState extends ConsumerState<_HostEditor> {
         SettingsFields(
           form: _settings,
           hosts: [
+            // Jumps go by SSH.
             for (final h in library.hosts)
-              if (h.id != widget.id) (h.id, h.label),
+              if (h.id != widget.id && overSsh(h)) (h.id, h.label),
           ],
           groupId: _group,
           connectionTitle: l.sectionConnection,
@@ -455,7 +487,10 @@ class _GroupEditorState extends ConsumerState<_GroupEditor> {
         const SizedBox(height: 6),
         SettingsFields(
           form: _settings,
-          hosts: [for (final h in library.hosts) (h.id, h.label)],
+          hosts: [
+            for (final h in library.hosts)
+              if (overSsh(h)) (h.id, h.label),
+          ],
           groupId: _parent,
           connectionTitle: l.groupSettingsSection,
           show: widget.field,

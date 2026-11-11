@@ -12,15 +12,20 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/providers.dart';
 import '../core/settings.dart';
 import '../history/history.dart';
 import '../history/line_tracker.dart';
+import '../history/suggest.dart';
 import '../l10n/l10n.dart';
 import '../snippets/palette.dart' show showSnippetPalette;
+import '../snippets/snippets.dart' show snippetsProvider;
 import '../src/rust/api/session.dart';
-import '../tabs/connection_motion.dart' show comebackWords;
+import '../tabs/connection_motion.dart' show comebackWords, moshFallbackWords;
+import '../ui/themes.dart' show hostTerminal;
 import '../ui/tokens.dart';
 import 'controller.dart';
+import 'highlight.dart';
 import 'keys.dart';
 import 'links.dart';
 import 'paste.dart';
@@ -121,6 +126,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
       if (!mounted) return;
       final l = context.l10n;
       _c.comebackLine = (at, away) => comebackWords(l, at, away);
+      _c.moshFallbackLine = (why) => moshFallbackWords(l, why);
     });
     final settings = ref.read(settingsProvider);
     _optionAsAlt = settings.optionAsAlt;
@@ -159,10 +165,20 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   TerminalRenderer _look() {
     final settings = ref.watch(settingsProvider);
     final ow = context.ow;
+    _c.setHighlighter(
+      highlighterFor(on: settings.highlight, rules: settings.highlightRules),
+    );
+    // A host with colors of its own (or its groups'), whatever the theme.
+    final hostId = _c.hostId;
+    final own = hostId == null
+        ? ''
+        : ref.watch(
+            libraryProvider.select((l) => l.host(hostId)?.terminalScheme ?? ''),
+          );
     final r = _c.renderer(
       MediaQuery.devicePixelRatioOf(context),
       fontSize: (settings.fontSize + _c.zoom).clamp(6, 48),
-      palette: ow.terminal,
+      palette: hostTerminal(own, settings) ?? ow.terminal,
       fontFamily: ow.fonts.terminal,
       lineHeight: settings.lineHeight,
       minimumContrast: settings.minimumContrast ? ow.minimumContrast : 1,
@@ -243,6 +259,67 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     if (before?.row != after?.row || before?.col != after?.col) {
       SchedulerBinding.instance.addPostFrameCallback((_) => _updateImeRects());
     }
+    _suggest();
+  }
+
+  // ------------------------------------------------------------ suggestions
+
+  /// The rest of the command line shown dimmed, or null.
+  String? _ghost;
+
+  /// Works out the suggestion for what the screen shows now: none in the
+  /// alternate screen, where a secret is asked, with the history off,
+  /// while broadcasting, or while the shell suggests on its own.
+  void _suggest() {
+    final s = ref.read(settingsProvider);
+    final line = _c.line;
+    final typed = line.plainTyped;
+    String? rest;
+    if (s.autocomplete &&
+        s.commandHistory &&
+        !widget.readOnly &&
+        !_c.altScreen &&
+        focusNode.hasFocus &&
+        (widget.mirrors?.call() ?? const []).isEmpty &&
+        typed != null &&
+        typed.isNotEmpty &&
+        line.showsTyped(_screen)) {
+      final place = historyPlace(_c);
+      rest = suggestFor(typed, [
+        SuggestionSource(
+          ref
+              .read(historyProvider)
+              .where((e) => e.where == place)
+              .map((e) => e.command),
+        ),
+        SuggestionSource(
+          ref
+              .read(snippetsProvider)
+              .where((v) => v.variables.asked.isEmpty)
+              .map((v) => v.spec.script),
+        ),
+        const SuggestionSource(commonCommands, minTyped: 2),
+      ]);
+    }
+    _setGhost(rest);
+  }
+
+  void _setGhost(String? rest) {
+    final cursor = _renderer?.cursor;
+    if (rest == null || cursor == null) {
+      _ghost = null;
+      _renderer?.setGhost(null);
+      return;
+    }
+    _ghost = rest;
+    _renderer?.setGhost((row: cursor.row, col: cursor.col, text: rest));
+  }
+
+  /// → or End with a suggestion shown: it is typed.
+  void _takeGhost(String rest) {
+    _setGhost(null);
+    _c.line.text(rest, _screen);
+    _session.text(text: rest);
   }
 
   /// The size on its way to the core. Dragging a divider or the window
@@ -355,6 +432,15 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
 
     final mods = hardwareMods();
     _renderer?.setCursorOn(true);
+    final rest = _ghost;
+    if (rest != null &&
+        event is KeyDownEvent &&
+        mods & (Mods.shift | Mods.ctrl | Mods.alt | Mods.superKey) == 0 &&
+        (event.logicalKey == LogicalKeyboardKey.arrowRight ||
+            event.logicalKey == LogicalKeyboardKey.end)) {
+      _takeGhost(rest);
+      return KeyEventResult.handled;
+    }
     if (event is KeyDownEvent &&
         !widget.readOnly &&
         _isPasteShortcut(event, mods)) {
@@ -366,7 +452,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
       return KeyEventResult.handled;
     }
     if (event is KeyDownEvent &&
-        isApple &&
+        macShortcuts &&
         mods & Mods.superKey != 0 &&
         event.logicalKey == LogicalKeyboardKey.keyA) {
       _session.selectAll();
@@ -417,7 +503,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
 
   bool _isCopyShortcut(KeyDownEvent e, int mods) {
     final c = e.logicalKey == LogicalKeyboardKey.keyC;
-    if (isApple) return c && mods & Mods.superKey != 0;
+    if (macShortcuts) return c && mods & Mods.superKey != 0;
     return c && mods & Mods.ctrl != 0 && mods & Mods.shift != 0;
   }
 
@@ -432,7 +518,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   Future<void> _contextMenu(Offset at) async {
     final hasSelection = _session.selectionText()?.isNotEmpty ?? false;
     final l = context.l10n;
-    final key = isApple ? '⌘' : l.ctrlShiftPrefix;
+    final key = macShortcuts ? '⌘' : l.ctrlShiftPrefix;
     final action = await showMenu<VoidCallback>(
       context: context,
       position: RelativeRect.fromLTRB(at.dx, at.dy, at.dx, at.dy),
@@ -459,7 +545,10 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
           PopupMenuItem(
             value: () => showSnippetPalette(context),
             height: 34,
-            child: _MenuRow(l.snippetsEllipsis, isApple ? '⌘⇧S' : '${key}S'),
+            child: _MenuRow(
+              l.snippetsEllipsis,
+              macShortcuts ? '⌘⇧S' : '${key}S',
+            ),
           ),
           // What scrolled away, forgotten here; the program is not told.
           PopupMenuItem(
@@ -473,7 +562,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
         PopupMenuItem(
           value: _session.selectAll,
           height: 34,
-          child: _MenuRow(l.selectAllText, isApple ? '⌘A' : ''),
+          child: _MenuRow(l.selectAllText, macShortcuts ? '⌘A' : ''),
         ),
         PopupMenuItem(
           enabled: hasSelection,
@@ -490,7 +579,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
 
   bool _isPasteShortcut(KeyDownEvent e, int mods) {
     final v = e.logicalKey == LogicalKeyboardKey.keyV;
-    if (isApple) return v && mods & Mods.superKey != 0;
+    if (macShortcuts) return v && mods & Mods.superKey != 0;
     return (v && mods & Mods.ctrl != 0 && mods & Mods.shift != 0) ||
         (e.logicalKey == LogicalKeyboardKey.insert && mods & Mods.shift != 0);
   }
@@ -549,6 +638,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     final has = focusNode.hasFocus;
     if (!_c.isDisposed) _session.focus(gained: has);
     _renderer?.setFocused(has);
+    if (!has) _setGhost(null);
     if (has && !widget.readOnly) {
       _openInput();
     } else {
@@ -767,7 +857,14 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     }
     if (!_toProgram) {
       if (pressed & kSecondaryMouseButton != 0) {
-        _contextMenu(e.position);
+        // Pasting with a right click (an option): with Ctrl, the menu.
+        if (ref.read(settingsProvider).rightClickPaste &&
+            !widget.readOnly &&
+            !HardwareKeyboard.instance.isControlPressed) {
+          _paste();
+        } else {
+          _contextMenu(e.position);
+        }
       } else if (pressed & kPrimaryMouseButton != 0) {
         _selecting = true;
         _session.selectPress(x: e.localPosition.dx, y: e.localPosition.dy);
@@ -841,6 +938,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
       _autoScroll?.cancel();
       _autoScroll = null;
       _session.selectRelease(x: e.localPosition.dx, y: e.localPosition.dy);
+      if (ref.read(settingsProvider).copyOnSelect) _copy();
       return;
     }
     if (!_programMouse || released == 0) return;

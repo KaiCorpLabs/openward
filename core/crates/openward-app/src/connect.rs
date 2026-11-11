@@ -43,6 +43,8 @@ use crate::tunnels::Tunnels;
 pub(crate) struct Ctx {
     pub vault: Arc<Mutex<Vault>>,
     pub local: Local,
+    /// What talks to security keys: the one plugged in.
+    pub security_keys: Arc<dyn openward_fido::Authenticator>,
     pub prompts: Arc<Prompts>,
     pub sink: Arc<dyn EventSink>,
     /// Connections that are up, to share.
@@ -213,13 +215,51 @@ pub(crate) fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 
 /// Authenticated sessions, jumps first; they must live as long as the last.
 pub(crate) async fn run(plan: &Plan, ctx: &Ctx) -> Result<Vec<Session>, Failure> {
-    let mut sessions: Vec<Session> = Vec::with_capacity(plan.hops.len());
-    for (i, hop) in plan.hops.iter().enumerate() {
+    ssh_hops(plan, ctx, plan.hops.len()).await
+}
+
+/// A Telnet plan's connection: its jumps by SSH, then the target's plain
+/// stream, out of the last jump or the way the plan says. The sessions
+/// must live as long as the stream.
+pub(crate) async fn telnet(
+    plan: &Plan,
+    ctx: &Ctx,
+) -> Result<(Vec<Session>, openward_ssh::client::Stream), Failure> {
+    let last = plan.hops.len() - 1;
+    let sessions = ssh_hops(plan, ctx, last).await?;
+    ctx.stage(plan, last, Stage::Connecting);
+    let hop = &plan.hops[last];
+    let target = Target::new(&hop.address, hop.port);
+    let mut proxy = hop.proxy.clone();
+    let mut asked = 0;
+    loop {
+        let transport = match (sessions.last(), &hop.proxy_command, &proxy) {
+            (Some(previous), _, _) => Transport::Via(previous),
+            (None, Some(command), _) => Transport::ProxyCommand(command.clone()),
+            (None, None, Some(p)) => Transport::Proxy(p.clone()),
+            (None, None, None) => Transport::Tcp,
+        };
+        match openward_ssh::client::open_stream(&target, transport, hop.connect_timeout).await {
+            Ok(stream) => return Ok((sessions, stream)),
+            Err(e) if e.downcast_ref::<ProxyAuthRequired>().is_some() && asked < 3 => {
+                let p = proxy.as_mut().expect("only a proxy asks");
+                proxy_login(p, ctx, asked > 0).await?;
+                asked += 1;
+            }
+            Err(e) => return Err(Failure::network(hop.label.clone(), &e)),
+        }
+    }
+}
+
+/// The first `count` hops of `plan`, by SSH.
+async fn ssh_hops(plan: &Plan, ctx: &Ctx, count: usize) -> Result<Vec<Session>, Failure> {
+    let mut sessions: Vec<Session> = Vec::with_capacity(count);
+    for (i, hop) in plan.hops.iter().take(count).enumerate() {
         ctx.stage(plan, i, Stage::Connecting);
         let texts = ctx.known_hosts(&hop.known_hosts);
         let known = texts.all();
         let refused = Arc::new(Mutex::new(None));
-        let last = i + 1 == plan.hops.len();
+        let last = i + 1 == count;
         let opts = Options {
             user: hop.user.clone(),
             known_hosts: Arc::new(Mutex::new(KnownHosts::parse(&known, Unknown::Reject))),
@@ -255,7 +295,7 @@ pub(crate) async fn run(plan: &Plan, ctx: &Ctx) -> Result<Vec<Session>, Failure>
             }
         };
         ctx.stage(plan, i, Stage::Authenticating);
-        authenticate(&mut session, hop, ctx).await?;
+        authenticate(&mut session, hop, ctx, (i, plan.hops.len())).await?;
         sessions.push(session);
     }
     Ok(sessions)
@@ -366,16 +406,27 @@ fn rejected(outcome: &Outcome) -> bool {
     matches!(outcome, Outcome::Continue { partial: false, .. })
 }
 
-async fn authenticate(s: &mut Session, hop: &Hop, ctx: &Ctx) -> Result<(), Failure> {
+/// Logs in to `hop`, the `at.0`-th of `at.1` (for the stages it tells).
+async fn authenticate(
+    s: &mut Session,
+    hop: &Hop,
+    ctx: &Ctx,
+    at: (usize, usize),
+) -> Result<(), Failure> {
     let user = hop.user.as_str();
     let mut methods = match s.auth_none(user).await.map_err(network(hop))? {
         Outcome::Success => return Ok(()),
         Outcome::Continue { methods, .. } => methods,
     };
-    let failed = |methods: &[MethodKind]| Failure::AuthFailed {
+    // Why it failed, likely: a key's certificate that had run out, a
+    // security key that did not sign.
+    let mut why = Why::default();
+    let failed = |methods: &[MethodKind], why: &Why| Failure::AuthFailed {
         label: hop.label.clone(),
         user: user.to_owned(),
         methods: methods.iter().map(|m| <&str>::from(m).to_owned()).collect(),
+        expired_certificate: why.expired.clone(),
+        security_key: why.security_key,
     };
     let mut tried = Vec::new();
     loop {
@@ -387,7 +438,7 @@ async fn authenticate(s: &mut Session, hop: &Hop, ctx: &Ctx) -> Result<(), Failu
         .into_iter()
         .find(|m| methods.contains(m) && !tried.contains(m));
         let Some(method) = next else {
-            return Err(failed(&methods));
+            return Err(failed(&methods, &why));
         };
         tried.push(method);
         // What stands if a method has nothing to try.
@@ -396,7 +447,7 @@ async fn authenticate(s: &mut Session, hop: &Hop, ctx: &Ctx) -> Result<(), Failu
             partial: false,
         };
         let outcome = match method {
-            MethodKind::PublicKey => public_keys(s, hop, ctx, unchanged).await,
+            MethodKind::PublicKey => public_keys(s, hop, ctx, unchanged, &mut why, at).await,
             MethodKind::KeyboardInteractive => keyboard_interactive(s, hop, ctx, unchanged).await,
             _ => password(s, hop, ctx, unchanged).await,
         };
@@ -405,7 +456,7 @@ async fn authenticate(s: &mut Session, hop: &Hop, ctx: &Ctx) -> Result<(), Failu
             // Hung up on after a rejection (`MaxAuthTries`): not the
             // network, and trying again would offer every key again.
             Ok(Outcome::Continue { .. }) | Err(Failure::Network { .. }) if s.gave_up() => {
-                return Err(failed(&methods));
+                return Err(failed(&methods, &why));
             }
             Ok(Outcome::Continue { methods: m, .. }) => methods = m,
             Err(failure) => return Err(failure),
@@ -413,11 +464,20 @@ async fn authenticate(s: &mut Session, hop: &Hop, ctx: &Ctx) -> Result<(), Failu
     }
 }
 
+/// What a failed login may have failed for.
+#[derive(Default)]
+struct Why {
+    expired: Option<String>,
+    security_key: Option<crate::events::SecurityKeyProblem>,
+}
+
 async fn public_keys(
     s: &mut Session,
     hop: &Hop,
     ctx: &Ctx,
     mut last: Outcome,
+    why: &mut Why,
+    at: (usize, usize),
 ) -> Result<Outcome, Failure> {
     let user = hop.user.as_str();
     let files: Vec<(&Path, Option<PublicKey>)> = hop
@@ -477,8 +537,24 @@ async fn public_keys(
         let Some(key) = load_key(path, ctx).await? else {
             continue;
         };
+        if openward_fido::is_security_key(&key) {
+            match security_key(s, hop, ctx, path, key, at).await? {
+                Ok(outcome) if !rejected(&outcome) => return Ok(outcome),
+                Ok(outcome) => last = outcome,
+                Err(problem) => why.security_key = Some(problem),
+            }
+            continue;
+        }
         let key = Arc::new(key);
-        if let Some(cert) = certificate_for(&key, path, &hop.certificate_files) {
+        let found = certificate_for(&key, path, &hop.certificate_files);
+        let found = found.filter(|(cert, cert_path)| {
+            let valid = in_force(cert);
+            if !valid {
+                why.expired = Some(cert_path.display().to_string());
+            }
+            valid
+        });
+        if let Some((cert, _)) = found {
             let outcome = s
                 .auth_cert(user, Arc::clone(&key), cert)
                 .await
@@ -507,6 +583,73 @@ fn public_half(private: &Path) -> Option<PublicKey> {
 /// Loads a key, asking for its passphrase up to three times. `None` skips
 /// it: unreadable, or the user would rather not (as ssh does on an empty
 /// passphrase).
+/// A key of a security key: touched (with its PIN when it was made with
+/// `verify-required`), it signs. Why it did not, if it did not.
+async fn security_key(
+    s: &mut Session,
+    hop: &Hop,
+    ctx: &Ctx,
+    path: &Path,
+    key: PrivateKey,
+    at: (usize, usize),
+) -> Result<Result<Outcome, crate::events::SecurityKeyProblem>, Failure> {
+    use crate::events::SecurityKeyProblem;
+    let key = Arc::new(key);
+    let mut pin: Option<zeroize::Zeroizing<String>> = None;
+    for attempt in 0..3 {
+        if openward_fido::needs_pin(&key) && pin.is_none() {
+            let prompt = Prompt::SecurityKeyPin {
+                key: path.display().to_string(),
+                retry: attempt > 0,
+            };
+            let Answer::Text(mut texts) = ctx.ask(prompt).await else {
+                return Err(Failure::Cancelled);
+            };
+            pin = texts.drain(..).next().filter(|p| !p.is_empty());
+            if pin.is_none() {
+                return Err(Failure::Cancelled);
+            }
+        }
+        // The hop's place, with the key's file for a label.
+        ctx.sink.send(Event::Stage {
+            hop: at.0,
+            hops: at.1,
+            label: path.display().to_string(),
+            stage: Stage::TouchKey,
+        });
+        let (auth, signing_key, given) = (
+            Arc::clone(&ctx.security_keys),
+            Arc::clone(&key),
+            pin.clone(),
+        );
+        let problem = Arc::new(Mutex::new(None));
+        let said = Arc::clone(&problem);
+        let sign: openward_ssh::client::SignFn = Arc::new(move |data: &[u8]| {
+            openward_fido::sign(
+                &*auth,
+                &signing_key,
+                data,
+                given.as_deref().map(String::as_str),
+            )
+            .map_err(|e| {
+                *lock(&said) = Some(e.clone());
+                anyhow::Error::new(e)
+            })
+        });
+        let signed = s
+            .auth_signed(&hop.user, key.public_key().clone(), sign)
+            .await;
+        let failed = lock(&problem).take();
+        match (signed, failed) {
+            (Ok(outcome), _) => return Ok(Ok(outcome)),
+            (Err(_), Some(openward_fido::FidoError::WrongPin)) => pin = None,
+            (Err(_), Some(e)) => return Ok(Err(SecurityKeyProblem::of(&e))),
+            (Err(e), None) => return Err(network(hop)(e)),
+        }
+    }
+    Ok(Err(SecurityKeyProblem::WrongPin))
+}
+
 async fn load_key(path: &Path, ctx: &Ctx) -> Result<Option<PrivateKey>, Failure> {
     match ssh::load_key(path, None) {
         Ok(key) => return Ok(Some(key)),
@@ -534,7 +677,13 @@ async fn load_key(path: &Path, ctx: &Ctx) -> Result<Option<PrivateKey>, Failure>
 }
 
 /// The certificate for `key`: one of `explicit`, or `<key>-cert.pub`.
-fn certificate_for(key: &PrivateKey, path: &Path, explicit: &[PathBuf]) -> Option<Certificate> {
+/// The certificate that goes with `key`, and where it is: one of those
+/// named, or `<key>-cert.pub`.
+fn certificate_for(
+    key: &PrivateKey,
+    path: &Path,
+    explicit: &[PathBuf],
+) -> Option<(Certificate, PathBuf)> {
     let mut implicit = path.as_os_str().to_owned();
     implicit.push("-cert.pub");
     explicit
@@ -542,8 +691,20 @@ fn certificate_for(key: &PrivateKey, path: &Path, explicit: &[PathBuf]) -> Optio
         .map(|p| p.as_path())
         .chain([Path::new(&implicit)])
         .filter(|p| p.is_file())
-        .filter_map(|p| openward_ssh::russh::keys::load_openssh_certificate(p).ok())
-        .find(|c| c.public_key() == key.public_key().key_data())
+        .filter_map(|p| {
+            openward_ssh::russh::keys::load_openssh_certificate(p)
+                .ok()
+                .map(|c| (c, p.to_owned()))
+        })
+        .find(|(c, _)| c.public_key() == key.public_key().key_data())
+}
+
+/// Valid now: after its start and before its end.
+fn in_force(cert: &Certificate) -> bool {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs());
+    cert.valid_after() <= now && now < cert.valid_before()
 }
 
 async fn keyboard_interactive(

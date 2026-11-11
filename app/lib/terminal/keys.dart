@@ -33,6 +33,15 @@ abstract final class Hid {
 
 final bool isApple = Platform.isMacOS || Platform.isIOS;
 
+/// Shortcuts go with ⌘ (a Mac's) rather than Ctrl+Shift (a PC's): the
+/// system's way unless the settings choose (`Settings.shortcutProfile`).
+/// Platform matters (Option as Alt, ⌘-click on links) stay [isApple].
+bool macShortcuts = isApple;
+
+/// In a terminal, the window takes only Ctrl+Shift shortcuts: Ctrl+Tab,
+/// Ctrl+= and the like go to the program (`Settings.terminalKeysFirst`).
+bool terminalKeysFirst = false;
+
 /// Modifiers held on the hardware keyboard, as [Mods] bits.
 int hardwareMods() {
   final k = HardwareKeyboard.instance;
@@ -131,15 +140,22 @@ bool isControlText(String s) =>
     s.runes.any((r) => r < 0x20 || r == 0x7F || (r >= 0xF700 && r <= 0xF8FF));
 
 /// Keys the window keeps for itself (tabs, search), never sent to the
-/// program: ⌘ anything on Apple platforms; elsewhere Ctrl+Shift+letter and
-/// Ctrl+Tab, as other terminals do.
+/// program: ⌘ anything with a Mac's shortcuts; with a PC's, Ctrl+Shift
+/// and a letter, and Ctrl+Tab, as other terminals do (unless the program
+/// comes first: [terminalKeysFirst]).
 bool isAppShortcut(KeyEvent event, int mods) {
-  if (isApple) return mods & Mods.superKey != 0;
+  if (macShortcuts) return mods & Mods.superKey != 0;
   final ctrlShift = Mods.ctrl | Mods.shift;
   final key = event.logicalKey;
-  if (key == LogicalKeyboardKey.tab && mods & Mods.ctrl != 0) return true;
-  // Ctrl+, opens the settings.
-  if (key == LogicalKeyboardKey.comma && mods & Mods.ctrl != 0) return true;
+  // Ctrl+Tab, Ctrl+, (the settings), the text size and Ctrl+Alt+digit:
+  // the program's, when it comes first.
+  final ctrlOnly = !terminalKeysFirst;
+  if (ctrlOnly && key == LogicalKeyboardKey.tab && mods & Mods.ctrl != 0) {
+    return true;
+  }
+  if (ctrlOnly && key == LogicalKeyboardKey.comma && mods & Mods.ctrl != 0) {
+    return true;
+  }
   // Ctrl+Shift+arrows move between panes; Ctrl+Shift+Enter maximizes one.
   if (mods & ctrlShift == ctrlShift &&
       mods & Mods.alt == 0 &&
@@ -157,7 +173,8 @@ bool isAppShortcut(KeyEvent event, int mods) {
     return true;
   }
   // Ctrl+= / Ctrl+- / Ctrl+0 size the tab's text, as in other terminals.
-  if (mods & Mods.ctrl != 0 &&
+  if (ctrlOnly &&
+      mods & Mods.ctrl != 0 &&
       mods & Mods.alt == 0 &&
       (key == LogicalKeyboardKey.equal ||
           key == LogicalKeyboardKey.minus ||
@@ -165,7 +182,8 @@ bool isAppShortcut(KeyEvent event, int mods) {
     return true;
   }
   // Ctrl+(left) Alt+1…9 go to a tab; AltGr+digit types.
-  if (key.keyId >= LogicalKeyboardKey.digit1.keyId &&
+  if (ctrlOnly &&
+      key.keyId >= LogicalKeyboardKey.digit1.keyId &&
       key.keyId <= LogicalKeyboardKey.digit9.keyId &&
       isTabDigit(HardwareKeyboard.instance)) {
     return true;

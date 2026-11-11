@@ -13,7 +13,7 @@ use std::collections::BTreeMap;
 use std::io;
 use std::path::Path;
 
-use openward_proto::{ForwardKind, Settings};
+use openward_proto::{FlowControl, ForwardKind, Parity, Protocol, SerialLine, Settings};
 use quick_xml::events::Event;
 use quick_xml::{Reader, XmlVersion};
 
@@ -283,6 +283,57 @@ fn bundle(sessions: Vec<(Vec<String>, Session)>) -> Bundle {
                 )),
             },
         }
+        let mut address = text("Hostname").unwrap_or_default();
+        let mut odd = |field: &str, value: Option<u64>| {
+            out.warnings.push(Warning::about(
+                &name,
+                WarningKind::BadValue {
+                    field: field.into(),
+                    value: value.map(|v| v.to_string()).unwrap_or_default(),
+                },
+            ));
+        };
+        if protocol.eq_ignore_ascii_case("Telnet") {
+            settings.protocol = Some(Protocol::Telnet);
+            settings.port = num("[Telnet] Port")
+                .and_then(|p| u16::try_from(p).ok())
+                .filter(|&p| p > 0);
+        } else if protocol.eq_ignore_ascii_case("Serial") {
+            // The port is the host's address.
+            settings.protocol = Some(Protocol::Serial);
+            settings.port = None;
+            address = text("[Serial] Com Port").unwrap_or_default();
+            let mut line = SerialLine::default();
+            if let Some(baud) = num("[Serial] Baud Rate")
+                .and_then(|b| u32::try_from(b).ok())
+                .filter(|&b| b > 0)
+            {
+                line.baud = baud;
+            }
+            match num("[Serial] Data Bits") {
+                Some(b @ 5..=8) => line.data_bits = b as u8,
+                None => {}
+                other => odd("[Serial] Data Bits", other),
+            }
+            match num("[Serial] Parity") {
+                Some(0) | None => {}
+                Some(1) => line.parity = Parity::Odd,
+                Some(2) => line.parity = Parity::Even,
+                other => odd("[Serial] Parity", other),
+            }
+            // 0 is one, 2 two; 1 (one and a half) is not to be had here.
+            match num("[Serial] Stop Bits") {
+                Some(0) | None => {}
+                Some(2) => line.stop_bits = 2,
+                other => odd("[Serial] Stop Bits", other),
+            }
+            if num("[Serial] CTS Flow") == Some(1) {
+                line.flow = FlowControl::Hardware;
+            } else if num("[Serial] XON Flow") == Some(1) {
+                line.flow = FlowControl::Software;
+            }
+            settings.serial = Some(line);
+        }
         let mut keys = Vec::new();
         if num("Use Global Public Key") == Some(1) {
             out.warnings.push(Warning::about(
@@ -347,13 +398,16 @@ fn bundle(sessions: Vec<(Vec<String>, Session)>) -> Bundle {
         out.hosts.push(Host {
             id,
             label: name,
-            address: text("Hostname").unwrap_or_default(),
+            address,
             group: (!folder.is_empty()).then(|| folder.join("/")),
             settings,
             keys,
             jumps,
             notes: (!description.trim().is_empty()).then(|| description.trim().to_owned()),
-            unsupported: (!protocol.eq_ignore_ascii_case("SSH2")).then(|| protocol.to_lowercase()),
+            unsupported: (!["SSH2", "Telnet", "Serial"]
+                .iter()
+                .any(|p| protocol.eq_ignore_ascii_case(p)))
+            .then(|| protocol.to_lowercase()),
             ..Host::default()
         });
     }
@@ -434,6 +488,20 @@ mod tests {
       <string name="Protocol Name">Telnet</string>
       <string name="Hostname">10.0.9.2</string>
     </key>
+    <key name="console">
+      <dword name="Is Session">1</dword>
+      <string name="Protocol Name">Serial</string>
+      <string name="[Serial] Com Port">COM4</string>
+      <dword name="[Serial] Baud Rate">115200</dword>
+      <dword name="[Serial] Data Bits">8</dword>
+      <dword name="[Serial] Parity">0</dword>
+      <dword name="[Serial] Stop Bits">0</dword>
+      <dword name="[Serial] CTS Flow">1</dword>
+    </key>
+    <key name="dialup">
+      <dword name="Is Session">1</dword>
+      <string name="Protocol Name">TAPI</string>
+    </key>
   </key>
 </VanDyke>
 "#;
@@ -444,7 +512,7 @@ mod tests {
         let b = from_xml(XML.as_bytes()).unwrap();
         assert_eq!(b.groups.len(), 1);
         let labels: Vec<&str> = b.hosts.iter().map(|h| h.label.as_str()).collect();
-        assert_eq!(labels, ["bastion", "web-01", "switch"]);
+        assert_eq!(labels, ["bastion", "web-01", "switch", "console", "dialup"]);
         let web = &b.hosts[1];
         assert_eq!(web.group.as_deref(), Some("Production"));
         assert_eq!(web.settings.port, Some(2222));
@@ -452,7 +520,22 @@ mod tests {
         assert_eq!(web.keys, [KeyRef::Path("/home/ana/.ssh/deploy".into())]);
         assert_eq!(web.settings.agent_forward, Some(true));
         assert_eq!(web.notes.as_deref(), Some("Web tier"));
-        assert_eq!(b.hosts[2].unsupported.as_deref(), Some("telnet"));
+        let switch = &b.hosts[2];
+        assert_eq!(switch.unsupported, None);
+        assert_eq!(switch.settings.protocol, Some(Protocol::Telnet));
+        assert_eq!(switch.settings.port, None, "Telnet's own, 23");
+        let console = &b.hosts[3];
+        assert_eq!(console.address, "COM4");
+        assert_eq!(console.settings.protocol, Some(Protocol::Serial));
+        assert_eq!(
+            console.settings.serial,
+            Some(SerialLine {
+                baud: 115_200,
+                flow: FlowControl::Hardware,
+                ..SerialLine::default()
+            })
+        );
+        assert_eq!(b.hosts[4].unsupported.as_deref(), Some("tapi"));
         let t: Vec<(ForwardKind, u16, Option<&str>)> = b
             .tunnels
             .iter()

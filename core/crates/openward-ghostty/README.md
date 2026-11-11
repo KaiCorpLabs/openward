@@ -40,4 +40,4 @@ Zig mete su `compiler_rt` en la librería estática y, enlazada con `-force_load
 
 ## Licencias
 
-`src/sys.rs` deriva de las cabeceras de `libghostty-vt` (Ghostty, © Mitchell Hashimoto y colaboradores de Ghostty, [licencia MIT](https://github.com/ghostty-org/ghostty/blob/main/LICENSE)). La librería se enlaza de forma estática y también es MIT. El resto del crate es Apache-2.0, como el repositorio.
+`src/sys.rs` deriva de las cabeceras de `libghostty-vt` (Ghostty, © Mitchell Hashimoto y colaboradores de Ghostty, [licencia MIT](https://github.com/ghostty-org/ghostty/blob/main/LICENSE)). La librería se enlaza de forma estática y también es MIT. El resto del crate tiene todos los derechos reservados, como el repositorio ([LICENSE](../../../LICENSE)).

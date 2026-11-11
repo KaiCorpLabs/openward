@@ -1,5 +1,7 @@
 // What a session's state looks like in words, in the interface's language.
 
+import 'dart:io' show Platform;
+
 import '../core/errors.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/session.dart';
@@ -11,6 +13,7 @@ String stageText(AppLocalizations l, StageView s) {
   return switch (s.stage) {
     StageKind.connecting => l.stageConnecting(s.label, hop),
     StageKind.authenticating => l.stageAuthenticating(s.label, hop),
+    StageKind.touchKey => l.stageTouchKey(s.label),
     StageKind.openingShell => l.stageOpeningShell(s.label),
     StageKind.openingSftp => l.stageOpeningSftp(s.label),
   };
@@ -37,6 +40,16 @@ String failureText(AppLocalizations l, FailureView f) {
         CertKind.notForHost || null => l.certNotForHost,
       },
     ),
+    // What it likely failed for first: a security key that did not sign,
+    // a certificate that ran out.
+    FailureKind.authFailed when f.securityKey != null =>
+      l.failureAuthSecurityKey(
+        f.user,
+        f.label,
+        securityKeyReason(l, f.securityKey!),
+      ),
+    FailureKind.authFailed when f.expiredCertificate.isNotEmpty =>
+      l.failureAuthCertExpired(f.user, f.label, f.expiredCertificate),
     FailureKind.authFailed =>
       f.methods.isEmpty
           ? l.failureAuth(f.user, f.label)
@@ -44,6 +57,7 @@ String failureText(AppLocalizations l, FailureView f) {
     FailureKind.cancelled => l.cancelled,
     FailureKind.noSftp => l.failureNoSftp(f.label),
     FailureKind.network => '${f.label}: ${networkReason(l, f)}',
+    FailureKind.serial => serialReason(l, f),
     // The core's words are in «Detalles».
     FailureKind.other || null => l.failureOther,
   };
@@ -61,6 +75,36 @@ String networkReason(AppLocalizations l, FailureView f) => switch (f.net) {
   // What the command wrote: its words, not the core's.
   NetKind.proxyCommand => l.netProxyCommand(f.reason),
   NetKind.other || null => l.netOther,
+};
+
+/// Why a security key did not sign or make a key, in words.
+String securityKeyReason(AppLocalizations l, SecurityKeyKind k) => switch (k) {
+  SecurityKeyKind.noKey => l.skNoKey,
+  SecurityKeyKind.tooManyKeys => l.skTooManyKeys,
+  SecurityKeyKind.pinRequired => l.skPinRequired,
+  SecurityKeyKind.wrongPin => l.skWrongPin,
+  SecurityKeyKind.locked => l.skLocked,
+  SecurityKeyKind.notTouched => l.skNotTouched,
+  SecurityKeyKind.notThisKey => l.skNotThisKey,
+  // Linux without the udev rule; Windows without administrator rights.
+  SecurityKeyKind.noAccess =>
+    Platform.isLinux ? l.skNoAccessLinux : l.skNoAccess,
+  SecurityKeyKind.other => l.skOther,
+};
+
+/// A serial port that did not open or went away, in words; the core's
+/// own words in «Detalles».
+String serialReason(AppLocalizations l, FailureView f) => switch (f.serial) {
+  SerialKind.missing => l.failureSerialMissing(f.host),
+  SerialKind.busy => l.failureSerialBusy(f.host),
+  // On Linux the port's group is the usual reason: say how to join it.
+  SerialKind.denied =>
+    Platform.isLinux
+        ? l.failureSerialDeniedLinux(f.host)
+        : l.failureSerialDenied(f.host),
+  SerialKind.settings => l.failureSerialSettings(f.host),
+  SerialKind.gone => l.failureSerialGone(f.host),
+  SerialKind.other || null => l.failureSerialOther(f.host),
 };
 
 /// The hops before the target, for "via bastion".

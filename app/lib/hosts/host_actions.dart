@@ -13,12 +13,25 @@ import '../src/rust/api/vault.dart';
 import '../tabs/tabs.dart';
 import '../ui/confirm.dart';
 import '../ui/environment.dart';
+import 'editor/serial_fields.dart';
 import 'editors.dart';
 
-/// `user@address`, and the port when it is not 22.
-String hostAddress(HostView h) =>
+/// How a host is reached, written out: `user@address` with the port when
+/// it is not 22, `telnet://address` with it when not 23, or a serial
+/// port with its speed and format.
+String hostAddress(HostView h) => switch (h.protocol) {
+  ProtocolKind.ssh =>
     '${h.user.isEmpty ? '' : '${h.user}@'}${h.address}'
-    '${h.port == 22 ? '' : ':${h.port}'}';
+        '${h.port == 22 ? '' : ':${h.port}'}',
+  ProtocolKind.telnet =>
+    'telnet://${h.address}${h.port == 23 ? '' : ':${h.port}'}',
+  ProtocolKind.serial =>
+    '${h.address} · ${h.serial?.baud ?? 9600} ${h.serial?.frame ?? '8N1'}',
+};
+
+/// What only SSH gives: files, tunnels, keys copied over, the server's
+/// system told.
+bool overSsh(HostView h) => h.protocol == ProtocolKind.ssh;
 
 /// The actions, for the widget at `context`.
 class HostActions {
@@ -31,8 +44,11 @@ class HostActions {
 
   void connect(HostView h) => ref.read(tabsProvider.notifier).openHost(h);
 
-  void sftp(HostView h) =>
-      ref.read(tabsProvider.notifier).openSftp(hostId: h.id, label: h.label);
+  /// Its files: only over SSH.
+  void sftp(HostView h) {
+    if (!overSsh(h)) return;
+    ref.read(tabsProvider.notifier).openSftp(hostId: h.id, label: h.label);
+  }
 
   /// Stars it, or takes the star away; says so if that fails.
   Future<void> toggleFavorite(HostView h) async {
@@ -194,12 +210,12 @@ class HostActions {
     final l = context.l10n;
     return [
       item(l.connect, () => connect(h)),
-      item(l.openSftp, () => sftp(h)),
+      if (overSsh(h)) item(l.openSftp, () => sftp(h)),
       item(
         h.favorite == null ? l.addFavorite : l.removeFavorite,
         () => toggleFavorite(h),
       ),
-      if (!systemKnown(h.system?.code))
+      if (overSsh(h) && !systemKnown(h.system?.code))
         item(l.findOutSystem, () => findOutSystem(h)),
       item(l.editEllipsis, () => editHost(id: h.id)),
       item(l.duplicate, () => duplicate(h)),

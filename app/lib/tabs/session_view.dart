@@ -106,7 +106,7 @@ List<PopupMenuEntry<VoidCallback>> paneMenu(
 ) {
   final l = context.l10n;
   final tabs = ProviderScope.containerOf(context).read(tabsProvider.notifier);
-  final key = isApple ? '⌘' : l.ctrlShiftPrefix;
+  final key = macShortcuts ? '⌘' : l.ctrlShiftPrefix;
   void here(void Function() f) {
     tab.panes.focus(pane);
     f();
@@ -138,20 +138,20 @@ List<PopupMenuEntry<VoidCallback>> paneMenu(
     menuItem(context, l.splitRight, '${key}D', () {
       here(() => tabs.split(Axis.horizontal));
     }),
-    menuItem(context, l.splitDown, isApple ? '⌘⇧D' : '${key}E', () {
+    menuItem(context, l.splitDown, macShortcuts ? '⌘⇧D' : '${key}E', () {
       here(() => tabs.split(Axis.vertical));
     }),
     if (split) ...[
       menuItem(
         context,
         l.equalizePanes,
-        isApple ? '⌘⌥=' : '',
+        macShortcuts ? '⌘⌥=' : '',
         () => here(tab.panes.equalize),
       ),
       menuItem(
         context,
         tab.panes.maximized == null ? l.maximizePane : l.restorePanes,
-        isApple ? '⌘⇧↩' : '$key↩',
+        macShortcuts ? '⌘⇧↩' : '$key↩',
         () => here(tabs.toggleMaximize),
       ),
     ],
@@ -474,7 +474,7 @@ class _BroadcastBanner extends ConsumerWidget {
                 foregroundColor: c.warn,
               ),
               child: Text(
-                l.broadcastExit(isApple ? '⌘⇧B' : '${l.ctrlShiftPrefix}B'),
+                l.broadcastExit(macShortcuts ? '⌘⇧B' : '${l.ctrlShiftPrefix}B'),
               ),
             ),
           ],

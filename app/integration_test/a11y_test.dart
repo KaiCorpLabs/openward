@@ -597,6 +597,10 @@ Future<void> _walk(WidgetTester tester, _Look look) async {
       await audit('settings: appearance');
       await tapText(l.settingsTerminal);
       await audit('settings: terminal');
+      await tapOn(find.byKey(const ValueKey('highlight.add')));
+      await tester.pump(const Duration(milliseconds: 400));
+      await audit('a highlighting rule');
+      await close();
       await tapOn(find.byKey(const ValueKey('settings.section.logs')));
       await tester.pump(const Duration(milliseconds: 400));
       await audit('settings: logs');
@@ -618,6 +622,11 @@ Future<void> _walk(WidgetTester tester, _Look look) async {
 
       tabs.openPage(PageKind.snippets);
       await audit('snippets');
+      await tapOn(find.byKey(const ValueKey('snippet.run.Logs')));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tapText(l.runOnHostsMenu);
+      await audit('a snippet on several hosts');
+      await close();
       await tapText('Logs');
       await audit('snippet editor');
       await close();
@@ -661,6 +670,9 @@ Future<void> _walk(WidgetTester tester, _Look look) async {
       await tapOn(find.byKey(const ValueKey('keys.new')));
       await tester.pump(const Duration(milliseconds: 400));
       await audit('new key');
+      await tapOn(find.byKey(const ValueKey('newKey.onKey')));
+      await tester.pump(const Duration(milliseconds: 300));
+      await audit('new key on a security key');
       await close();
       await tapOn(find.byKey(const ValueKey('keys.import')));
       await tester.pump(const Duration(milliseconds: 400));

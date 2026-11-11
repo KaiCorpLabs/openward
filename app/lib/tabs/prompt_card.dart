@@ -27,7 +27,9 @@ class _PromptCardState extends State<PromptCard> {
   PromptView get _p => widget.prompt;
 
   int get _fieldCount => switch (_p.kind) {
-    PromptKind.passphrase || PromptKind.password => 1,
+    PromptKind.passphrase ||
+    PromptKind.password ||
+    PromptKind.securityKeyPin => 1,
     PromptKind.keyboardInteractive => _p.questions.length,
     // The user too, when the settings name none.
     PromptKind.proxyLogin => _p.user.isEmpty ? 2 : 1,
@@ -59,6 +61,7 @@ class _PromptCardState extends State<PromptCard> {
     PromptKind.hostKey when _otherType => l.hostKeyOtherTypeTitle(_p.label),
     PromptKind.hostKey => l.firstConnectionTo(_p.label),
     PromptKind.passphrase => l.passphraseTitle,
+    PromptKind.securityKeyPin => l.securityKeyPinTitle,
     PromptKind.password => l.passwordTitle,
     PromptKind.proxyLogin => l.proxyLoginTitle,
     PromptKind.keyboardInteractive =>
@@ -121,6 +124,13 @@ class _PromptCardState extends State<PromptCard> {
           if (_p.retry) _retry(context, l.wrongPassphrase),
           const SizedBox(height: 12),
           _field(0, l.passphraseField, obscure: true),
+        ];
+      case PromptKind.securityKeyPin:
+        return [
+          Text(l.securityKeyPinBody(_p.key)),
+          if (_p.retry) _retry(context, l.wrongPin),
+          const SizedBox(height: 12),
+          _field(0, l.pinField, obscure: true),
         ];
       case PromptKind.password:
         return [

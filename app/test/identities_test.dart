@@ -132,4 +132,16 @@ void main() {
       'sin caducidad',
     );
   });
+
+  test('a certificate is said to run out only in its last week', () {
+    final now = DateTime(2026, 11, 6, 12);
+    int? left(Duration d) =>
+        certificateDaysLeft(now.add(d).millisecondsSinceEpoch, now: now);
+    expect(left(const Duration(hours: 3)), 1);
+    expect(left(const Duration(days: 2, hours: 1)), 3);
+    expect(left(const Duration(days: 7)), 7);
+    expect(left(const Duration(days: 8)), isNull);
+    expect(left(const Duration(hours: -1)), isNull, reason: 'run out');
+    expect(certificateDaysLeft(null, now: now), isNull, reason: 'never');
+  });
 }

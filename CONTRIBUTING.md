@@ -1,6 +1,8 @@
 # Contribuir a OpenWard
 
-Gracias por tu interés. OpenWard está en fase 1, con una beta de escritorio: el diseño todavía cambia, así que **abre un issue antes de un pull request grande**.
+Gracias por tu interés. OpenWard está en fase 1, con una beta de escritorio, y **hasta que se lance la Community no acepta contribuciones de código de fuera**: el repositorio tiene todos los derechos reservados ([LICENSING.md](LICENSING.md)). Los issues y los [avisos de seguridad](SECURITY.md) sí son bienvenidos.
+
+Lo que sigue es cómo trabaja el equipo, y lo que se pedirá a quien contribuya cuando el código sea open source.
 
 ## Antes de empezar
 
@@ -26,16 +28,14 @@ El núcleo prohíbe `unsafe` (`unsafe_code = "forbid"`). Las únicas excepciones
 
 No incluyas en el repositorio grabaciones de terminal, capturas ni logs con hosts, usuarios, rutas o claves reales. Graba en contenedores desechables con datos sintéticos.
 
-## DCO
+## Firmar los commits
 
-Las contribuciones a `core/`, `app/`, `spec/`, `docs/` y `spikes/` usan el [Developer Certificate of Origin](https://developercertificate.org/). Firma cada commit:
+Firma cada commit con `Signed-off-by` ([Developer Certificate of Origin](https://developercertificate.org/)):
 
 ```bash
 git commit -s
 ```
 
-Eso añade `Signed-off-by: Tu Nombre <tu@email>` y certifica que tienes derecho a aportar el código bajo la licencia del directorio.
+## CLA (desde el lanzamiento)
 
-## CLA (solo `server/`)
-
-Las contribuciones al servidor, cuando exista, requerirán además un acuerdo de licencia de contribuidor (CLA). **No cedes el copyright:** concedes una licencia amplia que permite ofrecer el servidor también bajo licencia comercial. El motivo está en el [ADR-007](docs/adr/ADR-007-licencias-y-contribuciones.md).
+Cuando se abran las contribuciones, todas (cliente, servidor, especificación y documentación) requerirán un acuerdo de licencia de contribuidor (CLA). **No cedes el copyright:** concedes una licencia amplia que permite ofrecer OpenWard también con otras licencias, por ejemplo en la App Store, o el servidor con licencia comercial. El motivo está en el [ADR-007](docs/adr/ADR-007-licencias-y-contribuciones.md).

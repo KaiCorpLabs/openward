@@ -24,6 +24,16 @@ class TerminalScheme {
   }
 }
 
+/// The scheme `id` names, among the gallery's and those imported
+/// (`imported`); null if there is none by that id.
+TerminalScheme? schemeById(String id, List<TerminalScheme> imported) {
+  if (id.isEmpty) return null;
+  for (final s in [...knownSchemes, ...imported]) {
+    if (s.id == id) return s;
+  }
+  return null;
+}
+
 abstract final class ThemePalettes {
   /// Papel's terminal when it is set to stay dark: the warm card of the
   /// first proposal.

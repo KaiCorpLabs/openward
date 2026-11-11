@@ -382,6 +382,14 @@ enum ProgramWarningKind {
   /// is the command.
   proxyCommand,
 
+  /// The agent forwarded to the server, left out (that server could sign
+  /// with your keys).
+  agentForward,
+
+  /// A tunnel open to other computers, brought in on loopback; `detail`
+  /// is where it listened.
+  openTunnel,
+
   /// Something OpenWard does not have: `missing`; `detail` is its
   /// name, when it has one.
   unsupported,

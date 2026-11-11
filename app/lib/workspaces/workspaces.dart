@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/address.dart';
 import '../core/providers.dart';
 import '../l10n/l10n.dart';
+import '../src/rust/api/vault.dart' show ProtocolKind;
 import '../src/rust/api/workspaces.dart';
 import '../tabs/tabs.dart';
 import '../terminal/controller.dart';
@@ -26,12 +27,25 @@ final workspacesProvider =
 
 WorkspaceTarget _targetOf(ConnectionController c) {
   final t = c.target;
+  // Telnet and serial ports go as they are written (`telnet://…`,
+  // `serial://…`): the address says how to open them again.
+  if (t != null && t.protocol != ProtocolKind.ssh) {
+    return WorkspaceTarget(hostId: c.hostId, address: t.label);
+  }
   return WorkspaceTarget(
     hostId: c.hostId,
     address: t?.address,
     user: t?.user,
     port: t?.port,
   );
+}
+
+/// The address a workspace keeps, as a target to open.
+QuickTarget? _quick(WorkspaceTarget t) {
+  final address = t.address;
+  if (address == null) return null;
+  if (address.contains('://')) return QuickTarget.parse(address);
+  return QuickTarget(address: address, user: t.user, port: t.port);
 }
 
 void _preorder(PaneNode n, Pane active, List<WorkspacePane> out) {
@@ -111,10 +125,10 @@ String targetLabel(AppLocalizations l, WidgetRef ref, WorkspaceTarget? t) {
   if (hostId != null) {
     return ref.read(libraryProvider).host(hostId)?.label ?? l.deletedHost;
   }
-  final address = t.address;
-  if (address != null) {
-    return QuickTarget(address: address, user: t.user, port: t.port).label;
+  if (_quick(t) case final quick?) {
+    return quick.isSerial ? quick.address : quick.label;
   }
+  if (t.address case final address?) return address;
   return l.localShell;
 }
 
@@ -135,9 +149,7 @@ void openWorkspace(WidgetRef ref, WorkspaceView w) {
   final added = <OpenTab>[];
   OpenTab? front;
 
-  QuickTarget? address(WorkspaceTarget t) => t.address == null
-      ? null
-      : QuickTarget(address: t.address!, user: t.user, port: t.port);
+  QuickTarget? address(WorkspaceTarget t) => _quick(t);
 
   for (final (i, t) in w.spec.tabs.indexed) {
     final OpenTab? tab;

@@ -244,6 +244,16 @@ pub fn parse(bytes: &[u8]) -> Result<Bundle, String> {
                 out.warnings.push(Warning::about(&label, WarningKind::Mosh));
                 None
             }
+            "telnet" => {
+                settings.protocol = Some(openward_proto::Protocol::Telnet);
+                None
+            }
+            // The address is the port; the line, OpenWard's default.
+            "serial" | "serie" => {
+                settings.protocol = Some(openward_proto::Protocol::Serial);
+                settings.port = None;
+                None
+            }
             other => Some(other.to_owned()),
         };
 
@@ -313,7 +323,12 @@ mod tests {
         assert_eq!(web.settings.user.as_deref(), Some("deploy"));
         assert_eq!(web.settings.port, None, "22 is the default");
         assert_eq!(b.hosts[1].settings.port, Some(2222));
-        assert_eq!(b.hosts[2].unsupported.as_deref(), Some("telnet"));
+        assert_eq!(b.hosts[2].unsupported, None);
+        assert_eq!(
+            b.hosts[2].settings.protocol,
+            Some(openward_proto::Protocol::Telnet)
+        );
+        assert_eq!(b.hosts[2].settings.port, Some(23));
         assert_eq!(b.hosts[2].group, None);
     }
 

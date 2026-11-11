@@ -7,10 +7,14 @@
 //! is the kind of session (0 is SSH). Text in those fields is escaped with
 //! tokens such as `__PIPE__`, and paths start with `_CurrentDrive_`.
 //! MobaXterm's tunnels (MobaSSHTunnel) are kept elsewhere and not read.
+//!
+//! Telnet sessions (1) bring their address, port and user; serial ones
+//! (8) their port and its speed, the rest of the line as OpenWard's
+//! defaults (8N1): MobaXterm keeps those as numbers of its own.
 
 use std::collections::BTreeMap;
 
-use openward_proto::{Agent, Proxy, ProxyServer, Settings};
+use openward_proto::{Agent, Protocol, Proxy, ProxyServer, SerialLine, Settings};
 
 use crate::bundle::{Bundle, Group, Host, JumpRef, KeyRef, Missing, Warning, WarningKind};
 use crate::text;
@@ -22,6 +26,16 @@ pub fn sniff(text: &str) -> bool {
         l == "[Bookmarks]" || (l.starts_with("[Bookmarks_") && l.ends_with(']'))
     }) && text.contains("=#")
 }
+
+const SSH: usize = 0;
+const TELNET: usize = 1;
+const SERIAL: usize = 8;
+
+/// The speeds a serial port is set to: a number outside these is not one.
+const BAUDS: [u32; 18] = [
+    300, 600, 1200, 1800, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, 76800, 115_200,
+    230_400, 460_800, 500_000, 921_600,
+];
 
 const KINDS: [&str; 15] = [
     "ssh", "telnet", "rsh", "xdmcp", "rdp", "vnc", "ftp", "sftp", "serial", "file", "shell",
@@ -114,19 +128,49 @@ pub fn parse(bytes: &[u8]) -> Bundle {
             port: (port != 22).then_some(port),
             ..Settings::default()
         };
-        if field(3).starts_with('[') {
+        let mut address = field(1).to_owned();
+        match kind {
+            TELNET => settings.protocol = Some(Protocol::Telnet),
+            // `COM3  (USB Serial Port (COM3))`: the port, then what it is.
+            SERIAL => {
+                settings = Settings {
+                    protocol: Some(Protocol::Serial),
+                    ..Settings::default()
+                };
+                address = field(1)
+                    .split_whitespace()
+                    .next()
+                    .unwrap_or_default()
+                    .to_owned();
+                let mut line = SerialLine::default();
+                match field(2).parse::<u32>() {
+                    Ok(baud) if BAUDS.contains(&baud) => line.baud = baud,
+                    _ => out.warnings.push(Warning::about(
+                        &name,
+                        WarningKind::BadValue {
+                            field: "speed".into(),
+                            value: field(2).to_owned(),
+                        },
+                    )),
+                }
+                settings.serial = Some(line);
+            }
+            _ => {}
+        }
+        let ssh = kind == SSH;
+        if ssh && field(3).starts_with('[') {
             out.warnings.push(Warning::about(
                 &name,
                 WarningKind::Unsupported(Missing::MobaCredential),
             ));
         }
-        if on(5) {
+        if ssh && on(5) {
             out.warnings.push(Warning::about(
                 &name,
                 WarningKind::Unsupported(Missing::X11),
             ));
         }
-        if !field(7).is_empty() {
+        if ssh && !field(7).is_empty() {
             out.warnings
                 .push(Warning::about(&name, WarningKind::StartupCommand));
         }
@@ -139,7 +183,11 @@ pub fn parse(bytes: &[u8]) -> Bundle {
         };
         let (hosts, ports, users) = (list(8), list(9), list(10));
         let mut jumps = Vec::new();
-        for (i, h) in hosts.iter().enumerate().filter(|(_, h)| !h.is_empty()) {
+        for (i, h) in hosts
+            .iter()
+            .enumerate()
+            .filter(|(_, h)| ssh && !h.is_empty())
+        {
             let p: u16 = ports.get(i).and_then(|p| p.parse().ok()).unwrap_or(22);
             let u = users.get(i).map(String::as_str).and_then(user_of);
             jumps.push(match by_address.get(&(h.clone(), p, u.clone())) {
@@ -152,7 +200,7 @@ pub fn parse(bytes: &[u8]) -> Bundle {
             });
         }
         let keys: Vec<KeyRef> = Some(field(14))
-            .filter(|k| !k.is_empty())
+            .filter(|k| ssh && !k.is_empty())
             .map(|k| KeyRef::Path(path(k)))
             .into_iter()
             .collect();
@@ -164,6 +212,7 @@ pub fn parse(bytes: &[u8]) -> Bundle {
             extra: Default::default(),
         };
         match field(19) {
+            _ if !ssh => {}
             "" | "0" => {}
             "2" if !field(20).is_empty() => settings.proxy = Some(Proxy::Socks5(server())),
             "3" if !field(20).is_empty() => settings.proxy = Some(Proxy::Http(server())),
@@ -180,10 +229,10 @@ pub fn parse(bytes: &[u8]) -> Bundle {
                 WarningKind::Unsupported(Missing::Proxy(other.to_owned())),
             )),
         }
-        if field(33) == "0" {
+        if ssh && field(33) == "0" {
             settings.agent = Some(Agent::Off);
         }
-        if on(34) {
+        if ssh && on(34) {
             settings.agent_forward = Some(true);
         }
         let notes = parts
@@ -193,7 +242,7 @@ pub fn parse(bytes: &[u8]) -> Bundle {
         out.hosts.push(Host {
             id,
             label: name,
-            address: field(1).to_owned(),
+            address,
             group: (!l.folder.is_empty()).then(|| {
                 l.folder
                     .split('\\')
@@ -207,7 +256,7 @@ pub fn parse(bytes: &[u8]) -> Bundle {
             jumps,
             tags: Vec::new(),
             notes,
-            unsupported: (kind != 0).then(|| {
+            unsupported: (![SSH, TELNET, SERIAL].contains(&kind)).then(|| {
                 KINDS
                     .get(kind)
                     .map(|k| (*k).to_owned())
@@ -258,7 +307,9 @@ bastion=#109#0%bastion.example.com%22%ana%%-1%-1%%%%%0%0%0%%%-1%0%0%0%%1080%%0%0
 web-01=#109#0%web01.example.com%22%deploy%%0%-1%%bastion.example.com%22%ana%0%0%0%_CurrentDrive_:\\Users\\ana\\.ssh\\id_ed25519%%-1%0%0%2%socks.example.com%1081%%0%0%1#MobaFont%10#0#Web tier __DIEZE__1#-1\r\n\
 [Bookmarks_2]\r\nSubRep=Production\\Databases\r\nImgNum=41\r\n\
 db-01=#109#0%db01.example.com%2222%<default>%%-1%-1%ls __PTVIRG__ pwd%gw1.example.com__PIPE__gw2.example.com%22__PIPE__2200%u1__PIPE__u2%0%-1%0%%%-1%0%0%0%%1080%%0%0%1#MobaFont%10#0# #-1\r\n\
-desktop=#91#4%win.example.com%3389%admin%%0%0%%%%#MobaFont#0# #-1\r\n";
+desktop=#91#4%win.example.com%3389%admin%%0%0%%%%#MobaFont#0# #-1\r\n\
+switch=#98#1%10.0.9.2%23%admin%%2%%%%%#MobaFont%10#0# #-1\r\n\
+console=#131#8%COM3  (USB Serial Port (COM3))%115200%3%0%0%1%2%%#MobaFont%10#0# #-1\r\n";
 
     #[test]
     fn folders_jumps_keys_and_a_proxy() {
@@ -311,5 +362,20 @@ desktop=#91#4%win.example.com%3389%admin%%0%0%%%%#MobaFont#0# #-1\r\n";
                 .contains(&Warning::about("db-01", WarningKind::StartupCommand))
         );
         assert_eq!(b.hosts[3].unsupported.as_deref(), Some("rdp"));
+
+        let switch = &b.hosts[4];
+        assert_eq!(switch.unsupported, None);
+        assert_eq!(switch.settings.protocol, Some(Protocol::Telnet));
+        assert_eq!(
+            (switch.address.as_str(), switch.settings.port),
+            ("10.0.9.2", Some(23))
+        );
+        assert!(switch.jumps.is_empty() && switch.keys.is_empty());
+        let console = &b.hosts[5];
+        assert_eq!(console.unsupported, None);
+        assert_eq!(console.address, "COM3");
+        assert_eq!(console.settings.protocol, Some(Protocol::Serial));
+        assert_eq!(console.settings.serial.as_ref().unwrap().baud, 115_200);
+        assert_eq!(console.settings.port, None);
     }
 }

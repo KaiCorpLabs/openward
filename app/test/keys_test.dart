@@ -89,4 +89,35 @@ void main() {
     expect(activator.triggers, [LogicalKeyboardKey.digit3]);
     expect(activator.debugDescribeKeys(), 'Ctrl+Alt+3');
   });
+
+  test('either profile on any system; the program first takes Ctrl keys', () {
+    KeyDownEvent down(LogicalKeyboardKey key) => KeyDownEvent(
+      physicalKey: PhysicalKeyboardKey.keyA,
+      logicalKey: key,
+      timeStamp: Duration.zero,
+    );
+    addTearDown(() {
+      macShortcuts = isApple;
+      terminalKeysFirst = false;
+    });
+    final t = down(LogicalKeyboardKey.keyT);
+    final tab = down(LogicalKeyboardKey.tab);
+    macShortcuts = true;
+    expect(isAppShortcut(t, Mods.superKey), isTrue);
+    expect(isAppShortcut(t, Mods.ctrl | Mods.shift), isFalse);
+    macShortcuts = false;
+    expect(isAppShortcut(t, Mods.ctrl | Mods.shift), isTrue);
+    expect(isAppShortcut(t, Mods.superKey), isFalse);
+    expect(isAppShortcut(tab, Mods.ctrl), isTrue);
+    terminalKeysFirst = true;
+    // Ctrl alone goes to the program; Ctrl+Shift stays the window's.
+    expect(isAppShortcut(tab, Mods.ctrl), isFalse);
+    expect(isAppShortcut(down(LogicalKeyboardKey.equal), Mods.ctrl), isFalse);
+    expect(isAppShortcut(down(LogicalKeyboardKey.comma), Mods.ctrl), isFalse);
+    expect(isAppShortcut(t, Mods.ctrl | Mods.shift), isTrue);
+    expect(
+      isAppShortcut(down(LogicalKeyboardKey.arrowLeft), Mods.ctrl | Mods.shift),
+      isTrue,
+    );
+  });
 }

@@ -6,7 +6,7 @@ La [v0.3](v0.3.md) cierra la fase 1. Su puerta de salida es esta:
 - abre su día con un espacio de trabajo;
 - importa un CSV propio.
 
-Lo que trae está en las [notas de la versión](../notas/v0.3.md).
+Lo que trae está en las [notas de la versión](../notas/v0.3.md). La 0.3.4-beta.1 trae lo del [camino a la Community](community.md) de P1 a P6: se prueba con los puntos 24 a 30, en macOS, Windows y Linux.
 
 ## Instalar
 
@@ -16,7 +16,7 @@ En macOS, como la 0.2 ([cómo](prueba-v0.2.md#instalar)): con Homebrew, o el `.d
 brew upgrade --cask openward
 ```
 
-**Linux:** desde la 0.3.2-beta.7 la release trae un `.tar.gz` para x86_64 y otro para arm64; se descomprime y se abre `OpenWard/openward`. Necesita GTK 3. También se construye con `make package-linux` (en un contenedor, con podman o docker). **Windows:** por ahora hay que compilarla en Windows (`fvm flutter build windows`); la compilación copia junto a la app el runtime de Visual C++, aún sin probar en un Windows recién instalado.
+**Linux:** desde la 0.3.2-beta.7 la release trae un `.tar.gz` para x86_64 y otro para arm64; se descomprime y se abre `OpenWard/openward`. Necesita GTK 3. También se construye con `make package-linux` (en un contenedor, con podman o docker). **Windows:** desde la 0.3.4, cada etiqueta de versión deja en la CI un `.zip` (el artefacto `OpenWard-Windows` de esa ejecución), que acaba en la release. Mientras no haya, se compila en Windows con `fvm flutter build windows`. La compilación copia junto a la app el runtime de Visual C++; probarlo en un Windows recién instalado es el punto 24.
 
 ## Dónde guarda sus datos
 
@@ -158,8 +158,80 @@ Además, OpenWard escribe en `~/.ssh` cuando creas o importas una clave (siempre
    - cierra la app de golpe (`kill -9`) mientras graba: al abrirla, el registro debe estar, como mucho sin los últimos segundos;
    - vuelca algo grande (`cat` de un log de cientos de MB, o `seq 1 30000000`) con la grabación activada y sin ella, y dinos cuánto tarda cada vez;
    - cambia los días a 90 y reinicia la app: Ajustes › Registros debe seguir diciendo 90.
-
-En Windows y Linux, ⌘ es Ctrl+Mayús: Ctrl+Mayús+K abre la paleta y Ctrl+Mayús+/ la hoja de atajos. La barra lateral se pliega con Ctrl+Mayús+L (Ctrl+B es del shell).
+24. **En Windows y en Linux** (P0 del [camino a la Community](community.md#p0--windows-y-linux-al-día)). Desde aquí, cada beta se prueba en los tres sistemas:
+   - **Windows recién instalado:** en Windows Sandbox (o un Windows sin herramientas de desarrollo), descomprime el `.zip` y abre `openward.exe`. Debe arrancar sin instalar nada más, porque el runtime de Visual C++ va con la app. Si falta una DLL, dinos cuál;
+   - la primera vez, el asistente debe encontrar `%USERPROFILE%\.ssh\config` y las claves de esa carpeta;
+   - la terminal local abre PowerShell, con colores, `Ctrl+C` y el tamaño al cambiar la ventana;
+   - si usas el agente de OpenSSH de Windows (el servicio «OpenSSH Authentication Agent»), OpenWard debe conectar con sus claves sin pedirte nada;
+   - **con el teclado español**, en Windows y en Linux: AltGr escribe en el terminal `@ # | \ [ ] { } €` y nunca dispara un atajo; Alt con una letra llega al programa como Alt (pruébalo con `cat -v` en un servidor: Alt+X debe salir `^[x`);
+   - SFTP con rutas de Windows: `C:\Users\…`, carpetas con espacios y con tildes, y arrastrar desde el Explorador;
+   - en Linux, en X11 y en Wayland: arranca, y el portapapeles copia y pega en los dos sentidos;
+   - con el tamaño del texto al 150 % (Ajustes › Apariencia), recorre la barra lateral, Hosts y el inicio: nada debe salirse ni cortarse. Los atajos largos, como «Ctrl+Mayús+H», se quitan cuando no caben;
+   - en Windows y en Linux, Ctrl+Mayús+K abre la paleta y Ctrl+Mayús+/ la hoja de atajos. La barra lateral se pliega con Ctrl+Mayús+L (Ctrl+B es del shell).
+25. **Telnet y puerto serie** (P1 del [camino a la Community](community.md#p1--telnet-y-puerto-serie)):
+   - **Telnet:** crea un host para un switch o un router; si no tienes ninguno, `docker run --rm -p 2323:23 busybox telnetd -F -l /bin/sh`. En el editor, pon «Protocolo» a Telnet:
+     - debe avisar de que no cifra;
+     - deben desaparecer el usuario, las claves y el agente;
+     - el puerto debe quedar en 23.
+   - conecta:
+     - la barra de estado debe decir «Sin cifrar»;
+     - cambia el tamaño de la ventana: `stty size` debe dar el nuevo;
+     - `echo $TERM` debe dar `xterm-256color`;
+     - `exit` debe cerrar la sesión sin decir que se perdió la conexión;
+   - un host Telnet detrás de un bastión SSH («Ruta» › a través de él) debe conectar por el bastión;
+   - en la barra de conexión rápida, `telnet://host:puerto` debe conectar por Telnet, y volver a hacerlo desde «Recientes»;
+   - **puerto serie** (un cable USB a la consola de un router o un switch, o dos adaptadores cruzados; en Linux sirve `socat -d -d pty,raw,echo=0 pty,raw,echo=0`):
+     - en el inicio, «Puerto serie»: la lista del botón USB debe tener el cable, con su nombre;
+     - a 9600 8N1 debe salir la consola al pulsar Intro;
+     - «Enviar un break por el puerto serie» (en la paleta) debe llevar un router a su monitor de arranque;
+     - el mismo puerto en dos pestañas: la segunda debe decir que está en uso;
+     - suelta el cable: la pestaña debe decir «Se ha desconectado…», y al volver a conectar, «Reconectar» debe abrirlo otra vez;
+     - en Linux, con un usuario que no está en `dialout`, el error debe decir cómo añadirlo;
+     - un host guardado con «Protocolo» › Puerto serie, el puerto elegido de la lista y otra velocidad, debe abrirse con esa velocidad;
+   - **importar** desde PuTTY, SecureCRT, MobaXterm, Tabby, Termius o un CSV con sesiones Telnet y serie: deben llegar como Telnet y serie, no como avisos. De MobaXterm, el serie trae el puerto y la velocidad; comprueba el resto de la línea;
+   - con los registros activados, una sesión Telnet y otra serie deben quedar en Registros y verse en el visor.
+26. **Mosh** (P2 del [camino a la Community](community.md#p2--mosh-en-escritorio)), con `brew install mosh` (o `apt install mosh`) aquí y `mosh` en un servidor tuyo:
+   - en el editor del host, «Avanzado» › Mosh › Encendido, y conecta: la barra debe decir «Mosh»;
+   - cambia de red sin cerrar nada (de la wifi al móvil, o duerme el portátil diez minutos): la sesión debe seguir donde estaba, sin «Reconectando»;
+   - con el servidor detrás de un cortafuegos que no deja pasar UDP (o un host sin `mosh`), la sesión debe seguir por SSH, en tmux, con una línea que diga por qué;
+   - sin `mosh-client` en el equipo, igual, y la línea debe decir cómo instalarlo;
+   - si `mosh-server` no está en el `PATH` del servidor (Homebrew en un Mac), pon su ruta en «Servidor de Mosh».
+27. **Llaves de seguridad y certificados** (P3 del [camino a la Community](community.md#p3--llaves-fido2-y-certificados)), con una YubiKey u otra llave FIDO2, en los tres sistemas:
+   - **crear:** «Claves» › «Nueva clave» › «En una llave de seguridad», Ed25519, y toca la llave cuando parpadee. Debe quedar `~/.ssh/id_ed25519_sk` con «Llave de seguridad» en la lista. Con una llave sin Ed25519 (las anteriores a 2020), elige ECDSA;
+   - **entrar:** pon la clave en un servidor («Poner en un servidor») y conecta. La tarjeta debe pedir el toque, y sin tocarla debe decir que no se tocó a tiempo;
+   - **el PIN:** crea otra con «Pedir el PIN cada vez». Al conectar, debe pedir el PIN, y con uno mal, decirlo y volver a pedirlo;
+   - **otra llave:** con una segunda llave conectada en lugar de la primera, el error debe decir que no es la de esta clave; con las dos a la vez, que hay más de una;
+   - **importar** una hecha con `ssh-keygen -t ed25519-sk`: debe entrar igual;
+   - **en Linux**, sin la regla de udev de `/dev/hidraw*`, el error debe decir que falta y qué paquete la trae; **en Windows**, sin ser administrador, que se use el agente de OpenSSH de Windows;
+   - **un certificado** que caduque en unos días (`ssh-keygen -s ca -V +3d`): «caduca en 3 días» en las claves y en la identidad. Ya caducado, el error al entrar debe decir que es el certificado.
+28. **Terminal** (P4 del [camino a la Community](community.md#p4--terminal)):
+   - **ratón:** en Ajustes › Terminal, «Copiar al seleccionar»: selecciona y pega en otra app sin copiar. «Pegar con clic derecho»: el clic derecho pega, y con Ctrl abre el menú;
+   - **resaltado:** `ip addr`, `ping`, `journalctl -p warning` y un `make` que falle deben mostrar en color las direcciones, los avisos y los errores. `ls --color` debe seguir con sus colores, y en `vim` o `less` no debe pintarse nada. Apaga una regla, añade una tuya (`\bretry\b`) y cambia el tema: los colores lo siguen;
+   - **codificación:** un switch o un sistema viejo en Latin-1 (o `printf '\xe1\xe9\xed\n'` en un servidor), con «Avanzado» › Codificación › Latin-1, debe verse «áéí» y escribir «ñ» debe llegar bien. Un BIOS o un menú de DOS en CP437 debe dibujar sus cajas;
+   - **retroceso:** con Control-H, en un equipo que lo pida, Retroceso debe borrar en vez de escribir `^H`;
+   - **colores por host:** pon Monitor a un host de producción. Su pestaña debe tener esos colores con cualquier tema, y los demás, los del tema;
+   - **atajos:** en un Mac, «Atajos de» PC: Ctrl+Mayús+T abre un terminal y ⌘T no. En Windows o Linux con «Las teclas, para el terminal», Ctrl+Tab debe llegar al programa (en `emacs`, o con `showkey -a`).
+29. **Sugerencias** (P5 del [camino a la Community](community.md#p5--autocompletado-local)):
+   - en un host con historial, escribe el principio de un comando que ya usaste: el resto debe salir en gris y → (o Fin) escribirlo. Escribe otra cosa: debe desaparecer;
+   - con `sudo` o `read -s`, mientras pide la contraseña, nada; en `vim` o `less`, nada;
+   - con fish, o zsh con zsh-autosuggestions, solo la del shell, no las dos;
+   - un snippet de una línea debe sugerirse también, y `do` en un host nuevo, `docker ps`;
+   - con el historial de comandos apagado (Ajustes › Registros), «Sugerir mientras escribes» queda apagado y no sale nada.
+30. **Snippets en varios hosts y archivos remotos** (P6 del [camino a la Community](community.md#p6--snippets-en-varios-hosts-y-archivos-remotos)):
+   - en Snippets, «Ejecutar…» › «En varios hosts…»: elige tres hosts, uno ya conectado. Debe abrirse una pestaña con tres paneles y el resultado en cada uno; el que estaba conectado no debe pedir la contraseña otra vez;
+   - pon a un host «Snippet al conectar» (por ejemplo `cd /srv/app && git status`): debe escribirse al conectar y al reconectar, pero no al volver a su sesión persistente;
+   - en SFTP, «Abrir» un archivo de texto del servidor: se abre en su editor. Guárdalo: la barra debe decir «subido a las…» y el archivo cambiar en el servidor. Cámbialo también en el servidor (`echo x >> archivo`) y guarda otra vez: debe preguntar antes de subirlo encima;
+   - «Abrir con…»: en Windows, su diálogo; en macOS, `TextEdit` o `Visual Studio Code`; en Linux, `gedit` o `code`.
+31. **«Abrir» sin sorpresas** (0.3.4-beta.2), en los tres sistemas, con archivos que creas en un servidor tuyo:
+   - `touch 'prueba&calc.txt'` y, en Windows, «Abrir»: debe abrirse el Bloc de notas con ese archivo, y no la Calculadora;
+   - `touch setup.exe` (Windows), `touch instalar.command` (macOS) o `touch lanzador.desktop` (Linux): «Abrir» debe preguntar antes, con Cancelar delante;
+   - `touch "$(printf 'factura\342\200\256fdp.exe')"`: la lista debe enseñar `factura⟨RLO⟩fdp.exe` en ámbar;
+   - en Windows, un `.docx` abierto así debe salir en Word en vista protegida;
+   - abre un archivo, cierra la app a la fuerza (el Administrador de tareas, o `kill -9`) y ábrela otra vez: en la carpeta temporal (`%TEMP%`, `$TMPDIR` o `/tmp`) no debe quedar ninguna `openward-open-…`.
+32. **Importar sin sorpresas** (0.3.4-beta.3):
+   - importa de PuTTY (un `.reg`) o de Tabby un host que reenvíe el agente y tenga un túnel abierto a la red (`LocalPortAcceptAll` en PuTTY, `host: 0.0.0.0` en Tabby). La vista previa debe avisar de los dos. Después, conectado a ese host, `ssh-add -l` en el servidor debe decir que no hay agente, y el túnel debe salir en «Solo este equipo»;
+   - un túnel dinámico con «Toda la red local»: el aviso debe hablar de un proxy SOCKS sin contraseña;
+   - en Linux, `stat -c %a ~/.local/share/dev.openward.OpenWard` debe dar `700`, también si antes daba `755`.
 
 ## Cómo informar
 

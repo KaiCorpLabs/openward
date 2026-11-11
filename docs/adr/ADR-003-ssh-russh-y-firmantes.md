@@ -31,7 +31,7 @@ Necesitamos un cliente SSH embebible en Rust que funcione en las 5 plataformas, 
 - **FIDO2/`sk-*`:** `russh` acepta la firma por un `Signer` externo o por un agente (PR #701, v0.61.1). Pero `ssh-key` solo verifica `sk`, no firma, así que la parte CTAP2 la ponemos nosotros (`libfido2` o `ctap-hid-fido2` en escritorio). [#219](https://github.com/Eugeny/russh/issues/219)
 - **Móvil:** el CI de `russh` no prueba iOS ni Android (solo `wasm32-wasip1`). Nuestro CI compilará y ejecutará en ambos, y elegiremos entre `aws-lc-rs` y `ring` para móvil en el spike.
 - **Aviso RUSTSEC-2023-0071 (Marvin) en `rsa`:** sin versión corregida. Afecta a las operaciones con clave privada RSA, que en un cliente son solo la firma al autenticarse con una clave RSA propia; la verificación de claves de host usa la pública y no se ve afectada. Recuperar la clave exige muchísimas firmas cronometradas, y aquí hay una por inicio de sesión. Queda ignorado en `cargo-deny` con esta justificación; la app recomienda Ed25519 al generar claves y se revisa cuando `rsa` publique una versión de tiempo constante.
-- **`ssh-key` 0.7 sigue en RC** (`0.7.0-rc.11`) y `russh` la fija con `=`. Habrá cambios al publicarse la 0.7.0.
+- **`ssh-key` 0.7 sigue en RC** (`0.7.0-rc.11`) y `russh` la fija con `=`. Habrá cambios al publicarse la 0.7.0. Además rechaza una de cada 512 claves P-256 de `ssh-keygen`, las que tienen el escalar en 31 bytes: `openward-ssh` las lee rellenando el escalar (`keyfile.rs`) hasta que se arregle upstream ([RustCrypto/SSH#620](https://github.com/RustCrypto/SSH/issues/620)).
 
 **Puerta del spike S2:** interoperabilidad con OpenSSH 8.x–10.x, Dropbear, Windows OpenSSH y Tailscale SSH (autenticación, certificados, L/R/D, saltos anidados, 2FA y kex poscuántico negociado), compilando y ejecutando en iOS y Android.
 
@@ -60,6 +60,19 @@ Necesitamos un cliente SSH embebible en Rust que funcione en las 5 plataformas, 
 ## Consecuencias
 
 Dependemos de un proyecto open source con un mantenedor principal (unas 1.900 estrellas). Hay que presupuestar contribuciones upstream (firma `sk-*` en `ssh-key`, CI móvil, casos raros de servidores) y tener una matriz de interoperabilidad en CI. Las alertas de seguridad corregidas en la 0.64.0 y la 0.64.1 obligan a vigilar los avisos de seguridad (`cargo-audit`) y a actualizar con rapidez. Los firmantes de plataforma necesitan código `unsafe` o FFI aislado en crates aparte y revisado.
+
+## Revisión del 2026-11-06: llaves FIDO2 en escritorio
+
+Con P3 del [camino a la Community](../plan/community.md#p3--llaves-fido2-y-certificados):
+
+- **La firma `sk-*`** la hace el crate `openward-fido`. Pide a la llave una aserción CTAP2 para la aplicación `ssh:` sobre `SHA-256` de los datos, y monta con ella la firma de OpenSSH: la de la llave, sus flags y su contador (`PROTOCOL.u2f`). `ssh-key` la verifica, así que las pruebas la comprueban como lo hace el servidor.
+- **La llave** se habla por un trait `Authenticator`:
+  - en escritorio, `ctap-hid-fido2` por USB HID, con `aws-lc-rs` y sin `libfido2`;
+  - en las pruebas, uno por software que firma igual.
+- **`russh`** recibe la firma por una función (`auth_signed`, sobre su `Signer`), que corre fuera del runtime porque espera el toque.
+- **Linux:** compilar pide `libudev-dev` (`hidapi`), y la app usa `libudev.so.1`, que traen todas las distribuciones con systemd. La licencia de HIDAPI (la opción BSD) va en las licencias de la app.
+- **Windows** no deja hablar con una llave FIDO a un programa sin permisos de administrador. Ahí la llave va por el agente de OpenSSH de Windows, que usa WebAuthn, y la app lo dice.
+- Secure Enclave y Keystore siguen con S3 y con D4 de la v0.4.
 
 ## Validación y revisión
 

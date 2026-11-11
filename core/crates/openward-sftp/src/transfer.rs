@@ -1146,6 +1146,9 @@ impl JobRun<'_> {
             &mut open,
             item.mode.map_or(0o666, |m| 0o600 | (m & 0o066)),
         );
+        // Windows files have no mode to give them.
+        #[cfg(not(unix))]
+        let _ = item;
         // Made here, not on a thread of its own: once the job has stopped,
         // nothing it began makes a part after a cancel deleted it.
         let mut file = tokio::fs::File::from_std(open.open(part).map_err(local_err)?);

@@ -4,15 +4,20 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openward/core/fonts.dart';
 
+/// A path as the code writes it: Windows lists `assets\fonts`.
+String _slashed(String path) => path.replaceAll(r'\', '/');
+
 void main() {
   test('every bundled font has its license listed, and bundled', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
     final folders = Directory('assets/fonts')
         .listSync()
         .whereType<Directory>()
-        .map((d) => d.path)
+        .map((d) => _slashed(d.path))
         .toSet();
-    final listed = bundledFonts.values.map((p) => File(p).parent.path).toSet();
+    final listed = bundledFonts.values
+        .map((p) => _slashed(File(p).parent.path))
+        .toSet();
     expect(listed, folders);
     for (final path in bundledFonts.values) {
       expect(File(path).existsSync(), isTrue, reason: path);

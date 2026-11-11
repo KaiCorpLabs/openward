@@ -1,5 +1,6 @@
-//! A terminal: the engine's state, the program behind it (a remote shell or
-//! a local one), and the input and frames the UI exchanges with it.
+//! A terminal: the engine's state, the program behind it (a remote shell
+//! over SSH or Telnet, a serial port, or a local shell), and the input and
+//! frames the UI exchanges with it.
 //!
 //! The UI pulls damage frames with [`Terminal::poll`], once per refresh
 //! while there is something to draw: the waker ([`Terminal::set_waker`])
@@ -10,6 +11,7 @@
 
 pub use openward_ghostty::OptionAsAlt;
 use std::io::Read;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
 
@@ -20,14 +22,16 @@ use openward_ghostty::{
 use openward_pty::{Pty, Spawn};
 use openward_ssh::russh::ChannelMsg;
 use openward_ssh::russh::client::Msg;
+use openward_telnet::Telnet;
 pub use openward_term::CursorShape;
 use openward_term::{FrameEncoder, Size, TermEngine};
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
 use crate::alive::Activity;
-use crate::events::{Event, EventSink, Failure};
+use crate::charset::{Coding, Decoder};
+use crate::events::{Connected, Event, EventSink, Failure, SerialProblem};
 use crate::logs::{self, End};
 
 #[derive(Clone, Copy, Debug)]
@@ -104,6 +108,9 @@ struct State {
     waker: Option<Waker>,
     /// The session log of the connection going on, if one is kept.
     log: Option<Arc<logs::Session>>,
+    /// Reads the host's output into UTF-8, when it writes another
+    /// character set.
+    decoder: Option<Decoder>,
 }
 
 impl State {
@@ -123,7 +130,14 @@ enum Io {
     /// Not connected (yet, or any more): input goes nowhere.
     None,
     Pty(Arc<Pty>),
-    Ssh(mpsc::Sender<SshCmd>),
+    /// SSH or Telnet: input queued for the task that sends it.
+    Remote(mpsc::Sender<RemoteCmd>),
+    /// A serial port: input queued for its writing thread. Set, `stop`
+    /// tells its reading thread to let the port go.
+    Serial {
+        tx: mpsc::Sender<RemoteCmd>,
+        stop: Arc<AtomicBool>,
+    },
 }
 
 /// Chunks of output waiting for the parse thread.
@@ -134,9 +148,14 @@ const PARSE_QUEUE: usize = 64;
 /// typing goes nowhere and the parse waits, rather than piling up.
 const SEND_QUEUE: usize = 256;
 
-pub(crate) enum SshCmd {
+pub(crate) enum RemoteCmd {
+    /// Typed, pasted or the terminal's answers.
     Data(Vec<u8>),
     Resize(u16, u16),
+    /// Telnet's own answers, ready for the wire.
+    Raw(Vec<u8>),
+    /// A serial break.
+    Break,
 }
 
 pub struct Terminal {
@@ -153,6 +172,22 @@ pub struct Terminal {
     /// The tmux session of a persistent shell: the same for every
     /// connection of this terminal, so that reconnecting finds it again.
     tmux: Mutex<Option<String>>,
+    /// The host's character set and Backspace.
+    coding: Mutex<Coding>,
+}
+
+/// Backspace's USB HID usage (keyboard page 7), as the UI gives it.
+const BACKSPACE: u32 = 0x0007_002a;
+
+/// A host that wants `^H` for Backspace: DEL and `^H` change places,
+/// alone or after Alt's ESC (Ctrl+Backspace gives the other). What the
+/// keyboard protocols of today encode is left as it is.
+fn swap_backspace(bytes: &mut [u8]) {
+    match bytes {
+        [b] | [0x1b, b] if *b == 0x7f => *b = 0x08,
+        [b] | [0x1b, b] if *b == 0x08 => *b = 0x7f,
+        _ => {}
+    }
 }
 
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -169,13 +204,22 @@ impl Terminal {
                 notified: false,
                 waker: None,
                 log: None,
+                decoder: None,
             })),
             io: Arc::new(Mutex::new(Io::None)),
             task: Mutex::new(None),
             activity: Arc::default(),
             closer: Mutex::new(None),
             tmux: Mutex::new(None),
+            coding: Mutex::new(Coding::default()),
         })
+    }
+
+    /// How the host's bytes are read and written from now on: its
+    /// character set (a character cut in two is dropped) and Backspace.
+    pub(crate) fn set_coding(&self, coding: Coding) {
+        *lock(&self.coding) = coding;
+        lock(&self.state).decoder = coding.charset.map(|c| c.decoder());
     }
 
     /// The name of this terminal's tmux session, made the first time.
@@ -202,6 +246,10 @@ impl Terminal {
     /// Output from the program; replies to its queries go straight back.
     fn output(state: &Mutex<State>, bytes: &[u8]) -> Vec<u8> {
         let mut s = lock(state);
+        let s = &mut *s;
+        // The engine and the log only see UTF-8.
+        let decoded = s.decoder.as_mut().map(|d| d.decode(bytes));
+        let bytes = decoded.as_deref().unwrap_or(bytes);
         s.engine.feed(bytes);
         if let Some(log) = &s.log {
             log.output(bytes);
@@ -330,6 +378,146 @@ impl Terminal {
         Ok(())
     }
 
+    /// Runs a local program (`mosh-client`) without telling anyone: what
+    /// it prints feeds the screen, and the caller hears when `needle` shows
+    /// in it and when it ends, with its exit code.
+    pub(crate) fn run_program(
+        &self,
+        spawn: Spawn,
+        needle: &'static str,
+    ) -> anyhow::Result<Program> {
+        let (pty, mut reader) = Pty::spawn(&spawn)?;
+        let pty = Arc::new(pty);
+        *lock(&self.io) = Io::Pty(Arc::clone(&pty));
+        let (saw, seen) = tokio::sync::oneshot::channel();
+        let (ended, exited) = tokio::sync::oneshot::channel();
+        let state = Arc::clone(&self.state);
+        let activity = Arc::clone(&self.activity);
+        thread::Builder::new()
+            .name("openward-program".into())
+            .spawn(move || {
+                let mut buf = vec![0u8; 64 * 1024];
+                let mut window: Vec<u8> = Vec::new();
+                let mut saw = Some(saw);
+                loop {
+                    let n = match reader.read(&mut buf) {
+                        Ok(0) | Err(_) => break,
+                        Ok(n) => n,
+                    };
+                    activity.received();
+                    if saw.is_some() {
+                        window.extend_from_slice(&buf[..n]);
+                        if crate::mosh::seen(&window, needle)
+                            && let Some(saw) = saw.take()
+                        {
+                            let _ = saw.send(());
+                        }
+                        let keep = window.len().saturating_sub(needle.len());
+                        window.drain(..keep);
+                    }
+                    let replies = Self::output(&state, &buf[..n]);
+                    if !replies.is_empty() {
+                        let _ = pty.write(&replies);
+                    }
+                }
+                lock(&state).touch();
+                let mut exit_code = pty.exit_code();
+                for _ in 0..50 {
+                    if exit_code.is_some() {
+                        break;
+                    }
+                    thread::sleep(std::time::Duration::from_millis(20));
+                    exit_code = pty.exit_code();
+                }
+                let _ = ended.send(exit_code);
+            })?;
+        Ok(Program { seen, exited })
+    }
+
+    /// Talks to an open serial port: `connected` goes out at once, and
+    /// the session closes when the terminal lets the port go, or with a
+    /// failure if the port went (the cable was pulled).
+    pub(crate) fn attach_serial(
+        &self,
+        port: &str,
+        (mut reader, mut writer): (openward_serial::Reader, openward_serial::Writer),
+        connected: Connected,
+        sink: Arc<dyn EventSink>,
+    ) -> anyhow::Result<()> {
+        let (tx, mut rx) = mpsc::channel::<RemoteCmd>(SEND_QUEUE);
+        let stop = Arc::new(AtomicBool::new(false));
+        *lock(&self.io) = Io::Serial {
+            tx: tx.clone(),
+            stop: Arc::clone(&stop),
+        };
+        let typed = Arc::clone(&self.activity);
+        thread::Builder::new()
+            .name("openward-serial-out".into())
+            .spawn(move || {
+                while let Some(cmd) = rx.blocking_recv() {
+                    let sent = match cmd {
+                        RemoteCmd::Data(bytes) | RemoteCmd::Raw(bytes) => {
+                            typed.sent();
+                            writer.write(&bytes)
+                        }
+                        RemoteCmd::Break => writer.send_break(),
+                        RemoteCmd::Resize(..) => Ok(()),
+                    };
+                    if sent.is_err() {
+                        break;
+                    }
+                }
+            })?;
+        sink.send(Event::Connected(connected));
+        let (state, io, activity, port) = (
+            Arc::clone(&self.state),
+            Arc::clone(&self.io),
+            Arc::clone(&self.activity),
+            port.to_owned(),
+        );
+        thread::Builder::new()
+            .name("openward-serial-in".into())
+            .spawn(move || {
+                let mut buf = vec![0u8; 16 * 1024];
+                let gone = loop {
+                    if stop.load(Ordering::Relaxed) {
+                        break false;
+                    }
+                    match reader.read(&mut buf) {
+                        Ok(None) => {}
+                        Ok(Some(0)) | Err(_) => break true,
+                        Ok(Some(n)) => {
+                            activity.received();
+                            let replies = Self::output(&state, &buf[..n]);
+                            if !replies.is_empty() {
+                                let _ = tx.try_send(RemoteCmd::Data(replies));
+                            }
+                        }
+                    }
+                };
+                // The port closes with the reader, and the writer with the
+                // last sender.
+                drop(reader);
+                {
+                    let mut io = lock(&io);
+                    if matches!(&*io, Io::Serial { stop: s, .. } if Arc::ptr_eq(s, &stop)) {
+                        *io = Io::None;
+                    }
+                }
+                drop(tx);
+                lock(&state).touch();
+                let failure = gone.then_some(Failure::Serial {
+                    port,
+                    problem: SerialProblem::Gone,
+                });
+                sink.send(Event::Closed {
+                    exit_code: None,
+                    failure,
+                });
+            })?;
+        Ok(())
+    }
+
     /// What a connection task needs to feed this terminal, without
     /// keeping the terminal itself alive: dropping it ends the task.
     pub(crate) fn pipe(&self) -> Pipe {
@@ -367,6 +555,20 @@ impl Terminal {
         self.detach();
     }
 
+    /// Ends the program `run_program` started, and only it: the session
+    /// that runs it goes on (over SSH, when Mosh got nothing back). The
+    /// screen leaves its alternate screen and modes.
+    pub(crate) fn end_program(&self) {
+        let mut io = lock(&self.io);
+        if matches!(*io, Io::Pty(_))
+            && let Io::Pty(pty) = std::mem::replace(&mut *io, Io::None)
+        {
+            pty.kill();
+        }
+        drop(io);
+        let _ = Self::output(&self.state, b"\x1b[?1049l\x1b[!p\r\n");
+    }
+
     /// Drops the connection or the local program, leaving a persistent
     /// session on the server to be found again: what reconnecting does.
     pub(crate) fn detach(&self) {
@@ -374,8 +576,18 @@ impl Terminal {
         if let Some(task) = lock(&self.task).take() {
             task.abort();
         }
-        if let Io::Pty(pty) = std::mem::replace(&mut *lock(&self.io), Io::None) {
-            pty.kill();
+        match std::mem::replace(&mut *lock(&self.io), Io::None) {
+            Io::Pty(pty) => pty.kill(),
+            Io::Serial { stop, .. } => stop.store(true, Ordering::Relaxed),
+            Io::None | Io::Remote(_) => {}
+        }
+    }
+
+    /// Sends a break down a serial port; false if this is not one.
+    pub fn send_break(&self) -> bool {
+        match &*lock(&self.io) {
+            Io::Serial { tx, .. } => tx.try_send(RemoteCmd::Break).is_ok(),
+            _ => false,
         }
     }
 
@@ -393,9 +605,14 @@ impl Terminal {
                 s.touch();
             }
         }
+        let charset = lock(&self.coding).charset;
+        let bytes = match charset {
+            Some(c) => c.encode(&bytes),
+            None => bytes,
+        };
         match &*lock(&self.io) {
             Io::Pty(pty) => pty.write(&bytes).is_ok(),
-            Io::Ssh(tx) => tx.try_send(SshCmd::Data(bytes)).is_ok(),
+            Io::Remote(tx) | Io::Serial { tx, .. } => tx.try_send(RemoteCmd::Data(bytes)).is_ok(),
             Io::None => false,
         }
     }
@@ -468,7 +685,10 @@ impl Terminal {
             text,
             unshifted,
         };
-        let bytes = lock(&self.state).engine.encode_key(&key);
+        let mut bytes = lock(&self.state).engine.encode_key(&key);
+        if hid_usage == BACKSPACE && lock(&self.coding).backspace_h {
+            swap_backspace(&mut bytes);
+        }
         self.send(bytes)
     }
 
@@ -564,10 +784,10 @@ impl Terminal {
             Io::Pty(pty) => {
                 let _ = pty.resize(cols, rows);
             }
-            Io::Ssh(tx) => {
-                let _ = tx.try_send(SshCmd::Resize(cols, rows));
+            Io::Remote(tx) => {
+                let _ = tx.try_send(RemoteCmd::Resize(cols, rows));
             }
-            Io::None => {}
+            Io::Serial { .. } | Io::None => {}
         }
     }
 
@@ -688,6 +908,14 @@ impl Terminal {
     }
 }
 
+/// A local program run by [`Terminal::run_program`].
+pub(crate) struct Program {
+    /// Its needle showed in what it printed.
+    pub seen: tokio::sync::oneshot::Receiver<()>,
+    /// It ended, with its exit code if it gave one.
+    pub exited: tokio::sync::oneshot::Receiver<Option<u32>>,
+}
+
 /// A terminal's state and input side, for the task that feeds it.
 pub(crate) struct Pipe {
     state: Arc<Mutex<State>>,
@@ -714,8 +942,8 @@ impl Pipe {
         channel: openward_ssh::russh::Channel<Msg>,
         label: &str,
     ) -> impl Future<Output = (Option<u32>, Option<Failure>)> + Send + 'static {
-        let (tx, rx) = mpsc::channel::<SshCmd>(SEND_QUEUE);
-        *lock(&self.io) = Io::Ssh(tx.clone());
+        let (tx, rx) = mpsc::channel::<RemoteCmd>(SEND_QUEUE);
+        *lock(&self.io) = Io::Remote(tx.clone());
         let (state, io, activity, label) = (
             Arc::clone(&self.state),
             Arc::clone(&self.io),
@@ -727,8 +955,8 @@ impl Pipe {
 
     async fn pump(
         channel: openward_ssh::russh::Channel<Msg>,
-        tx: mpsc::Sender<SshCmd>,
-        mut rx: mpsc::Receiver<SshCmd>,
+        tx: mpsc::Sender<RemoteCmd>,
+        mut rx: mpsc::Receiver<RemoteCmd>,
         state: Arc<Mutex<State>>,
         io: Arc<Mutex<Io>>,
         activity: Arc<Activity>,
@@ -740,37 +968,20 @@ impl Pipe {
             let mut w = write.make_writer();
             while let Some(cmd) = rx.recv().await {
                 match cmd {
-                    SshCmd::Data(bytes) => {
+                    RemoteCmd::Data(bytes) | RemoteCmd::Raw(bytes) => {
                         typed.sent();
                         if w.write_all(&bytes).await.is_err() || w.flush().await.is_err() {
                             break;
                         }
                     }
-                    SshCmd::Resize(c, r) => {
+                    RemoteCmd::Resize(c, r) => {
                         let _ = write.window_change(u32::from(c), u32::from(r), 0, 0).await;
                     }
+                    RemoteCmd::Break => {}
                 }
             }
         };
-        // The engine parses on a thread of its own: a flood of output in one
-        // tab would otherwise hold the runtime's few threads, which every
-        // connection's keepalives, transfers and tunnels share. The channel
-        // is bounded, so a slow parse still slows the server down.
-        let (feed, mut parsed) = mpsc::channel::<Vec<u8>>(PARSE_QUEUE);
-        let parser_state = Arc::clone(&state);
-        let replies = tx.clone();
-        let parser = thread::Builder::new()
-            .name("openward-parse".into())
-            .spawn(move || {
-                while let Some(data) = parsed.blocking_recv() {
-                    let out = Terminal::output(&parser_state, &data);
-                    if !out.is_empty() {
-                        // Its own thread: waiting here holds the parse back.
-                        let _ = replies.blocking_send(SshCmd::Data(out));
-                    }
-                }
-            });
-        let mut feed = parser.is_ok().then_some(feed);
+        let mut feed = parser(&state, &tx);
         let reader_state = Arc::clone(&state);
         let reader = async move {
             let mut exit = None;
@@ -788,7 +999,7 @@ impl Pipe {
                             feed = None;
                             let out = Terminal::output(&reader_state, &data);
                             if !out.is_empty() {
-                                let _ = tx.send(SshCmd::Data(out)).await;
+                                let _ = tx.send(RemoteCmd::Data(out)).await;
                             }
                         }
                     }
@@ -819,6 +1030,120 @@ impl Pipe {
         let failure = (!ended).then(|| Failure::lost(label));
         (exit, failure)
     }
+
+    /// As [`Pipe::pump_ssh`], over a Telnet connection: `term` is told
+    /// when the server asks for the terminal's type. The server closing
+    /// the connection is the session's end; a broken one is lost.
+    pub(crate) fn pump_telnet(
+        &self,
+        stream: Box<dyn openward_ssh::client::Duplex>,
+        term: &str,
+        label: &str,
+    ) -> impl Future<Output = (Option<u32>, Option<Failure>)> + Send + 'static {
+        let (tx, mut rx) = mpsc::channel::<RemoteCmd>(SEND_QUEUE);
+        *lock(&self.io) = Io::Remote(tx.clone());
+        let size = self.size();
+        let telnet = Arc::new(Mutex::new(Telnet::new(term, size.cols, size.rows)));
+        let (state, io, activity, label) = (
+            Arc::clone(&self.state),
+            Arc::clone(&self.io),
+            Arc::clone(&self.activity),
+            label.to_owned(),
+        );
+        async move {
+            let (mut read, mut write) = tokio::io::split(stream);
+            let first = lock(&telnet).start();
+            let (typed, said) = (Arc::clone(&activity), Arc::clone(&telnet));
+            let writer = async move {
+                if write.write_all(&first).await.is_err() {
+                    return;
+                }
+                while let Some(cmd) = rx.recv().await {
+                    let bytes = match cmd {
+                        RemoteCmd::Data(bytes) => {
+                            typed.sent();
+                            lock(&said).send(&bytes)
+                        }
+                        RemoteCmd::Resize(c, r) => lock(&said).resize(c, r),
+                        RemoteCmd::Raw(bytes) => bytes,
+                        RemoteCmd::Break => continue,
+                    };
+                    if !bytes.is_empty()
+                        && (write.write_all(&bytes).await.is_err() || write.flush().await.is_err())
+                    {
+                        break;
+                    }
+                }
+            };
+            let mut feed = parser(&state, &tx);
+            let reader_state = Arc::clone(&state);
+            let reader = async move {
+                let mut buf = vec![0u8; 64 * 1024];
+                loop {
+                    let n = match read.read(&mut buf).await {
+                        Ok(0) => return true,
+                        Ok(n) => n,
+                        Err(_) => return false,
+                    };
+                    activity.received();
+                    let got = lock(&telnet).receive(&buf[..n]);
+                    if !got.reply.is_empty() && tx.send(RemoteCmd::Raw(got.reply)).await.is_err() {
+                        return false;
+                    }
+                    if got.data.is_empty() {
+                        continue;
+                    }
+                    let parsed = match &feed {
+                        Some(f) => f.send(got.data.clone()).await.is_ok(),
+                        None => false,
+                    };
+                    if !parsed {
+                        feed = None;
+                        let out = Terminal::output(&reader_state, &got.data);
+                        if !out.is_empty() {
+                            let _ = tx.send(RemoteCmd::Data(out)).await;
+                        }
+                    }
+                }
+            };
+            let (ended, ()) = tokio::join!(
+                async {
+                    let r = reader.await;
+                    *lock(&io) = Io::None;
+                    r
+                },
+                writer
+            );
+            lock(&state).touch();
+            (None, (!ended).then(|| Failure::lost(label)))
+        }
+    }
+}
+
+/// The engine parses on a thread of its own: a flood of output in one tab
+/// would otherwise hold the runtime's few threads, which every
+/// connection's keepalives, transfers and tunnels share. The channel is
+/// bounded, so a slow parse still slows the server down. What feeds it,
+/// unless the thread could not start (then the reader parses).
+fn parser(
+    state: &Arc<Mutex<State>>,
+    replies: &mpsc::Sender<RemoteCmd>,
+) -> Option<mpsc::Sender<Vec<u8>>> {
+    let (feed, mut parsed) = mpsc::channel::<Vec<u8>>(PARSE_QUEUE);
+    let (state, replies) = (Arc::clone(state), replies.clone());
+    thread::Builder::new()
+        .name("openward-parse".into())
+        .spawn(move || {
+            while let Some(data) = parsed.blocking_recv() {
+                let out = Terminal::output(&state, &data);
+                if !out.is_empty() {
+                    // Its own thread: waiting here holds the parse back.
+                    let _ = replies.blocking_send(RemoteCmd::Data(out));
+                }
+            }
+        })
+        .ok()
+        .map(|_| feed)
 }
 
 impl Drop for Terminal {
@@ -838,7 +1163,7 @@ mod tests {
     fn input_for_a_server_that_reads_nothing_is_bounded() {
         let term = Terminal::new(40, 4, 100);
         let (tx, _rx) = mpsc::channel(SEND_QUEUE);
-        *lock(&term.io) = Io::Ssh(tx);
+        *lock(&term.io) = Io::Remote(tx);
         for _ in 0..SEND_QUEUE {
             assert!(term.send(b"x".to_vec()));
         }
@@ -872,5 +1197,67 @@ mod tests {
         assert!(term.poll().is_some());
         assert!(term.poll().is_none());
         assert_eq!(calls.load(Ordering::Relaxed), 3);
+    }
+
+    /// A Latin-1 host: its bytes reach the screen as their letters, and
+    /// what is typed goes back in its bytes.
+    #[test]
+    fn a_host_in_another_charset_is_read_and_written_in_it() {
+        let term = Terminal::new(40, 4, 100);
+        let (tx, mut rx) = mpsc::channel(SEND_QUEUE);
+        *lock(&term.io) = Io::Remote(tx);
+        term.set_coding(Coding {
+            charset: crate::charset::Charset::of("iso-8859-1"),
+            backspace_h: false,
+        });
+        term.feed(b"canci\xf3n");
+        assert!(
+            term.screen_text().contains("canción"),
+            "{}",
+            term.screen_text()
+        );
+        term.text("ñ");
+        match rx.try_recv() {
+            Ok(RemoteCmd::Data(bytes)) => assert_eq!(bytes, b"\xf1"),
+            _ => panic!("nothing sent"),
+        }
+        // Back to UTF-8: as it comes.
+        term.set_coding(Coding::default());
+        term.feed("\r\nañil".as_bytes());
+        assert!(
+            term.screen_text().contains("añil"),
+            "{}",
+            term.screen_text()
+        );
+    }
+
+    #[test]
+    fn backspace_sends_control_h_where_asked() {
+        let mut bytes = vec![0x7f];
+        swap_backspace(&mut bytes);
+        assert_eq!(bytes, [0x08]);
+        let mut alt = vec![0x1b, 0x7f];
+        swap_backspace(&mut alt);
+        assert_eq!(alt, [0x1b, 0x08]);
+        let mut ctrl = vec![0x08];
+        swap_backspace(&mut ctrl);
+        assert_eq!(ctrl, [0x7f]);
+        // A keyboard protocol's own report stays as it is.
+        let mut kitty = b"\x1b[127;5u".to_vec();
+        swap_backspace(&mut kitty);
+        assert_eq!(kitty, b"\x1b[127;5u");
+
+        let term = Terminal::new(40, 4, 100);
+        let (tx, mut rx) = mpsc::channel(SEND_QUEUE);
+        *lock(&term.io) = Io::Remote(tx);
+        term.set_coding(Coding {
+            charset: None,
+            backspace_h: true,
+        });
+        assert!(term.key(BACKSPACE, KeyKind::Down, 0, String::new(), 0));
+        match rx.try_recv() {
+            Ok(RemoteCmd::Data(bytes)) => assert_eq!(bytes, [0x08]),
+            _ => panic!("nothing sent"),
+        }
     }
 }

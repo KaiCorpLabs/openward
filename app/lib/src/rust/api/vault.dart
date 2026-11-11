@@ -7,10 +7,19 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `apply`, `from_settings`, `id`, `identity_choice`, `merge`, `merge`, `of`, `of`, `opt_id`, `origin`, `pick`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
+// These functions are ignored because they are not marked as `pub`: `apply`, `from_settings`, `id`, `identity_choice`, `line`, `merge`, `merge`, `of`, `of`, `of`, `of`, `of`, `opt_id`, `origin`, `pick`, `proto`, `proto`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
 
 enum AgentKind { off, system, socket }
+
+/// What the Backspace key sends.
+enum BackspaceKind {
+  /// `^?`, as systems of today expect.
+  delete,
+
+  /// `^H`, for old systems and some network gear.
+  controlH,
+}
 
 class EnvVar {
   final String name;
@@ -94,6 +103,16 @@ class FieldOrigin {
           origin == other.origin &&
           groupId == other.groupId &&
           identityId == other.identityId;
+}
+
+enum FlowKind {
+  none,
+
+  /// XON/XOFF.
+  software,
+
+  /// RTS/CTS.
+  hardware,
 }
 
 class GroupDetail {
@@ -294,6 +313,19 @@ class HostView {
   /// Its place among the favorites (lower first), if it is one.
   final int? favorite;
 
+  /// How it is reached, its own or its groups'.
+  final ProtocolKind protocol;
+
+  /// With a serial port: its settings.
+  final SerialLineSpec? serial;
+
+  /// Its terminal's scheme, its own or its groups'; empty for the app's.
+  final String terminalScheme;
+
+  /// The snippet typed in each new shell, its own or its groups'; empty
+  /// for none.
+  final String startupSnippet;
+
   const HostView({
     required this.id,
     required this.label,
@@ -306,6 +338,10 @@ class HostView {
     this.environment,
     this.system,
     this.favorite,
+    required this.protocol,
+    this.serial,
+    required this.terminalScheme,
+    required this.startupSnippet,
   });
 
   @override
@@ -320,7 +356,11 @@ class HostView {
       importedAlias.hashCode ^
       environment.hashCode ^
       system.hashCode ^
-      favorite.hashCode;
+      favorite.hashCode ^
+      protocol.hashCode ^
+      serial.hashCode ^
+      terminalScheme.hashCode ^
+      startupSnippet.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -337,7 +377,11 @@ class HostView {
           importedAlias == other.importedAlias &&
           environment == other.environment &&
           system == other.system &&
-          favorite == other.favorite;
+          favorite == other.favorite &&
+          protocol == other.protocol &&
+          serial == other.serial &&
+          terminalScheme == other.terminalScheme &&
+          startupSnippet == other.startupSnippet;
 }
 
 /// Which identity applies; `None` overrides one inherited.
@@ -548,10 +592,63 @@ enum OriginKind {
   host,
 }
 
+enum ParityKind { none, odd, even }
+
+/// How a host is reached.
+enum ProtocolKind {
+  ssh,
+
+  /// Unencrypted.
+  telnet,
+
+  /// A serial port of this computer: the host's address is the port.
+  serial,
+}
+
 /// A proxy in front of the first hop; `Off` overrides one inherited.
 enum ProxyKind { off, http, socks5 }
 
 enum RouteKind { direct, jump, command }
+
+/// A serial port's settings.
+class SerialLineSpec {
+  final int baud;
+
+  /// 5 to 8.
+  final int dataBits;
+  final ParityKind parity;
+
+  /// 1 or 2.
+  final int stopBits;
+  final FlowKind flow;
+
+  const SerialLineSpec({
+    required this.baud,
+    required this.dataBits,
+    required this.parity,
+    required this.stopBits,
+    required this.flow,
+  });
+
+  @override
+  int get hashCode =>
+      baud.hashCode ^
+      dataBits.hashCode ^
+      parity.hashCode ^
+      stopBits.hashCode ^
+      flow.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SerialLineSpec &&
+          runtimeType == other.runtimeType &&
+          baud == other.baud &&
+          dataBits == other.dataBits &&
+          parity == other.parity &&
+          stopBits == other.stopBits &&
+          flow == other.flow;
+}
 
 /// Settings a group or host sets; `None` inherits.
 class SettingsSpec {
@@ -610,6 +707,30 @@ class SettingsSpec {
   /// Record what comes out on the screen in the session log.
   final bool? sessionLog;
 
+  /// SSH, Telnet or a serial port.
+  final ProtocolKind? protocol;
+
+  /// With a serial port.
+  final SerialLineSpec? serial;
+
+  /// The shell over Mosh (SSH only).
+  final bool? mosh;
+
+  /// What starts `mosh-server`, when it is not on the server's `PATH`.
+  final String? moshServer;
+
+  /// The host's character set, as `encoding_rs` names it (`utf-8`,
+  /// `iso-8859-1`, `cp437`…).
+  final String? encoding;
+  final BackspaceKind? backspace;
+
+  /// The terminal's colors: a scheme's name.
+  final String? terminalScheme;
+
+  /// A snippet's id, typed in each new shell; empty here for none, over
+  /// a group's.
+  final String? startupSnippet;
+
   const SettingsSpec({
     this.user,
     this.port,
@@ -641,6 +762,14 @@ class SettingsSpec {
     this.environmentColor = r"",
     this.readOsRelease = null,
     this.sessionLog = null,
+    this.protocol = null,
+    this.serial = null,
+    this.mosh = null,
+    this.moshServer = null,
+    this.encoding = null,
+    this.backspace = null,
+    this.terminalScheme = null,
+    this.startupSnippet = null,
   });
 
   static Future<SettingsSpec> default_() =>
@@ -677,7 +806,15 @@ class SettingsSpec {
       environmentShort.hashCode ^
       environmentColor.hashCode ^
       readOsRelease.hashCode ^
-      sessionLog.hashCode;
+      sessionLog.hashCode ^
+      protocol.hashCode ^
+      serial.hashCode ^
+      mosh.hashCode ^
+      moshServer.hashCode ^
+      encoding.hashCode ^
+      backspace.hashCode ^
+      terminalScheme.hashCode ^
+      startupSnippet.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -713,7 +850,15 @@ class SettingsSpec {
           environmentShort == other.environmentShort &&
           environmentColor == other.environmentColor &&
           readOsRelease == other.readOsRelease &&
-          sessionLog == other.sessionLog;
+          sessionLog == other.sessionLog &&
+          protocol == other.protocol &&
+          serial == other.serial &&
+          mosh == other.mosh &&
+          moshServer == other.moshServer &&
+          encoding == other.encoding &&
+          backspace == other.backspace &&
+          terminalScheme == other.terminalScheme &&
+          startupSnippet == other.startupSnippet;
 }
 
 enum SystemKind {

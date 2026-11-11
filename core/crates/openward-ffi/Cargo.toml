@@ -13,6 +13,7 @@ crate-type = ["cdylib", "staticlib", "rlib"]
 
 [dependencies]
 openward-app = { path = "../openward-app" }
+openward-fido = { path = "../openward-fido" }
 openward-import = { path = "../openward-import" }
 anyhow = "1"
 # Pinned exactly: the Dart package must be the same version.

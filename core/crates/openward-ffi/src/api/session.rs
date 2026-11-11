@@ -8,7 +8,8 @@ use std::sync::Arc;
 
 use flutter_rust_bridge::frb;
 use openward_app::events::{
-    CertProblem, Connected, Health, KeySource, NetCause, Persistence, Question, Stage, Trust,
+    CertProblem, Connected, Health, KeySource, NetCause, Persistence, Question, SerialProblem,
+    Stage, Trust,
 };
 use openward_app::terminal::{self, Terminal};
 use openward_app::{Answer, Event, EventSink, Failure, Prompt};
@@ -36,9 +37,31 @@ pub enum SessionEventKind {
     /// How the shell of a host with a persistent session started
     /// (`persistent`).
     Persistent,
+    /// Mosh was asked for and the session goes over SSH (`mosh_fallback`).
+    MoshFallback,
     /// A local program is running (`program`).
     Started,
     Closed,
+}
+
+/// Why a session asked to go over Mosh goes over SSH, in tmux.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MoshFallbackKind {
+    /// No `mosh-client` on this computer.
+    NoClient,
+    /// No `mosh-server` on the server.
+    NoServer,
+    /// The server's UDP did not get through.
+    NoUdp,
+    /// `mosh-server` did not start; [`MoshFallbackView::said`] is why.
+    Other,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MoshFallbackView {
+    pub kind: MoshFallbackKind,
+    /// What the server said, with `Other`.
+    pub said: String,
 }
 
 /// One event; the field named by `kind` is set.
@@ -60,6 +83,7 @@ pub struct SessionEvent {
     /// Saved hosts (by id) that do not tell their system and do not read
     /// `/etc/os-release`, with `HostsChanged`.
     pub unknown_systems: Vec<String>,
+    pub mosh_fallback: Option<MoshFallbackView>,
 }
 
 /// An answer from the server (after `rtt_ms`, when it was a question's),
@@ -92,6 +116,8 @@ pub struct PersistentView {
 pub enum StageKind {
     Connecting,
     Authenticating,
+    /// Touch the security key of the key file in `label`.
+    TouchKey,
     OpeningShell,
     OpeningSftp,
 }
@@ -115,6 +141,40 @@ pub enum PromptKind {
     KeyboardInteractive,
     /// The proxy's password; first its user when `user` is empty.
     ProxyLogin,
+    /// The PIN of the security key that holds the key file `key`.
+    SecurityKeyPin,
+}
+
+/// Why a security key did not sign or make a key.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SecurityKeyKind {
+    NoKey,
+    TooManyKeys,
+    PinRequired,
+    WrongPin,
+    Locked,
+    NotTouched,
+    NotThisKey,
+    /// Windows, without administrator rights: the agent of its OpenSSH.
+    NoAccess,
+    Other,
+}
+
+impl SecurityKeyKind {
+    pub(crate) fn of(p: openward_app::events::SecurityKeyProblem) -> Self {
+        use openward_app::events::SecurityKeyProblem as P;
+        match p {
+            P::NoKey => Self::NoKey,
+            P::TooManyKeys => Self::TooManyKeys,
+            P::PinRequired => Self::PinRequired,
+            P::WrongPin => Self::WrongPin,
+            P::Locked => Self::Locked,
+            P::NotTouched => Self::NotTouched,
+            P::NotThisKey => Self::NotThisKey,
+            P::NoAccess => Self::NoAccess,
+            P::Other => Self::Other,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -166,6 +226,11 @@ pub struct ReconnectingView {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ConnectedView {
+    /// For Telnet the SSH fields are empty (nothing is encrypted); for a
+    /// serial port `host` is the port and `port` 0.
+    pub protocol: super::vault::ProtocolKind,
+    /// The shell goes over Mosh (SSH only started it).
+    pub mosh: bool,
     pub host: String,
     pub port: u16,
     pub kex: String,
@@ -192,7 +257,26 @@ pub enum FailureKind {
     Cancelled,
     /// The server has no SFTP.
     NoSftp,
+    /// A serial port: [`FailureView::serial`] says what.
+    Serial,
     Network,
+    Other,
+}
+
+/// With [`FailureKind::Serial`]: what went wrong with the port
+/// ([`FailureView::host`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SerialKind {
+    /// Not there (now).
+    Missing,
+    /// Another program has it.
+    Busy,
+    /// Not allowed (on Linux, not in `dialout`).
+    Denied,
+    /// It does not take these settings; [`FailureView::reason`] says why.
+    Settings,
+    /// It went while open: the cable was pulled.
+    Gone,
     Other,
 }
 
@@ -249,7 +333,13 @@ pub struct FailureView {
     pub previous: Vec<PreviousKeyView>,
     pub cert: Option<CertKind>,
     pub net: Option<NetKind>,
+    pub serial: Option<SerialKind>,
     pub seconds: u32,
+    /// With [`FailureKind::AuthFailed`]: a certificate that had run out
+    /// and was not offered (its path); empty if none.
+    pub expired_certificate: String,
+    /// With [`FailureKind::AuthFailed`]: a security key that did not sign.
+    pub security_key: Option<SecurityKeyKind>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -353,11 +443,15 @@ pub(crate) fn failure_view(f: Failure) -> FailureView {
             label,
             user,
             methods,
+            expired_certificate,
+            security_key,
         } => FailureView {
             kind: Some(FailureKind::AuthFailed),
             label,
             user,
             methods,
+            expired_certificate: expired_certificate.unwrap_or_default(),
+            security_key: security_key.map(SecurityKeyKind::of),
             ..v
         },
         Failure::Cancelled => FailureView {
@@ -396,6 +490,24 @@ pub(crate) fn failure_view(f: Failure) -> FailureView {
                 ..v
             }
         }
+        Failure::Serial { port, problem } => {
+            let (serial, reason) = match problem {
+                SerialProblem::Missing => (SerialKind::Missing, String::new()),
+                SerialProblem::Busy => (SerialKind::Busy, String::new()),
+                SerialProblem::Denied => (SerialKind::Denied, String::new()),
+                SerialProblem::Settings(why) => (SerialKind::Settings, why),
+                SerialProblem::Gone => (SerialKind::Gone, String::new()),
+                SerialProblem::Other(why) => (SerialKind::Other, why),
+            };
+            FailureView {
+                kind: Some(FailureKind::Serial),
+                label: port.clone(),
+                host: port,
+                reason,
+                serial: Some(serial),
+                ..v
+            }
+        }
         Failure::Other(reason) => FailureView {
             kind: Some(FailureKind::Other),
             reason,
@@ -429,6 +541,12 @@ fn prompt_view(id: u64, p: Prompt) -> PromptView {
         },
         Prompt::Passphrase { key, retry } => PromptView {
             kind: Some(PromptKind::Passphrase),
+            key,
+            retry,
+            ..v
+        },
+        Prompt::SecurityKeyPin { key, retry } => PromptView {
+            kind: Some(PromptKind::SecurityKeyPin),
             key,
             retry,
             ..v
@@ -484,6 +602,7 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
         program: None,
         closed: None,
         unknown_systems: Vec::new(),
+        mosh_fallback: None,
     };
     match e {
         Event::Route { hops } => {
@@ -517,6 +636,7 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
                     Stage::Authenticating => StageKind::Authenticating,
                     Stage::OpeningShell => StageKind::OpeningShell,
                     Stage::OpeningSftp => StageKind::OpeningSftp,
+                    Stage::TouchKey => StageKind::TouchKey,
                 },
             });
         }
@@ -525,6 +645,8 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
             v.prompt = Some(prompt_view(id, prompt));
         }
         Event::Connected(Connected {
+            protocol,
+            mosh,
             host,
             port,
             kex,
@@ -543,6 +665,8 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
                 Trust::New => (TrustKind::New, String::new()),
             };
             v.connected = Some(ConnectedView {
+                protocol: super::vault::ProtocolKind::of(protocol),
+                mosh,
                 host,
                 port,
                 kex,
@@ -589,6 +713,17 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
                     Persistence::NoTmux => PersistenceKind::NoTmux,
                 },
             });
+        }
+        Event::MoshFallback { reason } => {
+            use openward_app::events::MoshFallback;
+            v.kind = SessionEventKind::MoshFallback;
+            let (kind, said) = match reason {
+                MoshFallback::NoClient => (MoshFallbackKind::NoClient, String::new()),
+                MoshFallback::NoServer => (MoshFallbackKind::NoServer, String::new()),
+                MoshFallback::NoUdp => (MoshFallbackKind::NoUdp, String::new()),
+                MoshFallback::Other(said) => (MoshFallbackKind::Other, said),
+            };
+            v.mosh_fallback = Some(MoshFallbackView { kind, said });
         }
         Event::Started { program } => {
             v.kind = SessionEventKind::Started;
@@ -1034,6 +1169,13 @@ impl TerminalSession {
     #[frb(sync)]
     pub fn close(&self) {
         self.term.close();
+    }
+
+    /// Sends a break down a serial port (a router's ROM monitor waits for
+    /// one); false if this is not a serial port.
+    #[frb(sync)]
+    pub fn send_break(&self) -> bool {
+        self.term.send_break()
     }
 
     /// A command ran (the UI saw it at Enter): a marker in the session's
