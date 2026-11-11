@@ -237,6 +237,50 @@ impl Remote {
         }
     }
 
+    /// A transfer owns a directory only after an acknowledged exclusive
+    /// mkdir. It stays private until the entire tree has been copied.
+    pub(crate) async fn mkdir_private(&self, path: &str) -> Result<()> {
+        self.raw
+            .mkdir(
+                path,
+                FileAttributes {
+                    permissions: Some(0o700),
+                    ..FileAttributes::empty()
+                },
+            )
+            .await
+            .map(|_| ())
+            .map_err(|e| Error::sftp(path, e))
+    }
+
+    pub(crate) async fn prepare_directory(&self, path: &str) -> Result<u32> {
+        self.set_mode(path, 0o700).await?;
+        if self
+            .lstat(path)
+            .await?
+            .is_none_or(|e| e.kind != Kind::Dir || e.mode != Some(0o700))
+        {
+            return Err(Error::Other(format!(
+                "{path}: private directory permissions could not be applied"
+            )));
+        }
+        // Observe the server's creation mask without asking it to widen the
+        // final copied directory beyond that mask. This file is empty and
+        // lives only inside the job's private directory.
+        let probe = join(path, ".openward-directory-mode");
+        let handle = self.open_write(&probe, true, Some(0o777)).await?;
+        let mode = self.stat_handle(&probe, &handle).await.and_then(|e| {
+            e.mode
+                .ok_or_else(|| Error::Other(format!("{path}: permissions are unavailable")))
+        });
+        let closed = self.close(&probe, handle).await;
+        let removed = self.remove_file(&probe).await;
+        let mode = mode?;
+        closed?;
+        removed?;
+        Ok(mode & 0o777)
+    }
+
     /// Renames `from` to `to`. With `overwrite`, an existing `to` is
     /// replaced, at once where the server can (`posix-rename`).
     pub async fn rename(&self, from: &str, to: &str, overwrite: bool) -> Result<()> {

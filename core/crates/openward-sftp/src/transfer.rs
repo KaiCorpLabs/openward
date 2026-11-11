@@ -38,7 +38,7 @@ use tokio::task::JoinHandle;
 use crate::entry::{Entry, Kind};
 use crate::flight::InFlight;
 use crate::remote::Remote;
-use crate::transfer_local::LocalRoot;
+use crate::transfer_local::{LocalDirectory, LocalRoot};
 use crate::{Error, Result, is_name, join, local, pipe};
 
 /// Jobs running at once.
@@ -275,8 +275,121 @@ struct Job {
     progress: Arc<AtomicU64>,
     /// The `.part` each item being copied writes, by item.
     parts: BTreeMap<usize, Part>,
+    directories: Arc<Directories>,
     task: Option<JoinHandle<()>>,
     sample: Option<(Instant, u64)>,
+}
+
+/// Directory creation completes even if its waiting run is paused. Ownership
+/// and final metadata survive into the next run; existing folders are never
+/// enrolled for chmod. Only a completed tree can publish final permissions.
+#[derive(Default)]
+struct Directories {
+    made: Mutex<BTreeMap<usize, Arc<CreatedDirectory>>>,
+    local: Mutex<HashMap<(u64, u64), Arc<CreatedDirectory>>>,
+    work: Mutex<HashMap<usize, tokio::sync::watch::Receiver<Option<Result<bool>>>>>,
+}
+
+enum CreatedDirectory {
+    Local {
+        dir: LocalDirectory,
+        mode: Mutex<Option<u32>>,
+        modified: Option<i64>,
+    },
+    Remote {
+        path: String,
+        mode: Option<u32>,
+        modified: Option<i64>,
+        allowed: Mutex<Option<u32>>,
+    },
+}
+
+enum DirectoryDest {
+    Local(PathBuf),
+    Remote(String),
+}
+
+impl Directories {
+    fn record(&self, i: usize, created: CreatedDirectory) -> Arc<CreatedDirectory> {
+        let created = Arc::new(created);
+        if let CreatedDirectory::Local { dir, .. } = created.as_ref() {
+            lock(&self.local).insert(dir.identity(), Arc::clone(&created));
+        }
+        lock(&self.made).insert(i, Arc::clone(&created));
+        created
+    }
+
+    fn merge_local_mode(&self, local: &LocalRoot, path: &Path, source: Option<u32>) -> Result<()> {
+        let identity = local.directory_identity(path)?;
+        if let Some(owned) = lock(&self.local).get(&identity)
+            && let CreatedDirectory::Local { mode, .. } = owned.as_ref()
+        {
+            let mut mode = lock(mode);
+            *mode = Some(mode.unwrap_or(0o700) & source.unwrap_or(0o700));
+        }
+        Ok(())
+    }
+
+    async fn prepare(
+        &self,
+        i: usize,
+        source: Entry,
+        dest: DirectoryDest,
+        fresh: bool,
+        remote: &Remote,
+        local: &LocalRoot,
+    ) -> Result<bool> {
+        let owned = lock(&self.made).get(&i).cloned();
+        let owned = if let Some(owned) = owned {
+            owned
+        } else {
+            let created = match dest {
+                DirectoryDest::Local(path) => {
+                    if download_existing(local, &path, OnConflict::Replace, true)?
+                        .is_some_and(|e| e.is_dir())
+                    {
+                        // Case folding, Unicode normalization and contained
+                        // directory links can name a directory this job made.
+                        // Its final mode must satisfy every source merged into it.
+                        self.merge_local_mode(local, &path, source.mode)?;
+                        return Ok(false);
+                    }
+                    CreatedDirectory::Local {
+                        dir: local.mkdir(&path)?,
+                        mode: Mutex::new(source.mode),
+                        modified: source.modified,
+                    }
+                }
+                DirectoryDest::Remote(path) => {
+                    if !fresh && remote.stat(&path).await?.is_some_and(|e| e.is_dir()) {
+                        let ambiguous = lock(&self.made).values().any(|owned| {
+                            matches!(owned.as_ref(), CreatedDirectory::Remote { path: made, .. } if made != &path && made.to_lowercase() == path.to_lowercase())
+                        });
+                        if ambiguous {
+                            return Err(Error::Other(format!("{path}: ambiguous directory name")));
+                        }
+                        return Ok(false);
+                    }
+                    remote.mkdir_private(&path).await?;
+                    CreatedDirectory::Remote {
+                        path,
+                        mode: source.mode,
+                        modified: source.modified,
+                        allowed: Mutex::new(None),
+                    }
+                }
+            };
+            self.record(i, created)
+        };
+        if let CreatedDirectory::Remote { path, allowed, .. } = owned.as_ref() {
+            let ready = lock(allowed).is_some();
+            if !ready {
+                let mask = remote.prepare_directory(path).await?;
+                *lock(allowed) = Some(mask);
+            }
+        }
+        Ok(true)
+    }
 }
 
 struct Inner {
@@ -353,6 +466,7 @@ impl Transfers {
             dest_name: None,
             progress: Arc::new(AtomicU64::new(0)),
             parts: BTreeMap::new(),
+            directories: Arc::new(Directories::default()),
             task: None,
             sample: None,
         });
@@ -443,6 +557,7 @@ impl Transfers {
             }
             j.view.state = JobState::Cancelled;
             j.local = None;
+            j.directories = Arc::new(Directories::default());
             j.view.ended_at = Some(now_secs());
             let parts = std::mem::take(&mut j.parts);
             if !parts.is_empty() {
@@ -550,6 +665,7 @@ fn finish(inner: &Arc<Inner>, id: u64, result: Result<()>) {
                     j.view.state = JobState::Done;
                     j.parts.clear();
                     j.local = None;
+                    j.directories = Arc::new(Directories::default());
                 }
                 Err(e) => {
                     j.view.state = JobState::Failed;
@@ -571,6 +687,7 @@ struct Snapshot {
     ahead: BTreeSet<usize>,
     dest_name: Option<String>,
     progress: Arc<AtomicU64>,
+    directories: Arc<Directories>,
 }
 
 fn with_job<T>(inner: &Inner, id: u64, f: impl FnOnce(&mut Job) -> T) -> Option<T> {
@@ -590,6 +707,7 @@ async fn run(inner: &Arc<Inner>, id: u64) -> Result<()> {
         ahead: j.ahead.clone(),
         dest_name: j.dest_name.clone(),
         progress: Arc::clone(&j.progress),
+        directories: Arc::clone(&j.directories),
     }) else {
         return Ok(());
     };
@@ -676,6 +794,7 @@ async fn run(inner: &Arc<Inner>, id: u64) -> Result<()> {
         req,
         dest_name: &dest_name,
         progress: &s.progress,
+        directories: &s.directories,
     };
     let mut flight = InFlight::default();
     let mut flow = Flow {
@@ -712,6 +831,7 @@ async fn run(inner: &Arc<Inner>, id: u64) -> Result<()> {
     while let Some((k, done)) = flight.next().await {
         job.settle(k, &items[k], done?, &mut flow);
     }
+    job.finalize_directories().await?;
     Ok(())
 }
 
@@ -761,14 +881,98 @@ enum Done {
 struct JobRun<'a> {
     inner: &'a Inner,
     id: u64,
-    remote: &'a Remote,
+    remote: &'a Arc<Remote>,
     local: &'a Arc<LocalRoot>,
     req: &'a Request,
     dest_name: &'a str,
     progress: &'a AtomicU64,
+    directories: &'a Arc<Directories>,
 }
 
 impl JobRun<'_> {
+    async fn directory(
+        &self,
+        i: usize,
+        source: Entry,
+        dest: DirectoryDest,
+        fresh: bool,
+    ) -> Result<Done> {
+        let mut result = {
+            let mut work = lock(&self.directories.work);
+            if let Some(existing) = work.get(&i)
+                && !existing.borrow().as_ref().is_some_and(Result::is_err)
+            {
+                existing.clone()
+            } else {
+                let (tx, rx) = tokio::sync::watch::channel(None);
+                work.insert(i, rx.clone());
+                let directories = Arc::clone(self.directories);
+                let remote = Arc::clone(self.remote);
+                let local = Arc::clone(self.local);
+                // Deliberately independent of the cancellable copy task: an
+                // acknowledged mkdir must not lose its ownership record.
+                tokio::spawn(async move {
+                    let result = directories
+                        .prepare(i, source, dest, fresh, &remote, &local)
+                        .await;
+                    let _ = tx.send(Some(result));
+                });
+                rx
+            }
+        };
+        loop {
+            let ready = result.borrow().clone();
+            if let Some(ready) = ready {
+                return ready.map(|made| Done::Dir { made });
+            }
+            result
+                .changed()
+                .await
+                .map_err(|_| Error::Other("directory creation stopped".into()))?;
+        }
+    }
+
+    async fn finalize_directories(&self) -> Result<()> {
+        let pending: Vec<_> = lock(&self.directories.made)
+            .iter()
+            .rev()
+            .map(|(&i, dir)| (i, Arc::clone(dir)))
+            .collect();
+        for (i, dir) in pending {
+            match dir.as_ref() {
+                CreatedDirectory::Local {
+                    dir,
+                    mode,
+                    modified,
+                } => dir.finish(self.local, *lock(mode), *modified)?,
+                CreatedDirectory::Remote {
+                    path,
+                    mode,
+                    modified,
+                    allowed,
+                } => {
+                    let allowed = (*lock(allowed)).ok_or_else(|| {
+                        Error::Other(format!("{path}: directory creation is incomplete"))
+                    })?;
+                    let mode = mode.unwrap_or(0o700) & allowed & 0o777;
+                    self.remote.set_attrs(path, Some(mode), *modified).await?;
+                    if self
+                        .remote
+                        .lstat(path)
+                        .await?
+                        .is_none_or(|e| e.kind != Kind::Dir || e.mode != Some(mode))
+                    {
+                        return Err(Error::Other(format!(
+                            "{path}: directory permissions could not be applied"
+                        )));
+                    }
+                }
+            }
+            lock(&self.directories.made).remove(&i);
+        }
+        Ok(())
+    }
+
     /// Copies item `i`; `fresh` if it goes in a folder this run made and
     /// has no twin.
     async fn copy(&self, i: usize, item: &Item, fresh: bool) -> Result<Done> {
@@ -1008,17 +1212,21 @@ impl JobRun<'_> {
     ) -> Result<Done> {
         let remote = self.remote;
         if item.dir {
-            // In a folder this run made there is nothing yet.
-            let there = if fresh {
-                None
+            let source = if src.as_os_str().is_empty() {
+                self.local.top()?
             } else {
-                remote.stat(dest).await?
+                self.local
+                    .stat(src)?
+                    .ok_or_else(|| Error::NotFound(self.local.display(src).display().to_string()))?
             };
-            if there.is_some_and(|e| e.is_dir()) {
-                return Ok(Done::Dir { made: false });
+            if !source.is_dir() {
+                return Err(Error::Changed(
+                    self.local.display(src).display().to_string(),
+                ));
             }
-            remote.mkdir(dest).await?;
-            return Ok(Done::Dir { made: true });
+            return self
+                .directory(i, source, DirectoryDest::Remote(dest.to_owned()), fresh)
+                .await;
         }
         let name = self.local.display(src).display().to_string();
         // The validated source handle is acquired before any remote write or
@@ -1128,13 +1336,16 @@ impl JobRun<'_> {
         let remote = self.remote;
         let existing = download_existing(self.local, dest, self.req.on_conflict, item.dir)?;
         if item.dir {
-            return match existing {
-                Some(e) if e.is_dir() => Ok(Done::Dir { made: false }),
-                _ => {
-                    self.local.mkdir(dest)?;
-                    Ok(Done::Dir { made: true })
-                }
-            };
+            let source = remote
+                .stat(src)
+                .await?
+                .ok_or_else(|| Error::NotFound(src.to_owned()))?;
+            if !source.is_dir() {
+                return Err(Error::Changed(src.to_owned()));
+            }
+            return self
+                .directory(i, source, DirectoryDest::Local(dest.to_owned()), false)
+                .await;
         }
         if let Some(e) = &existing
             && (self.req.on_conflict == OnConflict::Skip
@@ -1360,6 +1571,59 @@ mod tests {
         }
         assert_eq!(t.jobs().len(), 512);
         std::fs::File::open(&probe).expect("the waiting queue must leave descriptors available");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn aliases_restrict_new_directory_modes_but_do_not_rewrite_preexisting_directories() {
+        use std::os::unix::fs::{PermissionsExt, symlink};
+        let tmp = tempfile::tempdir().unwrap();
+        let root = LocalRoot::destination(tmp.path()).unwrap();
+        let directories = Directories::default();
+        let created = directories.record(
+            0,
+            CreatedDirectory::Local {
+                dir: root.mkdir(Path::new("A")).unwrap(),
+                mode: Mutex::new(Some(0o755)),
+                modified: None,
+            },
+        );
+        if !tmp.path().join("a").exists() {
+            symlink("A", tmp.path().join("a")).unwrap();
+        }
+        directories
+            .merge_local_mode(&root, Path::new("a"), Some(0o700))
+            .unwrap();
+        if let CreatedDirectory::Local { dir, mode, .. } = created.as_ref() {
+            dir.finish(&root, *lock(mode), None).unwrap();
+        } else {
+            unreachable!();
+        }
+        assert_eq!(
+            std::fs::metadata(tmp.path().join("A"))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o700
+        );
+        std::fs::create_dir(tmp.path().join("preexisting")).unwrap();
+        std::fs::set_permissions(
+            tmp.path().join("preexisting"),
+            std::fs::Permissions::from_mode(0o700),
+        )
+        .unwrap();
+        directories
+            .merge_local_mode(&root, Path::new("preexisting"), Some(0o755))
+            .unwrap();
+        assert_eq!(
+            std::fs::metadata(tmp.path().join("preexisting"))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o700
+        );
     }
 
     fn entry(modified: Option<i64>) -> Entry {

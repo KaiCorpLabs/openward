@@ -206,7 +206,11 @@ fn chmod_entry(
 }
 
 #[cfg(unix)]
-fn set_named_mode(parent: &cap_std::fs::Dir, name: &Path, mode: u32) -> std::io::Result<()> {
+pub(crate) fn set_named_mode(
+    parent: &cap_std::fs::Dir,
+    name: &Path,
+    mode: u32,
+) -> std::io::Result<()> {
     use cap_std::fs::{Permissions, PermissionsExt};
     // rustix's Linux chmodat rejects SYMLINK_NOFOLLOW. Its confined
     // setter uses an O_PATH descriptor instead. On macOS the no-follow
