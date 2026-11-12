@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../src/rust/api/app.dart';
 import '../src/rust/api/session.dart';
+import '../src/rust/api/security.dart';
 import '../src/rust/api/vault.dart' show ProtocolKind;
 import 'errors.dart';
 import 'address.dart';
@@ -177,7 +178,10 @@ abstract class ConnectionController extends ChangeNotifier {
         stage = e.stage;
         reconnectAt = null;
       case SessionEventKind.prompt:
-        prompts.add(e.prompt!);
+        if (app.securityState().phase
+            case VaultPhase.legacy || VaultPhase.unlocked) {
+          prompts.add(e.prompt!);
+        }
       case SessionEventKind.connected:
         phase = Phase.connected;
         connected = e.connected;

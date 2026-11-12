@@ -5,6 +5,7 @@ pub mod envelope;
 pub mod hierarchy;
 pub mod password;
 pub mod plaintext;
+pub mod unlock;
 mod wire;
 
 pub use ed25519_dalek::{SigningKey, VerifyingKey};

@@ -69,6 +69,7 @@ List<ShortcutGroup> shortcutGroups(AppLocalizations l, {bool? apple}) {
       ShortcutRow(l.reopenTab, [reopenKeys(l, apple: mac)]),
       ShortcutRow(l.toggleSidebar, [k('⌘B', '${cs}L')]),
       ShortcutRow(l.settings, [c(',')]),
+      ShortcutRow(l.vaultLock, [k('⌘L', 'Ctrl+Alt+L')]),
       ShortcutRow(l.shortcutsTitle, [w('/')]),
     ]),
     ShortcutGroup(l.shortcutsTabs, [

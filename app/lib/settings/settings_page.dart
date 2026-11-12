@@ -26,12 +26,13 @@ import '../ui/umbral.dart';
 import '../ui/widgets.dart';
 import '../welcome/whats_new.dart';
 import 'appearance_page.dart';
+import '../security/settings.dart';
 import 'highlight_rules.dart';
 import 'report.dart';
 import '../window/shortcuts.dart';
 import '../window/sidebar_state.dart';
 
-enum SettingsSection { general, appearance, terminal, logs }
+enum SettingsSection { general, appearance, terminal, logs, security }
 
 class SettingsSectionNotifier extends Notifier<SettingsSection> {
   @override
@@ -90,6 +91,7 @@ class SettingsPage extends ConsumerWidget {
                       SettingsSection.appearance => l.settingsAppearance,
                       SettingsSection.terminal => l.settingsTerminal,
                       SettingsSection.logs => l.settingsLogs,
+                      SettingsSection.security => l.vaultSecurity,
                     },
                     selected: s == section,
                     onTap: () =>
@@ -119,6 +121,7 @@ class SettingsPage extends ConsumerWidget {
                     SettingsSection.appearance => const AppearanceSection(),
                     SettingsSection.terminal => const _Terminal(),
                     SettingsSection.logs => const _Logs(),
+                    SettingsSection.security => const VaultSettings(),
                   },
                 ),
               ),

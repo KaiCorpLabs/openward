@@ -48,6 +48,19 @@ void _type(LineTracker t, _Screen s, String text, {bool echo = true}) {
 
 void main() {
   group('LineTracker', () {
+    test('vault redaction cannot turn a private partial line into history', () {
+      final screen = _Screen('\$ ');
+      final tracker = LineTracker();
+      _type(tracker, screen, ' export TOKEN=private');
+      tracker.redact();
+      expect(tracker.plainTyped, isNull);
+      tracker.key(Hid.arrowUp, 0, '', screen);
+      screen.echoed = 'export TOKEN=private-resumed';
+      expect(tracker.enter(screen, altScreen: false), isNull);
+      screen.echoed = '';
+      _type(tracker, screen, 'echo public');
+      expect(tracker.enter(screen, altScreen: false), 'echo public');
+    });
     test('plain input is own; reconstructed output is screen provenance', () {
       final s = _Screen('\$ ');
       final t = LineTracker();

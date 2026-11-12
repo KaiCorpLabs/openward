@@ -556,14 +556,30 @@ impl Prompts {
         self.pending.lock().unwrap_or_else(|e| e.into_inner())
     }
 
-    /// Sends `prompt` and waits; no answer counts as a cancel.
-    pub async fn ask(&self, sink: &Arc<dyn EventSink>, prompt: Prompt) -> Answer {
-        let id = self.next.fetch_add(1, Ordering::Relaxed) + 1;
-        let (tx, rx) = oneshot::channel();
-        self.lock().insert(id, tx);
+    /// Registers the prompt while holding permission, before a lock can drain
+    /// it. The permission guard is never held across the user's answer.
+    pub async fn ask_permitted(
+        &self,
+        sink: &Arc<dyn EventSink>,
+        prompt: Prompt,
+        gate: &crate::security::AccessGate,
+    ) -> Answer {
+        let (id, rx) = {
+            let Ok(_permission) = gate.read() else {
+                return Answer::Cancel;
+            };
+            let id = self.next.fetch_add(1, Ordering::Relaxed) + 1;
+            let (tx, rx) = oneshot::channel();
+            self.lock().insert(id, tx);
+            sink.send(Event::Prompt { id, prompt });
+            (id, rx)
+        };
         let _forget = Forget(self, id);
-        sink.send(Event::Prompt { id, prompt });
         rx.await.unwrap_or(Answer::Cancel)
+    }
+
+    pub fn cancel_all(&self) {
+        self.lock().clear();
     }
 
     /// False if nothing waits on `id` any more.

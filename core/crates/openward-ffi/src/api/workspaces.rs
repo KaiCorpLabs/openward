@@ -206,23 +206,30 @@ impl OpenWard {
     /// Every workspace, by name.
     #[frb(sync)]
     pub fn workspaces(&self) -> Vec<WorkspaceView> {
-        let vault = self.app.vault();
-        vault
-            .workspaces()
-            .into_iter()
-            .map(|(wid, w)| WorkspaceView {
-                id: wid.to_string(),
-                rev: vault.get(wid).map_or(0, |i| i.rev),
-                spec: spec_of(w),
-                sessions: sessions(w),
-            })
-            .collect()
+        let gate = self.app.security().gate();
+        super::security::access(&gate, true, || {
+            let vault = self.app.vault();
+            vault
+                .workspaces()
+                .into_iter()
+                .map(|(wid, w)| WorkspaceView {
+                    id: wid.to_string(),
+                    rev: vault.get(wid).map_or(0, |i| i.rev),
+                    spec: spec_of(w),
+                    sessions: sessions(w),
+                })
+                .collect()
+        })
+        .unwrap_or_default()
     }
 
     pub fn create_workspace(&self, spec: WorkspaceSpec) -> Result<String, VaultError> {
-        let mut w = Workspace::default();
-        apply(&spec, &mut w)?;
-        Ok(self.app.vault().create(Data::Workspace(w))?.to_string())
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            let mut w = Workspace::default();
+            apply(&spec, &mut w)?;
+            Ok(self.app.vault().create(Data::Workspace(w))?.to_string())
+        })?
     }
 
     /// Returns the new revision. Fails if it changed since `rev`.
@@ -232,20 +239,26 @@ impl OpenWard {
         rev: u64,
         spec: WorkspaceSpec,
     ) -> Result<u64, VaultError> {
-        let wid = super::vault::id(&id)?;
-        let mut vault = self.app.vault();
-        let mut w = vault.workspace(wid)?.clone();
-        apply(&spec, &mut w)?;
-        Ok(vault.update(wid, rev, Data::Workspace(w))?)
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            let wid = super::vault::id(&id)?;
+            let mut vault = self.app.vault();
+            let mut w = vault.workspace(wid)?.clone();
+            apply(&spec, &mut w)?;
+            Ok(vault.update(wid, rev, Data::Workspace(w))?)
+        })?
     }
 
     /// Renames it, leaving its tabs as they are.
     pub fn rename_workspace(&self, id: String, rev: u64, name: String) -> Result<u64, VaultError> {
-        let wid = super::vault::id(&id)?;
-        let mut vault = self.app.vault();
-        let mut w = vault.workspace(wid)?.clone();
-        w.name = name.trim().to_owned();
-        Ok(vault.update(wid, rev, Data::Workspace(w))?)
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            let wid = super::vault::id(&id)?;
+            let mut vault = self.app.vault();
+            let mut w = vault.workspace(wid)?.clone();
+            w.name = name.trim().to_owned();
+            Ok(vault.update(wid, rev, Data::Workspace(w))?)
+        })?
     }
 }
 

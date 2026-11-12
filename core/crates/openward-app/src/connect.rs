@@ -42,6 +42,7 @@ use crate::tunnels::Tunnels;
 #[derive(Clone)]
 pub(crate) struct Ctx {
     pub vault: Arc<Mutex<Vault>>,
+    pub security: Arc<crate::security::VaultSession>,
     pub local: Local,
     /// What talks to security keys: the one plugged in.
     pub security_keys: Arc<dyn openward_fido::Authenticator>,
@@ -151,7 +152,9 @@ pub(crate) async fn learn_systems(
 
 impl Ctx {
     async fn ask(&self, prompt: Prompt) -> Answer {
-        self.prompts.ask(&self.sink, prompt).await
+        self.prompts
+            .ask_permitted(&self.sink, prompt, &self.security.gate())
+            .await
     }
 
     pub fn stage(&self, plan: &Plan, hop: usize, stage: Stage) {
@@ -165,9 +168,11 @@ impl Ctx {
 
     /// The vault's trusted keys, and `~/.ssh/known_hosts`.
     /// OpenWard's trusted keys, and OpenSSH's in `files`.
-    fn known_hosts(&self, files: &[PathBuf]) -> KnownTexts {
+    fn known_hosts(&self, files: &[PathBuf]) -> Result<KnownTexts, Failure> {
+        let gate = self.security.gate();
+        let _permission = gate.read().map_err(|e| Failure::Other(e.to_string()))?;
         let openssh = read_known_files(files);
-        KnownTexts::of(&lock(&self.vault), openssh)
+        Ok(KnownTexts::of(&lock(&self.vault), openssh))
     }
 }
 
@@ -322,7 +327,7 @@ async fn ssh_hops(plan: &Plan, ctx: &Ctx, count: usize) -> Result<Vec<Session>, 
     let mut sessions: Vec<Session> = Vec::with_capacity(count);
     for (i, hop) in plan.hops.iter().take(count).enumerate() {
         ctx.stage(plan, i, Stage::Connecting);
-        let texts = ctx.known_hosts(&hop.known_hosts);
+        let texts = ctx.known_hosts(&hop.known_hosts)?;
         let known = texts.all();
         let refused = Arc::new(Mutex::new(None));
         let last = i + 1 == count;

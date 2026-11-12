@@ -21,6 +21,7 @@ import '../ui/widgets.dart' show monoStyle;
 /// Why it failed, short, to follow «No se ha podido guardar: …».
 String errorReason(AppLocalizations l, Object e) => switch (e) {
   VaultError(:final kind) => switch (kind) {
+    VaultErrorKind.locked => l.vaultLocked,
     VaultErrorKind.conflict => l.errConflict,
     VaultErrorKind.notFound => l.errNotFound,
     VaultErrorKind.inUse => l.errInUse,

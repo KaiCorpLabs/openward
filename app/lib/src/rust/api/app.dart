@@ -12,6 +12,7 @@ import 'logs.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'programs.dart';
+import 'security.dart';
 import 'session.dart';
 import 'sftp.dart';
 import 'snippets.dart';
@@ -33,6 +34,8 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// Stops it for good, deleting the file it was writing.
   void cancelTransfer({required BigInt id});
 
+  Future<void> cancelVaultSetup();
+
   /// Puts a key behind `new` (none if empty), opened with `old`; None if
   /// it went.
   Future<SshKeyFailure?> changeKeyPassphrase({
@@ -49,6 +52,11 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   /// Closes it (and forgets an error it had).
   void closeTunnel({required String id});
+
+  Future<void> completeVaultSetup({
+    required String group3,
+    required String group12,
+  });
 
   /// Connects `session` to a saved host; again on the same session, it
   /// reconnects and keeps the screen. In Dart this returns the stream of
@@ -116,6 +124,10 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   /// False for a session still going on.
   Future<bool> deleteLog({required String id});
+
+  Future<void> disableNative();
+
+  Future<void> enableNative({required bool linuxAck});
 
   Future<void> exportLog({
     required String id,
@@ -224,6 +236,8 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// The `known_hosts` file OpenWard reads, as the UI names it.
   String knownHostsFile();
 
+  Future<void> lockVault();
+
   LogEntry? log({required String id});
 
   /// The `index`th command (from 0) of a recording, with what came out
@@ -258,6 +272,8 @@ abstract class OpenWard implements RustOpaqueInterface {
   List<LogSetIn> logsSetIn();
 
   LogsUsage logsUsage();
+
+  NativeProtection nativeProtection();
 
   /// Opens or creates the app's data in `data_dir` (the platform's
   /// application support directory).
@@ -310,9 +326,13 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// after these.
   Future<void> orderFavorites({required List<String> ids});
 
+  Future<int> passwordScore({required String password});
+
   void pauseTransfer({required BigInt id});
 
   void pauseTransfers();
+
+  Future<String> prepareVault({required String password});
 
   /// What importing it would bring, and what is there already.
   ProgramPreview previewProgram({required ProgramData data});
@@ -345,6 +365,8 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// Tries after losing a connection, before giving up.
   int reconnectAttempts();
 
+  Future<void> recoverVault({required String kit});
+
   /// Takes it off the list (cancelling it if it was not finished).
   void removeTransfer({required BigInt id});
 
@@ -357,6 +379,8 @@ abstract class OpenWard implements RustOpaqueInterface {
     required BigInt rev,
     required String name,
   });
+
+  Future<void> resumeLegacyVault();
 
   void resumeTransfer({required BigInt id});
 
@@ -371,8 +395,14 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// found, and the stream ends with the search.
   Stream<LogFound> searchLogs({required String query});
 
+  void securityActivity();
+
+  SecurityView securityState();
+
   /// The serial ports there are now, USB ones (cables, adapters) first.
   Future<List<SerialPortView>> serialPorts();
+
+  Future<void> setAutoLock({required BigInt seconds});
 
   /// Makes a host a favorite (the last one) or not.
   Future<void> setFavorite({required String id, required bool favorite});
@@ -430,6 +460,10 @@ abstract class OpenWard implements RustOpaqueInterface {
   });
 
   List<TunnelView> tunnels();
+
+  Future<void> unlockNative();
+
+  Future<void> unlockVault({required String password});
 
   /// Items this version cannot read, written by a newer one: they stay
   /// in the vault as they are, but the app does not show them.
@@ -497,6 +531,8 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// An event each time sessions begin, end, change or go: read them
   /// again then.
   Stream<bool> watchLogs();
+
+  Stream<SecurityView> watchSecurity();
 
   /// Every saved tunnel with its state now, by name.
   /// An event each time a tunnel opens, closes or fails, or a local

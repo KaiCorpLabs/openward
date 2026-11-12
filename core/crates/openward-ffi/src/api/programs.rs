@@ -387,32 +387,45 @@ impl OpenWard {
     /// sessions, SecureCRT's, MobaXterm's. Off the UI thread: it looks in
     /// their folders, which macOS may ask the user about.
     pub fn installed_programs(&self) -> Vec<FoundProgram> {
-        self.app
-            .installed_programs()
-            .into_iter()
-            .map(|f| FoundProgram {
-                program: f.program.into(),
-                path: f.path.display().to_string(),
-            })
-            .collect()
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            self.app
+                .installed_programs()
+                .into_iter()
+                .map(|f| FoundProgram {
+                    program: f.program.into(),
+                    path: f.path.display().to_string(),
+                })
+                .collect()
+        })
+        .unwrap_or_default()
     }
 
     /// Reads a file or folder of another program, recognizing whose it
     /// is. For Termius's data the system asks the user first, to let
     /// OpenWard use Termius's key from the keychain.
-    pub fn read_program(&self, path: String) -> ProgramRead {
-        self.read(path, None)
+    pub fn read_program(&self, path: String) -> Result<ProgramRead, VaultError> {
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || self.read(path, None)).map_err(Into::into)
     }
 
     /// As [`Self::read_program`], with Termius's key given (tests). A
     /// release build does not take it (see `for_tests`): there it is
     /// [`Self::read_program`].
-    pub fn read_program_with_key(&self, path: String, termius_key: Vec<u8>) -> ProgramRead {
-        if crate::api::app::for_tests("read_program_with_key").is_err() {
-            return self.read_program(path);
-        }
-        let key: Option<[u8; 32]> = termius_key.try_into().ok();
-        self.read(path, Some(key.into_iter().collect()))
+    pub fn read_program_with_key(
+        &self,
+        path: String,
+        termius_key: Vec<u8>,
+    ) -> Result<ProgramRead, VaultError> {
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            if crate::api::app::for_tests("read_program_with_key").is_err() {
+                return self.read(path, None);
+            }
+            let key: Option<[u8; 32]> = termius_key.try_into().ok();
+            self.read(path, Some(key.into_iter().collect()))
+        })
+        .map_err(Into::into)
     }
 
     fn read(&self, path: String, keys: Option<Vec<[u8; 32]>>) -> ProgramRead {
@@ -430,8 +443,10 @@ impl OpenWard {
 
     /// What importing it would bring, and what is there already.
     #[frb(sync)]
-    pub fn preview_program(&self, data: &ProgramData) -> ProgramPreview {
-        self.app.preview_program(&data.read).into()
+    pub fn preview_program(&self, data: &ProgramData) -> Result<ProgramPreview, VaultError> {
+        let gate = self.app.security().gate();
+        super::security::access(&gate, true, || self.app.preview_program(&data.read).into())
+            .map_err(Into::into)
     }
 
     pub fn import_program_selection(
@@ -439,12 +454,15 @@ impl OpenWard {
         data: &ProgramData,
         choice: ProgramChoice,
     ) -> Result<ProgramReport, VaultError> {
-        let choice = Choice {
-            hosts: choice.hosts,
-            group_name: choice.group_name,
-            save_keys: choice.save_keys,
-            known_hosts: choice.known_hosts,
-        };
-        Ok(self.app.import_program(&data.read, &choice)?.into())
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            let choice = Choice {
+                hosts: choice.hosts,
+                group_name: choice.group_name,
+                save_keys: choice.save_keys,
+                known_hosts: choice.known_hosts,
+            };
+            Ok(self.app.import_program(&data.read, &choice)?.into())
+        })?
     }
 }

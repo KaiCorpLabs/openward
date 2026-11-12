@@ -20,6 +20,8 @@ import 'package:openward/src/rust/api/known_hosts.dart';
 import 'package:openward/src/rust/api/programs.dart';
 import 'package:openward/src/rust/api/snippets.dart';
 import 'package:openward/src/rust/api/session.dart';
+import 'package:openward/src/rust/api/security.dart';
+import 'package:openward/src/rust/api/sftp.dart';
 import 'package:openward/src/rust/api/tunnels.dart';
 import 'package:openward/src/rust/api/vault.dart';
 import 'package:openward/src/rust/api/workspaces.dart';
@@ -54,6 +56,88 @@ void main() {
   /// stale library would not be.
   test('the core built in is the app\'s version', () {
     expect(coreVersion(), appVersion);
+  });
+
+  test('encrypted vault lifecycle crosses the generated bridge and rejects locked actions', () async {
+    final id = await app.createHost(
+      spec: const HostSpec(label: 'private host', address: 'private.example'),
+    );
+    final terminal = app.terminal(cols: 80, rows: 24, scrollback: 100);
+    final browser = app.sftp();
+    final phases = <VaultPhase>[];
+    final subscription = app.watchSecurity().listen(
+      (view) => phases.add(view.phase),
+    );
+    try {
+      const password = 'Meteor-7-Parchment-Unfurl-Quartz-92!';
+      expect(
+        await app.passwordScore(password: password),
+        greaterThanOrEqualTo(3),
+      );
+      final kit = await app.prepareVault(password: password);
+      final groups = kit.split('-');
+      await app.completeVaultSetup(group3: groups[3], group12: groups[12]);
+      expect(app.securityState().phase, VaultPhase.unlocked);
+      expect(app.securityState().recoveryAvailable, isTrue);
+      expect(app.securityState().nativeEnabled, isFalse);
+      expect(app.host(id: id).spec.label, 'private host');
+      await app.lockVault();
+      await until(
+        () => phases.contains(VaultPhase.locked),
+        'locked notification',
+      );
+      expect(app.hosts(), isEmpty);
+      expect(terminal.screenText(), isEmpty);
+      await expectLater(
+        browser.list(path: '/'),
+        throwsA(
+          isA<FileError>().having((e) => e.kind, 'kind', FileErrorKind.locked),
+        ),
+      );
+      final serial = await app
+          .openSerial(
+            session: terminal,
+            path: '/never-open-this-test-device',
+            line: const SerialLineSpec(
+              baud: 115200,
+              dataBits: 8,
+              parity: ParityKind.none,
+              stopBits: 1,
+              flow: FlowKind.none,
+            ),
+          )
+          .first;
+      expect(serial.kind, SessionEventKind.closed);
+      expect(serial.closed!.failure!.message, contains('unlock'));
+      final ssh = await app.connect(session: terminal, hostId: id).first;
+      expect(ssh.kind, SessionEventKind.closed);
+      expect(ssh.closed!.failure!.message, contains('unlock'));
+      final sftp = await app.connectSftp(browser: browser, hostId: id).first;
+      expect(sftp.kind, SessionEventKind.closed);
+      expect(sftp.closed!.failure!.message, contains('unlock'));
+      await expectLater(
+        app.unlockVault(password: 'wrong password'),
+        throwsA(isA<VaultError>()),
+      );
+      expect(app.securityState().phase, VaultPhase.locked);
+      await app.recoverVault(kit: kit);
+      expect(app.host(id: id).spec.label, 'private host');
+      await app.setAutoLock(seconds: BigInt.from(60));
+      expect(app.securityState().autoLockSeconds, BigInt.from(60));
+      await app.lockVault();
+      await app.unlockVault(password: password);
+      expect(app.host(id: id).spec.label, 'private host');
+    } finally {
+      terminal.close();
+      browser.close();
+      // The native observer belongs to App; release its owner before waiting
+      // for the Rust sink to finish the subscription cancellation handshake.
+      final cancelled = subscription.cancel();
+      terminal.dispose();
+      browser.dispose();
+      app.dispose();
+      await cancelled;
+    }
   });
 
   test('hosts, groups, inheritance and conflicts', () async {

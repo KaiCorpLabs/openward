@@ -74,38 +74,51 @@ impl OpenWard {
     /// match `query` (all of them when empty). Off the UI thread: it reads
     /// the file and works out which hashed names are saved hosts.
     pub fn known_host_rows(&self, query: String) -> Vec<KnownHostRow> {
-        let entries = self.app.known_hosts(&query);
-        let vault = self.app.vault();
-        entries
-            .into_iter()
-            .map(|e| row(e, |id| vault.host(id).ok().map(|h| h.label.clone())))
-            .collect()
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            let entries = self.app.known_hosts(&query);
+            let vault = self.app.vault();
+            entries
+                .into_iter()
+                .map(|e| row(e, |id| vault.host(id).ok().map(|h| h.label.clone())))
+                .collect()
+        })
+        .unwrap_or_default()
     }
 
     /// How many rows [`OpenWard::known_host_rows`] would list with no
     /// query, without working out their hosts: for a counter.
     pub fn known_host_count(&self) -> u32 {
-        self.app.known_host_count() as u32
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || self.app.known_host_count() as u32)
+            .unwrap_or_default()
     }
 
     /// The `known_hosts` file OpenWard reads, as the UI names it.
     #[frb(sync)]
     pub fn known_hosts_file(&self) -> String {
-        self.app.local().known_hosts_file().display().to_string()
+        let gate = self.app.security().gate();
+        super::security::access(&gate, true, || {
+            self.app.local().known_hosts_file().display().to_string()
+        })
+        .unwrap_or_default()
     }
 
     /// Forgets a key: OpenWard's, or the line of the file if it still reads
     /// `text` (a copy of the file goes to `known_hosts.old` first).
     pub fn forget_known_host(&self, row: KnownHostRow) -> Result<(), VaultError> {
-        let source = match row.source {
-            KnownSourceKind::OpenWard => KnownSource::OpenWard {
-                id: super::vault::id(&row.id)?,
-                added: 0,
-            },
-            KnownSourceKind::File => KnownSource::File {
-                line: row.line as usize,
-            },
-        };
-        Ok(self.app.forget_known_host(source, &row.text)?)
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            let source = match row.source {
+                KnownSourceKind::OpenWard => KnownSource::OpenWard {
+                    id: super::vault::id(&row.id)?,
+                    added: 0,
+                },
+                KnownSourceKind::File => KnownSource::File {
+                    line: row.line as usize,
+                },
+            };
+            Ok(self.app.forget_known_host(source, &row.text)?)
+        })?
     }
 }

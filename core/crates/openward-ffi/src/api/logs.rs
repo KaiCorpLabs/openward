@@ -241,12 +241,18 @@ impl OpenWard {
     /// Every session, the newest first.
     #[frb(sync)]
     pub fn logs(&self) -> Vec<LogEntry> {
-        self.app.logs().list().into_iter().map(entry_view).collect()
+        let gate = self.app.security().gate();
+        super::security::access(&gate, true, || {
+            self.app.logs().list().into_iter().map(entry_view).collect()
+        })
+        .unwrap_or_default()
     }
 
     #[frb(sync)]
     pub fn log(&self, id: String) -> Option<LogEntry> {
-        self.app.logs().entry(&id).map(entry_view)
+        let gate = self.app.security().gate();
+        super::security::access(&gate, true, || self.app.logs().entry(&id).map(entry_view))
+            .unwrap_or_default()
     }
 
     /// An event each time sessions begin, end, change or go: read them
@@ -258,70 +264,98 @@ impl OpenWard {
     }
 
     #[frb(sync)]
-    pub fn logs_usage(&self) -> LogsUsage {
-        let u = self.app.logs().usage();
-        LogsUsage {
-            bytes: u.bytes,
-            entries: u.entries,
-            recorded: u.recorded,
-            saved: u.saved,
-        }
+    pub fn logs_usage(&self) -> Result<LogsUsage, VaultError> {
+        let gate = self.app.security().gate();
+        super::security::access(&gate, true, || {
+            let u = self.app.logs().usage();
+            LogsUsage {
+                bytes: u.bytes,
+                entries: u.entries,
+                recorded: u.recorded,
+                saved: u.saved,
+            }
+        })
+        .map_err(Into::into)
     }
 
     #[frb(sync)]
-    pub fn logs_config(&self) -> LogsConfig {
-        let c = self.app.logs().config();
-        LogsConfig {
-            record_local: c.record_local,
-            keep_days: c.keep_days,
-            max_bytes: c.max_bytes,
-        }
+    pub fn logs_config(&self) -> Result<LogsConfig, VaultError> {
+        let gate = self.app.security().gate();
+        super::security::access(&gate, true, || {
+            let c = self.app.logs().config();
+            LogsConfig {
+                record_local: c.record_local,
+                keep_days: c.keep_days,
+                max_bytes: c.max_bytes,
+            }
+        })
+        .map_err(Into::into)
     }
 
     /// From Ajustes; the limits apply at once and are kept for the next
     /// start.
     #[frb(sync)]
     pub fn set_logs_config(&self, config: LogsConfig) {
-        self.app.logs().set_config(logs::Config {
-            record_local: config.record_local,
-            keep_days: config.keep_days,
-            max_bytes: config.max_bytes,
-        });
+        let gate = self.app.security().gate();
+        super::security::access(&gate, true, || {
+            self.app.logs().set_config(logs::Config {
+                record_local: config.record_local,
+                keep_days: config.keep_days,
+                max_bytes: config.max_bytes,
+            });
+        })
+        .unwrap_or_default()
     }
 
     /// The folder the logs are in, to show it.
     #[frb(sync)]
     pub fn logs_dir(&self) -> String {
-        self.app.logs().dir().to_string_lossy().into_owned()
+        let gate = self.app.security().gate();
+        super::security::access(&gate, true, || {
+            self.app.logs().dir().to_string_lossy().into_owned()
+        })
+        .unwrap_or_default()
     }
 
     /// The groups, then the hosts, that set the session log themselves
     /// (by name): what Ajustes lists beside «on every host».
     #[frb(sync)]
     pub fn logs_set_in(&self) -> Vec<LogSetIn> {
-        let vault = self.app.vault();
-        let groups = vault.groups().into_iter().filter_map(|(id, g)| {
-            g.settings.session_log.map(|enabled| LogSetIn {
-                group: true,
-                id: id.to_string(),
-                enabled,
-            })
-        });
-        let hosts = vault.hosts().into_iter().filter_map(|(id, h)| {
-            h.settings.session_log.map(|enabled| LogSetIn {
-                group: false,
-                id: id.to_string(),
-                enabled,
-            })
-        });
-        groups.chain(hosts).collect()
+        let gate = self.app.security().gate();
+        super::security::access(&gate, true, || {
+            let vault = self.app.vault();
+            let groups = vault.groups().into_iter().filter_map(|(id, g)| {
+                g.settings.session_log.map(|enabled| LogSetIn {
+                    group: true,
+                    id: id.to_string(),
+                    enabled,
+                })
+            });
+            let hosts = vault.hosts().into_iter().filter_map(|(id, h)| {
+                h.settings.session_log.map(|enabled| LogSetIn {
+                    group: false,
+                    id: id.to_string(),
+                    enabled,
+                })
+            });
+            groups.chain(hosts).collect()
+        })
+        .unwrap_or_default()
     }
 
     /// Looks for `query` (ignoring case) in what was seen, the newest
     /// sessions first; each one with matches comes on the stream as it is
     /// found, and the stream ends with the search.
     pub fn search_logs(&self, query: String, found: StreamSink<LogFound>) {
+        let gate = self.app.security().gate();
+        let Ok(ticket) = gate.ticket() else { return };
         self.app.logs().search(&query, |f| {
+            let Ok(permission) = gate.read() else {
+                return false;
+            };
+            if permission.epoch() != ticket {
+                return false;
+            }
             found
                 .add(LogFound {
                     entry: entry_view(f.entry),
@@ -342,22 +376,26 @@ impl OpenWard {
 
     /// Keeps a session for good with a note, or changes its note.
     pub fn save_log(&self, id: String, note: String) -> Result<(), VaultError> {
-        Ok(self.app.logs().save(&id, &note)?)
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || Ok(self.app.logs().save(&id, &note)?))?
     }
 
     /// Lets the limits delete it again.
     pub fn unsave_log(&self, id: String) -> Result<(), VaultError> {
-        Ok(self.app.logs().unsave(&id)?)
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || Ok(self.app.logs().unsave(&id)?))?
     }
 
     /// False for a session still going on.
     pub fn delete_log(&self, id: String) -> Result<bool, VaultError> {
-        Ok(self.app.logs().delete(&id)?)
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || Ok(self.app.logs().delete(&id)?))?
     }
 
     /// Every session but those going on, saved ones too; how many went.
     pub fn delete_all_logs(&self) -> Result<u32, VaultError> {
-        Ok(self.app.logs().delete_all()?)
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || Ok(self.app.logs().delete_all()?))?
     }
 
     pub fn export_log(
@@ -366,28 +404,37 @@ impl OpenWard {
         path: String,
         format: LogFormat,
     ) -> Result<(), VaultError> {
-        let logs = self.app.logs();
-        let to = Path::new(&path);
-        match format {
-            LogFormat::Cast => logs.export_cast(&id, to)?,
-            LogFormat::Text => logs.export_text(&id, to)?,
-        }
-        Ok(())
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            let logs = self.app.logs();
+            let to = Path::new(&path);
+            match format {
+                LogFormat::Cast => logs.export_cast(&id, to)?,
+                LogFormat::Text => logs.export_text(&id, to)?,
+            }
+            Ok(())
+        })?
     }
 
     /// The `index`th command (from 0) of a recording, with what came out
     /// of it, as text.
     pub fn log_command_text(&self, id: String, index: u32) -> Result<String, VaultError> {
-        Ok(self.app.logs().command_text(&id, index as usize)?)
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            Ok(self.app.logs().command_text(&id, index as usize)?)
+        })?
     }
 
     /// The last `lines` lines of a recording and its markers.
     pub fn log_preview(&self, id: String, lines: u32) -> Result<LogPreview, VaultError> {
-        let p = self.app.logs().preview(&id, lines as usize)?;
-        Ok(LogPreview {
-            lines: lines_view(p.lines),
-            markers: p.markers.into_iter().map(marker_view).collect(),
-        })
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            let p = self.app.logs().preview(&id, lines as usize)?;
+            Ok(LogPreview {
+                lines: lines_view(p.lines),
+                markers: p.markers.into_iter().map(marker_view).collect(),
+            })
+        })?
     }
 
     /// The lines around a moment (a search's match): `before` lines that
@@ -399,22 +446,32 @@ impl OpenWard {
         before: u32,
         after: u32,
     ) -> Result<Vec<LogLine>, VaultError> {
-        let lines = self
-            .app
-            .logs()
-            .lines_around(&id, at, before as usize, after as usize)?;
-        Ok(lines_view(lines))
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            let lines = self
+                .app
+                .logs()
+                .lines_around(&id, at, before as usize, after as usize)?;
+            Ok(lines_view(lines))
+        })?
     }
 
     /// What was seen as plain text, to copy.
     pub fn log_text(&self, id: String) -> Result<String, VaultError> {
-        Ok(self.app.logs().plain_text(&id)?)
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || Ok(self.app.logs().plain_text(&id)?))?
     }
 
     /// A player for a recording, at its start.
     pub fn open_log(&self, id: String, scrollback: u32) -> Result<LogPlayer, VaultError> {
-        let player = self.app.logs().player(&id, scrollback as usize)?;
-        Ok(LogPlayer { player })
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            let player = self.app.logs().player(&id, scrollback as usize)?;
+            Ok(LogPlayer {
+                player,
+                access: self.app.security().gate(),
+            })
+        })?
     }
 }
 
@@ -422,6 +479,7 @@ impl OpenWard {
 #[frb(opaque)]
 pub struct LogPlayer {
     player: Arc<Player>,
+    access: Arc<openward_app::security::AccessGate>,
 }
 
 impl LogPlayer {
@@ -430,45 +488,62 @@ impl LogPlayer {
     pub fn session(&self) -> TerminalSession {
         TerminalSession {
             term: self.player.terminal(),
+            access: Arc::clone(&self.access),
         }
     }
 
     #[frb(sync)]
     pub fn duration(&self) -> f64 {
-        self.player.duration()
+        let gate = std::sync::Arc::clone(&self.access);
+        super::security::access(&gate, true, || self.player.duration()).unwrap_or_default()
     }
 
     /// False when it stops short (OpenWard closed suddenly).
     #[frb(sync)]
     pub fn complete(&self) -> bool {
-        self.player.complete()
+        let gate = std::sync::Arc::clone(&self.access);
+        super::security::access(&gate, true, || self.player.complete()).unwrap_or_default()
     }
 
     #[frb(sync)]
     pub fn markers(&self) -> Vec<LogMarker> {
-        self.player.markers().into_iter().map(marker_view).collect()
+        let gate = std::sync::Arc::clone(&self.access);
+        super::security::access(&gate, true, || {
+            self.player.markers().into_iter().map(marker_view).collect()
+        })
+        .unwrap_or_default()
     }
 
     #[frb(sync)]
     pub fn position(&self) -> f64 {
-        self.player.position()
+        let gate = std::sync::Arc::clone(&self.access);
+        super::security::access(&gate, true, || self.player.position()).unwrap_or_default()
     }
 
     #[frb(sync)]
     pub fn playing(&self) -> bool {
-        self.player.playing()
+        let gate = std::sync::Arc::clone(&self.access);
+        super::security::access(&gate, true, || self.player.playing()).unwrap_or_default()
     }
 
     /// The screen as it was at `at` seconds. Off the UI thread: going back
     /// plays everything before again.
     pub fn seek(&self, at: f64) {
-        self.player.seek(at);
+        let gate = std::sync::Arc::clone(&self.access);
+        super::security::access(&gate, false, || {
+            self.player.seek(at);
+        })
+        .unwrap_or_default()
     }
 
     /// Plays on, `speed` times as fast (from the start, if at the end).
     #[frb(sync)]
     pub fn play(&self, speed: f64) {
-        self.player.play(speed);
+        let gate = std::sync::Arc::clone(&self.access);
+        super::security::access(&gate, true, || {
+            self.player.play(speed);
+        })
+        .unwrap_or_default()
     }
 
     #[frb(sync)]

@@ -10,6 +10,7 @@
 //! Every item is loaded at open and served from memory; writes go to SQLite
 //! first and then to the index.
 
+mod factors;
 mod inherit;
 mod migration;
 mod store;
@@ -130,12 +131,61 @@ impl Vault {
         self.store.header.is_some()
     }
     pub fn lock(mut self) -> Result<LockedVault> {
+        self.lock_in_place()?;
+        Ok(LockedVault { store: self.store })
+    }
+    /// App-owned session: encrypted vaults start without keys or an index.
+    pub fn open_session(path: &Path) -> Result<Self> {
+        match Self::open(path) {
+            Ok(vault) => Ok(vault),
+            Err(Error::Locked) => Ok(Self::loaded(
+                Self::open_locked(path)?.store,
+                HashMap::new(),
+                0,
+            )),
+            Err(error) => Err(error),
+        }
+    }
+    pub fn is_locked(&self) -> bool {
+        self.is_encrypted() && self.store.keys.is_none()
+    }
+    /// Retains the process lock and on-change subscription, but no item index,
+    /// derived keys or vault-derived defaults. Writes still fail in Store.
+    pub fn lock_in_place(&mut self) -> Result<()> {
         if !self.is_encrypted() {
             return Err(Error::Invalid("a plaintext vault cannot be locked"));
         }
-        self.items.clear();
+        self.items = HashMap::new();
+        self.unreadable = 0;
+        self.device = Settings::default();
         self.store.lock_keys();
-        Ok(LockedVault { store: self.store })
+        Ok(())
+    }
+    pub fn unlock_in_place(&mut self, password: &[u8]) -> Result<()> {
+        if !self.is_encrypted() {
+            return Err(Error::Invalid("the vault is not encrypted"));
+        }
+        if !self.is_locked() {
+            return Ok(());
+        }
+        let loaded = self
+            .store
+            .unlock(password)
+            .and_then(|()| Self::load_index(&mut self.store));
+        self.finish_unlock(loaded)
+    }
+    fn finish_unlock(&mut self, loaded: Result<(HashMap<ItemId, Item>, usize)>) -> Result<()> {
+        match loaded {
+            Ok((items, unreadable)) => {
+                self.items = items;
+                self.unreadable = unreadable;
+                Ok(())
+            }
+            Err(error) => {
+                self.lock_in_place()?;
+                Err(error)
+            }
+        }
     }
     /// Opaque extension metadata remains available to future Rust readers.
     pub fn metadata_value(&self, name: &str) -> Result<Option<zeroize::Zeroizing<Vec<u8>>>> {
@@ -152,6 +202,10 @@ impl Vault {
     }
 
     fn load(mut store: store::Store) -> Result<Self> {
+        let (items, unreadable) = Self::load_index(&mut store)?;
+        Ok(Self::loaded(store, items, unreadable))
+    }
+    fn load_index(store: &mut store::Store) -> Result<(HashMap<ItemId, Item>, usize)> {
         let mut items = HashMap::new();
         let mut unreadable = 0;
         for (id, rev, envelope) in store.rows()? {
@@ -167,13 +221,16 @@ impl Vault {
                 _ => unreadable += 1,
             }
         }
-        Ok(Self {
+        Ok((items, unreadable))
+    }
+    fn loaded(store: store::Store, items: HashMap<ItemId, Item>, unreadable: usize) -> Self {
+        Self {
             store,
             items,
             unreadable,
             device: Settings::default(),
             on_change: None,
-        })
+        }
     }
 
     pub fn id(&self) -> ItemId {

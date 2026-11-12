@@ -100,18 +100,25 @@ impl OpenWard {
     /// Every snippet, by name.
     #[frb(sync)]
     pub fn snippets_for_execution(&self) -> Vec<SnippetView> {
-        let vault = self.app.vault();
-        vault
-            .snippets()
-            .into_iter()
-            .map(|(sid, s)| view_of(sid.to_string(), vault.get(sid).map_or(0, |i| i.rev), s))
-            .collect()
+        let gate = self.app.security().gate();
+        super::security::access(&gate, true, || {
+            let vault = self.app.vault();
+            vault
+                .snippets()
+                .into_iter()
+                .map(|(sid, s)| view_of(sid.to_string(), vault.get(sid).map_or(0, |i| i.rev), s))
+                .collect()
+        })
+        .unwrap_or_default()
     }
 
     pub fn create_snippet(&self, spec: SnippetSpec) -> Result<String, VaultError> {
-        let mut s = Snippet::default();
-        apply(&spec, &mut s);
-        Ok(self.app.vault().create(Data::Snippet(s))?.to_string())
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            let mut s = Snippet::default();
+            apply(&spec, &mut s);
+            Ok(self.app.vault().create(Data::Snippet(s))?.to_string())
+        })?
     }
 
     /// Returns the new revision. Fails if it changed since `rev`.
@@ -121,11 +128,14 @@ impl OpenWard {
         rev: u64,
         spec: SnippetSpec,
     ) -> Result<u64, VaultError> {
-        let sid = super::vault::id(&id)?;
-        let mut vault = self.app.vault();
-        let mut s = vault.snippet(sid)?.clone();
-        apply(&spec, &mut s);
-        Ok(vault.update(sid, rev, Data::Snippet(s))?)
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            let sid = super::vault::id(&id)?;
+            let mut vault = self.app.vault();
+            let mut s = vault.snippet(sid)?.clone();
+            apply(&spec, &mut s);
+            Ok(vault.update(sid, rev, Data::Snippet(s))?)
+        })?
     }
 }
 

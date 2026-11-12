@@ -775,6 +775,7 @@ Future<bool> confirmDelete(
 
 /// A file error in words.
 String fileErrorText(AppLocalizations l, FileError e) => switch (e.kind) {
+  FileErrorKind.locked => l.vaultLocked,
   FileErrorKind.notFound => l.fileNotFound(e.path),
   FileErrorKind.denied => l.fileDenied(e.path),
   FileErrorKind.exists => l.fileExists(e.path),
