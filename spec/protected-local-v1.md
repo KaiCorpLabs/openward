@@ -58,7 +58,10 @@ recording's wrapper must accompany a backup if that backup includes recordings.
 
 Legacy history/recent documents, `.json.tmp` and `.json.bad` aliases, and session
 metadata/recordings migrate idempotently with verified ciphertext staged in a
-0600 temporary file and atomic replacement. Source files are retained if sealing
+0600 temporary file and atomic replacement. Unix directory entries are synced
+after installation, in particular before a new recording uses its key wrapper.
+Other platforms retain the file synchronization and replacement semantics used
+by the vault installer. Source files are retained if sealing
 or verification fails. Symlinks and Unix hardlinks are refused. Authentication,
 missing-wrapper, bounds or I/O failures leave the app locked, preserving data;
 retry/restore is explicit. Malformed JSON is preserved as encrypted `.bad`

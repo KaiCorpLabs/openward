@@ -252,13 +252,26 @@ pub(crate) fn read_optional(path: &Path, max: usize) -> io::Result<Option<Vec<u8
     }
     Ok(Some(b))
 }
+// Make newly installed wrappers durable before any recording can use their
+// keys. As in the vault installer, Unix needs the directory synced as well.
+fn sync_parent(path: &Path) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        File::open(path.parent().ok_or_else(|| err("missing parent"))?)?.sync_all()
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+        Ok(())
+    }
+}
 pub(crate) fn atomic(path: &Path, bytes: &[u8]) -> io::Result<()> {
     let mut f =
         tempfile::NamedTempFile::new_in(path.parent().ok_or_else(|| err("missing parent"))?)?;
     f.write_all(bytes)?;
     f.as_file().sync_all()?;
     f.persist(path).map_err(|e| e.error)?;
-    Ok(())
+    sync_parent(path)
 }
 fn atomic_new(path: &Path, bytes: &[u8]) -> io::Result<()> {
     let mut f =
@@ -266,7 +279,7 @@ fn atomic_new(path: &Path, bytes: &[u8]) -> io::Result<()> {
     f.write_all(bytes)?;
     f.as_file().sync_all()?;
     f.persist_noclobber(path).map_err(|e| e.error)?;
-    Ok(())
+    sync_parent(path)
 }
 
 const CHUNK: usize = 64 * 1024;
@@ -532,7 +545,7 @@ pub(crate) fn seal_file(path: &Path, key: Arc<LocalKey>) -> io::Result<()> {
     )?;
     io::copy(&mut check, &mut io::sink())?;
     temp.persist(path).map_err(|e| e.error)?;
-    Ok(())
+    sync_parent(path)
 }
 
 #[cfg(test)]
