@@ -22,6 +22,7 @@ pub struct CredentialUpdate {
     cache: Vec<u8>,
     package: Vec<u8>,
     remove_native: bool,
+    pub(crate) remove_device: bool,
     expected: Option<(Vec<u8>, RecoveryVersion)>,
 }
 impl CredentialUpdate {
@@ -53,6 +54,7 @@ impl CredentialUpdate {
             cache,
             package,
             remove_native,
+            remove_device: false,
             expected: None,
         })
     }
@@ -67,6 +69,9 @@ impl CredentialUpdate {
                 "INSERT OR REPLACE INTO meta VALUES (?1,?2)",
                 rusqlite::params![name, value],
             )?;
+        }
+        if self.remove_device {
+            conn.execute("DELETE FROM meta WHERE key=?1", [crate::device::DEVICE])?;
         }
         if self.remove_native {
             conn.execute("DELETE FROM meta WHERE key=?1", [NATIVE])?;
@@ -89,6 +94,31 @@ impl Vault {
             return Err(Error::Invalid("credential mismatch"));
         }
         Ok(())
+    }
+    pub fn prepare_device_password(
+        &self,
+        device_key: &[u8],
+        password: &[u8],
+        params: KdfParams,
+        kit: &RecoveryKit,
+    ) -> Result<CredentialUpdate> {
+        self.device_id()?
+            .ok_or(Error::Invalid("not a device-only vault"))?;
+        self.verify_password(device_key)?;
+        let old = self.store.header.as_ref().ok_or(Error::Locked)?;
+        let keys = self.store.keys.as_ref().ok_or(Error::Locked)?;
+        let header = VaultHeader::from_keys(
+            old.vault_id(),
+            old.device_id(),
+            old.generation(),
+            password,
+            params,
+            keys,
+        )?;
+        let mut update = CredentialUpdate::prepare(header, keys, password, params, kit, true)?;
+        update.remove_device = true;
+        update.expected = Some((old.to_bytes(), recovery_version(&self.store.conn)?));
+        Ok(update)
     }
     pub fn prepare_recovery_rotation(
         &self,

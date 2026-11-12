@@ -21,6 +21,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:openward/app.dart';
 import 'package:openward/core/providers.dart';
+import 'package:openward/core/errors.dart';
+import 'package:openward/settings/settings_page.dart';
+import 'package:openward/security/credentials.dart';
 import 'package:openward/core/settings.dart';
 import 'package:openward/hosts/sidebar.dart';
 import 'package:openward/import/program_preview.dart';
@@ -87,12 +90,17 @@ void main() {
     tester,
   ) async {
     final dir = await Directory.systemTemp.createTemp('openward-gallery-');
-    addTearDown(() => dir.delete(recursive: true));
+    addTearDown(() async {
+      if (dir.existsSync()) await dir.delete(recursive: true);
+    });
     final ssh = Directory('${dir.path}/ssh')..createSync();
     final app = await OpenWard.openWithSshDir(
       dataDir: '${dir.path}/data',
       sshDir: ssh.path,
     );
+    addTearDown(() {
+      if (!app.isDisposed) app.dispose();
+    });
     // Marked as production: its hosts' tabs and terminals say so.
     final prod = await app.createGroup(
       spec: const GroupSpec(
@@ -294,8 +302,67 @@ void main() {
       out.listSync().where((f) => f.path.endsWith('.png')).length,
       greaterThanOrEqualTo(_themes.length * 8),
     );
-    binding.reportData = {'screenshots': reported};
     tabs.closeCurrent();
     await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpWidget(const SizedBox());
+    app.dispose();
+    final beta = await OpenWard.openWithHome(
+      dataDir: '${dir.path}/beta',
+      home: '${dir.path}/beta-home',
+      requireOnboarding: true,
+    );
+    addTearDown(() {
+      if (!beta.isDisposed) beta.dispose();
+    });
+    final betaSettings = File('${dir.path}/beta/settings.json')
+      ..writeAsStringSync(
+        '{"language":"es","welcomed":true,"seen_news":"$newsVersion"}',
+      );
+    await tester.pumpWidget(
+      RepaintBoundary(
+        key: _frame,
+        child: ProviderScope(
+          overrides: [
+            openWardProvider.overrideWithValue(beta),
+            settingsFileProvider.overrideWithValue(betaSettings),
+            sshConfigFileProvider.overrideWithValue('${dir.path}/no-config'),
+          ],
+          child: const OpenWardApp(),
+        ),
+      ),
+    );
+    await shot('d8-1-onboarding');
+    const password = 'Gallery-D8-Marzipan-Conductor-Fjord-87!';
+    final kit = await beta.prepareVault(password: password);
+    final groups = kit.split('-');
+    await beta.completeVaultSetup(group3: groups[3], group12: groups[12]);
+    await tester.pumpAndSettle();
+    await beta.lockVault();
+    await tester.pumpAndSettle();
+    await shot('d8-2-locked');
+    await beta.unlockVault(password: password);
+    await tester.pumpAndSettle();
+    final betaContainer = ProviderScope.containerOf(
+      tester.element(find.byType(OpenWardApp)),
+    );
+    betaContainer
+        .read(settingsSectionProvider.notifier)
+        .show(SettingsSection.security);
+    await betaContainer.read(savedCredentialsProvider.future);
+    unawaited(
+      appNavigator.currentState!.push(
+        MaterialPageRoute<void>(
+          builder: (_) => const Material(child: SettingsPage()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await shot('d8-3-security');
+    binding.reportData = {'screenshots': reported};
+    await tester.pumpWidget(const SizedBox());
+    beta.dispose();
+    // Cleanup failures must happen inside the test body: some desktop
+    // integration bindings do not include tearDown failures in driver results.
+    await dir.delete(recursive: true);
   });
 }

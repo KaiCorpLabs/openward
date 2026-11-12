@@ -284,7 +284,10 @@ void main() {
 
   setUp(() async {
     dir = await Directory.systemTemp.createTemp('openward-ui-');
-    app = await OpenWard.open(dataDir: '${dir.path}/data');
+    app = await OpenWard.open(
+      dataDir: '${dir.path}/data',
+      requireOnboarding: false,
+    );
   });
   tearDown(() => dir.delete(recursive: true));
 
@@ -3609,7 +3612,12 @@ Host db
     await tester.pump(const Duration(milliseconds: 400));
     expect(app.snippetsForExecution(), isEmpty);
     expect(find.text('Snippet «Saludo» eliminado'), findsOneWidget);
-    await tester.tap(find.text('Deshacer'));
+    await _until(
+      tester,
+      () => find.text('Deshacer').hitTestable().evaluate().isNotEmpty,
+      'the undo action to be interactive',
+    );
+    await tester.tap(find.text('Deshacer').hitTestable());
     await _until(
       tester,
       () => app.snippetsForExecution().any((s) => s.spec.label == 'Saludo'),

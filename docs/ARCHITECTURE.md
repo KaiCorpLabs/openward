@@ -404,7 +404,7 @@ Hay que ser honestos con el cliente: la grabación hecha en el cliente es una at
   - Fuera de alcance: un dispositivo comprometido mientras está desbloqueado.
 - **En código** (hecho, salvo lo marcado):
   - `zeroize` para los secretos;
-  - bloqueo automático y portapapeles con caducidad (pendientes: llegan con el vault cifrado);
+  - bloqueo automático implementado D4; onboarding y modo temporal D8. No hay acción de copiar secretos guardados o kit; caducidad y exclusión del historial se exigen antes de añadirla;
   - pruebas de propiedades (`proptest`) en los importadores, `known_hosts` y los decodificadores de Termius; `cargo-fuzz` en CBOR y VT, pendiente;
   - vectores de prueba criptográficos (fase 2, con `openward-crypto`);
   - interoperabilidad en la CI contra OpenSSH, Dropbear y otros servidores en contenedores (S2); Windows OpenSSH, Tailscale SSH y Teleport, pendientes.

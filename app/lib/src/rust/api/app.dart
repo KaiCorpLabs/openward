@@ -123,6 +123,8 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   Future<String> createWorkspace({required WorkspaceSpec spec});
 
+  Future<void> deferVaultSetup({required bool linuxAck});
+
   /// A host, group or known host. A group's contents move up to its
   /// parent; a host other hosts jump through cannot go.
   Future<void> delete({required String id});
@@ -323,8 +325,13 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   /// Opens or creates the app's data in `data_dir` (the platform's
   /// application support directory).
-  static Future<OpenWard> open({required String dataDir}) =>
-      RustLib.instance.api.crateApiAppOpenWardOpen(dataDir: dataDir);
+  static Future<OpenWard> open({
+    required String dataDir,
+    bool? requireOnboarding,
+  }) => RustLib.instance.api.crateApiAppOpenWardOpen(
+    dataDir: dataDir,
+    requireOnboarding: requireOnboarding,
+  );
 
   /// Runs the user's shell on this machine in `session`. In Dart this
   /// returns the stream of its events (the end, with its exit code).
@@ -352,9 +359,11 @@ abstract class OpenWard implements RustOpaqueInterface {
   static Future<OpenWard> openWithHome({
     required String dataDir,
     required String home,
+    bool? requireOnboarding,
   }) => RustLib.instance.api.crateApiAppOpenWardOpenWithHome(
     dataDir: dataDir,
     home: home,
+    requireOnboarding: requireOnboarding,
   );
 
   /// As [`OpenWard::open`], with another `~/.ssh` (tests: the tester's
@@ -537,6 +546,8 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   List<TunnelView> tunnels();
 
+  Future<void> unlockDeviceVault();
+
   Future<void> unlockNative();
 
   Future<void> unlockVault({required String password});
@@ -603,6 +614,10 @@ abstract class OpenWard implements RustOpaqueInterface {
     required String identityId,
     required List<String> choosers,
   });
+
+  bool vaultNeedsPassword();
+
+  bool vaultOnboardingRequired();
 
   /// An event each time sessions begin, end, change or go: read them
   /// again then.

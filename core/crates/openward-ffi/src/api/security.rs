@@ -111,6 +111,27 @@ impl From<Status> for SecurityView {
 }
 impl OpenWard {
     #[frb(sync)]
+    pub fn vault_onboarding_required(&self) -> bool {
+        self.app.security().onboarding_required()
+    }
+    #[frb(sync)]
+    pub fn vault_needs_password(&self) -> bool {
+        self.app.security().needs_password()
+    }
+    pub fn defer_vault_setup(&self, linux_ack: bool) -> Result<(), VaultError> {
+        Ok(self
+            .app
+            .security()
+            .defer_setup(&openward_app::security::device::System, linux_ack)?)
+    }
+    pub fn unlock_device_vault(&self) -> Result<(), VaultError> {
+        Ok(self
+            .app
+            .security()
+            .unlock_device(&openward_app::security::device::System)?)
+    }
+
+    #[frb(sync)]
     pub fn security_state(&self) -> SecurityView {
         self.app.security().status().into()
     }

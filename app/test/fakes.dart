@@ -58,6 +58,12 @@ class FakeSession extends Fake implements TerminalSession {
 }
 
 class FakeOpenWard extends Fake implements OpenWard {
+  bool onboardingRequired = false;
+  bool needsPassword = false;
+  @override
+  bool vaultOnboardingRequired() => onboardingRequired;
+  @override
+  bool vaultNeedsPassword() => needsPassword;
   SecurityView security = SecurityView(
     phase: VaultPhase.legacy,
     autoLockSeconds: BigInt.from(900),

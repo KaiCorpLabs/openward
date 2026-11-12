@@ -10,6 +10,7 @@
 //! first and then to the index.
 
 pub mod backup;
+mod device;
 mod factors;
 mod inherit;
 mod migration;

@@ -126,9 +126,11 @@ jobs:
           cargo test --workspace
           # The reference engine of the spikes, off by default.
           cargo test -p openward-term --features alacritty
-      - name: Encrypted vault index measurement
+      - name: Encrypted vault index and KDF measurements
         working-directory: core
-        run: cargo test --release --locked -p openward-vault ten_thousand -- --ignored --nocapture
+        run: |
+          cargo test --release --locked -p openward-vault ten_thousand -- --ignored --nocapture
+          cargo test --release --locked -p openward-crypto calibrated_password_measurement -- --ignored --nocapture
       - name: Stop SSH test servers
         if: always() && runner.os == 'Linux'
         env:
@@ -419,23 +421,18 @@ jobs:
           itest integration_test/a11y_test.dart
           # The gallery through `flutter drive`: its driver saves the
           # screenshots, which `flutter test` on Linux does not always keep.
-          flutter drive -d linux --driver=test_driver/integration_test.dart \
-            --target=integration_test/gallery_test.dart
+          ../.github/scripts/run-gallery.sh linux
       - name: Stop SSH test servers
         if: always() && runner.os == 'Linux'
         env:
           S2_RUNTIME: docker
         run: spikes/s2-ssh/servers/down.sh
-      # The gallery on macOS and Windows too, in the full runs; a hiccup
-      # there does not hold up the packages.
+      # The beta gallery is required on every desktop. The wrapper also catches
+      # inner test failures incorrectly reported as success by flutter drive.
       - name: Review gallery
         if: runner.os != 'Linux'
-        continue-on-error: true
         working-directory: app
-        run: |
-          flutter drive -d "$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')" \
-            --driver=test_driver/integration_test.dart \
-            --target=integration_test/gallery_test.dart
+        run: ../.github/scripts/run-gallery.sh "$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')"
       - name: List screenshots
         if: always()
         run: ls -R "$OPENWARD_SHOTS" 2>/dev/null | head -50 || echo "no screenshots"

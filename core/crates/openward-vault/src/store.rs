@@ -126,7 +126,7 @@ impl Store {
     }
     fn plain(mut conn: Connection) -> Result<Self> {
         let format: i64 = conn.pragma_query_value(None, "user_version", |r| r.get(0))?;
-        if (2..=3).contains(&format) {
+        if (2..=4).contains(&format) {
             return Err(Error::Locked);
         }
         if format > 1 {
@@ -158,8 +158,8 @@ impl Store {
     }
     pub(crate) fn encrypted(conn: Connection, path: PathBuf, lock: ProcessLock) -> Result<Self> {
         let format: i64 = conn.pragma_query_value(None, "user_version", |r| r.get(0))?;
-        if !(2..=3).contains(&format) {
-            return Err(if format > 3 {
+        if !(2..=4).contains(&format) {
+            return Err(if format > 4 {
                 Error::NewerFormat(format)
             } else {
                 Error::Invalid("the vault is not encrypted")
@@ -311,7 +311,8 @@ impl Store {
         let mut next = self.clock;
         let tx = self.conn.transaction()?;
         if stores_secret {
-            tx.pragma_update(None, "user_version", 3)?;
+            let version: i64 = tx.pragma_query_value(None, "user_version", |r| r.get(0))?;
+            tx.pragma_update(None, "user_version", version.max(3))?;
         }
 
         {

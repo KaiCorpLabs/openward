@@ -34,7 +34,9 @@ class _VaultUnlockState extends ConsumerState<VaultUnlock> {
     });
     final app = ref.read(openWardProvider);
     try {
-      if (native) {
+      if (app.vaultNeedsPassword()) {
+        await app.unlockDeviceVault();
+      } else if (native) {
         await app.unlockNative();
       } else if (kit) {
         await app.recoverVault(kit: password.text);
@@ -46,13 +48,17 @@ class _VaultUnlockState extends ConsumerState<VaultUnlock> {
         setState(
           () => error = failure.kind == VaultErrorKind.storage
               ? context.l10n.vaultLocalDataError
+              : app.vaultNeedsPassword()
+              ? context.l10n.vaultDeviceError
               : context.l10n.vaultAuthError,
         );
       }
     } on Object {
       if (mounted) {
         setState(
-          () => error = native
+          () => error = app.vaultNeedsPassword()
+              ? context.l10n.vaultDeviceError
+              : native
               ? context.l10n.vaultNativeError
               : context.l10n.vaultAuthError,
         );
@@ -71,6 +77,7 @@ class _VaultUnlockState extends ConsumerState<VaultUnlock> {
     final view = ref.watch(securityProvider);
     final busy = pending || view.phase == VaultPhase.changing;
     final paused = view.phase == VaultPhase.legacyPaused;
+    final deviceOnly = ref.read(openWardProvider).vaultNeedsPassword();
     return Material(
       color: Theme.of(context).colorScheme.surface,
       child: Center(
@@ -101,7 +108,14 @@ class _VaultUnlockState extends ConsumerState<VaultUnlock> {
                         ref.read(openWardProvider).resumeLegacyVault(),
                     child: Text(l.vaultResume),
                   )
-                else ...[
+                else if (deviceOnly) ...[
+                  Text(l.vaultDeviceWarning),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: busy ? null : unlock,
+                    child: Text(busy ? l.vaultBusy : l.vaultDeviceUnlock),
+                  ),
+                ] else ...[
                   TextField(
                     key: const ValueKey('vault.password'),
                     controller: password,
