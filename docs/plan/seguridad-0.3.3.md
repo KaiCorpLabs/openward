@@ -371,14 +371,15 @@ create_private_dir crea el directorio con 0700 y trata de endurecer uno existent
 
 #### DA-2 · Backup de migración: ruta latente que debe endurecerse
 
-**No accionable en el alcance actual · Requisito antes de D3**. Gravedad original: Baja hoy (`STEPS` está vacío); Media con la primera migración real (D3).
+**Ruta sustituida en D3 (2026-11-12); sin migración automática desde la app**. Gravedad original: Baja hoy (`STEPS` está vacío); Media con la primera migración real (D3).
 
 La copia VACUUM INTO no aplica permisos ni política de eliminación específicos.
 
 - **Condiciones e impacto:** Una futura migración activa la ruta de backup. Riesgo futuro de conservar una copia clara con protección insuficiente.
 - **Controles y límites:** STEPS está vacío y el formato distribuido no alcanza hoy una migración que ejecute esa copia; el directorio de datos propio es 0700. No es una fuga activa demostrada en esta versión.
 - **Pendiente de prueba/contexto:** Se debe volver a evaluar al añadir la primera migración real y el cifrado D3.
-- **Siguiente paso:** Antes de D3, crear backups 0600, establecer retención y eliminar copias/WAL claros tras migrar; no dar este requisito por implementado.
+- **Resultado D3:** Se elimina la ruta de producción `VACUUM INTO`/backup claro. La nueva migración prepara solo ciphertext en un archivo 0600, verifica cada fila/metadato y reemplaza atómicamente tras cerrar/checkpointar la fuente y sus sidecars. Pruebas con WAL/PERSIST pendientes, freelist, aliases, fallos e interrupciones comprueban recuperación y ausencia del marcador claro en los archivos gestionados.
+- **Límites vigentes:** Las copias externas previas, snapshots y bloques SSD no se borran con esta operación. ACL extendidas/DACL conservan su seguimiento de plataforma. La app activa esta API en D4/D5; el formato distribuido de la beta sigue siendo 1. [Contrato, comandos y evidencia](../../spec/vault-sqlite-v2.md).
 - **Evidencia en main:** [core/crates/openward-vault/src/store.rs:18-18](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-vault/src/store.rs#L18); [core/crates/openward-vault/src/store.rs:73-83](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-vault/src/store.rs#L73-L83); [core/crates/openward-vault/src/store.rs:124-133](https://github.com/KaiCorpLabs/openward/blob/35ab7a63187a58aae132a31bd000ab0858164dff/core/crates/openward-vault/src/store.rs#L124-L133).
 
 #### DA-3 · Una clave pública con comentario multilínea instala líneas adicionales

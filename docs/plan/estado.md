@@ -1,17 +1,17 @@
 # Estado y backlog verificable
 
-Actualizado el **11 de noviembre de 2026**. Este índice relaciona el código,
+Actualizado el **12 de noviembre de 2026**. Este índice relaciona el código,
 las PR y las puertas del roadmap; las estimaciones antiguas no son fechas
 comprometidas.
 
 | Área | Estado y evidencia |
 |---|---|
-| Integración | Base del balance: `main 2118736`, tras las PR #26–#29. Cada fusión posterior exige revisión exacta probada y actualización local por avance rápido. |
+| Integración | Jerarquía D3 integrada en `main e8af0c3` ([#45](https://github.com/KaiCorpLabs/openward/pull/45), 19 trabajos correctos). Cada fusión posterior exige revisión exacta probada y actualización local por avance rápido. |
 | CI de Mosh | [#26](https://github.com/KaiCorpLabs/openward/pull/26) fusionada con 19 trabajos correctos. La CI posterior encontró un aviso transitorio durante conexiones válidas; [#44](https://github.com/KaiCorpLabs/openward/pull/44) lo reproduce por PTY y cambia el fallback al diagnóstico final de fallo de handshake. Once casos focalizados y las conexiones UDP/SSH reales forman la puerta. |
-| Beta | [#27](https://github.com/KaiCorpLabs/openward/pull/27) fusionada con 19 trabajos correctos: `0.3.4-beta.4+30` y notas preparadas. Etiqueta/borrador/artefactos finales pendientes de cerrar S2. |
-| Distribución | La última etiqueta anterior es `v0.3.4-beta.3`; sus binarios no incluyen por sí solos las correcciones posteriores. No hay release pública; no se ha actualizado el cask en este trabajo. |
+| Beta | [#27](https://github.com/KaiCorpLabs/openward/pull/27) fusionada con 19 trabajos correctos: `0.3.4-beta.4+30` y notas preparadas. Etiqueta `v0.3.4-beta.4` fijada en `5736b7c`; borrador privado con cuatro paquetes, checksums y procedencia verificados. Publicación pendiente en #42. |
+| Distribución | La etiqueta `v0.3.4-beta.4` incluye S2 y la corrección final de Mosh; D3 queda fuera de esa beta. No hay release pública; no se ha actualizado el cask en este trabajo. |
 | Seguridad | S0/S1 integrados. Cuatro correcciones de S2, con sus puertas de CI y fusión, en [#28](https://github.com/KaiCorpLabs/openward/pull/28), [#29](https://github.com/KaiCorpLabs/openward/pull/29), [#30](https://github.com/KaiCorpLabs/openward/pull/30) y [#31](https://github.com/KaiCorpLabs/openward/pull/31). [Seguimiento y límites](seguridad-0.3.3.md#seguimiento-de-s2). |
-| v0.4 | D0–D2 completados y ADR-004/005 aceptados. D3 iniciado en [#43](https://github.com/KaiCorpLabs/openward/pull/43): sobre canónico autenticado y ocho pruebas; queda fuera de esta beta. D3–D8 conservan sus criterios de cierre abajo. |
+| v0.4 | D0–D2 completados y ADR-004/005 aceptados. D3 implementa sobres, jerarquía/Argon2id y migración del backend Rust, con pruebas de recuperación y formato documentado. [#43](https://github.com/KaiCorpLabs/openward/pull/43), [#45](https://github.com/KaiCorpLabs/openward/pull/45) y #32 conservan la evidencia. Activar el flujo de la app requiere D4/D5; D4–D8 siguen pendientes. |
 | Uso real | Etapa 1 implementada; pruebas con hardware y dos semanas de uso pendientes. CI no las sustituye. |
 
 ## Hito v0.4
@@ -22,7 +22,7 @@ corresponde. Cerrar una PR parcial no cierra automáticamente su hito.
 
 | Trabajo | Seguimiento | Puerta principal |
 |---|---|---|
-| D3: núcleo y migración | [#32](https://github.com/KaiCorpLabs/openward/issues/32) | Sobres v1, vectores/interoperabilidad y migración transaccional sin pérdidas. |
+| D3: núcleo y migración | [#32](https://github.com/KaiCorpLabs/openward/issues/32) | Implementado: sobres v1, vectores/interoperabilidad, jerarquía/KDF y migración verificada; [formato y pruebas](../../spec/vault-sqlite-v2.md). |
 | D4: desbloqueo/bloqueo | [#33](https://github.com/KaiCorpLabs/openward/issues/33) | Maquetas revisadas, ciclo de bloqueo y pruebas nativas en tres sistemas. |
 | D5: recuperación | [#34](https://github.com/KaiCorpLabs/openward/issues/34) | Kit y cambio de contraseña; recuperación independiente. |
 | D6: secretos y sesiones | [#35](https://github.com/KaiCorpLabs/openward/issues/35) | Guardado opcional y cifrado de historial, recientes y grabaciones. |
@@ -30,8 +30,9 @@ corresponde. Cerrar una PR parcial no cierra automáticamente su hito.
 | D8: beta y validación | [#37](https://github.com/KaiCorpLabs/openward/issues/37) | Uso, recuperación, mediciones, CI, notas y beta preparada. |
 
 El [plan v0.4](v0.4.md) conserva el contrato de producto y las decisiones
-aceptadas. El vault actual continúa sin cifrar hasta implementar y activar esa
-migración.
+aceptadas. La app continúa con su vault sin cifrar hasta activar el alta, desbloqueo y
+recuperación de D4/D5. El backend D3 ya permite crear/migrar/abrir/bloquear
+explícitamente un vault cifrado; no convierte datos reales al actualizar.
 
 ## Puertas Community
 

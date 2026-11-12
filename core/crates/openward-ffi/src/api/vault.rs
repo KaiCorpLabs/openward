@@ -60,7 +60,12 @@ impl From<anyhow::Error> for VaultError {
                 E::Invalid(_) => VaultErrorKind::Invalid,
                 E::NewerFormat(_) => VaultErrorKind::NewerFormat,
                 E::OpenElsewhere => VaultErrorKind::OpenElsewhere,
-                E::Sql(_) | E::Io(_) => VaultErrorKind::Storage,
+                E::Sql(_) | E::Io(_) | E::Crypto(_) | E::MigrationInstalled(_) => {
+                    VaultErrorKind::Storage
+                }
+                // D4 introduces the unlock UI; retain the Rust error message
+                // without changing the generated Dart contract in D3.
+                E::Locked => VaultErrorKind::Other,
             }
         } else if let Some(f) = e.downcast_ref::<openward_app::known::ForgetError>() {
             match f {
@@ -1171,6 +1176,12 @@ mod tests {
             VaultErrorKind::InUse
         );
         assert_eq!(kind(anyhow::anyhow!("other")), VaultErrorKind::Other);
+        let locked = VaultError::from(E::Locked);
+        assert_eq!(locked.kind, VaultErrorKind::Other);
+        assert!(locked.message.contains("must be unlocked"));
+        let installed = VaultError::from(E::MigrationInstalled("directory sync failed".into()));
+        assert_eq!(installed.kind, VaultErrorKind::Storage);
+        assert!(installed.message.contains("was installed; reopen"));
     }
 
     /// Saving from the editor keeps what a newer version wrote inside a

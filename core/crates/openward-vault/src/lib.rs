@@ -3,13 +3,15 @@
 //!
 //! Phase 1 stores item bodies unencrypted (envelope version 0), so the alpha
 //! keeps nothing secret here: keys are referenced by path and passwords are
-//! asked for on each connection. Phase 2 encrypts the same bodies into the
-//! same column (ADR-004).
+//! asked for on each connection. D3 adds explicit Rust APIs for encrypted
+//! format2, lock/unlock and verified migration (spec/vault-sqlite-v2.md).
+//! App activation awaits D4/D5; the default open path remains format1.
 //!
 //! Every item is loaded at open and served from memory; writes go to SQLite
 //! first and then to the index.
 
 mod inherit;
+mod migration;
 mod store;
 
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -26,6 +28,12 @@ pub use openward_proto as proto;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("the vault is encrypted and must be unlocked")]
+    Locked,
+    #[error("cryptography: {0}")]
+    Crypto(#[from] openward_crypto::Error),
+    #[error("the encrypted vault was installed; reopen it to recover: {0}")]
+    MigrationInstalled(String),
     #[error("storage: {0}")]
     Sql(#[from] rusqlite::Error),
     #[error("storage: {0}")]
@@ -74,6 +82,21 @@ pub struct Vault {
     on_change: Option<Box<dyn Fn() + Send>>,
 }
 
+/// Holds the process lock and encrypted SQLite state, with no item index or
+/// decryption keys. App activation/lock-screen behavior is supplied by D4.
+pub struct LockedVault {
+    store: store::Store,
+}
+impl LockedVault {
+    pub fn id(&self) -> ItemId {
+        self.store.vault_id
+    }
+    pub fn unlock(mut self, password: &[u8]) -> Result<Vault> {
+        self.store.unlock(password)?;
+        Vault::load(self.store)
+    }
+}
+
 fn now_ms() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -81,6 +104,43 @@ fn now_ms() -> i64 {
 }
 
 impl Vault {
+    pub fn open_locked(path: &Path) -> Result<LockedVault> {
+        Ok(LockedVault {
+            store: migration::open_locked(path)?,
+        })
+    }
+    pub fn open_encrypted(path: &Path, password: &[u8]) -> Result<Self> {
+        Self::open_locked(path)?.unlock(password)
+    }
+    pub fn create_encrypted(
+        path: &Path,
+        password: &[u8],
+        params: openward_crypto::password::KdfParams,
+    ) -> Result<Self> {
+        migration::create(path, password, params)?.unlock(password)
+    }
+    pub fn migrate_encrypted(
+        path: &Path,
+        password: &[u8],
+        params: openward_crypto::password::KdfParams,
+    ) -> Result<LockedVault> {
+        migration::migrate(path, password, params)
+    }
+    pub fn is_encrypted(&self) -> bool {
+        self.store.header.is_some()
+    }
+    pub fn lock(mut self) -> Result<LockedVault> {
+        if !self.is_encrypted() {
+            return Err(Error::Invalid("a plaintext vault cannot be locked"));
+        }
+        self.items.clear();
+        self.store.lock_keys();
+        Ok(LockedVault { store: self.store })
+    }
+    /// Opaque extension metadata remains available to future Rust readers.
+    pub fn metadata_value(&self, name: &str) -> Result<Option<zeroize::Zeroizing<Vec<u8>>>> {
+        self.store.metadata(name)
+    }
     /// Opens the vault at `path`, creating it if needed. On Unix a new file
     /// is readable by its owner only.
     pub fn open(path: &Path) -> Result<Self> {
@@ -91,11 +151,16 @@ impl Vault {
         Self::load(store::Store::open_in_memory()?)
     }
 
-    fn load(store: store::Store) -> Result<Self> {
+    fn load(mut store: store::Store) -> Result<Self> {
         let mut items = HashMap::new();
         let mut unreadable = 0;
         for (id, rev, envelope) in store.rows()? {
-            match openward_proto::envelope::open(&envelope) {
+            let clear = store.body(id, &envelope)?;
+            let decoded = match clear {
+                Some(body) => Body::from_cbor(&body),
+                None => openward_proto::envelope::open(&envelope),
+            };
+            match decoded {
                 Ok(body) if body.data != Data::Unsupported => {
                     items.insert(id, Item { id, rev, body });
                 }
