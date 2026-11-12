@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openward/core/providers.dart';
 import 'package:openward/core/settings.dart';
 import 'package:openward/src/rust/api/app.dart';
+import 'package:openward/src/rust/api/security.dart';
 import 'package:openward/src/rust/api/session.dart';
 import 'package:openward/src/rust/api/sftp.dart';
 import 'package:openward/src/rust/api/snippets.dart';
@@ -57,6 +58,39 @@ class FakeSession extends Fake implements TerminalSession {
 }
 
 class FakeOpenWard extends Fake implements OpenWard {
+  SecurityView security = SecurityView(
+    phase: VaultPhase.legacy,
+    autoLockSeconds: BigInt.from(900),
+    nativeEnabled: false,
+    recoveryAvailable: false,
+  );
+  final securityEvents = StreamController<SecurityView>.broadcast();
+  @override
+  SecurityView securityState() => security;
+  @override
+  Stream<SecurityView> watchSecurity() => securityEvents.stream;
+  @override
+  NativeProtection nativeProtection() => NativeProtection.touchId;
+  @override
+  void securityActivity() {}
+  @override
+  void setReadOsReleaseEverywhere({required bool enabled}) {}
+  @override
+  void setSessionLogEverywhere({required bool enabled}) {}
+  @override
+  Future<void> lockVault() async {
+    security = SecurityView(
+      phase: VaultPhase.locked,
+      autoLockSeconds: security.autoLockSeconds,
+      nativeEnabled: security.nativeEnabled,
+      recoveryAvailable: security.recoveryAvailable,
+    );
+    securityEvents.add(security);
+  }
+
+  @override
+  Future<void> cancelVaultSetup() async {}
+
   List<HostView> hostList = [];
   List<GroupView> groupList = [];
   List<TransferView> transferList = [];

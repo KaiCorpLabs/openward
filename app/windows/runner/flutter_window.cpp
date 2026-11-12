@@ -1,6 +1,9 @@
 #include "flutter_window.h"
 
 #include <optional>
+#include <wtsapi32.h>
+#include <flutter/standard_method_codec.h>
+#pragma comment(lib, "wtsapi32.lib")
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -26,6 +29,23 @@ bool FlutterWindow::OnCreate() {
   }
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
+  security_channel_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+    flutter_controller_->engine()->messenger(), "openward/security", &flutter::StandardMethodCodec::GetInstance());
+  security_channel_->SetMethodCallHandler([this](const auto& call, auto result) {
+    if (call.method_name() == "ready") {
+      security_ready_ = true;
+      if (privacy_pending_) security_channel_->InvokeMethod("suspend", nullptr);
+      result->Success();
+    } else if (call.method_name() == "privacyReady") {
+      privacy_pending_ = false;
+      flutter_controller_->engine()->SetNextFrameCallback([this]() {
+        if (!privacy_pending_) ShowWindow(flutter_controller_->view()->GetNativeWindow(), SW_SHOW);
+      });
+      flutter_controller_->ForceRedraw();
+      result->Success();
+    } else { result->NotImplemented(); }
+  });
+  WTSRegisterSessionNotification(GetHandle(), NOTIFY_FOR_THIS_SESSION);
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
@@ -39,7 +59,16 @@ bool FlutterWindow::OnCreate() {
   return true;
 }
 
+void FlutterWindow::RedactForSystemLock() {
+  privacy_pending_ = true;
+  // Hide the old native surface before Dart can be suspended.
+  ShowWindow(flutter_controller_->view()->GetNativeWindow(), SW_HIDE);
+  if (security_ready_) security_channel_->InvokeMethod("suspend", nullptr);
+}
+
 void FlutterWindow::OnDestroy() {
+  WTSUnRegisterSessionNotification(GetHandle());
+  security_channel_.reset();
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
@@ -51,6 +80,11 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  if (flutter_controller_ &&
+      ((message == WM_POWERBROADCAST && wparam == PBT_APMSUSPEND) ||
+       (message == WM_WTSSESSION_CHANGE && (wparam == WTS_SESSION_LOCK || wparam == WTS_SESSION_LOGOFF)))) {
+    RedactForSystemLock();
+  }
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =

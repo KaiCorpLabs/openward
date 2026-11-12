@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/errors.dart';
 import 'core/settings.dart';
-import 'home.dart';
+import 'security/boundary.dart';
 import 'l10n/l10n.dart';
 import 'ui/themes.dart';
 
@@ -62,7 +62,7 @@ class OpenWardApp extends ConsumerWidget {
               MotionChoice.full => false,
             },
           ),
-          child: child!,
+          child: VaultBoundary(child: child!),
         );
       },
       themeMode: switch (choice) {
@@ -92,7 +92,7 @@ class OpenWardApp extends ConsumerWidget {
         }
         return const Locale('en');
       },
-      home: const Home(),
+      home: const VaultHome(),
     );
   }
 }

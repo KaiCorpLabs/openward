@@ -6305,4 +6305,125 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get historyOriginUnknown =>
       'Se desconoce el origen de esta entrada antigua del historial.';
+
+  @override
+  String get vaultSecurity => 'Seguridad';
+
+  @override
+  String get vaultLocked => 'Vault bloqueado';
+
+  @override
+  String get vaultPassword => 'Contraseña maestra';
+
+  @override
+  String get vaultUnlock => 'Desbloquear';
+
+  @override
+  String get vaultLock => 'Bloquear ahora · ⌘L / Ctrl+Alt+L';
+
+  @override
+  String get vaultBusy => 'Autenticando…';
+
+  @override
+  String get vaultPasswordHint =>
+      'Usa al menos 12 caracteres y una contraseña única.';
+
+  @override
+  String get vaultEnable => 'Cifrar este vault';
+
+  @override
+  String get vaultLegacy =>
+      'Este vault todavía no está cifrado. Configura una contraseña y guarda el kit antes de activar el bloqueo.';
+
+  @override
+  String get vaultRecovery => 'Usar kit de recuperación';
+
+  @override
+  String get vaultKit => 'Kit de recuperación';
+
+  @override
+  String get vaultKitWarning =>
+      'Guarda este kit fuera de OpenWard. Quien lo tenga puede abrir esta copia del vault. Si pierdes la contraseña, el kit y todos tus dispositivos, no podremos recuperar tus datos.';
+
+  @override
+  String get vaultSaved => 'He guardado el kit en un lugar seguro';
+
+  @override
+  String get vaultGroup3 => 'Grupo 3 del kit';
+
+  @override
+  String get vaultGroup12 => 'Grupo 12 del kit';
+
+  @override
+  String get vaultConfirmKit => 'Confirmar kit y cifrar';
+
+  @override
+  String get vaultConfirmPassword => 'Repetir contraseña';
+
+  @override
+  String get vaultMismatch => 'Las contraseñas no coinciden.';
+
+  @override
+  String get vaultAuthError =>
+      'No se ha podido desbloquear. Comprueba la contraseña o el kit, o usa la contraseña si el sistema no autoriza el acceso. El vault se conserva.';
+
+  @override
+  String get vaultSetupError =>
+      'No se ha podido completar. Comprueba la contraseña (12–128 caracteres y robusta) y la confirmación del kit. Reinicia la configuración si has cerrado el diálogo.';
+
+  @override
+  String get vaultNativeError =>
+      'La protección del sistema no está disponible o se ha cancelado. Puedes seguir usando la contraseña.';
+
+  @override
+  String get vaultTouchId => 'Touch ID';
+
+  @override
+  String get vaultHello => 'Windows Hello';
+
+  @override
+  String get vaultKeyring => 'Llavero de la sesión';
+
+  @override
+  String get vaultNativeExplain =>
+      'Opcional y apagado por defecto. El sistema protege una clave local para abrir este vault; la contraseña no se guarda. Al cambiar la biometría puede ser necesario volver a configurarlo.';
+
+  @override
+  String get vaultLinuxWarning =>
+      'En Linux, el llavero puede liberar la clave con la sesión abierta sin pedir otra autenticación. Actívalo solo si aceptas esa protección.';
+
+  @override
+  String get vaultLinuxAccept => 'Acepto usar la protección de mi sesión';
+
+  @override
+  String get vaultNativeEnable => 'Activar desbloqueo del sistema';
+
+  @override
+  String get vaultNativeDisable => 'Desactivar desbloqueo del sistema';
+
+  @override
+  String get vaultAutoLock => 'Bloqueo automático por inactividad';
+
+  @override
+  String get vaultNever => 'Nunca';
+
+  @override
+  String get vaultSessions =>
+      'Las sesiones siguen conectadas. Su contenido y entrada permanecen bloqueados hasta desbloquear.';
+
+  @override
+  String get vaultPaused =>
+      'La configuración se interrumpió. El vault anterior sigue sin cifrar.';
+
+  @override
+  String get vaultResume => 'Volver a la configuración';
+
+  @override
+  String get vaultStrength => 'Robustez de la contraseña';
+
+  @override
+  String get vaultCancel => 'Cancelar';
+
+  @override
+  String get vaultKitContinue => 'Ya lo he guardado';
 }

@@ -60,6 +60,7 @@ impl From<Entry> for FileEntry {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FileErrorKind {
+    Locked,
     NotFound,
     Denied,
     Exists,
@@ -79,6 +80,15 @@ pub struct FileError {
     pub message: String,
 }
 
+impl From<openward_app::vault::Error> for FileError {
+    fn from(_: openward_app::vault::Error) -> Self {
+        Self {
+            kind: FileErrorKind::Locked,
+            path: String::new(),
+            message: "the vault is locked".into(),
+        }
+    }
+}
 impl From<files::Error> for FileError {
     fn from(e: files::Error) -> Self {
         let message = e.to_string();
@@ -218,47 +228,64 @@ impl From<JobView> for TransferView {
 #[frb(opaque)]
 pub struct SftpBrowser {
     pub(crate) sftp: Arc<Sftp>,
+    pub(crate) access: Arc<openward_app::security::AccessGate>,
 }
 
 impl SftpBrowser {
     /// Puts a public key in the server's `~/.ssh/authorized_keys`, as
     /// `ssh-copy-id` does. False when it was there already.
     pub async fn install_public_key(&self, line: String) -> Result<bool> {
-        Ok(self.sftp.install_public_key(line).await?)
+        let gate = std::sync::Arc::clone(&self.access);
+        super::security::async_access(&gate, async {
+            Ok(self.sftp.install_public_key(line).await?)
+        })
+        .await?
     }
 
     /// The folder the server starts in.
     pub async fn home(&self) -> Result<String> {
-        Ok(self.sftp.home().await?)
+        let gate = std::sync::Arc::clone(&self.access);
+        super::security::async_access(&gate, async { Ok(self.sftp.home().await?) }).await?
     }
 
     /// `path` made absolute, `..` and links resolved.
     pub async fn realpath(&self, path: String) -> Result<String> {
-        Ok(self.sftp.realpath(path).await?)
+        let gate = std::sync::Arc::clone(&self.access);
+        super::security::async_access(&gate, async { Ok(self.sftp.realpath(path).await?) }).await?
     }
 
     /// What is in a folder, in no order.
     pub async fn list(&self, path: String) -> Result<Vec<FileEntry>> {
-        Ok(entries(self.sftp.list(path).await?))
+        let gate = std::sync::Arc::clone(&self.access);
+        super::security::async_access(&gate, async { Ok(entries(self.sftp.list(path).await?)) })
+            .await?
     }
 
     pub async fn stat(&self, path: String) -> Result<Option<FileEntry>> {
-        Ok(self.sftp.stat(path).await?.map(FileEntry::from))
+        let gate = std::sync::Arc::clone(&self.access);
+        super::security::async_access(&gate, async {
+            Ok(self.sftp.stat(path).await?.map(FileEntry::from))
+        })
+        .await?
     }
 
     pub async fn mkdir(&self, path: String) -> Result<()> {
-        Ok(self.sftp.mkdir(path).await?)
+        let gate = std::sync::Arc::clone(&self.access);
+        super::security::async_access(&gate, async { Ok(self.sftp.mkdir(path).await?) }).await?
     }
 
     /// Never over something that exists.
     pub async fn rename(&self, from: String, to: String) -> Result<()> {
-        Ok(self.sftp.rename(from, to).await?)
+        let gate = std::sync::Arc::clone(&self.access);
+        super::security::async_access(&gate, async { Ok(self.sftp.rename(from, to).await?) })
+            .await?
     }
 
     /// Files, links (not what they point to) and folders with all they
     /// hold. There is no undo.
     pub async fn remove(&self, paths: Vec<String>) -> Result<()> {
-        Ok(self.sftp.remove(paths).await?)
+        let gate = std::sync::Arc::clone(&self.access);
+        super::security::async_access(&gate, async { Ok(self.sftp.remove(paths).await?) }).await?
     }
 
     /// With `recursive`, files keep execute only if they had it. Returns
@@ -270,10 +297,14 @@ impl SftpBrowser {
         recursive: bool,
         preserve_special: Option<bool>,
     ) -> Result<i64> {
-        Ok(self
-            .sftp
-            .chmod_with_options(path, mode, recursive, preserve_special.unwrap_or(false))
-            .await? as i64)
+        let gate = std::sync::Arc::clone(&self.access);
+        super::security::async_access(&gate, async {
+            Ok(self
+                .sftp
+                .chmod_with_options(path, mode, recursive, preserve_special.unwrap_or(false))
+                .await? as i64)
+        })
+        .await?
     }
 
     /// Which of `sources` already exist in `dest_dir` (on the other side).
@@ -283,11 +314,15 @@ impl SftpBrowser {
         sources: Vec<String>,
         dest_dir: String,
     ) -> Result<Vec<ConflictView>> {
-        let found = self
-            .sftp
-            .conflicts(direction.into(), sources, dest_dir)
-            .await?;
-        Ok(found.into_iter().map(ConflictView::from).collect())
+        let gate = std::sync::Arc::clone(&self.access);
+        super::security::async_access(&gate, async {
+            let found = self
+                .sftp
+                .conflicts(direction.into(), sources, dest_dir)
+                .await?;
+            Ok(found.into_iter().map(ConflictView::from).collect())
+        })
+        .await?
     }
 
     /// Stops connecting or watching the connection.

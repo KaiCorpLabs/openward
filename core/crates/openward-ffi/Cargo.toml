@@ -28,3 +28,7 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
 
 [lints.clippy]
 all = "warn"
+
+[dev-dependencies]
+tempfile = "3"
+openward-crypto = { path = "../openward-crypto" }

@@ -9,6 +9,7 @@ import 'api/keychain.dart';
 import 'api/known_hosts.dart';
 import 'api/logs.dart';
 import 'api/programs.dart';
+import 'api/security.dart';
 import 'api/session.dart';
 import 'api/sftp.dart';
 import 'api/snippets.dart';
@@ -150,6 +151,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RustStreamSink<LogFound> dco_decode_StreamSink_log_found_Sse(dynamic raw);
+
+  @protected
+  RustStreamSink<SecurityView> dco_decode_StreamSink_security_view_Sse(
+    dynamic raw,
+  );
 
   @protected
   RustStreamSink<SessionEvent> dco_decode_StreamSink_session_event_Sse(
@@ -691,6 +697,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   MoshFallbackView dco_decode_mosh_fallback_view(dynamic raw);
 
   @protected
+  NativeProtection dco_decode_native_protection(dynamic raw);
+
+  @protected
   NetKind dco_decode_net_kind(dynamic raw);
 
   @protected
@@ -958,6 +967,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SecurityKeyType dco_decode_security_key_type(dynamic raw);
 
   @protected
+  SecurityView dco_decode_security_view(dynamic raw);
+
+  @protected
   SelectedRange dco_decode_selected_range(dynamic raw);
 
   @protected
@@ -1084,6 +1096,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   VaultErrorKind dco_decode_vault_error_kind(dynamic raw);
 
   @protected
+  VaultPhase dco_decode_vault_phase(dynamic raw);
+
+  @protected
   WorkspacePane dco_decode_workspace_pane(dynamic raw);
 
   @protected
@@ -1201,6 +1216,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RustStreamSink<LogFound> sse_decode_StreamSink_log_found_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RustStreamSink<SecurityView> sse_decode_StreamSink_security_view_Sse(
     SseDeserializer deserializer,
   );
 
@@ -1828,6 +1848,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   MoshFallbackView sse_decode_mosh_fallback_view(SseDeserializer deserializer);
 
   @protected
+  NativeProtection sse_decode_native_protection(SseDeserializer deserializer);
+
+  @protected
   NetKind sse_decode_net_kind(SseDeserializer deserializer);
 
   @protected
@@ -2175,6 +2198,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SecurityKeyType sse_decode_security_key_type(SseDeserializer deserializer);
 
   @protected
+  SecurityView sse_decode_security_view(SseDeserializer deserializer);
+
+  @protected
   SelectedRange sse_decode_selected_range(SseDeserializer deserializer);
 
   @protected
@@ -2301,6 +2327,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   VaultErrorKind sse_decode_vault_error_kind(SseDeserializer deserializer);
+
+  @protected
+  VaultPhase sse_decode_vault_phase(SseDeserializer deserializer);
 
   @protected
   WorkspacePane sse_decode_workspace_pane(SseDeserializer deserializer);
@@ -2440,6 +2469,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_StreamSink_log_found_Sse(
     RustStreamSink<LogFound> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_StreamSink_security_view_Sse(
+    RustStreamSink<SecurityView> self,
     SseSerializer serializer,
   );
 
@@ -3273,6 +3308,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_native_protection(
+    NativeProtection self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_net_kind(NetKind self, SseSerializer serializer);
 
   @protected
@@ -3721,6 +3762,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_security_view(SecurityView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_selected_range(SelectedRange self, SseSerializer serializer);
 
   @protected
@@ -3875,6 +3919,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     VaultErrorKind self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_vault_phase(VaultPhase self, SseSerializer serializer);
 
   @protected
   void sse_encode_workspace_pane(WorkspacePane self, SseSerializer serializer);

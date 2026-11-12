@@ -299,6 +299,9 @@ impl Store {
             .map(Zeroizing::new))
     }
     pub fn write(&mut self, items: &[Item], deleted: &[ItemId]) -> Result<()> {
+        if self.header.is_some() && self.keys.is_none() {
+            return Err(Error::Locked);
+        }
         let mut next = self.clock;
         let tx = self.conn.transaction()?;
         {

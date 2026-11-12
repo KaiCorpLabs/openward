@@ -18,6 +18,8 @@ use openward_app::vault::proto::{
 /// its own words.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum VaultErrorKind {
+    /// The vault was locked; the operation must be retried after unlocking.
+    Locked,
     /// It changed meanwhile (connecting learned the system, another
     /// window): read it again.
     Conflict,
@@ -65,7 +67,7 @@ impl From<anyhow::Error> for VaultError {
                 }
                 // D4 introduces the unlock UI; retain the Rust error message
                 // without changing the generated Dart contract in D3.
-                E::Locked => VaultErrorKind::Other,
+                E::Locked => VaultErrorKind::Locked,
             }
         } else if let Some(f) = e.downcast_ref::<openward_app::known::ForgetError>() {
             match f {
@@ -1177,7 +1179,7 @@ mod tests {
         );
         assert_eq!(kind(anyhow::anyhow!("other")), VaultErrorKind::Other);
         let locked = VaultError::from(E::Locked);
-        assert_eq!(locked.kind, VaultErrorKind::Other);
+        assert_eq!(locked.kind, VaultErrorKind::Locked);
         assert!(locked.message.contains("must be unlocked"));
         let installed = VaultError::from(E::MigrationInstalled("directory sync failed".into()));
         assert_eq!(installed.kind, VaultErrorKind::Storage);

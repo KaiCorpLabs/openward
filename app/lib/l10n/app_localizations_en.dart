@@ -6280,4 +6280,125 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get historyOriginUnknown =>
       'The origin of this older history entry is unknown.';
+
+  @override
+  String get vaultSecurity => 'Security';
+
+  @override
+  String get vaultLocked => 'Vault locked';
+
+  @override
+  String get vaultPassword => 'Master password';
+
+  @override
+  String get vaultUnlock => 'Unlock';
+
+  @override
+  String get vaultLock => 'Lock now · ⌘L / Ctrl+Alt+L';
+
+  @override
+  String get vaultBusy => 'Authenticating…';
+
+  @override
+  String get vaultPasswordHint =>
+      'Use at least 12 characters and a unique password.';
+
+  @override
+  String get vaultEnable => 'Encrypt this vault';
+
+  @override
+  String get vaultLegacy =>
+      'This vault is not encrypted yet. Set a password and save the kit before enabling locking.';
+
+  @override
+  String get vaultRecovery => 'Use recovery kit';
+
+  @override
+  String get vaultKit => 'Recovery kit';
+
+  @override
+  String get vaultKitWarning =>
+      'Save this kit outside OpenWard. Anyone holding it can open this vault copy. If you lose your password, kit and all devices, we cannot recover your data.';
+
+  @override
+  String get vaultSaved => 'I saved the kit in a safe place';
+
+  @override
+  String get vaultGroup3 => 'Kit group 3';
+
+  @override
+  String get vaultGroup12 => 'Kit group 12';
+
+  @override
+  String get vaultConfirmKit => 'Confirm kit and encrypt';
+
+  @override
+  String get vaultConfirmPassword => 'Repeat password';
+
+  @override
+  String get vaultMismatch => 'Passwords do not match.';
+
+  @override
+  String get vaultAuthError =>
+      'Could not unlock. Check your password or kit, or use the password if the system does not authorize access. Your vault is preserved.';
+
+  @override
+  String get vaultSetupError =>
+      'Could not complete setup. Check password strength (12–128 characters) and kit confirmation. Restart setup if you closed the dialog.';
+
+  @override
+  String get vaultNativeError =>
+      'System protection is unavailable or was cancelled. You can keep using your password.';
+
+  @override
+  String get vaultTouchId => 'Touch ID';
+
+  @override
+  String get vaultHello => 'Windows Hello';
+
+  @override
+  String get vaultKeyring => 'Session keyring';
+
+  @override
+  String get vaultNativeExplain =>
+      'Optional and off by default. The system protects a local key for this vault; your password is not stored. Changing enrolled biometrics may require setting this up again.';
+
+  @override
+  String get vaultLinuxWarning =>
+      'On Linux, the keyring may release the key while your session is open without another authentication. Enable only if you accept this protection.';
+
+  @override
+  String get vaultLinuxAccept => 'I accept using my session protection';
+
+  @override
+  String get vaultNativeEnable => 'Enable system unlock';
+
+  @override
+  String get vaultNativeDisable => 'Disable system unlock';
+
+  @override
+  String get vaultAutoLock => 'Auto-lock after inactivity';
+
+  @override
+  String get vaultNever => 'Never';
+
+  @override
+  String get vaultSessions =>
+      'Sessions stay connected. Their content and input remain locked until you unlock.';
+
+  @override
+  String get vaultPaused =>
+      'Setup was interrupted. The previous vault remains unencrypted.';
+
+  @override
+  String get vaultResume => 'Return to setup';
+
+  @override
+  String get vaultStrength => 'Password strength';
+
+  @override
+  String get vaultCancel => 'Cancel';
+
+  @override
+  String get vaultKitContinue => 'I have saved it';
 }

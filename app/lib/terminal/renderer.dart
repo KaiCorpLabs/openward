@@ -541,6 +541,24 @@ class TerminalRenderer extends ChangeNotifier {
     }
   }
 
+  /// Drop all cached text, accessibility spans and recorded pictures on lock.
+  void redact() {
+    _disposeRows();
+    _spans = [];
+    _text = [];
+    _rows = [];
+    selection = const [];
+    search = const [];
+    link = null;
+    ghost = null;
+    cursor = null;
+    cols = 0;
+    rows = 0;
+    textVersion++;
+    _tellScreen();
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _disposeRows();

@@ -1,11 +1,21 @@
 import Cocoa
 import FlutterMacOS
 
+private final class VaultPrivacyCover: NSView {
+  override var acceptsFirstResponder: Bool { true }
+  override func keyDown(with event: NSEvent) {}
+  override func mouseDown(with event: NSEvent) {}
+}
+
 class MainFlutterWindow: NSWindow {
   /// The app's top bar (lib/window/chrome.dart): the window buttons are
   /// centred in it.
   private let barHeight: CGFloat = 40
   private var channel: FlutterMethodChannel?
+  private var securityChannel: FlutterMethodChannel?
+  private var privacyCover: NSView?
+  private var privacyPending = false
+  private var securityReady = false
 
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
@@ -47,6 +57,29 @@ class MainFlutterWindow: NSWindow {
       }
     }
     self.channel = channel
+    let security = FlutterMethodChannel(name: "openward/security", binaryMessenger: flutterViewController.engine.binaryMessenger)
+    security.setMethodCallHandler { [weak self] call, result in
+      guard let self else { return result(nil) }
+      switch call.method {
+      case "ready":
+        self.securityReady = true
+        if self.privacyPending { security.invokeMethod("suspend", arguments: nil) }
+        result(nil)
+      case "privacyReady":
+        self.privacyCover?.removeFromSuperview()
+        self.makeFirstResponder(self.contentViewController?.view)
+        self.privacyCover = nil
+        self.privacyPending = false
+        result(nil)
+      default: result(FlutterMethodNotImplemented)
+      }
+    }
+    self.securityChannel = security
+    let workspace = NSWorkspace.shared.notificationCenter
+    workspace.addObserver(self, selector: #selector(redactForSystemLock), name: NSWorkspace.willSleepNotification, object: nil)
+    workspace.addObserver(self, selector: #selector(redactForSystemLock), name: NSWorkspace.sessionDidResignActiveNotification, object: nil)
+    // Screen lock is distinct from ordinary app deactivation (including Touch ID).
+    DistributedNotificationCenter.default().addObserver(self, selector: #selector(redactForSystemLock), name: NSNotification.Name("com.apple.screenIsLocked"), object: nil)
 
     let center = NotificationCenter.default
     center.addObserver(
@@ -63,6 +96,21 @@ class MainFlutterWindow: NSWindow {
 
     super.awakeFromNib()
     layoutWindowButtons()
+  }
+
+  @objc private func redactForSystemLock() {
+    privacyPending = true
+    if privacyCover == nil, let content = contentView {
+      let cover = VaultPrivacyCover(frame: content.bounds)
+      cover.wantsLayer = true
+      cover.layer?.backgroundColor = NSColor.black.cgColor
+      cover.autoresizingMask = [.width, .height]
+      content.addSubview(cover, positioned: .above, relativeTo: nil)
+      privacyCover = cover
+      makeFirstResponder(cover)
+      content.displayIfNeeded()
+    }
+    if securityReady { securityChannel?.invokeMethod("suspend", arguments: nil) }
   }
 
   /// Closing the window quits (it is the only one), so it goes the way

@@ -249,34 +249,44 @@ impl OpenWard {
 
     /// Every identity, by name.
     pub fn identities(&self) -> Vec<IdentityView> {
-        let views: Vec<_> = {
-            let vault = self.app.vault();
-            vault
-                .identities()
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            let views: Vec<_> = {
+                let vault = self.app.vault();
+                vault
+                    .identities()
+                    .into_iter()
+                    .map(|(iid, i)| self.identity_view(&vault, iid, i))
+                    .collect()
+            };
+            views
                 .into_iter()
-                .map(|(iid, i)| self.identity_view(&vault, iid, i))
+                .map(|view| self.inspect_identity(view))
                 .collect()
-        };
-        views
-            .into_iter()
-            .map(|view| self.inspect_identity(view))
-            .collect()
+        })
+        .unwrap_or_default()
     }
 
     pub fn identity(&self, id: String) -> Result<IdentityView, VaultError> {
-        let iid = super::vault::id(&id)?;
-        let view = {
-            let vault = self.app.vault();
-            let i = vault.identity(iid)?;
-            self.identity_view(&vault, iid, i)
-        };
-        Ok(self.inspect_identity(view))
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            let iid = super::vault::id(&id)?;
+            let view = {
+                let vault = self.app.vault();
+                let i = vault.identity(iid)?;
+                self.identity_view(&vault, iid, i)
+            };
+            Ok(self.inspect_identity(view))
+        })?
     }
 
     pub fn create_identity(&self, spec: IdentitySpec) -> Result<String, VaultError> {
-        let mut i = Identity::default();
-        apply(&spec, &mut i);
-        Ok(self.app.vault().create(Data::Identity(i))?.to_string())
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            let mut i = Identity::default();
+            apply(&spec, &mut i);
+            Ok(self.app.vault().create(Data::Identity(i))?.to_string())
+        })?
     }
 
     /// Returns the new revision. Fails if it changed since `rev`.
@@ -286,17 +296,28 @@ impl OpenWard {
         rev: u64,
         spec: IdentitySpec,
     ) -> Result<u64, VaultError> {
-        let iid = super::vault::id(&id)?;
-        let mut vault = self.app.vault();
-        let mut i = vault.identity(iid)?.clone();
-        apply(&spec, &mut i);
-        Ok(vault.update(iid, rev, Data::Identity(i))?)
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            let iid = super::vault::id(&id)?;
+            let mut vault = self.app.vault();
+            let mut i = vault.identity(iid)?.clone();
+            apply(&spec, &mut i);
+            Ok(vault.update(iid, rev, Data::Identity(i))?)
+        })?
     }
 
     /// What the key at `path` is on this machine, and which of
     /// `certificate_files` (or `<key>-cert.pub`) goes with it.
-    pub fn key_info(&self, path: String, certificate_files: Vec<String>) -> KeyView {
-        key_view(&path, key_info(self.app.local(), &path, &certificate_files))
+    pub fn key_info(
+        &self,
+        path: String,
+        certificate_files: Vec<String>,
+    ) -> Result<KeyView, VaultError> {
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            key_view(&path, key_info(self.app.local(), &path, &certificate_files))
+        })
+        .map_err(Into::into)
     }
 
     /// Groups (by name) and hosts (by label) for the "use on…" dialog, as
@@ -307,69 +328,73 @@ impl OpenWard {
         identity_id: String,
         choosers: Vec<String>,
     ) -> Result<Vec<IdentityUseRow>, VaultError> {
-        let iid = id(&identity_id)?;
-        let choosers: HashSet<ItemId> = choosers.iter().map(|c| id(c)).collect::<Result<_, _>>()?;
-        let vault = self.app.vault();
-        vault.identity(iid)?;
-        let counts = hosts_per_group(&vault);
-        let group_label = |g: Option<ItemId>| g.map(|g| label_of(&vault, g));
-        let mut rows = Vec::new();
-        for (gid, g) in vault.groups() {
-            let (now, now_none) = match g.settings.identity {
-                Some(UseIdentity::Id(other)) => (Some(other), false),
-                Some(UseIdentity::None) => (None, true),
-                None => (None, false),
-            };
-            rows.push(IdentityUseRow {
-                id: gid.to_string(),
-                is_group: true,
-                label: g.name.clone(),
-                group_label: group_label(g.parent),
-                chooses: choosers.contains(&gid),
-                host_count: counts.get(&gid).copied().unwrap_or(0),
-                now: now.map(|n| label_of(&vault, n)),
-                now_is_this: now == Some(iid),
-                now_from_group: None,
-                now_none,
-                after: false,
-                after_from_group: None,
-                own_user: None,
-            });
-        }
-        let current: HashMap<ItemId, Option<Origin>> = vault
-            .hosts()
-            .into_iter()
-            .map(|(hid, _)| {
-                (
-                    hid,
-                    vault.effective(hid).ok().and_then(|e| e.origin("identity")),
-                )
-            })
-            .collect();
-        let preview = vault.identity_use_preview(iid, &choosers);
-        for u in preview {
-            let Ok(h) = vault.host(u.host) else { continue };
-            let from = |o: Option<Origin>| match o {
-                Some(Origin::Group(g)) => Some(label_of(&vault, g)),
-                _ => None,
-            };
-            rows.push(IdentityUseRow {
-                id: u.host.to_string(),
-                is_group: false,
-                label: h.label.clone(),
-                group_label: group_label(h.group),
-                chooses: choosers.contains(&u.host),
-                host_count: 0,
-                now: u.before.map(|b| label_of(&vault, b)),
-                now_is_this: u.before == Some(iid),
-                now_from_group: u.before.and(from(current.get(&u.host).copied().flatten())),
-                now_none: false,
-                after: u.after == Some(iid),
-                after_from_group: (u.after == Some(iid)).then(|| from(u.by)).flatten(),
-                own_user: h.settings.user.clone(),
-            });
-        }
-        Ok(rows)
+        let gate = self.app.security().gate();
+        super::security::access(&gate, true, || {
+            let iid = id(&identity_id)?;
+            let choosers: HashSet<ItemId> =
+                choosers.iter().map(|c| id(c)).collect::<Result<_, _>>()?;
+            let vault = self.app.vault();
+            vault.identity(iid)?;
+            let counts = hosts_per_group(&vault);
+            let group_label = |g: Option<ItemId>| g.map(|g| label_of(&vault, g));
+            let mut rows = Vec::new();
+            for (gid, g) in vault.groups() {
+                let (now, now_none) = match g.settings.identity {
+                    Some(UseIdentity::Id(other)) => (Some(other), false),
+                    Some(UseIdentity::None) => (None, true),
+                    None => (None, false),
+                };
+                rows.push(IdentityUseRow {
+                    id: gid.to_string(),
+                    is_group: true,
+                    label: g.name.clone(),
+                    group_label: group_label(g.parent),
+                    chooses: choosers.contains(&gid),
+                    host_count: counts.get(&gid).copied().unwrap_or(0),
+                    now: now.map(|n| label_of(&vault, n)),
+                    now_is_this: now == Some(iid),
+                    now_from_group: None,
+                    now_none,
+                    after: false,
+                    after_from_group: None,
+                    own_user: None,
+                });
+            }
+            let current: HashMap<ItemId, Option<Origin>> = vault
+                .hosts()
+                .into_iter()
+                .map(|(hid, _)| {
+                    (
+                        hid,
+                        vault.effective(hid).ok().and_then(|e| e.origin("identity")),
+                    )
+                })
+                .collect();
+            let preview = vault.identity_use_preview(iid, &choosers);
+            for u in preview {
+                let Ok(h) = vault.host(u.host) else { continue };
+                let from = |o: Option<Origin>| match o {
+                    Some(Origin::Group(g)) => Some(label_of(&vault, g)),
+                    _ => None,
+                };
+                rows.push(IdentityUseRow {
+                    id: u.host.to_string(),
+                    is_group: false,
+                    label: h.label.clone(),
+                    group_label: group_label(h.group),
+                    chooses: choosers.contains(&u.host),
+                    host_count: 0,
+                    now: u.before.map(|b| label_of(&vault, b)),
+                    now_is_this: u.before == Some(iid),
+                    now_from_group: u.before.and(from(current.get(&u.host).copied().flatten())),
+                    now_none: false,
+                    after: u.after == Some(iid),
+                    after_from_group: (u.after == Some(iid)).then(|| from(u.by)).flatten(),
+                    own_user: h.settings.user.clone(),
+                });
+            }
+            Ok(rows)
+        })?
     }
 
     /// Makes exactly `choosers` (hosts and groups) choose `identity_id`;
@@ -380,9 +405,13 @@ impl OpenWard {
         identity_id: String,
         choosers: Vec<String>,
     ) -> Result<u32, VaultError> {
-        let iid = id(&identity_id)?;
-        let choosers: HashSet<ItemId> = choosers.iter().map(|c| id(c)).collect::<Result<_, _>>()?;
-        Ok(self.app.vault().use_identity(iid, &choosers)? as u32)
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            let iid = id(&identity_id)?;
+            let choosers: HashSet<ItemId> =
+                choosers.iter().map(|c| id(c)).collect::<Result<_, _>>()?;
+            Ok(self.app.vault().use_identity(iid, &choosers)? as u32)
+        })?
     }
 }
 

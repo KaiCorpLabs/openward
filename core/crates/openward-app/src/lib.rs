@@ -18,6 +18,7 @@ pub mod local;
 pub mod logs;
 pub mod plan;
 pub mod programs;
+pub mod security;
 pub mod sftp;
 pub mod snippets;
 pub mod terminal;
@@ -60,6 +61,7 @@ pub const DEFAULT_SCROLLBACK: usize = 10_000;
 
 pub struct App {
     vault: Arc<Mutex<Vault>>,
+    security: Arc<security::VaultSession>,
     local: Local,
     /// What talks to security keys: the one plugged in, by default.
     security_keys: Mutex<Arc<dyn openward_fido::Authenticator>>,
@@ -81,18 +83,32 @@ impl App {
     /// As [`App::open`], for a given local user (tests).
     pub fn open_as(data_dir: &Path, local: Local) -> anyhow::Result<Self> {
         let data_dir = create_private_dir(data_dir)?;
-        let vault = Vault::open(&data_dir.join("vault.db"))?;
+        let security = Arc::new(security::VaultSession::open(&data_dir.join("vault.db"))?);
+        let vault = security.vault();
         let logs = Logs::open(&data_dir.join("logs"), logs::Config::default())?;
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
             .thread_name("openward-net")
             .enable_all()
             .build()?;
+        let prompts = Arc::new(Prompts::default());
+        let idle_security = Arc::clone(&security);
+        let idle_prompts = Arc::clone(&prompts);
+        runtime.spawn(async move {
+            let mut timer = tokio::time::interval(Duration::from_secs(1));
+            loop {
+                timer.tick().await;
+                if idle_security.enforce_idle().unwrap_or(false) {
+                    idle_prompts.cancel_all();
+                }
+            }
+        });
         Ok(Self {
-            vault: Arc::new(Mutex::new(vault)),
+            vault,
+            security,
             local,
             security_keys: Mutex::new(default_security_keys()),
-            prompts: Arc::default(),
+            prompts,
             live: Arc::default(),
             links: sftp::Links::default(),
             transfers: Transfers::new(runtime.handle().clone()),
@@ -100,6 +116,15 @@ impl App {
             logs,
             runtime,
         })
+    }
+
+    pub fn security(&self) -> &Arc<security::VaultSession> {
+        &self.security
+    }
+    pub fn lock_vault(&self) -> vault::Result<()> {
+        self.security.lock()?;
+        self.prompts.cancel_all();
+        Ok(())
     }
 
     /// The session logs.
@@ -198,6 +223,9 @@ impl App {
         sink: Arc<dyn EventSink>,
         reuse: bool,
     ) -> Result<(), PlanError> {
+        let gate = self.security.gate();
+        let _permission = gate.read()?;
+
         let serial = target.serial(&self.vault())?;
         if let Some(serial) = serial {
             self.open_serial_line(terminal, &target, serial, sink);
@@ -353,6 +381,7 @@ impl App {
     fn ctx(&self, sink: &Arc<dyn EventSink>) -> Ctx {
         Ctx {
             vault: Arc::clone(&self.vault),
+            security: Arc::clone(&self.security),
             local: self.local.clone(),
             security_keys: self.security_keys(),
             prompts: Arc::clone(&self.prompts),
@@ -373,7 +402,7 @@ impl App {
     /// import, or the core itself (a system learned, a key trusted). What
     /// shows items reads them again then.
     pub fn watch_vault(&self, wake: terminal::Waker) {
-        self.vault().on_change(move || wake());
+        self.security.watch_vault(wake);
     }
 
     /// Every saved tunnel with its host's label and its state now, by
@@ -401,6 +430,9 @@ impl App {
     /// is up (questions and the outcome of that arrive on `sink`, which
     /// gets `Connected` once it listens). Returns at once.
     pub fn open_tunnel(&self, id: ItemId, sink: Arc<dyn EventSink>) -> Result<(), PlanError> {
+        let gate = self.security.gate();
+        let _permission = gate.read()?;
+
         let spec = self.vault().port_forward(id)?.clone();
         let plan = Plan::for_host(&self.vault(), spec.host, &self.local)?.ssh()?;
         let Some(ticket) = self.tunnels.begin(id) else {
@@ -626,6 +658,9 @@ impl App {
         target: Target,
         sink: Arc<dyn EventSink>,
     ) -> Result<(), PlanError> {
+        let gate = self.security.gate();
+        let _permission = gate.read()?;
+
         let plan = target.plan(&self.vault(), &self.local)?.ssh()?;
         let label = plan.hops.last().map_or("", |h| h.label.as_str());
         let link = self.links.get(&plan.key(), label);
@@ -659,6 +694,9 @@ impl App {
         program: Option<String>,
         sink: Arc<dyn EventSink>,
     ) -> anyhow::Result<()> {
+        let gate = self.security.gate();
+        let _permission = gate.read()?;
+
         terminal.close();
         let size = terminal.size();
         let begin = logs::Begin {
@@ -688,6 +726,11 @@ impl App {
 
     /// Answers a [`Prompt`]; false if nothing waits for it any more.
     pub fn answer(&self, prompt: u64, answer: Answer) -> bool {
+        let gate = self.security.gate();
+        let Ok(_permission) = gate.read() else {
+            return false;
+        };
+
         self.prompts.answer(prompt, answer)
     }
 

@@ -1,8 +1,9 @@
 # Vault SQLite format 2
 
-D3 implements this local Rust format. The application still opens format 1
-until D4/D5 supply setup, unlock and recovery UX. No automatic conversion runs
-through the current FFI. Passwords, key seeds and decrypted buffers stay in Rust.
+D3 implements this local Rust format. D4 adds opt-in setup, locked startup,
+password/native unlock and a mandatory minimal local recovery kit; see
+[vault-session-v1](vault-session-v1.md). No automatic conversion runs on update.
+Key seeds and decrypted cryptographic buffers stay in Rust.
 
 ## Records
 

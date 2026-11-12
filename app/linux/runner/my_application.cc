@@ -1,4 +1,5 @@
 #include "my_application.h"
+#include <initializer_list>
 
 #include <flutter_linux/flutter_linux.h>
 #ifdef GDK_WINDOWING_X11
@@ -10,9 +11,49 @@
 struct _MyApplication {
   GtkApplication parent_instance;
   char** dart_entrypoint_arguments;
+  FlMethodChannel* security_channel;
+  GtkWidget* privacy_cover;
+  GtkWidget* security_view;
+  GDBusConnection* session_bus;
+  GDBusConnection* system_bus;
+  gboolean security_ready;
+  gboolean privacy_pending;
+  guint session_subscriptions[3];
+  guint sleep_subscription;
 };
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
+
+// The native overlay covers the previous surface before Dart handles suspend.
+static void redact_for_system_lock(MyApplication* self) {
+  self->privacy_pending = TRUE;
+  if (self->privacy_cover) gtk_widget_show(self->privacy_cover);
+  if (self->security_view) gtk_widget_set_sensitive(self->security_view, FALSE);
+  if (self->security_ready && self->security_channel) {
+    fl_method_channel_invoke_method(self->security_channel, "suspend", nullptr, nullptr, nullptr, nullptr);
+  }
+}
+static void security_signal(GDBusConnection*, const gchar*, const gchar*, const gchar*,
+                            const gchar*, GVariant* parameters, gpointer data) {
+  if (!g_variant_is_of_type(parameters, G_VARIANT_TYPE("(b)"))) return;
+  gboolean active = FALSE;
+  g_variant_get(parameters, "(b)", &active);
+  if (active) redact_for_system_lock(MY_APPLICATION(data));
+}
+static void security_method(FlMethodChannel*, FlMethodCall* call, gpointer data) {
+  MyApplication* self = MY_APPLICATION(data);
+  const gchar* method = fl_method_call_get_name(call);
+  if (g_strcmp0(method, "ready") == 0) {
+    self->security_ready = TRUE;
+    if (self->privacy_pending) redact_for_system_lock(self);
+    fl_method_call_respond_success(call, nullptr, nullptr);
+  } else if (g_strcmp0(method, "privacyReady") == 0) {
+    self->privacy_pending = FALSE;
+    if (self->privacy_cover) gtk_widget_hide(self->privacy_cover);
+    if (self->security_view) gtk_widget_set_sensitive(self->security_view, TRUE);
+    fl_method_call_respond_success(call, nullptr, nullptr);
+  } else { fl_method_call_respond_not_implemented(call, nullptr); }
+}
 
 // Called when first Flutter frame received.
 static void first_frame_cb(MyApplication* self, FlView* view) {
@@ -64,13 +105,39 @@ static void my_application_activate(GApplication* application) {
       project, self->dart_entrypoint_arguments);
 
   FlView* view = fl_view_new(project);
+  self->security_view = GTK_WIDGET(view);
+  g_object_add_weak_pointer(G_OBJECT(view), reinterpret_cast<gpointer*>(&self->security_view));
   GdkRGBA background_color;
   // Background defaults to black, override it here if necessary, e.g. #00000000
   // for transparent.
   gdk_rgba_parse(&background_color, "#000000");
   fl_view_set_background_color(view, &background_color);
   gtk_widget_show(GTK_WIDGET(view));
-  gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
+  GtkWidget* overlay = gtk_overlay_new();
+  gtk_container_add(GTK_CONTAINER(overlay), GTK_WIDGET(view));
+  self->privacy_cover = gtk_event_box_new();
+  // CSS avoids deprecated GTK color APIs under the runner's -Werror policy.
+  GtkCssProvider* css = gtk_css_provider_new();
+  gtk_css_provider_load_from_data(css, "* { background-color: black; }", -1, nullptr);
+  gtk_style_context_add_provider(gtk_widget_get_style_context(self->privacy_cover), GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+  g_object_unref(css);
+  gtk_overlay_add_overlay(GTK_OVERLAY(overlay), self->privacy_cover);
+  gtk_widget_set_no_show_all(self->privacy_cover, TRUE);
+  gtk_widget_show(overlay);
+  gtk_container_add(GTK_CONTAINER(window), overlay);
+  g_object_add_weak_pointer(G_OBJECT(self->privacy_cover), reinterpret_cast<gpointer*>(&self->privacy_cover));
+  g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
+  self->security_channel = fl_method_channel_new(fl_engine_get_binary_messenger(fl_view_get_engine(view)), "openward/security", FL_METHOD_CODEC(codec));
+  fl_method_channel_set_method_call_handler(self->security_channel, security_method, self, nullptr);
+  self->session_bus = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr);
+  if (self->session_bus) {
+    size_t subscription_index = 0;
+    for (const char* service : {"org.freedesktop.ScreenSaver", "org.gnome.ScreenSaver", "org.cinnamon.ScreenSaver"}) {
+      self->session_subscriptions[subscription_index++] = g_dbus_connection_signal_subscribe(self->session_bus, service, service, "ActiveChanged", nullptr, nullptr, G_DBUS_SIGNAL_FLAGS_NONE, security_signal, self, nullptr);
+    }
+  }
+  self->system_bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, nullptr, nullptr);
+  if (self->system_bus) self->sleep_subscription = g_dbus_connection_signal_subscribe(self->system_bus, "org.freedesktop.login1", "org.freedesktop.login1.Manager", "PrepareForSleep", "/org/freedesktop/login1", nullptr, G_DBUS_SIGNAL_FLAGS_NONE, security_signal, self, nullptr);
 
   // Show the window when Flutter renders.
   // Requires the view to be realized so we can start rendering.
@@ -125,6 +192,12 @@ static void my_application_shutdown(GApplication* application) {
 // Implements GObject::dispose.
 static void my_application_dispose(GObject* object) {
   MyApplication* self = MY_APPLICATION(object);
+  if (self->security_channel) fl_method_channel_set_method_call_handler(self->security_channel, nullptr, nullptr, nullptr);
+  g_clear_object(&self->security_channel);
+  if (self->session_bus) for (guint id : self->session_subscriptions) { if (id) g_dbus_connection_signal_unsubscribe(self->session_bus, id); }
+  if (self->system_bus && self->sleep_subscription) g_dbus_connection_signal_unsubscribe(self->system_bus, self->sleep_subscription);
+  g_clear_object(&self->session_bus);
+  g_clear_object(&self->system_bus);
   g_clear_pointer(&self->dart_entrypoint_arguments, g_strfreev);
   G_OBJECT_CLASS(my_application_parent_class)->dispose(object);
 }

@@ -9733,6 +9733,228 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Se desconoce el origen de esta entrada antigua del historial.'**
   String get historyOriginUnknown;
+
+  /// No description provided for @vaultSecurity.
+  ///
+  /// In es, this message translates to:
+  /// **'Seguridad'**
+  String get vaultSecurity;
+
+  /// No description provided for @vaultLocked.
+  ///
+  /// In es, this message translates to:
+  /// **'Vault bloqueado'**
+  String get vaultLocked;
+
+  /// No description provided for @vaultPassword.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña maestra'**
+  String get vaultPassword;
+
+  /// No description provided for @vaultUnlock.
+  ///
+  /// In es, this message translates to:
+  /// **'Desbloquear'**
+  String get vaultUnlock;
+
+  /// No description provided for @vaultLock.
+  ///
+  /// In es, this message translates to:
+  /// **'Bloquear ahora · ⌘L / Ctrl+Alt+L'**
+  String get vaultLock;
+
+  /// No description provided for @vaultBusy.
+  ///
+  /// In es, this message translates to:
+  /// **'Autenticando…'**
+  String get vaultBusy;
+
+  /// No description provided for @vaultPasswordHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Usa al menos 12 caracteres y una contraseña única.'**
+  String get vaultPasswordHint;
+
+  /// No description provided for @vaultEnable.
+  ///
+  /// In es, this message translates to:
+  /// **'Cifrar este vault'**
+  String get vaultEnable;
+
+  /// No description provided for @vaultLegacy.
+  ///
+  /// In es, this message translates to:
+  /// **'Este vault todavía no está cifrado. Configura una contraseña y guarda el kit antes de activar el bloqueo.'**
+  String get vaultLegacy;
+
+  /// No description provided for @vaultRecovery.
+  ///
+  /// In es, this message translates to:
+  /// **'Usar kit de recuperación'**
+  String get vaultRecovery;
+
+  /// No description provided for @vaultKit.
+  ///
+  /// In es, this message translates to:
+  /// **'Kit de recuperación'**
+  String get vaultKit;
+
+  /// No description provided for @vaultKitWarning.
+  ///
+  /// In es, this message translates to:
+  /// **'Guarda este kit fuera de OpenWard. Quien lo tenga puede abrir esta copia del vault. Si pierdes la contraseña, el kit y todos tus dispositivos, no podremos recuperar tus datos.'**
+  String get vaultKitWarning;
+
+  /// No description provided for @vaultSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'He guardado el kit en un lugar seguro'**
+  String get vaultSaved;
+
+  /// No description provided for @vaultGroup3.
+  ///
+  /// In es, this message translates to:
+  /// **'Grupo 3 del kit'**
+  String get vaultGroup3;
+
+  /// No description provided for @vaultGroup12.
+  ///
+  /// In es, this message translates to:
+  /// **'Grupo 12 del kit'**
+  String get vaultGroup12;
+
+  /// No description provided for @vaultConfirmKit.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar kit y cifrar'**
+  String get vaultConfirmKit;
+
+  /// No description provided for @vaultConfirmPassword.
+  ///
+  /// In es, this message translates to:
+  /// **'Repetir contraseña'**
+  String get vaultConfirmPassword;
+
+  /// No description provided for @vaultMismatch.
+  ///
+  /// In es, this message translates to:
+  /// **'Las contraseñas no coinciden.'**
+  String get vaultMismatch;
+
+  /// No description provided for @vaultAuthError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se ha podido desbloquear. Comprueba la contraseña o el kit, o usa la contraseña si el sistema no autoriza el acceso. El vault se conserva.'**
+  String get vaultAuthError;
+
+  /// No description provided for @vaultSetupError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se ha podido completar. Comprueba la contraseña (12–128 caracteres y robusta) y la confirmación del kit. Reinicia la configuración si has cerrado el diálogo.'**
+  String get vaultSetupError;
+
+  /// No description provided for @vaultNativeError.
+  ///
+  /// In es, this message translates to:
+  /// **'La protección del sistema no está disponible o se ha cancelado. Puedes seguir usando la contraseña.'**
+  String get vaultNativeError;
+
+  /// No description provided for @vaultTouchId.
+  ///
+  /// In es, this message translates to:
+  /// **'Touch ID'**
+  String get vaultTouchId;
+
+  /// No description provided for @vaultHello.
+  ///
+  /// In es, this message translates to:
+  /// **'Windows Hello'**
+  String get vaultHello;
+
+  /// No description provided for @vaultKeyring.
+  ///
+  /// In es, this message translates to:
+  /// **'Llavero de la sesión'**
+  String get vaultKeyring;
+
+  /// No description provided for @vaultNativeExplain.
+  ///
+  /// In es, this message translates to:
+  /// **'Opcional y apagado por defecto. El sistema protege una clave local para abrir este vault; la contraseña no se guarda. Al cambiar la biometría puede ser necesario volver a configurarlo.'**
+  String get vaultNativeExplain;
+
+  /// No description provided for @vaultLinuxWarning.
+  ///
+  /// In es, this message translates to:
+  /// **'En Linux, el llavero puede liberar la clave con la sesión abierta sin pedir otra autenticación. Actívalo solo si aceptas esa protección.'**
+  String get vaultLinuxWarning;
+
+  /// No description provided for @vaultLinuxAccept.
+  ///
+  /// In es, this message translates to:
+  /// **'Acepto usar la protección de mi sesión'**
+  String get vaultLinuxAccept;
+
+  /// No description provided for @vaultNativeEnable.
+  ///
+  /// In es, this message translates to:
+  /// **'Activar desbloqueo del sistema'**
+  String get vaultNativeEnable;
+
+  /// No description provided for @vaultNativeDisable.
+  ///
+  /// In es, this message translates to:
+  /// **'Desactivar desbloqueo del sistema'**
+  String get vaultNativeDisable;
+
+  /// No description provided for @vaultAutoLock.
+  ///
+  /// In es, this message translates to:
+  /// **'Bloqueo automático por inactividad'**
+  String get vaultAutoLock;
+
+  /// No description provided for @vaultNever.
+  ///
+  /// In es, this message translates to:
+  /// **'Nunca'**
+  String get vaultNever;
+
+  /// No description provided for @vaultSessions.
+  ///
+  /// In es, this message translates to:
+  /// **'Las sesiones siguen conectadas. Su contenido y entrada permanecen bloqueados hasta desbloquear.'**
+  String get vaultSessions;
+
+  /// No description provided for @vaultPaused.
+  ///
+  /// In es, this message translates to:
+  /// **'La configuración se interrumpió. El vault anterior sigue sin cifrar.'**
+  String get vaultPaused;
+
+  /// No description provided for @vaultResume.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a la configuración'**
+  String get vaultResume;
+
+  /// No description provided for @vaultStrength.
+  ///
+  /// In es, this message translates to:
+  /// **'Robustez de la contraseña'**
+  String get vaultStrength;
+
+  /// No description provided for @vaultCancel.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar'**
+  String get vaultCancel;
+
+  /// No description provided for @vaultKitContinue.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya lo he guardado'**
+  String get vaultKitContinue;
 }
 
 class _AppLocalizationsDelegate

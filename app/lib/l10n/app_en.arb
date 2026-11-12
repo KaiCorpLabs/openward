@@ -1254,7 +1254,7 @@
     }
   },
   "noGroup": "No group",
-  "noHostsBody": "Add one or bring them from your ~/\u2060.ssh/\u2060config.",
+  "noHostsBody": "Add one or bring them from your ~/⁠.ssh/⁠config.",
   "noHostsTitle": "No hosts yet",
   "noIdentities": "No identities yet",
   "noIdentitiesBody": "An identity puts a user, their keys and the agent under a name (“deploy in production”). Put it on a group and all its hosts log in the same way; change it once and they all change.",
@@ -2017,9 +2017,52 @@
   "yesterdayAt": "yesterday {time}",
   "historyReviewTitle": "Review history command",
   "historyReviewFrom": "History from {place}",
-  "@historyReviewFrom": {"placeholders": {"place": {"type": "String"}}},
+  "@historyReviewFrom": {
+    "placeholders": {
+      "place": {
+        "type": "String"
+      }
+    }
+  },
   "historyReviewTo": "Send to:",
   "historyOriginOwn": "Written on this device.",
   "historyOriginScreen": "Reconstructed from terminal output; it may contain text supplied by the server.",
-  "historyOriginUnknown": "The origin of this older history entry is unknown."
+  "historyOriginUnknown": "The origin of this older history entry is unknown.",
+  "vaultSecurity": "Security",
+  "vaultLocked": "Vault locked",
+  "vaultPassword": "Master password",
+  "vaultUnlock": "Unlock",
+  "vaultLock": "Lock now · ⌘L / Ctrl+Alt+L",
+  "vaultBusy": "Authenticating…",
+  "vaultPasswordHint": "Use at least 12 characters and a unique password.",
+  "vaultEnable": "Encrypt this vault",
+  "vaultLegacy": "This vault is not encrypted yet. Set a password and save the kit before enabling locking.",
+  "vaultRecovery": "Use recovery kit",
+  "vaultKit": "Recovery kit",
+  "vaultKitWarning": "Save this kit outside OpenWard. Anyone holding it can open this vault copy. If you lose your password, kit and all devices, we cannot recover your data.",
+  "vaultSaved": "I saved the kit in a safe place",
+  "vaultGroup3": "Kit group 3",
+  "vaultGroup12": "Kit group 12",
+  "vaultConfirmKit": "Confirm kit and encrypt",
+  "vaultConfirmPassword": "Repeat password",
+  "vaultMismatch": "Passwords do not match.",
+  "vaultAuthError": "Could not unlock. Check your password or kit, or use the password if the system does not authorize access. Your vault is preserved.",
+  "vaultSetupError": "Could not complete setup. Check password strength (12–128 characters) and kit confirmation. Restart setup if you closed the dialog.",
+  "vaultNativeError": "System protection is unavailable or was cancelled. You can keep using your password.",
+  "vaultTouchId": "Touch ID",
+  "vaultHello": "Windows Hello",
+  "vaultKeyring": "Session keyring",
+  "vaultNativeExplain": "Optional and off by default. The system protects a local key for this vault; your password is not stored. Changing enrolled biometrics may require setting this up again.",
+  "vaultLinuxWarning": "On Linux, the keyring may release the key while your session is open without another authentication. Enable only if you accept this protection.",
+  "vaultLinuxAccept": "I accept using my session protection",
+  "vaultNativeEnable": "Enable system unlock",
+  "vaultNativeDisable": "Disable system unlock",
+  "vaultAutoLock": "Auto-lock after inactivity",
+  "vaultNever": "Never",
+  "vaultSessions": "Sessions stay connected. Their content and input remain locked until you unlock.",
+  "vaultPaused": "Setup was interrupted. The previous vault remains unencrypted.",
+  "vaultResume": "Return to setup",
+  "vaultStrength": "Password strength",
+  "vaultCancel": "Cancel",
+  "vaultKitContinue": "I have saved it"
 }

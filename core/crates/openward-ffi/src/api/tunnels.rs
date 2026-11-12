@@ -223,41 +223,51 @@ impl OpenWard {
 
     #[frb(sync)]
     pub fn tunnels(&self) -> Vec<TunnelView> {
-        self.app.tunnels().into_iter().map(view).collect()
+        let gate = self.app.security().gate();
+        super::security::access(&gate, true, || {
+            self.app.tunnels().into_iter().map(view).collect()
+        })
+        .unwrap_or_default()
     }
 
     pub fn create_tunnel(&self, spec: TunnelSpec) -> Result<String, VaultError> {
-        let mut f = PortForward {
-            label: String::new(),
-            host: id(&spec.host_id)?,
-            kind: ForwardKind::Local,
-            listen_port: 0,
-            listen_address: None,
-            dest_host: None,
-            dest_port: None,
-            autostart: false,
-            source: None,
-            imported: None,
-            extra: Default::default(),
-        };
-        apply(&spec, &mut f)?;
-        Ok(self.app.vault().create(Data::PortForward(f))?.to_string())
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            let mut f = PortForward {
+                label: String::new(),
+                host: id(&spec.host_id)?,
+                kind: ForwardKind::Local,
+                listen_port: 0,
+                listen_address: None,
+                dest_host: None,
+                dest_port: None,
+                autostart: false,
+                source: None,
+                imported: None,
+                extra: Default::default(),
+            };
+            apply(&spec, &mut f)?;
+            Ok(self.app.vault().create(Data::PortForward(f))?.to_string())
+        })?
     }
 
     /// Returns the new revision. An open tunnel whose forward changed
     /// closes, to open again as it is now; a new name or "open on connect"
     /// leaves it open.
     pub fn update_tunnel(&self, id: String, rev: u64, spec: TunnelSpec) -> Result<u64, VaultError> {
-        let tid = super::vault::id(&id)?;
-        let mut f = self.app.vault().port_forward(tid)?.clone();
-        let before = forward_of(&f);
-        apply(&spec, &mut f)?;
-        let changed = forward_of(&f) != before;
-        let rev = self.app.vault().update(tid, rev, Data::PortForward(f))?;
-        if changed {
-            self.app.close_tunnel(tid);
-        }
-        Ok(rev)
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            let tid = super::vault::id(&id)?;
+            let mut f = self.app.vault().port_forward(tid)?.clone();
+            let before = forward_of(&f);
+            apply(&spec, &mut f)?;
+            let changed = forward_of(&f) != before;
+            let rev = self.app.vault().update(tid, rev, Data::PortForward(f))?;
+            if changed {
+                self.app.close_tunnel(tid);
+            }
+            Ok(rev)
+        })?
     }
 
     /// Opens a tunnel, connecting to its host if needed. The stream is that
@@ -267,22 +277,29 @@ impl OpenWard {
         id: String,
         events: StreamSink<SessionEvent>,
     ) -> Result<(), VaultError> {
-        self.app
-            .open_tunnel(super::vault::id(&id)?, Arc::new(DartSink(events)))?;
-        Ok(())
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            self.app
+                .open_tunnel(super::vault::id(&id)?, Arc::new(DartSink(events)))?;
+            Ok(())
+        })?
     }
 
     /// Closes it (and forgets an error it had).
     #[frb(sync)]
     pub fn close_tunnel(&self, id: String) -> Result<(), VaultError> {
-        self.app.close_tunnel(super::vault::id(&id)?);
-        Ok(())
+        let gate = self.app.security().gate();
+        super::security::access(&gate, true, || {
+            self.app.close_tunnel(super::vault::id(&id)?);
+            Ok(())
+        })?
     }
 
     /// A free port here after `port`, to offer when that one is taken.
     #[frb(sync)]
     pub fn free_port_near(&self, port: u16) -> Option<u16> {
-        self.app.free_port_near(port)
+        let gate = self.app.security().gate();
+        super::security::access(&gate, true, || self.app.free_port_near(port)).unwrap_or_default()
     }
 }
 

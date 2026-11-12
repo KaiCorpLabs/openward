@@ -867,6 +867,7 @@ pub struct TermFrame {
 #[frb(opaque)]
 pub struct TerminalSession {
     pub(crate) term: Arc<Terminal>,
+    pub(crate) access: Arc<openward_app::security::AccessGate>,
 }
 
 /// What a hidden tab reads instead of the screen.
@@ -878,6 +879,11 @@ pub struct TermMeta {
 }
 
 impl TerminalSession {
+    fn with_access<T>(&self, action: impl FnOnce() -> T) -> Option<T> {
+        let _access = self.access.read().ok()?;
+        Some(action())
+    }
+
     /// An event each time there is something new to draw that has not
     /// been polled: the UI polls while it has events, and asks for no
     /// frames while nothing changes.
@@ -897,51 +903,60 @@ impl TerminalSession {
     /// a tab that is not on view.
     #[frb(sync)]
     pub fn poll_meta(&self) -> TermMeta {
-        let (title, bell) = self.term.poll_meta();
-        TermMeta { title, bell }
+        self.with_access(|| {
+            let (title, bell) = self.term.poll_meta();
+            TermMeta { title, bell }
+        })
+        .unwrap_or_else(|| TermMeta {
+            title: String::new(),
+            bell: false,
+        })
     }
 
     /// What changed since the last call, or nothing; once per refresh.
     #[frb(sync)]
     pub fn poll(&self) -> Option<TermFrame> {
-        self.term.poll().map(|f| TermFrame {
-            frame: f.frame,
-            mouse_tracking: f.mouse_tracking,
-            bracketed_paste: f.bracketed_paste,
-            report_all_keys: f.report_all_keys,
-            keypad_application: f.keypad_application,
-            program_foreground: f.program_foreground.map(packed),
-            program_background: f.program_background.map(packed),
-            program_cursor: f.program_cursor.map(packed),
-            alt_screen: f.alt_screen,
-            title: f.title,
-            selection: f
-                .selection
-                .into_iter()
-                .map(|r| SelectedRange {
-                    row: r.row,
-                    start: r.start,
-                    end: r.end,
-                })
-                .collect(),
-            bell: f.bell,
-            cursor_blinks: f.cursor_blinks,
-            search: f.search.map(|s| SearchView {
-                searching: s.searching,
-                total: s.total as u32,
-                selected: s.selected.map(|i| i as u32),
-                hits: s
-                    .hits
+        self.with_access(|| {
+            self.term.poll().map(|f| TermFrame {
+                frame: f.frame,
+                mouse_tracking: f.mouse_tracking,
+                bracketed_paste: f.bracketed_paste,
+                report_all_keys: f.report_all_keys,
+                keypad_application: f.keypad_application,
+                program_foreground: f.program_foreground.map(packed),
+                program_background: f.program_background.map(packed),
+                program_cursor: f.program_cursor.map(packed),
+                alt_screen: f.alt_screen,
+                title: f.title,
+                selection: f
+                    .selection
                     .into_iter()
-                    .map(|h| SearchHitView {
-                        row: h.row,
-                        start: h.start,
-                        end: h.end,
-                        selected: h.selected,
+                    .map(|r| SelectedRange {
+                        row: r.row,
+                        start: r.start,
+                        end: r.end,
                     })
                     .collect(),
-            }),
+                bell: f.bell,
+                cursor_blinks: f.cursor_blinks,
+                search: f.search.map(|s| SearchView {
+                    searching: s.searching,
+                    total: s.total as u32,
+                    selected: s.selected.map(|i| i as u32),
+                    hits: s
+                        .hits
+                        .into_iter()
+                        .map(|h| SearchHitView {
+                            row: h.row,
+                            start: h.start,
+                            end: h.end,
+                            selected: h.selected,
+                        })
+                        .collect(),
+                }),
+            })
         })
+        .unwrap_or_default()
     }
 
     /// Looks for `needle` through the screen and the history (ASCII letters
@@ -949,44 +964,59 @@ impl TerminalSession {
     /// next frames.
     #[frb(sync)]
     pub fn search(&self, needle: String) {
-        self.term.search(&needle);
+        self.with_access(|| {
+            self.term.search(&needle);
+        })
+        .unwrap_or_default()
     }
 
     /// The next match towards older output (`older`), or towards newer;
     /// scrolls to it.
     #[frb(sync)]
     pub fn search_step(&self, older: bool) {
-        self.term.search_step(older);
+        self.with_access(|| {
+            self.term.search_step(older);
+        })
+        .unwrap_or_default()
     }
 
     #[frb(sync)]
     pub fn end_search(&self) {
-        self.term.end_search();
+        self.with_access(|| {
+            self.term.end_search();
+        })
+        .unwrap_or_default()
     }
 
     /// The link under a point, in the logical pixels of [`Self::pointer`].
     #[frb(sync)]
     pub fn link_at(&self, x: f32, y: f32) -> Option<LinkView> {
-        self.term.link_at(x, y).map(|l| LinkView {
-            url: l.url,
-            text: l.text,
-            row: l.row,
-            start: l.start,
-            end: l.end,
+        self.with_access(|| {
+            self.term.link_at(x, y).map(|l| LinkView {
+                url: l.url,
+                text: l.text,
+                row: l.row,
+                start: l.start,
+                end: l.end,
+            })
         })
+        .unwrap_or_default()
     }
 
     /// The cursor until a program sets its own, and whether it blinks.
     #[frb(sync)]
     pub fn set_cursor(&self, style: CursorStyle, blink: bool) {
-        self.term.set_cursor(
-            match style {
-                CursorStyle::Block => terminal::CursorShape::Block,
-                CursorStyle::Bar => terminal::CursorShape::Beam,
-                CursorStyle::Underline => terminal::CursorShape::Underline,
-            },
-            blink,
-        );
+        self.with_access(|| {
+            self.term.set_cursor(
+                match style {
+                    CursorStyle::Block => terminal::CursorShape::Block,
+                    CursorStyle::Bar => terminal::CursorShape::Beam,
+                    CursorStyle::Underline => terminal::CursorShape::Underline,
+                },
+                blink,
+            );
+        })
+        .unwrap_or_default()
     }
 
     /// Selection with the mouse, in the logical pixels of [`Self::pointer`]:
@@ -994,33 +1024,49 @@ impl TerminalSession {
     /// quick presses select a word and a line.
     #[frb(sync)]
     pub fn select_press(&self, x: f32, y: f32) {
-        self.term.select_press(x, y);
+        self.with_access(|| {
+            self.term.select_press(x, y);
+        })
+        .unwrap_or_default()
     }
 
     #[frb(sync)]
     pub fn select_drag(&self, x: f32, y: f32, rectangle: bool) {
-        self.term.select_drag(x, y, rectangle);
+        self.with_access(|| {
+            self.term.select_drag(x, y, rectangle);
+        })
+        .unwrap_or_default()
     }
 
     #[frb(sync)]
     pub fn select_release(&self, x: f32, y: f32) {
-        self.term.select_release(x, y);
+        self.with_access(|| {
+            self.term.select_release(x, y);
+        })
+        .unwrap_or_default()
     }
 
     #[frb(sync)]
     pub fn select_all(&self) {
-        self.term.select_all();
+        self.with_access(|| {
+            self.term.select_all();
+        })
+        .unwrap_or_default()
     }
 
     #[frb(sync)]
     pub fn clear_selection(&self) {
-        self.term.clear_selection();
+        self.with_access(|| {
+            self.term.clear_selection();
+        })
+        .unwrap_or_default()
     }
 
     /// The selected text, for the clipboard; `None` without a selection.
     #[frb(sync)]
     pub fn selection_text(&self) -> Option<String> {
-        self.term.selection_text()
+        self.with_access(|| self.term.selection_text())
+            .unwrap_or_default()
     }
 
     /// The UI theme, which programs ask for to pick their colors: its
@@ -1034,13 +1080,16 @@ impl TerminalSession {
         cursor: u32,
         palette: Vec<u32>,
     ) {
-        let rgb = |c: u32| [(c >> 16) as u8, (c >> 8) as u8, c as u8];
-        let mut colors = [[0u8; 3]; 256];
-        for (i, c) in palette.iter().take(256).enumerate() {
-            colors[i] = rgb(*c);
-        }
-        self.term
-            .set_theme(dark, rgb(foreground), rgb(background), rgb(cursor), &colors);
+        self.with_access(|| {
+            let rgb = |c: u32| [(c >> 16) as u8, (c >> 8) as u8, c as u8];
+            let mut colors = [[0u8; 3]; 256];
+            for (i, c) in palette.iter().take(256).enumerate() {
+                colors[i] = rgb(*c);
+            }
+            self.term
+                .set_theme(dark, rgb(foreground), rgb(background), rgb(cursor), &colors);
+        })
+        .unwrap_or_default()
     }
 
     /// A key; returns whether it produced any bytes.
@@ -1053,122 +1102,166 @@ impl TerminalSession {
         text: String,
         unshifted: u32,
     ) -> bool {
-        let kind = match kind {
-            KeyKind::Down => terminal::KeyKind::Down,
-            KeyKind::Repeat => terminal::KeyKind::Repeat,
-            KeyKind::Up => terminal::KeyKind::Up,
-        };
-        self.term.key(hid_usage, kind, mods, text, unshifted)
+        self.with_access(|| {
+            let kind = match kind {
+                KeyKind::Down => terminal::KeyKind::Down,
+                KeyKind::Repeat => terminal::KeyKind::Repeat,
+                KeyKind::Up => terminal::KeyKind::Up,
+            };
+            self.term.key(hid_usage, kind, mods, text, unshifted)
+        })
+        .unwrap_or_default()
     }
 
     /// Text from an input method or soft keyboard.
     #[frb(sync)]
     pub fn text(&self, text: String) {
-        self.term.text(&text);
+        self.with_access(|| {
+            self.term.text(&text);
+        })
+        .unwrap_or_default()
     }
 
     /// False, sending nothing, if the text could run commands: confirm and
     /// call again with `allow_unsafe`.
     #[frb(sync)]
     pub fn paste(&self, text: String, allow_unsafe: bool) -> bool {
-        self.term.paste(&text, allow_unsafe)
+        self.with_access(|| self.term.paste(&text, allow_unsafe))
+            .unwrap_or_default()
     }
 
     #[frb(sync)]
     pub fn pointer(&self, action: PointerAction, button: PointerButton, mods: u16, x: f32, y: f32) {
-        let action = match action {
-            PointerAction::Down => terminal::PointerAction::Down,
-            PointerAction::Up => terminal::PointerAction::Up,
-            PointerAction::Move => terminal::PointerAction::Move,
-        };
-        let button = match button {
-            PointerButton::None => terminal::PointerButton::None,
-            PointerButton::Left => terminal::PointerButton::Left,
-            PointerButton::Middle => terminal::PointerButton::Middle,
-            PointerButton::Right => terminal::PointerButton::Right,
-        };
-        self.term.pointer(action, button, mods, x, y);
+        self.with_access(|| {
+            let action = match action {
+                PointerAction::Down => terminal::PointerAction::Down,
+                PointerAction::Up => terminal::PointerAction::Up,
+                PointerAction::Move => terminal::PointerAction::Move,
+            };
+            let button = match button {
+                PointerButton::None => terminal::PointerButton::None,
+                PointerButton::Left => terminal::PointerButton::Left,
+                PointerButton::Middle => terminal::PointerButton::Middle,
+                PointerButton::Right => terminal::PointerButton::Right,
+            };
+            self.term.pointer(action, button, mods, x, y);
+        })
+        .unwrap_or_default()
     }
 
     /// `lines` notches, positive up.
     #[frb(sync)]
     pub fn wheel(&self, lines: i32, x: f32, y: f32, mods: u16) {
-        self.term.wheel(lines, x, y, mods);
+        self.with_access(|| {
+            self.term.wheel(lines, x, y, mods);
+        })
+        .unwrap_or_default()
     }
 
     /// Scrolls the history only (a selection dragged past an edge): the
     /// program hears nothing.
     #[frb(sync)]
     pub fn scroll_history(&self, lines: i32) {
-        self.term.scroll_history(lines);
+        self.with_access(|| {
+            self.term.scroll_history(lines);
+        })
+        .unwrap_or_default()
     }
 
     #[frb(sync)]
     pub fn focus(&self, gained: bool) {
-        self.term.focus(gained);
+        self.with_access(|| {
+            self.term.focus(gained);
+        })
+        .unwrap_or_default()
     }
 
     /// Forgets the history above the screen; the program is not told.
     #[frb(sync)]
     pub fn clear_history(&self) {
-        self.term.clear_history();
+        self.with_access(|| {
+            self.term.clear_history();
+        })
+        .unwrap_or_default()
     }
 
     #[frb(sync)]
     pub fn resize(&self, cols: u16, rows: u16) {
-        self.term.resize(cols, rows);
+        self.with_access(|| {
+            self.term.resize(cols, rows);
+        })
+        .unwrap_or_default()
     }
 
     #[frb(sync)]
     pub fn set_cell_pixels(&self, width: f32, height: f32) {
-        self.term.set_cell_pixels(width, height);
+        self.with_access(|| {
+            self.term.set_cell_pixels(width, height);
+        })
+        .unwrap_or_default()
     }
 
     #[frb(sync)]
     pub fn set_option_as_alt(&self, which: OptionAlt) {
-        self.term.set_option_as_alt(match which {
-            OptionAlt::Off => terminal::OptionAsAlt::Off,
-            OptionAlt::Both => terminal::OptionAsAlt::Both,
-            OptionAlt::Left => terminal::OptionAsAlt::Left,
-            OptionAlt::Right => terminal::OptionAsAlt::Right,
-        });
+        self.with_access(|| {
+            self.term.set_option_as_alt(match which {
+                OptionAlt::Off => terminal::OptionAsAlt::Off,
+                OptionAlt::Both => terminal::OptionAsAlt::Both,
+                OptionAlt::Left => terminal::OptionAsAlt::Left,
+                OptionAlt::Right => terminal::OptionAsAlt::Right,
+            });
+        })
+        .unwrap_or_default()
     }
 
     #[frb(sync)]
     pub fn screen_text(&self) -> String {
-        self.term.screen_text()
+        self.with_access(|| self.term.screen_text())
+            .unwrap_or_default()
     }
 
     /// A line of OpenWard's own on the screen (escape sequences allowed),
     /// never sent to the program: where a new shell starts after a cut.
     #[frb(sync)]
     pub fn note(&self, text: String) {
-        self.term.note(&text);
+        self.with_access(|| {
+            self.term.note(&text);
+        })
+        .unwrap_or_default()
     }
 
     /// The cursor's cell while the live screen is on view: where a prompt
     /// begins, read when typing starts.
     #[frb(sync)]
     pub fn cursor_cell(&self) -> Option<CellPos> {
-        self.term
-            .cursor_cell()
-            .map(|(row, col)| CellPos { row, col })
+        self.with_access(|| {
+            self.term
+                .cursor_cell()
+                .map(|(row, col)| CellPos { row, col })
+        })
+        .unwrap_or_default()
     }
 
     /// What was typed since `start` (see [`Self::cursor_cell`]): for the
     /// command history.
     #[frb(sync)]
     pub fn typed_since(&self, start: CellPos) -> Option<TypedLine> {
-        self.term
-            .typed_since((start.row, start.col))
-            .map(|(text, after)| TypedLine { text, after })
+        self.with_access(|| {
+            self.term
+                .typed_since((start.row, start.col))
+                .map(|(text, after)| TypedLine { text, after })
+        })
+        .unwrap_or_default()
     }
 
     /// The next poll returns the whole screen: after the UI dropped its
     /// cached rows (new font, theme or pixel density).
     #[frb(sync)]
     pub fn redraw(&self) {
-        self.term.redraw();
+        self.with_access(|| {
+            self.term.redraw();
+        })
+        .unwrap_or_default()
     }
 
     /// Ends the connection or program; the screen stays until dropped.
@@ -1181,32 +1274,40 @@ impl TerminalSession {
     /// one); false if this is not a serial port.
     #[frb(sync)]
     pub fn send_break(&self) -> bool {
-        self.term.send_break()
+        self.with_access(|| self.term.send_break())
+            .unwrap_or_default()
     }
 
     /// A command ran (the UI saw it at Enter): a marker in the session's
     /// recording, to jump to it.
     #[frb(sync)]
     pub fn log_command(&self, command: String) {
-        self.term.log_command(&command);
+        self.with_access(|| {
+            self.term.log_command(&command);
+        })
+        .unwrap_or_default()
     }
 
     /// Stops recording what comes out, or starts again. False when there
     /// is no recording, or it already was so.
     #[frb(sync)]
     pub fn pause_log(&self, paused: bool) -> bool {
-        self.term.pause_log(paused)
+        self.with_access(|| self.term.pause_log(paused))
+            .unwrap_or_default()
     }
 
     /// The session log kept now, if any.
     #[frb(sync)]
     pub fn log_state(&self) -> Option<LogStateView> {
-        self.term.log_state().map(|s| LogStateView {
-            id: s.id,
-            recording: s.recording,
-            paused: s.paused,
-            failed: s.failed,
+        self.with_access(|| {
+            self.term.log_state().map(|s| LogStateView {
+                id: s.id,
+                recording: s.recording,
+                paused: s.paused,
+                failed: s.failed,
+            })
         })
+        .unwrap_or_default()
     }
 }
 

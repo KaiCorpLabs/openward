@@ -436,6 +436,17 @@ class TerminalController extends ConnectionController {
     _notify();
   }
 
+  void redact() {
+    _renderer?.redact();
+    title = '';
+    findText = '';
+    findTotal = 0;
+    findSelected = null;
+    prompts.clear();
+    line.reset();
+    sendWhenUp = null;
+  }
+
   /// Applies what changed since the last poll. Returns true if anything did.
   bool poll() {
     final renderer = _renderer;

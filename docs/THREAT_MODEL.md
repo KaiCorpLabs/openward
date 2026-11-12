@@ -5,6 +5,23 @@
 - **Alcance:** el cliente de escritorio en macOS, Windows y Linux. La sync (v0.5), el servidor y las cuentas (v0.6), el móvil y la IA tienen su sitio en el [§8](#8-lo-que-llega-después), con lo que ya se sabe que traerán.
 - **Base:** [ARCHITECTURE §11](ARCHITECTURE.md#11-seguridad-y-cadena-de-suministro), [ADR-003](adr/ADR-003-ssh-russh-y-firmantes.md) (SSH), [ADR-004](adr/ADR-004-vault-y-jerarquia-de-claves.md) (vault y claves) y [ADR-005](adr/ADR-005-sync-por-registros-de-dispositivo.md) (sync).
 
+## Estado de implementación D4 (2026-11-12)
+
+La [sesión local v1](../spec/vault-session-v1.md) añade alta optativa con kit mínimo,
+arranque bloqueado, contraseña y factores nativos opcionales, bloqueo manual,
+por inactividad y señales de suspensión. La revocación se comprueba también en
+la FFI, no solo en la pantalla Flutter. Las sesiones establecidas siguen vivas
+con su estado Rust en memoria; el bloqueo impide mostrarlo o enviar entrada
+mediante sus handles de UI. Se descartan índice, claves y cachés visuales.
+
+Esto aún no cumple todas las garantías finales del §5: historial, recientes,
+logs y archivos SSH siguen fuera del vault (D6), el alta obligatoria/«Más tarde»
+aún no está activa y la recuperación completa sigue en D5. La autenticación
+física y la firma SSH con Secure Enclave no se dan por validadas por mocks o CI.
+La sonda ad hoc pudo crear una clave efímera no exportable, pero Touch ID devolvió
+SystemCancel; detalles y reproducción en la especificación. No hay fallback
+silencioso de biometría a un llavero sin autenticación adicional.
+
 ## 1. Qué se protege
 
 | Activo | Por qué importa |

@@ -446,6 +446,9 @@ impl VaultHeader {
             &self.wrapped,
         );
         let secret = self.local.open(password, &context)?;
+        self.restore_keys(&secret)
+    }
+    pub(crate) fn restore_keys(&self, secret: &[u8]) -> Result<UnlockedKeys, Error> {
         if secret.len() != 96 {
             return Err(Error::Encoding);
         }

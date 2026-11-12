@@ -949,6 +949,9 @@ class VaultError implements FrbException {
 /// What went wrong with a change to the vault, for the app to say it in
 /// its own words.
 enum VaultErrorKind {
+  /// The vault was locked; the operation must be retried after unlocking.
+  locked,
+
   /// It changed meanwhile (connecting learned the system, another
   /// window): read it again.
   conflict,

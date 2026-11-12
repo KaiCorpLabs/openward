@@ -294,6 +294,17 @@ pub(crate) fn install(
     password: &[u8],
     params: KdfParams,
     migrate: bool,
+    phase: impl FnMut(Phase) -> Result<()>,
+) -> Result<LockedVault> {
+    install_with_recovery(input, password, params, migrate, None, phase)
+}
+
+pub(crate) fn install_with_recovery(
+    input: &Path,
+    password: &[u8],
+    params: KdfParams,
+    migrate: bool,
+    recovery: Option<&openward_crypto::unlock::RecoveryKit>,
     mut phase: impl FnMut(Phase) -> Result<()>,
 ) -> Result<LockedVault> {
     let (path, identity) = path(input, migrate)?;
@@ -365,6 +376,17 @@ pub(crate) fn install(
             meta.to_bytes()
         ],
     )?;
+    if let Some(kit) = recovery {
+        use openward_crypto::unlock::{Purpose, UnlockBox};
+        let sealed = UnlockBox::seal(&header, &keys, kit.secret(), Purpose::Recovery)?;
+        let bytes = sealed.to_bytes();
+        // Verify the serialized record before the install commit point.
+        UnlockBox::from_bytes(&bytes)?.open(&header, kit.secret(), Purpose::Recovery)?;
+        tx.execute(
+            "INSERT INTO meta VALUES (?1,?2)",
+            params![crate::factors::RECOVERY, bytes],
+        )?;
+    }
     let mut count = 0usize;
     let mut clock = 0;
     if let Some(source) = &source {

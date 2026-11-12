@@ -18,6 +18,7 @@ openward-sftp = { path = "../openward-sftp" }
 openward-ssh = { path = "../openward-ssh" }
 openward-telnet = { path = "../openward-telnet" }
 openward-term = { path = "../openward-term" }
+openward-crypto = { path = "../openward-crypto" }
 openward-vault = { path = "../openward-vault" }
 anyhow = "1"
 # A host's character set when it is not UTF-8 (Latin-1, Shift-JIS…).
@@ -34,6 +35,18 @@ tempfile = "3"
 thiserror = "2"
 tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "io-util", "macros"] }
 zeroize = "1"
+getrandom = "0.4"
+sha2 = { version = "0.11", features = ["zeroize"] }
+zxcvbn = "=3.1.1"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = { version = "=3.7.0", features = ["OSX_10_15"] }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "=0.62.2", features = ["Security_Credentials", "Security_Cryptography", "Storage_Streams", "Foundation"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+secret-service = { version = "=6.0.0-rc.1", default-features = false, features = ["rt-default", "crypto-rust"] }
 
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "1.1.6", features = ["process", "fs"] }

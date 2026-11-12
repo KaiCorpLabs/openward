@@ -144,6 +144,11 @@ bool isControlText(String s) =>
 /// and a letter, and Ctrl+Tab, as other terminals do (unless the program
 /// comes first: [terminalKeysFirst]).
 bool isAppShortcut(KeyEvent event, int mods) {
+  // Vault locking must remain available even in terminal-keys-first mode.
+  if (event.logicalKey == LogicalKeyboardKey.keyL &&
+      mods & (Mods.ctrl | Mods.alt) == (Mods.ctrl | Mods.alt)) {
+    return true;
+  }
   if (macShortcuts) return mods & Mods.superKey != 0;
   final ctrlShift = Mods.ctrl | Mods.shift;
   final key = event.logicalKey;
