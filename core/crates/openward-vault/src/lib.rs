@@ -9,6 +9,7 @@
 //! Every item is loaded at open and served from memory; writes go to SQLite
 //! first and then to the index.
 
+pub mod backup;
 mod factors;
 mod inherit;
 mod migration;

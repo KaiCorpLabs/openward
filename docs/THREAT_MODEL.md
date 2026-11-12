@@ -5,7 +5,7 @@
 - **Alcance:** el cliente de escritorio en macOS, Windows y Linux. La sync (v0.5), el servidor y las cuentas (v0.6), el móvil y la IA tienen su sitio en el [§8](#8-lo-que-llega-después), con lo que ya se sabe que traerán.
 - **Base:** [ARCHITECTURE §11](ARCHITECTURE.md#11-seguridad-y-cadena-de-suministro), [ADR-003](adr/ADR-003-ssh-russh-y-firmantes.md) (SSH), [ADR-004](adr/ADR-004-vault-y-jerarquia-de-claves.md) (vault y claves) y [ADR-005](adr/ADR-005-sync-por-registros-de-dispositivo.md) (sync).
 
-## Estado de implementación D4–D6 (2026-11-12)
+## Estado de implementación D4–D7 (2026-11-12)
 
 La [sesión local v1](../spec/vault-session-v1.md) añade alta optativa con kit mínimo,
 arranque bloqueado, contraseña y factores nativos opcionales, bloqueo manual,
@@ -21,6 +21,14 @@ y autenticación correcta, e historial, recientes y registros cifrados (D0-2).
 La versión3 del almacén bloquea clientes antiguos antes de cifrar datos auxiliares.
 Una grabación activa retiene solo su clave propia y continúa con la app bloqueada.
 Una migración incompleta o corrupta conserva datos y deja la app bloqueada.
+
+[D7](../spec/vault-backup-v1.md) añade copias `.owvault` autenticadas, abiertas
+por contraseña o kit, y JSON en claro solo con aviso y contraseña actual.
+La restauración requiere un destino cifrado vacío, conserva sus propias claves
+y credenciales y rechaza conflictos, archivos alterados y cambios tras la vista
+previa. El JSON es estructuralmente validado pero no autentica su origen.
+Las copias contienen el vault; no incluyen archivos externos ni datos locales
+D6 (historial, recientes y grabaciones). Las copias antiguas mantienen sus factores.
 
 El alta obligatoria/«Más tarde» sigue pendiente de D8; las claves por archivo son
 una opción explícita. Exportaciones y copias anteriores conservan su protección

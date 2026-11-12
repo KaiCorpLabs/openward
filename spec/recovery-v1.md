@@ -131,3 +131,10 @@ Windows Rust jobs. Flutter tests cover proof, errors/retries and disposed widget
 the generated-bridge integration test exercises setup, QR/PDF, rotation, both
 password-change authorizations and old-factor rejection. The PDF is rendered and
 its QR independently decoded against the complete extracted printable code.
+
+## D7 backup integration
+
+[Vault backup v1](vault-backup-v1.md) now specifies portable encrypted and JSON
+copies. Restoration re-encrypts logical items under a new destination identity;
+it preserves that destination's password/kit. Device-local history/recordings and
+external key files are excluded. The original D4/D5/D6 scope above is historical.

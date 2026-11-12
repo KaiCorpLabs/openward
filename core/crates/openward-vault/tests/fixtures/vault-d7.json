@@ -1,0 +1,33 @@
+{
+  "format": "openward-vault",
+  "version": 1,
+  "private_metadata_hex": "4f57504d0100000000",
+  "items": [
+    {
+      "id": "01a1d10a-786f-7419-bfc5-5736f1b79f6f",
+      "revision": 1,
+      "body_cbor_hex": "bf67637265617465641b000001a1d10a786f686d6f6469666965641b000001a1d10a786f647479706564686f7374656c6162656c78185075626c6963204437206261636b7570206669787475726567616464726573736e6261636b75702e696e76616c6964ff",
+      "body": {
+        "created": 1794508486767,
+        "modified": 1794508486767,
+        "type": "host",
+        "label": "Public D7 backup fixture",
+        "address": "backup.invalid"
+      }
+    },
+    {
+      "id": "01a1d10a-7870-70ba-ae72-2900b0a6e5d8",
+      "revision": 1,
+      "body_cbor_hex": "bf67637265617465641b000001a1d10a7870686d6f6469666965641b000001a1d10a7870647479706566736563726574646b696e646850617373776f7264656c6162656c755075626c69632066697874757265207365637265746762696e64696e676f666978747572653a62696e64696e676576616c7565757075626c6963204437207465737420736563726574ff",
+      "body": {
+        "created": 1794508486768,
+        "modified": 1794508486768,
+        "type": "secret",
+        "kind": "Password",
+        "label": "Public fixture secret",
+        "binding": "fixture:binding",
+        "value": "public D7 test secret"
+      }
+    }
+  ]
+}

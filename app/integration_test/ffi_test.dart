@@ -14,6 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:openward/core/version.dart';
 import 'package:openward/src/rust/api/app.dart';
+import 'package:openward/src/rust/api/backups.dart';
 import 'package:openward/src/rust/api/identities.dart';
 import 'package:openward/src/rust/api/keychain.dart';
 import 'package:openward/src/rust/api/known_hosts.dart';
@@ -315,6 +316,134 @@ void main() {
         app.eraseLocalDocument(kind: LocalDocument.history);
         expect(File('${dir.path}/data/history.json').existsSync(), isFalse);
       } finally {
+        app.dispose();
+      }
+    },
+  );
+
+  test(
+    'D7 portable backups restore into independent vaults by kit and JSON',
+    () async {
+      const sourcePassword = 'Meteor-7-Parchment-Unfurl-Quartz-92!';
+      const targetPassword = 'Larch-93-Quietly-Orbit-Parchment-72!';
+      final targets = <OpenWard>[];
+      try {
+        final kit = await app.prepareVault(password: sourcePassword);
+        final groups = kit.split('-');
+        await app.completeVaultSetup(group3: groups[3], group12: groups[12]);
+        final id = await app.createHost(
+          spec: const HostSpec(label: 'D7 host', address: 'backup.invalid'),
+        );
+        final made = await app.generateVaultKey(
+          name: 'D7 private key',
+          kind: SshKeyType.ed25519,
+          comment: 'public fixture',
+        );
+        expect(made.failure, isNull);
+        final public = await app.publicKeyLine(path: made.key!.path);
+        final archive = '${dir.path}/copy.owvault';
+        final json = '${dir.path}/copy.json';
+        await app.exportVaultBackup(
+          path: archive,
+          format: BackupFormat.encrypted,
+          password: '',
+          acknowledgePlaintext: false,
+        );
+        await expectLater(
+          app.exportVaultBackup(
+            path: json,
+            format: BackupFormat.json,
+            password: 'wrong',
+            acknowledgePlaintext: true,
+          ),
+          throwsA(isA<VaultError>()),
+        );
+        expect(File(json).existsSync(), isFalse);
+        await app.exportVaultBackup(
+          path: json,
+          format: BackupFormat.json,
+          password: sourcePassword,
+          acknowledgePlaintext: true,
+        );
+        final original = await File(archive).readAsBytes();
+        for (final mode in [BackupFormat.encrypted, BackupFormat.json]) {
+          final target = await OpenWard.openWithHome(
+            dataDir: '${dir.path}/restore-${mode.name}/data',
+            home: '${dir.path}/restore-${mode.name}',
+          );
+          targets.add(target);
+          final targetKit = await target.prepareVault(password: targetPassword);
+          final parts = targetKit.split('-');
+          await target.completeVaultSetup(group3: parts[3], group12: parts[12]);
+          final path = mode == BackupFormat.encrypted ? archive : json;
+          final credential = mode == BackupFormat.encrypted ? kit : '';
+          final view = await target.previewVaultBackup(
+            path: path,
+            credential: credential,
+            useKit: true,
+          );
+          expect(view.items, 2);
+          expect(view.secrets, 1);
+          expect(view.destinationEmpty, isTrue);
+          expect(target.hosts(), isEmpty);
+          await expectLater(
+            target.restoreVaultBackup(
+              path: path,
+              credential: credential,
+              useKit: true,
+              expectedDigest: view.digest,
+              confirmed: false,
+            ),
+            throwsA(isA<VaultError>()),
+          );
+          if (mode == BackupFormat.encrypted) {
+            final changed = List<int>.of(original);
+            changed[changed.length - 1] ^= 1;
+            await File(path).writeAsBytes(changed);
+            await expectLater(
+              target.restoreVaultBackup(
+                path: path,
+                credential: credential,
+                useKit: true,
+                expectedDigest: view.digest,
+                confirmed: true,
+              ),
+              throwsA(isA<VaultError>()),
+            );
+            expect(target.hosts(), isEmpty);
+            await File(path).writeAsBytes(original);
+          }
+          await target.restoreVaultBackup(
+            path: path,
+            credential: credential,
+            useKit: true,
+            expectedDigest: view.digest,
+            confirmed: true,
+          );
+          expect(target.host(id: id).spec.label, 'D7 host');
+          expect(await target.publicKeyLine(path: made.key!.path), public);
+          await expectLater(
+            target.restoreVaultBackup(
+              path: path,
+              credential: credential,
+              useKit: true,
+              expectedDigest: view.digest,
+              confirmed: true,
+            ),
+            throwsA(isA<VaultError>()),
+          );
+          await target.lockVault();
+          await expectLater(
+            target.unlockVault(password: sourcePassword),
+            throwsA(isA<VaultError>()),
+          );
+          await target.recoverVault(kit: targetKit);
+          expect(target.host(id: id).spec.address, 'backup.invalid');
+        }
+      } finally {
+        for (final target in targets) {
+          target.dispose();
+        }
         app.dispose();
       }
     },

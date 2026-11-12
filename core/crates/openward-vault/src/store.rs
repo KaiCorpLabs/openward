@@ -99,7 +99,7 @@ pub struct Store {
     pub(crate) lock: Option<ProcessLock>,
     pub(crate) header: Option<VaultHeader>,
     pub(crate) keys: Option<UnlockedKeys>,
-    clock: u64,
+    pub(crate) clock: u64,
 }
 impl Store {
     pub fn open(path: &Path) -> Result<Self> {

@@ -163,3 +163,10 @@ kit regeneration and two-factor portable account package. Its local kit cache
 and atomic updates extend these records without changing OWLU1/OWRK1 or item
 ciphertext. Earlier D4 vaults upgrade with the active kit or password-authorized
 kit regeneration.
+
+## D7 backup integration
+
+[Vault backup v1](vault-backup-v1.md) now specifies portable encrypted and JSON
+copies. Restoration re-encrypts logical items under a new destination identity;
+it preserves that destination's password/kit. Device-local history/recordings and
+external key files are excluded. The original D4/D5/D6 scope above is historical.

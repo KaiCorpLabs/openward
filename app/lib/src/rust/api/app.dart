@@ -4,6 +4,7 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'backups.dart';
 import 'credentials.dart';
 import 'identities.dart';
 import 'keychain.dart';
@@ -149,6 +150,13 @@ abstract class OpenWard implements RustOpaqueInterface {
   });
 
   Future<void> exportPreparedRecovery({required String path});
+
+  Future<void> exportVaultBackup({
+    required String path,
+    required BackupFormat format,
+    required String password,
+    required bool acknowledgePlaintext,
+  });
 
   Future<void> exportVaultKey({required String path, required String to});
 
@@ -385,6 +393,12 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// file's order. An empty list: no file, or no hosts in it.
   Future<List<ImportPreview>> previewSshConfig({String? file});
 
+  Future<BackupPreview> previewVaultBackup({
+    required String path,
+    required String credential,
+    required bool useKit,
+  });
+
   /// A key's public half, as an `authorized_keys` line.
   Future<String?> publicKeyLine({required String path});
 
@@ -424,6 +438,14 @@ abstract class OpenWard implements RustOpaqueInterface {
     required String id,
     required BigInt rev,
     required String name,
+  });
+
+  Future<void> restoreVaultBackup({
+    required String path,
+    required String credential,
+    required bool useKit,
+    required String expectedDigest,
+    required bool confirmed,
   });
 
   Future<void> resumeLegacyVault();

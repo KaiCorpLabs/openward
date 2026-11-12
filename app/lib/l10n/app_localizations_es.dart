@@ -6534,4 +6534,77 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get vaultLocalDataError =>
       'No se pudo completar la protección de los datos locales. El vault sigue bloqueado y no se ha borrado. Comprueba el espacio y los permisos; si hay archivos dañados, restáuralos desde una copia y vuelve a intentarlo.';
+
+  @override
+  String get backupTitle => 'Copias de seguridad del vault';
+
+  @override
+  String get backupScope =>
+      'Incluye los elementos del vault, las claves privadas y las credenciales guardadas. Los archivos por ruta, ajustes, historial, recientes y grabaciones son locales y no se incluyen.';
+
+  @override
+  String get backupUnlockFirst =>
+      'Primero activa el cifrado y desbloquea el vault.';
+
+  @override
+  String get backupExportEncrypted => 'Exportar .owvault';
+
+  @override
+  String get backupExportJson => 'Exportar JSON en claro';
+
+  @override
+  String get backupRestore => 'Restaurar copia';
+
+  @override
+  String get backupPlaintextWarning =>
+      'El JSON no está cifrado. Quien lo lea puede obtener claves privadas, contraseñas y los demás datos del vault. Guárdalo en un lugar seguro y bórralo cuando ya no lo necesites.';
+
+  @override
+  String get backupAcknowledge =>
+      'Entiendo que este archivo deja expuestos los datos del vault.';
+
+  @override
+  String get backupRestoreExplain =>
+      'Restaura en un vault cifrado nuevo y vacío. Seguirá usando su propia contraseña y kit de recuperación. Los datos existentes nunca se reemplazan.';
+
+  @override
+  String get backupUseKit => 'Abrir .owvault con su kit de recuperación';
+
+  @override
+  String get backupCredentialExplain =>
+      'Para .owvault, escribe la contraseña o el kit que tenía al crear esa copia. Para JSON, deja este campo vacío.';
+
+  @override
+  String get backupSourceCredential => 'Contraseña o kit de la copia';
+
+  @override
+  String get backupPreview => 'Comprobar copia';
+
+  @override
+  String get backupNeedsEmpty =>
+      'Este vault no está vacío. Usa una carpeta de datos nueva y crea allí un vault cifrado antes de restaurar.';
+
+  @override
+  String get backupConfirmRestore =>
+      'Restaurar los datos comprobados en este vault vacío.';
+
+  @override
+  String get backupFailed =>
+      'No se pudo completar la operación. Revisa la credencial, versión e integridad del archivo, permisos del destino y espacio libre. Los datos existentes no se han reemplazado.';
+
+  @override
+  String get backupExported =>
+      'Copia guardada. Conserva su contraseña o kit de recuperación por separado.';
+
+  @override
+  String get backupRestored =>
+      'Vault restaurado. Comprueba los hosts y claves antes de conectar.';
+
+  @override
+  String get backupSave => 'Guardar copia';
+
+  @override
+  String backupSummary(int items, int secrets, int unreadable) {
+    return '$items elementos, $secrets secretos guardados, $unreadable elementos conservados para una versión posterior.';
+  }
 }

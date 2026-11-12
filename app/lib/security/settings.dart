@@ -9,6 +9,7 @@ import '../l10n/l10n.dart';
 import '../src/rust/api/security.dart';
 import 'state.dart';
 import 'credentials.dart';
+import 'backups.dart';
 import 'recovery.dart';
 import 'unlock.dart';
 
@@ -154,6 +155,8 @@ class _VaultSettingsState extends ConsumerState<VaultSettings> {
               ),
             ),
         ],
+        const SizedBox(height: 24),
+        const VaultBackups(),
         if (error != null)
           Text(
             error!,

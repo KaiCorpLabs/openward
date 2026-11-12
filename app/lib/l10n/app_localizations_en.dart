@@ -6507,4 +6507,77 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get vaultLocalDataError =>
       'Local data protection could not finish. The vault remains locked and has not been erased. Check free space and permissions; restore damaged files from a backup and retry.';
+
+  @override
+  String get backupTitle => 'Vault backups';
+
+  @override
+  String get backupScope =>
+      'Includes vault items, saved private keys and credentials. Files referenced by path, settings, history, recent connections and recordings stay local and are not included.';
+
+  @override
+  String get backupUnlockFirst =>
+      'First enable encryption and unlock the vault.';
+
+  @override
+  String get backupExportEncrypted => 'Export .owvault';
+
+  @override
+  String get backupExportJson => 'Export plaintext JSON';
+
+  @override
+  String get backupRestore => 'Restore backup';
+
+  @override
+  String get backupPlaintextWarning =>
+      'JSON is not encrypted. Anyone who can read it can obtain private keys, passwords and other vault data. Store it securely and delete it when no longer needed.';
+
+  @override
+  String get backupAcknowledge =>
+      'I understand that this file exposes the vault data.';
+
+  @override
+  String get backupRestoreExplain =>
+      'Restore into a new, empty encrypted vault. Its own password and recovery kit remain in use. Existing data is never replaced.';
+
+  @override
+  String get backupUseKit => 'Open .owvault with its recovery kit';
+
+  @override
+  String get backupCredentialExplain =>
+      'For .owvault, enter the password or kit used when that copy was made. For JSON, leave this field empty.';
+
+  @override
+  String get backupSourceCredential => 'Backup password or recovery kit';
+
+  @override
+  String get backupPreview => 'Check backup';
+
+  @override
+  String get backupNeedsEmpty =>
+      'This vault is not empty. Use a new data folder and create an encrypted vault there before restoring.';
+
+  @override
+  String get backupConfirmRestore =>
+      'Restore the checked data into this empty vault.';
+
+  @override
+  String get backupFailed =>
+      'Could not complete the operation. Check the credential, file version and integrity, destination permissions and free space. Existing data has not been replaced.';
+
+  @override
+  String get backupExported =>
+      'Backup saved. Keep its password or recovery kit separately.';
+
+  @override
+  String get backupRestored =>
+      'Vault restored. Verify the hosts and keys before connecting.';
+
+  @override
+  String get backupSave => 'Save backup';
+
+  @override
+  String backupSummary(int items, int secrets, int unreadable) {
+    return '$items items, $secrets saved secrets, $unreadable items preserved for a newer version.';
+  }
 }

@@ -175,6 +175,22 @@ impl Vault {
         self.store.header = Some(update.header);
         Ok(())
     }
+    pub(crate) fn verified_backup_recovery(&self) -> Result<Vec<u8>> {
+        let header = self.store.header.as_ref().ok_or(Error::Locked)?;
+        let keys = self.store.keys.as_ref().ok_or(Error::Locked)?;
+        let cache = bounded(&self.store.conn, CACHE, 77)?.ok_or(Error::Invalid(
+            "regenerate the recovery kit before exporting this older vault",
+        ))?;
+        let kit = open_local_kit(&cache, header, keys)?;
+        let record = bounded(&self.store.conn, RECOVERY, 512)?
+            .ok_or(Error::Invalid("missing recovery kit"))?;
+        let checked =
+            UnlockBox::from_bytes(&record)?.open(header, kit.secret(), Purpose::Recovery)?;
+        if checked.vault.secret() != keys.vault.secret() {
+            return Err(Error::Invalid("recovery verification failed"));
+        }
+        Ok(record)
+    }
     pub fn account_package(&self) -> Result<Option<Vec<u8>>> {
         if self.is_locked() {
             return Err(Error::Locked);

@@ -8,6 +8,7 @@
 //! as the attempt that uses them.
 
 pub mod alive;
+pub mod backups;
 pub mod charset;
 pub mod events;
 pub mod import;
