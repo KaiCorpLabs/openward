@@ -146,6 +146,20 @@ enum Reply {
     },
 }
 
+/// An owned authentication response: wiped on drop and redacted in diagnostics.
+pub struct AuthResponse(zeroize::Zeroizing<String>);
+impl From<String> for AuthResponse {
+    fn from(value: String) -> Self { Self(zeroize::Zeroizing::new(value)) }
+}
+impl std::fmt::Debug for AuthResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("[REDACTED]")
+    }
+}
+impl AuthResponse {
+    pub(crate) fn as_str(&self) -> &str { self.0.as_str() }
+}
+
 #[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum Msg {
@@ -154,7 +168,7 @@ pub enum Msg {
         method: auth::Method,
     },
     AuthInfoResponse {
-        responses: Vec<zeroize::Zeroizing<String>>,
+        responses: Vec<AuthResponse>,
     },
     AuthGssapiToken {
         token: Vec<u8>,
@@ -395,7 +409,7 @@ impl<H: Handler> Handle<H> {
         responses: Vec<String>,
     ) -> Result<KeyboardInteractiveAuthResponse, crate::Error> {
         self.sender
-            .send(Msg::AuthInfoResponse { responses: responses.into_iter().map(zeroize::Zeroizing::new).collect() })
+            .send(Msg::AuthInfoResponse { responses: responses.into_iter().map(AuthResponse::from).collect() })
             .await
             .map_err(|_| crate::Error::SendError)?;
         self.wait_recv_keyboard_interactive_reply().await

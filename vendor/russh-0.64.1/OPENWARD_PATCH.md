@@ -14,7 +14,7 @@ OpenWard changes these upstream source files:
 - `src/client/mod.rs`: exports that verification function so OpenWard's
   regression suite can exercise it with real RSA signatures, without a
   second implementation of the check. D6 also wraps queued keyboard-interactive
-  responses in `Zeroizing<String>` on entry; they are redacted from Debug.
+  responses in an owned `AuthResponse(Zeroizing<String>)` on entry; they are redacted from Debug.
 - `src/client/encrypted.rs`: encodes those zeroizing responses by borrowed str,
   preserving the wire protocol and releasing/wiping queue-owned values after use.
 

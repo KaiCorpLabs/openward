@@ -544,7 +544,12 @@ pub(crate) fn seal_file(path: &Path, key: Arc<LocalKey>) -> io::Result<()> {
         false,
     )?;
     io::copy(&mut check, &mut io::sink())?;
-    temp.persist(path).map_err(|e| e.error)?;
+    // Windows requires the verification/source handles closed before replace.
+    drop(check);
+    drop(source);
+    // Close the staging file itself too; TempPath keeps cleanup-on-error.
+    let stage = temp.into_temp_path();
+    stage.persist(path).map_err(|e| e.error)?;
     sync_parent(path)
 }
 

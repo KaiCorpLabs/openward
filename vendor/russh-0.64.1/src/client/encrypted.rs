@@ -1588,7 +1588,7 @@ impl Encrypted {
         Ok(())
     }
 
-    fn client_send_auth_response(&mut self, responses: &[zeroize::Zeroizing<String>]) -> Result<(), crate::Error> {
+    fn client_send_auth_response(&mut self, responses: &[super::AuthResponse]) -> Result<(), crate::Error> {
         push_packet!(self.write, {
             msg::USERAUTH_INFO_RESPONSE.encode(&mut self.write)?;
             (responses.len().try_into().unwrap_or(0) as u32).encode(&mut self.write)?; // number of responses

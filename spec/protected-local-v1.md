@@ -60,6 +60,7 @@ Legacy history/recent documents, `.json.tmp` and `.json.bad` aliases, and sessio
 metadata/recordings migrate idempotently with verified ciphertext staged in a
 0600 temporary file and atomic replacement. Unix directory entries are synced
 after installation, in particular before a new recording uses its key wrapper.
+Verification/source file handles are closed before replacement for Windows.
 Other platforms retain the file synchronization and replacement semantics used
 by the vault installer. Source files are retained if sealing
 or verification fails. Symlinks and Unix hardlinks are refused. Authentication,
