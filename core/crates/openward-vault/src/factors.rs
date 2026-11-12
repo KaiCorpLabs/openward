@@ -9,7 +9,7 @@ use rusqlite::OptionalExtension;
 use std::path::Path;
 
 pub(crate) const RECOVERY: &str = "local_recovery_v1";
-const NATIVE: &str = "local_native_v1";
+pub(crate) const NATIVE: &str = "local_native_v1";
 
 impl Vault {
     pub fn migrate_with_recovery(

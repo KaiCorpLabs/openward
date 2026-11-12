@@ -6409,4 +6409,53 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get vaultCompatibility =>
       'After encryption, older versions cannot open this vault. Keep the kit; no new plaintext copy is created.';
+
+  @override
+  String get vaultChangePassword => 'Change password';
+
+  @override
+  String get vaultRegenerateKit => 'Regenerate recovery kit';
+
+  @override
+  String get vaultCurrentPassword => 'Current password';
+
+  @override
+  String get vaultNewPassword => 'New password';
+
+  @override
+  String get vaultChangeExplain =>
+      'Authorize with the current password or recovery kit. Your data and kit are preserved; native unlock must be enabled again.';
+
+  @override
+  String get vaultPasswordChanged =>
+      'Password changed. Your recovery kit still works.';
+
+  @override
+  String get vaultPasswordChangeError =>
+      'Password unchanged. Check the authorization and choose a strong password. For a vault created with an earlier version, regenerate its kit with the current password first, or authorize with the existing kit.';
+
+  @override
+  String get vaultRotateWarning =>
+      'The current password is required. The old kit works until you confirm the new one. Save the new sheet before confirming.';
+
+  @override
+  String get vaultKitCopies =>
+      'This kit does not contain your data. Keep an encrypted vault backup too. Regeneration does not revoke kits in older copies.';
+
+  @override
+  String get vaultSavePdf => 'Save printable PDF…';
+
+  @override
+  String get vaultPdfError =>
+      'PDF not saved. Choose a new .pdf file and a writable folder.';
+
+  @override
+  String get vaultQrLabel =>
+      'Recovery kit QR. Contains the same secret as the text.';
+
+  @override
+  String get vaultUseKit => 'Use recovery kit';
+
+  @override
+  String get vaultConfirmReplacement => 'Activate new kit';
 }

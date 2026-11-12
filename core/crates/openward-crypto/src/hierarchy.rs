@@ -470,6 +470,9 @@ impl VaultHeader {
             vault,
         })
     }
+    pub fn kdf_params(&self) -> KdfParams {
+        self.local.params()
+    }
     pub fn vault_id(&self) -> Id {
         self.vault
     }

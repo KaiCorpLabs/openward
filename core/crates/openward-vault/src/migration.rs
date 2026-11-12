@@ -377,15 +377,17 @@ pub(crate) fn install_with_recovery(
         ],
     )?;
     if let Some(kit) = recovery {
-        use openward_crypto::unlock::{Purpose, UnlockBox};
-        let sealed = UnlockBox::seal(&header, &keys, kit.secret(), Purpose::Recovery)?;
-        let bytes = sealed.to_bytes();
-        // Verify the serialized record before the install commit point.
-        UnlockBox::from_bytes(&bytes)?.open(&header, kit.secret(), Purpose::Recovery)?;
-        tx.execute(
-            "INSERT INTO meta VALUES (?1,?2)",
-            params![crate::factors::RECOVERY, bytes],
-        )?;
+        // All factors, the locally sealed kit and the portable D0-1 package
+        // are verified and committed inside the staged encrypted database.
+        crate::recovery::CredentialUpdate::prepare(
+            header.clone(),
+            &keys,
+            password,
+            params,
+            kit,
+            false,
+        )?
+        .write(&tx)?;
     }
     let mut count = 0usize;
     let mut clock = 0;

@@ -6434,4 +6434,53 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get vaultCompatibility =>
       'Después de cifrar, las versiones antiguas no podrán abrir este vault. Conserva el kit; no se crea una copia nueva en claro.';
+
+  @override
+  String get vaultChangePassword => 'Cambiar la contraseña';
+
+  @override
+  String get vaultRegenerateKit => 'Regenerar el kit de recuperación';
+
+  @override
+  String get vaultCurrentPassword => 'Contraseña actual';
+
+  @override
+  String get vaultNewPassword => 'Contraseña nueva';
+
+  @override
+  String get vaultChangeExplain =>
+      'Autoriza el cambio con la contraseña actual o el kit. Se conservan los datos y el kit; tendrás que volver a activar el desbloqueo nativo.';
+
+  @override
+  String get vaultPasswordChanged =>
+      'Contraseña cambiada. El kit sigue siendo válido.';
+
+  @override
+  String get vaultPasswordChangeError =>
+      'No se cambió la contraseña. Comprueba la autorización y elige una contraseña fuerte. Si el vault se creó con una versión anterior, regenera primero el kit con la contraseña actual, o autoriza el cambio con el kit existente.';
+
+  @override
+  String get vaultRotateWarning =>
+      'La contraseña actual es necesaria. El kit anterior seguirá funcionando hasta confirmar el nuevo. Guarda la nueva hoja antes de confirmar.';
+
+  @override
+  String get vaultKitCopies =>
+      'El kit no contiene tus datos. Conserva una copia cifrada del vault. La regeneración no invalida los kits de copias antiguas.';
+
+  @override
+  String get vaultSavePdf => 'Guardar PDF para imprimir…';
+
+  @override
+  String get vaultPdfError =>
+      'No se guardó el PDF. Elige un archivo .pdf nuevo y una carpeta con permiso de escritura.';
+
+  @override
+  String get vaultQrLabel =>
+      'QR del kit de recuperación. Contiene el mismo secreto que el texto.';
+
+  @override
+  String get vaultUseKit => 'Usar el kit de recuperación';
+
+  @override
+  String get vaultConfirmReplacement => 'Activar el nuevo kit';
 }

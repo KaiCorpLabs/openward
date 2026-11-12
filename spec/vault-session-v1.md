@@ -3,8 +3,8 @@
 D4 activates the D3 encrypted format from Settings → Security. An existing
 plaintext vault remains explicitly labelled as such until setup succeeds. This
 is an opt-in development path, not the completed v0.4 onboarding contract:
-mandatory onboarding / “Later”, complete recovery/export and derived-data
-protection remain D5–D8. Updating the binary never silently migrates user data.
+mandatory onboarding / “Later”, data backup/export and derived-data
+protection remain D6–D8. D5 adds the [complete kit and credential flows](recovery-v1.md). Updating the binary never silently migrates user data.
 
 ## Authority and lifetime
 
@@ -83,8 +83,8 @@ The kit text is `OWRK1`, sixteen groups of four uppercase hex digits, and an
 8-hex-digit domain-separated SHA-256 checksum. Parsing is ASCII/bounded, accepts
 case/whitespace and rejects checksum errors. The kit can open this vault copy
 without the password. **This local wrapper is not a remote account package**:
-D5 must still implement the password+kit HKDF account package, rotation,
-password changes, QR/PDF and independent export/recovery. Derived keys never
+[D5](recovery-v1.md) implements the password+kit HKDF account package, rotation,
+password changes and QR/PDF. Full data backup/export remains D7. Derived keys never
 enter Dart. Entered passwords and deliberately displayed kit text do enter
 Flutter; fields/controllers are cleared, but immutable Dart strings cannot be
 reliably overwritten (the existing D6 memory-copy limitation).
@@ -152,6 +152,14 @@ manual gates before a Developer ID decision. No certificate was purchased.
 
 Issue #33 stays open for its original mockup review (no source available in this
 workspace), physical native authentication and the roadmap's separate SSH
-Secure Enclave signing feature. This probe is not that SSH feature. D5–D8,
+Secure Enclave signing feature. This probe is not that SSH feature. D6–D8,
 Windows ACL/DACL work and external cryptographic review retain their existing
 gates; D4 does not make history/recent/log files encrypted.
+
+## D5 continuation
+
+[Recovery v1](recovery-v1.md) completes the printable kit, QR, password changes,
+kit regeneration and two-factor portable account package. Its local kit cache
+and atomic updates extend these records without changing OWLU1/OWRK1 or item
+ciphertext. Earlier D4 vaults upgrade with the active kit or password-authorized
+kit regeneration.

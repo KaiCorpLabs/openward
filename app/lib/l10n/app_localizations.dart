@@ -9967,6 +9967,90 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Después de cifrar, las versiones antiguas no podrán abrir este vault. Conserva el kit; no se crea una copia nueva en claro.'**
   String get vaultCompatibility;
+
+  /// No description provided for @vaultChangePassword.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar la contraseña'**
+  String get vaultChangePassword;
+
+  /// No description provided for @vaultRegenerateKit.
+  ///
+  /// In es, this message translates to:
+  /// **'Regenerar el kit de recuperación'**
+  String get vaultRegenerateKit;
+
+  /// No description provided for @vaultCurrentPassword.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña actual'**
+  String get vaultCurrentPassword;
+
+  /// No description provided for @vaultNewPassword.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña nueva'**
+  String get vaultNewPassword;
+
+  /// No description provided for @vaultChangeExplain.
+  ///
+  /// In es, this message translates to:
+  /// **'Autoriza el cambio con la contraseña actual o el kit. Se conservan los datos y el kit; tendrás que volver a activar el desbloqueo nativo.'**
+  String get vaultChangeExplain;
+
+  /// No description provided for @vaultPasswordChanged.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña cambiada. El kit sigue siendo válido.'**
+  String get vaultPasswordChanged;
+
+  /// No description provided for @vaultPasswordChangeError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se cambió la contraseña. Comprueba la autorización y elige una contraseña fuerte. Si el vault se creó con una versión anterior, regenera primero el kit con la contraseña actual, o autoriza el cambio con el kit existente.'**
+  String get vaultPasswordChangeError;
+
+  /// No description provided for @vaultRotateWarning.
+  ///
+  /// In es, this message translates to:
+  /// **'La contraseña actual es necesaria. El kit anterior seguirá funcionando hasta confirmar el nuevo. Guarda la nueva hoja antes de confirmar.'**
+  String get vaultRotateWarning;
+
+  /// No description provided for @vaultKitCopies.
+  ///
+  /// In es, this message translates to:
+  /// **'El kit no contiene tus datos. Conserva una copia cifrada del vault. La regeneración no invalida los kits de copias antiguas.'**
+  String get vaultKitCopies;
+
+  /// No description provided for @vaultSavePdf.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar PDF para imprimir…'**
+  String get vaultSavePdf;
+
+  /// No description provided for @vaultPdfError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se guardó el PDF. Elige un archivo .pdf nuevo y una carpeta con permiso de escritura.'**
+  String get vaultPdfError;
+
+  /// No description provided for @vaultQrLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'QR del kit de recuperación. Contiene el mismo secreto que el texto.'**
+  String get vaultQrLabel;
+
+  /// No description provided for @vaultUseKit.
+  ///
+  /// In es, this message translates to:
+  /// **'Usar el kit de recuperación'**
+  String get vaultUseKit;
+
+  /// No description provided for @vaultConfirmReplacement.
+  ///
+  /// In es, this message translates to:
+  /// **'Activar el nuevo kit'**
+  String get vaultConfirmReplacement;
 }
 
 class _AppLocalizationsDelegate

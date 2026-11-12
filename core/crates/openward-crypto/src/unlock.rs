@@ -140,6 +140,9 @@ impl RecoveryKit {
         getrandom::fill(b.as_mut()).map_err(|_| Error::Randomness)?;
         Ok(Self(b))
     }
+    pub fn from_secret(secret: Zeroizing<[u8; 32]>) -> Self {
+        Self(secret)
+    }
     pub fn secret(&self) -> &[u8; 32] {
         &self.0
     }
