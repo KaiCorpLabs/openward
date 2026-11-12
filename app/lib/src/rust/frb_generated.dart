@@ -3636,7 +3636,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           },
           codec: SseCodec(
             decodeSuccessData: sse_decode_unit,
-            decodeErrorData: null,
+            decodeErrorData: sse_decode_vault_error,
           ),
           constMeta: kCrateApiAppOpenWardOpenSerialConstMeta,
           argValues: [that, session, path, line, events],

@@ -747,11 +747,9 @@ impl OpenWard {
         path: String,
         line: SerialLineSpec,
         events: StreamSink<SessionEvent>,
-    ) {
+    ) -> Result<(), VaultError> {
         let gate = self.app.security().gate();
-        if super::security::same_owner(&gate, &session.access).is_err() {
-            return;
-        }
+        super::security::same_owner(&gate, &session.access)?;
         super::security::access(&gate, false, || {
             self.app.open_serial(
                 &session.term,
@@ -759,8 +757,8 @@ impl OpenWard {
                 line.line(None),
                 Arc::new(DartSink(events)),
             );
-        })
-        .unwrap_or_default()
+        })?;
+        Ok(())
     }
 
     /// Tries after losing a connection, before giving up.

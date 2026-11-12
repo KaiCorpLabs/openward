@@ -3896,7 +3896,7 @@ fn wire__crate__api__app__OpenWard_open_serial_impl(
             >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, ()>((move || {
+                transform_result_sse::<_, crate::api::vault::VaultError>((move || {
                     let mut api_that_guard = None;
                     let mut api_session_guard = None;
                     let decode_indices_ =
@@ -3919,15 +3919,13 @@ fn wire__crate__api__app__OpenWard_open_serial_impl(
                     }
                     let api_that_guard = api_that_guard.unwrap();
                     let api_session_guard = api_session_guard.unwrap();
-                    let output_ok = Ok::<_, ()>({
-                        crate::api::app::OpenWard::open_serial(
-                            &*api_that_guard,
-                            &*api_session_guard,
-                            api_path,
-                            api_line,
-                            api_events,
-                        );
-                    })?;
+                    let output_ok = crate::api::app::OpenWard::open_serial(
+                        &*api_that_guard,
+                        &*api_session_guard,
+                        api_path,
+                        api_line,
+                        api_events,
+                    )?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
