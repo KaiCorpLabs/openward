@@ -10,6 +10,15 @@ use openward_vault::{Error, Result, Vault};
 pub mod native;
 mod recovery_document;
 
+/// Resources that must be authenticated before publishing an unlocked frame.
+/// Implementations must not re-enter the vault/session from these callbacks.
+pub trait Protected: Send + Sync {
+    fn before_encrypt(&self) -> Result<()> {
+        Ok(())
+    }
+    fn unlock(&self, vault: &Vault) -> Result<()>;
+    fn lock(&self);
+}
 pub type Waker = Arc<dyn Fn() + Send + Sync>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -116,6 +125,7 @@ pub struct VaultSession {
     activity: Mutex<Instant>,
     wake: Mutex<Option<Waker>>,
     vault_wake: Mutex<Option<Waker>>,
+    protected: Mutex<Vec<Arc<dyn Protected>>>,
 }
 impl VaultSession {
     pub fn open(path: &Path) -> Result<Self> {
@@ -152,7 +162,20 @@ impl VaultSession {
             activity: Mutex::new(Instant::now()),
             wake: Mutex::new(None),
             vault_wake: Mutex::new(None),
+            protected: Mutex::new(Vec::new()),
         })
+    }
+    pub fn protect(&self, resource: Arc<dyn Protected>) {
+        self.protected
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .push(resource);
+    }
+    fn resources(&self) -> Vec<Arc<dyn Protected>> {
+        self.protected
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
     }
     pub fn vault(&self) -> Arc<Mutex<Vault>> {
         Arc::clone(&self.vault)
@@ -253,11 +276,20 @@ impl VaultSession {
         self.finish_auth(epoch, &mut vault, result)
     }
     fn finish_auth(&self, epoch: u64, vault: &mut Vault, result: Result<()>) -> Result<()> {
+        let result = result.and_then(|()| {
+            for resource in self.resources() {
+                resource.unlock(vault)?;
+            }
+            Ok(())
+        });
         let result = if result.is_ok() && self.gate.open(epoch) {
             *self.activity.lock().unwrap_or_else(|e| e.into_inner()) = Instant::now();
             self.phase(Phase::Unlocked);
             Ok(())
         } else {
+            for resource in self.resources() {
+                resource.lock();
+            }
             vault.lock_in_place()?;
             self.phase(Phase::Locked);
             result.and(Err(Error::Locked))
@@ -433,6 +465,9 @@ impl VaultSession {
         let epoch = self.gate.epoch();
         if self.status().phase != Phase::Legacy {
             return Err(Error::Locked);
+        }
+        for resource in self.resources() {
+            resource.before_encrypt()?;
         }
         let (params, _) = openward_crypto::password::calibrate()?;
         if self.gate.epoch() != epoch {
@@ -613,6 +648,9 @@ impl VaultSession {
         self.cancel_setup();
         self.phase(Phase::Locked);
         self.notify();
+        for resource in self.resources() {
+            resource.lock();
+        }
         let mut v = self.guard();
         if v.is_encrypted() {
             v.lock_in_place()?;
@@ -653,6 +691,15 @@ fn native_error(error: native::Error) -> Error {
         native::Error::Missing => Error::Invalid("native unlock key missing; use your password"),
         native::Error::Failed(_) => {
             Error::Invalid("native authentication failed; use your password")
+        }
+    }
+}
+
+impl Drop for VaultSession {
+    fn drop(&mut self) {
+        self.gate.close_when(|| true);
+        for resource in self.resources() {
+            resource.lock();
         }
     }
 }

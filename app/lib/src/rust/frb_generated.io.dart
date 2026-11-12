@@ -4,9 +4,11 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api/app.dart';
+import 'api/credentials.dart';
 import 'api/identities.dart';
 import 'api/keychain.dart';
 import 'api/known_hosts.dart';
+import 'api/local_data.dart';
 import 'api/logs.dart';
 import 'api/programs.dart';
 import 'api/security.dart';
@@ -385,6 +387,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ConnectedView dco_decode_connected_view(dynamic raw);
 
   @protected
+  CredentialKind dco_decode_credential_kind(dynamic raw);
+
+  @protected
   CursorStyle dco_decode_cursor_style(dynamic raw);
 
   @protected
@@ -607,6 +612,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<QuestionView> dco_decode_list_question_view(dynamic raw);
 
   @protected
+  List<SavedCredential> dco_decode_list_saved_credential(dynamic raw);
+
+  @protected
   List<SearchHitView> dco_decode_list_search_hit_view(dynamic raw);
 
   @protected
@@ -641,6 +649,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<WorkspaceView> dco_decode_list_workspace_view(dynamic raw);
+
+  @protected
+  LocalDocument dco_decode_local_document(dynamic raw);
 
   @protected
   LogEnd dco_decode_log_end(dynamic raw);
@@ -953,6 +964,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RouteKind dco_decode_route_kind(dynamic raw);
+
+  @protected
+  SavedCredential dco_decode_saved_credential(dynamic raw);
 
   @protected
   SearchHitView dco_decode_search_hit_view(dynamic raw);
@@ -1496,6 +1510,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ConnectedView sse_decode_connected_view(SseDeserializer deserializer);
 
   @protected
+  CredentialKind sse_decode_credential_kind(SseDeserializer deserializer);
+
+  @protected
   CursorStyle sse_decode_cursor_style(SseDeserializer deserializer);
 
   @protected
@@ -1742,6 +1759,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<SavedCredential> sse_decode_list_saved_credential(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<SearchHitView> sse_decode_list_search_hit_view(
     SseDeserializer deserializer,
   );
@@ -1792,6 +1814,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<WorkspaceView> sse_decode_list_workspace_view(
     SseDeserializer deserializer,
   );
+
+  @protected
+  LocalDocument sse_decode_local_document(SseDeserializer deserializer);
 
   @protected
   LogEnd sse_decode_log_end(SseDeserializer deserializer);
@@ -2184,6 +2209,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RouteKind sse_decode_route_kind(SseDeserializer deserializer);
+
+  @protected
+  SavedCredential sse_decode_saved_credential(SseDeserializer deserializer);
 
   @protected
   SearchHitView sse_decode_search_hit_view(SseDeserializer deserializer);
@@ -2873,6 +2901,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_connected_view(ConnectedView self, SseSerializer serializer);
 
   @protected
+  void sse_encode_credential_kind(
+    CredentialKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_cursor_style(CursorStyle self, SseSerializer serializer);
 
   @protected
@@ -3182,6 +3216,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_saved_credential(
+    List<SavedCredential> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_search_hit_view(
     List<SearchHitView> self,
     SseSerializer serializer,
@@ -3246,6 +3286,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     List<WorkspaceView> self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_local_document(LocalDocument self, SseSerializer serializer);
 
   @protected
   void sse_encode_log_end(LogEnd self, SseSerializer serializer);
@@ -3742,6 +3785,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_route_kind(RouteKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_saved_credential(
+    SavedCredential self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_search_hit_view(SearchHitView self, SseSerializer serializer);

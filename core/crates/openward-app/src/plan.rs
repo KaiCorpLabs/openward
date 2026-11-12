@@ -290,7 +290,16 @@ fn hop(
         alias: label,
     };
     let identity_files = match &s.identity_files {
-        Some(files) => files.iter().map(|f| local.path(f, &t)).collect(),
+        Some(files) => files
+            .iter()
+            .map(|f| {
+                if f.starts_with("vault:") {
+                    PathBuf::from(f)
+                } else {
+                    local.path(f, &t)
+                }
+            })
+            .collect(),
         None => DEFAULT_KEYS.iter().map(|k| local.ssh_dir.join(k)).collect(),
     };
     let files = |set: &Option<Vec<String>>, dir: &Path, defaults: [&str; 2]| match set {

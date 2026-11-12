@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/providers.dart';
+import '../history/history.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/security.dart';
 import 'state.dart';
+import 'credentials.dart';
 import 'recovery.dart';
 import 'unlock.dart';
 
@@ -81,10 +83,15 @@ class _VaultSettingsState extends ConsumerState<VaultSettings> {
             child: Text(l.vaultRegenerateKit),
           ),
           const SizedBox(height: 16),
+          const StoredCredentials(),
+          const SizedBox(height: 16),
           Text(l.vaultSessions),
           const SizedBox(height: 16),
           FilledButton(
-            onPressed: () => app.lockVault(),
+            onPressed: () {
+              ref.read(historyProvider.notifier).flush();
+              app.lockVault();
+            },
             child: Text(l.vaultLock),
           ),
           const SizedBox(height: 24),

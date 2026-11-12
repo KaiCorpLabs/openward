@@ -41,11 +41,23 @@ Future<void> exportKey(BuildContext context, WidgetRef ref, SshKey k) async {
   final l = context.l10n;
   final messenger = ScaffoldMessenger.of(context);
   final to = await getSaveLocation(suggestedName: k.name);
-  if (to == null) return;
-  final from = ref.read(openWardProvider).keyFilePath(path: k.path);
+  if (to == null || !context.mounted) return;
+  final app = ref.read(openWardProvider);
   try {
-    await File(from).copy(to.path);
-    if (!Platform.isWindows) await Process.run('chmod', ['600', to.path]);
+    if (k.path.startsWith('vault:')) {
+      final sure = await confirmDestructive(
+        context,
+        title: l.exportEllipsis,
+        body: l.vaultExportKeyWarning,
+        action: l.exportEllipsis,
+      );
+      if (!sure) return;
+      await app.exportVaultKey(path: k.path, to: to.path);
+    } else {
+      final from = app.keyFilePath(path: k.path);
+      await File(from).copy(to.path);
+      if (!Platform.isWindows) await Process.run('chmod', ['600', to.path]);
+    }
     messenger.showSnackBar(
       SnackBar(content: Text(l.keyExported(k.name, to.path))),
     );
@@ -292,5 +304,73 @@ class _PassphraseState extends ConsumerState<_Passphrase> {
         ),
       ],
     );
+  }
+}
+
+Future<void> storeKeyInVault(
+  BuildContext context,
+  WidgetRef ref,
+  SshKey key,
+) async {
+  final l = context.l10n;
+  final phrase = TextEditingController();
+  bool remove = false;
+  try {
+    final sure = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(l.vaultStoreKey),
+          scrollable: true,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(l.vaultMoveKeyExplain),
+              TextField(
+                controller: phrase,
+                obscureText: true,
+                autocorrect: false,
+                enableSuggestions: false,
+                decoration: InputDecoration(labelText: l.vaultImportPassphrase),
+              ),
+              CheckboxListTile(
+                value: remove,
+                title: Text(l.vaultRemoveSource),
+                onChanged: (v) => setState(() => remove = v ?? false),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(l.vaultCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l.vaultStoreKey),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (sure != true) return;
+    final result = await ref
+        .read(openWardProvider)
+        .storeKeyFile(
+          path: key.path,
+          removeSource: remove,
+          passphrase: phrase.text.isEmpty ? null : phrase.text,
+        );
+    ref.read(keysProvider.notifier).refresh();
+    if (context.mounted && result.failure != null) {
+      showErrorNotice(
+        ScaffoldMessenger.of(context),
+        l.keyFailed,
+        result.failure!,
+      );
+    }
+  } finally {
+    phrase.clear();
+    phrase.dispose();
   }
 }

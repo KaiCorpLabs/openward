@@ -154,7 +154,7 @@ pub enum Msg {
         method: auth::Method,
     },
     AuthInfoResponse {
-        responses: Vec<String>,
+        responses: Vec<zeroize::Zeroizing<String>>,
     },
     AuthGssapiToken {
         token: Vec<u8>,
@@ -395,7 +395,7 @@ impl<H: Handler> Handle<H> {
         responses: Vec<String>,
     ) -> Result<KeyboardInteractiveAuthResponse, crate::Error> {
         self.sender
-            .send(Msg::AuthInfoResponse { responses })
+            .send(Msg::AuthInfoResponse { responses: responses.into_iter().map(zeroize::Zeroizing::new).collect() })
             .await
             .map_err(|_| crate::Error::SendError)?;
         self.wait_recv_keyboard_interactive_reply().await

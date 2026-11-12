@@ -315,7 +315,30 @@ impl OpenWard {
     ) -> Result<KeyView, VaultError> {
         let gate = self.app.security().gate();
         super::security::access(&gate, false, || {
-            key_view(&path, key_info(self.app.local(), &path, &certificate_files))
+            if openward_app::vault_keys::reference(std::path::Path::new(&path)).is_some() {
+                let found = openward_app::vault_keys::list(&self.app.vault())
+                    .into_iter()
+                    .find(|k| k.path == path);
+                let info = match found {
+                    Some(k) => openward_app::keys::KeyInfo {
+                        state: openward_app::keys::KeyState::Found,
+                        algorithm: k.algorithm,
+                        fingerprint: k.fingerprint,
+                        comment: k.comment,
+                        certificate: None,
+                    },
+                    None => openward_app::keys::KeyInfo {
+                        state: openward_app::keys::KeyState::Missing,
+                        algorithm: None,
+                        fingerprint: None,
+                        comment: None,
+                        certificate: None,
+                    },
+                };
+                key_view(&path, info)
+            } else {
+                key_view(&path, key_info(self.app.local(), &path, &certificate_files))
+            }
         })
         .map_err(Into::into)
     }

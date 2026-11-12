@@ -417,12 +417,13 @@ impl OpenWard {
         path: String,
         termius_key: Vec<u8>,
     ) -> Result<ProgramRead, VaultError> {
+        let termius_key = zeroize::Zeroizing::new(termius_key);
         let gate = self.app.security().gate();
         super::security::access(&gate, false, || {
             if crate::api::app::for_tests("read_program_with_key").is_err() {
                 return self.read(path, None);
             }
-            let key: Option<[u8; 32]> = termius_key.try_into().ok();
+            let key: Option<[u8; 32]> = termius_key.as_slice().try_into().ok();
             self.read(path, Some(key.into_iter().collect()))
         })
         .map_err(Into::into)

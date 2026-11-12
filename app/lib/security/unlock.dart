@@ -5,6 +5,7 @@ import '../core/providers.dart';
 import '../l10n/l10n.dart';
 import '../ui/tokens.dart';
 import '../src/rust/api/security.dart';
+import '../src/rust/api/vault.dart';
 import 'state.dart';
 
 class VaultUnlock extends ConsumerStatefulWidget {
@@ -39,6 +40,14 @@ class _VaultUnlockState extends ConsumerState<VaultUnlock> {
         await app.recoverVault(kit: password.text);
       } else {
         await app.unlockVault(password: password.text);
+      }
+    } on VaultError catch (failure) {
+      if (mounted) {
+        setState(
+          () => error = failure.kind == VaultErrorKind.storage
+              ? context.l10n.vaultLocalDataError
+              : context.l10n.vaultAuthError,
+        );
       }
     } on Object {
       if (mounted) {

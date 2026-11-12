@@ -33,9 +33,12 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use flate2::read::MultiGzDecoder;
 use serde::{Deserialize, Serialize};
 
+use crate::protected;
 use crate::terminal::Waker;
 use cast::{Header, Mark, Recording};
+use openward_crypto::local::LocalKey;
 use recorder::Recorder;
+use zeroize::Zeroizing;
 
 /// Where a session went.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -215,6 +218,7 @@ pub(crate) fn create(path: &Path) -> std::io::Result<File> {
 
 pub struct Logs {
     dir: PathBuf,
+    cipher: Arc<protected::Files>,
     /// File mutations precede `inner` in the lock order. In particular a
     /// sweep cannot see a session between file creation and registration.
     files: Mutex<()>,
@@ -234,6 +238,13 @@ impl Logs {
     /// exit are closed as such, and what is past the limits goes. The
     /// limits are the ones kept there, or `config` the first time.
     pub fn open(dir: &Path, config: Config) -> std::io::Result<Arc<Self>> {
+        Self::open_protected(dir, config, protected::Files::legacy())
+    }
+    pub(crate) fn open_protected(
+        dir: &Path,
+        config: Config,
+        cipher: Arc<protected::Files>,
+    ) -> std::io::Result<Arc<Self>> {
         let private_dir = crate::create_private_dir(dir)?;
         let dir = private_dir.as_path();
         let config = fs::read(dir.join(CONFIG_FILE))
@@ -241,7 +252,7 @@ impl Logs {
             .and_then(|b| serde_json::from_slice(&b).ok())
             .unwrap_or(config);
         let mut entries = BTreeMap::new();
-        for file in fs::read_dir(dir)? {
+        for file in fs::read_dir(dir)?.filter(|_| cipher.available()) {
             let path = file?.path();
             let Some(id) = path
                 .file_name()
@@ -276,6 +287,7 @@ impl Logs {
         }
         let logs = Arc::new(Self {
             dir: dir.to_owned(),
+            cipher,
             files: Mutex::new(()),
             inner: Mutex::new(Inner {
                 config,
@@ -288,6 +300,154 @@ impl Logs {
         Ok(logs)
     }
 
+    pub(crate) fn before_encrypt(&self) -> std::io::Result<()> {
+        if !lock(&self.inner).open.is_empty() {
+            return Err(std::io::Error::other(
+                "close active sessions before encrypting the vault",
+            ));
+        }
+        Ok(())
+    }
+    pub(crate) fn lock_private(&self) {
+        let _files = lock(&self.files);
+        let active: Vec<_> = {
+            let inner = lock(&self.inner);
+            inner
+                .entries
+                .values()
+                .filter(|e| inner.open.contains(&e.id))
+                .cloned()
+                .collect()
+        };
+        for entry in active {
+            if let Ok(key) = self.cipher.recording_key(&self.dir, &entry.id) {
+                let _ = self.write_entry(&entry, key.as_deref());
+            }
+        }
+        lock(&self.inner).entries.clear();
+    }
+    pub(crate) fn unlock_private(&self) -> std::io::Result<()> {
+        let _files = lock(&self.files);
+        let mut ids = BTreeSet::new();
+        for entry in fs::read_dir(&self.dir)? {
+            let entry = entry?;
+            if let Some(id) = entry.file_name().to_str().and_then(managed_id) {
+                ids.insert(id.to_owned());
+            }
+        }
+        let mut last_times = BTreeMap::new();
+        for id in &ids {
+            let last = fs::metadata(self.cast_path(id))
+                .or_else(|_| fs::metadata(self.dir.join(format!("{id}.json"))))
+                .and_then(|m| m.modified())
+                .ok()
+                .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+                .map(|t| t.as_millis() as i64);
+            last_times.insert(id.clone(), last);
+            let key = match self.cipher.recording_key(&self.dir, id) {
+                Ok(k) => k,
+                Err(e)
+                    if e.kind() == std::io::ErrorKind::NotFound
+                        || !self.dir.join(format!("{id}.key")).exists() =>
+                {
+                    for suffix in ["json", "json.tmp", "cast.gz", "txt.gz"] {
+                        if protected::encrypted_prefix(&self.dir.join(format!("{id}.{suffix}")))? {
+                            return Err(std::io::Error::other(
+                                "encrypted recording key is missing",
+                            ));
+                        }
+                    }
+                    self.cipher.new_recording(&self.dir, id)?
+                }
+                Err(e) => return Err(e),
+            };
+            let key = key.ok_or_else(|| std::io::Error::other("missing protected key"))?;
+            for suffix in ["json", "json.tmp"] {
+                let path = self.dir.join(format!("{id}.{suffix}"));
+                if let Some(bytes) = protected::read_optional(&path, 1024 * 1024)? {
+                    if bytes.starts_with(b"OWLD") {
+                        key.open(path.file_name().unwrap().as_encoded_bytes(), &bytes)
+                            .map_err(std::io::Error::other)?;
+                        continue;
+                    }
+                    let clear = Zeroizing::new(bytes);
+                    let sealed = key
+                        .seal(path.file_name().unwrap().as_encoded_bytes(), &clear)
+                        .map_err(std::io::Error::other)?;
+                    protected::atomic(&path, &sealed)?;
+                }
+            }
+            for suffix in ["cast.gz", "txt.gz"] {
+                let path = self.dir.join(format!("{id}.{suffix}"));
+                if path.exists() {
+                    protected::seal_file(&path, Arc::clone(&key))?;
+                }
+            }
+        }
+        let mut entries = BTreeMap::new();
+        let open = lock(&self.inner).open.clone();
+        for id in ids {
+            let path = self.dir.join(format!("{id}.json"));
+            let Some(bytes) = protected::read_optional(&path, 1024 * 1024)? else {
+                continue;
+            };
+            let key = self.cipher.recording_key(&self.dir, &id)?.unwrap();
+            let clear = key
+                .open(path.file_name().unwrap().as_encoded_bytes(), &bytes)
+                .map_err(std::io::Error::other)?;
+            let mut entry: Entry = serde_json::from_slice(&clear).map_err(std::io::Error::other)?;
+            if entry.id != id {
+                return Err(std::io::Error::other("invalid recording identity"));
+            }
+            if entry.end == End::Open && !open.contains(&id) {
+                entry.end = End::AppQuit;
+                entry.ended_ms = Some(
+                    last_times
+                        .get(&id)
+                        .copied()
+                        .flatten()
+                        .unwrap_or(entry.started_ms)
+                        .max(entry.started_ms),
+                );
+                self.write_entry(&entry, Some(&key))?;
+            }
+            entries.insert(id, entry);
+        }
+        lock(&self.inner).entries = entries;
+        drop(_files);
+        self.prune();
+        Ok(())
+    }
+    fn write_entry(&self, entry: &Entry, key: Option<&LocalKey>) -> std::io::Result<()> {
+        match key {
+            None => write_entry(&self.dir, entry),
+            Some(key) => {
+                let name = format!("{}.json", entry.id);
+                let clear =
+                    Zeroizing::new(serde_json::to_vec(entry).map_err(std::io::Error::other)?);
+                let b = key
+                    .seal(name.as_bytes(), &clear)
+                    .map_err(std::io::Error::other)?;
+                protected::atomic(&self.dir.join(name), &b)
+            }
+        }
+    }
+    fn reader(&self, id: &str, cast: bool) -> std::io::Result<Box<dyn std::io::Read>> {
+        let entry = self.recorded(id)?;
+        let key = self.cipher.recording_key(&self.dir, id)?;
+        protected::reader(
+            &if cast {
+                self.cast_path(id)
+            } else {
+                self.text_path(id)
+            },
+            key,
+            matches!(entry.end, End::Open | End::AppQuit),
+        )
+    }
+    fn for_each_line(&self, id: &str, f: impl FnMut(f64, &str) -> bool) -> std::io::Result<()> {
+        for_each_input(self.reader(id, false)?, f)
+    }
     pub fn dir(&self) -> &Path {
         &self.dir
     }
@@ -362,6 +522,7 @@ impl Logs {
 
     fn begin_with_id(self: &Arc<Self>, begin: Begin, id: String) -> std::io::Result<Arc<Session>> {
         let files = lock(&self.files);
+        let key = self.cipher.new_recording(&self.dir, &id)?;
         let started_ms = now_ms();
         let entry = Entry {
             id: id.clone(),
@@ -387,15 +548,22 @@ impl Logs {
                 &entry.label,
                 &begin.term,
             );
-            Some(Recorder::start(
+            match Recorder::start(
                 &self.cast_path(&id),
                 &self.text_path(&id),
                 &header,
-            )?)
+                key.clone(),
+            ) {
+                Ok(recorder) => Some(recorder),
+                Err(error) => {
+                    let _ = self.remove_files(&id);
+                    return Err(error);
+                }
+            }
         } else {
             None
         };
-        if let Err(error) = write_entry(&self.dir, &entry) {
+        if let Err(error) = self.write_entry(&entry, key.as_deref()) {
             // Join the recorder before removing files, so no late writer
             // can leave output behind after a failed session start.
             drop(recorder);
@@ -412,6 +580,7 @@ impl Logs {
         Ok(Arc::new(Session {
             logs: Arc::clone(self),
             recorder,
+            key: Mutex::new(key),
             entry: Mutex::new(entry),
         }))
     }
@@ -444,7 +613,8 @@ impl Logs {
             change(entry);
             entry.clone()
         };
-        write_entry(&self.dir, &entry)?;
+        let key = self.cipher.recording_key(&self.dir, id)?;
+        self.write_entry(&entry, key.as_deref())?;
         drop(files);
         self.changed();
         Ok(())
@@ -531,6 +701,7 @@ impl Logs {
             self.text_path(id),
             self.dir.join(format!("{id}.json")),
             self.dir.join(format!("{id}.json.tmp")),
+            self.dir.join(format!("{id}.key")),
         ] {
             match fs::remove_file(&path) {
                 Err(e) if e.kind() != std::io::ErrorKind::NotFound && error.is_none() => {
@@ -609,7 +780,7 @@ impl Logs {
     /// A recording, as far as it is written.
     pub fn read(&self, id: &str) -> std::io::Result<Recording> {
         self.recorded(id)?;
-        let file = File::open(self.cast_path(id))?;
+        let file = self.reader(id, true)?;
         cast::read(BufReader::new(MultiGzDecoder::new(file)))
     }
 
@@ -617,7 +788,7 @@ impl Logs {
     pub fn text(&self, id: &str) -> std::io::Result<Vec<(f64, String)>> {
         self.recorded(id)?;
         let mut lines = Vec::new();
-        for_each_line(&self.text_path(id), |t, line| {
+        self.for_each_line(id, |t, line| {
             lines.push((t, line.to_owned()));
             true
         })?;
@@ -635,7 +806,7 @@ impl Logs {
         for entry in self.list().into_iter().filter(|e| e.recorded) {
             let mut hits = Vec::new();
             let mut total = 0;
-            let _ = for_each_line(&self.text_path(&entry.id), |t, line| {
+            let _ = self.for_each_line(&entry.id, |t, line| {
                 if line.to_lowercase().contains(&needle) {
                     total += 1;
                     if hits.len() < HITS_SHOWN {
@@ -657,7 +828,7 @@ impl Logs {
     /// plays.
     pub fn export_cast(&self, id: &str, to: &Path) -> std::io::Result<()> {
         self.recorded(id)?;
-        let mut from = MultiGzDecoder::new(File::open(self.cast_path(id))?);
+        let mut from = MultiGzDecoder::new(self.reader(id, true)?);
         let mut out = std::io::BufWriter::new(create(to)?);
         // A recording cut short ends at its last whole line.
         let mut whole = Vec::new();
@@ -696,7 +867,7 @@ impl Logs {
         self.recorded(id)?;
         let mut earlier = std::collections::VecDeque::with_capacity(before + 1);
         let mut later = Vec::new();
-        for_each_line(&self.text_path(id), |t, line| {
+        self.for_each_line(id, |t, line| {
             if t < at {
                 earlier.push_back((t, line.to_owned()));
                 if earlier.len() > before {
@@ -716,7 +887,7 @@ impl Logs {
     pub fn preview(&self, id: &str, lines: usize) -> std::io::Result<Preview> {
         self.recorded(id)?;
         let mut last = std::collections::VecDeque::with_capacity(lines + 1);
-        for_each_line(&self.text_path(id), |t, line| {
+        self.for_each_line(id, |t, line| {
             last.push_back((t, line.to_owned()));
             if last.len() > lines {
                 last.pop_front();
@@ -732,7 +903,7 @@ impl Logs {
     /// A recording's markers, `(seconds, label)`, reading only those.
     pub fn markers(&self, id: &str) -> std::io::Result<Vec<(f64, String)>> {
         self.recorded(id)?;
-        let file = File::open(self.cast_path(id))?;
+        let file = self.reader(id, true)?;
         let mut input = BufReader::new(MultiGzDecoder::new(file));
         let mut line = String::new();
         let mut markers = Vec::new();
@@ -813,13 +984,15 @@ impl Logs {
         self.changed();
     }
 
-    fn finished(&self, entry: Entry) {
+    fn finished(&self, entry: Entry, key: Option<Arc<LocalKey>>) {
         {
             let _files = lock(&self.files);
-            let _ = write_entry(&self.dir, &entry);
+            let _ = self.write_entry(&entry, key.as_deref());
             let mut inner = lock(&self.inner);
             inner.open.remove(&entry.id);
-            inner.entries.insert(entry.id.clone(), entry);
+            if self.cipher.available() {
+                inner.entries.insert(entry.id.clone(), entry);
+            }
         }
         self.prune();
         self.changed();
@@ -829,7 +1002,7 @@ impl Logs {
 /// Only this module's complete session filenames belong to the sweep.
 /// Canonical UUID spelling also excludes traversal and configuration names.
 fn managed_id(name: &str) -> Option<&str> {
-    let id = [".json.tmp", ".cast.gz", ".txt.gz", ".json"]
+    let id = [".json.tmp", ".cast.gz", ".txt.gz", ".json", ".key"]
         .into_iter()
         .find_map(|suffix| name.strip_suffix(suffix))?;
     let parsed = id.parse::<crate::vault::proto::ItemId>().ok()?;
@@ -858,8 +1031,11 @@ fn files_size(dir: &Path, id: &str) -> u64 {
 }
 
 /// Calls `f` with each whole line of a text file until it returns false.
-fn for_each_line(path: &Path, mut f: impl FnMut(f64, &str) -> bool) -> std::io::Result<()> {
-    let mut input = BufReader::new(MultiGzDecoder::new(File::open(path)?));
+fn for_each_input(
+    input: impl std::io::Read,
+    mut f: impl FnMut(f64, &str) -> bool,
+) -> std::io::Result<()> {
+    let mut input = BufReader::new(MultiGzDecoder::new(input));
     let mut line = String::new();
     loop {
         line.clear();
@@ -883,6 +1059,7 @@ fn for_each_line(path: &Path, mut f: impl FnMut(f64, &str) -> bool) -> std::io::
 pub struct Session {
     logs: Arc<Logs>,
     recorder: Option<Recorder>,
+    key: Mutex<Option<Arc<LocalKey>>>,
     entry: Mutex<Entry>,
 }
 
@@ -966,7 +1143,8 @@ impl Session {
             entry.bytes = files_size(&self.logs.dir, &entry.id);
             entry.clone()
         };
-        self.logs.finished(entry);
+        let key = lock(&self.key).take();
+        self.logs.finished(entry, key);
     }
 }
 

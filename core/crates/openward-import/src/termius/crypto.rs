@@ -32,16 +32,21 @@ pub enum Error {
 
 /// The key from its keychain form: base64 of 32 bytes.
 pub fn key_from_keychain(stored: &str) -> Option<[u8; 32]> {
-    STANDARD.decode(stored.trim()).ok()?.try_into().ok()
+    let bytes = zeroize::Zeroizing::new(STANDARD.decode(stored.trim()).ok()?);
+    bytes.as_slice().try_into().ok()
 }
 
 pub fn decrypt(key: &[u8; 32], field: &str) -> Result<String, Error> {
     let bytes = envelope(field).ok_or(Error::NotEncrypted)?;
     let (nonce, sealed) = bytes[2..].split_at(NONCE);
-    let plain = XSalsa20Poly1305::new(key.into())
-        .decrypt(Nonce::from_slice(nonce), sealed)
-        .map_err(|_| Error::WrongKey)?;
-    String::from_utf8(plain).map_err(|_| Error::NotText)
+    let plain = zeroize::Zeroizing::new(
+        XSalsa20Poly1305::new(key.into())
+            .decrypt(Nonce::from_slice(nonce), sealed)
+            .map_err(|_| Error::WrongKey)?,
+    );
+    std::str::from_utf8(&plain)
+        .map(str::to_owned)
+        .map_err(|_| Error::NotText)
 }
 
 /// Encrypts as Termius does: for tests and fixtures.

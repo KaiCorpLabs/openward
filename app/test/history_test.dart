@@ -1,5 +1,9 @@
 import 'dart:io';
 
+import 'package:openward/core/local_documents.dart';
+
+import 'local_documents_fake.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openward/core/address.dart';
@@ -374,6 +378,7 @@ void main() {
       dir = Directory.systemTemp.createTempSync('ow-history');
       container = ProviderContainer(
         overrides: [
+          localDocumentsProvider.overrideWithValue(FileLocalDocuments(dir)),
           settingsFileProvider.overrideWithValue(
             File('${dir.path}/settings.json'),
           ),
@@ -407,6 +412,7 @@ void main() {
       h.flush();
       final again = ProviderContainer(
         overrides: [
+          localDocumentsProvider.overrideWithValue(FileLocalDocuments(dir)),
           settingsFileProvider.overrideWithValue(
             File('${dir.path}/settings.json'),
           ),

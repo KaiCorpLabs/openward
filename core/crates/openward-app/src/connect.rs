@@ -55,6 +55,30 @@ pub(crate) struct Ctx {
 }
 
 impl Ctx {
+    fn saved(&self, kind: openward_vault::SecretKind, binding: &str) -> Option<Zeroizing<String>> {
+        let gate = self.security.gate();
+        let _permission = gate.read().ok()?;
+        lock(&self.vault)
+            .find_secret(kind, binding)
+            .ok()
+            .flatten()
+            .map(|s| s.value)
+    }
+    fn remember(
+        &self,
+        epoch: Option<u64>,
+        kind: openward_vault::SecretKind,
+        label: &str,
+        binding: &str,
+        value: &str,
+    ) {
+        let gate = self.security.gate();
+        if let Ok(permission) = gate.read()
+            && Some(permission.epoch()) == epoch
+        {
+            let _ = lock(&self.vault).save_secret(kind, label, binding, value);
+        }
+    }
     /// Tells the system of each saved host of a new connection (the jumps
     /// too) and stores it where it changed, in the background: from the
     /// banner, and from `/etc/os-release` where the host asks for it.
@@ -573,8 +597,17 @@ async fn public_keys(
     let files: Vec<(&Path, Option<PublicKey>)> = hop
         .identity_files
         .iter()
-        .filter(|p| p.is_file())
-        .map(|p| (p.as_path(), public_half(p)))
+        .filter(|p| p.is_file() || crate::vault_keys::reference(p).is_some())
+        .map(|p| {
+            let public = if crate::vault_keys::reference(p).is_some() {
+                crate::vault_keys::public(&lock(&ctx.vault), p)
+                    .ok()
+                    .and_then(|s| PublicKey::from_openssh(&s).ok())
+            } else {
+                public_half(p)
+            };
+            (p.as_path(), public)
+        })
         .collect();
     let mut offered: Vec<PublicKey> = Vec::new();
 
@@ -636,7 +669,12 @@ async fn public_keys(
             continue;
         }
         let key = Arc::new(key);
-        let found = certificate_for(&key, path, &hop.certificate_files);
+        let source = crate::vault_keys::source_path(&lock(&ctx.vault), path);
+        let found = certificate_for(
+            &key,
+            source.as_deref().unwrap_or(path),
+            &hop.certificate_files,
+        );
         let found = found.filter(|(cert, cert_path)| {
             let valid = in_force(cert);
             if !valid {
@@ -740,25 +778,78 @@ async fn security_key(
     Ok(Err(SecurityKeyProblem::WrongPin))
 }
 
+fn load_material(path: &Path, ctx: &Ctx, phrase: Option<&str>) -> Result<PrivateKey, KeyError> {
+    if crate::vault_keys::reference(path).is_some() {
+        let gate = ctx.security.gate();
+        let ticket = gate
+            .ticket()
+            .map_err(|_| KeyError::Unreadable("vault locked".into()))?;
+        let text = crate::vault_keys::text(&lock(&ctx.vault), path)
+            .map_err(|_| KeyError::Unreadable("vault key unavailable".into()))?;
+        let result = openward_ssh::keyfile::decode_secret_key(&text, phrase).map_err(|_| {
+            if phrase.is_some() {
+                KeyError::WrongPassphrase
+            } else {
+                KeyError::Encrypted
+            }
+        });
+        gate.check(ticket)
+            .map_err(|_| KeyError::Unreadable("vault locked".into()))?;
+        result
+    } else {
+        ssh::load_key(path, phrase)
+    }
+}
+fn phrase_binding(path: &Path, ctx: &Ctx) -> Option<String> {
+    let public = if crate::vault_keys::reference(path).is_some() {
+        crate::vault_keys::public(&lock(&ctx.vault), path).ok()?
+    } else {
+        let p = public_half(path)?;
+        p.to_openssh().ok()?
+    };
+    Some(format!("key:{}", public.trim()))
+}
 async fn load_key(path: &Path, ctx: &Ctx) -> Result<Option<PrivateKey>, Failure> {
-    match ssh::load_key(path, None) {
+    let consent_epoch = ctx.security.gate().ticket().ok();
+    match load_material(path, ctx, None) {
         Ok(key) => return Ok(Some(key)),
         Err(KeyError::Encrypted) => {}
         Err(_) => return Ok(None),
     }
+    let binding = phrase_binding(path, ctx);
+    if let Some(binding) = &binding
+        && let Some(secret) = ctx.saved(openward_vault::SecretKind::Passphrase, binding)
+        && let Ok(key) = load_material(path, ctx, Some(&secret))
+    {
+        return Ok(Some(key));
+    }
     for attempt in 0..3 {
-        let prompt = Prompt::Passphrase {
-            key: path.display().to_string(),
-            retry: attempt > 0,
-        };
-        let Answer::Text(texts) = ctx.ask(prompt).await else {
+        let Some((texts, remember)) = ctx
+            .ask(Prompt::Passphrase {
+                key: path.display().to_string(),
+                retry: attempt > 0,
+            })
+            .await
+            .texts()
+        else {
             return Ok(None);
         };
-        let Some(passphrase) = texts.first().filter(|p| !p.is_empty()) else {
+        let Some(phrase) = texts.first().filter(|p| !p.is_empty()) else {
             return Ok(None);
         };
-        match ssh::load_key(path, Some(passphrase)) {
-            Ok(key) => return Ok(Some(key)),
+        match load_material(path, ctx, Some(phrase)) {
+            Ok(key) => {
+                if remember && let Some(binding) = &binding {
+                    ctx.remember(
+                        consent_epoch,
+                        openward_vault::SecretKind::Passphrase,
+                        &path.display().to_string(),
+                        binding,
+                        phrase,
+                    );
+                }
+                return Ok(Some(key));
+            }
             Err(KeyError::WrongPassphrase) => continue,
             Err(_) => return Ok(None),
         }
@@ -797,6 +888,39 @@ fn in_force(cert: &Certificate) -> bool {
     cert.valid_after() <= now && now < cert.valid_before()
 }
 
+fn kbd_password_binding(
+    hop: &Hop,
+    fingerprint: &str,
+    name: &str,
+    instructions: &str,
+    prompts: &[(String, bool)],
+) -> Option<String> {
+    if fingerprint.is_empty()
+        || prompts.len() != 1
+        || prompts[0].1
+        || !prompts[0]
+            .0
+            .trim()
+            .trim_end_matches(':')
+            .trim()
+            .eq_ignore_ascii_case("password")
+    {
+        return None;
+    }
+    Some(format!(
+        "ssh-kbd-password:{}",
+        serde_json::to_string(&(
+            hop.address.to_lowercase(),
+            hop.port,
+            &hop.user,
+            fingerprint,
+            name,
+            instructions,
+            &prompts[0].0
+        ))
+        .ok()?
+    ))
+}
 async fn keyboard_interactive(
     s: &mut Session,
     hop: &Hop,
@@ -804,9 +928,13 @@ async fn keyboard_interactive(
     mut last: Outcome,
 ) -> Result<Outcome, Failure> {
     let user = hop.user.as_str();
+    let consent_epoch = ctx.security.gate().ticket().ok();
+    let fingerprint = s.info().host_key_fingerprint;
+    let mut automatic = std::collections::HashSet::new();
     for attempt in 0..3 {
         let mut step = s.kbd_start(user).await.map_err(network(hop))?;
         let mut rounds = 0;
+        let mut candidate: Option<(String, Zeroizing<String>)> = None;
         let outcome = loop {
             match step {
                 Kbd::Done(outcome) => break outcome,
@@ -823,20 +951,40 @@ async fn keyboard_interactive(
                     let answers: Vec<Zeroizing<String>> = if prompts.is_empty() {
                         Vec::new()
                     } else {
-                        let prompt = Prompt::KeyboardInteractive {
-                            user: user.to_owned(),
-                            host: hop.address.clone(),
-                            name,
-                            instructions,
-                            questions: prompts
-                                .into_iter()
-                                .map(|(text, echo)| Question { text, echo })
-                                .collect(),
-                            retry: attempt > 0,
-                        };
-                        match ctx.ask(prompt).await {
-                            Answer::Text(texts) => texts,
-                            _ => return Err(Failure::Cancelled),
+                        let binding =
+                            kbd_password_binding(hop, &fingerprint, &name, &instructions, &prompts);
+                        let saved = binding
+                            .as_deref()
+                            .filter(|b| automatic.insert((*b).to_owned()))
+                            .and_then(|b| ctx.saved(openward_vault::SecretKind::Password, b));
+                        if let Some(secret) = saved {
+                            vec![secret]
+                        } else {
+                            let prompt = Prompt::KeyboardInteractive {
+                                user: user.into(),
+                                host: hop.address.clone(),
+                                name,
+                                instructions,
+                                questions: prompts
+                                    .into_iter()
+                                    .map(|(text, echo)| Question { text, echo })
+                                    .collect(),
+                                retry: attempt > 0,
+                            };
+                            let Some((texts, remember)) = ctx.ask(prompt).await.texts() else {
+                                return Err(Failure::Cancelled);
+                            };
+                            if let Some(binding) = binding {
+                                candidate = if remember {
+                                    texts
+                                        .first()
+                                        .filter(|p| !p.is_empty())
+                                        .map(|v| (binding, v.clone()))
+                                } else {
+                                    None
+                                };
+                            }
+                            texts
                         }
                     };
                     let answers = answers.iter().map(|a| a.as_str().to_owned()).collect();
@@ -845,6 +993,15 @@ async fn keyboard_interactive(
             }
         };
         if !rejected(&outcome) {
+            if let Some((binding, value)) = candidate {
+                ctx.remember(
+                    consent_epoch,
+                    openward_vault::SecretKind::Password,
+                    &format!("{}@{}:{}", user, hop.address, hop.port),
+                    &binding,
+                    &value,
+                );
+            }
             return Ok(outcome);
         }
         let again = matches!(&outcome, Outcome::Continue { methods, .. }
@@ -864,13 +1021,32 @@ async fn password(
     mut last: Outcome,
 ) -> Result<Outcome, Failure> {
     let user = hop.user.as_str();
+    let consent_epoch = ctx.security.gate().ticket().ok();
+    let fingerprint = s.info().host_key_fingerprint;
+    let binding = format!(
+        "ssh-password:{}",
+        serde_json::to_string(&(hop.address.to_lowercase(), hop.port, user, &fingerprint))
+            .unwrap_or_default()
+    );
+    if !fingerprint.is_empty()
+        && let Some(saved) = ctx.saved(openward_vault::SecretKind::Password, &binding)
+    {
+        let outcome = s.auth_password(user, &saved).await.map_err(network(hop))?;
+        if !rejected(&outcome) {
+            return Ok(outcome);
+        }
+        last = outcome;
+    }
     for attempt in 0..3 {
-        let prompt = Prompt::Password {
-            user: user.to_owned(),
-            host: hop.address.clone(),
-            retry: attempt > 0,
-        };
-        let Answer::Text(texts) = ctx.ask(prompt).await else {
+        let Some((texts, remember)) = ctx
+            .ask(Prompt::Password {
+                user: user.to_owned(),
+                host: hop.address.clone(),
+                retry: attempt > 0,
+            })
+            .await
+            .texts()
+        else {
             return Err(Failure::Cancelled);
         };
         let password = texts.first().map_or("", |p| p.as_str());
@@ -879,6 +1055,15 @@ async fn password(
             .await
             .map_err(network(hop))?;
         if !rejected(&outcome) {
+            if remember && !fingerprint.is_empty() && !password.is_empty() {
+                ctx.remember(
+                    consent_epoch,
+                    openward_vault::SecretKind::Password,
+                    &format!("{}@{}:{}", user, hop.address, hop.port),
+                    &binding,
+                    password,
+                );
+            }
             return Ok(outcome);
         }
         last = outcome;
@@ -908,6 +1093,88 @@ mod trust_tests {
     struct Sink;
     impl EventSink for Sink {
         fn send(&self, _: Event) {}
+    }
+
+    #[test]
+    fn a_lock_unlock_cycle_revokes_pending_credential_saving() {
+        let d = tempfile::tempdir().unwrap();
+        let app = App::open_as(d.path(), Local::from_env()).unwrap();
+        let password = "Meteor-7-Parchment-Unfurl-Quartz-92!";
+        let setup = app
+            .security()
+            .prepare_setup(Zeroizing::new(password.into()))
+            .unwrap();
+        let groups: Vec<_> = setup.kit.split('-').collect();
+        app.security()
+            .complete_setup(groups[3], groups[12])
+            .unwrap();
+        let sink: Arc<dyn EventSink> = Arc::new(Sink);
+        let ctx = app.ctx(&sink);
+        let old = ctx.security.gate().ticket().ok();
+        app.lock_vault().unwrap();
+        app.security().unlock(password.as_bytes()).unwrap();
+        ctx.remember(
+            old,
+            openward_vault::SecretKind::Password,
+            "fixture",
+            "binding",
+            "private-TEST",
+        );
+        assert!(app.vault().secret_infos().unwrap().is_empty());
+        ctx.remember(
+            ctx.security.gate().ticket().ok(),
+            openward_vault::SecretKind::Password,
+            "fixture",
+            "binding",
+            "private-TEST",
+        );
+        assert_eq!(app.vault().secret_infos().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn saved_pam_passwords_bind_the_complete_challenge_and_exclude_otp_pin_and_echo() {
+        let local = Local::from_env();
+        let mut hop = Plan::for_address(
+            "host.example",
+            Some("demo".into()),
+            Some(22),
+            openward_vault::proto::Protocol::Ssh,
+            &local,
+        )
+        .hops
+        .remove(0);
+        let questions = vec![("Password: ".into(), false)];
+        let binding = kbd_password_binding(&hop, "SHA256:fixture", "PAM", "", &questions).unwrap();
+        for q in ["OTP:", "PIN:", "Verification code:", "New password:"] {
+            assert!(
+                kbd_password_binding(&hop, "SHA256:fixture", "PAM", "", &[(q.into(), false)])
+                    .is_none()
+            );
+        }
+        assert!(kbd_password_binding(&hop, "", "PAM", "", &questions).is_none());
+        assert!(
+            kbd_password_binding(
+                &hop,
+                "SHA256:fixture",
+                "PAM",
+                "",
+                &[("Password:".into(), true)]
+            )
+            .is_none()
+        );
+        assert_ne!(
+            Some(binding.clone()),
+            kbd_password_binding(&hop, "SHA256:other", "PAM", "", &questions)
+        );
+        assert_ne!(
+            Some(binding.clone()),
+            kbd_password_binding(&hop, "SHA256:fixture", "PAM", "changed", &questions)
+        );
+        hop.port = 2222;
+        assert_ne!(
+            Some(binding),
+            kbd_password_binding(&hop, "SHA256:fixture", "PAM", "", &questions)
+        );
     }
 
     #[test]

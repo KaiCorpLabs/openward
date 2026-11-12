@@ -13,6 +13,7 @@ pub fn local_keys() -> Result<Vec<[u8; 32]>, String> {
     for service in SERVICES {
         match read(service) {
             Ok(Some(stored)) => {
+                let stored = zeroize::Zeroizing::new(stored);
                 if let Some(key) = super::crypto::key_from_keychain(&stored) {
                     keys.push(key);
                 }
@@ -39,7 +40,10 @@ fn read(service: &str) -> Result<Option<String>, String> {
     // errSecItemNotFound
     const NOT_FOUND: i32 = -25300;
     match get_generic_password(service, ACCOUNT) {
-        Ok(bytes) => Ok(Some(String::from_utf8_lossy(&bytes).into_owned())),
+        Ok(bytes) => {
+            let bytes = zeroize::Zeroizing::new(bytes);
+            Ok(Some(String::from_utf8_lossy(&bytes).into_owned()))
+        }
         Err(e) if e.code() == NOT_FOUND => Ok(None),
         Err(e) => Err(e.to_string()),
     }
@@ -55,7 +59,10 @@ fn read(service: &str) -> Result<Option<String>, String> {
     let entry =
         keyring::Entry::new_with_target(&target, service, ACCOUNT).map_err(|e| e.to_string())?;
     match entry.get_secret() {
-        Ok(bytes) => Ok(Some(String::from_utf8_lossy(&bytes).into_owned())),
+        Ok(bytes) => {
+            let bytes = zeroize::Zeroizing::new(bytes);
+            Ok(Some(String::from_utf8_lossy(&bytes).into_owned()))
+        }
         Err(keyring::Error::NoEntry) => Ok(None),
         Err(e) => Err(e.to_string()),
     }
@@ -78,11 +85,14 @@ const SERVICES: &[&str] = &["termius-app", "Termius"];
     not(target_os = "android")
 ))]
 fn read(service: &str) -> Result<Option<String>, String> {
-    let out = std::process::Command::new("secret-tool")
+    let mut out = std::process::Command::new("secret-tool")
         .args(["lookup", "service", service, "account", ACCOUNT])
         .output()
         .map_err(|e| format!("secret-tool: {e}"))?;
     let text = String::from_utf8_lossy(&out.stdout).trim().to_owned();
+    use zeroize::Zeroize;
+    out.stdout.zeroize();
+    out.stderr.zeroize();
     Ok((out.status.success() && !text.is_empty()).then_some(text))
 }
 

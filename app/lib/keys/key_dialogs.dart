@@ -14,6 +14,8 @@ import '../core/providers.dart';
 import '../hosts/host_actions.dart' show overSsh;
 import '../l10n/l10n.dart';
 import '../src/rust/api/keychain.dart';
+import '../src/rust/api/security.dart';
+import '../security/state.dart';
 import '../src/rust/api/vault.dart';
 import '../tabs/connection_panels.dart';
 import '../tabs/messages.dart';
@@ -61,6 +63,7 @@ class _NewKeyState extends ConsumerState<_NewKey> {
 
   /// Made on a security key: the file holds no secret.
   bool _onKey = false;
+  bool _inVault = false;
 
   /// With [_onKey]: its PIN at every use (`verify-required`).
   bool _verify = false;
@@ -152,14 +155,14 @@ class _NewKeyState extends ConsumerState<_NewKey> {
       _error = null;
       _cause = null;
     });
-    final r = await ref
-        .read(openWardProvider)
-        .generateKey(
-          name: name,
-          kind: _type,
-          comment: _comment.text.trim(),
-          passphrase: _passphrase.text.isEmpty ? null : _passphrase.text,
-        );
+    final app = ref.read(openWardProvider);
+    final make = _inVault ? app.generateVaultKey : app.generateKey;
+    final r = await make(
+      name: name,
+      kind: _type,
+      comment: _comment.text.trim(),
+      passphrase: _passphrase.text.isEmpty ? null : _passphrase.text,
+    );
     if (!mounted) return;
     _passphrase.clear();
     _again.clear();
@@ -191,6 +194,16 @@ class _NewKeyState extends ConsumerState<_NewKey> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (ref.watch(securityProvider).phase == VaultPhase.unlocked &&
+                !_onKey)
+              SwitchListTile(
+                key: const ValueKey('newKey.inVault'),
+                contentPadding: EdgeInsets.zero,
+                title: Text(l.vaultStoreKey),
+                value: _inVault,
+                onChanged: _busy ? null : (v) => setState(() => _inVault = v),
+              ),
+
             SwitchListTile(
               key: const ValueKey('newKey.onKey'),
               contentPadding: EdgeInsets.zero,
@@ -200,6 +213,7 @@ class _NewKeyState extends ConsumerState<_NewKey> {
                   ? null
                   : (on) => setState(() {
                       _onKey = on;
+                      if (on) _inVault = false;
                       // No RSA on security keys.
                       if (on && _type == SshKeyType.rsa) {
                         _type = SshKeyType.ed25519;
@@ -378,6 +392,10 @@ class _ImportKey extends ConsumerStatefulWidget {
 }
 
 class _ImportKeyState extends ConsumerState<_ImportKey> {
+  bool _inVault = false;
+  String? _selectedPath;
+  final _unlockPhrase = TextEditingController();
+
   final _name = TextEditingController();
   final _text = TextEditingController();
   bool _busy = false;
@@ -396,6 +414,9 @@ class _ImportKeyState extends ConsumerState<_ImportKey> {
 
   @override
   void dispose() {
+    _unlockPhrase.clear();
+    _unlockPhrase.dispose();
+
     _name.dispose();
     // Dart cannot wipe strings; at least the field lets go of it now.
     _text.clear();
@@ -407,13 +428,14 @@ class _ImportKeyState extends ConsumerState<_ImportKey> {
     final file = await openFile();
     if (file == null || !mounted) return;
     try {
-      final text = await File(file.path).readAsString();
+      final text = _inVault ? '' : await File(file.path).readAsString();
       final taken = (await ref.read(keysProvider.future))
           .map((k) => k.name)
           .toSet();
       if (!mounted) return;
       setState(() {
         _text.text = text;
+        _selectedPath = _inVault ? file.path : null;
         if (_name.text.trim().isEmpty) {
           var name = file.name.replaceAll(RegExp(r'[^A-Za-z0-9._@-]'), '_');
           if (name.endsWith('.pem') || name.endsWith('.ppk')) {
@@ -444,9 +466,22 @@ class _ImportKeyState extends ConsumerState<_ImportKey> {
       _error = null;
       _cause = null;
     });
-    final r = await ref
-        .read(openWardProvider)
-        .importKey(name: name, text: _text.text);
+    final app = ref.read(openWardProvider);
+    final phrase = _unlockPhrase.text.isEmpty ? null : _unlockPhrase.text;
+    final r = _inVault
+        ? _selectedPath != null
+              ? await app.importVaultKeyFile(
+                  name: name,
+                  path: _selectedPath!,
+                  passphrase: phrase,
+                )
+              : await app.importVaultKey(
+                  name: name,
+                  text: _text.text,
+                  passphrase: phrase,
+                )
+        : await app.importKey(name: name, text: _text.text);
+    if (mounted) _unlockPhrase.clear();
     if (!mounted) return;
     if (r.failure != null) {
       setState(() {
@@ -475,6 +510,30 @@ class _ImportKeyState extends ConsumerState<_ImportKey> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (ref.watch(securityProvider).phase == VaultPhase.unlocked)
+              SwitchListTile(
+                key: const ValueKey('importKey.inVault'),
+                contentPadding: EdgeInsets.zero,
+                title: Text(l.vaultStoreKey),
+                value: _inVault,
+                onChanged: _busy
+                    ? null
+                    : (v) => setState(() {
+                        _inVault = v;
+                        _selectedPath = null;
+                        _text.clear();
+                      }),
+              ),
+            if (_inVault && _selectedPath != null) Text(l.vaultSelectedKeyFile),
+            if (_inVault)
+              TextField(
+                controller: _unlockPhrase,
+                obscureText: true,
+                autocorrect: false,
+                enableSuggestions: false,
+                decoration: InputDecoration(labelText: l.vaultImportPassphrase),
+              ),
+
             Text(l.importKeyIntro, style: TextStyle(color: c.textMuted)),
             const SizedBox(height: 16),
             _labelled(
@@ -483,7 +542,7 @@ class _ImportKeyState extends ConsumerState<_ImportKey> {
               TextField(
                 key: const ValueKey('importKey.text'),
                 controller: _text,
-                enabled: !_busy,
+                enabled: !_busy && _selectedPath == null,
                 minLines: 6,
                 maxLines: 10,
                 style: mono.copyWith(height: 1.4),

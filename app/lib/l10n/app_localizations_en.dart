@@ -6404,7 +6404,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get vaultScope =>
-      'The password protects vault items. History, recent connections, recordings and SSH files are outside this protection.';
+      'An encrypted vault protects its items, saved secrets and OpenWard history, recents and logs. External SSH files are copied into the vault only on request. Close open sessions before activating encryption.';
 
   @override
   String get vaultCompatibility =>
@@ -6458,4 +6458,53 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get vaultConfirmReplacement => 'Activate new kit';
+
+  @override
+  String get vaultStoreKey => 'Store in vault';
+
+  @override
+  String get vaultStoredKey => 'Private key in vault';
+
+  @override
+  String get vaultRememberCredential => 'Save in vault after verification';
+
+  @override
+  String get vaultImportPassphrase => 'File passphrase, if needed for import';
+
+  @override
+  String get vaultSelectedKeyFile =>
+      'File selected. Rust will read the key; its contents are not loaded into this field.';
+
+  @override
+  String get vaultMoveKeyExplain =>
+      'An encrypted copy will be stored and direct host, group and identity references updated. The original file stays unless you choose to remove it.';
+
+  @override
+  String get vaultRemoveSource =>
+      'Remove the original private file after verifying the copy';
+
+  @override
+  String get vaultExportKeyWarning =>
+      'A private key file will be created outside the vault. Protect it; OpenWard locking will no longer protect that copy.';
+
+  @override
+  String get vaultSavedCredentials => 'Saved credentials';
+
+  @override
+  String get vaultCredentialExplain =>
+      'Stored only on request after successful verification. Passwords are bound to server, port, user and host key. PIN, 2FA and proxy passwords are never saved.';
+
+  @override
+  String get vaultCredentialPassword => 'SSH password';
+
+  @override
+  String get vaultCredentialPassphrase => 'Key passphrase';
+
+  @override
+  String get logsEncrypted =>
+      'Metadata and recordings are encrypted. Each session has its own key so recording can continue while the vault is locked. Explicit exports saved outside remain plaintext.';
+
+  @override
+  String get vaultLocalDataError =>
+      'Local data protection could not finish. The vault remains locked and has not been erased. Check free space and permissions; restore damaged files from a backup and retry.';
 }

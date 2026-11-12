@@ -1,15 +1,14 @@
 // What was used lately on this device: the connections opened (when, and
 // until when) and how often each palette action runs. In recent.json
-// beside the settings, never in the vault nor synced.
+// protected local storage owned by Rust, never synced.
 
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/connection.dart';
-import '../core/json_file.dart';
+import '../core/local_documents.dart';
 import '../core/settings.dart';
 import '../history/history.dart' show historyPlace;
 import '../src/rust/api/session.dart' show PersistenceKind;
@@ -103,10 +102,12 @@ class RecentNotifier extends Notifier<Recent> {
   /// The oldest go beyond this many.
   static const limit = 50;
 
+  late LocalDocuments _store;
   @override
   Recent build() {
+    _store = ref.watch(localDocumentsProvider);
     try {
-      final json = readJsonFile(ref.read(recentFileProvider));
+      final json = _store.read(LocalDocument.recent);
       if (json is Map) {
         final list = json['connections'];
         final actions = json['actions'];
@@ -137,7 +138,9 @@ class RecentNotifier extends Notifier<Recent> {
 
   /// A connection to `where` (as [historyPlace] says) came up.
   void add(String where, String label, {DateTime? now}) {
-    if (!ref.read(settingsProvider).recentConnections) return;
+    if (!_store.visible || !ref.read(settingsProvider).recentConnections) {
+      return;
+    }
     final entry = RecentConnection(
       where: where,
       label: label,
@@ -166,6 +169,7 @@ class RecentNotifier extends Notifier<Recent> {
 
   /// The open connection to `where` closed.
   void end(String where, {DateTime? now, bool tmux = false}) {
+    if (!_store.visible) return;
     final at = state.connections.indexWhere(
       (e) => e.where == where && e.ended == null,
     );
@@ -181,6 +185,7 @@ class RecentNotifier extends Notifier<Recent> {
 
   /// A palette action ran.
   void used(String action) {
+    if (!_store.visible) return;
     state = Recent(
       connections: state.connections,
       actions: {...state.actions, action: (state.actions[action] ?? 0) + 1},
@@ -195,20 +200,17 @@ class RecentNotifier extends Notifier<Recent> {
   }
 
   void _save() {
-    final file = ref.read(recentFileProvider);
+    if (!_store.visible) return;
     try {
       if (state.connections.isEmpty && state.actions.isEmpty) {
-        if (file.existsSync()) file.deleteSync();
+        _store.erase(LocalDocument.recent);
         return;
       }
-      writeFileAtomically(
-        file,
-        jsonEncode({
-          'version': 1,
-          'connections': [for (final e in state.connections) e.toJson()],
-          if (state.actions.isNotEmpty) 'actions': state.actions,
-        }),
-      );
+      _store.write(LocalDocument.recent, {
+        'version': 1,
+        'connections': [for (final e in state.connections) e.toJson()],
+        if (state.actions.isNotEmpty) 'actions': state.actions,
+      });
     } catch (_) {
       // Kept for this run even if it cannot be saved.
     }

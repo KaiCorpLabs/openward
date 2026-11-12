@@ -211,7 +211,19 @@ pub enum Answer {
     Accept,
     /// One text per question: passphrase, password, or 2FA answers.
     Text(Vec<Zeroizing<String>>),
+    /// Explicit consent, honored only for validated reusable credentials.
+    Remember(Vec<Zeroizing<String>>),
     Cancel,
+}
+
+impl Answer {
+    pub(crate) fn texts(self) -> Option<(Vec<Zeroizing<String>>, bool)> {
+        match self {
+            Self::Text(t) => Some((t, false)),
+            Self::Remember(t) => Some((t, true)),
+            _ => None,
+        }
+    }
 }
 
 /// A host key that differs from the one trusted.

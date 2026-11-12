@@ -264,9 +264,14 @@ abstract class ConnectionController extends ChangeNotifier {
     notify();
   }
 
-  void answer(PromptView prompt, PromptAnswer answer) {
+  bool get canRememberSecrets => app.securityState().phase.name == 'unlocked';
+  void answer(PromptView prompt, PromptAnswer answer, {bool remember = false}) {
     prompts.remove(prompt);
-    app.answer(promptId: prompt.id, answer: answer);
+    if (remember) {
+      app.answerRemember(promptId: prompt.id, answer: answer);
+    } else {
+      app.answer(promptId: prompt.id, answer: answer);
+    }
     notify();
   }
 

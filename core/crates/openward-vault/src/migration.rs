@@ -318,7 +318,7 @@ pub(crate) fn install_with_recovery(
         c.execute_batch("BEGIN EXCLUSIVE")?;
         let version: i64 = c.pragma_query_value(None, "user_version", |r| r.get(0))?;
         if version != 1 {
-            return Err(if version > 2 {
+            return Err(if version > 3 {
                 Error::NewerFormat(version)
             } else {
                 Error::Invalid("migration requires a plaintext format1 vault")

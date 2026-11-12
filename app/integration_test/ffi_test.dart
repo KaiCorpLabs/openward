@@ -17,6 +17,7 @@ import 'package:openward/src/rust/api/app.dart';
 import 'package:openward/src/rust/api/identities.dart';
 import 'package:openward/src/rust/api/keychain.dart';
 import 'package:openward/src/rust/api/known_hosts.dart';
+import 'package:openward/src/rust/api/local_data.dart';
 import 'package:openward/src/rust/api/programs.dart';
 import 'package:openward/src/rust/api/snippets.dart';
 import 'package:openward/src/rust/api/session.dart';
@@ -209,6 +210,110 @@ void main() {
         await app.lockVault();
         await app.unlockVault(password: oldPassword);
         expect(app.host(id: id).spec.label, 'recovery fixture');
+      } finally {
+        app.dispose();
+      }
+    },
+  );
+
+  test(
+    'D6 secrets and protected local documents cross the generated bridge',
+    () async {
+      const password = 'Meteor-7-Parchment-Unfurl-Quartz-92!';
+      const nextPassword = 'Larch-93-Quietly-Orbit-Parchment-72!';
+      try {
+        final kit = await app.prepareVault(password: password);
+        final groups = kit.split('-');
+        await app.completeVaultSetup(group3: groups[3], group12: groups[12]);
+        final made = await app.generateVaultKey(
+          name: 'D6 private key',
+          kind: SshKeyType.ed25519,
+          comment: 'fixture',
+        );
+        expect(made.failure, isNull);
+        final key = made.key!;
+        expect(key.path, startsWith('vault:'));
+        final public = await app.publicKeyLine(path: key.path);
+        expect(public, startsWith('ssh-ed25519 '));
+        expect(
+          await app.savedCredentials(),
+          isEmpty,
+        ); // metadata API excludes private keys
+        final exported = '${dir.path}/exported';
+        await app.exportVaultKey(path: key.path, to: exported);
+        await expectLater(
+          app.exportVaultKey(path: key.path, to: exported),
+          throwsA(isA<VaultError>()),
+        );
+        final imported = await app.importVaultKeyFile(
+          name: 'D6 imported',
+          path: exported,
+        );
+        expect(imported.failure, isNull);
+        expect(await app.publicKeyLine(path: imported.key!.path), public);
+        final copy = '${dir.path}/copy-key';
+        await File(exported).copy(copy);
+        final copied = await app.storeKeyFile(path: copy, removeSource: false);
+        expect(copied.failure, isNull);
+        expect(File(copy).existsSync(), isTrue);
+        final movedFile = '${dir.path}/move-key';
+        await File(exported).copy(movedFile);
+        final moved = await app.storeKeyFile(
+          path: movedFile,
+          removeSource: true,
+        );
+        expect(moved.failure, isNull);
+        expect(File(movedFile).existsSync(), isFalse);
+        app.writeLocalDocument(
+          kind: LocalDocument.history,
+          json: '{"commands":["private-command-D6"]}',
+        );
+        app.writeLocalDocument(
+          kind: LocalDocument.recent,
+          json: '{"connections":["private-host-D6"]}',
+        );
+        for (final name in ['history', 'recent']) {
+          final bytes = await File('${dir.path}/data/$name.json').readAsBytes();
+          expect(bytes.take(5), [79, 87, 76, 68, 1]);
+          expect(String.fromCharCodes(bytes), isNot(contains('private-')));
+        }
+        await app.lockVault();
+        expect(await app.keys(), isEmpty);
+        expect(await app.savedCredentials(), isEmpty);
+        expect(
+          () => app.readLocalDocument(kind: LocalDocument.history),
+          throwsA(isVault(VaultErrorKind.locked)),
+        );
+        expect(
+          () => app.writeLocalDocument(kind: LocalDocument.recent, json: '{}'),
+          throwsA(isVault(VaultErrorKind.locked)),
+        );
+        await expectLater(
+          app.exportVaultKey(path: key.path, to: '${dir.path}/blocked'),
+          throwsA(isVault(VaultErrorKind.locked)),
+        );
+        expect(File('${dir.path}/blocked').existsSync(), isFalse);
+        await app.recoverVault(kit: kit);
+        expect(
+          app.readLocalDocument(kind: LocalDocument.history),
+          contains('private-command-D6'),
+        );
+        await app.changeVaultPassword(
+          authorization: password,
+          useKit: false,
+          password: nextPassword,
+        );
+        await app.lockVault();
+        await app.unlockVault(password: nextPassword);
+        expect(await app.publicKeyLine(path: key.path), public);
+        expect(
+          app.readLocalDocument(kind: LocalDocument.recent),
+          contains('private-host-D6'),
+        );
+        expect(await app.deleteKey(path: key.path), isNull);
+        expect((await app.keys()).any((k) => k.path == key.path), isFalse);
+        app.eraseLocalDocument(kind: LocalDocument.history);
+        expect(File('${dir.path}/data/history.json').existsSync(), isFalse);
       } finally {
         app.dispose();
       }

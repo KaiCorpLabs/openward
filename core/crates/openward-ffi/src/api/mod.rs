@@ -13,3 +13,7 @@ pub mod snippets;
 pub mod tunnels;
 pub mod vault;
 pub mod workspaces;
+
+pub mod local_data;
+
+pub mod credentials;

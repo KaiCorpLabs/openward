@@ -13,6 +13,7 @@ serde = { version = "1", features = ["derive"] }
 ciborium = "0.2"
 uuid = { version = "1", features = ["v7", "serde"] }
 thiserror = "2"
+zeroize = { version = "1", features = ["serde"] }
 
 [lints]
 workspace = true

@@ -6,7 +6,8 @@
 //! flushed every [`FLUSH_EVERY`] while output comes, so a sudden exit
 //! loses at most those last seconds.
 
-use std::fs::File;
+use crate::protected::Writer;
+use openward_crypto::local::LocalKey;
 use std::io::{BufWriter, Write};
 use std::path::Path;
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
@@ -77,8 +78,9 @@ impl Recorder {
         cast_path: &Path,
         text_path: &Path,
         header: &Header,
+        key: Option<Arc<LocalKey>>,
     ) -> std::io::Result<Self> {
-        let result = Self::start_writer(cast_path, text_path, header);
+        let result = Self::start_writer(cast_path, text_path, header, key);
         if result.is_err() {
             // A failed second file, header or thread start must not leave
             // the first recording as an unindexed session on disk.
@@ -88,13 +90,18 @@ impl Recorder {
         result
     }
 
-    fn start_writer(cast_path: &Path, text_path: &Path, header: &Header) -> std::io::Result<Self> {
+    fn start_writer(
+        cast_path: &Path,
+        text_path: &Path,
+        header: &Header,
+        key: Option<Arc<LocalKey>>,
+    ) -> std::io::Result<Self> {
         let mut cast = GzEncoder::new(
-            BufWriter::new(super::create(cast_path)?),
+            BufWriter::new(Writer::create(cast_path, key.clone())?),
             Compression::fast(),
         );
         let text = GzEncoder::new(
-            BufWriter::new(super::create(text_path)?),
+            BufWriter::new(Writer::create(text_path, key)?),
             Compression::fast(),
         );
         cast.write_all(header.line().as_bytes())?;
@@ -226,7 +233,7 @@ impl Drop for Recorder {
     }
 }
 
-type Gz = GzEncoder<BufWriter<File>>;
+type Gz = GzEncoder<BufWriter<Writer>>;
 
 fn write_loop(shared: &Shared, mut cast: Gz, mut text: Gz) {
     let mut utf8 = Utf8Stream::default();
@@ -292,6 +299,8 @@ fn write_loop(shared: &Shared, mut cast: Gz, mut text: Gz) {
                 text.try_finish()?;
                 cast.get_mut().flush()?;
                 text.get_mut().flush()?;
+                cast.get_mut().get_mut().finish()?;
+                text.get_mut().get_mut().finish()?;
             } else if (dirty || wrote) && last_flush.elapsed() >= FLUSH_EVERY {
                 // A sync flush: what is in the file so far reads back.
                 cast.flush()?;

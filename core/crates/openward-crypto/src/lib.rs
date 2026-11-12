@@ -3,6 +3,7 @@
 mod codec;
 pub mod envelope;
 pub mod hierarchy;
+pub mod local;
 pub mod password;
 pub mod plaintext;
 pub mod recovery;

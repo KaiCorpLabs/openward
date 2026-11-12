@@ -133,10 +133,18 @@ impl OpenWard {
         let gate = self.app.security().gate();
         super::security::access(&gate, false, || {
             let users = keychain::users(self.app.local(), &self.app.vault());
-            keychain::list(self.app.local(), &users)
-                .into_iter()
-                .map(SshKey::from)
-                .collect()
+            let mut keys = keychain::list(self.app.local(), &users);
+            let mut stored = openward_app::vault_keys::list(&self.app.vault());
+            for key in &mut stored {
+                let path = keychain::absolute(self.app.local(), &key.path);
+                key.used_by = users
+                    .iter()
+                    .filter(|(p, _)| p == &path)
+                    .map(|(_, name)| name.clone())
+                    .collect();
+            }
+            keys.extend(stored);
+            keys.into_iter().map(SshKey::from).collect()
         })
         .unwrap_or_default()
     }
@@ -149,6 +157,7 @@ impl OpenWard {
         comment: String,
         passphrase: Option<String>,
     ) -> Result<SshKeyResult, VaultError> {
+        let passphrase = passphrase.map(Zeroizing::new);
         let gate = self.app.security().gate();
         super::security::access(&gate, false, || {
             let kind = match kind {
@@ -162,7 +171,7 @@ impl OpenWard {
                 &name,
                 kind,
                 &comment,
-                passphrase.as_deref(),
+                passphrase.as_deref().map(String::as_str),
                 || keychain::users(self.app.local(), &self.app.vault()),
             ))
         })
@@ -179,6 +188,7 @@ impl OpenWard {
         pin: Option<String>,
         verify: bool,
     ) -> Result<SshKeyResult, VaultError> {
+        let pin = pin.map(Zeroizing::new);
         let gate = self.app.security().gate();
         super::security::access(&gate, false, || {
             let keys = self.app.security_keys();
@@ -192,7 +202,7 @@ impl OpenWard {
                         SecurityKeyType::Ecdsa => openward_fido::Kind::Ecdsa,
                     },
                     comment: &comment,
-                    pin: pin.as_deref(),
+                    pin: pin.as_deref().map(String::as_str),
                     verify,
                 },
                 || keychain::users(self.app.local(), &self.app.vault()),
@@ -203,6 +213,7 @@ impl OpenWard {
 
     /// Saves a private key given as text as `~/.ssh/<name>`.
     pub fn import_key(&self, name: String, text: String) -> Result<SshKeyResult, VaultError> {
+        let text = Zeroizing::new(text);
         let gate = self.app.security().gate();
         super::security::access(&gate, false, || {
             result(keychain::import(self.app.local(), &name, &text, || {
@@ -212,12 +223,124 @@ impl OpenWard {
         .map_err(Into::into)
     }
 
+    pub fn generate_vault_key(
+        &self,
+        name: String,
+        kind: SshKeyType,
+        comment: String,
+        passphrase: Option<String>,
+    ) -> Result<SshKeyResult, VaultError> {
+        let phrase = passphrase.map(Zeroizing::new);
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            result(openward_app::vault_keys::generate(
+                &mut self.app.vault(),
+                &name,
+                match kind {
+                    SshKeyType::Ed25519 => NewKey::Ed25519,
+                    SshKeyType::Ecdsa => NewKey::Ecdsa,
+                    SshKeyType::Rsa => NewKey::Rsa,
+                },
+                &comment,
+                phrase.as_deref().map(String::as_str),
+            ))
+        })
+        .map_err(Into::into)
+    }
+    pub fn import_vault_key(
+        &self,
+        name: String,
+        text: String,
+        passphrase: Option<String>,
+    ) -> Result<SshKeyResult, VaultError> {
+        let phrase = passphrase.map(Zeroizing::new);
+        let text = Zeroizing::new(text);
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            result(openward_app::vault_keys::import(
+                &mut self.app.vault(),
+                &name,
+                &text,
+                phrase.as_deref().map(String::as_str),
+            ))
+        })
+        .map_err(Into::into)
+    }
+    pub fn import_vault_key_file(
+        &self,
+        name: String,
+        path: String,
+        passphrase: Option<String>,
+    ) -> Result<SshKeyResult, VaultError> {
+        let phrase = passphrase.map(Zeroizing::new);
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            let text = match openward_app::vault_keys::read_import_file(std::path::Path::new(&path))
+            {
+                Ok(t) => t,
+                Err(e) => return result(Err(e)),
+            };
+            result(openward_app::vault_keys::import(
+                &mut self.app.vault(),
+                &name,
+                &text,
+                phrase.as_deref().map(String::as_str),
+            ))
+        })
+        .map_err(Into::into)
+    }
+    pub fn store_key_file(
+        &self,
+        path: String,
+        remove_source: bool,
+        passphrase: Option<String>,
+    ) -> Result<SshKeyResult, VaultError> {
+        let phrase = passphrase.map(Zeroizing::new);
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || {
+            result(openward_app::vault_keys::store_file(
+                &mut self.app.vault(),
+                self.app.local(),
+                &path,
+                remove_source,
+                phrase.as_deref().map(String::as_str),
+            ))
+        })
+        .map_err(Into::into)
+    }
+    pub fn export_vault_key(&self, path: String, to: String) -> Result<(), VaultError> {
+        let gate = self.app.security().gate();
+        super::security::access(&gate, false, || -> openward_app::vault::Result<()> {
+            let text =
+                openward_app::vault_keys::text(&self.app.vault(), std::path::Path::new(&path))
+                    .map_err(|_| openward_app::vault::Error::Invalid("key unavailable"))?;
+            let dest = std::path::Path::new(&to);
+            let mut file = tempfile::NamedTempFile::new_in(
+                dest.parent()
+                    .ok_or(openward_app::vault::Error::Invalid("invalid destination"))?,
+            )?;
+            use std::io::Write;
+            file.write_all(text.as_bytes())?;
+            file.as_file().sync_all()?;
+            file.persist_noclobber(dest).map_err(|e| e.error)?;
+            Ok(())
+        })??;
+        Ok(())
+    }
     /// Deletes a key of `~/.ssh` and its `.pub` and certificate; None if
     /// it went.
     pub fn delete_key(&self, path: String) -> Result<Option<SshKeyFailure>, VaultError> {
         let gate = self.app.security().gate();
         super::security::access(&gate, false, || {
-            keychain::delete(self.app.local(), &path).err().map(failure)
+            if let Some(id) = openward_app::vault_keys::reference(std::path::Path::new(&path)) {
+                self.app
+                    .vault()
+                    .delete_secret(&id)
+                    .err()
+                    .map(|_| failure(keychain::KeyError::NotAKey))
+            } else {
+                keychain::delete(self.app.local(), &path).err().map(failure)
+            }
         })
         .map_err(Into::into)
     }
@@ -226,6 +349,19 @@ impl OpenWard {
     pub fn rename_key(&self, path: String, name: String) -> Result<SshKeyResult, VaultError> {
         let gate = self.app.security().gate();
         super::security::access(&gate, false, || {
+            if let Some(id) = openward_app::vault_keys::reference(std::path::Path::new(&path)) {
+                let mut v = self.app.vault();
+                let renamed = v.rename_secret(&id, &name);
+                return match renamed {
+                    Ok(()) => result(
+                        openward_app::vault_keys::list(&v)
+                            .into_iter()
+                            .find(|k| k.path == path)
+                            .ok_or(keychain::KeyError::NotAKey),
+                    ),
+                    Err(_) => result(Err(keychain::KeyError::NotAKey)),
+                };
+            }
             result(keychain::rename(
                 self.app.local(),
                 &mut self.app.vault(),
@@ -248,6 +384,16 @@ impl OpenWard {
         super::security::access(&gate, false, || {
             let old = old.map(Zeroizing::new);
             let new = new.map(Zeroizing::new);
+            if openward_app::vault_keys::reference(std::path::Path::new(&path)).is_some() {
+                return openward_app::vault_keys::change_phrase(
+                    &mut self.app.vault(),
+                    std::path::Path::new(&path),
+                    old.as_deref().map(String::as_str),
+                    new.as_deref().map(String::as_str),
+                )
+                .err()
+                .map(failure);
+            }
             keychain::change_passphrase(
                 self.app.local(),
                 &path,
@@ -276,7 +422,12 @@ impl OpenWard {
     pub fn public_key_line(&self, path: String) -> Option<String> {
         let gate = self.app.security().gate();
         super::security::access(&gate, false, || {
-            keychain::public_line(self.app.local(), &path).ok()
+            if openward_app::vault_keys::reference(std::path::Path::new(&path)).is_some() {
+                openward_app::vault_keys::public(&self.app.vault(), std::path::Path::new(&path))
+                    .ok()
+            } else {
+                keychain::public_line(self.app.local(), &path).ok()
+            }
         })
         .unwrap_or_default()
     }

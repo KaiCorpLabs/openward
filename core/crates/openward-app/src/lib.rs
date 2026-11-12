@@ -18,11 +18,13 @@ pub mod local;
 pub mod logs;
 pub mod plan;
 pub mod programs;
+pub mod protected;
 pub mod security;
 pub mod sftp;
 pub mod snippets;
 pub mod terminal;
 pub mod tunnels;
+pub mod vault_keys;
 
 mod connect;
 mod live;
@@ -62,6 +64,7 @@ pub const DEFAULT_SCROLLBACK: usize = 10_000;
 pub struct App {
     vault: Arc<Mutex<Vault>>,
     security: Arc<security::VaultSession>,
+    protected: Arc<protected::Files>,
     local: Local,
     /// What talks to security keys: the one plugged in, by default.
     security_keys: Mutex<Arc<dyn openward_fido::Authenticator>>,
@@ -72,6 +75,28 @@ pub struct App {
     tunnels: Arc<Tunnels>,
     logs: Arc<Logs>,
     runtime: tokio::runtime::Runtime,
+}
+
+struct ProtectedResources {
+    files: Arc<protected::Files>,
+    logs: Arc<Logs>,
+}
+impl security::Protected for ProtectedResources {
+    fn before_encrypt(&self) -> vault::Result<()> {
+        self.logs.before_encrypt()?;
+        Ok(())
+    }
+    fn unlock(&self, vault: &Vault) -> vault::Result<()> {
+        vault.require_protected_storage()?;
+        self.files.bind(vault.local_data_key()?);
+        self.files.migrate_documents()?;
+        self.logs.unlock_private()?;
+        Ok(())
+    }
+    fn lock(&self) {
+        self.logs.lock_private();
+        self.files.lock();
+    }
 }
 
 impl App {
@@ -85,7 +110,19 @@ impl App {
         let data_dir = create_private_dir(data_dir)?;
         let security = Arc::new(security::VaultSession::open(&data_dir.join("vault.db"))?);
         let vault = security.vault();
-        let logs = Logs::open(&data_dir.join("logs"), logs::Config::default())?;
+        let protected = protected::Files::new(
+            &data_dir,
+            security.status().phase != security::Phase::Legacy,
+        );
+        let logs = Logs::open_protected(
+            &data_dir.join("logs"),
+            logs::Config::default(),
+            Arc::clone(&protected),
+        )?;
+        security.protect(Arc::new(ProtectedResources {
+            files: Arc::clone(&protected),
+            logs: Arc::clone(&logs),
+        }));
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
             .thread_name("openward-net")
@@ -106,6 +143,7 @@ impl App {
         Ok(Self {
             vault,
             security,
+            protected,
             local,
             security_keys: Mutex::new(default_security_keys()),
             prompts,
@@ -118,6 +156,9 @@ impl App {
         })
     }
 
+    pub fn protected(&self) -> &Arc<protected::Files> {
+        &self.protected
+    }
     pub fn security(&self) -> &Arc<security::VaultSession> {
         &self.security
     }
