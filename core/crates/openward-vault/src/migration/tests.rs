@@ -83,8 +83,12 @@ fn migration_encrypts_deleted_pages_wal_metadata_and_reopens_for_writes() {
     // Close before install; a subprocess crash test below covers a hot WAL.
     drop(raw);
     let locked = Vault::migrate_encrypted(&path, PASSWORD, params()).unwrap();
-    no_marker(dir.path());
     assert!(matches!(Vault::open(&path), Err(Error::OpenElsewhere)));
+    // Windows locks are mandatory: even a read of the empty .lock file is
+    // refused while held. Close it before scanning every sibling, then reopen.
+    drop(locked);
+    no_marker(dir.path());
+    let locked = Vault::open_locked(&path).unwrap();
     let mut v = locked.unlock(PASSWORD).unwrap();
     assert!(v.is_encrypted());
     assert_eq!(v.item(id).unwrap().rev, 3);
