@@ -4,9 +4,11 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'credentials.dart';
 import 'identities.dart';
 import 'keychain.dart';
 import 'known_hosts.dart';
+import 'local_data.dart';
 import 'logs.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
@@ -30,6 +32,9 @@ String coreVersion() => RustLib.instance.api.crateApiAppCoreVersion();
 abstract class OpenWard implements RustOpaqueInterface {
   /// Answers a prompt; false if nothing waits for it any more.
   bool answer({required BigInt promptId, required PromptAnswer answer});
+
+  /// Consent applies only after a password/passphrase is verified by Rust.
+  bool answerRemember({required BigInt promptId, required PromptAnswer answer});
 
   /// Stops it for good, deleting the file it was writing.
   void cancelTransfer({required BigInt id});
@@ -135,6 +140,8 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   Future<void> enableNative({required bool linuxAck});
 
+  void eraseLocalDocument({required LocalDocument kind});
+
   Future<void> exportLog({
     required String id,
     required String path,
@@ -142,6 +149,10 @@ abstract class OpenWard implements RustOpaqueInterface {
   });
 
   Future<void> exportPreparedRecovery({required String path});
+
+  Future<void> exportVaultKey({required String path, required String to});
+
+  Future<void> forgetCredential({required String id});
 
   /// Forgets a key: OpenWard's, or the line of the file if it still reads
   /// `text` (a copy of the file goes to `known_hosts.old` first).
@@ -166,6 +177,13 @@ abstract class OpenWard implements RustOpaqueInterface {
     required String comment,
     String? pin,
     required bool verify,
+  });
+
+  Future<SshKeyResult> generateVaultKey({
+    required String name,
+    required SshKeyType kind,
+    required String comment,
+    String? passphrase,
   });
 
   GroupDetail group({required String id});
@@ -200,6 +218,18 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// and the hosts they jump through. Aliases imported before stay as
   /// they are.
   Future<ImportReport> importSshConfig({String? file, List<String>? only});
+
+  Future<SshKeyResult> importVaultKey({
+    required String name,
+    required String text,
+    String? passphrase,
+  });
+
+  Future<SshKeyResult> importVaultKeyFile({
+    required String name,
+    required String path,
+    String? passphrase,
+  });
 
   /// What a host in `group_id` (none: the top level) gets before its own
   /// settings, and where each value comes from. For editors, so a new
@@ -358,6 +388,8 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// A key's public half, as an `authorized_keys` line.
   Future<String?> publicKeyLine({required String path});
 
+  String? readLocalDocument({required LocalDocument kind});
+
   /// From now on, reads a host's `/etc/os-release` after connecting, and
   /// now over its connection if one is up. False when there is none: it
   /// is read on the next one.
@@ -401,6 +433,8 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// Keeps a session for good with a note, or changes its note.
   Future<void> saveLog({required String id, required String note});
 
+  Future<List<SavedCredential>> savedCredentials();
+
   /// Ids of the hosts matching every word, sorted by label.
   List<String> search({required String query});
 
@@ -439,6 +473,12 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   /// Every snippet, by name.
   List<SnippetView> snippetsForExecution();
+
+  Future<SshKeyResult> storeKeyFile({
+    required String path,
+    required bool removeSource,
+    String? passphrase,
+  });
 
   List<TagCount> tags();
 
@@ -560,6 +600,8 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   /// Every workspace, by name.
   List<WorkspaceView> workspaces();
+
+  void writeLocalDocument({required LocalDocument kind, required String json});
 }
 
 /// A serial port of this computer.

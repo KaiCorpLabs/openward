@@ -5,7 +5,7 @@
 - **Alcance:** el cliente de escritorio en macOS, Windows y Linux. La sync (v0.5), el servidor y las cuentas (v0.6), el móvil y la IA tienen su sitio en el [§8](#8-lo-que-llega-después), con lo que ya se sabe que traerán.
 - **Base:** [ARCHITECTURE §11](ARCHITECTURE.md#11-seguridad-y-cadena-de-suministro), [ADR-003](adr/ADR-003-ssh-russh-y-firmantes.md) (SSH), [ADR-004](adr/ADR-004-vault-y-jerarquia-de-claves.md) (vault y claves) y [ADR-005](adr/ADR-005-sync-por-registros-de-dispositivo.md) (sync).
 
-## Estado de implementación D4 (2026-11-12)
+## Estado de implementación D4–D6 (2026-11-12)
 
 La [sesión local v1](../spec/vault-session-v1.md) añade alta optativa con kit mínimo,
 arranque bloqueado, contraseña y factores nativos opcionales, bloqueo manual,
@@ -14,13 +14,20 @@ la FFI, no solo en la pantalla Flutter. Las sesiones establecidas siguen vivas
 con su estado Rust en memoria; el bloqueo impide mostrarlo o enviar entrada
 mediante sus handles de UI. Se descartan índice, claves y cachés visuales.
 
-Esto aún no cumple todas las garantías finales del §5: historial, recientes,
-logs y archivos SSH siguen fuera del vault (D6), el alta obligatoria/«Más tarde»
-aún no está activa y la recuperación completa sigue en D5. La autenticación
-física y la firma SSH con Secure Enclave no se dan por validadas por mocks o CI.
-La sonda ad hoc pudo crear una clave efímera no exportable, pero Touch ID devolvió
-SystemCancel; detalles y reproducción en la especificación. No hay fallback
-silencioso de biometría a un llavero sin autenticación adicional.
+La [recuperación D5](../spec/recovery-v1.md) completa kit, QR/PDF, regeneración,
+cambio de contraseña y paquete de cuenta D0-1. [D6](../spec/protected-local-v1.md)
+añade claves privadas optativas, contraseñas/frases de paso solo por consentimiento
+y autenticación correcta, e historial, recientes y registros cifrados (D0-2).
+La versión3 del almacén bloquea clientes antiguos antes de cifrar datos auxiliares.
+Una grabación activa retiene solo su clave propia y continúa con la app bloqueada.
+Una migración incompleta o corrupta conserva datos y deja la app bloqueada.
+
+El alta obligatoria/«Más tarde» sigue pendiente de D8; las claves por archivo son
+una opción explícita. Exportaciones y copias anteriores conservan su protección
+anterior. No se promete borrado forense ni limpiar de RAM todas las cadenas Dart.
+La autenticación física y la firma SSH con Secure Enclave siguen pendientes en
+[#33](https://github.com/KaiCorpLabs/openward/issues/33); no las validan mocks o CI.
+No hay fallback silencioso de biometría a un llavero sin autenticación adicional.
 
 ## 1. Qué se protege
 
@@ -75,11 +82,11 @@ En la carpeta de datos de la app (en macOS, `~/Library/Application Support/dev.o
 | Archivo | Qué guarda | Permisos | Hoy | Con la v0.4 |
 |---|---|---|---|---|
 | `vault.db` (con `-wal`, `-shm` y `.lock`) | Hosts y grupos (etiquetas, direcciones, usuarios, notas, el texto con el que se detectó el sistema), identidades sin secretos, claves de host de confianza, snippets, túneles y espacios de trabajo | 0600 | En claro (sobres `v: 0`) | Cifrado por ítem (D3) |
-| `history.json` | Cada orden, dónde y cuándo se ejecutó (hasta 2000) | 0644, en la carpeta 0700 ([AM-3](#9-hallazgos-de-d0)) | En claro | Cifrado (D6) |
-| `recent.json` | Las conexiones: a dónde, etiqueta y cuándo | 0644, en la carpeta 0700 ([AM-3](#9-hallazgos-de-d0)) | En claro | Cifrado (D6, [D0-2](#11-decisiones-que-salen-de-d0)) |
-| `logs/` (`.json`, `.cast.gz`, `.txt.gz`) | Cada sesión (quién, a dónde, cuándo) y, si se graba, lo que se vio | 0700 y 0600 | En claro | Cifrado (D6, [D0-2](#11-decisiones-que-salen-de-d0)) |
+| `history.json` | Cada orden, dónde y cuándo se ejecutó (hasta 2000) | 0600, carpeta 0700 | OWLD1 con vault cifrado; legado en claro hasta activarlo | Implementado D6 |
+| `recent.json` | Las conexiones: a dónde, etiqueta y cuándo | 0600, carpeta 0700 | OWLD1 con vault cifrado; legado en claro hasta activarlo | Implementado D6 (D0-2) |
+| `logs/` (`.json`, `.cast.gz`, `.txt.gz`) | Cada sesión (quién, a dónde, cuándo) y, si se graba, lo que se vio | 0700 y 0600 | Metadatos OWLD1 y flujos OWLF1, clave por sesión | Implementado D6 (D0-2); legado en claro hasta activar |
 | `settings.json` | Aspecto, reglas de resaltado y el programa de «Abrir con…»; no nombra hosts | 0644 | En claro | Igual |
-| `~/.ssh/<clave>` | Las claves que genera o importa la app; las de una llave FIDO2 solo dicen qué llave usar | 0600 (`.pub` 0644) | Cifradas si tienen frase de paso | Dentro del vault, si se quiere (D6) |
+| `~/.ssh/<clave>` | Las claves que genera o importa la app; las de una llave FIDO2 solo dicen qué llave usar | 0600 (`.pub` 0644) | Cifradas si tienen frase de paso | Opción explícita de archivo o Secret cifrado con referencia opaca (D6) |
 | `~/.ssh/known_hosts` | Se lee al conectar. Solo se escribe al olvidar una línea, con una copia en `known_hosts.old` | Los que tenía | — | Igual |
 | `<temporal>/openward-open-*` | Copias de archivos remotos abiertos aquí («Abrir», «Abrir con…») | 0700; la copia, sin bit de ejecución y con la marca de origen | En claro. Se borran al cerrar la pestaña, y las que queden, al arrancar otra vez ([AM-6](#9-hallazgos-de-d0)) | Igual |
 | `<destino>.ow-*.part` | Transferencias a medias, que se quedan para reanudar | 0600 y los bits del servidor | En claro | Igual |
@@ -150,12 +157,12 @@ Salieron al repasar el código para escribir este documento.
 | AM-1 | Alta | **En Windows, «Abrir» un archivo del SFTP pasa su ruta a `cmd /c start`.** El nombre lo elige el servidor, y Dart solo pone comillas si hay espacios. Un archivo llamado `informe&calc` ejecuta `calc` al abrirlo. Afecta al paquete de Windows de la 0.3.4-beta.1, en un borrador sin publicar, y a los de la CI desde P6, que se guardan 14 días como artefactos y puede bajar cualquiera con cuenta de GitHub | `app/lib/sftp/remote_edit.dart:209-214`, `core/crates/openward-sftp/src/lib.rs:96-98` | `ShellExecute` con la ruta como archivo, sin `cmd`: `url_launcher` con la ruta tal cual, sin una URL que codificar y decodificar por el camino. Si ningún programa abre ese tipo, el diálogo «Abrir con» de Windows | **Arreglado** (2026-11-07). La beta no se publica con el paquete de la 0.3.4-beta.1 |
 | AM-2 | Media | **«Abrir» lanza lo que el sistema ejecuta en vez de abrir** (`.exe`, `.bat`, `.cmd`, `.ps1`, `.lnk`, `.command`, `.desktop`, `.jar`…). El nombre y el bit de ejecución los pone el servidor, y la copia no lleva la marca de cuarentena de macOS ni la de Windows. En la lista del SFTP, un nombre con caracteres bidi o de ancho cero puede disfrazar la extensión (`factura`, U+202E y `fdp.exe` se ve como `facturaexe.pdf`) | `app/lib/sftp/remote_edit.dart:205-218`, `core/crates/openward-sftp/src/transfer.rs:1187-1200` | Preguntar antes con esos tipos, cada sistema los suyos (en Windows, sin los puntos y espacios del final, que quita al guardar); quitar el bit de ejecución a la copia; `com.apple.quarantine` en macOS y la marca de origen (`Zone.Identifier`, zona 3) en Windows; y enseñar los caracteres invisibles de los nombres, como al pegar, también saltos de línea y tabuladores | **Arreglado** (2026-11-07) |
 | AM-3 | Media | **La carpeta de datos queda en 0755**, porque la crea antes `path_provider` y el núcleo solo pone 0700 a una carpeta nueva. `history.json`, `recent.json` y `settings.json` se escriben con 0644. En Linux, otro usuario del equipo puede leer el historial si su carpeta personal lo deja | `core/crates/openward-app/src/lib.rs:1234-1249`, `app/lib/core/json_file.dart:28-33` | Al abrir la app, el núcleo pone 0700 a la carpeta de datos aunque ya estuviera (Unix). El historial, los recientes y los ajustes siguen en 0644, pero dentro de una carpeta que solo abre su dueño | **Arreglado** (2026-11-09) |
-| AM-4 | Baja | **Secretos sin `Zeroizing`:** la frase de paso al generar una clave, el PIN al crearla en una llave, el texto de una clave importada y la clave de Termius al importar. Y copias de los que sí llegan en `Zeroizing`: las respuestas a las preguntas del servidor, y la contraseña, que `russh` recibe como cadena | `core/crates/openward-ffi/src/api/keychain.rs:141-195`, `core/crates/openward-import/src/termius/mod.rs:89-103`, `core/crates/openward-app/src/connect.rs:745,786-788` | `Zeroizing` en los tipos; lo de `russh`, donde su API lo permita | D6 |
+| AM-4 | Baja | Buffers de secretos en FFI, importación Termius y respuestas SSH | `openward-ffi/api/keychain.rs`, `openward-import/termius`, parche `russh` documentado | Zeroizing en buffers propios y respuestas en cola; el borrado de Method/password de russh ya existía en main. No se promete limpieza forense de Dart o paquetes internos. | **Mitigado D6** (2026-11-12); [límites y pruebas](../spec/protected-local-v1.md) |
 | AM-5 | Baja | **Un túnel dinámico abierto a «Toda la red local» es un proxy SOCKS5 sin contraseña** hacia la red del servidor. El aviso de siempre («Cualquiera de tu red podrá usarlo») no dice que, en un dinámico, eso es entrar en toda la red del servidor | `core/crates/openward-app/src/tunnels.rs:156-179`, `core/crates/openward-ssh/src/forward.rs:110-200`, `app/lib/tunnels/tunnel_editor.dart:354-360` | Un aviso propio en el editor del túnel cuando el dinámico se abre a la red: es un proxy SOCKS sin contraseña, y por él se entra en todo lo que alcanza el host | **Arreglado** (2026-11-09) |
 | AM-6 | Baja | **Las copias de «Abrir» se quedan** si la app se cierra mal, o en Windows si otro programa las tiene abiertas | `app/lib/sftp/remote_edit.dart:190-200` | Cada carpeta lleva un cerrojo mientras está en uso. Al arrancar se borran las que lo tienen libre, porque su ejecución terminó, y las de antes del cerrojo, pasado un día. Las de otro OpenWard abierto se quedan | **Arreglado** (2026-11-07) |
-| AM-7 | Baja | **El historial guarda los secretos escritos dentro de una orden** (`mysql -pclave`, `export TOKEN=…`), y la grabación de una sesión, lo que se vio. Ya se saltan lo que no se ve en pantalla, las respuestas a preguntas de contraseña, la pantalla alternativa, las órdenes de más de 4000 caracteres y las que empiezan por un espacio. Pero si la orden se edita con Tab o con las flechas, se lee de la pantalla sin el espacio y se guarda | `app/lib/history/line_tracker.dart:126-191` | Recordar el espacio del principio aunque la línea se edite, y cifrar el historial | D6 |
+| AM-7 | Baja | Historial y grabaciones pueden contener secretos escritos o mostrados | `app/lib/history/line_tracker.dart`, almacenes locales Rust | La supresión por espacio inicial incluso tras editar ya estaba corregida en main. D6 cifra historial/recientes y grabaciones; no sanea órdenes ni salida. | **Mitigado D6** (2026-11-12); [pruebas y límites](../spec/protected-local-v1.md) |
 | AM-8 | Media | **Lo que se importa de otros programas puede encender el reenvío del agente**, además de traer variables de entorno y túneles abiertos a la red. Un archivo hostil (de Termius, PuTTY, SecureCRT, MobaXterm o Tabby) apunta un host a un servidor del atacante con el agente reenviado, y al conectarse este firma con tus claves | `core/crates/openward-import/src/termius/model.rs:303-319,441-443`, `putty.rs:303`, `securecrt.rs:360`, `mobaxterm.rs:236`, `tabby.rs:250` | Al leer el archivo de otro programa, el reenvío del agente se quita y un túnel abierto a la red llega cerrado (en `localhost`), cada uno con un aviso que dice lo que pedía el archivo, como el ProxyCommand. Un reenvío apagado a propósito sigue apagado. `~/.ssh/config` llega tal cual, porque es tuyo | **Arreglado** (2026-11-09) |
-| AM-9 | Baja | **La app promete lo que hoy no es verdad:** la nota de los registros dice que están en una carpeta que solo lee tu usuario (en Linux no, por AM-3) y que irán cifrados con el vault (el plan no lo prevé, [D0-2](#11-decisiones-que-salen-de-d0)) | `app/lib/l10n/app_es.arb:2304` (`logsUnencrypted`) | La carpeta ya es privada (AM-3). Lo de cifrarlos espera a D0-2 | La carpeta, **arreglado** (2026-11-09); el cifrado, en D6 (D0-2) |
+| AM-9 | Baja | Texto de la app sobre protección de los registros | `app/lib/settings/settings_page.dart`, traducciones en/es | Carpeta privada desde AM-3; ahora el aviso distingue legado en claro, vault cifrado y exportaciones. | **Arreglado D6** (2026-11-12), con pruebas de cifrado y bloqueo |
 
 ## 10. Riesgos abiertos
 

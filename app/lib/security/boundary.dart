@@ -8,6 +8,7 @@ import '../core/errors.dart';
 import '../core/providers.dart';
 import '../core/settings.dart';
 import '../home.dart';
+import '../history/history.dart';
 import '../src/rust/api/security.dart';
 import '../tabs/tabs.dart';
 import 'state.dart';
@@ -50,6 +51,7 @@ class _VaultBoundaryState extends ConsumerState<VaultBoundary> {
       try {
         final app = ref.read(openWardProvider);
         if (app.securityState().phase != VaultPhase.legacy) {
+          ref.read(historyProvider.notifier).flush();
           await app.lockVault();
         }
       } finally {
@@ -86,6 +88,7 @@ class _VaultBoundaryState extends ConsumerState<VaultBoundary> {
   Future<void> lock() async {
     final phase = ref.read(securityProvider).phase;
     if (phase != VaultPhase.unlocked && phase != VaultPhase.changing) return;
+    ref.read(historyProvider.notifier).flush();
     await ref.read(openWardProvider).lockVault();
   }
 

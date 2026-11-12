@@ -61,7 +61,7 @@ Las de la v0.4 y las tres de su modelo de amenazas están aceptadas desde el 202
 - **D3:** `openward-crypto`, el vault cifrado y la migración desde la 0.3 (1,5 semanas). Antes de D4, se revisan las maquetas del lienzo.
 - **D4:** el desbloqueo con contraseña, Touch ID, Windows Hello y el llavero de Linux, el bloqueo automático y las claves en el Secure Enclave (1,5 semanas).
 - **D5:** el kit de recuperación, el cambio de contraseña y el paquete de la clave de cuenta (0,5 semanas). Implementado en [#54](https://github.com/KaiCorpLabs/openward/pull/54); [formato, pruebas de recuperación y límites](../../spec/recovery-v1.md).
-- **D6:** los secretos en el vault, y el historial, los recientes y los registros cifrados (2 semanas). Cierra los tres hallazgos de D0 que siguen abiertos: [AM-4, AM-7 y AM-9](../THREAT_MODEL.md#9-hallazgos-de-d0).
+- **D6:** los secretos en el vault, y el historial, los recientes y los registros cifrados (2 semanas). Implementado con guardado explícito, migración y barrera de formato3 ([contrato, pruebas y límites](../../spec/protected-local-v1.md)). Completa las mitigaciones de [AM-4, AM-7 y AM-9](../THREAT_MODEL.md#9-hallazgos-de-d0).
 - **D7:** la copia de seguridad y su especificación (0,5 semanas).
 - **D8:** Ajustes › Seguridad y la 0.4.0-beta.1 (0,5 semanas).
 

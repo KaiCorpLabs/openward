@@ -6,14 +6,21 @@ is `ba61e87b9ec9a39a59a6bbed4c0b8ff7fb07073405b24a767a1f2c8560ac8f58`;
 license is included. Registry cache markers/checksums and the package's own
 lockfile are omitted: OpenWard uses `core/Cargo.lock`.
 
-Only two upstream source files are changed:
+OpenWard changes these upstream source files:
 
 - `src/client/kex.rs`: the actual KEX signature must use the negotiated
   host-key algorithm before its cryptographic verification succeeds. The
   same path handles the initial exchange, rekeys and host certificates.
 - `src/client/mod.rs`: exports that verification function so OpenWard's
   regression suite can exercise it with real RSA signatures, without a
-  second implementation of the check.
+  second implementation of the check. D6 also wraps queued keyboard-interactive
+  responses in an owned `AuthResponse(Zeroizing<String>)` on entry; they are redacted from Debug.
+- `src/client/encrypted.rs`: encodes those zeroizing responses by borrowed str,
+  preserving the wire protocol and releasing/wiping queue-owned values after use.
+
+D6 does not introduce the password Method drop/Debug protections: those already
+exist upstream. Keeping strings zeroizing at this boundary does not promise to
+wipe all packet buffers or library allocations.
 
 No algorithms, trust checks or cryptographic verification are removed. The
 guard enforces the negotiated algorithm, so explicitly negotiated legacy

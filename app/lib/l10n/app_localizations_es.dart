@@ -6429,7 +6429,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get vaultScope =>
-      'La contraseña protege los elementos del vault. El historial, los recientes, las grabaciones y los archivos SSH están fuera de esta protección.';
+      'El vault cifrado protege los ítems, los secretos guardados y el historial, los recientes y los registros de OpenWard. Los archivos SSH externos sólo se copian al vault cuando lo solicitas. Antes de activar el cifrado, cierra las sesiones abiertas.';
 
   @override
   String get vaultCompatibility =>
@@ -6483,4 +6483,55 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get vaultConfirmReplacement => 'Activar el nuevo kit';
+
+  @override
+  String get vaultStoreKey => 'Guardar en el vault';
+
+  @override
+  String get vaultStoredKey => 'Clave privada en el vault';
+
+  @override
+  String get vaultRememberCredential =>
+      'Guardar en el vault después de verificar';
+
+  @override
+  String get vaultImportPassphrase =>
+      'Frase de paso del archivo, si hace falta para importarlo';
+
+  @override
+  String get vaultSelectedKeyFile =>
+      'Archivo seleccionado. El núcleo leerá la clave; su contenido no se carga en este campo.';
+
+  @override
+  String get vaultMoveKeyExplain =>
+      'Se guardará una copia cifrada y se actualizarán las referencias directas de hosts, grupos e identidades. El archivo original se conserva salvo que elijas eliminarlo.';
+
+  @override
+  String get vaultRemoveSource =>
+      'Eliminar el archivo privado original después de verificar la copia';
+
+  @override
+  String get vaultExportKeyWarning =>
+      'Se creará un archivo de clave privada fuera del vault. Protégelo; ya no dependerá del bloqueo de OpenWard.';
+
+  @override
+  String get vaultSavedCredentials => 'Credenciales guardadas';
+
+  @override
+  String get vaultCredentialExplain =>
+      'Sólo se guardan cuando lo solicitas y la autenticación las verifica. Las contraseñas se vinculan al servidor, puerto, usuario y clave de host. PIN, 2FA y contraseñas de proxy no se guardan.';
+
+  @override
+  String get vaultCredentialPassword => 'Contraseña SSH';
+
+  @override
+  String get vaultCredentialPassphrase => 'Frase de paso de una clave';
+
+  @override
+  String get logsEncrypted =>
+      'Los metadatos y las grabaciones se guardan cifrados. Cada sesión tiene su propia clave y puede seguir grabándose con el vault bloqueado. Las exportaciones que elijas guardar fuera quedan en claro.';
+
+  @override
+  String get vaultLocalDataError =>
+      'No se pudo completar la protección de los datos locales. El vault sigue bloqueado y no se ha borrado. Comprueba el espacio y los permisos; si hay archivos dañados, restáuralos desde una copia y vuelve a intentarlo.';
 }

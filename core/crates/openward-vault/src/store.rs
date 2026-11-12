@@ -126,7 +126,7 @@ impl Store {
     }
     fn plain(mut conn: Connection) -> Result<Self> {
         let format: i64 = conn.pragma_query_value(None, "user_version", |r| r.get(0))?;
-        if format == 2 {
+        if (2..=3).contains(&format) {
             return Err(Error::Locked);
         }
         if format > 1 {
@@ -158,8 +158,8 @@ impl Store {
     }
     pub(crate) fn encrypted(conn: Connection, path: PathBuf, lock: ProcessLock) -> Result<Self> {
         let format: i64 = conn.pragma_query_value(None, "user_version", |r| r.get(0))?;
-        if format != 2 {
-            return Err(if format > 2 {
+        if !(2..=3).contains(&format) {
+            return Err(if format > 3 {
                 Error::NewerFormat(format)
             } else {
                 Error::Invalid("the vault is not encrypted")
@@ -302,11 +302,26 @@ impl Store {
         if self.header.is_some() && self.keys.is_none() {
             return Err(Error::Locked);
         }
+        let stores_secret = items
+            .iter()
+            .any(|i| matches!(i.body.data, openward_proto::Data::Secret(_)));
+        if stores_secret {
+            self.conn.pragma_update(None, "synchronous", "FULL")?;
+        }
         let mut next = self.clock;
         let tx = self.conn.transaction()?;
+        if stores_secret {
+            tx.pragma_update(None, "user_version", 3)?;
+        }
+
         {
             let mut put=tx.prepare_cached("INSERT INTO items (vault_id,item_id,head_rev,envelope) VALUES (?1,?2,?3,?4) ON CONFLICT(item_id) DO UPDATE SET head_rev=excluded.head_rev,envelope=excluded.envelope")?;
             for item in items {
+                if self.header.is_none()
+                    && matches!(item.body.data, openward_proto::Data::Secret(_))
+                {
+                    return Err(Error::Invalid("encrypt the vault before storing a secret"));
+                }
                 let encoded = if let Some(header) = &self.header {
                     let keys = self.keys.as_ref().ok_or(Error::Locked)?;
                     let old: Option<Vec<u8>> = {

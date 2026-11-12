@@ -9,6 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../identities/identities.dart' show certificatePill;
 import '../l10n/l10n.dart';
 import '../src/rust/api/keychain.dart';
+import '../src/rust/api/security.dart';
+import '../security/state.dart';
 import '../ui/announcer.dart';
 import '../ui/page.dart';
 import '../ui/tokens.dart';
@@ -196,7 +198,7 @@ class _KeysPageState extends ConsumerState<KeysPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              k.path,
+              k.path.startsWith('vault:') ? l.vaultStoredKey : k.path,
               overflow: TextOverflow.ellipsis,
               style: monoStyle(context, size: 12, color: c.text),
             ),
@@ -247,15 +249,27 @@ class _KeysPageState extends ConsumerState<KeysPage> {
               // Open and in amber without a passphrase: a closed lock would
               // say the opposite.
               Icon(
-                k.encrypted ? Icons.lock_outline : Icons.lock_open,
+                (k.encrypted || k.path.startsWith('vault:'))
+                    ? Icons.lock_outline
+                    : Icons.lock_open,
                 size: 14,
-                color: k.encrypted ? c.accentText : c.warn,
+                color: (k.encrypted || k.path.startsWith('vault:'))
+                    ? c.accentText
+                    : c.warn,
               ),
               const SizedBox(width: 6),
               Flexible(
                 child: Text(
-                  k.encrypted ? l.withPassphrase : l.withoutPassphrase,
-                  style: TextStyle(color: k.encrypted ? c.text : c.warn),
+                  k.path.startsWith('vault:')
+                      ? l.vaultStoredKey
+                      : k.encrypted
+                      ? l.withPassphrase
+                      : l.withoutPassphrase,
+                  style: TextStyle(
+                    color: (k.encrypted || k.path.startsWith('vault:'))
+                        ? c.text
+                        : c.warn,
+                  ),
                 ),
               ),
             ],
@@ -300,7 +314,11 @@ class _KeysPageState extends ConsumerState<KeysPage> {
                     () => changeKeyPassphrase(context, k),
                   ),
                   (l.exportEllipsis, () => exportKey(context, ref, k)),
-                  (revealLabel(l), () => revealKey(ref, k)),
+                  if (!k.path.startsWith('vault:'))
+                    (revealLabel(l), () => revealKey(ref, k)),
+                  if (!k.path.startsWith('vault:') &&
+                      ref.read(securityProvider).phase == VaultPhase.unlocked)
+                    (l.vaultStoreKey, () => storeKeyInVault(context, ref, k)),
                   (l.deleteEllipsis, () => deleteKey(context, ref, k)),
                 ])
                   PopupMenuItem(value: action, height: 36, child: Text(text)),

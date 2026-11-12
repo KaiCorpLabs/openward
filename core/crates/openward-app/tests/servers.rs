@@ -2726,3 +2726,116 @@ fn a_local_shell_is_recorded_when_asked() {
     assert_eq!(entry.end, openward_app::logs::End::Closed);
     assert!(recorded_output(app.logs(), &entry.id).contains("on-42"));
 }
+
+// D6: exercise consent and reuse against actual SSH authentication, not a mock.
+fn encrypt_fixture(f: &Fixture) {
+    let setup = f
+        .app
+        .security()
+        .prepare_setup(Zeroizing::new(
+            "Meteor-7-Parchment-Unfurl-Quartz-92!".into(),
+        ))
+        .unwrap();
+    let groups: Vec<_> = setup.kit.split('-').collect();
+    f.app
+        .security()
+        .complete_setup(groups[3], groups[12])
+        .unwrap();
+}
+fn remember(value: &str) -> Answer {
+    Answer::Remember(vec![Zeroizing::new(value.into())])
+}
+#[test]
+fn vault_passwords_require_consent_and_success_then_reuse_without_a_prompt() {
+    let f = Fixture::new(servers!());
+    encrypt_fixture(&f);
+    for port in [22200, BASTION] {
+        let host = f.host(
+            "D6 password",
+            "127.0.0.1",
+            port,
+            Settings {
+                user: Some("demo".into()),
+                identity_files: Some(vec![]),
+                host_key_policy: Some(HostKeyPolicy::AcceptNew),
+                ..Default::default()
+            },
+        );
+        let password = f.password("demo");
+        let (term, rx) = f.connect(host, move |p| match p {
+            Prompt::Password { retry, .. } | Prompt::KeyboardInteractive { retry, .. } => {
+                if *retry {
+                    text(&password)
+                } else {
+                    remember("wrong-TEST")
+                }
+            }
+            _ => Answer::Cancel,
+        });
+        outcome(&rx).0.unwrap();
+        term.close();
+        assert!(
+            f.app.vault().secret_infos().unwrap().is_empty(),
+            "neither failed consent nor successful unconsented answers may persist"
+        );
+        let password = f.password("demo");
+        let (term, rx) = f.connect(host, move |p| match p {
+            Prompt::Password { .. } | Prompt::KeyboardInteractive { .. } => remember(&password),
+            _ => Answer::Cancel,
+        });
+        outcome(&rx).0.unwrap();
+        term.close();
+        let secrets = f.app.vault().secret_infos().unwrap();
+        assert_eq!(secrets.len(), 1);
+        let (term, rx) = f.connect(host, |_| Answer::Cancel);
+        let (result, prompts) = outcome(&rx);
+        result.unwrap();
+        assert!(prompts.is_empty());
+        term.close();
+        f.app.vault().delete_secret(&secrets[0].id).unwrap();
+        let (term, rx) = f.connect(host, |_| Answer::Cancel);
+        assert!(outcome(&rx).0.is_err());
+        term.close();
+    }
+}
+#[test]
+fn encrypted_vault_key_references_authenticate_and_only_valid_passphrases_are_saved() {
+    let f = Fixture::new(servers!());
+    encrypt_fixture(&f);
+    let original = f.read("id_ed25519_pass");
+    let saved = openward_app::vault_keys::import(&mut f.app.vault(), "D6 SSH key", &original, None)
+        .unwrap();
+    let host = f.host(
+        "D6 key",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: Some(vec![saved.path]),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Default::default()
+        },
+    );
+    let (term, rx) = f.connect(host, |p| match p {
+        Prompt::Passphrase { retry: false, .. } => remember("wrong"),
+        Prompt::Passphrase { retry: true, .. } => remember("s2-passphrase"),
+        _ => Answer::Cancel,
+    });
+    let (result, prompts) = outcome(&rx);
+    result.unwrap();
+    assert_eq!(prompts.len(), 2);
+    term.close();
+    let infos = f.app.vault().secret_infos().unwrap();
+    assert_eq!(
+        infos
+            .iter()
+            .filter(|i| i.kind == openward_vault::SecretKind::Passphrase)
+            .count(),
+        1
+    );
+    let (term, rx) = f.connect(host, |_| Answer::Cancel);
+    let (result, prompts) = outcome(&rx);
+    result.unwrap();
+    assert!(prompts.is_empty());
+    term.close();
+}

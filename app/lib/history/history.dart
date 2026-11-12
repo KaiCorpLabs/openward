@@ -1,5 +1,5 @@
 // The command history: commands typed in terminals, kept on this device
-// only (history.json beside the settings, never in the vault), newest
+// only (Rust-owned protected local storage), newest
 // first, to find and send again.
 
 import 'dart:async';
@@ -10,7 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/connection.dart';
-import '../core/json_file.dart';
+import '../core/local_documents.dart';
 import '../core/settings.dart';
 import 'origin.dart';
 
@@ -127,14 +127,14 @@ class HistoryNotifier extends Notifier<List<HistoryEntry>> {
 
   /// Where it is written: read once, as `ref` cannot be read while the
   /// app goes and [flush] writes what was waiting.
-  late File _file;
+  late LocalDocuments _store;
 
   @override
   List<HistoryEntry> build() {
-    _file = ref.read(historyFileProvider);
+    _store = ref.watch(localDocumentsProvider);
     ref.onDispose(flush);
     try {
-      final json = readJsonFile(_file);
+      final json = _store.read(LocalDocument.history);
       if (json is Map && json['commands'] is List) {
         return [
           for (final e in json['commands'] as List) ?HistoryEntry.fromJson(e),
@@ -153,6 +153,7 @@ class HistoryNotifier extends Notifier<List<HistoryEntry>> {
     DateTime? now,
     CommandOrigin origin = CommandOrigin.unknown,
   }) {
+    if (!_store.visible) return;
     final where = historyPlace(c);
     final old = state.where((e) => e.command == command && e.where == where);
     final next = HistoryEntry(
@@ -197,19 +198,15 @@ class HistoryNotifier extends Notifier<List<HistoryEntry>> {
     if (_pending == null) return;
     _pending!.cancel();
     _pending = null;
-    final file = _file;
     try {
       if (state.isEmpty) {
-        if (file.existsSync()) file.deleteSync();
+        _store.erase(LocalDocument.history);
         return;
       }
-      writeFileAtomically(
-        file,
-        jsonEncode({
-          'version': 1,
-          'commands': [for (final e in state) e.toJson()],
-        }),
-      );
+      _store.write(LocalDocument.history, {
+        'version': 1,
+        'commands': [for (final e in state) e.toJson()],
+      });
     } catch (_) {
       // Kept for this run even if it cannot be saved.
     }

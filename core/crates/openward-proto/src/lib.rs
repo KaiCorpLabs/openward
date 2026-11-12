@@ -93,6 +93,7 @@ pub enum Data {
     Group(Group),
     Host(Host),
     Identity(Identity),
+    Secret(StoredSecret),
     KnownHost(KnownHost),
     PortForward(PortForward),
     Snippet(Snippet),
@@ -108,12 +109,38 @@ impl Data {
             Self::Group(_) => "group",
             Self::Host(_) => "host",
             Self::Identity(_) => "identity",
+            Self::Secret(_) => "secret",
             Self::KnownHost(_) => "known_host",
             Self::PortForward(_) => "port_forward",
             Self::Snippet(_) => "snippet",
             Self::Workspace(_) => "workspace",
             Self::Unsupported => "unsupported",
         }
+    }
+}
+
+/// Secret values are serialized only inside authenticated encrypted items.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SecretKind {
+    PrivateKey,
+    Password,
+    Passphrase,
+}
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+pub struct StoredSecret {
+    pub kind: SecretKind,
+    pub label: String,
+    pub binding: String,
+    pub value: zeroize::Zeroizing<String>,
+    #[serde(flatten)]
+    pub extra: Extra,
+}
+impl std::fmt::Debug for StoredSecret {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("StoredSecret")
+            .field("kind", &self.kind)
+            .field("value", &"[REDACTED]")
+            .finish()
     }
 }
 

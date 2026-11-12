@@ -20,6 +20,7 @@ class PromptCard extends StatefulWidget {
 }
 
 class _PromptCardState extends State<PromptCard> {
+  bool _remember = false;
   late final List<TextEditingController> _fields = [
     for (var i = 0; i < _fieldCount; i++) TextEditingController(),
   ];
@@ -46,11 +47,28 @@ class _PromptCardState extends State<PromptCard> {
     super.dispose();
   }
 
+  bool get _rememberable =>
+      _p.kind == PromptKind.password ||
+      _p.kind == PromptKind.passphrase ||
+      (_p.kind == PromptKind.keyboardInteractive &&
+          _p.questions.length == 1 &&
+          !_p.questions.single.echo &&
+          _p.questions.single.text
+                  .trim()
+                  .replaceFirst(RegExp(r':\s*$'), '')
+                  .trim()
+                  .toLowerCase() ==
+              'password');
   void _answer(AnswerKind kind) {
     final texts = kind == AnswerKind.text
         ? [for (final f in _fields) f.text]
         : <String>[];
-    widget.controller.answer(_p, PromptAnswer(kind: kind, texts: texts));
+    widget.controller.answer(
+      _p,
+      PromptAnswer(kind: kind, texts: texts),
+      remember:
+          _remember && widget.controller.canRememberSecrets && _rememberable,
+    );
   }
 
   /// A host known by keys of other types offers one that is not known.
@@ -237,6 +255,17 @@ class _PromptCardState extends State<PromptCard> {
               Text(_title(l), style: theme.textTheme.titleMedium),
               const SizedBox(height: 12),
               ..._body(context, l),
+              if (widget.controller.canRememberSecrets && _rememberable)
+                Material(
+                  color: Colors.transparent,
+                  child: CheckboxListTile(
+                    key: const ValueKey('prompt.remember'),
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l.vaultRememberCredential),
+                    value: _remember,
+                    onChanged: (v) => setState(() => _remember = v ?? false),
+                  ),
+                ),
               const SizedBox(height: 18),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,

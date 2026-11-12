@@ -9959,7 +9959,7 @@ abstract class AppLocalizations {
   /// No description provided for @vaultScope.
   ///
   /// In es, this message translates to:
-  /// **'La contraseña protege los elementos del vault. El historial, los recientes, las grabaciones y los archivos SSH están fuera de esta protección.'**
+  /// **'El vault cifrado protege los ítems, los secretos guardados y el historial, los recientes y los registros de OpenWard. Los archivos SSH externos sólo se copian al vault cuando lo solicitas. Antes de activar el cifrado, cierra las sesiones abiertas.'**
   String get vaultScope;
 
   /// No description provided for @vaultCompatibility.
@@ -10051,6 +10051,90 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Activar el nuevo kit'**
   String get vaultConfirmReplacement;
+
+  /// No description provided for @vaultStoreKey.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar en el vault'**
+  String get vaultStoreKey;
+
+  /// No description provided for @vaultStoredKey.
+  ///
+  /// In es, this message translates to:
+  /// **'Clave privada en el vault'**
+  String get vaultStoredKey;
+
+  /// No description provided for @vaultRememberCredential.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar en el vault después de verificar'**
+  String get vaultRememberCredential;
+
+  /// No description provided for @vaultImportPassphrase.
+  ///
+  /// In es, this message translates to:
+  /// **'Frase de paso del archivo, si hace falta para importarlo'**
+  String get vaultImportPassphrase;
+
+  /// No description provided for @vaultSelectedKeyFile.
+  ///
+  /// In es, this message translates to:
+  /// **'Archivo seleccionado. El núcleo leerá la clave; su contenido no se carga en este campo.'**
+  String get vaultSelectedKeyFile;
+
+  /// No description provided for @vaultMoveKeyExplain.
+  ///
+  /// In es, this message translates to:
+  /// **'Se guardará una copia cifrada y se actualizarán las referencias directas de hosts, grupos e identidades. El archivo original se conserva salvo que elijas eliminarlo.'**
+  String get vaultMoveKeyExplain;
+
+  /// No description provided for @vaultRemoveSource.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar el archivo privado original después de verificar la copia'**
+  String get vaultRemoveSource;
+
+  /// No description provided for @vaultExportKeyWarning.
+  ///
+  /// In es, this message translates to:
+  /// **'Se creará un archivo de clave privada fuera del vault. Protégelo; ya no dependerá del bloqueo de OpenWard.'**
+  String get vaultExportKeyWarning;
+
+  /// No description provided for @vaultSavedCredentials.
+  ///
+  /// In es, this message translates to:
+  /// **'Credenciales guardadas'**
+  String get vaultSavedCredentials;
+
+  /// No description provided for @vaultCredentialExplain.
+  ///
+  /// In es, this message translates to:
+  /// **'Sólo se guardan cuando lo solicitas y la autenticación las verifica. Las contraseñas se vinculan al servidor, puerto, usuario y clave de host. PIN, 2FA y contraseñas de proxy no se guardan.'**
+  String get vaultCredentialExplain;
+
+  /// No description provided for @vaultCredentialPassword.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña SSH'**
+  String get vaultCredentialPassword;
+
+  /// No description provided for @vaultCredentialPassphrase.
+  ///
+  /// In es, this message translates to:
+  /// **'Frase de paso de una clave'**
+  String get vaultCredentialPassphrase;
+
+  /// No description provided for @logsEncrypted.
+  ///
+  /// In es, this message translates to:
+  /// **'Los metadatos y las grabaciones se guardan cifrados. Cada sesión tiene su propia clave y puede seguir grabándose con el vault bloqueado. Las exportaciones que elijas guardar fuera quedan en claro.'**
+  String get logsEncrypted;
+
+  /// No description provided for @vaultLocalDataError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo completar la protección de los datos locales. El vault sigue bloqueado y no se ha borrado. Comprueba el espacio y los permisos; si hay archivos dañados, restáuralos desde una copia y vuelve a intentarlo.'**
+  String get vaultLocalDataError;
 }
 
 class _AppLocalizationsDelegate

@@ -766,7 +766,13 @@ class _Logs extends ConsumerWidget {
             children: [
               Icon(Icons.lock_outline, size: 16, color: c.textMuted),
               const SizedBox(width: OwSpace.s5),
-              Expanded(child: Text(l.logsUnencrypted)),
+              Expanded(
+                child: Text(
+                  app.securityState().phase.name == 'legacy'
+                      ? l.logsUnencrypted
+                      : l.logsEncrypted,
+                ),
+              ),
             ],
           ),
         ),

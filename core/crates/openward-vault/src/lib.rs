@@ -1,11 +1,10 @@
 //! The local vault: items in SQLite, an in-memory index, and settings
 //! inheritance (ARCHITECTURE §4).
 //!
-//! Phase 1 stores item bodies unencrypted (envelope version 0), so the alpha
-//! keeps nothing secret here: keys are referenced by path and passwords are
-//! asked for on each connection. D3 adds explicit Rust APIs for encrypted
-//! format2, lock/unlock and verified migration (spec/vault-sqlite-v2.md).
-//! App activation awaits D4/D5; the default open path remains format1.
+//! Legacy vaults use unencrypted envelope v0; the app offers explicit encrypted
+//! activation with recovery. Encrypted formats2/3 use signed v1 envelopes;
+//! format3 also protects D6 auxiliary storage from older plaintext writers.
+//! See spec/vault-sqlite-v2.md and spec/protected-local-v1.md.
 //!
 //! Every item is loaded at open and served from memory; writes go to SQLite
 //! first and then to the index.
@@ -14,7 +13,9 @@ mod factors;
 mod inherit;
 mod migration;
 mod recovery;
+mod secrets;
 mod store;
+pub use secrets::{Secret, SecretInfo, SecretKind};
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
@@ -424,6 +425,68 @@ impl Vault {
         let id = ItemId::new();
         self.create_all(vec![(id, data)])?;
         Ok(id)
+    }
+
+    /// Create a secret and rebind existing public settings in one transaction.
+    pub fn create_and_update(
+        &mut self,
+        id: ItemId,
+        data: Data,
+        changes: Vec<(ItemId, u64, Data)>,
+    ) -> Result<()> {
+        if self.items.contains_key(&id) {
+            return Err(Error::Invalid("duplicate item id"));
+        }
+        let mut incoming = HashMap::new();
+        incoming.insert(id, &data);
+        for (changed, rev, data) in &changes {
+            if incoming.insert(*changed, data).is_some() {
+                return Err(Error::Invalid("duplicate item id"));
+            }
+            let old = self.item(*changed)?;
+            if old.rev != *rev {
+                return Err(Error::Conflict {
+                    id: *changed,
+                    expected: *rev,
+                    current: old.rev,
+                });
+            }
+            if old.body.data.kind() != data.kind() {
+                return Err(Error::Invalid("cannot change item kind"));
+            }
+        }
+        self.validate(id, &data, &incoming)?;
+        for (id, _, data) in &changes {
+            self.validate(*id, data, &incoming)?;
+        }
+        let now = now_ms();
+        let mut writes = vec![Item {
+            id,
+            rev: 1,
+            body: Body {
+                created: now,
+                modified: now,
+                data,
+            },
+        }];
+        for (id, rev, data) in changes {
+            writes.push(Item {
+                id,
+                rev: rev
+                    .checked_add(1)
+                    .ok_or(Error::Invalid("revision exhausted"))?,
+                body: Body {
+                    created: self.item(id)?.body.created,
+                    modified: now,
+                    data,
+                },
+            });
+        }
+        self.write(&writes, &[])?;
+        for item in writes {
+            self.items.insert(item.id, item);
+        }
+        Ok(())
     }
 
     /// Adds several items in one transaction, with ids chosen by the caller
@@ -1057,6 +1120,19 @@ impl Vault {
                     _ => {}
                 }
                 expect(f.host, "host")
+            }
+            Data::Secret(s) => {
+                if !self.is_encrypted() {
+                    return Err(Error::Invalid("encrypt the vault before storing secrets"));
+                }
+                if s.label.len() > 1024
+                    || s.binding.len() > 8192
+                    || s.value.is_empty()
+                    || s.value.len() > 1024 * 1024
+                {
+                    return Err(Error::Invalid("invalid credential size"));
+                }
+                Ok(())
             }
             Data::Unsupported => Err(Error::Invalid("unsupported items cannot be written")),
         }

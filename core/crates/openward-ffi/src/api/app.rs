@@ -763,6 +763,15 @@ impl OpenWard {
         self.app.answer(prompt_id, answer.into_answer())
     }
 
+    /// Consent applies only after a password/passphrase is verified by Rust.
+    #[frb(sync)]
+    pub fn answer_remember(&self, prompt_id: u64, answer: PromptAnswer) -> bool {
+        let answer = match answer.into_answer() {
+            openward_app::Answer::Text(t) => openward_app::Answer::Remember(t),
+            other => other,
+        };
+        self.app.answer(prompt_id, answer)
+    }
     /// A new SFTP browser, not connected yet.
     #[frb(sync)]
     pub fn sftp(&self) -> SftpBrowser {

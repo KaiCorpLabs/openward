@@ -92,3 +92,11 @@ Local release measurement (2026-11-12): **10,000 items, 44 ms** for decryption a
 index loading, excluding password KDF. Run the ignored `ten_thousand` test in
 release mode to measure another machine. Argon2 calibration is described in
 [keys-v1](keys-v1.md). External cryptographic review remains required before Cloud.
+
+## D6 format3 compatibility barrier
+
+[Protected local data v1](protected-local-v1.md) adds user_version3 with the same
+tables, OWVH1 header and v1 envelopes. It is durably installed before encrypting
+auxiliary files (or atomically with the first Secret item). D3–D5 readers reject
+it instead of rewriting those files in cleartext. Current readers accept both
+2 and 3; legacy migration still stages format2. There is no downgrade.
