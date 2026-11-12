@@ -9955,6 +9955,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ya lo he guardado'**
   String get vaultKitContinue;
+
+  /// No description provided for @vaultScope.
+  ///
+  /// In es, this message translates to:
+  /// **'La contraseña protege los elementos del vault. El historial, los recientes, las grabaciones y los archivos SSH están fuera de esta protección.'**
+  String get vaultScope;
+
+  /// No description provided for @vaultCompatibility.
+  ///
+  /// In es, this message translates to:
+  /// **'Después de cifrar, las versiones antiguas no podrán abrir este vault. Conserva el kit; no se crea una copia nueva en claro.'**
+  String get vaultCompatibility;
 }
 
 class _AppLocalizationsDelegate

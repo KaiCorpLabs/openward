@@ -49,6 +49,8 @@ class _VaultSettingsState extends ConsumerState<VaultSettings> {
       children: [
         Text(l.vaultSecurity, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),
+        Text(l.vaultScope),
+        const SizedBox(height: 16),
         if (view.phase == VaultPhase.legacy) ...[
           Text(l.vaultLegacy),
           const SizedBox(height: 16),
@@ -268,6 +270,10 @@ class _VaultSetupState extends ConsumerState<VaultSetup> {
                   title: Text(l.vaultSaved),
                 ),
               ] else ...[
+                Text(l.vaultCompatibility),
+                const SizedBox(height: 16),
+                Text(l.vaultScope),
+                const SizedBox(height: 16),
                 Text(l.vaultPasswordHint),
                 TextField(
                   controller: password,

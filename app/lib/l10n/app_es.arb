@@ -4662,5 +4662,7 @@
   "vaultResume": "Volver a la configuración",
   "vaultStrength": "Robustez de la contraseña",
   "vaultCancel": "Cancelar",
-  "vaultKitContinue": "Ya lo he guardado"
+  "vaultKitContinue": "Ya lo he guardado",
+  "vaultScope": "La contraseña protege los elementos del vault. El historial, los recientes, las grabaciones y los archivos SSH están fuera de esta protección.",
+  "vaultCompatibility": "Después de cifrar, las versiones antiguas no podrán abrir este vault. Conserva el kit; no se crea una copia nueva en claro."
 }

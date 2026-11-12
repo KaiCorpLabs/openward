@@ -443,7 +443,7 @@ class TerminalController extends ConnectionController {
     findTotal = 0;
     findSelected = null;
     prompts.clear();
-    line.reset();
+    line.redact();
     sendWhenUp = null;
   }
 

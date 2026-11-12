@@ -94,6 +94,13 @@ class LineTracker {
     return t.text.substring(_prompt.length).trimLeft() == _typed.trimRight();
   }
 
+  /// Forget cached text on vault lock. The first resumed line is uncertain:
+  /// never reconstruct it into history until Enter or explicit cancellation.
+  void redact() {
+    reset();
+    _lost = true;
+  }
+
   void reset() {
     _active = false;
     _edited = false;

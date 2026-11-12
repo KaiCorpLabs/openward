@@ -6426,4 +6426,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get vaultKitContinue => 'Ya lo he guardado';
+
+  @override
+  String get vaultScope =>
+      'La contraseña protege los elementos del vault. El historial, los recientes, las grabaciones y los archivos SSH están fuera de esta protección.';
+
+  @override
+  String get vaultCompatibility =>
+      'Después de cifrar, las versiones antiguas no podrán abrir este vault. Conserva el kit; no se crea una copia nueva en claro.';
 }

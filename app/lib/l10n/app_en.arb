@@ -2064,5 +2064,7 @@
   "vaultResume": "Return to setup",
   "vaultStrength": "Password strength",
   "vaultCancel": "Cancel",
-  "vaultKitContinue": "I have saved it"
+  "vaultKitContinue": "I have saved it",
+  "vaultScope": "The password protects vault items. History, recent connections, recordings and SSH files are outside this protection.",
+  "vaultCompatibility": "After encryption, older versions cannot open this vault. Keep the kit; no new plaintext copy is created."
 }
