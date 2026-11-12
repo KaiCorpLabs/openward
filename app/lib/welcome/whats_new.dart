@@ -24,7 +24,7 @@ import '../window/shortcuts.dart';
 /// new logo, 0.3.1-beta.7 each server's system by its logo, 0.3.3-beta.1
 /// the session logs, 0.3.4-beta.1 Telnet and serial ports, Mosh, security
 /// keys, the terminal's options, suggestions, and snippets on several hosts.
-const newsVersion = '0.3.4-beta.1';
+const newsVersion = '0.4.0-beta.1';
 
 /// Who updated and has not seen this release's news yet.
 bool shouldShowNews(Settings s) => s.welcomed && s.seenNews != newsVersion;
@@ -49,12 +49,14 @@ class _WhatsNew extends StatelessWidget {
     String keys(String apple, String other) => macShortcuts ? apple : other;
     // Marked new: what came after who saw the news before.
     final items = [
-      (Icons.cable, l.newsLinesTitle, l.newsLinesBody, true),
-      (Icons.wifi_tethering, l.newsMoshTitle, l.newsMoshBody, true),
-      (Icons.usb, l.newsSecurityKeysTitle, l.newsSecurityKeysBody, true),
-      (Icons.tune, l.newsTerminalTitle, l.newsTerminalBody, true),
-      (Icons.keyboard_tab, l.newsSuggestTitle, l.newsSuggestBody, true),
-      (Icons.grid_view, l.newsManyHostsTitle, l.newsManyHostsBody, true),
+      (Icons.lock_outline, l.newsVaultTitle, l.newsVaultBody, true),
+      (Icons.restore, l.newsRecoveryTitle, l.newsRecoveryBody, true),
+      (Icons.cable, l.newsLinesTitle, l.newsLinesBody, false),
+      (Icons.wifi_tethering, l.newsMoshTitle, l.newsMoshBody, false),
+      (Icons.usb, l.newsSecurityKeysTitle, l.newsSecurityKeysBody, false),
+      (Icons.tune, l.newsTerminalTitle, l.newsTerminalBody, false),
+      (Icons.keyboard_tab, l.newsSuggestTitle, l.newsSuggestBody, false),
+      (Icons.grid_view, l.newsManyHostsTitle, l.newsManyHostsBody, false),
       (
         Icons.subject,
         l.newsLogsTitle,

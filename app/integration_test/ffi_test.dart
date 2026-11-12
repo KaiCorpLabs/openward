@@ -42,7 +42,10 @@ void main() {
 
   setUp(() async {
     dir = await Directory.systemTemp.createTemp('openward-ffi-');
-    app = await OpenWard.open(dataDir: '${dir.path}/data');
+    app = await OpenWard.open(
+      dataDir: '${dir.path}/data',
+      requireOnboarding: false,
+    );
   });
   tearDown(() => dir.delete(recursive: true));
 
@@ -56,6 +59,43 @@ void main() {
 
   /// The core built into the app is the version the app says it is: a
   /// stale library would not be.
+  test('D8 mandatory onboarding gates legacy data and enables independent recovery', () async {
+    final targetDir = await Directory.systemTemp.createTemp('openward-d8-');
+    final target = await OpenWard.openWithHome(
+      dataDir: '${targetDir.path}/data',
+      home: '${targetDir.path}/home',
+      requireOnboarding: true,
+    );
+    try {
+      expect(target.vaultOnboardingRequired(), isTrue);
+      expect(target.hosts(), isEmpty);
+      await expectLater(
+        target.createHost(
+          spec: const HostSpec(label: 'denied', address: 'denied.invalid'),
+        ),
+        throwsA(isVault(VaultErrorKind.locked)),
+      );
+      const password = 'Meteor-7-Parchment-Unfurl-Quartz-92!';
+      final kit = await target.prepareVault(password: password);
+      expect(await target.preparedRecoveryQr(), isNotEmpty);
+      expect(target.vaultOnboardingRequired(), isTrue);
+      final groups = kit.split('-');
+      await target.completeVaultSetup(group3: groups[3], group12: groups[12]);
+      expect(target.vaultOnboardingRequired(), isFalse);
+      expect(target.vaultNeedsPassword(), isFalse);
+      final id = await target.createHost(
+        spec: const HostSpec(label: 'D8 protected', address: 'd8.invalid'),
+      );
+      await target.lockVault();
+      expect(target.hosts(), isEmpty);
+      await target.recoverVault(kit: kit);
+      expect(target.host(id: id).spec.label, 'D8 protected');
+    } finally {
+      target.dispose();
+      await targetDir.delete(recursive: true);
+    }
+  });
+
   test('the core built in is the app\'s version', () {
     expect(coreVersion(), appVersion);
   });

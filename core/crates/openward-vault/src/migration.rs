@@ -305,6 +305,17 @@ pub(crate) fn install_with_recovery(
     params: KdfParams,
     migrate: bool,
     recovery: Option<&openward_crypto::unlock::RecoveryKit>,
+    phase: impl FnMut(Phase) -> Result<()>,
+) -> Result<LockedVault> {
+    install_factors(input, password, params, migrate, recovery, None, phase)
+}
+pub(crate) fn install_factors(
+    input: &Path,
+    password: &[u8],
+    params: KdfParams,
+    migrate: bool,
+    recovery: Option<&openward_crypto::unlock::RecoveryKit>,
+    device_only: Option<&str>,
     mut phase: impl FnMut(Phase) -> Result<()>,
 ) -> Result<LockedVault> {
     let (path, identity) = path(input, migrate)?;
@@ -318,7 +329,7 @@ pub(crate) fn install_with_recovery(
         c.execute_batch("BEGIN EXCLUSIVE")?;
         let version: i64 = c.pragma_query_value(None, "user_version", |r| r.get(0))?;
         if version != 1 {
-            return Err(if version > 3 {
+            return Err(if version > 4 {
                 Error::NewerFormat(version)
             } else {
                 Error::Invalid("migration requires a plaintext format1 vault")
@@ -389,6 +400,13 @@ pub(crate) fn install_with_recovery(
         )?
         .write(&tx)?;
     }
+    if let Some(id) = device_only {
+        crate::device::validate_id(&header, id)?;
+        tx.execute(
+            "INSERT INTO meta VALUES (?1,?2)",
+            params![crate::device::DEVICE, id.as_bytes()],
+        )?;
+    }
     let mut count = 0usize;
     let mut clock = 0;
     if let Some(source) = &source {
@@ -439,7 +457,11 @@ pub(crate) fn install_with_recovery(
             count += 1;
         }
     }
-    tx.pragma_update(None, "user_version", 2)?;
+    tx.pragma_update(
+        None,
+        "user_version",
+        if device_only.is_some() { 4 } else { 2 },
+    )?;
     tx.commit()?;
     phase(Phase::Staged)?;
     verify(&target, source.as_ref(), &header, &keys, &private, count)?;

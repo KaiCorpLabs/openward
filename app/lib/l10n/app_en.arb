@@ -2127,5 +2127,19 @@
         "type": "int"
       }
     }
-  }
+  },
+  "vaultOnboardingTitle": "Protect your vault",
+  "vaultOnboardingBody": "Create a master password and save your recovery kit before using OpenWard. Existing data is migrated in place. Keep the kit offline: without a password, kit or enabled unlock method, the vault cannot be recovered.",
+  "vaultLater": "Later · protect on this device",
+  "vaultDeviceWarning": "Temporary protection: encrypted with a key in this OS account’s keyring. Anyone with access to that account may unlock it. Moving or losing the keyring can make the vault unrecoverable. Set a password and save a kit for portable recovery and backups.",
+  "vaultDeviceReminder": "Password and recovery kit pending · protected only by this OS account",
+  "vaultFinishSetup": "Set password and recovery kit",
+  "vaultDeviceUnlock": "Unlock with this OS account",
+  "vaultDeviceError": "Device key unavailable. Unlock the original OS keyring and try again. Setup has not completed; your data is not shown.",
+  "vaultProtectedStatus": "Encrypted · password and recovery kit configured",
+  "newsVaultTitle": "Your encrypted vault",
+  "newsVaultBody": "Master password, optional OS unlock, automatic locking, and encrypted credentials, history and session logs. Settings › Security brings the controls together.",
+  "newsRecoveryTitle": "Recovery and portable backups",
+  "newsRecoveryBody": "Save your recovery kit offline, change your password, and export or restore .owvault backups. JSON export is cleartext and asks for your password and confirmation.",
+  "vaultMissingKitStatus": "Encrypted · recovery kit pending"
 }

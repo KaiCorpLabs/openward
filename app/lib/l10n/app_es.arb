@@ -4725,5 +4725,19 @@
         "type": "int"
       }
     }
-  }
+  },
+  "vaultOnboardingTitle": "Protege tu vault",
+  "vaultOnboardingBody": "Crea una contraseña maestra y guarda el kit de recuperación antes de usar OpenWard. Los datos existentes se migran en su ubicación. Guarda el kit fuera del equipo: sin contraseña, kit o método de desbloqueo habilitado, no se puede recuperar el vault.",
+  "vaultLater": "Más tarde · proteger en este equipo",
+  "vaultDeviceWarning": "Protección temporal: cifrado con una clave del llavero de esta cuenta del sistema. Quien acceda a esa cuenta podrá desbloquearlo. Mover o perder el llavero puede impedir recuperar el vault. Crea una contraseña y guarda el kit para recuperarlo en otro equipo y hacer copias.",
+  "vaultDeviceReminder": "Contraseña y kit pendientes · protegido solo por esta cuenta del sistema",
+  "vaultFinishSetup": "Crear contraseña y kit",
+  "vaultDeviceUnlock": "Desbloquear con esta cuenta del sistema",
+  "vaultDeviceError": "Clave del equipo no disponible. Desbloquea el llavero original del sistema y reinténtalo. La configuración no ha terminado; tus datos no se muestran.",
+  "vaultProtectedStatus": "Cifrado · contraseña y kit configurados",
+  "newsVaultTitle": "Tu vault cifrado",
+  "newsVaultBody": "Contraseña maestra, desbloqueo opcional del sistema, bloqueo automático y credenciales, historial y registros de sesión cifrados. Ajustes › Seguridad reúne los controles.",
+  "newsRecoveryTitle": "Recuperación y copias portables",
+  "newsRecoveryBody": "Guarda el kit fuera del equipo, cambia la contraseña y exporta o restaura copias .owvault. La exportación JSON está en claro y requiere contraseña y confirmación.",
+  "vaultMissingKitStatus": "Cifrado · kit de recuperación pendiente"
 }

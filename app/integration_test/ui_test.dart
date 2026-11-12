@@ -284,7 +284,10 @@ void main() {
 
   setUp(() async {
     dir = await Directory.systemTemp.createTemp('openward-ui-');
-    app = await OpenWard.open(dataDir: '${dir.path}/data');
+    app = await OpenWard.open(
+      dataDir: '${dir.path}/data',
+      requireOnboarding: false,
+    );
   });
   tearDown(() => dir.delete(recursive: true));
 

@@ -6580,4 +6580,53 @@ class AppLocalizationsEn extends AppLocalizations {
   String backupSummary(int items, int secrets, int unreadable) {
     return '$items items, $secrets saved secrets, $unreadable items preserved for a newer version.';
   }
+
+  @override
+  String get vaultOnboardingTitle => 'Protect your vault';
+
+  @override
+  String get vaultOnboardingBody =>
+      'Create a master password and save your recovery kit before using OpenWard. Existing data is migrated in place. Keep the kit offline: without a password, kit or enabled unlock method, the vault cannot be recovered.';
+
+  @override
+  String get vaultLater => 'Later · protect on this device';
+
+  @override
+  String get vaultDeviceWarning =>
+      'Temporary protection: encrypted with a key in this OS account’s keyring. Anyone with access to that account may unlock it. Moving or losing the keyring can make the vault unrecoverable. Set a password and save a kit for portable recovery and backups.';
+
+  @override
+  String get vaultDeviceReminder =>
+      'Password and recovery kit pending · protected only by this OS account';
+
+  @override
+  String get vaultFinishSetup => 'Set password and recovery kit';
+
+  @override
+  String get vaultDeviceUnlock => 'Unlock with this OS account';
+
+  @override
+  String get vaultDeviceError =>
+      'Device key unavailable. Unlock the original OS keyring and try again. Setup has not completed; your data is not shown.';
+
+  @override
+  String get vaultProtectedStatus =>
+      'Encrypted · password and recovery kit configured';
+
+  @override
+  String get newsVaultTitle => 'Your encrypted vault';
+
+  @override
+  String get newsVaultBody =>
+      'Master password, optional OS unlock, automatic locking, and encrypted credentials, history and session logs. Settings › Security brings the controls together.';
+
+  @override
+  String get newsRecoveryTitle => 'Recovery and portable backups';
+
+  @override
+  String get newsRecoveryBody =>
+      'Save your recovery kit offline, change your password, and export or restore .owvault backups. JSON export is cleartext and asks for your password and confirmation.';
+
+  @override
+  String get vaultMissingKitStatus => 'Encrypted · recovery kit pending';
 }

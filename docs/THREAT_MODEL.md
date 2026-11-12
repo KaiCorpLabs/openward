@@ -1,13 +1,13 @@
 # Modelo de amenazas
 
-- **Estado:** D0 de la [v0.4](plan/v0.4.md), sin auditoría externa. Sus tres decisiones están aceptadas (2026-11-10, [§11](#11-decisiones-que-salen-de-d0)). Describe la 0.3.4 tal como es y lo que la v0.4 cambia. Se revisa contra lo hecho en D8, y C1 (etapa 4 del [camino a la Community](plan/community.md)) le añade el servidor y las cuentas.
-- **Fecha:** 2026-11-07.
+- **Estado:** D0 de la [v0.4](plan/v0.4.md), sin auditoría externa. Sus tres decisiones están aceptadas (2026-11-10, [§11](#11-decisiones-que-salen-de-d0)). Revisado contra D3–D8 para 0.4.0-beta.1; conserva la 0.3.4 como base histórica, y C1 (etapa 4 del [camino a la Community](plan/community.md)) le añade el servidor y las cuentas.
+- **Fecha:** 2026-11-12.
 - **Alcance:** el cliente de escritorio en macOS, Windows y Linux. La sync (v0.5), el servidor y las cuentas (v0.6), el móvil y la IA tienen su sitio en el [§8](#8-lo-que-llega-después), con lo que ya se sabe que traerán.
 - **Base:** [ARCHITECTURE §11](ARCHITECTURE.md#11-seguridad-y-cadena-de-suministro), [ADR-003](adr/ADR-003-ssh-russh-y-firmantes.md) (SSH), [ADR-004](adr/ADR-004-vault-y-jerarquia-de-claves.md) (vault y claves) y [ADR-005](adr/ADR-005-sync-por-registros-de-dispositivo.md) (sync).
 
-## Estado de implementación D4–D7 (2026-11-12)
+## Estado de implementación D4–D8 (2026-11-12)
 
-La [sesión local v1](../spec/vault-session-v1.md) añade alta optativa con kit mínimo,
+La [sesión local v1](../spec/vault-session-v1.md) añade alta con kit confirmado,
 arranque bloqueado, contraseña y factores nativos opcionales, bloqueo manual,
 por inactividad y señales de suspensión. La revocación se comprueba también en
 la FFI, no solo en la pantalla Flutter. Las sesiones establecidas siguen vivas
@@ -30,8 +30,14 @@ previa. El JSON es estructuralmente validado pero no autentica su origen.
 Las copias contienen el vault; no incluyen archivos externos ni datos locales
 D6 (historial, recientes y grabaciones). Las copias antiguas mantienen sus factores.
 
-El alta obligatoria/«Más tarde» sigue pendiente de D8; las claves por archivo son
-una opción explícita. Exportaciones y copias anteriores conservan su protección
+El [onboarding D8](../spec/vault-onboarding-v1.md) bloquea el acceso al legado
+hasta confirmar contraseña+kit o elegir expresamente «Más tarde». Esta segunda
+vía cifra con una clave aleatoria del llavero de la cuenta del sistema, exige
+aviso de sesión en Linux y mantiene un recordatorio permanente. No ofrece
+recuperación portable; perder el llavero puede perder el vault. La conversión
+a contraseña+kit conserva las claves y los datos. Formato4 impide abrir este
+modo con lectores anteriores y nunca se rebaja al escribir o restaurar.
+Las claves por archivo son una opción explícita. Exportaciones y copias anteriores conservan su protección
 anterior. No se promete borrado forense ni limpiar de RAM todas las cadenas Dart.
 La autenticación física y la firma SSH con Secure Enclave siguen pendientes en
 [#33](https://github.com/KaiCorpLabs/openward/issues/33); no las validan mocks o CI.
@@ -68,7 +74,7 @@ No hay fallback silencioso de biometría a un llavero sin autenticación adicion
 
 ## 3. Atacantes y escenarios
 
-| Amenaza | Defensa hoy (0.3.4) | Con la v0.4 | Lo que queda |
+| Amenaza | Base histórica 0.3.4 | Implementación 0.4.0-beta.1 | Lo que queda |
 |---|---|---|---|
 | **Robo del equipo apagado o con la sesión bloqueada** | Solo el cifrado de disco del sistema (FileVault, BitLocker, LUKS), si está activo. Sin él, se lee todo lo del [§4](#4-lo-que-hay-en-el-disco) | El vault, cifrado con la contraseña maestra | Si la sesión del sistema y la app están abiertas, nada. Con «Más tarde» (sin contraseña todavía), quien abra tu sesión del sistema abre el vault ([§5](#5-garantías-de-la-v04-con-sus-condiciones)) |
 | **Una copia del disco o de su copia de seguridad** (Time Machine, una nube que copia la carpeta de la app) | Ninguna: el vault, el historial y los recientes van en claro | Los ítems, el historial, los recientes y los registros, cifrados. Se ve cuántos ítems hay, su tamaño y sus fechas | Las copias hechas con la 0.3 siguen en claro (la app no llega a ellas). Una contraseña débil se adivina sin conexión: Argon2id lo encarece, no lo impide |
@@ -78,7 +84,7 @@ No hay fallback silencioso de biometría a un llavero sin autenticación adicion
 | **La red** (escucha o se interpone) | Comprobación de la clave del host: «Preguntar» por defecto. Una clave cambiada o revocada se rechaza, y una de otro tipo pregunta incluso con «Aceptar nuevas». Un certificado de host inválido no vale: se mira la clave sola, con la misma política, como hace OpenSSH. Kex poscuántico (`mlkem768x25519-sha256`) y `strict-kex` contra Terrapin. Telnet se marca «Sin cifrar» | — | La primera conexión sin huella verificada (o con «Aceptar nuevas») se puede suplantar. Telnet va en claro. OpenSSH 9.0–9.8 se queda sin kex poscuántico. La contraseña de un proxy HTTP o SOCKS5 viaja en claro hasta el proxy |
 | **Un servidor hostil o comprometido** | El motor ignora el portapapeles (OSC 52), las notificaciones y OSC 7, y el título solo se usa en terminales locales. Los enlaces se abren con ⌘/Ctrl+clic, solo `http`, `https`, `mailto` y `ftp`, con aviso si el texto nombra otro host. Los nombres del SFTP se filtran (`/`, NUL, `.`, `..`; en Windows también `\` y `:`), y la lista enseña sus caracteres invisibles. «Abrir» deja la copia sin bit de ejecución y con la marca de origen del sistema, y pregunta antes con los tipos que el sistema ejecuta en vez de abrir. El reenvío del agente va apagado por defecto y solo al último salto. Los reenvíos remotos se aceptan solo en los puertos pedidos, y X11 no existe. Las preguntas al entrar, como mucho 3 intentos de 10 rondas. La respuesta de `mosh-server` se valida, y leer `os-release` es opcional y con límites | La contraseña maestra nunca se pide dentro de una sesión ([I-8](#6-invariantes-que-se-comprueban)) | Un documento puede atacar al programa que lo abre (un PDF a su lector): la marca de origen hace que Office lo abra en vista protegida, pero no protege a todos. Con el agente reenviado, el servidor firma con tus claves mientras dure la conexión. El servidor decide lo que ves, incluidas preguntas que imitan a la app. Todo lo que manda pasa por libghostty-vt ([§10](#10-riesgos-abiertos)) |
 | **Un salto intermedio comprometido** | Cada salto comprueba su clave por separado. El tráfico al siguiente va cifrado de punta a punta (`direct-tcpip`), y el agente solo llega al último | — | Ve a quién te conectas y cuándo, y puede cortar |
-| **Un archivo importado hostil** | 64 MiB por archivo, 16 niveles y 20.000 entradas como mucho. `proptest` en cada importador y decodificador. Las contraseñas nunca se importan, y las claves de otros programas solo si se eligen. Un ProxyCommand de otro programa no se importa: se descarta con un aviso que lo enseña. Tampoco el reenvío del agente, y un túnel abierto a la red llega cerrado, cada uno con su aviso ([AM-8](#9-hallazgos-de-d0)) | — | Las variables de entorno de otro programa sí llegan. `~/.ssh/config` es tuyo: su ProxyCommand y sus reenvíos llegan tal cual, como los usaría `ssh` |
+| **Un archivo importado hostil** | 64 MiB por archivo, 16 niveles y 20.000 entradas como mucho. `proptest` en cada importador y decodificador. Los importadores de otros programas descartan contraseñas, y sus claves solo llegan si se eligen. La restauración explícita de un vault sí recupera sus secretos (D7). Un ProxyCommand de otro programa no se importa: se descarta con un aviso que lo enseña. Tampoco el reenvío del agente, y un túnel abierto a la red llega cerrado, cada uno con su aviso ([AM-8](#9-hallazgos-de-d0)) | — | Las variables de entorno de otro programa sí llegan. `~/.ssh/config` es tuyo: su ProxyCommand y sus reenvíos llegan tal cual, como los usaría `ssh` |
 | **Pegar algo peligroso** | El motor no deja pasar un salto de línea fuera del pegado entre corchetes, ni su marca de fin. Avisa de los caracteres invisibles (controles, bidi, ancho cero). Pegar en varios paneles a la vez siempre pregunta | — | El pegado entre corchetes depende de la shell remota. Una orden que parece otra (homoglifos) no se detecta |
 | **La cadena de suministro** | Versiones fijadas. `cargo-deny` (licencias y avisos de seguridad) y dependabot (Cargo, pub y Actions). Las acciones de la CI van fijadas por SHA. libghostty-vt se construye desde un commit fijado. El `.dmg` solo sale de una etiqueta con el árbol limpio, el cask fija su sha256 y un paquete publicado no se sustituye | — | [§10](#10-riesgos-abiertos): sin firma de desarrollador ni notarización, sin SBOM ni builds reproducibles |
 | **Los programas que lanza la app** | En el ProxyCommand, `%h`, `%r` y `%n` no aceptan metacaracteres de la shell. `mosh-client` recibe la clave en `MOSH_KEY`, no en la línea de órdenes. «Abrir» pasa la ruta como archivo, sin shell: `open` en macOS, `ShellExecute` en Windows y `xdg-open` en Linux. El terminal local es tu shell | — | Un programa que aparece antes en el `PATH` puede hacerse pasar por `mosh-client`, como en tu shell. «Abrir con…» ejecuta el programa que escribas |
@@ -87,9 +93,9 @@ No hay fallback silencioso de biometría a un llavero sin autenticación adicion
 
 En la carpeta de datos de la app (en macOS, `~/Library/Application Support/dev.openward.OpenWard`; en Linux, `$XDG_DATA_HOME/dev.openward.OpenWard`), salvo donde se dice otra cosa.
 
-| Archivo | Qué guarda | Permisos | Hoy | Con la v0.4 |
+| Archivo | Qué guarda | Permisos | En 0.4.0-beta.1 | Contrato |
 |---|---|---|---|---|
-| `vault.db` (con `-wal`, `-shm` y `.lock`) | Hosts y grupos (etiquetas, direcciones, usuarios, notas, el texto con el que se detectó el sistema), identidades sin secretos, claves de host de confianza, snippets, túneles y espacios de trabajo | 0600 | En claro (sobres `v: 0`) | Cifrado por ítem (D3) |
+| `vault.db` (con `-wal`, `-shm` y `.lock`) | Hosts y grupos (etiquetas, direcciones, usuarios, notas, el texto con el que se detectó el sistema), identidades y secretos guardados explícitamente, claves de host de confianza, snippets, túneles y espacios de trabajo | 0600 | Cifrado por ítem, tras onboarding; legado inaccesible mientras se prepara | D3–D8 |
 | `history.json` | Cada orden, dónde y cuándo se ejecutó (hasta 2000) | 0600, carpeta 0700 | OWLD1 con vault cifrado; legado en claro hasta activarlo | Implementado D6 |
 | `recent.json` | Las conexiones: a dónde, etiqueta y cuándo | 0600, carpeta 0700 | OWLD1 con vault cifrado; legado en claro hasta activarlo | Implementado D6 (D0-2) |
 | `logs/` (`.json`, `.cast.gz`, `.txt.gz`) | Cada sesión (quién, a dónde, cuándo) y, si se graba, lo que se vio | 0700 y 0600 | Metadatos OWLD1 y flujos OWLF1, clave por sesión | Implementado D6 (D0-2); legado en claro hasta activar |
@@ -98,9 +104,9 @@ En la carpeta de datos de la app (en macOS, `~/Library/Application Support/dev.o
 | `~/.ssh/known_hosts` | Se lee al conectar. Solo se escribe al olvidar una línea, con una copia en `known_hosts.old` | Los que tenía | — | Igual |
 | `<temporal>/openward-open-*` | Copias de archivos remotos abiertos aquí («Abrir», «Abrir con…») | 0700; la copia, sin bit de ejecución y con la marca de origen | En claro. Se borran al cerrar la pestaña, y las que queden, al arrancar otra vez ([AM-6](#9-hallazgos-de-d0)) | Igual |
 | `<destino>.ow-*.part` | Transferencias a medias, que se quedan para reanudar | 0600 y los bits del servidor | En claro | Igual |
-| Llavero del sistema | Nada de OpenWard. Solo se lee la clave de Termius al importar | — | — | La clave del desbloqueo (Touch ID, Windows Hello, llavero de Linux) |
+| Llavero del sistema | Factor nativo opcional o clave aleatoria del modo temporal, con servicios distintos | Política del SO | Solo referencia opaca en SQLite; no se copia con el vault | D4, D8 |
 
-Las contraseñas, las frases de paso y el PIN se piden en cada conexión y no se guardan en ningún sitio. Al núcleo llegan en `Zeroizing`, aunque después quedan copias sin borrar ([AM-4](#9-hallazgos-de-d0)). En Dart solo se vacía el campo, porque una cadena de Dart no se puede borrar de la memoria.
+Las contraseñas y frases de paso pueden guardarse con consentimiento explícito y autenticación correcta; por defecto se preguntan. Los PIN y códigos 2FA no se guardan. Las claves privadas pueden permanecer por ruta o guardarse cifradas por elección. Al núcleo llegan en `Zeroizing`, aunque después quedan copias sin borrar ([AM-4](#9-hallazgos-de-d0)). En Dart solo se vacía el campo, porque una cadena de Dart no se puede borrar de la memoria.
 
 ## 5. Garantías de la v0.4, con sus condiciones
 
@@ -113,9 +119,9 @@ Las contraseñas, las frases de paso y el PIN se piden en cada conexión y no se
 - **Bloqueada, el núcleo no tiene nada del vault en claro.** Las sesiones abiertas siguen vivas, con sus claves de sesión en memoria, pero no se ven ni se escribe en ellas.
 - **Sin la contraseña, con el kit:** el kit (256 bits) lo abre en cualquier equipo. Quien tenga el kit tiene el vault: se guarda como la contraseña, no junto al equipo.
 - **El desbloqueo rápido es tan fuerte como su sistema:**
-  - Touch ID y Windows Hello piden tu huella o tu cara. Si en macOS el llavero con biometría exige un Developer ID, el plan pasa a «recordar en este Mac» con el llavero normal, sin biometría, hasta firmar la app;
+  - Touch ID y Windows Hello requieren la autenticación del sistema configurada para ese factor. Su funcionamiento físico y firma siguen pendientes en #33. Si no están disponibles, se mantiene la contraseña; no se sustituye silenciosamente por un llavero normal. «Más tarde» es una elección separada y explícita de menor protección;
   - el llavero de Linux se abre con tu sesión, sin biometría. Cualquiera que llegue a tu sesión abierta abre también el vault. Por eso viene apagado, y la app lo explica al encenderlo ([D0-3](#11-decisiones-que-salen-de-d0)).
-- **Un secreto copiado se borra del portapapeles a los 60 s.** Además, se marca para que no lo guarden el historial del portapapeles ni su sincronización: el tipo «oculto» en macOS, y en Windows, fuera del historial y de la nube.
+- **No se ofrece copiar al portapapeles el kit ni los secretos guardados.** El kit se presenta como texto/QR y se puede exportar a PDF con aviso. La caducidad a60s y las marcas contra historial/sync son requisitos de cualquier futuro flujo de copia de secretos; no son una garantía implementada para el portapapeles general ni para texto seleccionado del terminal.
 
 ## 6. Invariantes que se comprueban
 
@@ -123,15 +129,15 @@ Cada una es una prueba que se escribe en su hito.
 
 | # | Invariante | Hito |
 |---|---|---|
-| I-1 | Ningún secreto guardado cruza a Dart: el núcleo lo usa y la app solo ve que existe | D3, D6 |
+| I-1 | Los secretos SSH guardados no cruzan a Dart: el núcleo los usa. El kit preparado y su QR son presentaciones intencionadas y temporales del secreto de recuperación | D3, D6 |
 | I-2 | Bloqueado, el vault no tiene ítems en claro: el índice se vacía y las claves se borran (`zeroize`) | D3, D4 |
 | I-3 | Cambiar cualquier byte de un sobre (su cabecera: `vault`, `item`, `device`, `key_gen`, `parents`; el nonce o el texto cifrado) hace fallar el descifrado o la firma, y la revisión es el hash del sobre (vectores propios) | D2, D3 |
-| I-4 | La migración no deja la 0.3 en claro: ni la copia que hace la migración (`VACUUM INTO`), ni páginas libres de SQLite, ni el WAL. Se comprueba buscando en los archivos el nombre de un host de prueba. La copia, mientras exista, va con 0600 | D3 |
-| I-5 | Nada fuera del vault nombra un host. Se comprueba buscando en la carpeta de datos, después de una sesión, el nombre de un host de prueba | D3, D6 |
+| I-4 | La migración verifica un destino temporal cifrado antes de instalarlo, sin `.bak` en claro. Se comprueban marcadores en archivos, páginas y WAL y fallos/crashes durante la instalación. Las copias externas previas y borrado forense quedan fuera | D3 |
+| I-5 | Los almacenes locales gestionados de historial, recientes y grabaciones cifran nombres y contenido. Exportaciones explícitas, archivos externos, preferencias introducidas por el usuario y copias previas quedan fuera | D3, D6 |
 | I-6 | Una 0.3 no abre un vault de la 0.4 y lo dice, en vez de mostrarlo vacío | D3 |
 | I-7 | El vault se recupera con el kit en una carpeta de datos nueva | D5 |
 | I-8 | La contraseña maestra solo se pide en la pantalla de bloqueo y en Ajustes › Seguridad, nunca dentro de una sesión (una pregunta del servidor podría imitarla) | D4 |
-| I-9 | Un secreto copiado desaparece del portapapeles a los 60 s y lleva la marca que lo deja fuera del historial | D4 |
+| I-9 | No hay acción de copiar kit/secretos guardados. Antes de añadirla: caducidad60s y marcas contra historial/sync; portapapeles general excluido | Requisito futuro; no implementado |
 
 ## 7. Fuera de alcance
 
@@ -175,6 +181,7 @@ Salieron al repasar el código para escribir este documento.
 ## 10. Riesgos abiertos
 
 Lo que impide hacer afirmaciones fuertes hasta que se resuelva:
+- **Puertas de beta aún abiertas:** migraciones personales, una semana de uso, recuperación personal independiente y biometría física ([guía](plan/prueba-v0.4.md), #37/#33).
 - **Sin auditoría externa.** Está prevista una del núcleo criptográfico y de la sync antes de lanzar OpenWard Cloud.
 - **Los paquetes no se pueden verificar:**
   - en macOS, el `.dmg` va firmado ad hoc y sin notarizar;

@@ -1,10 +1,9 @@
 # Local vault session v1 (D4)
 
-D4 activates the D3 encrypted format from Settings → Security. An existing
-plaintext vault remains explicitly labelled as such until setup succeeds. This
-is an opt-in development path, not the completed v0.4 onboarding contract:
-mandatory onboarding / “Later”, data backup/export and derived-data
-protection remain D6–D8. D5 adds the [complete kit and credential flows](recovery-v1.md). Updating the binary never silently migrates user data.
+D4 introduced opt-in setup; D8 completes [mandatory onboarding and explicit
+beta “Later”](vault-onboarding-v1.md). Production access to legacy data is gated
+until encryption succeeds. D5 adds the [kit and credential flows](recovery-v1.md),
+D6 protects derived local data, and D7 implements portable backups.
 
 ## Authority and lifetime
 

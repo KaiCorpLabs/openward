@@ -189,3 +189,25 @@ impl PasswordBox {
         self.params
     }
 }
+
+#[cfg(test)]
+mod measurements {
+    #[test]
+    #[ignore = "release-mode calibration measurement, recorded separately from the index"]
+    fn calibrated_password_measurement() {
+        let (params, elapsed) = super::calibrate().unwrap();
+        eprintln!(
+            "Argon2id calibration: {} KiB, {} passes, {elapsed:?}; target 500–1000 ms",
+            params.memory_kib(),
+            params.passes()
+        );
+        assert!(params.memory_kib() >= super::MIN_MEMORY_KIB);
+        if !(std::time::Duration::from_millis(500)..=std::time::Duration::from_secs(1))
+            .contains(&elapsed)
+        {
+            eprintln!(
+                "Target not met on this runner within the bounded calibration policy; retain this result in beta evidence."
+            );
+        }
+    }
+}

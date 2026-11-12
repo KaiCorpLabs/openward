@@ -10255,6 +10255,90 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{items} elementos, {secrets} secretos guardados, {unreadable} elementos conservados para una versión posterior.'**
   String backupSummary(int items, int secrets, int unreadable);
+
+  /// No description provided for @vaultOnboardingTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Protege tu vault'**
+  String get vaultOnboardingTitle;
+
+  /// No description provided for @vaultOnboardingBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Crea una contraseña maestra y guarda el kit de recuperación antes de usar OpenWard. Los datos existentes se migran en su ubicación. Guarda el kit fuera del equipo: sin contraseña, kit o método de desbloqueo habilitado, no se puede recuperar el vault.'**
+  String get vaultOnboardingBody;
+
+  /// No description provided for @vaultLater.
+  ///
+  /// In es, this message translates to:
+  /// **'Más tarde · proteger en este equipo'**
+  String get vaultLater;
+
+  /// No description provided for @vaultDeviceWarning.
+  ///
+  /// In es, this message translates to:
+  /// **'Protección temporal: cifrado con una clave del llavero de esta cuenta del sistema. Quien acceda a esa cuenta podrá desbloquearlo. Mover o perder el llavero puede impedir recuperar el vault. Crea una contraseña y guarda el kit para recuperarlo en otro equipo y hacer copias.'**
+  String get vaultDeviceWarning;
+
+  /// No description provided for @vaultDeviceReminder.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña y kit pendientes · protegido solo por esta cuenta del sistema'**
+  String get vaultDeviceReminder;
+
+  /// No description provided for @vaultFinishSetup.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear contraseña y kit'**
+  String get vaultFinishSetup;
+
+  /// No description provided for @vaultDeviceUnlock.
+  ///
+  /// In es, this message translates to:
+  /// **'Desbloquear con esta cuenta del sistema'**
+  String get vaultDeviceUnlock;
+
+  /// No description provided for @vaultDeviceError.
+  ///
+  /// In es, this message translates to:
+  /// **'Clave del equipo no disponible. Desbloquea el llavero original del sistema y reinténtalo. La configuración no ha terminado; tus datos no se muestran.'**
+  String get vaultDeviceError;
+
+  /// No description provided for @vaultProtectedStatus.
+  ///
+  /// In es, this message translates to:
+  /// **'Cifrado · contraseña y kit configurados'**
+  String get vaultProtectedStatus;
+
+  /// No description provided for @newsVaultTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu vault cifrado'**
+  String get newsVaultTitle;
+
+  /// No description provided for @newsVaultBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña maestra, desbloqueo opcional del sistema, bloqueo automático y credenciales, historial y registros de sesión cifrados. Ajustes › Seguridad reúne los controles.'**
+  String get newsVaultBody;
+
+  /// No description provided for @newsRecoveryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Recuperación y copias portables'**
+  String get newsRecoveryTitle;
+
+  /// No description provided for @newsRecoveryBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Guarda el kit fuera del equipo, cambia la contraseña y exporta o restaura copias .owvault. La exportación JSON está en claro y requiere contraseña y confirmación.'**
+  String get newsRecoveryBody;
+
+  /// No description provided for @vaultMissingKitStatus.
+  ///
+  /// In es, this message translates to:
+  /// **'Cifrado · kit de recuperación pendiente'**
+  String get vaultMissingKitStatus;
 }
 
 class _AppLocalizationsDelegate

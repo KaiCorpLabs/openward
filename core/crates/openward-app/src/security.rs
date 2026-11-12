@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 
 use openward_vault::{Error, Result, Vault};
 
+pub mod device;
 pub mod native;
 mod recovery_document;
 
@@ -43,14 +44,23 @@ pub struct Status {
 /// holding this synchronous lease across a network await.
 pub struct AccessGate {
     state: RwLock<(u64, bool)>,
+    onboarding: AtomicBool,
 }
 impl AccessGate {
     fn new(open: bool) -> Self {
         Self {
             state: RwLock::new((0, open)),
+            onboarding: AtomicBool::new(false),
         }
     }
     pub fn read(&self) -> Result<Access<'_>> {
+        let access = self.control_read()?;
+        if self.onboarding.load(Ordering::Acquire) {
+            return Err(Error::Locked);
+        }
+        Ok(access)
+    }
+    fn control_read(&self) -> Result<Access<'_>> {
         let guard = self.state.read().unwrap_or_else(|e| e.into_inner());
         if !guard.1 {
             return Err(Error::Locked);
@@ -58,7 +68,7 @@ impl AccessGate {
         Ok(Access(guard))
     }
     pub fn is_open(&self) -> bool {
-        self.state.try_read().is_ok_and(|s| s.1)
+        !self.onboarding.load(Ordering::Acquire) && self.state.try_read().is_ok_and(|s| s.1)
     }
     pub fn ticket(&self) -> Result<u64> {
         Ok(self.read()?.0.0)
@@ -101,6 +111,7 @@ impl Access<'_> {
 enum SetupKind {
     Migration,
     Rotation(u64),
+    Device { epoch: u64, id: String },
 }
 struct Setup {
     kind: SetupKind,
@@ -120,6 +131,7 @@ pub struct VaultSession {
     timeout: AtomicU64,
     native_enabled: AtomicBool,
     recovery_available: AtomicBool,
+    needs_password: AtomicBool,
     operation: Mutex<()>,
     setup: Mutex<Option<Setup>>,
     activity: Mutex<Instant>,
@@ -139,6 +151,7 @@ impl VaultSession {
         // path. Invalid native identifiers are never sent to an OS store.
         let native_enabled = vault.native_id().ok().flatten().is_some();
         let recovery_available = vault.has_recovery().unwrap_or(false);
+        let needs_password = vault.is_device_only()?;
         let policy_path = path.with_extension("security.json");
         let timeout = match std::fs::metadata(&policy_path) {
             Ok(m) if m.len() <= 32 => std::fs::read_to_string(&policy_path)?
@@ -157,6 +170,7 @@ impl VaultSession {
             timeout: AtomicU64::new(timeout),
             native_enabled: AtomicBool::new(native_enabled),
             recovery_available: AtomicBool::new(recovery_available),
+            needs_password: AtomicBool::new(needs_password),
             operation: Mutex::new(()),
             setup: Mutex::new(None),
             activity: Mutex::new(Instant::now()),
@@ -164,6 +178,26 @@ impl VaultSession {
             vault_wake: Mutex::new(None),
             protected: Mutex::new(Vec::new()),
         })
+    }
+    /// Must be set before exposing the production FFI handle.
+    pub fn require_onboarding(&self) {
+        if self.status().phase == Phase::Legacy {
+            self.gate.onboarding.store(true, Ordering::Release);
+        }
+    }
+    pub fn onboarding_required(&self) -> bool {
+        self.gate.onboarding.load(Ordering::Acquire)
+    }
+    pub fn needs_password(&self) -> bool {
+        self.needs_password.load(Ordering::Acquire)
+    }
+    fn require_password(&self) -> Result<()> {
+        if self.needs_password() {
+            return Err(Error::Invalid(
+                "complete password and recovery kit setup first",
+            ));
+        }
+        Ok(())
     }
     pub fn protect(&self, resource: Arc<dyn Protected>) {
         self.protected
@@ -185,7 +219,7 @@ impl VaultSession {
     }
     pub fn access(&self) -> Result<MutexGuard<'_, Vault>> {
         let vault = self.guard();
-        if vault.is_locked() {
+        if self.onboarding_required() || vault.is_locked() {
             return Err(Error::Locked);
         }
         Ok(vault)
@@ -283,6 +317,7 @@ impl VaultSession {
             Ok(())
         });
         let result = if result.is_ok() && self.gate.open(epoch) {
+            self.gate.onboarding.store(false, Ordering::Release);
             *self.activity.lock().unwrap_or_else(|e| e.into_inner()) = Instant::now();
             self.phase(Phase::Unlocked);
             Ok(())
@@ -331,6 +366,7 @@ impl VaultSession {
         self.finish_auth(epoch, &mut vault, result)
     }
     pub fn enable_native(&self, store: &dyn native::Store, linux_ack: bool) -> Result<()> {
+        self.require_password()?;
         let _busy = self
             .operation
             .try_lock()
@@ -404,10 +440,17 @@ impl VaultSession {
             .operation
             .try_lock()
             .map_err(|_| Error::Invalid("authentication is already in progress"))?;
-        let _access = self.gate.read()?;
-        if self.status().phase != Phase::Legacy {
+        let access = self.gate.control_read()?;
+        let kind = if self.status().phase == Phase::Legacy {
+            SetupKind::Migration
+        } else if self.status().phase == Phase::Unlocked && self.needs_password() {
+            SetupKind::Device {
+                epoch: access.epoch(),
+                id: self.guard().device_id()?.ok_or(Error::Locked)?,
+            }
+        } else {
             return Err(Error::Invalid("the vault is already encrypted"));
-        }
+        };
         if password.chars().count() < 12 || Self::password_score(&password)? < 3 {
             return Err(Error::Invalid(
                 "choose a stronger master password (at least 12 characters)",
@@ -416,7 +459,7 @@ impl VaultSession {
         let kit = openward_crypto::unlock::RecoveryKit::generate()?;
         let text = kit.text();
         *self.setup.lock().unwrap_or_else(|e| e.into_inner()) = Some(Setup {
-            kind: SetupKind::Migration,
+            kind,
             password,
             kit,
         });
@@ -429,6 +472,14 @@ impl VaultSession {
         self.setup.lock().unwrap_or_else(|e| e.into_inner()).take();
     }
     pub fn complete_setup(&self, group3: &str, group12: &str) -> Result<()> {
+        self.complete_setup_using(group3, group12, &device::System)
+    }
+    pub fn complete_setup_using(
+        &self,
+        group3: &str,
+        group12: &str,
+        store: &dyn native::Store,
+    ) -> Result<()> {
         let _busy = self
             .operation
             .try_lock()
@@ -448,6 +499,31 @@ impl VaultSession {
                 "recovery kit confirmation did not match; restart setup",
             ));
         }
+        if let SetupKind::Device { epoch, ref id } = setup.kind {
+            // Fresh OS-session proof; no access lease across native interaction.
+            let key = store.read(id).map_err(device_error)?;
+            let (params, _) = openward_crypto::password::calibrate()?;
+            let mut vault = self.guard();
+            let update = vault.prepare_device_password(
+                key.as_ref(),
+                setup.password.as_bytes(),
+                params,
+                &setup.kit,
+            )?;
+            let access = self.gate.read()?;
+            if access.epoch() != epoch {
+                return Err(Error::Locked);
+            }
+            vault.apply_credential_update(update)?;
+            self.needs_password.store(false, Ordering::Release);
+            self.recovery_available.store(true, Ordering::Release);
+            self.native_enabled.store(false, Ordering::Release);
+            drop(vault);
+            drop(access);
+            self.notify();
+            let _ = store.remove(id);
+            return Ok(());
+        }
         if let SetupKind::Rotation(epoch) = setup.kind {
             let mut vault = self.guard();
             let update = vault.prepare_recovery_rotation(setup.password.as_bytes(), &setup.kit)?;
@@ -462,6 +538,79 @@ impl VaultSession {
             self.notify();
             return Ok(());
         }
+        let (params, _) = openward_crypto::password::calibrate()?;
+        self.install_legacy(setup.password.as_bytes(), || {
+            Vault::migrate_with_recovery(&self.path, setup.password.as_bytes(), params, &setup.kit)
+        })
+    }
+    /// Beta escape hatch: encryption is mandatory even when password setup is deferred.
+    pub fn defer_setup(&self, store: &dyn native::Store, linux_ack: bool) -> Result<()> {
+        let _busy = self
+            .operation
+            .try_lock()
+            .map_err(|_| Error::Invalid("setup is already in progress"))?;
+        if self.status().phase != Phase::Legacy {
+            return Err(Error::Locked);
+        }
+        if store.kind() == native::Kind::Unsupported {
+            return Err(device_error(native::Error::Unavailable));
+        }
+        if cfg!(target_os = "linux") && !linux_ack {
+            return Err(Error::Invalid("acknowledge Linux session protection first"));
+        }
+        let mut random = [0; 16];
+        getrandom::fill(&mut random)
+            .map_err(|_| Error::Invalid("secure randomness unavailable"))?;
+        let suffix: String = random.iter().map(|b| format!("{b:02x}")).collect();
+        let id = format!("{}{suffix}", self.guard().device_namespace()?);
+        let epoch = self.gate.epoch();
+        let key = store.create(&id).map_err(device_error)?;
+        // A faulty/unavailable store must fail before any plaintext replacement.
+        let proof = store.read(&id).map_err(device_error);
+        if self.gate.epoch() != epoch || !proof.as_ref().is_ok_and(|p| p.as_ref() == key.as_ref()) {
+            let _ = store.remove(&id);
+            return Err(device_error(native::Error::Unavailable));
+        }
+        self.cancel_setup();
+        let result = self.install_legacy(key.as_ref(), || {
+            Vault::migrate_device(&self.path, key.as_ref(), &id)
+        });
+        // Never delete the only key after an encrypted installation, even if reopening failed.
+        if result.is_err() && self.status().phase == Phase::Legacy {
+            let _ = store.remove(&id);
+        }
+        result
+    }
+    pub fn unlock_device(&self, store: &dyn native::Store) -> Result<()> {
+        let _busy = self
+            .operation
+            .try_lock()
+            .map_err(|_| Error::Invalid("authentication is already in progress"))?;
+        if self.status().phase == Phase::Unlocked {
+            return Ok(());
+        }
+        let epoch = self.gate.epoch();
+        let id = self
+            .guard()
+            .device_id()?
+            .ok_or(Error::Invalid("device protection is not enabled"))?;
+        self.phase(Phase::Changing);
+        self.notify();
+        let key = store.read(&id).map_err(device_error);
+        let mut vault = self.guard();
+        let result = key.and_then(|key| {
+            if self.gate.epoch() != epoch {
+                return Err(Error::Locked);
+            }
+            vault.unlock_in_place(key.as_ref())
+        });
+        self.finish_auth(epoch, &mut vault, result)
+    }
+    fn install_legacy(
+        &self,
+        password: &[u8],
+        install: impl FnOnce() -> Result<openward_vault::LockedVault>,
+    ) -> Result<()> {
         let epoch = self.gate.epoch();
         if self.status().phase != Phase::Legacy {
             return Err(Error::Locked);
@@ -469,7 +618,6 @@ impl VaultSession {
         for resource in self.resources() {
             resource.before_encrypt()?;
         }
-        let (params, _) = openward_crypto::password::calibrate()?;
         if self.gate.epoch() != epoch {
             return Err(Error::Locked);
         }
@@ -485,8 +633,7 @@ impl VaultSession {
         self.notify();
         let mut vault = self.guard();
         drop(std::mem::replace(&mut *vault, Vault::open_in_memory()?));
-        let installed =
-            Vault::migrate_with_recovery(&self.path, setup.password.as_bytes(), params, &setup.kit);
+        let installed = install();
         // Release migration's retained process lock before opening the same path.
         let result = installed.map(drop);
         let opened = Vault::open_session(&self.path);
@@ -506,6 +653,8 @@ impl VaultSession {
         {
             vault.on_change(move || wake());
         }
+        self.needs_password
+            .store(vault.is_device_only()?, Ordering::Release);
         self.recovery_available
             .store(vault.has_recovery()?, Ordering::Release);
         if !vault.is_encrypted() {
@@ -518,12 +667,13 @@ impl VaultSession {
             self.notify();
             return result;
         }
-        let unlocked = result.and_then(|()| vault.unlock_in_place(setup.password.as_bytes()));
+        let unlocked = result.and_then(|()| vault.unlock_in_place(password));
         self.finish_auth(install_epoch, &mut vault, unlocked)
     }
     /// Rotation requires the current password, including on a biometrically
     /// unlocked session. The old kit stays active until confirmation commits.
     pub fn prepare_recovery(&self, password: zeroize::Zeroizing<String>) -> Result<SetupView> {
+        self.require_password()?;
         let _busy = self
             .operation
             .try_lock()
@@ -557,6 +707,7 @@ impl VaultSession {
             .operation
             .try_lock()
             .map_err(|_| Error::Invalid("authentication is already in progress"))?;
+        self.require_password()?;
         let epoch = self.gate.ticket()?;
         if password.chars().count() < 12 || Self::password_score(password)? < 3 {
             return Err(Error::Invalid(
@@ -589,7 +740,7 @@ impl VaultSession {
     /// Only the currently prepared kit can be printed. No active kit is exposed
     /// merely because biometrics previously opened the vault.
     pub fn prepared_recovery_qr(&self) -> Result<Vec<u8>> {
-        let _access = self.gate.read()?;
+        let _access = self.gate.control_read()?;
         let pending = self.setup.lock().unwrap_or_else(|e| e.into_inner());
         let setup = pending
             .as_ref()
@@ -597,7 +748,7 @@ impl VaultSession {
         recovery_document::qr(&setup.kit)
     }
     pub fn export_prepared_recovery(&self, path: &Path) -> Result<()> {
-        let epoch = self.gate.ticket()?;
+        let epoch = self.gate.control_read()?.epoch();
         if path.extension().and_then(|s| s.to_str()) != Some("pdf") {
             return Err(Error::Invalid("choose a new .pdf file"));
         }
@@ -613,7 +764,7 @@ impl VaultSession {
         use std::io::Write;
         file.write_all(&document)?;
         file.as_file().sync_all()?;
-        let access = self.gate.read()?;
+        let access = self.gate.control_read()?;
         if access.epoch() != epoch {
             return Err(Error::Locked);
         }
@@ -682,6 +833,11 @@ impl VaultSession {
     }
 }
 
+fn device_error(_: native::Error) -> Error {
+    Error::Invalid(
+        "device key unavailable; unlock the original OS keyring or finish password setup before moving the vault",
+    )
+}
 fn native_error(error: native::Error) -> Error {
     match error {
         native::Error::Cancelled => Error::Invalid("native authentication cancelled"),
@@ -855,6 +1011,94 @@ mod factor_tests {
         );
         let s = Arc::new(VaultSession::open(&path).unwrap());
         (dir, s)
+    }
+    #[test]
+    fn onboarding_blocks_plaintext_and_later_requires_a_working_keystore() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("vault.db");
+        let s = VaultSession::open(&path).unwrap();
+        s.require_onboarding();
+        assert!(s.onboarding_required());
+        assert!(s.gate.read().is_err());
+        assert!(s.access().is_err());
+        let store = FakeStore::new(Kind::SessionKeyring);
+        if cfg!(target_os = "linux") {
+            assert!(s.defer_setup(&store, false).is_err());
+        }
+        store.fail.store(true, Ordering::Release);
+        assert!(s.defer_setup(&store, true).is_err());
+        assert!(store.keys.lock().unwrap().is_empty());
+        assert!(!s.guard().is_encrypted());
+        assert!(s.gate.read().is_err());
+        store.fail.store(false, Ordering::Release);
+        s.defer_setup(&store, true).unwrap();
+        assert!(s.needs_password());
+        assert!(!s.onboarding_required());
+        assert!(s.gate.read().is_ok());
+        assert!(
+            s.prepare_recovery(zeroize::Zeroizing::new("wrong".into()))
+                .is_err()
+        );
+        assert!(s.enable_native(&store, true).is_err());
+        s.lock().unwrap();
+        store.fail.store(true, Ordering::Release);
+        assert!(s.unlock_device(&store).is_err());
+        assert!(s.gate.read().is_err());
+        store.fail.store(false, Ordering::Release);
+        s.unlock_device(&store).unwrap();
+        drop(s);
+        let s = VaultSession::open(&path).unwrap();
+        assert!(s.needs_password());
+        assert!(s.gate.read().is_err());
+        s.unlock_device(&store).unwrap();
+        let pending = s
+            .prepare_setup(zeroize::Zeroizing::new(
+                "D8-Conductor-Marzipan-Fjord-87!".into(),
+            ))
+            .unwrap();
+        let groups: Vec<_> = pending.kit.split('-').collect();
+        store.fail.store(true, Ordering::Release);
+        assert!(
+            s.complete_setup_using(groups[3], groups[12], &store)
+                .is_err()
+        );
+        assert!(s.needs_password());
+        store.fail.store(false, Ordering::Release);
+        let pending = s
+            .prepare_setup(zeroize::Zeroizing::new(
+                "D8-Conductor-Marzipan-Fjord-87!".into(),
+            ))
+            .unwrap();
+        let groups: Vec<_> = pending.kit.split('-').collect();
+        s.complete_setup_using(groups[3], groups[12], &store)
+            .unwrap();
+        assert!(!s.needs_password());
+        assert!(store.keys.lock().unwrap().is_empty());
+        s.lock().unwrap();
+        assert!(s.unlock_device(&store).is_err());
+        s.recover(&pending.kit).unwrap();
+        assert!(s.gate.read().is_ok());
+    }
+    #[test]
+    fn mandatory_onboarding_allows_confirmed_password_and_kit_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("vault.db");
+        let s = VaultSession::open(&path).unwrap();
+        s.require_onboarding();
+        let pending = s
+            .prepare_setup(zeroize::Zeroizing::new(
+                "D8-Conductor-Marzipan-Fjord-87!".into(),
+            ))
+            .unwrap();
+        assert!(!s.prepared_recovery_qr().unwrap().is_empty());
+        assert!(s.gate.ticket().is_err());
+        let groups: Vec<_> = pending.kit.split('-').collect();
+        s.complete_setup(groups[3], groups[12]).unwrap();
+        assert!(!s.onboarding_required());
+        assert!(!s.needs_password());
+        assert!(s.gate.read().is_ok());
+        s.lock().unwrap();
+        s.recover(&pending.kit).unwrap();
     }
     #[test]
     fn recovery_confirmation_cancellation_and_password_reauthorization() {

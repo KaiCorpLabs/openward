@@ -193,10 +193,18 @@ pub(crate) fn for_tests(what: &str) -> Result<(), VaultError> {
 impl OpenWard {
     /// Opens or creates the app's data in `data_dir` (the platform's
     /// application support directory).
-    pub fn open(data_dir: String) -> Result<OpenWard, VaultError> {
-        Ok(Self {
-            app: Arc::new(App::open(&PathBuf::from(data_dir))?),
-        })
+    pub fn open(
+        data_dir: String,
+        require_onboarding: Option<bool>,
+    ) -> Result<OpenWard, VaultError> {
+        if require_onboarding == Some(false) {
+            for_tests("skipping onboarding")?;
+        }
+        let app = Arc::new(App::open(&PathBuf::from(data_dir))?);
+        if require_onboarding.unwrap_or(true) {
+            app.security().require_onboarding();
+        }
+        Ok(Self { app })
     }
 
     /// As [`OpenWard::open`], with another `~/.ssh` (tests: the tester's
@@ -218,7 +226,11 @@ impl OpenWard {
     /// As [`OpenWard::open`], with another home folder and its `.ssh`
     /// (tests: nothing of the tester's, such as their Termius, is seen).
     /// Debug builds only: see [`for_tests`].
-    pub fn open_with_home(data_dir: String, home: String) -> Result<OpenWard, VaultError> {
+    pub fn open_with_home(
+        data_dir: String,
+        home: String,
+        require_onboarding: Option<bool>,
+    ) -> Result<OpenWard, VaultError> {
         for_tests("open_with_home")?;
         let home = PathBuf::from(home);
         let local = openward_app::Local {
@@ -227,9 +239,11 @@ impl OpenWard {
             home,
             ..openward_app::Local::from_env()
         };
-        Ok(Self {
-            app: Arc::new(App::open_as(&PathBuf::from(data_dir), local)?),
-        })
+        let app = Arc::new(App::open_as(&PathBuf::from(data_dir), local)?);
+        if require_onboarding.unwrap_or(false) {
+            app.security().require_onboarding();
+        }
+        Ok(Self { app })
     }
 
     /// Items this version cannot read, written by a newer one: they stay

@@ -21,6 +21,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:openward/app.dart';
 import 'package:openward/core/providers.dart';
+import 'package:openward/core/errors.dart';
+import 'package:openward/settings/settings_page.dart';
 import 'package:openward/core/settings.dart';
 import 'package:openward/hosts/sidebar.dart';
 import 'package:openward/import/program_preview.dart';
@@ -294,8 +296,57 @@ void main() {
       out.listSync().where((f) => f.path.endsWith('.png')).length,
       greaterThanOrEqualTo(_themes.length * 8),
     );
-    binding.reportData = {'screenshots': reported};
     tabs.closeCurrent();
     await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpWidget(const SizedBox());
+    final beta = await OpenWard.openWithHome(
+      dataDir: '${dir.path}/beta',
+      home: '${dir.path}/beta-home',
+      requireOnboarding: true,
+    );
+    final betaSettings = File('${dir.path}/beta/settings.json')
+      ..writeAsStringSync(
+        '{"language":"es","welcomed":true,"seen_news":"$newsVersion"}',
+      );
+    await tester.pumpWidget(
+      RepaintBoundary(
+        key: _frame,
+        child: ProviderScope(
+          overrides: [
+            openWardProvider.overrideWithValue(beta),
+            settingsFileProvider.overrideWithValue(betaSettings),
+            sshConfigFileProvider.overrideWithValue('${dir.path}/no-config'),
+          ],
+          child: const OpenWardApp(),
+        ),
+      ),
+    );
+    await shot('d8-1-onboarding');
+    const password = 'Gallery-D8-Marzipan-Conductor-Fjord-87!';
+    final kit = await beta.prepareVault(password: password);
+    final groups = kit.split('-');
+    await beta.completeVaultSetup(group3: groups[3], group12: groups[12]);
+    await tester.pumpAndSettle();
+    await beta.lockVault();
+    await tester.pumpAndSettle();
+    await shot('d8-2-locked');
+    await beta.unlockVault(password: password);
+    await tester.pumpAndSettle();
+    final betaContainer = ProviderScope.containerOf(
+      tester.element(find.byType(OpenWardApp)),
+    );
+    betaContainer
+        .read(settingsSectionProvider.notifier)
+        .show(SettingsSection.security);
+    unawaited(
+      appNavigator.currentState!.push(
+        MaterialPageRoute<void>(builder: (_) => const SettingsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await shot('d8-3-security');
+    binding.reportData = {'screenshots': reported};
+    await tester.pumpWidget(const SizedBox());
+    beta.dispose();
   });
 }

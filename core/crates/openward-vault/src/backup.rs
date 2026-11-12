@@ -255,6 +255,11 @@ impl Vault {
         .map_err(Into::into)
     }
     pub fn empty_for_restore(&self) -> Result<()> {
+        if self.is_device_only()? {
+            return Err(Error::Invalid(
+                "complete password and recovery kit setup first",
+            ));
+        }
         if !self.is_encrypted() || self.is_locked() {
             return Err(Error::Locked);
         }
@@ -377,7 +382,8 @@ impl Vault {
         }
         self.store.conn.pragma_update(None, "synchronous", "FULL")?;
         let tx = self.store.conn.transaction()?;
-        tx.pragma_update(None, "user_version", 3)?;
+        let version: i64 = tx.pragma_query_value(None, "user_version", |r| r.get(0))?;
+        tx.pragma_update(None, "user_version", version.max(3))?;
         for (id, rev, bytes) in &import.rows {
             tx.execute(
                 "INSERT INTO items VALUES (?1,?2,?3,?4)",

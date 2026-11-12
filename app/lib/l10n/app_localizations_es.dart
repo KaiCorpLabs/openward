@@ -6607,4 +6607,52 @@ class AppLocalizationsEs extends AppLocalizations {
   String backupSummary(int items, int secrets, int unreadable) {
     return '$items elementos, $secrets secretos guardados, $unreadable elementos conservados para una versión posterior.';
   }
+
+  @override
+  String get vaultOnboardingTitle => 'Protege tu vault';
+
+  @override
+  String get vaultOnboardingBody =>
+      'Crea una contraseña maestra y guarda el kit de recuperación antes de usar OpenWard. Los datos existentes se migran en su ubicación. Guarda el kit fuera del equipo: sin contraseña, kit o método de desbloqueo habilitado, no se puede recuperar el vault.';
+
+  @override
+  String get vaultLater => 'Más tarde · proteger en este equipo';
+
+  @override
+  String get vaultDeviceWarning =>
+      'Protección temporal: cifrado con una clave del llavero de esta cuenta del sistema. Quien acceda a esa cuenta podrá desbloquearlo. Mover o perder el llavero puede impedir recuperar el vault. Crea una contraseña y guarda el kit para recuperarlo en otro equipo y hacer copias.';
+
+  @override
+  String get vaultDeviceReminder =>
+      'Contraseña y kit pendientes · protegido solo por esta cuenta del sistema';
+
+  @override
+  String get vaultFinishSetup => 'Crear contraseña y kit';
+
+  @override
+  String get vaultDeviceUnlock => 'Desbloquear con esta cuenta del sistema';
+
+  @override
+  String get vaultDeviceError =>
+      'Clave del equipo no disponible. Desbloquea el llavero original del sistema y reinténtalo. La configuración no ha terminado; tus datos no se muestran.';
+
+  @override
+  String get vaultProtectedStatus => 'Cifrado · contraseña y kit configurados';
+
+  @override
+  String get newsVaultTitle => 'Tu vault cifrado';
+
+  @override
+  String get newsVaultBody =>
+      'Contraseña maestra, desbloqueo opcional del sistema, bloqueo automático y credenciales, historial y registros de sesión cifrados. Ajustes › Seguridad reúne los controles.';
+
+  @override
+  String get newsRecoveryTitle => 'Recuperación y copias portables';
+
+  @override
+  String get newsRecoveryBody =>
+      'Guarda el kit fuera del equipo, cambia la contraseña y exporta o restaura copias .owvault. La exportación JSON está en claro y requiere contraseña y confirmación.';
+
+  @override
+  String get vaultMissingKitStatus => 'Cifrado · kit de recuperación pendiente';
 }

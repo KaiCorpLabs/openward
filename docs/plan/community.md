@@ -319,6 +319,8 @@ El plan de la [v0.4](v0.4.md) tal cual (D0–D8), con tres ajustes que salen de 
 
 Las decisiones de la v0.4 (contraseña maestra obligatoria y «Más tarde» durante la beta, entre otras) y las tres de su modelo de amenazas están aceptadas desde el 2026-11-10. La sync de la etapa 3 confirma que la contraseña y el kit hacen falta.
 
+D8 prepara `0.4.0-beta.1+31`, onboarding y Ajustes › Seguridad. La [guía](prueba-v0.4.md) mantiene pendientes la semana de uso, migraciones personales y autenticación física; #37/#33 siguen sus puertas. Preparar la candidata no publica una release.
+
 ## Etapa 3 · v0.5, sync con tu almacenamiento
 
 El motor de [ADR-005](../adr/ADR-005-sync-por-registros-de-dispositivo.md) con los backends gratuitos. Va antes del servidor por tres razones:

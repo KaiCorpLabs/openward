@@ -13,6 +13,7 @@ import '../src/rust/api/security.dart';
 import '../tabs/tabs.dart';
 import 'state.dart';
 import 'unlock.dart';
+import 'onboarding.dart';
 
 /// Does not mount Home until its first permitted frame. Once mounted, sessions
 /// and navigator state survive locking, outside focus, semantics and painting.
@@ -26,8 +27,17 @@ class _VaultHomeState extends ConsumerState<VaultHome> {
   bool opened = false;
   @override
   Widget build(BuildContext context) {
-    opened |= vaultVisible(ref.watch(securityProvider));
-    return opened ? const Home() : const SizedBox.shrink();
+    final view = ref.watch(securityProvider);
+    final app = ref.read(openWardProvider);
+    opened |= vaultVisible(view) && !app.vaultOnboardingRequired();
+    return opened
+        ? Column(
+            children: [
+              if (app.vaultNeedsPassword()) const VaultReminder(),
+              const Expanded(child: Home()),
+            ],
+          )
+        : const SizedBox.shrink();
   }
 }
 
@@ -101,7 +111,8 @@ class _VaultBoundaryState extends ConsumerState<VaultBoundary> {
   @override
   Widget build(BuildContext context) {
     final view = ref.watch(securityProvider);
-    final visible = vaultVisible(view) && !nativeCovered;
+    final onboarding = ref.read(openWardProvider).vaultOnboardingRequired();
+    final visible = vaultVisible(view) && !nativeCovered && !onboarding;
     ref.listen(securityProvider, (previous, next) {
       if (vaultVisible(next) == (previous != null && vaultVisible(previous))) {
         return;
@@ -163,8 +174,11 @@ class _VaultBoundaryState extends ConsumerState<VaultBoundary> {
                 Positioned.fill(
                   child: HeroControllerScope.none(
                     child: Navigator(
+                      key: ValueKey(onboarding),
                       onGenerateRoute: (_) => MaterialPageRoute<void>(
-                        builder: (_) => const VaultUnlock(),
+                        builder: (_) => onboarding
+                            ? const VaultOnboarding()
+                            : const VaultUnlock(),
                       ),
                     ),
                   ),
