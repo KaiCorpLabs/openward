@@ -10,6 +10,8 @@ import 'package:openward/l10n/l10n.dart';
 import 'package:openward/security/boundary.dart';
 import 'package:openward/security/settings.dart';
 import 'package:openward/security/onboarding.dart';
+import 'package:openward/security/credentials.dart';
+import 'package:openward/src/rust/api/credentials.dart';
 import 'package:openward/src/rust/api/security.dart';
 
 import 'fakes.dart';
@@ -115,6 +117,52 @@ Widget harness(Core core) => ProviderScope(
   ),
 );
 void main() {
+  testWidgets(
+    'Linux security tiles paint above a page background with saved credentials',
+    (tester) async {
+      final core = LinuxCore();
+      core.phase(VaultPhase.unlocked);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            openWardProvider.overrideWithValue(core),
+            savedCredentialsProvider.overrideWith(
+              (ref) async => [
+                const SavedCredential(
+                  id: 'fixture',
+                  label: 'D8 saved credential',
+                  kind: CredentialKind.password,
+                ),
+              ],
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: const Scaffold(
+              body: SingleChildScrollView(
+                child: ColoredBox(color: Colors.white, child: VaultSettings()),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('D8 saved credential'), findsOneWidget);
+      await tester.ensureVisible(find.byType(CheckboxListTile));
+      await tester.tap(find.byType(CheckboxListTile));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await core.securityEvents.close();
+    },
+  );
   testWidgets(
     'Linux later requires explicit session protection acknowledgement',
     (tester) async {

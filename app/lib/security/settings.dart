@@ -49,134 +49,137 @@ class _VaultSettingsState extends ConsumerState<VaultSettings> {
     final app = ref.read(openWardProvider);
     final nativeKind = app.nativeProtection();
     final deviceOnly = app.vaultNeedsPassword();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(l.vaultSecurity, style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 16),
-        Text(l.vaultScope),
-        const SizedBox(height: 16),
-        if (view.phase == VaultPhase.legacy || deviceOnly) ...[
-          Text(deviceOnly ? l.vaultDeviceWarning : l.vaultLegacy),
+    return Material(
+      type: MaterialType.transparency,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l.vaultSecurity, style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 16),
-          FilledButton(
-            onPressed: () => showDialog<void>(
-              context: context,
-              barrierDismissible: false,
-              builder: (_) => const VaultSetup(),
-            ),
-            child: Text(deviceOnly ? l.vaultFinishSetup : l.vaultEnable),
-          ),
-        ],
-        if (view.phase != VaultPhase.legacy) ...[
-          if (!deviceOnly) ...[
-            Text(
-              view.recoveryAvailable
-                  ? l.vaultProtectedStatus
-                  : l.vaultMissingKitStatus,
-            ),
+          Text(l.vaultScope),
+          const SizedBox(height: 16),
+          if (view.phase == VaultPhase.legacy || deviceOnly) ...[
+            Text(deviceOnly ? l.vaultDeviceWarning : l.vaultLegacy),
             const SizedBox(height: 16),
-            OutlinedButton(
+            FilledButton(
               onPressed: () => showDialog<void>(
                 context: context,
                 barrierDismissible: false,
-                builder: (_) => const VaultPasswordChange(),
+                builder: (_) => const VaultSetup(),
               ),
-              child: Text(l.vaultChangePassword),
+              child: Text(deviceOnly ? l.vaultFinishSetup : l.vaultEnable),
             ),
-            OutlinedButton(
-              onPressed: () => showDialog<void>(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) => const VaultSetup(regenerate: true),
-              ),
-              child: Text(l.vaultRegenerateKit),
-            ),
-            const SizedBox(height: 16),
           ],
-          const StoredCredentials(),
-          const SizedBox(height: 16),
-          Text(l.vaultSessions),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: () {
-              ref.read(historyProvider.notifier).flush();
-              app.lockVault();
-            },
-            child: Text(l.vaultLock),
-          ),
-          const SizedBox(height: 24),
-          DropdownButtonFormField<int>(
-            initialValue: view.autoLockSeconds.toInt(),
-            decoration: InputDecoration(labelText: l.vaultAutoLock),
-            items: [
-              for (final n in {
-                0,
-                60,
-                300,
-                900,
-                1800,
-                view.autoLockSeconds.toInt(),
-              })
-                DropdownMenuItem(
-                  value: n,
-                  child: Text(n == 0 ? l.vaultNever : '$n s'),
-                ),
-            ],
-            onChanged: (n) async {
-              if (n == null) return;
-              try {
-                await app.setAutoLock(seconds: BigInt.from(n));
-              } on Object {
-                if (mounted) setState(() => error = l.errStorage);
-              }
-            },
-          ),
-          const SizedBox(height: 24),
-          if (!deviceOnly) ...[
-            Text(
-              nativeLabel(l, nativeKind),
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            Text(l.vaultNativeExplain),
-            if (nativeKind == NativeProtection.sessionKeyring) ...[
-              const SizedBox(height: 8),
-              Text(l.vaultLinuxWarning),
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                value: linuxAck,
-                title: Text(l.vaultLinuxAccept),
-                onChanged: busy
-                    ? null
-                    : (v) => setState(() => linuxAck = v ?? false),
+          if (view.phase != VaultPhase.legacy) ...[
+            if (!deviceOnly) ...[
+              Text(
+                view.recoveryAvailable
+                    ? l.vaultProtectedStatus
+                    : l.vaultMissingKitStatus,
               ),
-            ],
-            const SizedBox(height: 12),
-            if (nativeKind != NativeProtection.unsupported)
+              const SizedBox(height: 16),
               OutlinedButton(
-                onPressed:
-                    busy ||
-                        (!view.nativeEnabled &&
-                            nativeKind == NativeProtection.sessionKeyring &&
-                            !linuxAck)
-                    ? null
-                    : () => native(!view.nativeEnabled),
-                child: Text(
-                  view.nativeEnabled
-                      ? l.vaultNativeDisable
-                      : l.vaultNativeEnable,
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => const VaultPasswordChange(),
                 ),
+                child: Text(l.vaultChangePassword),
               ),
+              OutlinedButton(
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => const VaultSetup(regenerate: true),
+                ),
+                child: Text(l.vaultRegenerateKit),
+              ),
+              const SizedBox(height: 16),
+            ],
+            const StoredCredentials(),
+            const SizedBox(height: 16),
+            Text(l.vaultSessions),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () {
+                ref.read(historyProvider.notifier).flush();
+                app.lockVault();
+              },
+              child: Text(l.vaultLock),
+            ),
+            const SizedBox(height: 24),
+            DropdownButtonFormField<int>(
+              initialValue: view.autoLockSeconds.toInt(),
+              decoration: InputDecoration(labelText: l.vaultAutoLock),
+              items: [
+                for (final n in {
+                  0,
+                  60,
+                  300,
+                  900,
+                  1800,
+                  view.autoLockSeconds.toInt(),
+                })
+                  DropdownMenuItem(
+                    value: n,
+                    child: Text(n == 0 ? l.vaultNever : '$n s'),
+                  ),
+              ],
+              onChanged: (n) async {
+                if (n == null) return;
+                try {
+                  await app.setAutoLock(seconds: BigInt.from(n));
+                } on Object {
+                  if (mounted) setState(() => error = l.errStorage);
+                }
+              },
+            ),
+            const SizedBox(height: 24),
+            if (!deviceOnly) ...[
+              Text(
+                nativeLabel(l, nativeKind),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              Text(l.vaultNativeExplain),
+              if (nativeKind == NativeProtection.sessionKeyring) ...[
+                const SizedBox(height: 8),
+                Text(l.vaultLinuxWarning),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: linuxAck,
+                  title: Text(l.vaultLinuxAccept),
+                  onChanged: busy
+                      ? null
+                      : (v) => setState(() => linuxAck = v ?? false),
+                ),
+              ],
+              const SizedBox(height: 12),
+              if (nativeKind != NativeProtection.unsupported)
+                OutlinedButton(
+                  onPressed:
+                      busy ||
+                          (!view.nativeEnabled &&
+                              nativeKind == NativeProtection.sessionKeyring &&
+                              !linuxAck)
+                      ? null
+                      : () => native(!view.nativeEnabled),
+                  child: Text(
+                    view.nativeEnabled
+                        ? l.vaultNativeDisable
+                        : l.vaultNativeEnable,
+                  ),
+                ),
+            ],
           ],
+          const SizedBox(height: 24),
+          if (!deviceOnly) const VaultBackups(),
+          if (error != null)
+            Text(
+              error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
         ],
-        const SizedBox(height: 24),
-        if (!deviceOnly) const VaultBackups(),
-        if (error != null)
-          Text(
-            error!,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
-          ),
-      ],
+      ),
     );
   }
 }
