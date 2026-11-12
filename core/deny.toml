@@ -7,6 +7,11 @@ all-features = true
 version = 2
 yanked = "deny"
 ignore = [
+    # Accepted in ADR-004 / S6 §7: proc-macro-error2 runs only as part of
+    # hax's compile-time macros in libcrux, not in the vault at runtime.
+    # No vulnerability/fixed upgrade is reported. Revisit this maintenance
+    # exception with every hpke-rs/libcrux update; inventory: spec/keys-v1.md.
+    { id = "RUSTSEC-2026-0173", reason = "unmaintained compile-time hax macro dependency of pinned libcrux; accepted ADR-004 / S6; review on each update" },
     # Marvin (timing in `rsa`), with no fixed release. It reaches us through
     # russh, which only uses the private key to sign with the user's own RSA
     # key when authenticating; host key checks are public-key operations and

@@ -1,6 +1,6 @@
 # openward-crypto
 
-Primer bloque de D3: el sobre v1 de [ADR-004](../../../docs/adr/ADR-004-vault-y-jerarquia-de-claves.md)
+Núcleo de D3: el sobre v1 de [ADR-004](../../../docs/adr/ADR-004-vault-y-jerarquia-de-claves.md)
 y [ADR-005](../../../docs/adr/ADR-005-sync-por-registros-de-dispositivo.md).
 Todavía no activa el cifrado del vault ni cambia la apertura de la app.
 
@@ -29,8 +29,12 @@ el módulo abre y reescribe esos bytes, reproduce firma/cifrado/revisión y
 contrasta cambios, posiciones, declaraciones enormes y formas no canónicas.
 Las semillas no son credenciales de usuarios.
 
-Quedan en [D3](https://github.com/KaiCorpLabs/openward/issues/32): jerarquía de
-cuenta/dispositivo, HPKE/X-Wing y sus vectores S6, KEK/Argon2id calibrado y la
-migración transaccional del vault con limpieza de páginas/WAL/copias claras.
-Las ocho pruebas de este bloque no cierran ese hito ni sustituyen la revisión
-criptográfica externa prevista antes de Cloud.
+La [jerarquía de claves](../../../spec/keys-v1.md) añade cuenta, certificado de
+dispositivo, generaciones envueltas con HPKE/X-Wing y KEK/Argon2id calibrado.
+Las semillas y la memoria de trabajo de Argon2 se borran al liberar sus tipos.
+Los vectores publicados de S6 y RFC 9106 pasan junto a la interoperabilidad
+con la alternativa de biblioteca.
+
+Queda en [D3](https://github.com/KaiCorpLabs/openward/issues/32) integrar la
+migración del vault con limpieza de páginas/WAL/copias claras. Las pruebas no
+sustituyen la revisión criptográfica externa prevista antes de Cloud.
