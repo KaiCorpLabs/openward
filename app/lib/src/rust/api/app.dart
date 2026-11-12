@@ -44,6 +44,12 @@ abstract class OpenWard implements RustOpaqueInterface {
     String? new_,
   });
 
+  Future<void> changeVaultPassword({
+    required String authorization,
+    required bool useKit,
+    required String password,
+  });
+
   /// The character sets a host can be set to, UTF-8 first, as the
   /// settings name them.
   List<String> charsets();
@@ -134,6 +140,8 @@ abstract class OpenWard implements RustOpaqueInterface {
     required String path,
     required LogFormat format,
   });
+
+  Future<void> exportPreparedRecovery({required String path});
 
   /// Forgets a key: OpenWard's, or the line of the file if it still reads
   /// `text` (a copy of the file goes to `known_hosts.old` first).
@@ -332,7 +340,13 @@ abstract class OpenWard implements RustOpaqueInterface {
 
   void pauseTransfers();
 
+  Future<String> prepareRecoveryKit({required String password});
+
   Future<String> prepareVault({required String password});
+
+  /// The displayed QR is an intentional recovery-secret presentation, like
+  /// the kit text. Derived keys and account/device secrets never cross FFI.
+  Future<Uint8List> preparedRecoveryQr();
 
   /// What importing it would bring, and what is there already.
   ProgramPreview previewProgram({required ProgramData data});

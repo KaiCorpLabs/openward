@@ -199,6 +199,39 @@ impl OpenWard {
         let group12 = Zeroizing::new(group12);
         Ok(self.app.security().complete_setup(&group3, &group12)?)
     }
+    pub fn prepare_recovery_kit(&self, password: String) -> Result<String, VaultError> {
+        let setup = self
+            .app
+            .security()
+            .prepare_recovery(Zeroizing::new(password))?;
+        Ok(setup.kit.to_string())
+    }
+    /// The displayed QR is an intentional recovery-secret presentation, like
+    /// the kit text. Derived keys and account/device secrets never cross FFI.
+    pub fn prepared_recovery_qr(&self) -> Result<Vec<u8>, VaultError> {
+        Ok(self.app.security().prepared_recovery_qr()?)
+    }
+    pub fn export_prepared_recovery(&self, path: String) -> Result<(), VaultError> {
+        Ok(self
+            .app
+            .security()
+            .export_prepared_recovery(std::path::Path::new(&path))?)
+    }
+    pub fn change_vault_password(
+        &self,
+        authorization: String,
+        use_kit: bool,
+        password: String,
+    ) -> Result<(), VaultError> {
+        let authorization = Zeroizing::new(authorization);
+        let password = Zeroizing::new(password);
+        Ok(self.app.security().change_password(
+            authorization.as_bytes(),
+            use_kit,
+            &password,
+            &openward_app::security::native::System,
+        )?)
+    }
     pub fn resume_legacy_vault(&self) -> Result<(), VaultError> {
         Ok(self.app.security().resume_legacy()?)
     }

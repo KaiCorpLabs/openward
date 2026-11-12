@@ -8,6 +8,7 @@ use std::time::{Duration, Instant};
 use openward_vault::{Error, Result, Vault};
 
 pub mod native;
+mod recovery_document;
 
 pub type Waker = Arc<dyn Fn() + Send + Sync>;
 
@@ -88,7 +89,12 @@ impl Access<'_> {
     }
 }
 
+enum SetupKind {
+    Migration,
+    Rotation(u64),
+}
 struct Setup {
+    kind: SetupKind,
     password: zeroize::Zeroizing<String>,
     kit: openward_crypto::unlock::RecoveryKit,
 }
@@ -377,7 +383,11 @@ impl VaultSession {
         }
         let kit = openward_crypto::unlock::RecoveryKit::generate()?;
         let text = kit.text();
-        *self.setup.lock().unwrap_or_else(|e| e.into_inner()) = Some(Setup { password, kit });
+        *self.setup.lock().unwrap_or_else(|e| e.into_inner()) = Some(Setup {
+            kind: SetupKind::Migration,
+            password,
+            kit,
+        });
         Ok(SetupView {
             kit: text,
             confirm_groups: [3, 12],
@@ -405,6 +415,20 @@ impl VaultSession {
             return Err(Error::Invalid(
                 "recovery kit confirmation did not match; restart setup",
             ));
+        }
+        if let SetupKind::Rotation(epoch) = setup.kind {
+            let mut vault = self.guard();
+            let update = vault.prepare_recovery_rotation(setup.password.as_bytes(), &setup.kit)?;
+            let access = self.gate.read()?;
+            if access.epoch() != epoch {
+                return Err(Error::Locked);
+            }
+            vault.apply_credential_update(update)?;
+            self.recovery_available.store(true, Ordering::Release);
+            drop(vault);
+            drop(access);
+            self.notify();
+            return Ok(());
         }
         let epoch = self.gate.epoch();
         if self.status().phase != Phase::Legacy {
@@ -462,6 +486,106 @@ impl VaultSession {
         let unlocked = result.and_then(|()| vault.unlock_in_place(setup.password.as_bytes()));
         self.finish_auth(install_epoch, &mut vault, unlocked)
     }
+    /// Rotation requires the current password, including on a biometrically
+    /// unlocked session. The old kit stays active until confirmation commits.
+    pub fn prepare_recovery(&self, password: zeroize::Zeroizing<String>) -> Result<SetupView> {
+        let _busy = self
+            .operation
+            .try_lock()
+            .map_err(|_| Error::Invalid("authentication is already in progress"))?;
+        let epoch = self.gate.ticket()?;
+        self.guard().verify_password(password.as_bytes())?;
+        let kit = openward_crypto::unlock::RecoveryKit::generate()?;
+        let text = kit.text();
+        let access = self.gate.read()?;
+        if access.epoch() != epoch {
+            return Err(Error::Locked);
+        }
+        *self.setup.lock().unwrap_or_else(|e| e.into_inner()) = Some(Setup {
+            kind: SetupKind::Rotation(epoch),
+            password,
+            kit,
+        });
+        Ok(SetupView {
+            kit: text,
+            confirm_groups: [3, 12],
+        })
+    }
+    pub fn change_password(
+        &self,
+        authorization: &[u8],
+        use_kit: bool,
+        password: &str,
+        store: &dyn native::Store,
+    ) -> Result<()> {
+        let _busy = self
+            .operation
+            .try_lock()
+            .map_err(|_| Error::Invalid("authentication is already in progress"))?;
+        let epoch = self.gate.ticket()?;
+        if password.chars().count() < 12 || Self::password_score(password)? < 3 {
+            return Err(Error::Invalid(
+                "choose a stronger master password (at least 12 characters)",
+            ));
+        }
+        let (params, _) = openward_crypto::password::calibrate()?;
+        let mut vault = self.guard();
+        let id = vault.native_id().ok().flatten();
+        let update =
+            vault.prepare_password_change(authorization, use_kit, password.as_bytes(), params)?;
+        let access = self.gate.read()?;
+        if access.epoch() != epoch {
+            return Err(Error::Locked);
+        }
+        vault.apply_credential_update(update)?;
+        self.native_enabled.store(false, Ordering::Release);
+        self.recovery_available.store(true, Ordering::Release);
+        self.cancel_setup();
+        drop(vault);
+        drop(access);
+        self.notify();
+        // The obsolete OS item has no active database wrapper after commit.
+        // Failure to remove an orphan cannot make the old factor usable again.
+        if let Some(id) = id {
+            let _ = store.remove(&id);
+        }
+        Ok(())
+    }
+    /// Only the currently prepared kit can be printed. No active kit is exposed
+    /// merely because biometrics previously opened the vault.
+    pub fn prepared_recovery_qr(&self) -> Result<Vec<u8>> {
+        let _access = self.gate.read()?;
+        let pending = self.setup.lock().unwrap_or_else(|e| e.into_inner());
+        let setup = pending
+            .as_ref()
+            .ok_or(Error::Invalid("prepare a recovery kit first"))?;
+        recovery_document::qr(&setup.kit)
+    }
+    pub fn export_prepared_recovery(&self, path: &Path) -> Result<()> {
+        let epoch = self.gate.ticket()?;
+        if path.extension().and_then(|s| s.to_str()) != Some("pdf") {
+            return Err(Error::Invalid("choose a new .pdf file"));
+        }
+        let document = {
+            let pending = self.setup.lock().unwrap_or_else(|e| e.into_inner());
+            let setup = pending
+                .as_ref()
+                .ok_or(Error::Invalid("prepare a recovery kit first"))?;
+            recovery_document::pdf(&setup.kit)?
+        };
+        let parent = path.parent().ok_or(Error::Invalid("invalid PDF path"))?;
+        let mut file = tempfile::NamedTempFile::new_in(parent)?;
+        use std::io::Write;
+        file.write_all(&document)?;
+        file.as_file().sync_all()?;
+        let access = self.gate.read()?;
+        if access.epoch() != epoch {
+            return Err(Error::Locked);
+        }
+        // Never overwrite a vault, a symlink, or a previously saved kit.
+        file.persist_noclobber(path).map_err(|e| e.error)?;
+        Ok(())
+    }
     pub fn resume_legacy(&self) -> Result<()> {
         let _busy = self
             .operation
@@ -486,6 +610,7 @@ impl VaultSession {
         self.lock_closed()
     }
     fn lock_closed(&self) -> Result<()> {
+        self.cancel_setup();
         self.phase(Phase::Locked);
         self.notify();
         let mut v = self.guard();
@@ -683,6 +808,57 @@ mod factor_tests {
         );
         let s = Arc::new(VaultSession::open(&path).unwrap());
         (dir, s)
+    }
+    #[test]
+    fn recovery_confirmation_cancellation_and_password_reauthorization() {
+        let (dir, s) = session();
+        s.unlock(b"public test password").unwrap();
+        assert!(
+            s.prepare_recovery(zeroize::Zeroizing::new("wrong".into()))
+                .is_err()
+        );
+        let pending = s
+            .prepare_recovery(zeroize::Zeroizing::new("public test password".into()))
+            .unwrap();
+        let groups: Vec<_> = pending.kit.split('-').collect();
+        assert!(!s.prepared_recovery_qr().unwrap().is_empty());
+        let pdf = dir.path().join("kit.pdf");
+        s.export_prepared_recovery(&pdf).unwrap();
+        assert!(std::fs::read(&pdf).unwrap().starts_with(b"%PDF-1.4"));
+        assert!(s.export_prepared_recovery(&pdf).is_err());
+        s.lock().unwrap();
+        assert!(s.complete_setup(groups[3], groups[12]).is_err());
+        assert!(s.recover(&pending.kit).is_err());
+        s.unlock(b"public test password").unwrap();
+        let pending = s
+            .prepare_recovery(zeroize::Zeroizing::new("public test password".into()))
+            .unwrap();
+        let groups: Vec<_> = pending.kit.split('-').collect();
+        assert!(s.complete_setup("WRNG", groups[12]).is_err());
+        assert!(s.prepared_recovery_qr().is_err());
+        let pending = s
+            .prepare_recovery(zeroize::Zeroizing::new("public test password".into()))
+            .unwrap();
+        let groups: Vec<_> = pending.kit.split('-').collect();
+        s.complete_setup(groups[3], groups[12]).unwrap();
+        let store = FakeStore::new(Kind::TouchId);
+        s.enable_native(&store, false).unwrap();
+        const NEXT: &str = "Meteor-7-Parchment-Unfurl-Quartz-92!";
+        assert!(s.change_password(b"wrong", false, NEXT, &store).is_err());
+        assert!(s.status().native_enabled);
+        assert!(
+            s.change_password(b"public test password", false, "weak", &store)
+                .is_err()
+        );
+        s.change_password(pending.kit.as_bytes(), true, NEXT, &store)
+            .unwrap();
+        assert!(!s.status().native_enabled);
+        assert!(store.keys.lock().unwrap().is_empty());
+        s.lock().unwrap();
+        assert!(s.unlock(b"public test password").is_err());
+        s.recover(&pending.kit).unwrap();
+        s.lock().unwrap();
+        s.unlock(NEXT.as_bytes()).unwrap();
     }
     #[test]
     fn damaged_optional_factors_leave_password_unlock_and_reenrollment_available() {

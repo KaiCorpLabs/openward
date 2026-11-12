@@ -140,6 +140,81 @@ void main() {
     }
   });
 
+  test(
+    'recovery rotation, PDF and password changes cross the generated bridge',
+    () async {
+      const oldPassword = 'Meteor-7-Parchment-Unfurl-Quartz-92!';
+      const newPassword = 'Orchid-49-Cabin-Helium-Ripple-73!';
+      try {
+        final id = await app.createHost(
+          spec: const HostSpec(
+            label: 'recovery fixture',
+            address: 'fixture.example',
+          ),
+        );
+        final kit = await app.prepareVault(password: oldPassword);
+        final groups = kit.split('-');
+        final qr = await app.preparedRecoveryQr();
+        expect(qr, isNotEmpty);
+        final pdf = '${dir.path}/recovery.pdf';
+        await app.exportPreparedRecovery(path: pdf);
+        expect(await File(pdf).readAsString(), startsWith('%PDF-1.4'));
+        await expectLater(
+          app.exportPreparedRecovery(path: pdf),
+          throwsA(isA<VaultError>()),
+        );
+        await app.completeVaultSetup(group3: groups[3], group12: groups[12]);
+        await expectLater(
+          app.changeVaultPassword(
+            authorization: 'wrong',
+            useKit: false,
+            password: newPassword,
+          ),
+          throwsA(isA<VaultError>()),
+        );
+        await app.changeVaultPassword(
+          authorization: oldPassword,
+          useKit: false,
+          password: newPassword,
+        );
+        await app.lockVault();
+        await expectLater(
+          app.unlockVault(password: oldPassword),
+          throwsA(isA<VaultError>()),
+        );
+        await app.recoverVault(kit: kit);
+        final next = await app.prepareRecoveryKit(password: newPassword);
+        await app.cancelVaultSetup();
+        await app.lockVault();
+        await expectLater(
+          app.recoverVault(kit: next),
+          throwsA(isA<VaultError>()),
+        );
+        await app.recoverVault(kit: kit);
+        final replacement = await app.prepareRecoveryKit(password: newPassword);
+        final parts = replacement.split('-');
+        await app.completeVaultSetup(group3: parts[3], group12: parts[12]);
+        await app.lockVault();
+        await expectLater(
+          app.recoverVault(kit: kit),
+          throwsA(isA<VaultError>()),
+        );
+        await app.recoverVault(kit: replacement);
+        await app.changeVaultPassword(
+          authorization: replacement,
+          useKit: true,
+          password: oldPassword,
+        );
+        expect(app.host(id: id).spec.label, 'recovery fixture');
+        await app.lockVault();
+        await app.unlockVault(password: oldPassword);
+        expect(app.host(id: id).spec.label, 'recovery fixture');
+      } finally {
+        app.dispose();
+      }
+    },
+  );
+
   test('hosts, groups, inheritance and conflicts', () async {
     final group = await app.createGroup(
       spec: const GroupSpec(

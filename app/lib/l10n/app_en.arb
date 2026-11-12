@@ -2066,5 +2066,19 @@
   "vaultCancel": "Cancel",
   "vaultKitContinue": "I have saved it",
   "vaultScope": "The password protects vault items. History, recent connections, recordings and SSH files are outside this protection.",
-  "vaultCompatibility": "After encryption, older versions cannot open this vault. Keep the kit; no new plaintext copy is created."
+  "vaultCompatibility": "After encryption, older versions cannot open this vault. Keep the kit; no new plaintext copy is created.",
+  "vaultChangePassword": "Change password",
+  "vaultRegenerateKit": "Regenerate recovery kit",
+  "vaultCurrentPassword": "Current password",
+  "vaultNewPassword": "New password",
+  "vaultChangeExplain": "Authorize with the current password or recovery kit. Your data and kit are preserved; native unlock must be enabled again.",
+  "vaultPasswordChanged": "Password changed. Your recovery kit still works.",
+  "vaultPasswordChangeError": "Password unchanged. Check the authorization and choose a strong password. For a vault created with an earlier version, regenerate its kit with the current password first, or authorize with the existing kit.",
+  "vaultRotateWarning": "The current password is required. The old kit works until you confirm the new one. Save the new sheet before confirming.",
+  "vaultKitCopies": "This kit does not contain your data. Keep an encrypted vault backup too. Regeneration does not revoke kits in older copies.",
+  "vaultSavePdf": "Save printable PDF…",
+  "vaultPdfError": "PDF not saved. Choose a new .pdf file and a writable folder.",
+  "vaultQrLabel": "Recovery kit QR. Contains the same secret as the text.",
+  "vaultUseKit": "Use recovery kit",
+  "vaultConfirmReplacement": "Activate new kit"
 }

@@ -13,6 +13,7 @@
 mod factors;
 mod inherit;
 mod migration;
+mod recovery;
 mod store;
 
 use std::collections::{BTreeMap, HashMap, HashSet};

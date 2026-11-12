@@ -5,6 +5,7 @@ pub mod envelope;
 pub mod hierarchy;
 pub mod password;
 pub mod plaintext;
+pub mod recovery;
 pub mod unlock;
 mod wire;
 

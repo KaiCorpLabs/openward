@@ -7,6 +7,7 @@ import '../core/providers.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/security.dart';
 import 'state.dart';
+import 'recovery.dart';
 import 'unlock.dart';
 
 class VaultSettings extends ConsumerStatefulWidget {
@@ -63,6 +64,23 @@ class _VaultSettingsState extends ConsumerState<VaultSettings> {
             child: Text(l.vaultEnable),
           ),
         ] else ...[
+          OutlinedButton(
+            onPressed: () => showDialog<void>(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) => const VaultPasswordChange(),
+            ),
+            child: Text(l.vaultChangePassword),
+          ),
+          OutlinedButton(
+            onPressed: () => showDialog<void>(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) => const VaultSetup(regenerate: true),
+            ),
+            child: Text(l.vaultRegenerateKit),
+          ),
+          const SizedBox(height: 16),
           Text(l.vaultSessions),
           const SizedBox(height: 16),
           FilledButton(
@@ -140,7 +158,8 @@ class _VaultSettingsState extends ConsumerState<VaultSettings> {
 }
 
 class VaultSetup extends ConsumerStatefulWidget {
-  const VaultSetup({super.key});
+  const VaultSetup({this.regenerate = false, super.key});
+  final bool regenerate;
   @override
   ConsumerState<VaultSetup> createState() => _VaultSetupState();
 }
@@ -151,6 +170,7 @@ class _VaultSetupState extends ConsumerState<VaultSetup> {
   final group3 = TextEditingController();
   final group12 = TextEditingController();
   String? kit;
+  List<int>? qr;
   String? error;
   bool saved = false;
   bool confirming = false;
@@ -174,6 +194,7 @@ class _VaultSetupState extends ConsumerState<VaultSetup> {
       c.dispose();
     }
     kit = null;
+    qr = null;
     unawaited(cancelSetup());
     super.dispose();
   }
@@ -209,12 +230,20 @@ class _VaultSetupState extends ConsumerState<VaultSetup> {
       } else if (kit != null) {
         setState(() {
           kit = null;
+          qr = null;
           confirming = true;
         });
-      } else if (password.text != confirmation.text) {
+      } else if (!widget.regenerate && password.text != confirmation.text) {
         setState(() => error = context.l10n.vaultMismatch);
       } else {
-        final text = await app.prepareVault(password: password.text);
+        final text = widget.regenerate
+            ? await app.prepareRecoveryKit(password: password.text)
+            : await app.prepareVault(password: password.text);
+        if (!mounted) {
+          await app.cancelVaultSetup();
+          return;
+        }
+        final modules = await app.preparedRecoveryQr();
         if (!mounted) {
           // Cancellation may reach a worker before prepare starts. Clear again
           // after completion so no abandoned password/kit remains prepared.
@@ -223,7 +252,10 @@ class _VaultSetupState extends ConsumerState<VaultSetup> {
         }
         password.clear();
         confirmation.clear();
-        setState(() => kit = text);
+        setState(() {
+          kit = text;
+          qr = modules;
+        });
       }
     } on Object {
       if (mounted) setState(() => error = context.l10n.vaultSetupError);
@@ -235,8 +267,9 @@ class _VaultSetupState extends ConsumerState<VaultSetup> {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
+    final app = ref.read(openWardProvider);
     return AlertDialog(
-      title: Text(l.vaultEnable),
+      title: Text(widget.regenerate ? l.vaultRegenerateKit : l.vaultEnable),
       content: SizedBox(
         width: 520,
         child: SingleChildScrollView(
@@ -263,10 +296,33 @@ class _VaultSetupState extends ConsumerState<VaultSetup> {
                 ),
               ] else if (kit case final text?) ...[
                 Text(l.vaultKitWarning),
+                Text(l.vaultKitCopies),
                 const SizedBox(height: 16),
                 Text(
                   text,
                   style: const TextStyle(fontFamily: 'monospace', height: 1.8),
+                ),
+                if (qr case final modules?) RecoveryQr(modules: modules),
+                OutlinedButton.icon(
+                  onPressed: busy
+                      ? null
+                      : () async {
+                          setState(() {
+                            busy = true;
+                            error = null;
+                          });
+                          try {
+                            await saveRecoveryPdf(app);
+                          } on Object {
+                            if (mounted) {
+                              setState(() => error = l.vaultPdfError);
+                            }
+                          } finally {
+                            if (mounted) setState(() => busy = false);
+                          }
+                        },
+                  icon: const Icon(Icons.picture_as_pdf_outlined),
+                  label: Text(l.vaultSavePdf),
                 ),
                 CheckboxListTile(
                   value: saved,
@@ -276,11 +332,14 @@ class _VaultSetupState extends ConsumerState<VaultSetup> {
                   title: Text(l.vaultSaved),
                 ),
               ] else ...[
-                Text(l.vaultCompatibility),
+                if (widget.regenerate)
+                  Text(l.vaultRotateWarning)
+                else
+                  Text(l.vaultCompatibility),
                 const SizedBox(height: 16),
                 Text(l.vaultScope),
                 const SizedBox(height: 16),
-                Text(l.vaultPasswordHint),
+                if (!widget.regenerate) Text(l.vaultPasswordHint),
                 TextField(
                   controller: password,
                   obscureText: true,
@@ -290,20 +349,22 @@ class _VaultSetupState extends ConsumerState<VaultSetup> {
                   decoration: InputDecoration(labelText: l.vaultPassword),
                   onChanged: strength,
                 ),
-                LinearProgressIndicator(
-                  value: score / 4,
-                  semanticsLabel: l.vaultStrength,
-                ),
-                TextField(
-                  controller: confirmation,
-                  obscureText: true,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  maxLength: 128,
-                  decoration: InputDecoration(
-                    labelText: l.vaultConfirmPassword,
+                if (!widget.regenerate)
+                  LinearProgressIndicator(
+                    value: score / 4,
+                    semanticsLabel: l.vaultStrength,
                   ),
-                ),
+                if (!widget.regenerate)
+                  TextField(
+                    controller: confirmation,
+                    obscureText: true,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    maxLength: 128,
+                    decoration: InputDecoration(
+                      labelText: l.vaultConfirmPassword,
+                    ),
+                  ),
               ],
               if (error != null)
                 Text(
@@ -325,9 +386,13 @@ class _VaultSetupState extends ConsumerState<VaultSetup> {
             busy
                 ? l.vaultBusy
                 : confirming
-                ? l.vaultConfirmKit
+                ? widget.regenerate
+                      ? l.vaultConfirmReplacement
+                      : l.vaultConfirmKit
                 : kit != null
                 ? l.vaultKitContinue
+                : widget.regenerate
+                ? l.vaultRegenerateKit
                 : l.vaultEnable,
           ),
         ),
