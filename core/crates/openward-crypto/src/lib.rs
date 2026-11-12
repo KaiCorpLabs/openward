@@ -4,6 +4,7 @@ mod codec;
 pub mod envelope;
 pub mod hierarchy;
 pub mod password;
+pub mod plaintext;
 mod wire;
 
 pub use ed25519_dalek::{SigningKey, VerifyingKey};
@@ -26,6 +27,16 @@ impl VaultKey {
     /// Rust-only access for wrapping keys; this type is not exposed through FFI.
     pub fn secret(&self) -> &[u8; 32] {
         &self.0
+    }
+    /// Separate metadata domain. A uniform random vault key is suitable PRK
+    /// input to HKDF-Expand (RFC 5869 §3.3).
+    pub fn metadata_key(&self) -> Result<Self, Error> {
+        let mut secret = Zeroizing::new([0; 32]);
+        hkdf::Hkdf::<sha2::Sha256>::from_prk(self.secret())
+            .map_err(|_| Error::Authentication)?
+            .expand(b"openward private metadata v1", secret.as_mut())
+            .map_err(|_| Error::Authentication)?;
+        Ok(Self::from_secret(secret))
     }
 }
 

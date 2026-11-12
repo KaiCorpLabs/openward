@@ -35,6 +35,7 @@ Las semillas y la memoria de trabajo de Argon2 se borran al liberar sus tipos.
 Los vectores publicados de S6 y RFC 9106 pasan junto a la interoperabilidad
 con la alternativa de biblioteca.
 
-Queda en [D3](https://github.com/KaiCorpLabs/openward/issues/32) integrar la
-migración del vault con limpieza de páginas/WAL/copias claras. Las pruebas no
-sustituyen la revisión criptográfica externa prevista antes de Cloud.
+La [migración del vault](../../../spec/vault-sqlite-v2.md) integra estos módulos
+con SQLite cifrado, bloqueo Rust y limpieza de páginas/WAL/copias claras. La
+activación desde la app depende de D4/D5. Las pruebas no sustituyen la revisión
+criptográfica externa prevista antes de Cloud.

@@ -2498,6 +2498,8 @@ dependencies = [
  "ed25519-dalek",
  "getrandom 0.4.3",
  "hex",
+ "hkdf",
+ "hmac",
  "hpke",
  "hpke-rs",
  "hpke-rs-crypto",
@@ -2636,11 +2638,16 @@ dependencies = [
 name = "openward-vault"
 version = "0.3.4-beta.4"
 dependencies = [
+ "cap-fs-ext",
+ "cap-std",
  "ciborium",
+ "openward-crypto",
  "openward-proto",
  "rusqlite",
+ "rustix",
  "tempfile",
  "thiserror 2.0.21",
+ "zeroize",
 ]
 
 [[package]]

@@ -126,6 +126,9 @@ jobs:
           cargo test --workspace
           # The reference engine of the spikes, off by default.
           cargo test -p openward-term --features alacritty
+      - name: Encrypted vault index measurement
+        working-directory: core
+        run: cargo test --release --locked -p openward-vault ten_thousand -- --ignored --nocapture
       - name: Stop SSH test servers
         if: always() && runner.os == 'Linux'
         env:

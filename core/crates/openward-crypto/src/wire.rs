@@ -86,6 +86,13 @@ impl<'a> Reader<'a> {
         }
         self.take(n)
     }
+    pub fn text(&mut self, limit: usize) -> Result<&'a str, Error> {
+        let n = usize::try_from(self.number(3)?).map_err(|_| Error::Limit)?;
+        if n > limit {
+            return Err(Error::Limit);
+        }
+        std::str::from_utf8(self.take(n)?).map_err(|_| Error::Encoding)
+    }
     pub fn fixed<const N: usize>(&mut self) -> Result<[u8; N], Error> {
         self.bytes(N)?.try_into().map_err(|_| Error::Encoding)
     }

@@ -10,6 +10,11 @@ publish.workspace = true
 
 [dependencies]
 openward-proto = { path = "../openward-proto" }
+openward-crypto = { path = "../openward-crypto" }
+zeroize = "1"
+tempfile = "3"
+cap-std = "=4.0.3"
+cap-fs-ext = "=4.0.3"
 # Bundled: the same SQLite on every platform, mobile included.
 rusqlite = { version = "0.41", features = ["bundled"] }
 thiserror = "2"
@@ -20,3 +25,6 @@ tempfile = "3"
 
 [lints]
 workspace = true
+
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1.1.6", features = ["process"] }

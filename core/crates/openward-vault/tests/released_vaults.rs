@@ -177,3 +177,34 @@ fn a_vault_of_0_3_1() {
     assert!(v.hosts().iter().any(|(_, h)| h.favorite == Some(0)));
     assert!(v.items().all(|i| !matches!(i.body.data, Data::Unsupported)));
 }
+
+#[test]
+fn published_vaults_migrate_encrypt_rewrite_and_reopen_without_loss() {
+    let password = b"public fixture test password";
+    for version in ["0.3.0", "0.3.1"] {
+        let (_dir, path) = copy(version);
+        let before = Vault::open(&path).unwrap();
+        let bodies: Vec<_> = before
+            .items()
+            .map(|i| (i.id, i.rev, i.body.to_cbor()))
+            .collect();
+        drop(before);
+        let mut v = Vault::migrate_encrypted(
+            &path,
+            password,
+            openward_crypto::password::KdfParams::new(64 * 1024, 1).unwrap(),
+        )
+        .unwrap()
+        .unlock(password)
+        .unwrap();
+        check_common(&v);
+        for (id, rev, body) in bodies {
+            let i = v.items().find(|i| i.id == id).unwrap();
+            assert_eq!(i.rev, rev);
+            assert_eq!(i.body.to_cbor(), body);
+            v.update(id, rev, i.body.data.clone()).unwrap();
+        }
+        check_common(&v.lock().unwrap().unlock(password).unwrap());
+        check_common(&Vault::open_encrypted(&path, password).unwrap());
+    }
+}
