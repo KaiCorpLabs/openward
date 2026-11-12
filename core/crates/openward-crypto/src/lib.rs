@@ -1,6 +1,9 @@
 //! D3's envelope boundary (ADR-004/005). Keys and decrypted bytes remain
 //! owned by Rust. The vault migration and key hierarchy build on this crate.
+mod codec;
 pub mod envelope;
+pub mod hierarchy;
+pub mod password;
 mod wire;
 
 pub use ed25519_dalek::{SigningKey, VerifyingKey};
@@ -42,4 +45,8 @@ pub enum Error {
     Authentication,
     #[error("secure randomness is unavailable")]
     Randomness,
+    #[error("unsupported or excessive password derivation parameters")]
+    KdfParameters,
+    #[error("not enough memory for password derivation")]
+    Memory,
 }
