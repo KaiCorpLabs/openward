@@ -90,12 +90,17 @@ void main() {
     tester,
   ) async {
     final dir = await Directory.systemTemp.createTemp('openward-gallery-');
-    addTearDown(() => dir.delete(recursive: true));
+    addTearDown(() async {
+      if (dir.existsSync()) await dir.delete(recursive: true);
+    });
     final ssh = Directory('${dir.path}/ssh')..createSync();
     final app = await OpenWard.openWithSshDir(
       dataDir: '${dir.path}/data',
       sshDir: ssh.path,
     );
+    addTearDown(() {
+      if (!app.isDisposed) app.dispose();
+    });
     // Marked as production: its hosts' tabs and terminals say so.
     final prod = await app.createGroup(
       spec: const GroupSpec(
@@ -300,11 +305,15 @@ void main() {
     tabs.closeCurrent();
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpWidget(const SizedBox());
+    app.dispose();
     final beta = await OpenWard.openWithHome(
       dataDir: '${dir.path}/beta',
       home: '${dir.path}/beta-home',
       requireOnboarding: true,
     );
+    addTearDown(() {
+      if (!beta.isDisposed) beta.dispose();
+    });
     final betaSettings = File('${dir.path}/beta/settings.json')
       ..writeAsStringSync(
         '{"language":"es","welcomed":true,"seen_news":"$newsVersion"}',
@@ -352,5 +361,8 @@ void main() {
     binding.reportData = {'screenshots': reported};
     await tester.pumpWidget(const SizedBox());
     beta.dispose();
+    // Cleanup failures must happen inside the test body: some desktop
+    // integration bindings do not include tearDown failures in driver results.
+    await dir.delete(recursive: true);
   });
 }

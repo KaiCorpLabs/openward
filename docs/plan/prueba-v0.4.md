@@ -67,8 +67,9 @@ al issue. Usar datos ficticios para capturas y errores reproducibles.
 
 La CI completa exige núcleo y App en Linux/macOS/Windows, dependencias, contratos
 S1/S2/S4/S6, servidores SSH reales en Linux, integración FFI, UI y accesibilidad,
-además de paquetes identificados por ejecución/commit. La galería debe terminar
-sin pasos fallidos aunque el trabajo permita fallos opcionales.
+además de paquetes identificados por ejecución/commit. La galería es obligatoria en los tres sistemas. Su envoltorio rechaza fallos
+internos aunque `flutter drive` termine con código0; la limpieza del perfil
+temporal se comprueba dentro del cuerpo de la prueba.
 
 `cargo test --release --locked -p openward-vault ten_thousand -- --ignored --nocapture`
 mide la carga del índice de 10.000 ítems después del KDF (objetivo <300ms).
