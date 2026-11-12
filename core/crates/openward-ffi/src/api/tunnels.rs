@@ -1,13 +1,11 @@
 //! Saved tunnels as Dart sees them: what each is and how it stands.
 
-use std::sync::Arc;
-
 use flutter_rust_bridge::frb;
 use openward_app::vault::proto::{Data, ForwardKind, PortForward};
 use openward_app::{TunnelError, TunnelInfo, TunnelState};
 
 use super::app::OpenWard;
-use super::session::{DartSink, FailureView, SessionEvent, failure_view};
+use super::session::{FailureView, SessionEvent, failure_view};
 use super::vault::VaultError;
 use super::vault::id;
 use crate::frb_generated::StreamSink;
@@ -272,17 +270,12 @@ impl OpenWard {
 
     /// Opens a tunnel, connecting to its host if needed. The stream is that
     /// connection's events (questions, and `connected` once it listens).
-    pub fn open_tunnel(
-        &self,
-        id: String,
-        events: StreamSink<SessionEvent>,
-    ) -> Result<(), VaultError> {
+    pub fn open_tunnel(&self, id: String, events: StreamSink<SessionEvent>) {
         let gate = self.app.security().gate();
-        super::security::access(&gate, false, || {
-            self.app
-                .open_tunnel(super::vault::id(&id)?, Arc::new(DartSink(events)))?;
+        super::security::connection(&gate, None, events, |sink| {
+            self.app.open_tunnel(super::vault::id(&id)?, sink)?;
             Ok(())
-        })?
+        })
     }
 
     /// Closes it (and forgets an error it had).

@@ -923,7 +923,7 @@ fn wire__crate__api__app__OpenWard_connect_impl(
             >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, crate::api::vault::VaultError>((move || {
+                transform_result_sse::<_, ()>((move || {
                     let mut api_that_guard = None;
                     let mut api_session_guard = None;
                     let decode_indices_ =
@@ -946,12 +946,14 @@ fn wire__crate__api__app__OpenWard_connect_impl(
                     }
                     let api_that_guard = api_that_guard.unwrap();
                     let api_session_guard = api_session_guard.unwrap();
-                    let output_ok = crate::api::app::OpenWard::connect(
-                        &*api_that_guard,
-                        &*api_session_guard,
-                        api_host_id,
-                        api_events,
-                    )?;
+                    let output_ok = Ok::<_, ()>({
+                        crate::api::app::OpenWard::connect(
+                            &*api_that_guard,
+                            &*api_session_guard,
+                            api_host_id,
+                            api_events,
+                        );
+                    })?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -996,7 +998,7 @@ fn wire__crate__api__app__OpenWard_connect_address_impl(
             >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, crate::api::vault::VaultError>((move || {
+                transform_result_sse::<_, ()>((move || {
                     let mut api_that_guard = None;
                     let mut api_session_guard = None;
                     let decode_indices_ =
@@ -1019,15 +1021,17 @@ fn wire__crate__api__app__OpenWard_connect_address_impl(
                     }
                     let api_that_guard = api_that_guard.unwrap();
                     let api_session_guard = api_session_guard.unwrap();
-                    let output_ok = crate::api::app::OpenWard::connect_address(
-                        &*api_that_guard,
-                        &*api_session_guard,
-                        api_address,
-                        api_user,
-                        api_port,
-                        api_protocol,
-                        api_events,
-                    )?;
+                    let output_ok = Ok::<_, ()>({
+                        crate::api::app::OpenWard::connect_address(
+                            &*api_that_guard,
+                            &*api_session_guard,
+                            api_address,
+                            api_user,
+                            api_port,
+                            api_protocol,
+                            api_events,
+                        );
+                    })?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -1069,7 +1073,7 @@ fn wire__crate__api__app__OpenWard_connect_reusing_impl(
             >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, crate::api::vault::VaultError>((move || {
+                transform_result_sse::<_, ()>((move || {
                     let mut api_that_guard = None;
                     let mut api_session_guard = None;
                     let decode_indices_ =
@@ -1092,12 +1096,14 @@ fn wire__crate__api__app__OpenWard_connect_reusing_impl(
                     }
                     let api_that_guard = api_that_guard.unwrap();
                     let api_session_guard = api_session_guard.unwrap();
-                    let output_ok = crate::api::app::OpenWard::connect_reusing(
-                        &*api_that_guard,
-                        &*api_session_guard,
-                        api_host_id,
-                        api_events,
-                    )?;
+                    let output_ok = Ok::<_, ()>({
+                        crate::api::app::OpenWard::connect_reusing(
+                            &*api_that_guard,
+                            &*api_session_guard,
+                            api_host_id,
+                            api_events,
+                        );
+                    })?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -1139,7 +1145,7 @@ fn wire__crate__api__app__OpenWard_connect_sftp_impl(
             >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, crate::api::vault::VaultError>((move || {
+                transform_result_sse::<_, ()>((move || {
                     let mut api_that_guard = None;
                     let mut api_browser_guard = None;
                     let decode_indices_ =
@@ -1162,12 +1168,14 @@ fn wire__crate__api__app__OpenWard_connect_sftp_impl(
                     }
                     let api_that_guard = api_that_guard.unwrap();
                     let api_browser_guard = api_browser_guard.unwrap();
-                    let output_ok = crate::api::app::OpenWard::connect_sftp(
-                        &*api_that_guard,
-                        &*api_browser_guard,
-                        api_host_id,
-                        api_events,
-                    )?;
+                    let output_ok = Ok::<_, ()>({
+                        crate::api::app::OpenWard::connect_sftp(
+                            &*api_that_guard,
+                            &*api_browser_guard,
+                            api_host_id,
+                            api_events,
+                        );
+                    })?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -1211,7 +1219,7 @@ fn wire__crate__api__app__OpenWard_connect_sftp_address_impl(
             >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, crate::api::vault::VaultError>((move || {
+                transform_result_sse::<_, ()>((move || {
                     let mut api_that_guard = None;
                     let mut api_browser_guard = None;
                     let decode_indices_ =
@@ -1234,14 +1242,16 @@ fn wire__crate__api__app__OpenWard_connect_sftp_address_impl(
                     }
                     let api_that_guard = api_that_guard.unwrap();
                     let api_browser_guard = api_browser_guard.unwrap();
-                    let output_ok = crate::api::app::OpenWard::connect_sftp_address(
-                        &*api_that_guard,
-                        &*api_browser_guard,
-                        api_address,
-                        api_user,
-                        api_port,
-                        api_events,
-                    )?;
+                    let output_ok = Ok::<_, ()>({
+                        crate::api::app::OpenWard::connect_sftp_address(
+                            &*api_that_guard,
+                            &*api_browser_guard,
+                            api_address,
+                            api_user,
+                            api_port,
+                            api_events,
+                        );
+                    })?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -3765,42 +3775,38 @@ fn wire__crate__api__app__OpenWard_open_local_impl(
             >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
-                    (move || {
-                        let mut api_that_guard = None;
-                        let mut api_session_guard = None;
-                        let decode_indices_ =
-                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
-                                vec![
-                                    flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                        &api_that, 0, false,
-                                    ),
-                                    flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                        &api_session,
-                                        1,
-                                        false,
-                                    ),
-                                ],
-                            );
-                        for i in decode_indices_ {
-                            match i {
-                                0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
-                                1 => {
-                                    api_session_guard = Some(api_session.lockable_decode_sync_ref())
-                                }
-                                _ => unreachable!(),
-                            }
+                transform_result_sse::<_, ()>((move || {
+                    let mut api_that_guard = None;
+                    let mut api_session_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_session,
+                                1,
+                                false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            1 => api_session_guard = Some(api_session.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
                         }
-                        let api_that_guard = api_that_guard.unwrap();
-                        let api_session_guard = api_session_guard.unwrap();
-                        let output_ok = crate::api::app::OpenWard::open_local(
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let api_session_guard = api_session_guard.unwrap();
+                    let output_ok = Ok::<_, ()>({
+                        crate::api::app::OpenWard::open_local(
                             &*api_that_guard,
                             &*api_session_guard,
                             api_events,
-                        )?;
-                        std::result::Result::Ok(output_ok)
-                    })(),
-                )
+                        );
+                    })?;
+                    std::result::Result::Ok(output_ok)
+                })())
             }
         },
     )
@@ -3896,7 +3902,7 @@ fn wire__crate__api__app__OpenWard_open_serial_impl(
             >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, crate::api::vault::VaultError>((move || {
+                transform_result_sse::<_, ()>((move || {
                     let mut api_that_guard = None;
                     let mut api_session_guard = None;
                     let decode_indices_ =
@@ -3919,13 +3925,15 @@ fn wire__crate__api__app__OpenWard_open_serial_impl(
                     }
                     let api_that_guard = api_that_guard.unwrap();
                     let api_session_guard = api_session_guard.unwrap();
-                    let output_ok = crate::api::app::OpenWard::open_serial(
-                        &*api_that_guard,
-                        &*api_session_guard,
-                        api_path,
-                        api_line,
-                        api_events,
-                    )?;
+                    let output_ok = Ok::<_, ()>({
+                        crate::api::app::OpenWard::open_serial(
+                            &*api_that_guard,
+                            &*api_session_guard,
+                            api_path,
+                            api_line,
+                            api_events,
+                        );
+                    })?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -3964,7 +3972,7 @@ fn wire__crate__api__app__OpenWard_open_tunnel_impl(
             >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, crate::api::vault::VaultError>((move || {
+                transform_result_sse::<_, ()>((move || {
                     let mut api_that_guard = None;
                     let decode_indices_ =
                         flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
@@ -3979,11 +3987,13 @@ fn wire__crate__api__app__OpenWard_open_tunnel_impl(
                         }
                     }
                     let api_that_guard = api_that_guard.unwrap();
-                    let output_ok = crate::api::app::OpenWard::open_tunnel(
-                        &*api_that_guard,
-                        api_id,
-                        api_events,
-                    )?;
+                    let output_ok = Ok::<_, ()>({
+                        crate::api::app::OpenWard::open_tunnel(
+                            &*api_that_guard,
+                            api_id,
+                            api_events,
+                        );
+                    })?;
                     std::result::Result::Ok(output_ok)
                 })())
             }

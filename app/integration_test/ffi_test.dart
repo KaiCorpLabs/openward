@@ -94,20 +94,27 @@ void main() {
           isA<FileError>().having((e) => e.kind, 'kind', FileErrorKind.locked),
         ),
       );
-      await expectLater(
-        app.openSerial(
-          session: terminal,
-          path: '/never-open-this-test-device',
-          line: const SerialLineSpec(
-            baud: 115200,
-            dataBits: 8,
-            parity: ParityKind.none,
-            stopBits: 1,
-            flow: FlowKind.none,
-          ),
-        ),
-        emitsError(isVault(VaultErrorKind.locked)),
-      );
+      final serial = await app
+          .openSerial(
+            session: terminal,
+            path: '/never-open-this-test-device',
+            line: const SerialLineSpec(
+              baud: 115200,
+              dataBits: 8,
+              parity: ParityKind.none,
+              stopBits: 1,
+              flow: FlowKind.none,
+            ),
+          )
+          .first;
+      expect(serial.kind, SessionEventKind.closed);
+      expect(serial.closed!.failure!.message, contains('unlock'));
+      final ssh = await app.connect(session: terminal, hostId: id).first;
+      expect(ssh.kind, SessionEventKind.closed);
+      expect(ssh.closed!.failure!.message, contains('unlock'));
+      final sftp = await app.connectSftp(browser: browser, hostId: id).first;
+      expect(sftp.kind, SessionEventKind.closed);
+      expect(sftp.closed!.failure!.message, contains('unlock'));
       await expectLater(
         app.unlockVault(password: 'wrong password'),
         throwsA(isA<VaultError>()),
@@ -123,7 +130,13 @@ void main() {
     } finally {
       terminal.close();
       browser.close();
-      await subscription.cancel();
+      // The native observer belongs to App; release its owner before waiting
+      // for the Rust sink to finish the subscription cancellation handshake.
+      final cancelled = subscription.cancel();
+      terminal.dispose();
+      browser.dispose();
+      app.dispose();
+      await cancelled;
     }
   });
 

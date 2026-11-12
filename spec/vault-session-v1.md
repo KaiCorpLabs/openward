@@ -26,6 +26,11 @@ mutex nor a read lease. An old authentication completion cannot reopen a newer
 lock epoch. Initial and subsequent security events are serialized so an old
 unlocked snapshot cannot follow a newer locked notification.
 
+Connection actions report synchronous denial as a Closed event carrying its
+reason. The Rust sink is retained until that event is sent; errors are not
+returned on FRB's detached normal-result Future outside the stream listener.
+This applies to SSH, SFTP, serial, local shells and tunnel startup.
+
 Established SSH/PTY/SFTP sessions, transfers and tunnels continue. Their live
 Rust state is an explicit exception to “no plaintext while locked”: terminating
 connections is not the lock operation. UI terminal frame, selection, search and

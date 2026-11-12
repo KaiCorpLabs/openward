@@ -21,6 +21,34 @@ pub(crate) fn same_owner(
     Ok(())
 }
 
+/// Stream actions report synchronous denial as a Closed event. FRB's detached
+/// normal-result Future cannot safely carry these errors to the stream listener.
+/// Retain the sink until after the event, before its last drop closes the stream.
+#[frb(ignore)]
+pub(crate) fn connection(
+    gate: &std::sync::Arc<openward_app::security::AccessGate>,
+    handle: Option<&std::sync::Arc<openward_app::security::AccessGate>>,
+    events: StreamSink<super::session::SessionEvent>,
+    operation: impl FnOnce(
+        std::sync::Arc<dyn openward_app::events::EventSink>,
+    ) -> Result<(), VaultError>,
+) {
+    use openward_app::events::{Event, EventSink, Failure};
+    let sink: std::sync::Arc<dyn EventSink> = std::sync::Arc::new(super::session::DartSink(events));
+    let result: Result<(), VaultError> = (|| {
+        if let Some(handle) = handle {
+            same_owner(gate, handle)?;
+        }
+        access(gate, false, || operation(std::sync::Arc::clone(&sink)))?
+    })();
+    if let Err(error) = result {
+        sink.send(Event::Closed {
+            exit_code: None,
+            failure: Some(Failure::Other(error.message)),
+        });
+    }
+}
+
 /// `critical` is only for short synchronous UI reads/input enqueues. Blocking
 /// I/O uses an epoch ticket so it cannot keep auto-lock waiting for a device.
 #[frb(ignore)]

@@ -10,7 +10,7 @@ use openward_app::vault::proto::{
 use openward_app::{App, DEFAULT_SCROLLBACK, RECONNECT_ATTEMPTS};
 use openward_import::ssh_config::Warning;
 
-use super::session::{DartSink, PromptAnswer, SessionEvent, TerminalSession};
+use super::session::{PromptAnswer, SessionEvent, TerminalSession};
 use super::sftp::{ConflictChoice, SftpBrowser, TransferDirection, TransferView};
 use super::vault::VaultError;
 use super::vault::*;
@@ -657,17 +657,13 @@ impl OpenWard {
         session: &TerminalSession,
         host_id: String,
         events: StreamSink<SessionEvent>,
-    ) -> Result<(), VaultError> {
+    ) {
         let gate = self.app.security().gate();
-        super::security::same_owner(&gate, &session.access)?;
-        super::security::access(&gate, false, || {
-            self.app.connect(
-                &session.term,
-                super::vault::id(&host_id)?,
-                Arc::new(DartSink(events)),
-            )?;
+        super::security::connection(&gate, Some(&session.access), events, |sink| {
+            self.app
+                .connect(&session.term, super::vault::id(&host_id)?, sink)?;
             Ok(())
-        })?
+        })
     }
 
     /// As [`OpenWard::connect`], over the connection to the host that is
@@ -677,17 +673,13 @@ impl OpenWard {
         session: &TerminalSession,
         host_id: String,
         events: StreamSink<SessionEvent>,
-    ) -> Result<(), VaultError> {
+    ) {
         let gate = self.app.security().gate();
-        super::security::same_owner(&gate, &session.access)?;
-        super::security::access(&gate, false, || {
-            self.app.connect_reusing(
-                &session.term,
-                super::vault::id(&host_id)?,
-                Arc::new(DartSink(events)),
-            )?;
+        super::security::connection(&gate, Some(&session.access), events, |sink| {
+            self.app
+                .connect_reusing(&session.term, super::vault::id(&host_id)?, sink)?;
             Ok(())
-        })?
+        })
     }
 
     /// As [`OpenWard::connect`], to an address that is not saved, with the
@@ -700,20 +692,13 @@ impl OpenWard {
         port: Option<u16>,
         protocol: ProtocolKind,
         events: StreamSink<SessionEvent>,
-    ) -> Result<(), VaultError> {
+    ) {
         let gate = self.app.security().gate();
-        super::security::same_owner(&gate, &session.access)?;
-        super::security::access(&gate, false, || {
-            self.app.connect_address(
-                &session.term,
-                address,
-                user,
-                port,
-                protocol.proto(),
-                Arc::new(DartSink(events)),
-            )?;
+        super::security::connection(&gate, Some(&session.access), events, |sink| {
+            self.app
+                .connect_address(&session.term, address, user, port, protocol.proto(), sink)?;
             Ok(())
-        })?
+        })
     }
 
     /// The character sets a host can be set to, UTF-8 first, as the
@@ -747,18 +732,13 @@ impl OpenWard {
         path: String,
         line: SerialLineSpec,
         events: StreamSink<SessionEvent>,
-    ) -> Result<(), VaultError> {
+    ) {
         let gate = self.app.security().gate();
-        super::security::same_owner(&gate, &session.access)?;
-        super::security::access(&gate, false, || {
-            self.app.open_serial(
-                &session.term,
-                path,
-                line.line(None),
-                Arc::new(DartSink(events)),
-            );
-        })?;
-        Ok(())
+        super::security::connection(&gate, Some(&session.access), events, |sink| {
+            self.app
+                .open_serial(&session.term, path, line.line(None), sink);
+            Ok(())
+        })
     }
 
     /// Tries after losing a connection, before giving up.
@@ -769,17 +749,12 @@ impl OpenWard {
 
     /// Runs the user's shell on this machine in `session`. In Dart this
     /// returns the stream of its events (the end, with its exit code).
-    pub fn open_local(
-        &self,
-        session: &TerminalSession,
-        events: StreamSink<SessionEvent>,
-    ) -> anyhow::Result<()> {
+    pub fn open_local(&self, session: &TerminalSession, events: StreamSink<SessionEvent>) {
         let gate = self.app.security().gate();
-        super::security::same_owner(&gate, &session.access)?;
-        super::security::access(&gate, false, || {
-            self.app
-                .open_local(&session.term, None, Arc::new(DartSink(events)))
-        })?
+        super::security::connection(&gate, Some(&session.access), events, |sink| {
+            self.app.open_local(&session.term, None, sink)?;
+            Ok(())
+        })
     }
 
     /// Answers a prompt; false if nothing waits for it any more.
@@ -805,17 +780,13 @@ impl OpenWard {
         browser: &SftpBrowser,
         host_id: String,
         events: StreamSink<SessionEvent>,
-    ) -> Result<(), VaultError> {
+    ) {
         let gate = self.app.security().gate();
-        super::security::same_owner(&gate, &browser.access)?;
-        super::security::access(&gate, false, || {
-            self.app.connect_sftp(
-                &browser.sftp,
-                super::vault::id(&host_id)?,
-                Arc::new(DartSink(events)),
-            )?;
+        super::security::connection(&gate, Some(&browser.access), events, |sink| {
+            self.app
+                .connect_sftp(&browser.sftp, super::vault::id(&host_id)?, sink)?;
             Ok(())
-        })?
+        })
     }
 
     /// As [`OpenWard::connect_sftp`], to an address that is not saved.
@@ -826,19 +797,13 @@ impl OpenWard {
         user: Option<String>,
         port: Option<u16>,
         events: StreamSink<SessionEvent>,
-    ) -> Result<(), VaultError> {
+    ) {
         let gate = self.app.security().gate();
-        super::security::same_owner(&gate, &browser.access)?;
-        super::security::access(&gate, false, || {
-            self.app.connect_sftp_address(
-                &browser.sftp,
-                address,
-                user,
-                port,
-                Arc::new(DartSink(events)),
-            )?;
+        super::security::connection(&gate, Some(&browser.access), events, |sink| {
+            self.app
+                .connect_sftp_address(&browser.sftp, address, user, port, sink)?;
             Ok(())
-        })?
+        })
     }
 
     /// Queues a copy of a file or folder over `browser`'s connection;

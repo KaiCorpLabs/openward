@@ -1574,7 +1574,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           },
           codec: SseCodec(
             decodeSuccessData: sse_decode_unit,
-            decodeErrorData: sse_decode_vault_error,
+            decodeErrorData: null,
           ),
           constMeta: kCrateApiAppOpenWardConnectConstMeta,
           argValues: [that, session, hostId, events],
@@ -1627,7 +1627,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           },
           codec: SseCodec(
             decodeSuccessData: sse_decode_unit,
-            decodeErrorData: sse_decode_vault_error,
+            decodeErrorData: null,
           ),
           constMeta: kCrateApiAppOpenWardConnectAddressConstMeta,
           argValues: [that, session, address, user, port, protocol, events],
@@ -1683,7 +1683,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           },
           codec: SseCodec(
             decodeSuccessData: sse_decode_unit,
-            decodeErrorData: sse_decode_vault_error,
+            decodeErrorData: null,
           ),
           constMeta: kCrateApiAppOpenWardConnectReusingConstMeta,
           argValues: [that, session, hostId, events],
@@ -1731,7 +1731,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           },
           codec: SseCodec(
             decodeSuccessData: sse_decode_unit,
-            decodeErrorData: sse_decode_vault_error,
+            decodeErrorData: null,
           ),
           constMeta: kCrateApiAppOpenWardConnectSftpConstMeta,
           argValues: [that, browser, hostId, events],
@@ -1783,7 +1783,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           },
           codec: SseCodec(
             decodeSuccessData: sse_decode_unit,
-            decodeErrorData: sse_decode_vault_error,
+            decodeErrorData: null,
           ),
           constMeta: kCrateApiAppOpenWardConnectSftpAddressConstMeta,
           argValues: [that, browser, address, user, port, events],
@@ -3546,7 +3546,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           },
           codec: SseCodec(
             decodeSuccessData: sse_decode_unit,
-            decodeErrorData: sse_decode_AnyhowException,
+            decodeErrorData: null,
           ),
           constMeta: kCrateApiAppOpenWardOpenLocalConstMeta,
           argValues: [that, session, events],
@@ -3636,7 +3636,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           },
           codec: SseCodec(
             decodeSuccessData: sse_decode_unit,
-            decodeErrorData: sse_decode_vault_error,
+            decodeErrorData: null,
           ),
           constMeta: kCrateApiAppOpenWardOpenSerialConstMeta,
           argValues: [that, session, path, line, events],
@@ -3679,7 +3679,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           },
           codec: SseCodec(
             decodeSuccessData: sse_decode_unit,
-            decodeErrorData: sse_decode_vault_error,
+            decodeErrorData: null,
           ),
           constMeta: kCrateApiAppOpenWardOpenTunnelConstMeta,
           argValues: [that, id, events],
