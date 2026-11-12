@@ -104,7 +104,9 @@ Setup creates and verifies all records inside the staged migration transaction.
 Changes prepare and reopen the serialized wrappers/cache/package before a short
 SQLite transaction commits all records together. The in-memory header is updated
 only after commit. A prepared update is bound to the current header **and** recovery
-record; stale and foreign updates fail. Failure leaves the old header, kit,
+record; stale and foreign updates fail. An oversized malformed recovery record
+has no usable factor and is represented by a bounded invalid-state marker, so
+password-authorized kit regeneration can repair it without allocating its value. Failure leaves the old header, kit,
 package and native wrapper usable. Neither change rewrites encrypted items.
 Reads bound SQL value length before allocation (cache 77, package 2200, recovery
 512 bytes). Damaged optional records do not remove independent password access.

@@ -22,7 +22,7 @@ pub struct CredentialUpdate {
     cache: Vec<u8>,
     package: Vec<u8>,
     remove_native: bool,
-    expected: Option<(Vec<u8>, Option<Vec<u8>>)>,
+    expected: Option<(Vec<u8>, RecoveryVersion)>,
 }
 impl CredentialUpdate {
     pub(crate) fn prepare(
@@ -105,7 +105,7 @@ impl Vault {
             kit,
             false,
         )?;
-        update.expected = Some((header.to_bytes(), bounded(&self.store.conn, RECOVERY, 512)?));
+        update.expected = Some((header.to_bytes(), recovery_version(&self.store.conn)?));
         Ok(update)
     }
     pub fn prepare_password_change(
@@ -151,7 +151,7 @@ impl Vault {
             keys,
         )?;
         let mut update = CredentialUpdate::prepare(header, keys, password, params, &kit, true)?;
-        update.expected = Some((old.to_bytes(), bounded(&self.store.conn, RECOVERY, 512)?));
+        update.expected = Some((old.to_bytes(), recovery_version(&self.store.conn)?));
         Ok(update)
     }
     /// Call under a short access lease after expensive preparation. SQLite
@@ -165,7 +165,7 @@ impl Vault {
             .as_ref()
             .ok_or(Error::Invalid("unbound credential update"))?;
         if self.store.header.as_ref().ok_or(Error::Locked)?.to_bytes() != expected.0
-            || bounded(&self.store.conn, RECOVERY, 512)? != expected.1
+            || recovery_version(&self.store.conn)? != expected.1
         {
             return Err(Error::Invalid("stale or foreign credential update"));
         }
@@ -188,6 +188,29 @@ impl Vault {
         }
         Ok(bytes)
     }
+}
+// A malformed oversized record has no usable factor. Password-authorized
+// regeneration may replace it without allocating attacker-controlled bytes.
+// Valid-sized records retain exact stale-update binding.
+#[derive(PartialEq, Eq)]
+enum RecoveryVersion {
+    Missing,
+    Oversized,
+    Record(Vec<u8>),
+}
+fn recovery_version(conn: &Connection) -> Result<RecoveryVersion> {
+    let value: Option<Option<Vec<u8>>> = conn
+        .query_row(
+            "SELECT CASE WHEN length(value)<=512 THEN value END FROM meta WHERE key=?1",
+            [RECOVERY],
+            |r| r.get(0),
+        )
+        .optional()?;
+    Ok(match value {
+        None => RecoveryVersion::Missing,
+        Some(None) => RecoveryVersion::Oversized,
+        Some(Some(bytes)) => RecoveryVersion::Record(bytes),
+    })
 }
 fn bounded(conn: &Connection, name: &str, limit: usize) -> Result<Option<Vec<u8>>> {
     let value: Option<Option<Vec<u8>>> = conn
@@ -363,6 +386,29 @@ mod tests {
             .prepare_password_change(b"new", false, b"next", params())
             .unwrap();
         v.apply_credential_update(update).unwrap();
+    }
+    #[test]
+    fn password_authorized_regeneration_repairs_a_corrupt_oversized_factor() {
+        let (_dir, mut v, _kit, id) = fixture();
+        v.store
+            .conn
+            .execute(
+                "INSERT OR REPLACE INTO meta VALUES (?1,?2)",
+                rusqlite::params![RECOVERY, vec![0u8; 65536]],
+            )
+            .unwrap();
+        v.lock_in_place().unwrap();
+        v.unlock_in_place(b"old public password").unwrap();
+        let next = RecoveryKit::generate().unwrap();
+        assert!(v.prepare_recovery_rotation(b"wrong", &next).is_err());
+        let update = v
+            .prepare_recovery_rotation(b"old public password", &next)
+            .unwrap();
+        v.apply_credential_update(update).unwrap();
+        v.lock_in_place().unwrap();
+        v.unlock_recovery(&next).unwrap();
+        assert_eq!(v.host(id).unwrap().label, "private fixture");
+        assert!(v.account_package().unwrap().is_some());
     }
     #[test]
     fn prepared_update_cannot_be_applied_to_another_vault() {
