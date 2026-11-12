@@ -215,6 +215,12 @@ class _VaultSetupState extends ConsumerState<VaultSetup> {
         setState(() => error = context.l10n.vaultMismatch);
       } else {
         final text = await app.prepareVault(password: password.text);
+        if (!mounted) {
+          // Cancellation may reach a worker before prepare starts. Clear again
+          // after completion so no abandoned password/kit remains prepared.
+          await app.cancelVaultSetup();
+          return;
+        }
         password.clear();
         confirmation.clear();
         setState(() => kit = text);

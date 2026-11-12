@@ -49,8 +49,10 @@ class _VaultUnlockState extends ConsumerState<VaultUnlock> {
         );
       }
     } finally {
-      password.clear();
-      if (mounted) setState(() => pending = false);
+      if (mounted) {
+        password.clear();
+        setState(() => pending = false);
+      }
     }
   }
 

@@ -105,7 +105,9 @@ reliably overwritten (the existing D6 memory-copy limitation).
 New OS keys are removed if enrollment cannot commit. Disabling first removes
 the vault wrapper, then deletes the OS item, so an OS deletion error cannot leave
 native unlock enabled. Missing/cancelled/unavailable factors preserve password
-and kit access. A crash can leave an unreferenced OS item; it cannot enable a
+and kit access. Damaged optional factor records disable that factor at startup
+without disabling password authentication; authenticated enrollment can replace
+a bad native record without issuing OS operations for its invalid identifier. A crash can leave an unreferenced OS item; it cannot enable a
 factor without its authenticated wrapper. Unreferenced-item cleanup is future
 maintenance, not an automatic scan/delete of the user's Keychain.
 

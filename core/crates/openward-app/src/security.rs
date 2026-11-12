@@ -119,8 +119,10 @@ impl VaultSession {
         } else {
             Phase::Legacy
         };
-        let native_enabled = vault.native_id()?.is_some();
-        let recovery_available = vault.has_recovery()?;
+        // A damaged optional factor must not disable the independent password
+        // path. Invalid native identifiers are never sent to an OS store.
+        let native_enabled = vault.native_id().ok().flatten().is_some();
+        let recovery_available = vault.has_recovery().unwrap_or(false);
         let policy_path = path.with_extension("security.json");
         let timeout = match std::fs::metadata(&policy_path) {
             Ok(m) if m.len() <= 32 => std::fs::read_to_string(&policy_path)?
@@ -314,7 +316,7 @@ impl VaultSession {
                 return Err(Error::Locked);
             }
             let mut vault = self.guard();
-            let old = vault.native_id()?;
+            let old = vault.native_id().ok().flatten();
             vault.enroll_native(&id, &key)?;
             self.native_enabled.store(true, Ordering::Release);
             Ok(old)
@@ -341,7 +343,7 @@ impl VaultSession {
         let _access = self.gate.read()?;
         let id = {
             let mut v = self.guard();
-            let id = v.native_id()?;
+            let id = v.native_id().ok().flatten();
             v.disable_native()?;
             id
         };
@@ -681,6 +683,32 @@ mod factor_tests {
         );
         let s = Arc::new(VaultSession::open(&path).unwrap());
         (dir, s)
+    }
+    #[test]
+    fn damaged_optional_factors_leave_password_unlock_and_reenrollment_available() {
+        let (dir, s) = session();
+        drop(s);
+        let path = dir.path().join("vault.db");
+        let db = rusqlite::Connection::open(&path).unwrap();
+        for name in ["local_native_v1", "local_recovery_v1"] {
+            db.execute(
+                "INSERT INTO meta VALUES (?1,?2)",
+                rusqlite::params![name, vec![0u8; 65536]],
+            )
+            .unwrap();
+        }
+        drop(db);
+        let s = VaultSession::open(&path).unwrap();
+        assert_eq!(s.status().phase, Phase::Locked);
+        assert!(!s.status().native_enabled);
+        assert!(!s.status().recovery_available);
+        assert!(s.access().is_err());
+        s.unlock(b"public test password").unwrap();
+        let store = FakeStore::new(Kind::TouchId);
+        s.enable_native(&store, false).unwrap();
+        s.lock().unwrap();
+        s.unlock_native(&store).unwrap();
+        assert_eq!(s.status().phase, Phase::Unlocked);
     }
     #[test]
     fn native_cancel_and_linux_ack_keep_password_fallback_and_default_off() {

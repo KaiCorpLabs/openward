@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openward/core/providers.dart';
 import 'package:openward/l10n/l10n.dart';
 import 'package:openward/security/boundary.dart';
+import 'package:openward/security/settings.dart';
 import 'package:openward/src/rust/api/security.dart';
 
 import 'fakes.dart';
@@ -15,6 +16,19 @@ import 'fakes.dart';
 class Core extends FakeOpenWard {
   bool rejectPassword = false;
   Completer<void>? native;
+  Completer<void>? passwordWait;
+  Completer<String>? preparation;
+  int cancelledSetup = 0;
+  @override
+  Future<void> cancelVaultSetup() async {
+    cancelledSetup++;
+  }
+
+  @override
+  Future<int> passwordScore({required String password}) async => 4;
+  @override
+  Future<String> prepareVault({required String password}) =>
+      preparation!.future;
   Core() {
     security = view(VaultPhase.locked);
   }
@@ -35,6 +49,7 @@ class Core extends FakeOpenWard {
       throw StateError('authentication');
     }
     phase(VaultPhase.unlocked);
+    if (passwordWait != null) await passwordWait!.future;
   }
 
   @override
@@ -109,6 +124,62 @@ void main() {
       expect(find.text('private-content 1'), findsOneWidget);
       semantics.dispose();
       await tester.pumpWidget(const SizedBox());
+      await core.securityEvents.close();
+    },
+  );
+  testWidgets(
+    'password completion after unlock screen disposal touches no old controller',
+    (tester) async {
+      final core = Core();
+      core.passwordWait = Completer<void>();
+      await tester.pumpWidget(harness(core));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('vault.password')),
+        'test password',
+      );
+      await tester.tap(find.byKey(const ValueKey('vault.unlock')));
+      await tester.pumpAndSettle();
+      expect(find.text('private-content 0'), findsOneWidget);
+      core.passwordWait!.complete();
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await core.securityEvents.close();
+    },
+  );
+  testWidgets(
+    'closed setup clears preparation even when the worker finishes later',
+    (tester) async {
+      final core = Core();
+      core.preparation = Completer<String>();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [openWardProvider.overrideWithValue(core)],
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: const Scaffold(body: VaultSetup()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final fields = find.byType(TextField);
+      await tester.enterText(fields.at(0), 'strong public test password');
+      await tester.enterText(fields.at(1), 'strong public test password');
+      await tester.tap(find.widgetWithText(FilledButton, 'Encrypt this vault'));
+      await tester.pump();
+      await tester.pumpWidget(const SizedBox());
+      core.preparation!.complete('public test kit');
+      await tester.pumpAndSettle();
+      expect(core.cancelledSetup, greaterThanOrEqualTo(2));
+      expect(tester.takeException(), isNull);
       await core.securityEvents.close();
     },
   );
