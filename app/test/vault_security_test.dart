@@ -144,6 +144,22 @@ void main() {
       await core.securityEvents.close();
     },
   );
+  testWidgets('manual lock shortcut hides an active view', (tester) async {
+    final core = Core();
+    core.phase(VaultPhase.unlocked);
+    await tester.pumpWidget(harness(core));
+    await tester.pumpAndSettle();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyL);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    expect(core.security.phase, VaultPhase.locked);
+    expect(find.text('private-content 0'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    await core.securityEvents.close();
+  });
   testWidgets('native sleep locks and hides the previous content', (
     tester,
   ) async {

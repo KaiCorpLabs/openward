@@ -571,6 +571,43 @@ mod tests {
         assert_eq!(s.access().unwrap().hosts()[0].1.label, "private host");
     }
     #[test]
+    fn initial_security_snapshot_cannot_overtake_a_lock_notification() {
+        let (_dir, s) = session();
+        let s = Arc::new(s);
+        s.unlock(b"public test password").unwrap();
+        let (entered, wait) = std::sync::mpsc::channel();
+        let (resume, rx) = std::sync::mpsc::channel();
+        let rx = Mutex::new(rx);
+        let phases = Arc::new(Mutex::new(Vec::new()));
+        let initial = AtomicBool::new(true);
+        std::thread::scope(|scope| {
+            let weak = Arc::downgrade(&s);
+            let observed = Arc::clone(&phases);
+            let watcher_session = Arc::clone(&s);
+            let watcher = scope.spawn(move || {
+                watcher_session.watch(Arc::new(move || {
+                    let phase = weak.upgrade().unwrap().status().phase;
+                    if initial.swap(false, Ordering::AcqRel) {
+                        entered.send(()).unwrap();
+                        rx.lock().unwrap().recv().unwrap();
+                    }
+                    observed.lock().unwrap().push(phase);
+                }))
+            });
+            wait.recv_timeout(Duration::from_secs(3)).unwrap();
+            let locked = scope.spawn(|| s.lock());
+            let deadline = Instant::now() + Duration::from_secs(3);
+            while s.status().phase != Phase::Locked {
+                assert!(Instant::now() < deadline, "lock did not revoke access");
+                std::thread::sleep(Duration::from_millis(1));
+            }
+            resume.send(()).unwrap();
+            watcher.join().unwrap();
+            locked.join().unwrap().unwrap();
+        });
+        assert_eq!(*phases.lock().unwrap(), [Phase::Unlocked, Phase::Locked]);
+    }
+    #[test]
     fn activity_deadline_and_stale_async_tickets() {
         let (_dir, s) = session();
         s.unlock(b"public test password").unwrap();

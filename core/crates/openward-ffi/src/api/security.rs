@@ -6,6 +6,21 @@ use flutter_rust_bridge::frb;
 use openward_app::security::{Phase, Status};
 use zeroize::Zeroizing;
 
+/// A handle's authority is fixed at creation; another OpenWard cannot attach
+/// its private connection to a handle protected by a different vault's gate.
+#[frb(ignore)]
+pub(crate) fn same_owner(
+    owner: &std::sync::Arc<openward_app::security::AccessGate>,
+    handle: &std::sync::Arc<openward_app::security::AccessGate>,
+) -> openward_app::vault::Result<()> {
+    if !std::sync::Arc::ptr_eq(owner, handle) {
+        return Err(openward_app::vault::Error::Invalid(
+            "handle belongs to another vault session",
+        ));
+    }
+    Ok(())
+}
+
 /// `critical` is only for short synchronous UI reads/input enqueues. Blocking
 /// I/O uses an epoch ticket so it cannot keep auto-lock waiting for a device.
 #[frb(ignore)]
@@ -161,16 +176,46 @@ impl OpenWard {
     }
 }
 
-#[cfg(all(test, unix))]
+#[cfg(test)]
 mod tests {
-    use std::{
-        sync::Arc,
-        time::{Duration, Instant},
-    };
+    use super::OpenWard;
+    use std::sync::Arc;
+    #[cfg(unix)]
+    use std::time::{Duration, Instant};
+    #[cfg(unix)]
     struct Sink;
+    #[cfg(unix)]
     impl openward_app::events::EventSink for Sink {
         fn send(&self, _: openward_app::events::Event) {}
     }
+    #[test]
+    fn handles_from_another_vault_cannot_borrow_the_callers_unlocked_authority() {
+        let a = tempfile::tempdir().unwrap();
+        let b = tempfile::tempdir().unwrap();
+        let first = OpenWard {
+            app: Arc::new(openward_app::App::open(a.path()).unwrap()),
+        };
+        let second = OpenWard {
+            app: Arc::new(openward_app::App::open(b.path()).unwrap()),
+        };
+        let own = first.terminal(80, 24, 100);
+        let foreign = second.terminal(80, 24, 100);
+        assert!(super::same_owner(&first.app.security().gate(), &own.access).is_ok());
+        assert!(super::same_owner(&first.app.security().gate(), &foreign.access).is_err());
+        let browser = second.sftp();
+        assert_eq!(
+            first.transfer(
+                &browser,
+                super::super::sftp::TransferDirection::Download,
+                "untrusted-source".into(),
+                a.path().display().to_string(),
+                super::super::sftp::ConflictChoice::Skip
+            ),
+            0
+        );
+        assert!(first.app.transfers().jobs().is_empty());
+    }
+    #[cfg(unix)]
     #[test]
     fn locking_redacts_ffi_and_blocks_input_while_the_real_pty_stays_alive() {
         let dir = tempfile::tempdir().unwrap();

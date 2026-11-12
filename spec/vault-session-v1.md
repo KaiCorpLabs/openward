@@ -17,6 +17,8 @@ index, clears device defaults and cancels pending connection questions. Keys
 and KDF buffers use `Zeroizing`. Dropping the index is not a forensic guarantee
 that all previously allocated application strings have been overwritten.
 
+Terminal/SFTP handles retain their owning gate. Cross-instance connection and
+transfer calls reject foreign handles before touching a connection or queue.
 Short FFI frame/metadata reads and input enqueues hold a read lease; lock takes
 the write lease. Blocking native, file and network work keeps an epoch ticket
 and rejects results after revocation. Native prompts hold neither the vault
@@ -120,11 +122,12 @@ Native API contracts: [Apple biometryCurrentSet](https://developer.apple.com/doc
 
 ## Evidence and remaining gates
 
-Local checks: 514 Rust tests, 315 Flutter tests, strict clippy/analyze, dependency
+Local checks: complete Rust/Flutter suites and focused concurrency/install-failure
+regressions, strict clippy/analyze, dependency
 policy and macOS Debug build. New tests cover password retry/process locking,
 idle deadlines, stale epochs/native cancellation, Linux acknowledgement,
 mandatory kit setup, factor bounds/tampering, recovery/native roundtrips and
-locked deletion rejection. A real `/bin/cat` PTY test proves that FFI input is
+locked deletion rejection, notification ordering and pre/post-install failures. A real `/bin/cat` PTY test proves that FFI input is
 rejected and content is redacted during lock while background output and the
 same session survive. Widget tests cover hidden semantics/state preservation,
 password error, native cancellation and suspend. Desktop CI is a separate gate

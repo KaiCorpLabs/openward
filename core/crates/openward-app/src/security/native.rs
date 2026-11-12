@@ -39,6 +39,7 @@ pub fn kind() -> Kind {
         Kind::Unsupported
     }
 }
+#[cfg(any(target_os = "macos", target_os = "linux", windows))]
 const SERVICE: &str = "dev.openward.local-unlock.v1";
 fn validate(id: &str) -> Result<(), Error> {
     let parts: Vec<_> = id.split('-').collect();
@@ -52,7 +53,7 @@ fn validate(id: &str) -> Result<(), Error> {
     }
     Ok(())
 }
-#[cfg(not(windows))]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn key(bytes: Zeroizing<Vec<u8>>) -> Result<Key, Error> {
     let b: [u8; 32] = bytes
         .as_slice()
@@ -60,7 +61,7 @@ fn key(bytes: Zeroizing<Vec<u8>>) -> Result<Key, Error> {
         .map_err(|_| Error::Failed("invalid native key length".into()))?;
     Ok(Zeroizing::new(b))
 }
-#[cfg(not(windows))]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn random() -> Result<Key, Error> {
     let mut bytes = Zeroizing::new([0; 32]);
     getrandom::fill(bytes.as_mut())

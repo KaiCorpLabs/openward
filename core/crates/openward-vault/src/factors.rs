@@ -208,3 +208,45 @@ mod tests {
         assert!(vault.is_locked());
     }
 }
+
+#[cfg(test)]
+mod install_failure_tests {
+    use super::*;
+    #[test]
+    fn recovery_factor_has_the_same_atomic_install_point_as_the_encrypted_vault() {
+        for fail in [
+            crate::migration::Phase::BeforeInstall,
+            crate::migration::Phase::Installed,
+        ] {
+            let dir = tempfile::tempdir().unwrap();
+            let path = dir.path().join("vault.db");
+            drop(Vault::open(&path).unwrap());
+            let kit = RecoveryKit::generate().unwrap();
+            let result = crate::migration::install_with_recovery(
+                &path,
+                b"public test password",
+                KdfParams::new(65536, 1).unwrap(),
+                true,
+                Some(&kit),
+                |phase| {
+                    if phase == fail {
+                        Err(Error::Invalid("injected install failure"))
+                    } else {
+                        Ok(())
+                    }
+                },
+            );
+            assert!(result.is_err());
+            let mut vault = Vault::open_session(&path).unwrap();
+            if fail == crate::migration::Phase::BeforeInstall {
+                assert!(!vault.is_encrypted());
+                assert!(!vault.has_recovery().unwrap());
+            } else {
+                assert!(matches!(result, Err(Error::MigrationInstalled(_))));
+                assert!(vault.is_locked());
+                vault.unlock_recovery(&kit).unwrap();
+                assert!(!vault.is_locked());
+            }
+        }
+    }
+}

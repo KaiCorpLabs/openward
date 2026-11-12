@@ -84,7 +84,8 @@ class _VaultBoundaryState extends ConsumerState<VaultBoundary> {
   }
 
   Future<void> lock() async {
-    if (ref.read(securityProvider).phase != VaultPhase.unlocked) return;
+    final phase = ref.read(securityProvider).phase;
+    if (phase != VaultPhase.unlocked && phase != VaultPhase.changing) return;
     await ref.read(openWardProvider).lockVault();
   }
 

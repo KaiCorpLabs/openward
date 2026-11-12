@@ -659,6 +659,7 @@ impl OpenWard {
         events: StreamSink<SessionEvent>,
     ) -> Result<(), VaultError> {
         let gate = self.app.security().gate();
+        super::security::same_owner(&gate, &session.access)?;
         super::security::access(&gate, false, || {
             self.app.connect(
                 &session.term,
@@ -678,6 +679,7 @@ impl OpenWard {
         events: StreamSink<SessionEvent>,
     ) -> Result<(), VaultError> {
         let gate = self.app.security().gate();
+        super::security::same_owner(&gate, &session.access)?;
         super::security::access(&gate, false, || {
             self.app.connect_reusing(
                 &session.term,
@@ -700,6 +702,7 @@ impl OpenWard {
         events: StreamSink<SessionEvent>,
     ) -> Result<(), VaultError> {
         let gate = self.app.security().gate();
+        super::security::same_owner(&gate, &session.access)?;
         super::security::access(&gate, false, || {
             self.app.connect_address(
                 &session.term,
@@ -746,6 +749,9 @@ impl OpenWard {
         events: StreamSink<SessionEvent>,
     ) {
         let gate = self.app.security().gate();
+        if super::security::same_owner(&gate, &session.access).is_err() {
+            return;
+        }
         super::security::access(&gate, false, || {
             self.app.open_serial(
                 &session.term,
@@ -771,6 +777,7 @@ impl OpenWard {
         events: StreamSink<SessionEvent>,
     ) -> anyhow::Result<()> {
         let gate = self.app.security().gate();
+        super::security::same_owner(&gate, &session.access)?;
         super::security::access(&gate, false, || {
             self.app
                 .open_local(&session.term, None, Arc::new(DartSink(events)))
@@ -802,6 +809,7 @@ impl OpenWard {
         events: StreamSink<SessionEvent>,
     ) -> Result<(), VaultError> {
         let gate = self.app.security().gate();
+        super::security::same_owner(&gate, &browser.access)?;
         super::security::access(&gate, false, || {
             self.app.connect_sftp(
                 &browser.sftp,
@@ -822,6 +830,7 @@ impl OpenWard {
         events: StreamSink<SessionEvent>,
     ) -> Result<(), VaultError> {
         let gate = self.app.security().gate();
+        super::security::same_owner(&gate, &browser.access)?;
         super::security::access(&gate, false, || {
             self.app.connect_sftp_address(
                 &browser.sftp,
@@ -846,6 +855,9 @@ impl OpenWard {
         on_conflict: ConflictChoice,
     ) -> u64 {
         let gate = self.app.security().gate();
+        if super::security::same_owner(&gate, &browser.access).is_err() {
+            return 0;
+        }
         super::security::access(&gate, true, || {
             super::sftp::transfer(&self.app, browser, direction, source, dest_dir, on_conflict)
         })
