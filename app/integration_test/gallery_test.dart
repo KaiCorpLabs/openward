@@ -23,6 +23,7 @@ import 'package:openward/app.dart';
 import 'package:openward/core/providers.dart';
 import 'package:openward/core/errors.dart';
 import 'package:openward/settings/settings_page.dart';
+import 'package:openward/security/credentials.dart';
 import 'package:openward/core/settings.dart';
 import 'package:openward/hosts/sidebar.dart';
 import 'package:openward/import/program_preview.dart';
@@ -338,9 +339,12 @@ void main() {
     betaContainer
         .read(settingsSectionProvider.notifier)
         .show(SettingsSection.security);
+    await betaContainer.read(savedCredentialsProvider.future);
     unawaited(
       appNavigator.currentState!.push(
-        MaterialPageRoute<void>(builder: (_) => const SettingsPage()),
+        MaterialPageRoute<void>(
+          builder: (_) => const Material(child: SettingsPage()),
+        ),
       ),
     );
     await tester.pumpAndSettle();
