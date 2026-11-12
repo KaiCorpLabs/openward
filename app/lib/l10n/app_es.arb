@@ -4692,5 +4692,38 @@
   "vaultCredentialPassword": "Contraseña SSH",
   "vaultCredentialPassphrase": "Frase de paso de una clave",
   "logsEncrypted": "Los metadatos y las grabaciones se guardan cifrados. Cada sesión tiene su propia clave y puede seguir grabándose con el vault bloqueado. Las exportaciones que elijas guardar fuera quedan en claro.",
-  "vaultLocalDataError": "No se pudo completar la protección de los datos locales. El vault sigue bloqueado y no se ha borrado. Comprueba el espacio y los permisos; si hay archivos dañados, restáuralos desde una copia y vuelve a intentarlo."
+  "vaultLocalDataError": "No se pudo completar la protección de los datos locales. El vault sigue bloqueado y no se ha borrado. Comprueba el espacio y los permisos; si hay archivos dañados, restáuralos desde una copia y vuelve a intentarlo.",
+  "backupTitle": "Copias de seguridad del vault",
+  "backupScope": "Incluye los elementos del vault, las claves privadas y las credenciales guardadas. Los archivos por ruta, ajustes, historial, recientes y grabaciones son locales y no se incluyen.",
+  "backupUnlockFirst": "Primero activa el cifrado y desbloquea el vault.",
+  "backupExportEncrypted": "Exportar .owvault",
+  "backupExportJson": "Exportar JSON en claro",
+  "backupRestore": "Restaurar copia",
+  "backupPlaintextWarning": "El JSON no está cifrado. Quien lo lea puede obtener claves privadas, contraseñas y los demás datos del vault. Guárdalo en un lugar seguro y bórralo cuando ya no lo necesites.",
+  "backupAcknowledge": "Entiendo que este archivo deja expuestos los datos del vault.",
+  "backupRestoreExplain": "Restaura en un vault cifrado nuevo y vacío. Seguirá usando su propia contraseña y kit de recuperación. Los datos existentes nunca se reemplazan.",
+  "backupUseKit": "Abrir .owvault con su kit de recuperación",
+  "backupCredentialExplain": "Para .owvault, escribe la contraseña o el kit que tenía al crear esa copia. Para JSON, deja este campo vacío.",
+  "backupSourceCredential": "Contraseña o kit de la copia",
+  "backupPreview": "Comprobar copia",
+  "backupNeedsEmpty": "Este vault no está vacío. Usa una carpeta de datos nueva y crea allí un vault cifrado antes de restaurar.",
+  "backupConfirmRestore": "Restaurar los datos comprobados en este vault vacío.",
+  "backupFailed": "No se pudo completar la operación. Revisa la credencial, versión e integridad del archivo, permisos del destino y espacio libre. Los datos existentes no se han reemplazado.",
+  "backupExported": "Copia guardada. Conserva su contraseña o kit de recuperación por separado.",
+  "backupRestored": "Vault restaurado. Comprueba los hosts y claves antes de conectar.",
+  "backupSave": "Guardar copia",
+  "backupSummary": "{items} elementos, {secrets} secretos guardados, {unreadable} elementos conservados para una versión posterior.",
+  "@backupSummary": {
+    "placeholders": {
+      "items": {
+        "type": "int"
+      },
+      "secrets": {
+        "type": "int"
+      },
+      "unreadable": {
+        "type": "int"
+      }
+    }
+  }
 }

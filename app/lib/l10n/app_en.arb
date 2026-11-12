@@ -2094,5 +2094,38 @@
   "vaultCredentialPassword": "SSH password",
   "vaultCredentialPassphrase": "Key passphrase",
   "logsEncrypted": "Metadata and recordings are encrypted. Each session has its own key so recording can continue while the vault is locked. Explicit exports saved outside remain plaintext.",
-  "vaultLocalDataError": "Local data protection could not finish. The vault remains locked and has not been erased. Check free space and permissions; restore damaged files from a backup and retry."
+  "vaultLocalDataError": "Local data protection could not finish. The vault remains locked and has not been erased. Check free space and permissions; restore damaged files from a backup and retry.",
+  "backupTitle": "Vault backups",
+  "backupScope": "Includes vault items, saved private keys and credentials. Files referenced by path, settings, history, recent connections and recordings stay local and are not included.",
+  "backupUnlockFirst": "First enable encryption and unlock the vault.",
+  "backupExportEncrypted": "Export .owvault",
+  "backupExportJson": "Export plaintext JSON",
+  "backupRestore": "Restore backup",
+  "backupPlaintextWarning": "JSON is not encrypted. Anyone who can read it can obtain private keys, passwords and other vault data. Store it securely and delete it when no longer needed.",
+  "backupAcknowledge": "I understand that this file exposes the vault data.",
+  "backupRestoreExplain": "Restore into a new, empty encrypted vault. Its own password and recovery kit remain in use. Existing data is never replaced.",
+  "backupUseKit": "Open .owvault with its recovery kit",
+  "backupCredentialExplain": "For .owvault, enter the password or kit used when that copy was made. For JSON, leave this field empty.",
+  "backupSourceCredential": "Backup password or recovery kit",
+  "backupPreview": "Check backup",
+  "backupNeedsEmpty": "This vault is not empty. Use a new data folder and create an encrypted vault there before restoring.",
+  "backupConfirmRestore": "Restore the checked data into this empty vault.",
+  "backupFailed": "Could not complete the operation. Check the credential, file version and integrity, destination permissions and free space. Existing data has not been replaced.",
+  "backupExported": "Backup saved. Keep its password or recovery kit separately.",
+  "backupRestored": "Vault restored. Verify the hosts and keys before connecting.",
+  "backupSave": "Save backup",
+  "backupSummary": "{items} items, {secrets} saved secrets, {unreadable} items preserved for a newer version.",
+  "@backupSummary": {
+    "placeholders": {
+      "items": {
+        "type": "int"
+      },
+      "secrets": {
+        "type": "int"
+      },
+      "unreadable": {
+        "type": "int"
+      }
+    }
+  }
 }

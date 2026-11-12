@@ -1,5 +1,6 @@
 //! D3's envelope boundary (ADR-004/005). Keys and decrypted bytes remain
 //! owned by Rust. The vault migration and key hierarchy build on this crate.
+pub mod backup;
 mod codec;
 pub mod envelope;
 pub mod hierarchy;

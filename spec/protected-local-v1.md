@@ -132,3 +132,10 @@ commands and recording can contain displayed secrets; encryption does not
 sanitize them. Leading-space history suppression, including edited lines,
 already existed on main and remains tested. Final onboarding and complete
 release/security review remain D8; physical D4 gates remain in #33.
+
+## D7 backup integration
+
+[Vault backup v1](vault-backup-v1.md) now specifies portable encrypted and JSON
+copies. Restoration re-encrypts logical items under a new destination identity;
+it preserves that destination's password/kit. Device-local history/recordings and
+external key files are excluded. The original D4/D5/D6 scope above is historical.

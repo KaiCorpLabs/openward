@@ -10135,6 +10135,126 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No se pudo completar la protección de los datos locales. El vault sigue bloqueado y no se ha borrado. Comprueba el espacio y los permisos; si hay archivos dañados, restáuralos desde una copia y vuelve a intentarlo.'**
   String get vaultLocalDataError;
+
+  /// No description provided for @backupTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Copias de seguridad del vault'**
+  String get backupTitle;
+
+  /// No description provided for @backupScope.
+  ///
+  /// In es, this message translates to:
+  /// **'Incluye los elementos del vault, las claves privadas y las credenciales guardadas. Los archivos por ruta, ajustes, historial, recientes y grabaciones son locales y no se incluyen.'**
+  String get backupScope;
+
+  /// No description provided for @backupUnlockFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Primero activa el cifrado y desbloquea el vault.'**
+  String get backupUnlockFirst;
+
+  /// No description provided for @backupExportEncrypted.
+  ///
+  /// In es, this message translates to:
+  /// **'Exportar .owvault'**
+  String get backupExportEncrypted;
+
+  /// No description provided for @backupExportJson.
+  ///
+  /// In es, this message translates to:
+  /// **'Exportar JSON en claro'**
+  String get backupExportJson;
+
+  /// No description provided for @backupRestore.
+  ///
+  /// In es, this message translates to:
+  /// **'Restaurar copia'**
+  String get backupRestore;
+
+  /// No description provided for @backupPlaintextWarning.
+  ///
+  /// In es, this message translates to:
+  /// **'El JSON no está cifrado. Quien lo lea puede obtener claves privadas, contraseñas y los demás datos del vault. Guárdalo en un lugar seguro y bórralo cuando ya no lo necesites.'**
+  String get backupPlaintextWarning;
+
+  /// No description provided for @backupAcknowledge.
+  ///
+  /// In es, this message translates to:
+  /// **'Entiendo que este archivo deja expuestos los datos del vault.'**
+  String get backupAcknowledge;
+
+  /// No description provided for @backupRestoreExplain.
+  ///
+  /// In es, this message translates to:
+  /// **'Restaura en un vault cifrado nuevo y vacío. Seguirá usando su propia contraseña y kit de recuperación. Los datos existentes nunca se reemplazan.'**
+  String get backupRestoreExplain;
+
+  /// No description provided for @backupUseKit.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir .owvault con su kit de recuperación'**
+  String get backupUseKit;
+
+  /// No description provided for @backupCredentialExplain.
+  ///
+  /// In es, this message translates to:
+  /// **'Para .owvault, escribe la contraseña o el kit que tenía al crear esa copia. Para JSON, deja este campo vacío.'**
+  String get backupCredentialExplain;
+
+  /// No description provided for @backupSourceCredential.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña o kit de la copia'**
+  String get backupSourceCredential;
+
+  /// No description provided for @backupPreview.
+  ///
+  /// In es, this message translates to:
+  /// **'Comprobar copia'**
+  String get backupPreview;
+
+  /// No description provided for @backupNeedsEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Este vault no está vacío. Usa una carpeta de datos nueva y crea allí un vault cifrado antes de restaurar.'**
+  String get backupNeedsEmpty;
+
+  /// No description provided for @backupConfirmRestore.
+  ///
+  /// In es, this message translates to:
+  /// **'Restaurar los datos comprobados en este vault vacío.'**
+  String get backupConfirmRestore;
+
+  /// No description provided for @backupFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo completar la operación. Revisa la credencial, versión e integridad del archivo, permisos del destino y espacio libre. Los datos existentes no se han reemplazado.'**
+  String get backupFailed;
+
+  /// No description provided for @backupExported.
+  ///
+  /// In es, this message translates to:
+  /// **'Copia guardada. Conserva su contraseña o kit de recuperación por separado.'**
+  String get backupExported;
+
+  /// No description provided for @backupRestored.
+  ///
+  /// In es, this message translates to:
+  /// **'Vault restaurado. Comprueba los hosts y claves antes de conectar.'**
+  String get backupRestored;
+
+  /// No description provided for @backupSave.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar copia'**
+  String get backupSave;
+
+  /// No description provided for @backupSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'{items} elementos, {secrets} secretos guardados, {unreadable} elementos conservados para una versión posterior.'**
+  String backupSummary(int items, int secrets, int unreadable);
 }
 
 class _AppLocalizationsDelegate
