@@ -28,6 +28,10 @@ use zeroize::Zeroizing;
 const BASTION: u16 = 22100;
 /// Its own server, for the test that freezes it.
 const FREEZE: u16 = 22101;
+// These two tests temporarily replace the same remote file. Other tests only
+// read the baseline keys; concurrent installers must not restore over a peer's
+// new key (or rename the same .restore file).
+static AUTHORIZED_KEYS_INSTALLER: Mutex<()> = Mutex::new(());
 
 fn fixtures() -> Option<PathBuf> {
     let dir = std::env::var_os("S2_FIXTURES")
@@ -1420,6 +1424,7 @@ fn sftp_goes_over_the_terminal_connection() {
 #[test]
 fn a_public_key_put_on_the_server_then_used() {
     use openward_ssh::russh::keys::ssh_key::{Algorithm, LineEnding, PrivateKey};
+    let _installer = AUTHORIZED_KEYS_INSTALLER.lock().unwrap();
     let f = Fixture::new(servers!());
     let password = f.password("demo");
     let host = f.host(
@@ -2112,6 +2117,7 @@ fn through_a_proxy_that_asks_for_a_password() {
 #[test]
 fn a_security_key_logs_in_and_says_when_it_is_not_this_one() {
     use openward_fido::soft::SoftKeys;
+    let _installer = AUTHORIZED_KEYS_INSTALLER.lock().unwrap();
     let f = Fixture::new(servers!());
     let password = f.password("demo");
     let soft = Arc::new(SoftKeys::new());
