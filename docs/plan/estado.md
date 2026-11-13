@@ -1,6 +1,6 @@
 # Estado y backlog verificable
 
-Actualizado el **12 de noviembre de 2026**. Este índice relaciona el código,
+Actualizado el **13 de noviembre de 2026**. Este índice relaciona el código,
 las PR y las puertas del roadmap; las estimaciones antiguas no son fechas
 comprometidas.
 
@@ -27,7 +27,7 @@ corresponde. Cerrar una PR parcial no cierra automáticamente su hito.
 | D5: recuperación | [#34](https://github.com/KaiCorpLabs/openward/issues/34) | Implementado en #54: kit obligatorio al cifrar, QR/PDF, regeneración y cambio de contraseña con autorización, paquete de cuenta D0-1 y recuperación de la misma copia cifrada en Linux/macOS/Windows; [contrato, pruebas y límites](../../spec/recovery-v1.md). |
 | D6: secretos y sesiones | [#35](https://github.com/KaiCorpLabs/openward/issues/35) | Implementado: claves privadas y credenciales con consentimiento; historial, recientes y grabaciones cifrados, migración y bloqueo, clave por grabación y formato3 contra regresión a texto claro. [Pruebas y límites](../../spec/protected-local-v1.md); CI completa como puerta de fusión. |
 | D7: copias | [#36](https://github.com/KaiCorpLabs/openward/issues/36) | Implementado: `.owvault` por contraseña/kit y JSON con autorización; restauración atómica en vault cifrado vacío con identidad propia, sin reemplazar datos. [Formato, pruebas y guía](../../spec/vault-backup-v1.md); CI completa como puerta de fusión. |
-| D8: beta y validación | [#37](https://github.com/KaiCorpLabs/openward/issues/37) | Implementación y candidata `0.4.0-beta.1+31` preparadas; [notas](../notas/v0.4.md), [guía](prueba-v0.4.md). Semana de uso, migraciones personales y hardware pendientes. |
+| D8: beta y validación | [#37](https://github.com/KaiCorpLabs/openward/issues/37) | Implementación y candidata `0.4.0-beta.1+31` preparadas; [notas](../notas/v0.4.md), [guía](prueba-v0.4.md). Calibración KDF corregida con regresión de Windows y prueba release estricta de 500–1000 ms ([evidencia](../evidence/kdf-calibration-v0.4.md)); CI completa en los tres sistemas como puerta de fusión. Semana de uso, migraciones personales y hardware pendientes. |
 
 El [plan v0.4](v0.4.md) conserva el contrato aceptado. D8 exige proteger el
 vault antes de Home, por contraseña+kit o «Más tarde» con una clave del llavero
