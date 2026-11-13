@@ -2141,5 +2141,14 @@
   "newsVaultBody": "Master password, optional OS unlock, automatic locking, and encrypted credentials, history and session logs. Settings › Security brings the controls together.",
   "newsRecoveryTitle": "Recovery and portable backups",
   "newsRecoveryBody": "Save your recovery kit offline, change your password, and export or restore .owvault backups. JSON export is cleartext and asks for your password and confirmation.",
-  "vaultMissingKitStatus": "Encrypted · recovery kit pending"
+  "vaultMissingKitStatus": "Encrypted · recovery kit pending",
+  "enclaveCreate": "Create in Secure Enclave (Touch ID)",
+  "enclaveNote": "A non-exportable ECDSA P-256 key protected by Touch ID. It only works on this Mac. Vault backups keep its reference but cannot recover the private key. Keep another way to access your servers.",
+  "enclaveStored": "Secure Enclave · bound to the Mac",
+  "enclaveName": "Key name",
+  "enclaveDelete": "The private key will be deleted from this Mac and cannot be recovered from a vault backup. Also revoke its public key on the servers where you installed it.",
+  "enclaveBusy": "Authorize the signature with Touch ID…",
+  "stageTouchId": "Authorize the SSH signature for {key} with Touch ID…",
+  "chooseSshKey": "Choose SSH key",
+  "chooseSshKeyFile": "Choose key file…"
 }

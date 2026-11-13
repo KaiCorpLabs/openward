@@ -10,6 +10,7 @@ import '../../core/settings.dart';
 import '../../identities/identities.dart';
 import '../../identities/identity_editor.dart';
 import '../../l10n/l10n.dart';
+import '../../keys/key_picker.dart';
 import '../../src/rust/api/vault.dart';
 import '../../settings/appearance_page.dart' show themeName;
 import '../../snippets/snippets.dart' show asksNothing, snippetsProvider;
@@ -671,7 +672,26 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
               minLines: 1,
               maxLines: 4,
               style: monoStyle(context, size: 13, color: ow.colors.text),
-              decoration: InputDecoration(helperText: l.keysHelp),
+              decoration: InputDecoration(
+                helperText: l.keysHelp,
+                suffixIcon: IconButton(
+                  key: const ValueKey('settings.pickKey'),
+                  tooltip: l.chooseSshKey,
+                  icon: const Icon(Icons.key),
+                  onPressed: () async {
+                    final path = await showSshKeyPicker(context);
+                    if (!mounted || path == null) return;
+                    final paths = f.keys.text
+                        .split('\n')
+                        .where((p) => p.trim().isNotEmpty)
+                        .toList();
+                    if (!paths.contains(path)) {
+                      f.update(() => f.keys.text = [...paths, path].join('\n'));
+                      f.edited('identity_files');
+                    }
+                  },
+                ),
+              ),
             ),
           ),
         if (_protocol != ProtocolKind.serial)

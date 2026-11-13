@@ -4739,5 +4739,14 @@
   "newsVaultBody": "Contraseña maestra, desbloqueo opcional del sistema, bloqueo automático y credenciales, historial y registros de sesión cifrados. Ajustes › Seguridad reúne los controles.",
   "newsRecoveryTitle": "Recuperación y copias portables",
   "newsRecoveryBody": "Guarda el kit fuera del equipo, cambia la contraseña y exporta o restaura copias .owvault. La exportación JSON está en claro y requiere contraseña y confirmación.",
-  "vaultMissingKitStatus": "Cifrado · kit de recuperación pendiente"
+  "vaultMissingKitStatus": "Cifrado · kit de recuperación pendiente",
+  "enclaveCreate": "Crear en Secure Enclave (Touch ID)",
+  "enclaveNote": "Clave ECDSA P-256 no exportable, protegida por Touch ID. Solo funciona en este Mac. Las copias del vault guardan su referencia, pero no permiten recuperar la clave privada. Conserva otra forma de entrar en tus servidores.",
+  "enclaveStored": "Secure Enclave · vinculada al Mac",
+  "enclaveName": "Nombre de la clave",
+  "enclaveDelete": "La clave privada se eliminará de este Mac y no se puede recuperar desde una copia del vault. Revoca también la clave pública en los servidores donde la instalaste.",
+  "enclaveBusy": "Autoriza la firma con Touch ID…",
+  "stageTouchId": "Autoriza con Touch ID la firma SSH de {key}…",
+  "chooseSshKey": "Elegir clave SSH",
+  "chooseSshKeyFile": "Elegir archivo de clave…"
 }

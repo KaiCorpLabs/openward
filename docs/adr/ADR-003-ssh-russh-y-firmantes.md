@@ -74,7 +74,7 @@ Con P3 del [camino a la Community](../plan/community.md#p3--llaves-fido2-y-certi
 - **`russh`** recibe la firma por una función (`auth_signed`, sobre su `Signer`), que corre fuera del runtime porque espera el toque.
 - **Linux:** compilar pide `libudev-dev` (`hidapi`), y la app usa `libudev.so.1`, que traen todas las distribuciones con systemd. La licencia de HIDAPI (la opción BSD) va en las licencias de la app.
 - **Windows** no deja hablar con una llave FIDO a un programa sin permisos de administrador. Ahí la llave va por el agente de OpenSSH de Windows, que usa WebAuthn, y la app lo dice.
-- Secure Enclave y Keystore siguen con S3 y con D4 de la v0.4.
+- Continuación D4 (2026-11-13): [firma SSH Secure Enclave v1](../../spec/secure-enclave-ssh-v1.md) implementada en macOS con P-256/Touch ID, sin exportar la clave privada; la validación física con el bundle real sigue en #33. Keystore/Android y la validación completa de S3 siguen pendientes.
 
 ## Validación y revisión
 

@@ -33,3 +33,5 @@ all = "warn"
 [dev-dependencies]
 tempfile = "3"
 openward-crypto = { path = "../openward-crypto" }
+openward-ssh = { path = "../openward-ssh" }
+serde_json = "1"

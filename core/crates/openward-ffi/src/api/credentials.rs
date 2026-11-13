@@ -42,7 +42,11 @@ impl OpenWard {
         super::security::access(&gate, true, || -> openward_app::vault::Result<()> {
             let mut v = self.app.vault();
             let s = v.secret(&id)?;
-            if s.info.kind == openward_app::vault::SecretKind::PrivateKey {
+            if matches!(
+                s.info.kind,
+                openward_app::vault::SecretKind::PrivateKey
+                    | openward_app::vault::SecretKind::SecureEnclaveKey
+            ) {
                 return Err(openward_app::vault::Error::Invalid(
                     "delete private keys from the key manager",
                 ));

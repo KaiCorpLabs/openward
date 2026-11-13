@@ -238,6 +238,9 @@ impl OpenWard {
             .identity_files
             .iter()
             .map(|p| {
+                if openward_app::enclave::reference(std::path::Path::new(p)).is_some() {
+                    return key_view(p, self.enclave_key_info(p));
+                }
                 key_view(
                     p,
                     key_info(self.app.local(), p, &view.spec.certificate_files),
@@ -245,6 +248,28 @@ impl OpenWard {
             })
             .collect();
         view
+    }
+
+    fn enclave_key_info(&self, path: &str) -> KeyInfo {
+        match openward_app::enclave::list(&self.app.vault())
+            .into_iter()
+            .find(|k| k.path == path)
+        {
+            Some(k) => KeyInfo {
+                state: KeyState::Found,
+                algorithm: k.algorithm,
+                fingerprint: k.fingerprint,
+                comment: k.comment,
+                certificate: None,
+            },
+            None => KeyInfo {
+                state: KeyState::Missing,
+                algorithm: None,
+                fingerprint: None,
+                comment: None,
+                certificate: None,
+            },
+        }
     }
 
     /// Every identity, by name.
@@ -315,6 +340,9 @@ impl OpenWard {
     ) -> Result<KeyView, VaultError> {
         let gate = self.app.security().gate();
         super::security::access(&gate, false, || {
+            if openward_app::enclave::reference(std::path::Path::new(&path)).is_some() {
+                return key_view(&path, self.enclave_key_info(&path));
+            }
             if openward_app::vault_keys::reference(std::path::Path::new(&path)).is_some() {
                 let found = openward_app::vault_keys::list(&self.app.vault())
                     .into_iter()

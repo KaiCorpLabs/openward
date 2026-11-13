@@ -10,6 +10,7 @@
 pub mod alive;
 pub mod backups;
 pub mod charset;
+pub mod enclave;
 pub mod events;
 pub mod import;
 pub mod keychain;
@@ -69,6 +70,7 @@ pub struct App {
     local: Local,
     /// What talks to security keys: the one plugged in, by default.
     security_keys: Mutex<Arc<dyn openward_fido::Authenticator>>,
+    enclave: Mutex<Arc<dyn enclave::Backend>>,
     prompts: Arc<Prompts>,
     live: Arc<Registry>,
     links: sftp::Links,
@@ -147,6 +149,7 @@ impl App {
             protected,
             local,
             security_keys: Mutex::new(default_security_keys()),
+            enclave: Mutex::new(Arc::new(enclave::System)),
             prompts,
             live: Arc::default(),
             links: sftp::Links::default(),
@@ -420,12 +423,21 @@ impl App {
         Arc::clone(&lock(&self.security_keys))
     }
 
+    /// Replace the native backend for tests/embedders, never from the UI.
+    pub fn set_enclave(&self, backend: Arc<dyn enclave::Backend>) {
+        *lock(&self.enclave) = backend;
+    }
+    pub fn enclave(&self) -> Arc<dyn enclave::Backend> {
+        Arc::clone(&lock(&self.enclave))
+    }
+
     fn ctx(&self, sink: &Arc<dyn EventSink>) -> Ctx {
         Ctx {
             vault: Arc::clone(&self.vault),
             security: Arc::clone(&self.security),
             local: self.local.clone(),
             security_keys: self.security_keys(),
+            enclave: self.enclave(),
             prompts: Arc::clone(&self.prompts),
             sink: Arc::clone(sink),
             live: Arc::clone(&self.live),

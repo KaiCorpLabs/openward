@@ -123,6 +123,8 @@ impl Data {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SecretKind {
     PrivateKey,
+    /// Public metadata and a device-local handle, never private key bytes.
+    SecureEnclaveKey,
     Password,
     Passphrase,
 }

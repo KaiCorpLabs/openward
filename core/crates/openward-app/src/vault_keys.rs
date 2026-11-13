@@ -97,7 +97,12 @@ fn new_label(vault: &Vault, name: &str) -> Result<(), KeyError> {
         .secret_infos()
         .map_err(|_| KeyError::Io("unlock the encrypted vault first".into()))?
         .iter()
-        .any(|s| s.kind == SecretKind::PrivateKey && s.label == name)
+        .any(|s| {
+            matches!(
+                s.kind,
+                SecretKind::PrivateKey | SecretKind::SecureEnclaveKey
+            ) && s.label == name
+        })
     {
         return Err(KeyError::Exists(name.into()));
     }
