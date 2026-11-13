@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/platform.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/vault.dart';
 import '../ui/tokens.dart';
@@ -86,6 +87,9 @@ class WindowDraggable extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Draggable<WindowDrag>(
     data: data,
+    // On a touch screen a drag is a scroll; dropping into panes is the
+    // desktop's.
+    maxSimultaneousDrags: touchFirst ? 0 : null,
     dragAnchorStrategy: pointerDragAnchorStrategy,
     feedback: DragGhost(label: data.label, subtitle: subtitle),
     childWhenDragging: Opacity(opacity: 0.4, child: child),

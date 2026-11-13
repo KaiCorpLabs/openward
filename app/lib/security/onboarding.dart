@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/platform.dart';
 import '../core/providers.dart';
 import '../l10n/l10n.dart';
 import '../ui/tokens.dart';
@@ -79,7 +80,11 @@ class _VaultOnboardingState extends ConsumerState<VaultOnboarding> {
                     child: Text(pending ? l.vaultBusy : l.vaultEnable),
                   ),
                   const SizedBox(height: 24),
-                  Text(l.vaultDeviceWarning),
+                  Text(
+                    Device.mobile
+                        ? l.vaultDeviceWarningMobile
+                        : l.vaultDeviceWarning,
+                  ),
                   if (linux) ...[
                     const SizedBox(height: 8),
                     Text(l.vaultLinuxWarning),
@@ -121,27 +126,35 @@ class VaultReminder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
+    // Its color goes on under a phone's status bar; its words below it.
     return Material(
       color: Theme.of(context).colorScheme.secondaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: OwSpace.s4,
-          vertical: OwSpace.s1,
-        ),
-        child: Wrap(
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: 12,
-          children: [
-            Text(l.vaultDeviceReminder),
-            TextButton(
-              onPressed: () => showDialog<void>(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) => const VaultSetup(),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: OwSpace.s4,
+            vertical: OwSpace.s1,
+          ),
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12,
+            children: [
+              Text(
+                Device.mobile
+                    ? l.vaultDeviceReminderMobile
+                    : l.vaultDeviceReminder,
               ),
-              child: Text(l.vaultFinishSetup),
-            ),
-          ],
+              TextButton(
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => const VaultSetup(),
+                ),
+                child: Text(l.vaultFinishSetup),
+              ),
+            ],
+          ),
         ),
       ),
     );

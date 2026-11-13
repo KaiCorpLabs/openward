@@ -1,8 +1,11 @@
 import 'dart:collection';
+import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
+import '../core/platform.dart';
 import '../src/rust/api/sftp.dart';
 
 /// The two sides of the browser.
@@ -40,8 +43,18 @@ class LocalFileSystem implements FileSystem {
   @override
   p.Context get paths => p.context;
 
+  /// On a phone, the app's own folder: Files shows it on iOS (On My
+  /// iPhone › OpenWard); on Android, the app's external one, which USB and
+  /// file managers reach. Elsewhere, the user's home.
   @override
-  Future<String> home() async => localHome();
+  Future<String> home() async {
+    if (Device.userFiles) return localHome();
+    if (Platform.isAndroid) {
+      final external = await getExternalStorageDirectory();
+      if (external != null) return external.path;
+    }
+    return (await getApplicationDocumentsDirectory()).path;
+  }
 
   @override
   Future<List<FileEntry>> list(String dir) => localList(path: dir);

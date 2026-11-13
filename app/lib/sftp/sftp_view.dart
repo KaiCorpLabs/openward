@@ -1,16 +1,19 @@
 // An SFTP tab: this machine on the left, the server on the right, the
 // transfer queue below and the connection's state at the bottom.
 
-import 'dart:io' show Platform;
+import 'dart:io' show File, Platform;
 
 import 'package:desktop_drop/desktop_drop.dart';
-import 'package:flutter/gestures.dart' show kPrimaryButton;
+import 'package:file_selector/file_selector.dart' show openFiles;
+import 'package:flutter/gestures.dart' show PointerDeviceKind, kPrimaryButton;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/connection.dart';
 import '../core/errors.dart';
+import '../core/platform.dart';
+import '../core/save_file.dart';
 import '../core/settings.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/sftp.dart';
@@ -55,30 +58,72 @@ class SftpView extends StatefulWidget {
 class _SftpViewState extends State<SftpView> {
   bool _queueOpen = false;
 
+  /// On a phone, the side shown: one at a time, the server's first.
+  Side _shown = Side.remote;
+
   @override
   Widget build(BuildContext context) {
     final c = widget.controller;
     final ow = context.ow;
+    final l = context.l10n;
+    final compact = compactLayout(context);
     return ColoredBox(
       color: ow.colors.window,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (compact)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                OwSpace.s4,
+                OwSpace.s4,
+                OwSpace.s4,
+                0,
+              ),
+              child: SegmentedButton<Side>(
+                key: const ValueKey('sftp.side'),
+                showSelectedIcon: false,
+                segments: [
+                  ButtonSegment(
+                    value: Side.local,
+                    icon: const Icon(Icons.smartphone, size: 16),
+                    label: Text(l.thisComputer),
+                  ),
+                  ButtonSegment(
+                    value: Side.remote,
+                    icon: const Icon(Icons.dns_outlined, size: 16),
+                    label: Text(
+                      c.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+                selected: {_shown},
+                onSelectionChanged: (s) => setState(() => _shown = s.first),
+              ),
+            ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(OwSpace.s4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: FilePaneView(controller: c, side: Side.local),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: FilePaneView(controller: c, side: Side.remote),
-                  ),
-                ],
-              ),
+              child: compact
+                  ? FilePaneView(
+                      key: ValueKey(_shown),
+                      controller: c,
+                      side: _shown,
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: FilePaneView(controller: c, side: Side.local),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: FilePaneView(controller: c, side: Side.remote),
+                        ),
+                      ],
+                    ),
             ),
           ),
           _EditsBar(edits: c.edits),
@@ -319,6 +364,19 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
     }
   }
 
+  /// Copies files the user picks (Files, Drive, Downloads…) into this
+  /// side's folder, to upload from there.
+  Future<void> _importFiles() async {
+    final picked = await openFiles();
+    if (picked.isEmpty) return;
+    await _run(() async {
+      for (final f in picked) {
+        await File(f.path).copy(_pane.pathOf(f.name));
+      }
+    });
+    await _pane.refresh();
+  }
+
   Future<void> _newFolder() async {
     final l = context.l10n;
     final name = await askName(context, title: l.newFolder, action: l.create);
@@ -444,6 +502,13 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
   void _pointerDown(FileEntry e, PointerDownEvent d) {
     _focus.requestFocus();
     if (d.buttons != kPrimaryButton) return;
+    // On a phone a finger selects; a tap opens a folder (below), and a
+    // second tap never sends a file by mistake: the menu does (a long
+    // press). A desktop's touch screen keeps the double tap.
+    if (touchFirst && d.kind == PointerDeviceKind.touch) {
+      _pane.press(e.name, toggle: false, range: false);
+      return;
+    }
     final keys = HardwareKeyboard.instance;
     final now = DateTime.now();
     final again =
@@ -502,7 +567,10 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
             '',
             connected && _other.path.isNotEmpty ? _copySelection : null,
           ),
-          if (_remote && one != null && !one.isDir) ...[
+          // Into the phone's own files, through the system's sheet.
+          if (!_remote && !Device.userFiles && one != null && !one.isDir)
+            item(l.mobileSaveTo, '', () => exportFile(_pane.pathOf(one.name))),
+          if (_remote && one != null && !one.isDir && Device.runsPrograms) ...[
             item(l.openRemote, '', connected ? () => _openHere(one) : null),
             item(
               l.openRemoteWith,
@@ -521,6 +589,9 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
                 : () => _permissions(one),
           ),
         ],
+        // A phone's files come in through the system's picker.
+        if (!_remote && !Device.userFiles)
+          item(l.mobileImportFiles, '', _importFiles),
         item(l.newFolder, keysFor('⌘⇧N', '${l.ctrlShiftPrefix}N'), _newFolder),
         item(l.reload, isApple ? '⌘R' : 'F5', _pane.refresh),
         item(
@@ -937,6 +1008,10 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
             onSecondaryTapDown: (d) => _menu(d.globalPosition, null),
+            // A touch screen's right click.
+            onLongPressStart: touchFirst
+                ? ((d) => _menu(d.globalPosition, null))
+                : null,
             child: Opacity(opacity: pane.loading ? 0.6 : 1, child: list),
           ),
         ),
@@ -1064,6 +1139,12 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
       onPointerCancel: (_) => pane.keepSelection(),
       child: GestureDetector(
         onSecondaryTapDown: (d) => _menu(d.globalPosition, e),
+        // A touch screen's right click.
+        onLongPressStart: touchFirst
+            ? ((d) => _menu(d.globalPosition, e))
+            : null,
+        // A tap opens a folder, as a double click does here.
+        onTap: touchFirst && e.isDir ? () => _activate(e) : null,
         // Nothing else here wants the press: a plain Draggable would take
         // it at once and flash its badge on every click.
         child: MoveDraggable<FileDrag>(

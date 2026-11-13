@@ -10,6 +10,7 @@ import '../history/line_tracker.dart';
 import '../src/rust/api/session.dart';
 import 'frame.dart';
 import 'highlight.dart';
+import 'key_bar.dart' show KeyBarTarget;
 import 'palette.dart';
 import 'renderer.dart';
 
@@ -133,6 +134,9 @@ class TerminalController extends ConnectionController {
   /// Set by the visible pane: there is something new to draw, so it asks
   /// for frames again (it stops while nothing changes).
   VoidCallback? wakePane;
+
+  /// Set by the visible pane: what the phone's key bar types into.
+  KeyBarTarget? keyBar;
 
   /// The core says when the screen changed after the last look.
   StreamSubscription<bool>? _wakes;

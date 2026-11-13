@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="unlock_title">Desbloquear OpenWard</string>
+    <string name="unlock_subtitle">La clave de tu vault está en el Keystore de este teléfono.</string>
+    <string name="unlock_password">Usar la contraseña</string>
+    <string name="sessions_channel">Sesiones abiertas</string>
+    <plurals name="sessions_open">
+        <item quantity="one">%d sesión abierta</item>
+        <item quantity="other">%d sesiones abiertas</item>
+    </plurals>
+    <string name="sessions_text">OpenWard las mantiene conectadas en segundo plano.</string>
+</resources>

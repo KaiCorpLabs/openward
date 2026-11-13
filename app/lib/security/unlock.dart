@@ -1,6 +1,9 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/platform.dart';
 import '../core/providers.dart';
 import '../l10n/l10n.dart';
 import '../ui/tokens.dart';
@@ -109,11 +112,21 @@ class _VaultUnlockState extends ConsumerState<VaultUnlock> {
                     child: Text(l.vaultResume),
                   )
                 else if (deviceOnly) ...[
-                  Text(l.vaultDeviceWarning),
+                  Text(
+                    Device.mobile
+                        ? l.vaultDeviceWarningMobile
+                        : l.vaultDeviceWarning,
+                  ),
                   const SizedBox(height: 16),
                   FilledButton(
                     onPressed: busy ? null : unlock,
-                    child: Text(busy ? l.vaultBusy : l.vaultDeviceUnlock),
+                    child: Text(
+                      busy
+                          ? l.vaultBusy
+                          : Device.mobile
+                          ? l.vaultDeviceUnlockMobile
+                          : l.vaultDeviceUnlock,
+                    ),
                   ),
                 ] else ...[
                   TextField(
@@ -186,6 +199,9 @@ String nativeLabel(AppLocalizations l, NativeProtection protection) =>
     switch (protection) {
       NativeProtection.touchId => l.vaultTouchId,
       NativeProtection.windowsHello => l.vaultHello,
+      // Face ID or Touch ID on iOS; the fingerprint or the face on Android.
+      NativeProtection.biometric =>
+        Platform.isIOS ? l.vaultFaceId : l.vaultBiometricAndroid,
       NativeProtection.sessionKeyring => l.vaultKeyring,
       NativeProtection.unsupported => l.vaultNativeEnable,
     };

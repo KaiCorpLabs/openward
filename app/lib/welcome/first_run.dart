@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/errors.dart';
+import '../core/platform.dart';
 import '../core/providers.dart';
 import '../core/settings.dart';
 import '../hosts/import_ssh_config.dart';
@@ -167,6 +168,8 @@ class _FirstRunState extends ConsumerState<FirstRun> {
         Text(
           found
               ? '${l.importFound(previews.length)} ${l.importKeepsFile}'
+              : Device.mobile
+              ? l.welcomeNoConfigMobile
               : l.welcomeNoConfig,
           style: TextStyle(color: c.textMuted, height: 1.5),
         ),

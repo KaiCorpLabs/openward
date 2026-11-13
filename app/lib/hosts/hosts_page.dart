@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/match.dart';
+import '../core/platform.dart';
 import '../core/providers.dart';
 import '../home/recent.dart';
 import '../l10n/l10n.dart';
@@ -923,6 +924,10 @@ class _GroupHeader extends StatelessWidget {
       onSecondaryTapDown: onMenu == null
           ? null
           : (d) => onMenu!(d.globalPosition),
+      // A touch screen's right click.
+      onLongPressStart: touchFirst
+          ? (onMenu == null ? null : (d) => onMenu!(d.globalPosition))
+          : null,
       child: CallbackShortcuts(
         bindings: {
           if (onToggle != null && open)
@@ -1005,11 +1010,19 @@ class _HostItemState extends State<_HostItem> {
       key: ValueKey('hosts.${widget.card ? 'card' : 'row'}.${h.label}'),
       borderRadius: BorderRadius.circular(radius),
       onFocusChange: (f) => setState(() => _focused = f),
-      onTap: widget.onSelect,
-      onDoubleTap: () {
-        widget.onSelect();
-        a.connect(h);
-      },
+      // A tap connects on a phone, as a double click does here.
+      onTap: touchFirst
+          ? () {
+              widget.onSelect();
+              a.connect(h);
+            }
+          : widget.onSelect,
+      onDoubleTap: touchFirst
+          ? null
+          : () {
+              widget.onSelect();
+              a.connect(h);
+            },
       child: widget.card ? _card(context) : _row(context),
     );
     return WindowDraggable(
@@ -1021,6 +1034,13 @@ class _HostItemState extends State<_HostItem> {
           widget.onSelect();
           a.menu(d.globalPosition, a.hostMenu(h));
         },
+        // A touch screen's right click.
+        onLongPressStart: touchFirst
+            ? ((d) {
+                widget.onSelect();
+                a.menu(d.globalPosition, a.hostMenu(h));
+              })
+            : null,
         child: MouseRegion(
           onEnter: (_) => setState(() => _hovered = true),
           onExit: (_) => setState(() => _hovered = false),

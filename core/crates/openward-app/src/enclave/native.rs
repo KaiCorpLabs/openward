@@ -3,7 +3,7 @@ use ssh_key::PublicKey;
 #[derive(Default)]
 pub struct System;
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "ios"))]
 mod mac {
     use super::*;
     use security_framework::{
@@ -44,6 +44,8 @@ mod mac {
             .key_class(KeyClass::private())
             .label(&label(id)?)
             .cloud_sync(CloudSync::MatchSyncNo);
+        // iOS has only the data protection keychain.
+        #[cfg(target_os = "macos")]
         q.ignore_legacy_keychains();
         Ok(q)
     }
@@ -155,7 +157,7 @@ mod mac {
         }
     }
 }
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "ios")))]
 impl Backend for System {
     fn create(&self, _: &str) -> Result<PublicKey, Error> {
         Err(Error::Unavailable)

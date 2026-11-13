@@ -13198,8 +13198,9 @@ impl SseDecode for crate::api::security::NativeProtection {
         return match inner {
             0 => crate::api::security::NativeProtection::TouchId,
             1 => crate::api::security::NativeProtection::WindowsHello,
-            2 => crate::api::security::NativeProtection::SessionKeyring,
-            3 => crate::api::security::NativeProtection::Unsupported,
+            2 => crate::api::security::NativeProtection::Biometric,
+            3 => crate::api::security::NativeProtection::SessionKeyring,
+            4 => crate::api::security::NativeProtection::Unsupported,
             _ => unreachable!("Invalid variant for NativeProtection: {}", inner),
         };
     }
@@ -17515,8 +17516,9 @@ impl flutter_rust_bridge::IntoDart for crate::api::security::NativeProtection {
         match self {
             Self::TouchId => 0.into_dart(),
             Self::WindowsHello => 1.into_dart(),
-            Self::SessionKeyring => 2.into_dart(),
-            Self::Unsupported => 3.into_dart(),
+            Self::Biometric => 2.into_dart(),
+            Self::SessionKeyring => 3.into_dart(),
+            Self::Unsupported => 4.into_dart(),
             _ => unreachable!(),
         }
     }
@@ -21013,8 +21015,9 @@ impl SseEncode for crate::api::security::NativeProtection {
             match self {
                 crate::api::security::NativeProtection::TouchId => 0,
                 crate::api::security::NativeProtection::WindowsHello => 1,
-                crate::api::security::NativeProtection::SessionKeyring => 2,
-                crate::api::security::NativeProtection::Unsupported => 3,
+                crate::api::security::NativeProtection::Biometric => 2,
+                crate::api::security::NativeProtection::SessionKeyring => 3,
+                crate::api::security::NativeProtection::Unsupported => 4,
                 _ => {
                     unimplemented!("");
                 }

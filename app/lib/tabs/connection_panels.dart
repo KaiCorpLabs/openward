@@ -401,20 +401,34 @@ class FailureCard extends ConsumerWidget {
           const SizedBox(height: 12),
           Text(statusText(l, s), style: const TextStyle(height: 1.45)),
           const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              if (s.closed?.failure ?? s.errorCause case final e?) ...[
-                DetailsButton(e),
-                const Spacer(),
-              ],
-              OutlinedButton(
-                onPressed: () => _closeTab(ref),
-                child: Text(l.closeTheTab),
-              ),
-              const SizedBox(width: 8),
-              FilledButton(onPressed: s.start, child: Text(l.tryAgain)),
-            ],
+          // The details on the left and the actions on the right; on a
+          // phone too narrow for them in a row, one under the other.
+          Builder(
+            builder: (context) {
+              final e = s.closed?.failure ?? s.errorCause;
+              return Wrap(
+                alignment: e == null
+                    ? WrapAlignment.end
+                    : WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                runSpacing: 8,
+                children: [
+                  ?(e == null ? null : DetailsButton(e)),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.end,
+                    children: [
+                      OutlinedButton(
+                        onPressed: () => _closeTab(ref),
+                        child: Text(l.closeTheTab),
+                      ),
+                      FilledButton(onPressed: s.start, child: Text(l.tryAgain)),
+                    ],
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),

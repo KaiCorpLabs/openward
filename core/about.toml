@@ -18,6 +18,9 @@ targets = [
     "x86_64-apple-darwin",
     "x86_64-unknown-linux-gnu",
     "x86_64-pc-windows-msvc",
+    # The phones' (docs/plan/movil.md): jni on Android, and what iOS adds.
+    "aarch64-apple-ios",
+    "aarch64-linux-android",
 ]
 ignore-build-dependencies = true
 # Our own crates keep all rights reserved (LICENSE) and are not published.

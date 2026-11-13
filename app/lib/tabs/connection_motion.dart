@@ -622,8 +622,13 @@ class _ReconnectCardState extends ConsumerState<ReconnectCard> {
               style: TextStyle(fontSize: OwText.small, color: c.textMuted),
             ),
             const SizedBox(height: 14),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            // On a phone too narrow for one row, the actions go under.
+            Wrap(
+              alignment: widget.logId == null
+                  ? WrapAlignment.end
+                  : WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              runSpacing: 8,
               children: [
                 if (widget.logId case final id?) ...[
                   TextButton.icon(
@@ -632,22 +637,27 @@ class _ReconnectCardState extends ConsumerState<ReconnectCard> {
                     icon: const Icon(Icons.subject, size: 16),
                     label: Text(l.logSeeIt),
                   ),
-                  const Spacer(),
                 ],
-                OutlinedButton(
-                  key: const ValueKey('reconnect.close'),
-                  onPressed: () =>
-                      ref.read(tabsProvider.notifier).closeConnection(s),
-                  child: Text(l.closeTab),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.end,
+                  children: [
+                    OutlinedButton(
+                      key: const ValueKey('reconnect.close'),
+                      onPressed: () =>
+                          ref.read(tabsProvider.notifier).closeConnection(s),
+                      child: Text(l.closeTab),
+                    ),
+                    if (!trying) ...[
+                      FilledButton(
+                        key: const ValueKey('reconnect.now'),
+                        onPressed: s.start,
+                        child: Text(l.retryNow),
+                      ),
+                    ],
+                  ],
                 ),
-                if (!trying) ...[
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    key: const ValueKey('reconnect.now'),
-                    onPressed: s.start,
-                    child: Text(l.retryNow),
-                  ),
-                ],
               ],
             ),
           ],

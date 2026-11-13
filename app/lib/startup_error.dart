@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'core/errors.dart';
+import 'core/platform.dart';
 import 'core/settings.dart';
 import 'l10n/l10n.dart';
 import 'src/rust/api/vault.dart' show VaultErrorKind;
@@ -116,12 +117,16 @@ class _StartupError extends StatelessWidget {
                       onPressed: () => exit(1),
                       child: Text(l.startupQuit),
                     ),
-                    const SizedBox(width: 8),
-                    FilledButton(
-                      autofocus: true,
-                      onPressed: () => launchUrl(Uri.directory(dataDir)),
-                      child: Text(l.startupShowFolder),
-                    ),
+                    // A phone's data folder is the app's own: nothing
+                    // opens it.
+                    if (Device.runsPrograms) ...[
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        autofocus: true,
+                        onPressed: () => launchUrl(Uri.directory(dataDir)),
+                        child: Text(l.startupShowFolder),
+                      ),
+                    ],
                   ],
                 ),
               ],

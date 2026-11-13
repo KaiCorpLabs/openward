@@ -94,14 +94,32 @@ fi
 (cd core && cargo clippy -p openward-term --features alacritty --all-targets -- -D warnings)
 
 step "Rust: mobile targets compile"
-# As the mobile-check job: the crates that build C or need a prebuilt
-# library are left out until phase 2.
+# The whole core, as the Android and iOS apps build it (docs/plan/movil.md):
+# libghostty-vt for each target, Xcode's clang for iOS and the NDK's for
+# Android (aws-lc, SQLite).
 mobile=(aarch64-apple-ios aarch64-apple-ios-sim aarch64-linux-android x86_64-linux-android)
+zig_target() {
+  case "$1" in
+    aarch64-apple-ios) echo aarch64-ios ;;
+    aarch64-apple-ios-sim) echo aarch64-ios-simulator ;;
+    *) echo "$1" ;;
+  esac
+}
 (cd core && rustup target add "${mobile[@]}" >/dev/null)
+ndk="${ANDROID_NDK_HOME:-$(ls -d "${ANDROID_HOME:-$HOME/Library/Android/sdk}"/ndk/* 2>/dev/null | sort -V | tail -1)}"
+ndk_bin="$(ls -d "$ndk"/toolchains/llvm/prebuilt/*/bin 2>/dev/null | head -1)"
+if [[ -z "$ndk_bin" ]]; then
+  echo "error: Android NDK not found (ANDROID_NDK_HOME)" >&2
+  exit 1
+fi
 for target in "${mobile[@]}"; do
-  (cd core && cargo check --workspace --target "$target" \
-    --exclude openward-ghostty --exclude openward-ssh --exclude openward-pty \
-    --exclude openward-vault --exclude openward-app --exclude openward-ffi)
+  core/crates/openward-ghostty/build-libghostty.sh "$(zig_target "$target")" >/dev/null
+  env_vars=()
+  if [[ "$target" == *-android ]]; then
+    var="${target//-/_}"
+    env_vars=("CC_$var=$ndk_bin/$target"28-clang "AR_$var=$ndk_bin/llvm-ar")
+  fi
+  (cd core && env "${env_vars[@]+"${env_vars[@]}"}" cargo check --workspace --target "$target")
 done
 
 step "Rust: dependencies"
@@ -151,13 +169,19 @@ if [[ "$mode" == full ]]; then
   fi
   shots="${OPENWARD_SHOTS:-${TMPDIR:-/tmp}/openward-shots}"
   defines=(--dart-define=OPENWARD_REQUIRE_SERVERS=true "--dart-define=OPENWARD_SHOTS=$shots")
-  for test in ffi_test ui_test a11y_test; do
+  # mobile_test: the phone's layout on the desktop; on a simulator or an
+  # emulator it also tries the phone's keychain (docs/plan/movil.md).
+  for test in ffi_test ui_test a11y_test mobile_test; do
     step "App: integration_test/$test.dart"
     window_test 1800 fvm flutter test "integration_test/$test.dart" -d macos "${defines[@]}"
   done
   step "App: gallery"
   window_test 1800 fvm flutter drive -d macos --driver=test_driver/integration_test.dart \
     --target=integration_test/gallery_test.dart "${defines[@]}"
+  # The phones' apps build (cargokit builds the core for them too).
+  step "App: Android and iOS builds"
+  fvm flutter build apk --debug --target-platform android-arm64
+  fvm flutter build ios --simulator --debug
 fi
 cd "$root"
 

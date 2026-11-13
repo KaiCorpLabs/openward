@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/platform.dart';
 import '../core/providers.dart';
 import '../hosts/sidebar.dart' show tabStatus;
 import '../l10n/l10n.dart';
@@ -96,21 +97,22 @@ class TabStrip extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    Padding(
-                      padding: EdgeInsets.only(
-                        left: OwSpace.s1,
-                        bottom: style == TabStyle.folder ? OwSpace.s1 : 0,
-                        top: style == TabStyle.block ? OwSpace.s2 : 0,
-                      ),
-                      child: IconButton(
-                        tooltip: withKeys(
-                          l.newLocalTerminal,
-                          keysFor('⌘T', '${l.ctrlShiftPrefix}T'),
+                    if (Device.localTerminal)
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: OwSpace.s1,
+                          bottom: style == TabStyle.folder ? OwSpace.s1 : 0,
+                          top: style == TabStyle.block ? OwSpace.s2 : 0,
                         ),
-                        icon: const Icon(Icons.add, size: 16),
-                        onPressed: tabs.openLocal,
+                        child: IconButton(
+                          tooltip: withKeys(
+                            l.newLocalTerminal,
+                            keysFor('⌘T', '${l.ctrlShiftPrefix}T'),
+                          ),
+                          icon: const Icon(Icons.add, size: 16),
+                          onPressed: tabs.openLocal,
+                        ),
                       ),
-                    ),
                     // Empty, it moves the window; while something is
                     // dragged, it takes it as a tab of its own.
                     const Expanded(

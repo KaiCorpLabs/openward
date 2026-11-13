@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/address.dart';
+import '../core/platform.dart';
 import '../core/providers.dart';
 import '../home/recent.dart';
 import '../l10n/l10n.dart';
@@ -40,6 +41,7 @@ class Sidebar extends ConsumerStatefulWidget {
     super.key,
     required this.searchFocus,
     this.overWindow = false,
+    this.inDrawer = false,
   });
 
   /// The search over the hosts.
@@ -48,6 +50,9 @@ class Sidebar extends ConsumerStatefulWidget {
   /// Shown over the window (the sidebar is hidden or a rail): no room for
   /// the window buttons, and a button to keep it open instead of folding.
   final bool overWindow;
+
+  /// In the phone's drawer: no window buttons, and nothing to fold.
+  final bool inDrawer;
 
   @override
   ConsumerState<Sidebar> createState() => _SidebarState();
@@ -189,7 +194,8 @@ class _SidebarState extends ConsumerState<Sidebar> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (!widget.overWindow) const WindowButtonsSpace(),
+          if (!widget.overWindow && !widget.inDrawer)
+            const WindowButtonsSpace(),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               OwSpace.s6,
@@ -247,7 +253,9 @@ class _SidebarState extends ConsumerState<Sidebar> {
                       .read(tabsProvider.notifier)
                       .openPage(PageKind.settings),
                 ),
-                if (widget.overWindow)
+                if (widget.inDrawer)
+                  const SizedBox.shrink()
+                else if (widget.overWindow)
                   IconButton(
                     key: const ValueKey('sidebar.pin'),
                     tooltip: withKeys(l.pinSidebar, sidebarKeys(l)),
@@ -390,6 +398,13 @@ class _SidebarState extends ConsumerState<Sidebar> {
         actions.item(l.connect, connect),
         actions.item(l.saveAsHost, () => _saveAddress(t)),
       ]),
+      // A touch screen's right click.
+      onLongPressStart: touchFirst
+          ? ((d) => actions.menu(d.globalPosition, [
+              actions.item(l.connect, connect),
+              actions.item(l.saveAsHost, () => _saveAddress(t)),
+            ]))
+          : null,
       child: Padding(
         padding: const EdgeInsets.only(bottom: OwSpace.s1),
         child: CallbackShortcuts(
@@ -415,8 +430,8 @@ class _SidebarState extends ConsumerState<Sidebar> {
                   child: InkWell(
                     key: ValueKey(key),
                     borderRadius: BorderRadius.circular(ow.shape.radius + 2),
-                    onTap: clearAfter ? connect : null,
-                    onDoubleTap: clearAfter ? null : connect,
+                    onTap: clearAfter || touchFirst ? connect : null,
+                    onDoubleTap: clearAfter || touchFirst ? null : connect,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: OwSpace.s4,
@@ -484,6 +499,13 @@ class _SidebarState extends ConsumerState<Sidebar> {
           setState(() => _selected = h.id);
           actions.menu(d.globalPosition, actions.hostMenu(h));
         },
+        // A touch screen's right click.
+        onLongPressStart: touchFirst
+            ? ((d) {
+                setState(() => _selected = h.id);
+                actions.menu(d.globalPosition, actions.hostMenu(h));
+              })
+            : null,
         child: Padding(
           padding: const EdgeInsets.only(bottom: OwSpace.s1),
           child: Material(
@@ -541,11 +563,19 @@ class _SidebarState extends ConsumerState<Sidebar> {
       builder: (hovered) => InkWell(
         key: ValueKey('sidebar.host.${h.label}'),
         borderRadius: BorderRadius.circular(ow.shape.radius + 2),
-        onTap: () => setState(() => _selected = h.id),
-        onDoubleTap: () {
-          setState(() => _selected = h.id);
-          actions.connect(h);
-        },
+        // A tap connects on a phone, as a double click does here.
+        onTap: touchFirst
+            ? () {
+                setState(() => _selected = h.id);
+                actions.connect(h);
+              }
+            : () => setState(() => _selected = h.id),
+        onDoubleTap: touchFirst
+            ? null
+            : () {
+                setState(() => _selected = h.id);
+                actions.connect(h);
+              },
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: OwSpace.s4,
@@ -805,6 +835,28 @@ class _OpenRow extends ConsumerWidget {
         );
         action?.call();
       },
+      // A touch screen's right click.
+      onLongPressStart: touchFirst
+          ? ((d) async {
+              final action = await showMenu<VoidCallback>(
+                context: context,
+                position: RelativeRect.fromLTRB(
+                  d.globalPosition.dx,
+                  d.globalPosition.dy,
+                  d.globalPosition.dx,
+                  d.globalPosition.dy,
+                ),
+                items: [
+                  PopupMenuItem(
+                    value: close,
+                    height: 36,
+                    child: Text(closeText),
+                  ),
+                ],
+              );
+              action?.call();
+            })
+          : null,
       child: Padding(
         padding: const EdgeInsets.only(bottom: OwSpace.hair),
         child: FocusOutline(

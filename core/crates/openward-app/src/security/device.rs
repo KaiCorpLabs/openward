@@ -1,9 +1,9 @@
 //! Explicit beta "Later" protection by the OS session, separate from biometrics.
 //! This is never used as an implicit fallback for Touch ID or Windows Hello.
 use super::native::{Error, Key, Kind, Store};
-#[cfg(any(target_os = "macos", target_os = "linux", windows))]
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "linux", windows))]
 use zeroize::Zeroizing;
-#[cfg(any(target_os = "macos", target_os = "linux", windows))]
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "linux", windows))]
 const SERVICE: &str = "dev.openward.device-only.v1";
 pub struct System;
 fn validate(id: &str) -> Result<(), Error> {
@@ -18,13 +18,13 @@ fn validate(id: &str) -> Result<(), Error> {
     }
     Ok(())
 }
-#[cfg(any(target_os = "macos", target_os = "linux", windows))]
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "linux", windows))]
 fn random() -> Result<Key, Error> {
     let mut k = Zeroizing::new([0; 32]);
     getrandom::fill(k.as_mut()).map_err(|_| Error::Unavailable)?;
     Ok(k)
 }
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "ios"))]
 mod platform {
     use super::*;
     use security_framework::passwords::{self, PasswordOptions};
@@ -172,7 +172,27 @@ mod platform {
         Ok(())
     }
 }
-#[cfg(not(any(target_os = "macos", target_os = "linux", windows)))]
+#[cfg(target_os = "android")]
+mod platform {
+    use super::*;
+    use crate::security::android;
+    pub fn create(id: &str) -> Result<Key, Error> {
+        android::create(id, false)
+    }
+    pub fn read(id: &str) -> Result<Key, Error> {
+        android::read(id, false)
+    }
+    pub fn remove(id: &str) -> Result<(), Error> {
+        android::remove(id, false)
+    }
+}
+#[cfg(not(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "linux",
+    windows,
+    target_os = "android"
+)))]
 mod platform {
     use super::*;
     pub fn create(_: &str) -> Result<Key, Error> {
@@ -187,7 +207,13 @@ mod platform {
 }
 impl Store for System {
     fn kind(&self) -> Kind {
-        if cfg!(any(target_os = "macos", target_os = "linux", windows)) {
+        if cfg!(any(
+            target_os = "macos",
+            target_os = "ios",
+            target_os = "linux",
+            windows,
+            target_os = "android"
+        )) {
             Kind::SessionKeyring
         } else {
             Kind::Unsupported

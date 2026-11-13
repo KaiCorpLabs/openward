@@ -10393,6 +10393,162 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Elegir archivo de clave…'**
   String get chooseSshKeyFile;
+
+  /// No description provided for @keyBarCtrl.
+  ///
+  /// In es, this message translates to:
+  /// **'Control (se mantiene para la siguiente tecla)'**
+  String get keyBarCtrl;
+
+  /// No description provided for @keyBarAlt.
+  ///
+  /// In es, this message translates to:
+  /// **'Alt (se mantiene para la siguiente tecla)'**
+  String get keyBarAlt;
+
+  /// No description provided for @keyBarLeft.
+  ///
+  /// In es, this message translates to:
+  /// **'Flecha izquierda'**
+  String get keyBarLeft;
+
+  /// No description provided for @keyBarUp.
+  ///
+  /// In es, this message translates to:
+  /// **'Flecha arriba'**
+  String get keyBarUp;
+
+  /// No description provided for @keyBarDown.
+  ///
+  /// In es, this message translates to:
+  /// **'Flecha abajo'**
+  String get keyBarDown;
+
+  /// No description provided for @keyBarRight.
+  ///
+  /// In es, this message translates to:
+  /// **'Flecha derecha'**
+  String get keyBarRight;
+
+  /// No description provided for @keyBarHome.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicio'**
+  String get keyBarHome;
+
+  /// No description provided for @keyBarEnd.
+  ///
+  /// In es, this message translates to:
+  /// **'Fin'**
+  String get keyBarEnd;
+
+  /// No description provided for @keyBarPageUp.
+  ///
+  /// In es, this message translates to:
+  /// **'RePág'**
+  String get keyBarPageUp;
+
+  /// No description provided for @keyBarPageDown.
+  ///
+  /// In es, this message translates to:
+  /// **'AvPág'**
+  String get keyBarPageDown;
+
+  /// No description provided for @keyBarHideKeyboard.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocultar el teclado'**
+  String get keyBarHideKeyboard;
+
+  /// No description provided for @keyBarShowKeyboard.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar el teclado'**
+  String get keyBarShowKeyboard;
+
+  /// No description provided for @mobileHostsMenu.
+  ///
+  /// In es, this message translates to:
+  /// **'Hosts y biblioteca'**
+  String get mobileHostsMenu;
+
+  /// No description provided for @mobileTabs.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 pestaña abierta} other{{count} pestañas abiertas}}'**
+  String mobileTabs(int count);
+
+  /// No description provided for @mobileSftpHere.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir SFTP de este host'**
+  String get mobileSftpHere;
+
+  /// No description provided for @mobileBiggerText.
+  ///
+  /// In es, this message translates to:
+  /// **'Letra más grande'**
+  String get mobileBiggerText;
+
+  /// No description provided for @mobileSmallerText.
+  ///
+  /// In es, this message translates to:
+  /// **'Letra más pequeña'**
+  String get mobileSmallerText;
+
+  /// No description provided for @vaultFaceId.
+  ///
+  /// In es, this message translates to:
+  /// **'Face ID o Touch ID'**
+  String get vaultFaceId;
+
+  /// No description provided for @vaultBiometricAndroid.
+  ///
+  /// In es, this message translates to:
+  /// **'Huella o rostro'**
+  String get vaultBiometricAndroid;
+
+  /// No description provided for @mobileSaveTo.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar en…'**
+  String get mobileSaveTo;
+
+  /// No description provided for @mobileImportFiles.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar archivos del teléfono…'**
+  String get mobileImportFiles;
+
+  /// No description provided for @vaultDeviceWarningMobile.
+  ///
+  /// In es, this message translates to:
+  /// **'Protección temporal: cifrado con una clave guardada en el llavero de este teléfono (Keychain en iOS, Keystore en Android). Quien pueda desbloquear el teléfono podrá abrirlo. Si borras la app o cambias de teléfono sin contraseña ni kit, no podrás recuperar el vault. Crea una contraseña y guarda el kit para recuperarlo en otro equipo y hacer copias.'**
+  String get vaultDeviceWarningMobile;
+
+  /// No description provided for @vaultDeviceReminderMobile.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña y kit pendientes · protegido solo por este teléfono'**
+  String get vaultDeviceReminderMobile;
+
+  /// No description provided for @welcomeNoConfigMobile.
+  ///
+  /// In es, this message translates to:
+  /// **'Añade tus hosts a mano en un momento, o impórtalos de un archivo exportado de otro programa.'**
+  String get welcomeNoConfigMobile;
+
+  /// No description provided for @vaultDeviceUnlockMobile.
+  ///
+  /// In es, this message translates to:
+  /// **'Desbloquear con este teléfono'**
+  String get vaultDeviceUnlockMobile;
+
+  /// No description provided for @importFromFile.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar desde un archivo exportado (PuTTY, MobaXterm, SecureCRT, CSV…)'**
+  String get importFromFile;
 }
 
 class _AppLocalizationsDelegate

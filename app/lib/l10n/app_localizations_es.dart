@@ -6686,4 +6686,94 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get chooseSshKeyFile => 'Elegir archivo de clave…';
+
+  @override
+  String get keyBarCtrl => 'Control (se mantiene para la siguiente tecla)';
+
+  @override
+  String get keyBarAlt => 'Alt (se mantiene para la siguiente tecla)';
+
+  @override
+  String get keyBarLeft => 'Flecha izquierda';
+
+  @override
+  String get keyBarUp => 'Flecha arriba';
+
+  @override
+  String get keyBarDown => 'Flecha abajo';
+
+  @override
+  String get keyBarRight => 'Flecha derecha';
+
+  @override
+  String get keyBarHome => 'Inicio';
+
+  @override
+  String get keyBarEnd => 'Fin';
+
+  @override
+  String get keyBarPageUp => 'RePág';
+
+  @override
+  String get keyBarPageDown => 'AvPág';
+
+  @override
+  String get keyBarHideKeyboard => 'Ocultar el teclado';
+
+  @override
+  String get keyBarShowKeyboard => 'Mostrar el teclado';
+
+  @override
+  String get mobileHostsMenu => 'Hosts y biblioteca';
+
+  @override
+  String mobileTabs(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pestañas abiertas',
+      one: '1 pestaña abierta',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mobileSftpHere => 'Abrir SFTP de este host';
+
+  @override
+  String get mobileBiggerText => 'Letra más grande';
+
+  @override
+  String get mobileSmallerText => 'Letra más pequeña';
+
+  @override
+  String get vaultFaceId => 'Face ID o Touch ID';
+
+  @override
+  String get vaultBiometricAndroid => 'Huella o rostro';
+
+  @override
+  String get mobileSaveTo => 'Guardar en…';
+
+  @override
+  String get mobileImportFiles => 'Importar archivos del teléfono…';
+
+  @override
+  String get vaultDeviceWarningMobile =>
+      'Protección temporal: cifrado con una clave guardada en el llavero de este teléfono (Keychain en iOS, Keystore en Android). Quien pueda desbloquear el teléfono podrá abrirlo. Si borras la app o cambias de teléfono sin contraseña ni kit, no podrás recuperar el vault. Crea una contraseña y guarda el kit para recuperarlo en otro equipo y hacer copias.';
+
+  @override
+  String get vaultDeviceReminderMobile =>
+      'Contraseña y kit pendientes · protegido solo por este teléfono';
+
+  @override
+  String get welcomeNoConfigMobile =>
+      'Añade tus hosts a mano en un momento, o impórtalos de un archivo exportado de otro programa.';
+
+  @override
+  String get vaultDeviceUnlockMobile => 'Desbloquear con este teléfono';
+
+  @override
+  String get importFromFile =>
+      'Importar desde un archivo exportado (PuTTY, MobaXterm, SecureCRT, CSV…)';
 }

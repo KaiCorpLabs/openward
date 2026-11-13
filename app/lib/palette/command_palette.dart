@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/address.dart';
 import '../core/match.dart';
+import '../core/platform.dart';
 import '../core/providers.dart';
 import '../history/history.dart';
 import '../history/replay.dart';
@@ -281,19 +282,21 @@ class _PaletteState extends ConsumerState<_Palette> {
     }
 
     out.addAll([
-      action(
-        'local',
-        l.openLocal,
-        Icons.terminal,
-        tabs.openLocal,
-        keys: '${key}T',
-      ),
-      action(
-        'serial',
-        l.serialOpenEllipsis,
-        Icons.cable,
-        () => showSerialOpen(window, home),
-      ),
+      if (Device.localTerminal)
+        action(
+          'local',
+          l.openLocal,
+          Icons.terminal,
+          tabs.openLocal,
+          keys: '${key}T',
+        ),
+      if (Device.serialPorts)
+        action(
+          'serial',
+          l.serialOpenEllipsis,
+          Icons.cable,
+          () => showSerialOpen(window, home),
+        ),
       action('newHost', l.saveNewHost, Icons.add, () async {
         if (await showHostEditor(window, home)) {
           home.read(libraryProvider.notifier).refresh();

@@ -10,11 +10,15 @@ publish.workspace = true
 
 [dependencies]
 openward-proto = { path = "../openward-proto" }
+thiserror = "2"
+
+# Desktop only: on iOS it links IOKit's macOS symbols, which iOS lacks, and
+# Android's USB serial is a later phase (docs/plan/movil.md).
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 # Pinned exactly, as little-maintained dependencies are (ARCHITECTURE §3.2).
 # Without libudev: Linux ports are found in /sys, and neither the build nor
 # the package needs libudev.
 serialport = { version = "=4.10.1", default-features = false }
-thiserror = "2"
 
 [lints]
 workspace = true

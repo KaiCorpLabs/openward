@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/errors.dart';
+import '../core/platform.dart';
 import '../core/providers.dart';
 import '../hosts/editors.dart';
+import '../keys/key_dialogs.dart' show showImportKeyDialog;
 import '../l10n/l10n.dart';
 import '../keys/key_picker.dart';
 import '../src/rust/api/identities.dart';
@@ -94,6 +96,8 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
   }
 
   Future<String?> _pick() async {
+    // A phone hands over a copy, not the file: into the vault with it.
+    if (!Device.userFiles) return (await showImportKeyDialog(context))?.path;
     final file = await openFile(initialDirectory: _sshDir);
     return file == null ? null : tildePath(file.path);
   }

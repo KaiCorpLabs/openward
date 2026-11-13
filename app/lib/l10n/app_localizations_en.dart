@@ -6660,4 +6660,94 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chooseSshKeyFile => 'Choose key file…';
+
+  @override
+  String get keyBarCtrl => 'Control (held for the next key)';
+
+  @override
+  String get keyBarAlt => 'Alt (held for the next key)';
+
+  @override
+  String get keyBarLeft => 'Left arrow';
+
+  @override
+  String get keyBarUp => 'Up arrow';
+
+  @override
+  String get keyBarDown => 'Down arrow';
+
+  @override
+  String get keyBarRight => 'Right arrow';
+
+  @override
+  String get keyBarHome => 'Home';
+
+  @override
+  String get keyBarEnd => 'End';
+
+  @override
+  String get keyBarPageUp => 'PgUp';
+
+  @override
+  String get keyBarPageDown => 'PgDn';
+
+  @override
+  String get keyBarHideKeyboard => 'Hide the keyboard';
+
+  @override
+  String get keyBarShowKeyboard => 'Show the keyboard';
+
+  @override
+  String get mobileHostsMenu => 'Hosts and library';
+
+  @override
+  String mobileTabs(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count open tabs',
+      one: '1 open tab',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mobileSftpHere => 'Open SFTP for this host';
+
+  @override
+  String get mobileBiggerText => 'Bigger text';
+
+  @override
+  String get mobileSmallerText => 'Smaller text';
+
+  @override
+  String get vaultFaceId => 'Face ID or Touch ID';
+
+  @override
+  String get vaultBiometricAndroid => 'Fingerprint or face';
+
+  @override
+  String get mobileSaveTo => 'Save to…';
+
+  @override
+  String get mobileImportFiles => 'Import files from the phone…';
+
+  @override
+  String get vaultDeviceWarningMobile =>
+      'Temporary protection: encrypted with a key kept in this phone’s keychain (Keychain on iOS, Keystore on Android). Anyone who can unlock the phone may open it. Deleting the app or changing phones without a password or kit makes the vault unrecoverable. Set a password and save a kit for portable recovery and backups.';
+
+  @override
+  String get vaultDeviceReminderMobile =>
+      'Password and recovery kit pending · protected only by this phone';
+
+  @override
+  String get welcomeNoConfigMobile =>
+      'Add your hosts by hand in a moment, or import them from a file another program exported.';
+
+  @override
+  String get vaultDeviceUnlockMobile => 'Unlock with this phone';
+
+  @override
+  String get importFromFile =>
+      'Import from an exported file (PuTTY, MobaXterm, SecureCRT, CSV…)';
 }

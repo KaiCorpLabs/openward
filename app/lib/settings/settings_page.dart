@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/errors.dart';
+import '../core/platform.dart';
 import '../core/providers.dart';
 import '../core/settings.dart';
 import '../core/version.dart';
@@ -567,16 +568,18 @@ class _Terminal extends ConsumerWidget {
                 notifier.update((s) => s.copyWith(copyOnSelect: v)),
           ),
         ),
-        _Row(
-          label: l.rightClickPaste,
-          help: l.rightClickPasteHelp,
-          control: Switch(
-            key: const ValueKey('settings.rightClickPaste'),
-            value: s.rightClickPaste,
-            onChanged: (v) =>
-                notifier.update((s) => s.copyWith(rightClickPaste: v)),
+        // A mouse's: phones paste with a long press.
+        if (!touchFirst)
+          _Row(
+            label: l.rightClickPaste,
+            help: l.rightClickPasteHelp,
+            control: Switch(
+              key: const ValueKey('settings.rightClickPaste'),
+              value: s.rightClickPaste,
+              onChanged: (v) =>
+                  notifier.update((s) => s.copyWith(rightClickPaste: v)),
+            ),
           ),
-        ),
         SectionLabel(l.settingsHighlight),
         _Row(
           label: l.highlightOn,
@@ -749,16 +752,19 @@ class _Logs extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: OwSpace.s4),
-        _Row(
-          label: l.logsFolder,
-          help: app.logsDir(),
-          control: OutlinedButton.icon(
-            key: const ValueKey('settings.logFolder'),
-            onPressed: () => _revealFolder(app.logsDir()),
-            icon: const Icon(Icons.folder_outlined, size: 16),
-            label: Text(revealLabel(l)),
+        // A folder of this device to open in Finder or Explorer; a
+        // phone's is the app's own, which no file manager opens.
+        if (Device.runsPrograms)
+          _Row(
+            label: l.logsFolder,
+            help: app.logsDir(),
+            control: OutlinedButton.icon(
+              key: const ValueKey('settings.logFolder'),
+              onPressed: () => _revealFolder(app.logsDir()),
+              icon: const Icon(Icons.folder_outlined, size: 16),
+              label: Text(revealLabel(l)),
+            ),
           ),
-        ),
         Callout(
           tone: Tone.info,
           child: Row(

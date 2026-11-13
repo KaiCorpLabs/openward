@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/connection.dart' show systemsNotTold;
+import 'core/platform.dart';
 import 'core/providers.dart';
 import 'core/settings.dart';
 import 'home/start_page.dart';
@@ -21,6 +23,7 @@ import 'tabs/session_view.dart';
 import 'tabs/tab_strip.dart';
 import 'tabs/tabs.dart';
 import 'terminal/controller.dart';
+import 'terminal/key_bar.dart';
 import 'terminal/keys.dart';
 import 'identities/identities.dart';
 import 'identities/identities_page.dart';
@@ -42,6 +45,7 @@ import 'workspaces/workspaces_page.dart';
 import 'ui/tokens.dart';
 import 'l10n/l10n.dart';
 import 'window/chrome.dart';
+import 'window/mobile_shell.dart';
 import 'window/shortcuts.dart';
 import 'window/sidebar_state.dart';
 import 'welcome/first_run.dart';
@@ -71,6 +75,9 @@ class _HomeState extends ConsumerState<Home> {
   bool _guide = false;
 
   final FocusNode _search = FocusNode(debugLabel: 'host search');
+
+  /// The phone's layout: its drawer opens and closes from here.
+  final GlobalKey<ScaffoldState> _scaffold = GlobalKey();
 
   /// ⌘Q and closing the window ask first when that cuts something off.
   late final AppLifecycleListener _exit;
@@ -426,7 +433,13 @@ class _HomeState extends ConsumerState<Home> {
     );
     if (!welcomed && (empty || _guide)) {
       _guide = true;
-      return const FirstRun();
+      // On a phone, clear of the status bar and the home indicator.
+      return Device.mobile
+          ? ColoredBox(
+              color: context.ow.colors.window,
+              child: const SafeArea(child: FirstRun()),
+            )
+          : const FirstRun();
     }
     // Once per release, for who used an earlier one.
     if (!_newsShown && shouldShowNews(ref.read(settingsProvider))) {
@@ -448,7 +461,10 @@ class _HomeState extends ConsumerState<Home> {
     });
     ref.listen(tabsProvider.select((s) => s.current), (_, _) {
       ref.read(sidebarProvider.notifier).setPeek(false);
+      // A host opened from the drawer: what it opened in front.
+      _scaffold.currentState?.closeDrawer();
     });
+    if (compactLayout(context)) return _compact(current);
     final ow = context.ow;
     return CallbackShortcuts(
       bindings: _shortcuts(),
@@ -496,39 +512,7 @@ class _HomeState extends ConsumerState<Home> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             TabStrip(leading: _leading(mode)),
-                            Expanded(
-                              child: switch (current) {
-                                final SessionTab tab => TabView(
-                                  key: ObjectKey(tab),
-                                  tab: tab,
-                                ),
-                                final SftpTab tab => SftpView(
-                                  key: ObjectKey(tab),
-                                  controller: tab.controller,
-                                ),
-                                PageTab(page: PageKind.hosts) =>
-                                  const HostsPage(),
-                                PageTab(page: PageKind.settings) =>
-                                  const SettingsPage(),
-                                PageTab(page: PageKind.tunnels) =>
-                                  const TunnelsPage(),
-                                PageTab(page: PageKind.identities) =>
-                                  const IdentitiesPage(),
-                                PageTab(page: PageKind.keys) =>
-                                  const KeysPage(),
-                                PageTab(page: PageKind.snippets) =>
-                                  const SnippetsPage(),
-                                PageTab(page: PageKind.workspaces) =>
-                                  const WorkspacesPage(),
-                                PageTab(page: PageKind.knownHosts) =>
-                                  const KnownHostsPage(),
-                                PageTab(page: PageKind.logs) =>
-                                  const LogsPage(),
-                                PageTab(page: PageKind.log) =>
-                                  const LogViewPage(),
-                                null => const StartPage(),
-                              },
-                            ),
+                            Expanded(child: _content(current)),
                           ],
                         ),
                       ),
@@ -556,6 +540,71 @@ class _HomeState extends ConsumerState<Home> {
                     ),
                   ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// What the tab in front shows; with none, the start page.
+  Widget _content(OpenTab? current) => switch (current) {
+    final SessionTab tab => TabView(key: ObjectKey(tab), tab: tab),
+    final SftpTab tab => SftpView(
+      key: ObjectKey(tab),
+      controller: tab.controller,
+    ),
+    PageTab(page: PageKind.hosts) => const HostsPage(),
+    PageTab(page: PageKind.settings) => const SettingsPage(),
+    PageTab(page: PageKind.tunnels) => const TunnelsPage(),
+    PageTab(page: PageKind.identities) => const IdentitiesPage(),
+    PageTab(page: PageKind.keys) => const KeysPage(),
+    PageTab(page: PageKind.snippets) => const SnippetsPage(),
+    PageTab(page: PageKind.workspaces) => const WorkspacesPage(),
+    PageTab(page: PageKind.knownHosts) => const KnownHostsPage(),
+    PageTab(page: PageKind.logs) => const LogsPage(),
+    PageTab(page: PageKind.log) => const LogViewPage(),
+    null => const StartPage(),
+  };
+
+  /// The phone's: the hosts in a drawer, the tabs behind the title, and
+  /// under a session the keys its keyboard lacks.
+  Widget _compact(OpenTab? current) {
+    final ow = context.ow;
+    final session = ref.watch(tabsProvider.select((s) => s.currentSession));
+    return CallbackShortcuts(
+      bindings: _shortcuts(),
+      child: KeepFocus(
+        debugLabel: 'window',
+        autofocus: true,
+        child: Announcer(
+          child: SessionKeeper(
+            child: Scaffold(
+              key: _scaffold,
+              backgroundColor: ow.colors.window,
+              drawer: Drawer(
+                key: const ValueKey('mobile.drawer'),
+                backgroundColor: ow.colors.window,
+                width: math.min(340, MediaQuery.sizeOf(context).width * 0.88),
+                child: SafeArea(
+                  right: false,
+                  child: Sidebar(searchFocus: _search, inDrawer: true),
+                ),
+              ),
+              body: SafeArea(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    MobileTopBar(
+                      onMenu: () => _scaffold.currentState?.openDrawer(),
+                      onSearch: _palette,
+                    ),
+                    Expanded(child: _content(current)),
+                    if (current is SessionTab && session != null)
+                      KeyBar(controller: session),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

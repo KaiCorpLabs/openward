@@ -6,18 +6,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/providers.dart';
+import '../core/save_file.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/app.dart';
 
 Future<void> saveRecoveryPdf(OpenWard app) async {
-  final location = await getSaveLocation(
-    suggestedName: 'openward-recovery-kit.pdf',
-    acceptedTypeGroups: const [
+  final location = await chooseSave(
+    'openward-recovery-kit.pdf',
+    types: const [
       XTypeGroup(label: 'PDF', extensions: ['pdf']),
     ],
   );
   if (location == null) return;
-  await app.exportPreparedRecovery(path: location.path);
+  try {
+    await app.exportPreparedRecovery(path: location.path);
+  } catch (_) {
+    await location.cancel();
+    rethrow;
+  }
+  await location.finish();
 }
 
 /// No network image, clipboard or semantic string contains this secret.
