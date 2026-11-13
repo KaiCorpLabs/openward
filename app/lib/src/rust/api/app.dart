@@ -171,6 +171,13 @@ abstract class OpenWard implements RustOpaqueInterface {
   /// A free port here after `port`, to offer when that one is taken.
   int? freePortNear({required int port});
 
+  /// A device-bound P-256 key. Generation proves an authenticated signature
+  /// before saving public metadata; no vault lease is held over Touch ID.
+  Future<SshKeyResult> generateEnclaveKey({
+    required String name,
+    required String comment,
+  });
+
   /// Makes `~/.ssh/<name>` and its `.pub`. RSA takes a few seconds.
   Future<SshKeyResult> generateKey({
     required String name,

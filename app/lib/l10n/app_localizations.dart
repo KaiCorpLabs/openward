@@ -10339,6 +10339,60 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cifrado · kit de recuperación pendiente'**
   String get vaultMissingKitStatus;
+
+  /// No description provided for @enclaveCreate.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear en Secure Enclave (Touch ID)'**
+  String get enclaveCreate;
+
+  /// No description provided for @enclaveNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Clave ECDSA P-256 no exportable, protegida por Touch ID. Solo funciona en este Mac. Las copias del vault guardan su referencia, pero no permiten recuperar la clave privada. Conserva otra forma de entrar en tus servidores.'**
+  String get enclaveNote;
+
+  /// No description provided for @enclaveStored.
+  ///
+  /// In es, this message translates to:
+  /// **'Secure Enclave · vinculada al Mac'**
+  String get enclaveStored;
+
+  /// No description provided for @enclaveName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre de la clave'**
+  String get enclaveName;
+
+  /// No description provided for @enclaveDelete.
+  ///
+  /// In es, this message translates to:
+  /// **'La clave privada se eliminará de este Mac y no se puede recuperar desde una copia del vault. Revoca también la clave pública en los servidores donde la instalaste.'**
+  String get enclaveDelete;
+
+  /// No description provided for @enclaveBusy.
+  ///
+  /// In es, this message translates to:
+  /// **'Autoriza la firma con Touch ID…'**
+  String get enclaveBusy;
+
+  /// No description provided for @stageTouchId.
+  ///
+  /// In es, this message translates to:
+  /// **'Autoriza con Touch ID la firma SSH de {key}…'**
+  String stageTouchId(Object key);
+
+  /// No description provided for @chooseSshKey.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir clave SSH'**
+  String get chooseSshKey;
+
+  /// No description provided for @chooseSshKeyFile.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir archivo de clave…'**
+  String get chooseSshKeyFile;
 }
 
 class _AppLocalizationsDelegate

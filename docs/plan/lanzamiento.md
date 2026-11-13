@@ -19,7 +19,7 @@ Cobrar por la sync viene después, con Android e iOS ([prioridad 3](#prioridad-3
 
 - **Etapa 1 implementada** (P0–P7); hardware y uso real siguen abiertos en [#42](https://github.com/KaiCorpLabs/openward/issues/42).
 - **v0.4:** D0–D3 y D5–D7 completados; sesión y backends D4, onboarding y Ajustes D8 integrados. Candidata `0.4.0-beta.1+31` en `main`, sin etiqueta ni release de 0.4. La KDF cumple 500–1000 ms en la CI release de los tres sistemas ([#58](https://github.com/KaiCorpLabs/openward/pull/58), [evidencia](../evidence/kdf-calibration-v0.4.md)).
-- **Pendiente para cerrar v0.4:** maquetas originales, autenticación física y firma SSH con claves no exportables en Secure Enclave ([#33](https://github.com/KaiCorpLabs/openward/issues/33)); migraciones personales, una semana de uso cifrado y recuperación independiente ([#37](https://github.com/KaiCorpLabs/openward/issues/37)). No se ha modificado el vault personal durante esta preparación.
+- **Pendiente para cerrar v0.4:** maquetas originales y autenticación física, incluida la firma SSH con claves no exportables en Secure Enclave ([#33](https://github.com/KaiCorpLabs/openward/issues/33)); migraciones personales, una semana de uso cifrado y recuperación independiente ([#37](https://github.com/KaiCorpLabs/openward/issues/37)). No se ha modificado el vault personal durante esta preparación.
 - **v0.5–v0.7:** motor de sync, servidor/cuentas y operación pública pendientes en [#38](https://github.com/KaiCorpLabs/openward/issues/38), [#39](https://github.com/KaiCorpLabs/openward/issues/39) y [#40](https://github.com/KaiCorpLabs/openward/issues/40).
 - **Desde el 2026-11-10, el repositorio tiene todos los derechos reservados** ([ADR-007](../adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-10)). El plan de lanzamiento prevé el cliente con GPL-3.0; el servidor es privado desde la [revisión del 2026-11-13](../adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-13). La revisión legal sigue en #42.
 - **Distribución:** ninguna release pública; 28 borradores a fecha de esta revisión. Última etiqueta/borrador `v0.3.4-beta.4` en `5736b7c`, con macOS universal, Windows x64 y Linux x86_64/aarch64, checksums y procedencia. El [cask](https://github.com/KaiCorpLabs/homebrew-tap/blob/main/Casks/openward.rb) sigue en `0.3.4-beta.3`; el código candidato 0.4 se obtiene de los artefactos de CI. Firma, actualizaciones y paquetes siguen en [#41](https://github.com/KaiCorpLabs/openward/issues/41).
@@ -44,7 +44,7 @@ Cobrar por la sync viene después, con Android e iOS ([prioridad 3](#prioridad-3
 
 ### 1 · Touch ID y el Secure Enclave
 
-Sigue siendo una puerta de #33 porque puede adelantar la necesidad de Developer ID. La sonda ad hoc creó una clave efímera no exportable, pero Touch ID devolvió `SystemCancel` (-4): no valida autenticación física ni implementa la firma SSH en Secure Enclave. Registrar el resultado con el bundle real antes de decidir certificados o compras.
+Sigue siendo una puerta de #33 porque puede adelantar la necesidad de Developer ID. La sonda ad hoc creó una clave efímera no exportable, pero Touch ID devolvió `SystemCancel` (-4): no valida autenticación física. La firma SSH P-256 está ahora implementada ([contrato y pruebas](../../spec/secure-enclave-ssh-v1.md)); falta comprobarla en el bundle real. Registrar el resultado con el bundle real antes de decidir certificados o compras.
 
 ### 2 · Las decisiones del camino a la Community
 
@@ -59,7 +59,7 @@ Lo que cambia el modelo ya está decidido, el 2026-11-13: toda la sync de pago y
 ### 3 · v0.4, el vault cifrado
 
 - **D3:** `openward-crypto`, jerarquía y migración implementados y [#32](https://github.com/KaiCorpLabs/openward/issues/32) cerrado. [Formato y pruebas](../../spec/vault-sqlite-v2.md). Las maquetas originales siguen pendientes en #33.
-- **D4:** sesión con contraseña, bloqueo y backends de Touch ID/Windows Hello/llavero Linux implementados en [#53](https://github.com/KaiCorpLabs/openward/pull/53). #33 conserva las pruebas físicas y la implementación de firma SSH en Secure Enclave.
+- **D4:** sesión con contraseña, bloqueo y backends de Touch ID/Windows Hello/llavero Linux implementados en [#53](https://github.com/KaiCorpLabs/openward/pull/53). La firma SSH P-256 no exportable está implementada con Touch ID y referencias públicas en el vault ([contrato y límites](../../spec/secure-enclave-ssh-v1.md)); #33 conserva las maquetas y pruebas físicas.
 - **D5:** el kit de recuperación, el cambio de contraseña y el paquete de la clave de cuenta (0,5 semanas). Implementado en [#54](https://github.com/KaiCorpLabs/openward/pull/54); [formato, pruebas de recuperación y límites](../../spec/recovery-v1.md).
 - **D6:** los secretos en el vault, y el historial, los recientes y los registros cifrados (2 semanas). Implementado con guardado explícito, migración y barrera de formato3 ([contrato, pruebas y límites](../../spec/protected-local-v1.md)). Completa las mitigaciones de [AM-4, AM-7 y AM-9](../THREAT_MODEL.md#9-hallazgos-de-d0).
 - **D7:** implementada la copia de seguridad `.owvault`/JSON y su restauración en un vault vacío con identidad propia (0,5 semanas). [Contrato, pruebas y guía de recuperación](../../spec/vault-backup-v1.md).

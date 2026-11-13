@@ -14,6 +14,7 @@ String stageText(AppLocalizations l, StageView s) {
     StageKind.connecting => l.stageConnecting(s.label, hop),
     StageKind.authenticating => l.stageAuthenticating(s.label, hop),
     StageKind.touchKey => l.stageTouchKey(s.label),
+    StageKind.touchId => l.stageTouchId(s.label),
     StageKind.openingShell => l.stageOpeningShell(s.label),
     StageKind.openingSftp => l.stageOpeningSftp(s.label),
   };

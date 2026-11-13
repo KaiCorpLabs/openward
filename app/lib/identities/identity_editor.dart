@@ -8,6 +8,7 @@ import '../core/errors.dart';
 import '../core/providers.dart';
 import '../hosts/editors.dart';
 import '../l10n/l10n.dart';
+import '../keys/key_picker.dart';
 import '../src/rust/api/identities.dart';
 import '../src/rust/api/vault.dart';
 import '../ui/confirm.dart';
@@ -98,8 +99,10 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
   }
 
   Future<void> _addKey() async {
-    final path = await _pick();
-    if (path != null && !_keys.contains(path)) setState(() => _keys.add(path));
+    final path = await showSshKeyPicker(context);
+    if (mounted && path != null && !_keys.contains(path)) {
+      setState(() => _keys.add(path));
+    }
   }
 
   void _addTyped() {
@@ -510,8 +513,8 @@ class _KeyItem extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      info.path,
+                    SshKeyLabel(
+                      path: info.path,
                       style: monoStyle(
                         context,
                         size: 12,
@@ -616,7 +619,8 @@ class _KeyItem extends StatelessWidget {
                 ],
               ),
             )
-          else if (info.state == KeyStateKind.found)
+          else if (info.state == KeyStateKind.found &&
+              !info.path.startsWith('enclave:'))
             Padding(
               padding: const EdgeInsets.only(left: OwSpace.s12),
               child: TextButton(

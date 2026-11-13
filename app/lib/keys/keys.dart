@@ -50,6 +50,7 @@ String freeKeyName(
   SshKeyType type,
   Iterable<String> taken, {
   bool securityKey = false,
+  bool enclaveKey = false,
 }) {
   final base =
       switch (type) {
@@ -57,7 +58,11 @@ String freeKeyName(
         SshKeyType.ecdsa => 'id_ecdsa',
         SshKeyType.rsa => 'id_rsa',
       } +
-      (securityKey ? '_sk' : '');
+      (enclaveKey
+          ? '_enclave'
+          : securityKey
+          ? '_sk'
+          : '');
   final names = taken.toSet();
   if (!names.contains(base)) return base;
   for (var i = 2; ; i++) {

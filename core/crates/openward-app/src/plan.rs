@@ -293,7 +293,7 @@ fn hop(
         Some(files) => files
             .iter()
             .map(|f| {
-                if f.starts_with("vault:") {
+                if f.starts_with("vault:") || f.starts_with("enclave:") {
                     PathBuf::from(f)
                 } else {
                     local.path(f, &t)

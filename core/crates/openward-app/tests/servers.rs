@@ -2839,3 +2839,130 @@ fn encrypted_vault_key_references_authenticate_and_only_valid_passphrases_are_sa
     assert!(prompts.is_empty());
     term.close();
 }
+
+/// The Secure Enclave adapter's complete SSH path, against real OpenSSH.
+/// Only the device backend is replaced; DER conversion and russh are real.
+#[test]
+fn enclave_identity_authenticates_and_cancellation_or_missing_key_never_falls_back() {
+    use openward_app::enclave::{self, Backend, Error};
+    use openward_ssh::russh::keys::PublicKey;
+    use signature::Signer;
+    type Pause = (Sender<()>, Receiver<()>);
+    struct Device {
+        key: p256::ecdsa::SigningKey,
+        fail: Mutex<Option<Error>>,
+        pause: Mutex<Option<Pause>>,
+    }
+    impl Backend for Device {
+        fn create(&self, _: &str) -> Result<PublicKey, Error> {
+            Ok(PublicKey::new(
+                ssh_key::public::EcdsaPublicKey::from(self.key.verifying_key()).into(),
+                "",
+            ))
+        }
+        fn sign(&self, _: &str, _: &PublicKey, msg: &[u8]) -> Result<Vec<u8>, Error> {
+            if let Some(e) = self.fail.lock().unwrap().clone() {
+                return Err(e);
+            }
+            let pause = self.pause.lock().unwrap().take();
+            if let Some((entered, resume)) = pause {
+                entered.send(()).unwrap();
+                resume.recv_timeout(Duration::from_secs(15)).unwrap();
+            }
+            let sig: p256::ecdsa::Signature = self.key.sign(msg);
+            Ok(sig.to_der().as_bytes().to_vec())
+        }
+        fn remove(&self, _: &str, _: &PublicKey) -> Result<(), Error> {
+            Ok(())
+        }
+    }
+    let f = Fixture::new(servers!());
+    encrypt_fixture(&f);
+    let fixture_key = openward_ssh::keyfile::from_openssh(f.read("id_ecdsa")).unwrap();
+    let material = fixture_key.key_data().ecdsa().unwrap().private_key_bytes();
+    let device = Arc::new(Device {
+        key: p256::ecdsa::SigningKey::from_slice(material).unwrap(),
+        fail: Mutex::default(),
+        pause: Mutex::default(),
+    });
+    f.app.set_enclave(device.clone());
+    let made =
+        enclave::generate(f.app.security(), &*device, "S2 Enclave", "synthetic CI key").unwrap();
+    let host = f.host(
+        "enclave-auth",
+        "127.0.0.1",
+        BASTION,
+        Settings {
+            user: Some("demo".into()),
+            identity_files: Some(vec![made.path]),
+            identities_only: Some(true),
+            host_key_policy: Some(HostKeyPolicy::AcceptNew),
+            ..Settings::default()
+        },
+    );
+    #[cfg(unix)]
+    {
+        // Even an agent that can sign the same fixture key must not bypass
+        // the selected Secure Enclave identity's cancellation/missing state.
+        let socket = f._dir.path().join("enclave-agent.sock");
+        test_agent(&socket, vec![fixture_key], false);
+        let mut vault = f.app.vault();
+        let item = vault.get(host).unwrap();
+        let rev = item.rev;
+        let Data::Host(mut h) = item.body.data.clone() else {
+            unreachable!()
+        };
+        h.settings.agent = Some(Agent::Socket(socket.display().to_string()));
+        vault.update(host, rev, Data::Host(h)).unwrap();
+    }
+    let (term, events) = f.connect(host, |p| panic!("unexpected fallback prompt {p:?}"));
+    let mut touched = false;
+    loop {
+        match events.recv_timeout(Duration::from_secs(30)).unwrap() {
+            Event::Stage {
+                stage: Stage::TouchId,
+                label,
+                ..
+            } => {
+                assert_eq!(
+                    label, "S2 Enclave",
+                    "the UI must show the key name, not its opaque reference"
+                );
+                touched = true;
+            }
+            Event::Connected(_) => break,
+            Event::Closed { failure, .. } => panic!("enclave login failed: {failure:?}"),
+            _ => {}
+        }
+    }
+    assert!(touched);
+    term.close();
+    for error in [Error::Cancelled, Error::Missing, Error::Unavailable] {
+        *device.fail.lock().unwrap() = Some(error.clone());
+        let (_term, events) = f.connect(host, |p| panic!("unexpected hardware fallback {p:?}"));
+        let failure = loop {
+            match events.recv_timeout(Duration::from_secs(30)).unwrap() {
+                Event::Connected(_) => panic!("hardware failure authenticated"),
+                Event::Closed { failure, .. } => break failure,
+                _ => {}
+            }
+        };
+        if error == Error::Cancelled {
+            assert_eq!(failure, Some(Failure::Cancelled));
+        } else {
+            assert!(matches!(failure, Some(Failure::Other(_))));
+        }
+    }
+    // A signature that completes after locking must not reach authentication.
+    *device.fail.lock().unwrap() = None;
+    let (entered, waiting) = channel();
+    let (resume, paused) = channel();
+    *device.pause.lock().unwrap() = Some((entered, paused));
+    let (_term, events) = f.connect(host, |p| panic!("late signature fallback: {p:?}"));
+    waiting.recv_timeout(Duration::from_secs(15)).unwrap();
+    f.app.lock_vault().unwrap();
+    resume.send(()).unwrap();
+    let (result, prompts) = outcome(&events);
+    assert_eq!(result.unwrap_err(), Some(Failure::Cancelled));
+    assert!(prompts.is_empty());
+}

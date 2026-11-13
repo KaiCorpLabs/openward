@@ -64,6 +64,7 @@ class _NewKeyState extends ConsumerState<_NewKey> {
   /// Made on a security key: the file holds no secret.
   bool _onKey = false;
   bool _inVault = false;
+  bool _enclave = false;
 
   /// With [_onKey]: its PIN at every use (`verify-required`).
   bool _verify = false;
@@ -103,6 +104,7 @@ class _NewKeyState extends ConsumerState<_NewKey> {
     _type,
     (ref.read(keysProvider).value ?? const <SshKey>[]).map((k) => k.name),
     securityKey: _onKey,
+    enclaveKey: _enclave,
   );
 
   /// On a security key: it waits for the touch.
@@ -139,7 +141,43 @@ class _NewKeyState extends ConsumerState<_NewKey> {
     Navigator.pop(context, r.key);
   }
 
+  Future<void> _makeEnclave() async {
+    final l = context.l10n;
+    setState(() {
+      _busy = true;
+      _error = null;
+      _cause = null;
+    });
+    try {
+      final result = await ref
+          .read(openWardProvider)
+          .generateEnclaveKey(
+            name: _name.text.trim(),
+            comment: _comment.text.trim(),
+          );
+      if (!mounted) return;
+      if (result.failure case final failure?) {
+        setState(() {
+          _busy = false;
+          _error = keyFailureText(l, failure, _name.text.trim());
+          _cause = failure;
+        });
+        return;
+      }
+      ref.read(keysProvider.notifier).refresh();
+      Navigator.pop(context, result.key);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = l.keyFailed;
+      });
+      await showErrorDetails(context, e);
+    }
+  }
+
   Future<void> _make() async {
+    if (_enclave) return _makeEnclave();
     if (_onKey) return _makeOnKey();
     final l = context.l10n;
     final name = _name.text.trim();
@@ -195,7 +233,8 @@ class _NewKeyState extends ConsumerState<_NewKey> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (ref.watch(securityProvider).phase == VaultPhase.unlocked &&
-                !_onKey)
+                !_onKey &&
+                !_enclave)
               SwitchListTile(
                 key: const ValueKey('newKey.inVault'),
                 contentPadding: EdgeInsets.zero,
@@ -204,6 +243,28 @@ class _NewKeyState extends ConsumerState<_NewKey> {
                 onChanged: _busy ? null : (v) => setState(() => _inVault = v),
               ),
 
+            if (Theme.of(context).platform == TargetPlatform.macOS &&
+                ref.watch(securityProvider).phase == VaultPhase.unlocked)
+              SwitchListTile(
+                key: const ValueKey('newKey.enclave'),
+                contentPadding: EdgeInsets.zero,
+                title: Text(l.enclaveCreate),
+                value: _enclave,
+                onChanged: _busy
+                    ? null
+                    : (value) => setState(() {
+                        _enclave = value;
+                        if (value) {
+                          _type = SshKeyType.ecdsa;
+                          _onKey = false;
+                          _inVault = false;
+                        }
+                        _passphrase.clear();
+                        _again.clear();
+                        _pin.clear();
+                        if (!_nameTouched) _name.text = _freeName();
+                      }),
+              ),
             SwitchListTile(
               key: const ValueKey('newKey.onKey'),
               contentPadding: EdgeInsets.zero,
@@ -213,7 +274,10 @@ class _NewKeyState extends ConsumerState<_NewKey> {
                   ? null
                   : (on) => setState(() {
                       _onKey = on;
-                      if (on) _inVault = false;
+                      if (on) {
+                        _inVault = false;
+                        _enclave = false;
+                      }
                       // No RSA on security keys.
                       if (on && _type == SshKeyType.rsa) {
                         _type = SshKeyType.ed25519;
@@ -230,7 +294,9 @@ class _NewKeyState extends ConsumerState<_NewKey> {
                 showSelectedIcon: false,
                 segments: [
                   for (final t in SshKeyType.values)
-                    if (!_onKey || t != SshKeyType.rsa)
+                    if (_enclave
+                        ? t == SshKeyType.ecdsa
+                        : (!_onKey || t != SshKeyType.rsa))
                       ButtonSegment(value: t, label: Text(keyTypeLabel(t))),
                 ],
                 selected: {_type},
@@ -253,14 +319,16 @@ class _NewKeyState extends ConsumerState<_NewKey> {
             const SizedBox(height: 16),
             _labelled(
               context,
-              l.fileName,
+              _enclave || _inVault ? l.enclaveName : l.fileName,
               TextField(
                 key: const ValueKey('newKey.name'),
                 controller: _name,
                 enabled: !_busy,
                 style: mono,
                 onChanged: (_) => setState(() => _nameTouched = true),
-                decoration: const InputDecoration(prefixText: '~/.ssh/'),
+                decoration: InputDecoration(
+                  prefixText: _enclave || _inVault ? null : '~/.ssh/',
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -275,7 +343,16 @@ class _NewKeyState extends ConsumerState<_NewKey> {
               ),
             ),
             const SizedBox(height: 16),
-            if (_onKey) ...[
+            if (_enclave)
+              Text(
+                _busy ? l.enclaveBusy : l.enclaveNote,
+                key: const ValueKey('newKey.enclave.note'),
+                style: TextStyle(
+                  fontSize: OwText.small,
+                  color: _busy ? c.accentText : c.textMuted,
+                ),
+              )
+            else if (_onKey) ...[
               _labelled(
                 context,
                 l.securityKeyPinOptional,
@@ -338,7 +415,11 @@ class _NewKeyState extends ConsumerState<_NewKey> {
               ),
             const SizedBox(height: 12),
             Text(
-              l.newKeyWhere('~/.ssh/$name', '~/.ssh/$name.pub'),
+              _enclave
+                  ? l.enclaveStored
+                  : _inVault
+                  ? l.vaultStoredKey
+                  : l.newKeyWhere('~/.ssh/$name', '~/.ssh/$name.pub'),
               style: TextStyle(fontSize: OwText.small, color: c.textMuted),
             ),
             if (_error != null) ...[
