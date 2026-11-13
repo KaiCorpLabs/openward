@@ -349,7 +349,7 @@ jobs:
       - name: Analyze and unit tests
         working-directory: app
         run: |
-          flutter pub get
+          flutter pub get --enforce-lockfile
           flutter analyze
           flutter test test/
       - name: Locked Cargokit bootstrap regressions

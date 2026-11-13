@@ -3,7 +3,7 @@
 - **Estado:** propuesta (2026-11-10). Ordena por prioridad lo que falta hasta lanzar la Community: lo que ya planifican [community.md](community.md) y [v0.4.md](v0.4.md), y lo que deja sin plan su apartado «[Después de este plan](community.md#después-de-este-plan)».
 - **Fecha:** 2026-11-10.
 - **Base:** el [camino a la Community](community.md) (etapas 2 a 5), la hoja de ruta ([ARCHITECTURE §15](../ARCHITECTURE.md#15-hoja-de-ruta-con-puertas)) y el [modelo de amenazas](../THREAT_MODEL.md).
-- **Duración estimada:** unas 18 semanas de los planes que ya existen: 6,5 de la v0.4, 5 de la v0.5, 5 de la v0.6 y 1,5 de la v0.7. Lo propio del lanzamiento (distribución, web y legal) todavía no tiene estimación, y las dos semanas de uso del punto 9 van aparte. La 0.2 y la 0.3 fueron bastante más rápidas que sus planes.
+- **Estimación original (2026-11-10):** unas 18 semanas: 6,5 de la v0.4, 5 de la v0.5, 5 de la v0.6 y 1,5 de la v0.7. Es una referencia histórica, no trabajo restante ni una fecha comprometida; D3–D8 han avanzado como se detalla abajo. Distribución, web y legal siguen sin estimación, y las dos semanas de uso del punto 9 van aparte.
 
 ## Objetivo
 
@@ -14,18 +14,15 @@ Lanzar la **Community**, la edición gratuita, en macOS, Windows y Linux:
 
 La sync alojada de pago viene después ([prioridad 3](#prioridad-3-para-cobrar)).
 
-## Dónde estamos (2026-11-10)
+## Dónde estamos (2026-11-13)
 
-- **La etapa 1 está hecha** (P0–P7, de la 0.3.4-beta.1 a la beta.3).
-- **De la v0.4 están hechos D0–D2**, con sus decisiones aceptadas, y ADR-004 y ADR-005 aceptados.
-- **Desde el 2026-11-10, el repositorio tiene todos los derechos reservados** ([ADR-007](../adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-10)). Al lanzar, el cliente pasa a GPL-3.0 y el servidor sale con AGPL-3.0.
-- **No hay ninguna release publicada.** Las 27 del repositorio son borradores. Hoy la app solo llega por el cask `openward` de `kaicorplabs/tap` y por los artefactos de la CI.
-- **Lo que sale de la CI:**
-  - en macOS, un `.dmg` con firma ad hoc;
-  - en Windows, un `.zip` sin firmar;
-  - en Linux, un `.tar.gz` para x86_64 y otro para aarch64.
-  
-  Ninguno se actualiza solo.
+- **Etapa 1 implementada** (P0–P7); hardware y uso real siguen abiertos en [#42](https://github.com/KaiCorpLabs/openward/issues/42).
+- **v0.4:** D0–D3 y D5–D7 completados; sesión y backends D4, onboarding y Ajustes D8 integrados. Candidata `0.4.0-beta.1+31` en `main`, sin etiqueta ni release de 0.4. La KDF cumple 500–1000 ms en la CI release de los tres sistemas ([#58](https://github.com/KaiCorpLabs/openward/pull/58), [evidencia](../evidence/kdf-calibration-v0.4.md)).
+- **Pendiente para cerrar v0.4:** maquetas originales, autenticación física y firma SSH con claves no exportables en Secure Enclave ([#33](https://github.com/KaiCorpLabs/openward/issues/33)); migraciones personales, una semana de uso cifrado y recuperación independiente ([#37](https://github.com/KaiCorpLabs/openward/issues/37)). No se ha modificado el vault personal durante esta preparación.
+- **v0.5–v0.7:** sync de producción, servidor/cuentas y operación pública pendientes en [#38](https://github.com/KaiCorpLabs/openward/issues/38), [#39](https://github.com/KaiCorpLabs/openward/issues/39) y [#40](https://github.com/KaiCorpLabs/openward/issues/40).
+- **Desde el 2026-11-10, el repositorio tiene todos los derechos reservados** ([ADR-007](../adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-10)). El plan de lanzamiento prevé cliente GPL-3.0 y servidor AGPL-3.0; su revisión sigue en #42.
+- **Distribución:** ninguna release pública; 28 borradores a fecha de esta revisión. Última etiqueta/borrador `v0.3.4-beta.4` en `5736b7c`, con macOS universal, Windows x64 y Linux x86_64/aarch64, checksums y procedencia. El [cask](https://github.com/KaiCorpLabs/homebrew-tap/blob/main/Casks/openward.rb) sigue en `0.3.4-beta.3`; el código candidato 0.4 se obtiene de los artefactos de CI. Firma, actualizaciones y paquetes siguen en [#41](https://github.com/KaiCorpLabs/openward/issues/41).
+- **CI habitual:** `.dmg` macOS universal con firma ad hoc, `.zip` Windows x64 sin firmar y `.tar.gz` Linux x86_64; Linux aarch64 tiene su flujo de contenedor aparte. Ninguno se actualiza solo. Las pruebas automatizadas no cierran las puertas humanas.
 
 ## Prioridad 1: sin esto no se lanza
 
@@ -33,7 +30,7 @@ La sync alojada de pago viene después ([prioridad 3](#prioridad-3-para-cobrar))
 |---|---|---|---|
 | 1 | Prueba de Touch ID y el Secure Enclave con la app firmada ad hoc | 1 día | [v0.4, riesgos](v0.4.md#riesgos) |
 | 2 | Confirmar las 10 decisiones por defecto del camino a la Community | — | [community.md](community.md#decisiones-por-defecto-a-confirmar) |
-| 3 | v0.4: el vault cifrado (D3–D8) | 6,5 | [v0.4.md](v0.4.md#hitos) |
+| 3 | Cerrar v0.4: puertas restantes de #33 y #37 | pendiente de evidencia | [v0.4.md](v0.4.md#hitos) |
 | 4 | v0.5: sync con tu almacenamiento (S1–S6) | 5 | [etapa 3](community.md#etapa-3--v05-sync-con-tu-almacenamiento) |
 | 5 | v0.6: servidor y cuentas de KaiCorp Labs (C1–C6) | 5 | [etapa 4](community.md#etapa-4--v06-servidor-y-cuentas-de-kaicorp-labs) |
 | 6 | v0.7: el servidor en producción (M1–M3) | 1,5 | [etapa 5](community.md#etapa-5--v07-abierto-el-servidor-en-producción) |
@@ -46,7 +43,7 @@ La sync alojada de pago viene después ([prioridad 3](#prioridad-3-para-cobrar))
 
 ### 1 · Touch ID y el Secure Enclave
 
-Va primero porque puede adelantar un gasto. Si el llavero con biometría o las claves del Secure Enclave exigen una app firmada con Developer ID, la cuenta de Apple Developer (unos 99 € al año) hace falta antes de D4, no al final. Si no lo exigen, la firma espera al punto 7.
+Sigue siendo una puerta de #33 porque puede adelantar la necesidad de Developer ID. La sonda ad hoc creó una clave efímera no exportable, pero Touch ID devolvió `SystemCancel` (-4): no valida autenticación física ni implementa la firma SSH en Secure Enclave. Registrar el resultado con el bundle real antes de decidir certificados o compras.
 
 ### 2 · Las decisiones del camino a la Community
 
@@ -58,12 +55,12 @@ Las de la v0.4 y las tres de su modelo de amenazas están aceptadas desde el 202
 
 ### 3 · v0.4, el vault cifrado
 
-- **D3:** `openward-crypto`, el vault cifrado y la migración desde la 0.3 (1,5 semanas). Antes de D4, se revisan las maquetas del lienzo.
-- **D4:** el desbloqueo con contraseña, Touch ID, Windows Hello y el llavero de Linux, el bloqueo automático y las claves en el Secure Enclave (1,5 semanas).
+- **D3:** `openward-crypto`, jerarquía y migración implementados y [#32](https://github.com/KaiCorpLabs/openward/issues/32) cerrado. [Formato y pruebas](../../spec/vault-sqlite-v2.md). Las maquetas originales siguen pendientes en #33.
+- **D4:** sesión con contraseña, bloqueo y backends de Touch ID/Windows Hello/llavero Linux implementados en [#53](https://github.com/KaiCorpLabs/openward/pull/53). #33 conserva las pruebas físicas y la implementación de firma SSH en Secure Enclave.
 - **D5:** el kit de recuperación, el cambio de contraseña y el paquete de la clave de cuenta (0,5 semanas). Implementado en [#54](https://github.com/KaiCorpLabs/openward/pull/54); [formato, pruebas de recuperación y límites](../../spec/recovery-v1.md).
 - **D6:** los secretos en el vault, y el historial, los recientes y los registros cifrados (2 semanas). Implementado con guardado explícito, migración y barrera de formato3 ([contrato, pruebas y límites](../../spec/protected-local-v1.md)). Completa las mitigaciones de [AM-4, AM-7 y AM-9](../THREAT_MODEL.md#9-hallazgos-de-d0).
 - **D7:** implementada la copia de seguridad `.owvault`/JSON y su restauración en un vault vacío con identidad propia (0,5 semanas). [Contrato, pruebas y guía de recuperación](../../spec/vault-backup-v1.md).
-- **D8:** Ajustes › Seguridad y la 0.4.0-beta.1 (0,5 semanas).
+- **D8:** onboarding, Ajustes › Seguridad, notas y candidata `0.4.0-beta.1+31` integrados en [#57](https://github.com/KaiCorpLabs/openward/pull/57); KDF corregida y validada en #58. [#37](https://github.com/KaiCorpLabs/openward/issues/37) conserva las puertas personales de migración, uso y recuperación. No hay publicación de 0.4.
 
 ### 4 · v0.5, sync con tu almacenamiento
 
