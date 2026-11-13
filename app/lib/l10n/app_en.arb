@@ -2148,5 +2148,7 @@
   "enclaveName": "Key name",
   "enclaveDelete": "The private key will be deleted from this Mac and cannot be recovered from a vault backup. Also revoke its public key on the servers where you installed it.",
   "enclaveBusy": "Authorize the signature with Touch ID…",
-  "stageTouchId": "Authorize the SSH signature for {key} with Touch ID…"
+  "stageTouchId": "Authorize the SSH signature for {key} with Touch ID…",
+  "chooseSshKey": "Choose SSH key",
+  "chooseSshKeyFile": "Choose key file…"
 }

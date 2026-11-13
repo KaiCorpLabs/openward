@@ -10381,6 +10381,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Autoriza con Touch ID la firma SSH de {key}…'**
   String stageTouchId(Object key);
+
+  /// No description provided for @chooseSshKey.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir clave SSH'**
+  String get chooseSshKey;
+
+  /// No description provided for @chooseSshKeyFile.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir archivo de clave…'**
+  String get chooseSshKeyFile;
 }
 
 class _AppLocalizationsDelegate

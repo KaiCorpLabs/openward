@@ -56,7 +56,7 @@ Usar un perfil y un servidor desechables, con otra forma de acceso disponible.
    Enclave (Touch ID)». Debe fijar P-256 y explicar que la clave privada no viaja
    en las copias ni se recupera con el kit. No pide frase de paso.
 2. Autorizar la creación con Touch ID. Copiar/instalar la clave pública, elegirla
-   para el host y conectar por SSH. Cerrar/reabrir la app y repetir la conexión.
+   en el selector «Elegir clave SSH» del host o identidad y conectar por SSH. Cerrar/reabrir la app y repetir la conexión.
 3. Cancelar Touch ID al crear y al conectar: no debe aparecer una nueva clave ni
    completarse la conexión. Bloquear el vault durante el diálogo; una respuesta
    tardía no debe aceptar la firma, aunque se desbloquee otra vez.

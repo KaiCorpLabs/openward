@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openward/core/providers.dart';
 import 'package:openward/keys/key_dialogs.dart';
+import 'package:openward/keys/key_picker.dart';
 import 'package:openward/keys/keys_page.dart';
 import 'package:openward/l10n/l10n.dart';
 import 'package:openward/src/rust/api/keychain.dart';
@@ -157,6 +158,7 @@ void main() {
       addTearDown(t.view.resetDevicePixelRatio);
       await t.pumpWidget(harness(core, page: true));
       await t.pumpAndSettle();
+      expect(find.text('hardware-deploy'), findsOneWidget);
       await t.tap(find.byKey(const ValueKey('key.menu.hardware-deploy')));
       await t.pumpAndSettle();
       expect(find.text('Export…'), findsNothing);
@@ -170,6 +172,46 @@ void main() {
         findsOneWidget,
       );
       expect(find.byKey(const ValueKey('key.delete.confirm')), findsOneWidget);
+    },
+  );
+  testWidgets(
+    'managed SSH chooser selects the native reference by name without exposing its identifier',
+    (t) async {
+      final core = Core()..saved = [key];
+      String? selected;
+      await t.pumpWidget(
+        ProviderScope(
+          overrides: [openWardProvider.overrideWithValue(core)],
+          child: MaterialApp(
+            theme: materialTheme(OwThemes.grafito),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () async {
+                    selected = await showSshKeyPicker(context);
+                  },
+                  child: const Text('choose-key'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await t.tap(find.text('choose-key'));
+      await t.pumpAndSettle();
+      expect(find.text('hardware-deploy'), findsOneWidget);
+      expect(find.textContaining('enclave:'), findsNothing);
+      await t.tap(find.byKey(ValueKey('sshKey.pick.${key.path}')));
+      await t.pumpAndSettle();
+      expect(selected, key.path);
     },
   );
 }

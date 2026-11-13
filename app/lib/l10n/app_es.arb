@@ -4746,5 +4746,7 @@
   "enclaveName": "Nombre de la clave",
   "enclaveDelete": "La clave privada se eliminará de este Mac y no se puede recuperar desde una copia del vault. Revoca también la clave pública en los servidores donde la instalaste.",
   "enclaveBusy": "Autoriza la firma con Touch ID…",
-  "stageTouchId": "Autoriza con Touch ID la firma SSH de {key}…"
+  "stageTouchId": "Autoriza con Touch ID la firma SSH de {key}…",
+  "chooseSshKey": "Elegir clave SSH",
+  "chooseSshKeyFile": "Elegir archivo de clave…"
 }

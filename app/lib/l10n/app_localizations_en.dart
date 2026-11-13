@@ -6654,4 +6654,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String stageTouchId(Object key) {
     return 'Authorize the SSH signature for $key with Touch ID…';
   }
+
+  @override
+  String get chooseSshKey => 'Choose SSH key';
+
+  @override
+  String get chooseSshKeyFile => 'Choose key file…';
 }

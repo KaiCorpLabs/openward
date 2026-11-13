@@ -50,7 +50,8 @@ client to restore it. The existing backup format retains its record.
 With an encrypted, unlocked vault, macOS offers **Keys → New key → Create in
 Secure Enclave (Touch ID)**. Other systems show imported references but cannot
 generate or sign with them. The user can copy/install the public half, assign
-it to a host/identity, rename its vault label or delete it. No passphrase,
+it to a host/identity using the managed-key chooser (by name), rename its vault
+label or delete it. No passphrase,
 private export or reveal-in-Finder action is offered. The FFI independently
 rejects private export and passphrase changes; metadata never grants signing.
 This first implementation authenticates with the ordinary public key, not an

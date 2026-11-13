@@ -198,10 +198,8 @@ class _KeysPageState extends ConsumerState<KeysPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              k.path.startsWith('enclave:')
-                  ? l.enclaveStored
-                  : k.path.startsWith('vault:')
-                  ? l.vaultStoredKey
+              k.path.startsWith('enclave:') || k.path.startsWith('vault:')
+                  ? k.name
                   : k.path,
               overflow: TextOverflow.ellipsis,
               style: monoStyle(context, size: 12, color: c.text),

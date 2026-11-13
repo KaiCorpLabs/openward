@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/l10n.dart';
+import '../keys/key_picker.dart';
 import '../src/rust/api/identities.dart';
 import '../ui/page.dart';
 import '../ui/tokens.dart';
@@ -178,8 +179,8 @@ class _IdentitiesPageState extends ConsumerState<IdentitiesPage> {
                               spacing: 8,
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
-                                Text(
-                                  k.path,
+                                SshKeyLabel(
+                                  path: k.path,
                                   style: monoStyle(
                                     context,
                                     color: k.state == KeyStateKind.missing

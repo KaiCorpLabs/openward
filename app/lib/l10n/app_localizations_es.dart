@@ -6680,4 +6680,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String stageTouchId(Object key) {
     return 'Autoriza con Touch ID la firma SSH de $key…';
   }
+
+  @override
+  String get chooseSshKey => 'Elegir clave SSH';
+
+  @override
+  String get chooseSshKeyFile => 'Elegir archivo de clave…';
 }
