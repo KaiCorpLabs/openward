@@ -502,9 +502,10 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
   void _pointerDown(FileEntry e, PointerDownEvent d) {
     _focus.requestFocus();
     if (d.buttons != kPrimaryButton) return;
-    // A finger selects; a tap opens a folder (below), and a second tap
-    // never sends a file by mistake: the menu does (a long press).
-    if (d.kind == PointerDeviceKind.touch) {
+    // On a phone a finger selects; a tap opens a folder (below), and a
+    // second tap never sends a file by mistake: the menu does (a long
+    // press). A desktop's touch screen keeps the double tap.
+    if (touchFirst && d.kind == PointerDeviceKind.touch) {
       _pane.press(e.name, toggle: false, range: false);
       return;
     }
