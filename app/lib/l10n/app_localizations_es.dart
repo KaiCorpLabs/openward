@@ -6757,4 +6757,23 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mobileImportFiles => 'Importar archivos del teléfono…';
+
+  @override
+  String get vaultDeviceWarningMobile =>
+      'Protección temporal: cifrado con una clave guardada en el llavero de este teléfono (Keychain en iOS, Keystore en Android). Quien pueda desbloquear el teléfono podrá abrirlo. Si borras la app o cambias de teléfono sin contraseña ni kit, no podrás recuperar el vault. Crea una contraseña y guarda el kit para recuperarlo en otro equipo y hacer copias.';
+
+  @override
+  String get vaultDeviceReminderMobile =>
+      'Contraseña y kit pendientes · protegido solo por este teléfono';
+
+  @override
+  String get welcomeNoConfigMobile =>
+      'Añade tus hosts a mano en un momento, o impórtalos de un archivo exportado de otro programa.';
+
+  @override
+  String get vaultDeviceUnlockMobile => 'Desbloquear con este teléfono';
+
+  @override
+  String get importFromFile =>
+      'Importar desde un archivo exportado (PuTTY, MobaXterm, SecureCRT, CSV…)';
 }

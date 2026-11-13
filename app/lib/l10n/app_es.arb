@@ -4776,5 +4776,10 @@
   "vaultFaceId": "Face ID o Touch ID",
   "vaultBiometricAndroid": "Huella o rostro",
   "mobileSaveTo": "Guardar en…",
-  "mobileImportFiles": "Importar archivos del teléfono…"
+  "mobileImportFiles": "Importar archivos del teléfono…",
+  "vaultDeviceWarningMobile": "Protección temporal: cifrado con una clave guardada en el llavero de este teléfono (Keychain en iOS, Keystore en Android). Quien pueda desbloquear el teléfono podrá abrirlo. Si borras la app o cambias de teléfono sin contraseña ni kit, no podrás recuperar el vault. Crea una contraseña y guarda el kit para recuperarlo en otro equipo y hacer copias.",
+  "vaultDeviceReminderMobile": "Contraseña y kit pendientes · protegido solo por este teléfono",
+  "welcomeNoConfigMobile": "Añade tus hosts a mano en un momento, o impórtalos de un archivo exportado de otro programa.",
+  "vaultDeviceUnlockMobile": "Desbloquear con este teléfono",
+  "importFromFile": "Importar desde un archivo exportado (PuTTY, MobaXterm, SecureCRT, CSV…)"
 }

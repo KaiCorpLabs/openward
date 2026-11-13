@@ -6731,4 +6731,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mobileImportFiles => 'Import files from the phone…';
+
+  @override
+  String get vaultDeviceWarningMobile =>
+      'Temporary protection: encrypted with a key kept in this phone’s keychain (Keychain on iOS, Keystore on Android). Anyone who can unlock the phone may open it. Deleting the app or changing phones without a password or kit makes the vault unrecoverable. Set a password and save a kit for portable recovery and backups.';
+
+  @override
+  String get vaultDeviceReminderMobile =>
+      'Password and recovery kit pending · protected only by this phone';
+
+  @override
+  String get welcomeNoConfigMobile =>
+      'Add your hosts by hand in a moment, or import them from a file another program exported.';
+
+  @override
+  String get vaultDeviceUnlockMobile => 'Unlock with this phone';
+
+  @override
+  String get importFromFile =>
+      'Import from an exported file (PuTTY, MobaXterm, SecureCRT, CSV…)';
 }

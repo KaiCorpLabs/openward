@@ -433,7 +433,13 @@ class _HomeState extends ConsumerState<Home> {
     );
     if (!welcomed && (empty || _guide)) {
       _guide = true;
-      return const FirstRun();
+      // On a phone, clear of the status bar and the home indicator.
+      return Device.mobile
+          ? ColoredBox(
+              color: context.ow.colors.window,
+              child: const SafeArea(child: FirstRun()),
+            )
+          : const FirstRun();
     }
     // Once per release, for who used an earlier one.
     if (!_newsShown && shouldShowNews(ref.read(settingsProvider))) {

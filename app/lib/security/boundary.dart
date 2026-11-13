@@ -30,11 +30,20 @@ class _VaultHomeState extends ConsumerState<VaultHome> {
     final view = ref.watch(securityProvider);
     final app = ref.read(openWardProvider);
     opened |= vaultVisible(view) && !app.vaultOnboardingRequired();
+    final reminder = app.vaultNeedsPassword();
     return opened
         ? Column(
             children: [
-              if (app.vaultNeedsPassword()) const VaultReminder(),
-              const Expanded(child: Home()),
+              // Under a phone's status bar, not over it; the app below then
+              // has no top inset of its own.
+              if (reminder) const VaultReminder(),
+              Expanded(
+                child: MediaQuery.removePadding(
+                  context: context,
+                  removeTop: reminder,
+                  child: const Home(),
+                ),
+              ),
             ],
           )
         : const SizedBox.shrink();

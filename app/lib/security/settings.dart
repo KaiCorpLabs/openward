@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/platform.dart';
 import '../core/providers.dart';
 import '../history/history.dart';
 import '../l10n/l10n.dart';
@@ -59,7 +60,13 @@ class _VaultSettingsState extends ConsumerState<VaultSettings> {
           Text(l.vaultScope),
           const SizedBox(height: 16),
           if (view.phase == VaultPhase.legacy || deviceOnly) ...[
-            Text(deviceOnly ? l.vaultDeviceWarning : l.vaultLegacy),
+            Text(
+              deviceOnly
+                  ? (Device.mobile
+                        ? l.vaultDeviceWarningMobile
+                        : l.vaultDeviceWarning)
+                  : l.vaultLegacy,
+            ),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () => showDialog<void>(

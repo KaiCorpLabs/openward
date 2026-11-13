@@ -10519,6 +10519,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Importar archivos del teléfono…'**
   String get mobileImportFiles;
+
+  /// No description provided for @vaultDeviceWarningMobile.
+  ///
+  /// In es, this message translates to:
+  /// **'Protección temporal: cifrado con una clave guardada en el llavero de este teléfono (Keychain en iOS, Keystore en Android). Quien pueda desbloquear el teléfono podrá abrirlo. Si borras la app o cambias de teléfono sin contraseña ni kit, no podrás recuperar el vault. Crea una contraseña y guarda el kit para recuperarlo en otro equipo y hacer copias.'**
+  String get vaultDeviceWarningMobile;
+
+  /// No description provided for @vaultDeviceReminderMobile.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña y kit pendientes · protegido solo por este teléfono'**
+  String get vaultDeviceReminderMobile;
+
+  /// No description provided for @welcomeNoConfigMobile.
+  ///
+  /// In es, this message translates to:
+  /// **'Añade tus hosts a mano en un momento, o impórtalos de un archivo exportado de otro programa.'**
+  String get welcomeNoConfigMobile;
+
+  /// No description provided for @vaultDeviceUnlockMobile.
+  ///
+  /// In es, this message translates to:
+  /// **'Desbloquear con este teléfono'**
+  String get vaultDeviceUnlockMobile;
+
+  /// No description provided for @importFromFile.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar desde un archivo exportado (PuTTY, MobaXterm, SecureCRT, CSV…)'**
+  String get importFromFile;
 }
 
 class _AppLocalizationsDelegate

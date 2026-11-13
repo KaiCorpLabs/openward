@@ -101,20 +101,31 @@ class _TabCount extends StatelessWidget {
       key: const ValueKey('mobile.tabs'),
       tooltip: context.l10n.mobileTabs(count),
       onPressed: onTap,
-      icon: Container(
-        constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          border: Border.all(color: c.text, width: 1.6),
-          borderRadius: BorderRadius.circular(5),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          count > 99 ? ':D' : '$count',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: c.text,
+      // A rounded square with the count, as mobile browsers show it.
+      icon: SizedBox(
+        height: 22,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.all(color: c.text, width: 1.6),
+            borderRadius: BorderRadius.circular(5),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 22),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Center(
+                widthFactor: 1,
+                child: Text(
+                  count > 99 ? ':D' : '$count',
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1,
+                    fontWeight: FontWeight.w700,
+                    color: c.text,
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),

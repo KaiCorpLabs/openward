@@ -576,10 +576,15 @@ class _StartPageState extends ConsumerState<StartPage> {
           ref.read(libraryProvider.notifier).refresh();
         }
       }),
-      action(Icons.download_outlined, l.importAnything, null, () async {
-        await showImport(context, ref);
-        ref.read(libraryProvider.notifier).refresh();
-      }),
+      action(
+        Icons.download_outlined,
+        Device.installedPrograms ? l.importAnything : l.importFromFile,
+        null,
+        () async {
+          await showImport(context, ref);
+          ref.read(libraryProvider.notifier).refresh();
+        },
+      ),
       action(
         Icons.keyboard_command_key,
         l.commandPalette,

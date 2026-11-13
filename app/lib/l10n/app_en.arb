@@ -2171,5 +2171,10 @@
   "vaultFaceId": "Face ID or Touch ID",
   "vaultBiometricAndroid": "Fingerprint or face",
   "mobileSaveTo": "Save to…",
-  "mobileImportFiles": "Import files from the phone…"
+  "mobileImportFiles": "Import files from the phone…",
+  "vaultDeviceWarningMobile": "Temporary protection: encrypted with a key kept in this phone’s keychain (Keychain on iOS, Keystore on Android). Anyone who can unlock the phone may open it. Deleting the app or changing phones without a password or kit makes the vault unrecoverable. Set a password and save a kit for portable recovery and backups.",
+  "vaultDeviceReminderMobile": "Password and recovery kit pending · protected only by this phone",
+  "welcomeNoConfigMobile": "Add your hosts by hand in a moment, or import them from a file another program exported.",
+  "vaultDeviceUnlockMobile": "Unlock with this phone",
+  "importFromFile": "Import from an exported file (PuTTY, MobaXterm, SecureCRT, CSV…)"
 }
