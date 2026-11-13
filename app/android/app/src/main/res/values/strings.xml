@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="unlock_title">Unlock OpenWard</string>
+    <string name="unlock_subtitle">Your vault\'s key is kept in this phone\'s Keystore.</string>
+    <string name="unlock_password">Use the password</string>
+    <string name="sessions_channel">Open sessions</string>
+    <plurals name="sessions_open">
+        <item quantity="one">%d session open</item>
+        <item quantity="other">%d sessions open</item>
+    </plurals>
+    <string name="sessions_text">OpenWard keeps them connected in the background.</string>
+</resources>

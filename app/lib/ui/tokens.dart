@@ -185,6 +185,8 @@ String get platformMono => Platform.isMacOS || Platform.isIOS
     ? 'Menlo'
     : Platform.isWindows
     ? 'Consolas'
+    : Platform.isAndroid
+    ? 'monospace'
     : 'DejaVu Sans Mono';
 
 /// Type: another layer. Null families mean the platform's own.

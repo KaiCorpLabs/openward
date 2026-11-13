@@ -1018,8 +1018,37 @@ impl Target {
 }
 
 /// The security key plugged in, over HID where the build has it.
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 fn default_security_keys() -> Arc<dyn openward_fido::Authenticator> {
     Arc::new(openward_fido::hid::HidKeys)
+}
+
+/// Phones: no HID. Their keys come over NFC or USB, which nothing here
+/// speaks yet, so the system "does not let OpenWard talk to the key".
+#[cfg(any(target_os = "android", target_os = "ios"))]
+fn default_security_keys() -> Arc<dyn openward_fido::Authenticator> {
+    struct Unreachable;
+    impl openward_fido::Authenticator for Unreachable {
+        fn assert(
+            &self,
+            _: &str,
+            _: &[u8],
+            _: &[u8],
+            _: Option<&str>,
+        ) -> Result<openward_fido::Assertion, openward_fido::FidoError> {
+            Err(openward_fido::FidoError::NoAccess)
+        }
+        fn make(
+            &self,
+            _: openward_fido::Kind,
+            _: &str,
+            _: Option<&str>,
+            _: bool,
+        ) -> Result<openward_fido::Made, openward_fido::FidoError> {
+            Err(openward_fido::FidoError::NoAccess)
+        }
+    }
+    Arc::new(Unreachable)
 }
 
 /// Tries after losing a connection, before giving up.
@@ -1385,7 +1414,23 @@ async fn shell(
 /// their own mode. Refuse an unowned or replaceable location, and propagate
 /// failures to tighten it before opening any application data.
 fn create_private_dir(dir: &Path) -> std::io::Result<PathBuf> {
-    #[cfg(unix)]
+    // Phones: the app's own container, which the system's sandbox keeps
+    // from other apps; its parents belong to the system (Android's
+    // /data/user/0 is `system`'s, 0771), so the desktop's checks of who
+    // owns them do not apply. The folder is still the app's alone
+    // (docs/plan/movil.md, «Revisar después»: THREAT_MODEL).
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    {
+        use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
+        std::fs::DirBuilder::new()
+            .recursive(true)
+            .mode(0o700)
+            .create(dir)?;
+        let canonical = std::fs::canonicalize(dir)?;
+        std::fs::set_permissions(&canonical, std::fs::Permissions::from_mode(0o700))?;
+        Ok(canonical)
+    }
+    #[cfg(all(unix, not(any(target_os = "android", target_os = "ios"))))]
     {
         use std::io::{Error, ErrorKind};
         use std::os::unix::fs::{DirBuilderExt, MetadataExt, PermissionsExt};

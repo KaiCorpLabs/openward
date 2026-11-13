@@ -20,6 +20,7 @@ class MoveDraggable<T extends Object> extends Draggable<T> {
     super.dragAnchorStrategy,
     super.onDragStarted,
     super.onDragEnd,
+    super.maxSimultaneousDrags,
   });
 
   @override

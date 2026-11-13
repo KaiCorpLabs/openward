@@ -4,11 +4,19 @@
 //!
 //! Ports open for this program only: a second program (or a second tab)
 //! that tries finds it in use.
+//!
+//! Phones have none here: iOS has no serial ports, and Android's over USB
+//! are a later phase. There [`ports`] is empty and [`open`] finds nothing.
 
-use std::io::{self, Read, Write};
+use std::io;
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+use std::io::{Read, Write};
 use std::time::Duration;
 
-use openward_proto::{FlowControl, Parity, SerialLine};
+use openward_proto::SerialLine;
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+use openward_proto::{FlowControl, Parity};
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 use serialport::{DataBits, ErrorKind, SerialPort, SerialPortType, StopBits};
 
 /// How long a read waits before saying nothing came: how soon a reader
@@ -17,6 +25,7 @@ pub const READ_WAIT: Duration = Duration::from_millis(100);
 
 /// How long a write may wait for the other end (flow control) before it
 /// gives up.
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 const WRITE_WAIT: Duration = Duration::from_secs(5);
 
 /// A port of this computer.
@@ -32,6 +41,7 @@ pub struct PortInfo {
 
 /// The ports there are now, USB ones first. On macOS only the `cu.` side
 /// of each: its `tty.` twin waits for a carrier that consoles never give.
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub fn ports() -> Vec<PortInfo> {
     let mut found: Vec<PortInfo> = serialport::available_ports()
         .unwrap_or_default()
@@ -81,6 +91,7 @@ pub enum OpenError {
 
 /// Opens `path` with `line`'s settings: what reads from it and what
 /// writes to it.
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub fn open(path: &str, line: &SerialLine) -> Result<(Reader, Writer), OpenError> {
     let data_bits = match line.data_bits {
         5 => DataBits::Five,
@@ -116,6 +127,7 @@ pub fn open(path: &str, line: &SerialLine) -> Result<(Reader, Writer), OpenError
     split(port, path)
 }
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 fn split(port: Box<dyn SerialPort>, path: &str) -> Result<(Reader, Writer), OpenError> {
     let mut writer = port
         .try_clone()
@@ -124,6 +136,7 @@ fn split(port: Box<dyn SerialPort>, path: &str) -> Result<(Reader, Writer), Open
     Ok((Reader(port), Writer(writer)))
 }
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 fn open_error(path: &str, e: serialport::Error) -> OpenError {
     let path = path.to_owned();
     match e.kind() {
@@ -141,8 +154,9 @@ fn open_error(path: &str, e: serialport::Error) -> OpenError {
 }
 
 /// The reading side of an open port.
-pub struct Reader(Box<dyn SerialPort>);
+pub struct Reader(Port);
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 impl Reader {
     /// What came, `None` if nothing did within [`READ_WAIT`]. An error,
     /// or `Some(0)`, is a port that went (the cable was pulled).
@@ -164,8 +178,9 @@ impl Reader {
 }
 
 /// The writing side of an open port.
-pub struct Writer(Box<dyn SerialPort>);
+pub struct Writer(Port);
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 impl Writer {
     /// Hands `bytes` to the system, which sends them at the port's speed.
     /// No `flush`: it would wait until they are all out, a keystroke at a
@@ -180,6 +195,40 @@ impl Writer {
         self.0.set_break().map_err(io::Error::other)?;
         std::thread::sleep(Duration::from_millis(300));
         self.0.clear_break().map_err(io::Error::other)
+    }
+}
+
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+type Port = Box<dyn SerialPort>;
+
+/// No port on a phone: nothing of this kind is ever made.
+#[cfg(any(target_os = "android", target_os = "ios"))]
+enum Port {}
+
+#[cfg(any(target_os = "android", target_os = "ios"))]
+pub fn ports() -> Vec<PortInfo> {
+    Vec::new()
+}
+
+#[cfg(any(target_os = "android", target_os = "ios"))]
+pub fn open(path: &str, _: &SerialLine) -> Result<(Reader, Writer), OpenError> {
+    Err(OpenError::Missing(path.to_owned()))
+}
+
+#[cfg(any(target_os = "android", target_os = "ios"))]
+impl Reader {
+    pub fn read(&mut self, _: &mut [u8]) -> io::Result<Option<usize>> {
+        match self.0 {}
+    }
+}
+
+#[cfg(any(target_os = "android", target_os = "ios"))]
+impl Writer {
+    pub fn write(&mut self, _: &[u8]) -> io::Result<()> {
+        match self.0 {}
+    }
+    pub fn send_break(&mut self) -> io::Result<()> {
+        match self.0 {}
     }
 }
 

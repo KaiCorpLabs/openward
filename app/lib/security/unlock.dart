@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -186,6 +188,9 @@ String nativeLabel(AppLocalizations l, NativeProtection protection) =>
     switch (protection) {
       NativeProtection.touchId => l.vaultTouchId,
       NativeProtection.windowsHello => l.vaultHello,
+      // Face ID or Touch ID on iOS; the fingerprint or the face on Android.
+      NativeProtection.biometric =>
+        Platform.isIOS ? l.vaultFaceId : l.vaultBiometricAndroid,
       NativeProtection.sessionKeyring => l.vaultKeyring,
       NativeProtection.unsupported => l.vaultNativeEnable,
     };

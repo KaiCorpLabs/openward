@@ -26,6 +26,7 @@ import '../ui/themes.dart' show hostTerminal;
 import '../ui/tokens.dart';
 import 'controller.dart';
 import 'highlight.dart';
+import 'key_bar.dart';
 import 'keys.dart';
 import 'links.dart';
 import 'paste.dart';
@@ -63,7 +64,8 @@ class TerminalPane extends ConsumerStatefulWidget {
 }
 
 class TerminalPaneState extends ConsumerState<TerminalPane>
-    with SingleTickerProviderStateMixin, TextInputClient {
+    with SingleTickerProviderStateMixin, TextInputClient
+    implements KeyBarTarget {
   late final Ticker _ticker = createTicker(_onTick);
   final FocusNode focusNode = FocusNode(debugLabel: 'terminal');
   final GlobalKey _gridKey = GlobalKey();
@@ -121,6 +123,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     _c.wakePane = _wake;
     _c.visible = true;
     _c.focusTerminal = _focusSoon;
+    if (!widget.readOnly) _c.keyBar = this;
     _wake();
     // Its language for the line that marks a new shell after a cut.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -209,10 +212,14 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
       if (oldWidget.controller.wakePane == _wake) {
         oldWidget.controller.wakePane = null;
       }
+      if (oldWidget.controller.keyBar == this) {
+        oldWidget.controller.keyBar = null;
+      }
       _setGhost(null);
       _c.wakePane = _wake;
       _c.visible = true;
       _c.focusTerminal = _focusSoon;
+      if (!widget.readOnly) _c.keyBar = this;
       _wake();
       _applyCursor(ref.read(settingsProvider));
       _cols = _rows = 0;
@@ -230,6 +237,8 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     if (_c.wakePane == _wake) _c.wakePane = null;
     _c.visible = false;
     if (_c.focusTerminal == _focusSoon) _c.focusTerminal = null;
+    if (_c.keyBar == this) _c.keyBar = null;
+    _touchHold?.cancel();
     super.dispose();
   }
 
@@ -683,8 +692,16 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
       this,
       TextInputConfiguration(
         viewId: View.of(context).viewId,
-        inputType: TextInputType.multiline,
-        inputAction: TextInputAction.newline,
+        // Android's keyboards compose whole words before handing them
+        // over, which a shell needs at once (Tab, a single key for less):
+        // as a visible password nothing composes, as Termux does. CJK
+        // input methods then type Latin; docs/plan/movil.md.
+        inputType: Platform.isAndroid
+            ? TextInputType.visiblePassword
+            : TextInputType.multiline,
+        inputAction: Platform.isAndroid
+            ? TextInputAction.done
+            : TextInputAction.newline,
         autocorrect: false,
         enableSuggestions: false,
         enableIMEPersonalizedLearning: false,
@@ -729,7 +746,12 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
     for (var i = common; i < _placeholder.length; i++) {
       _sendKey(Hid.backspace);
     }
-    final typed = text.substring(common);
+    var typed = text.substring(common);
+    // Ctrl or Alt held on the phone's key bar: the first character goes
+    // with them, as a key.
+    if (typed.isNotEmpty && stickyMods.value != 0) {
+      typed = _withSticky(typed);
+    }
     if (typed.isNotEmpty) {
       for (final c in _targets) {
         c.line.text(typed, _SessionScreen(c.session));
@@ -828,6 +850,189 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
       );
   }
 
+  // ------------------------------------------------------------- key bar
+
+  @override
+  void barKey(int hid, int mods) {
+    if (widget.readOnly) return;
+    _renderer?.setCursorOn(true);
+    _sendKey(hid, mods: mods);
+  }
+
+  @override
+  void barText(String text) {
+    if (widget.readOnly) return;
+    final typed = stickyMods.value != 0 ? _withSticky(text) : text;
+    if (typed.isEmpty) return;
+    for (final c in _targets) {
+      c.line.text(typed, _SessionScreen(c.session));
+      c.session.text(text: typed);
+    }
+  }
+
+  @override
+  Future<void> barPaste() => _paste();
+
+  @override
+  void barKeyboard({required bool show}) {
+    if (show) {
+      if (!focusNode.hasFocus) focusNode.requestFocus();
+      _openInput();
+    } else {
+      _input?.close();
+      _input = null;
+      SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+    }
+  }
+
+  /// Sends the first character of [typed] with the key bar's Ctrl or Alt
+  /// and returns the rest. A letter goes as its key, so the encoder makes
+  /// what the program asked for (Ctrl+C, Alt+B); anything else with Alt
+  /// is Esc and the character, as `meta sends escape`.
+  String _withSticky(String typed) {
+    final mods = stickyMods.take();
+    final first = String.fromCharCode(typed.runes.first);
+    final rest = typed.substring(first.length);
+    final hid = hidForChar(first);
+    final upper = first != first.toLowerCase();
+    if (hid != 0) {
+      _sendKey(
+        hid,
+        mods: mods | (upper ? Mods.shift : 0),
+        text: first,
+        unshifted: first.toLowerCase().codeUnitAt(0),
+      );
+      return rest;
+    }
+    if (mods & Mods.alt != 0) {
+      _sendKey(Hid.escape);
+      return typed;
+    }
+    return typed;
+  }
+
+  // ---------------------------------------------------------------- touch
+
+  /// Fingers on the terminal, where each is now.
+  final Map<int, Offset> _touches = {};
+  Offset _touchStart = Offset.zero;
+  DateTime _touchAt = DateTime.fromMillisecondsSinceEpoch(0);
+  bool _touchMoved = false;
+
+  /// A long press started a selection, which the finger now drags.
+  bool _touchSelecting = false;
+  Timer? _touchHold;
+
+  /// Two fingers apart this much at the last zoom step.
+  double? _pinchFrom;
+
+  void _touchDown(PointerDownEvent e) {
+    _touches[e.pointer] = e.localPosition;
+    if (_touches.length == 2) {
+      _touchHold?.cancel();
+      final [a, b] = _touches.values.toList();
+      _pinchFrom = (a - b).distance;
+      return;
+    }
+    if (_touches.length > 2) return;
+    _touchStart = e.localPosition;
+    _touchAt = DateTime.now();
+    _touchMoved = false;
+    _touchSelecting = false;
+    _touchHold?.cancel();
+    // Held still: select from there (a long press, as text fields do).
+    _touchHold = Timer(kLongPressTimeout, () {
+      if (_touchMoved || _touches.length != 1) return;
+      HapticFeedback.selectionClick();
+      _touchSelecting = true;
+      _selecting = true;
+      _session.selectPress(x: _touchStart.dx, y: _touchStart.dy);
+      _session.selectDrag(
+        x: _touchStart.dx,
+        y: _touchStart.dy,
+        rectangle: false,
+      );
+    });
+  }
+
+  void _touchMove(PointerMoveEvent e) {
+    final before = _touches[e.pointer];
+    _touches[e.pointer] = e.localPosition;
+    if (_touches.length == 2 && _pinchFrom != null) {
+      final [a, b] = _touches.values.toList();
+      final now = (a - b).distance;
+      final from = _pinchFrom!;
+      // A step of the font size every so much apart, as ⌘+ and ⌘-.
+      if (from > 0 && (now / from > 1.15 || now / from < 0.87)) {
+        _c.zoomBy(now > from ? 1 : -1);
+        _pinchFrom = now;
+      }
+      return;
+    }
+    if (before == null || _touches.length != 1) return;
+    if (_touchSelecting) {
+      _session.selectDrag(
+        x: e.localPosition.dx,
+        y: e.localPosition.dy,
+        rectangle: false,
+      );
+      return;
+    }
+    if (!_touchMoved && (e.localPosition - _touchStart).distance > kTouchSlop) {
+      _touchMoved = true;
+      _touchHold?.cancel();
+    }
+    // Dragging the content down reveals history (positive lines).
+    if (_touchMoved) _scroll(e.localDelta.dy, e.localPosition);
+  }
+
+  void _touchUp(PointerUpEvent e) {
+    _touches.remove(e.pointer);
+    if (_touches.isNotEmpty) return;
+    _touchHold?.cancel();
+    if (_pinchFrom != null) {
+      _pinchFrom = null;
+      return;
+    }
+    if (_touchSelecting) {
+      _touchSelecting = false;
+      _selecting = false;
+      _session.selectRelease(x: e.localPosition.dx, y: e.localPosition.dy);
+      if (ref.read(settingsProvider).copyOnSelect) _copy();
+      _contextMenu(e.position);
+      return;
+    }
+    if (_touchMoved) return;
+    if (DateTime.now().difference(_touchAt) > kLongPressTimeout) return;
+    // A tap: a link opens; a selection goes; otherwise the keyboard.
+    final link = _session.linkAt(x: e.localPosition.dx, y: e.localPosition.dy);
+    if (link != null) {
+      openTerminalLink(context, link.url);
+      return;
+    }
+    if (_session.selectionText()?.isNotEmpty ?? false) {
+      _session.clearSelection();
+      return;
+    }
+    if (_programMouse) {
+      _pointer(PointerAction.down, PointerButton.left, e.localPosition);
+      _pointer(PointerAction.up, PointerButton.left, e.localPosition);
+    }
+    focusNode.requestFocus();
+    if (!widget.readOnly) _openInput();
+  }
+
+  void _touchCancel(PointerCancelEvent e) {
+    _touches.remove(e.pointer);
+    if (_touches.isNotEmpty) return;
+    _touchHold?.cancel();
+    _pinchFrom = null;
+    if (_touchSelecting) {
+      _touchSelecting = false;
+      _selecting = false;
+    }
+  }
+
   // ------------------------------------------------------------------ mouse
 
   PointerButton _button(int bits) {
@@ -871,9 +1076,9 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   }
 
   void _onPointerDown(PointerDownEvent e) {
-    focusNode.requestFocus();
     _scrollPixels = 0;
-    if (_isTouch(e)) return;
+    if (_isTouch(e)) return _touchDown(e);
+    focusNode.requestFocus();
     final pressed = e.buttons & ~_buttons;
     _buttons = e.buttons;
     final link = _linkUrl;
@@ -901,11 +1106,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   }
 
   void _onPointerMove(PointerMoveEvent e) {
-    if (_isTouch(e)) {
-      // Dragging the content down reveals history (positive lines).
-      _scroll(e.localDelta.dy, e.localPosition);
-      return;
-    }
+    if (_isTouch(e)) return _touchMove(e);
     if (_selecting) {
       _session.selectDrag(
         x: e.localPosition.dx,
@@ -956,7 +1157,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
   }
 
   void _onPointerUp(PointerUpEvent e) {
-    if (_isTouch(e)) return;
+    if (_isTouch(e)) return _touchUp(e);
     final released = _buttons & ~e.buttons;
     _buttons = e.buttons;
     if (_selecting && released & kPrimaryMouseButton != 0) {
@@ -1042,6 +1243,7 @@ class TerminalPaneState extends ConsumerState<TerminalPane>
                   onPointerDown: _onPointerDown,
                   onPointerMove: _onPointerMove,
                   onPointerUp: _onPointerUp,
+                  onPointerCancel: _touchCancel,
                   onPointerHover: _onHover,
                   onPointerSignal: _onSignal,
                   onPointerPanZoomUpdate: _onPanZoom,

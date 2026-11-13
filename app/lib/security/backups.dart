@@ -1,3 +1,7 @@
+import 'dart:io';
+
+import '../core/save_file.dart';
+
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,23 +16,35 @@ import 'state.dart';
 class VaultBackups extends ConsumerWidget {
   const VaultBackups({super.key});
   Future<void> open(BuildContext context, {BackupFormat? format}) async {
+    final to = format == null
+        ? null
+        : await chooseSave(
+            format == BackupFormat.encrypted
+                ? 'openward.owvault'
+                : 'openward.json',
+          );
     final path = format == null
-        ? (await openFile(
-            acceptedTypeGroups: const [
+        ? (await pickFile(
+            types: const [
               XTypeGroup(label: 'OpenWard', extensions: ['owvault', 'json']),
             ],
           ))?.path
-        : (await getSaveLocation(
-            suggestedName: format == BackupFormat.encrypted
-                ? 'openward.owvault'
-                : 'openward.json',
-          ))?.path;
-    if (path == null || !context.mounted) return;
+        : to?.path;
+    if (path == null || !context.mounted) {
+      await to?.cancel();
+      return;
+    }
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (_) => VaultBackupDialog(path: path, format: format),
     );
+    // On a phone, the copy just written goes where the user says.
+    if (to != null && await File(to.path).exists()) {
+      await to.finish();
+    } else {
+      await to?.cancel();
+    }
   }
 
   @override

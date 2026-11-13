@@ -1,0 +1,22 @@
+PODS:
+  - Flutter (1.0.0)
+  - openward_ffi (0.0.1):
+    - Flutter
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - openward_ffi (from `.symlinks/plugins/openward_ffi/ios`)
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  openward_ffi:
+    :path: ".symlinks/plugins/openward_ffi/ios"
+
+SPEC CHECKSUMS:
+  Flutter: 71a624a5bc0c04062bf19101d501e466baf2fb47
+  openward_ffi: eb63e6bcfa25508ef572ed0e4f0f359ce0507775
+
+PODFILE CHECKSUM: ce2a4dd764e1c7aeed6a7cdc5e61d092b6dc6d32
+
+COCOAPODS: 1.17.0

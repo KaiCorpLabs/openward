@@ -6,6 +6,9 @@ pub type Key = Zeroizing<[u8; 32]>;
 pub enum Kind {
     TouchId,
     WindowsHello,
+    /// A phone's own: Face ID or Touch ID on iOS, the fingerprint or the
+    /// face on Android (BiometricPrompt).
+    Biometric,
     SessionKeyring,
     Unsupported,
 }
@@ -31,6 +34,8 @@ pub struct System;
 pub fn kind() -> Kind {
     if cfg!(target_os = "macos") {
         Kind::TouchId
+    } else if cfg!(any(target_os = "ios", target_os = "android")) {
+        Kind::Biometric
     } else if cfg!(windows) {
         Kind::WindowsHello
     } else if cfg!(target_os = "linux") {
@@ -39,7 +44,7 @@ pub fn kind() -> Kind {
         Kind::Unsupported
     }
 }
-#[cfg(any(target_os = "macos", target_os = "linux", windows))]
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "linux", windows))]
 const SERVICE: &str = "dev.openward.local-unlock.v1";
 fn validate(id: &str) -> Result<(), Error> {
     let parts: Vec<_> = id.split('-').collect();
@@ -53,7 +58,7 @@ fn validate(id: &str) -> Result<(), Error> {
     }
     Ok(())
 }
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "linux"))]
 fn key(bytes: Zeroizing<Vec<u8>>) -> Result<Key, Error> {
     let b: [u8; 32] = bytes
         .as_slice()
@@ -61,7 +66,7 @@ fn key(bytes: Zeroizing<Vec<u8>>) -> Result<Key, Error> {
         .map_err(|_| Error::Failed("invalid native key length".into()))?;
     Ok(Zeroizing::new(b))
 }
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "linux"))]
 fn random() -> Result<Key, Error> {
     let mut bytes = Zeroizing::new([0; 32]);
     getrandom::fill(bytes.as_mut())
@@ -69,7 +74,7 @@ fn random() -> Result<Key, Error> {
     Ok(bytes)
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "ios"))]
 mod platform {
     use super::*;
     use security_framework::{
@@ -281,7 +286,30 @@ mod platform {
     }
 }
 
-#[cfg(not(any(target_os = "macos", windows, target_os = "linux")))]
+#[cfg(target_os = "android")]
+mod platform {
+    use super::*;
+    use crate::security::android;
+    pub fn create(id: &str) -> Result<Key, Error> {
+        // BiometricPrompt asks once to encrypt; reading back would ask a
+        // second time at enrolment, so the read is proved on first unlock.
+        android::create(id, true)
+    }
+    pub fn read(id: &str) -> Result<Key, Error> {
+        android::read(id, true)
+    }
+    pub fn remove(id: &str) -> Result<(), Error> {
+        android::remove(id, true)
+    }
+}
+
+#[cfg(not(any(
+    target_os = "macos",
+    target_os = "ios",
+    windows,
+    target_os = "linux",
+    target_os = "android"
+)))]
 mod platform {
     use super::*;
     pub fn create(_: &str) -> Result<Key, Error> {

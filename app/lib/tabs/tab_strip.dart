@@ -1,3 +1,5 @@
+import '../core/platform.dart';
+
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart'
@@ -96,21 +98,22 @@ class TabStrip extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    Padding(
-                      padding: EdgeInsets.only(
-                        left: OwSpace.s1,
-                        bottom: style == TabStyle.folder ? OwSpace.s1 : 0,
-                        top: style == TabStyle.block ? OwSpace.s2 : 0,
-                      ),
-                      child: IconButton(
-                        tooltip: withKeys(
-                          l.newLocalTerminal,
-                          keysFor('⌘T', '${l.ctrlShiftPrefix}T'),
+                    if (Device.localTerminal)
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: OwSpace.s1,
+                          bottom: style == TabStyle.folder ? OwSpace.s1 : 0,
+                          top: style == TabStyle.block ? OwSpace.s2 : 0,
                         ),
-                        icon: const Icon(Icons.add, size: 16),
-                        onPressed: tabs.openLocal,
+                        child: IconButton(
+                          tooltip: withKeys(
+                            l.newLocalTerminal,
+                            keysFor('⌘T', '${l.ctrlShiftPrefix}T'),
+                          ),
+                          icon: const Icon(Icons.add, size: 16),
+                          onPressed: tabs.openLocal,
+                        ),
                       ),
-                    ),
                     // Empty, it moves the window; while something is
                     // dragged, it takes it as a tab of its own.
                     const Expanded(

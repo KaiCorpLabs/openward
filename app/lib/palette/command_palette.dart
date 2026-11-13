@@ -3,6 +3,8 @@
 // does, the saved hosts and workspaces, the snippets and the commands run
 // before, found by typing a few letters. `>` first: only the actions.
 
+import '../core/platform.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -281,19 +283,21 @@ class _PaletteState extends ConsumerState<_Palette> {
     }
 
     out.addAll([
-      action(
-        'local',
-        l.openLocal,
-        Icons.terminal,
-        tabs.openLocal,
-        keys: '${key}T',
-      ),
-      action(
-        'serial',
-        l.serialOpenEllipsis,
-        Icons.cable,
-        () => showSerialOpen(window, home),
-      ),
+      if (Device.localTerminal)
+        action(
+          'local',
+          l.openLocal,
+          Icons.terminal,
+          tabs.openLocal,
+          keys: '${key}T',
+        ),
+      if (Device.serialPorts)
+        action(
+          'serial',
+          l.serialOpenEllipsis,
+          Icons.cable,
+          () => showSerialOpen(window, home),
+        ),
       action('newHost', l.saveNewHost, Icons.add, () async {
         if (await showHostEditor(window, home)) {
           home.read(libraryProvider.notifier).refresh();

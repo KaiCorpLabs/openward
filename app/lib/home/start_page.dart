@@ -1,3 +1,5 @@
+import '../core/platform.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -203,9 +205,12 @@ class _StartPageState extends ConsumerState<StartPage> {
                 ),
               ),
             ),
-            Divider(height: 1, color: c.border),
-            const SizedBox(height: 10),
-            _shortcuts(context),
+            // Shortcuts are a keyboard's: a phone has none to show.
+            if (!touchFirst) ...[
+              Divider(height: 1, color: c.border),
+              const SizedBox(height: 10),
+              _shortcuts(context),
+            ],
           ],
         ),
       ),
@@ -218,7 +223,11 @@ class _StartPageState extends ConsumerState<StartPage> {
     final l = context.l10n;
     final title = firstDay ? l.startHere : l.startTitle;
     final titleStyle = Theme.of(context).textTheme.titleLarge;
-    final labels = [l.localTerminal, l.protocolSerial, l.newHost];
+    final labels = [
+      if (Device.localTerminal) l.localTerminal,
+      if (Device.serialPorts) l.protocolSerial,
+      l.newHost,
+    ];
     return LayoutBuilder(
       builder: (context, box) {
         // Narrow: the buttons keep only their icon. What they take with
@@ -259,20 +268,24 @@ class _StartPageState extends ConsumerState<StartPage> {
             const SizedBox(width: 12),
             Semantics(header: true, child: Text(title, style: titleStyle)),
             const Spacer(),
-            button(
-              'start.local',
-              Icons.terminal,
-              l.localTerminal,
-              ref.read(tabsProvider.notifier).openLocal,
-            ),
-            const SizedBox(width: 8),
-            button(
-              'start.serial',
-              Icons.cable,
-              l.protocolSerial,
-              () => showSerialOpen(context, ref),
-            ),
-            const SizedBox(width: 8),
+            if (Device.localTerminal) ...[
+              button(
+                'start.local',
+                Icons.terminal,
+                l.localTerminal,
+                ref.read(tabsProvider.notifier).openLocal,
+              ),
+              const SizedBox(width: 8),
+            ],
+            if (Device.serialPorts) ...[
+              button(
+                'start.serial',
+                Icons.cable,
+                l.protocolSerial,
+                () => showSerialOpen(context, ref),
+              ),
+              const SizedBox(width: 8),
+            ],
             button('start.newHost', Icons.add, l.newHost, () async {
               if (await showHostEditor(context, ref)) {
                 ref.read(libraryProvider.notifier).refresh();
@@ -552,12 +565,13 @@ class _StartPageState extends ConsumerState<StartPage> {
           ),
         );
     final actions = [
-      action(
-        Icons.terminal,
-        l.openLocal,
-        '${key}T',
-        ref.read(tabsProvider.notifier).openLocal,
-      ),
+      if (Device.localTerminal)
+        action(
+          Icons.terminal,
+          l.openLocal,
+          '${key}T',
+          ref.read(tabsProvider.notifier).openLocal,
+        ),
       action(Icons.add, l.saveNewHost, '${key}N', () async {
         if (await showHostEditor(context, ref)) {
           ref.read(libraryProvider.notifier).refresh();

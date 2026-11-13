@@ -1,6 +1,8 @@
 // An SFTP tab: this machine on the left, the server on the right, the
 // transfer queue below and the connection's state at the bottom.
 
+import '../core/platform.dart';
+
 import 'dart:io' show Platform;
 
 import 'package:desktop_drop/desktop_drop.dart';
@@ -937,6 +939,10 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
             onSecondaryTapDown: (d) => _menu(d.globalPosition, null),
+            // A touch screen's right click.
+            onLongPressStart: touchFirst
+                ? ((d) => _menu(d.globalPosition, null))
+                : null,
             child: Opacity(opacity: pane.loading ? 0.6 : 1, child: list),
           ),
         ),
@@ -1064,6 +1070,10 @@ class _FilePaneViewState extends ConsumerState<FilePaneView> {
       onPointerCancel: (_) => pane.keepSelection(),
       child: GestureDetector(
         onSecondaryTapDown: (d) => _menu(d.globalPosition, e),
+        // A touch screen's right click.
+        onLongPressStart: touchFirst
+            ? ((d) => _menu(d.globalPosition, e))
+            : null,
         // Nothing else here wants the press: a plain Draggable would take
         // it at once and flash its badge on every click.
         child: MoveDraggable<FileDrag>(

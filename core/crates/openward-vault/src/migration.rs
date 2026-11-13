@@ -36,9 +36,11 @@ pub(crate) fn next_clock(previous: u64) -> Result<u64> {
 /// Protect the literal path before taking a lock or letting SQLite interpret it.
 /// Symlink parents are resolved, a symlink/hardlink leaf is refused. Unix
 /// parents follow the same trusted/sticky ancestry policy as App::open.
+/// On phones the app's container is the system's to protect (its parents
+/// belong to the system), so only the private parent is checked there.
 fn path(path: &Path, exists: bool) -> Result<(PathBuf, Option<(u64, u64)>)> {
     let absolute = std::path::absolute(path)?;
-    #[cfg(unix)]
+    #[cfg(all(unix, not(any(target_os = "android", target_os = "ios"))))]
     {
         use std::os::unix::fs::MetadataExt;
         let uid = rustix::process::geteuid().as_raw();

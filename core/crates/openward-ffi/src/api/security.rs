@@ -163,6 +163,7 @@ impl OpenWard {
 pub enum NativeProtection {
     TouchId,
     WindowsHello,
+    Biometric,
     SessionKeyring,
     Unsupported,
 }
@@ -173,6 +174,7 @@ impl OpenWard {
         match openward_app::security::native::kind() {
             Kind::TouchId => NativeProtection::TouchId,
             Kind::WindowsHello => NativeProtection::WindowsHello,
+            Kind::Biometric => NativeProtection::Biometric,
             Kind::SessionKeyring => NativeProtection::SessionKeyring,
             Kind::Unsupported => NativeProtection::Unsupported,
         }

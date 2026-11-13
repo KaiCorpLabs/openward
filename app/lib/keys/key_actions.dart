@@ -2,9 +2,11 @@
 // on a server: renaming it, giving it another passphrase, exporting it,
 // finding it in the file manager and deleting it.
 
+import '../core/platform.dart';
+import '../core/save_file.dart';
+
 import 'dart:io';
 
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -40,8 +42,9 @@ Future<void> revealKey(WidgetRef ref, SshKey k) async {
 Future<void> exportKey(BuildContext context, WidgetRef ref, SshKey k) async {
   final l = context.l10n;
   final messenger = ScaffoldMessenger.of(context);
-  final to = await getSaveLocation(suggestedName: k.name);
-  if (to == null || !context.mounted) return;
+  final to = await chooseSave(k.name);
+  if (to == null) return;
+  if (!context.mounted) return to.cancel();
   final app = ref.read(openWardProvider);
   try {
     if (k.path.startsWith('vault:')) {
@@ -51,17 +54,24 @@ Future<void> exportKey(BuildContext context, WidgetRef ref, SshKey k) async {
         body: l.vaultExportKeyWarning,
         action: l.exportEllipsis,
       );
-      if (!sure) return;
+      if (!sure) {
+        await to.cancel();
+        return;
+      }
       await app.exportVaultKey(path: k.path, to: to.path);
     } else {
       final from = app.keyFilePath(path: k.path);
       await File(from).copy(to.path);
-      if (!Platform.isWindows) await Process.run('chmod', ['600', to.path]);
+      if (Device.runsPrograms && !Platform.isWindows) {
+        await Process.run('chmod', ['600', to.path]);
+      }
     }
+    if (!await to.finish()) return;
     messenger.showSnackBar(
-      SnackBar(content: Text(l.keyExported(k.name, to.path))),
+      SnackBar(content: Text(l.keyExported(k.name, to.shown))),
     );
   } catch (e) {
+    await to.cancel();
     showErrorNotice(messenger, l.keyFailed, e);
   }
 }

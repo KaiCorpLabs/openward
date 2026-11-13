@@ -1,3 +1,5 @@
+import '../core/platform.dart';
+
 import 'package:flutter/material.dart';
 
 import 'focus_ring.dart';
@@ -218,6 +220,8 @@ class KeyCap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A phone has no keyboard to show the shortcuts of.
+    if (touchFirst) return const SizedBox.shrink();
     final ow = context.ow;
     return ExcludeSemantics(
       child: Container(

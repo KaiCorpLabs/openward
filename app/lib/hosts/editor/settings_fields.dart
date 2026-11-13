@@ -1,5 +1,7 @@
 // The connection settings, each set here or inherited.
 
+import '../../core/platform.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -119,13 +121,13 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
       'host_key_policy',
       'legacy_host_keys',
       'persistent_session',
-      'mosh',
-      'mosh_server',
+      // Programs of this device and its agent: not on a phone.
+      if (Device.runsPrograms) ...['mosh', 'mosh_server'],
       ..._terminalFields,
       'session_log',
       'keepalive_secs',
       'connect_timeout_secs',
-      'agent',
+      if (Device.systemAgent) 'agent',
       if (widget.system == null) 'read_os_release',
     ],
     ProtocolKind.telnet => [
@@ -594,7 +596,11 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
             isExpanded: true,
             items: [
               for (final p in ProtocolKind.values)
-                DropdownMenuItem(value: p, child: Text(_protocolName(l, p))),
+                // Serial ports only where there are (kept when already set).
+                if (p != ProtocolKind.serial ||
+                    Device.serialPorts ||
+                    f.protocol == p)
+                  DropdownMenuItem(value: p, child: Text(_protocolName(l, p))),
             ],
             onChanged: (v) => f.update(() => f.protocol = v),
           ),
@@ -715,10 +721,13 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
                       value: RouteKind.jump,
                       child: Text(l.routeJump),
                     ),
-                    const DropdownMenuItem(
-                      value: RouteKind.command,
-                      child: Text('ProxyCommand'),
-                    ),
+                    // A program of this device: not on a phone (kept
+                    // when already set, from a desktop).
+                    if (Device.runsPrograms || f.route == RouteKind.command)
+                      const DropdownMenuItem(
+                        value: RouteKind.command,
+                        child: Text('ProxyCommand'),
+                      ),
                   ],
                   onChanged: (v) => f.update(() => f.route = v),
                 ),
@@ -957,7 +966,7 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
               ),
             ),
           ],
-          if (_protocol == ProtocolKind.ssh) ...[
+          if (_protocol == ProtocolKind.ssh && Device.runsPrograms) ...[
             _row(
               field: 'mosh',
               label: 'Mosh',
@@ -1219,7 +1228,7 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
                 onChanged: (v) => f.update(() => f.connectTimeout = v),
               ),
             ),
-          if (_protocol == ProtocolKind.ssh) ...[
+          if (_protocol == ProtocolKind.ssh && Device.systemAgent) ...[
             _row(
               field: 'agent',
               label: l.agent,

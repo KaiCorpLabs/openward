@@ -3,10 +3,11 @@
 // play it back, and saving it with a note, exporting it or connecting
 // again. One recording at a time: opening another replaces it.
 
+import '../core/save_file.dart';
+
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -566,16 +567,18 @@ class _ExportMenu extends ConsumerWidget {
     final l = context.l10n;
     final e = viewer.entry;
     final ext = format == LogFormat.cast ? 'cast' : 'txt';
-    final to = await getSaveLocation(suggestedName: exportName(l, e, ext));
-    if (to == null || !context.mounted) return;
+    final to = await chooseSave(exportName(l, e, ext));
+    if (to == null) return;
+    if (!context.mounted) return to.cancel();
     final app = ref.read(openWardProvider);
     final done = await runAction(
       context,
       () => app.exportLog(id: e.id, path: to.path, format: format),
     );
-    if (done && context.mounted) {
+    if (!done) return to.cancel();
+    if (await to.finish() && context.mounted) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l.logExported(to.path))));
+          .showSnackBar(SnackBar(content: Text(l.logExported(to.shown))));
     }
   }
 

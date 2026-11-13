@@ -1,3 +1,5 @@
+import '../core/platform.dart';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -281,7 +283,12 @@ class TabsNotifier extends Notifier<TabsState> {
       stringsFor(ref.read(settingsProvider).language).localShell;
 
   /// A new tab with the user's shell on this machine.
-  void openLocal() => _add(_controller(label: _localLabel));
+  void openLocal() {
+    // No shell of the phone (docs/plan/movil.md): what still asks for one
+    // (a shortcut, a recorded local session) does nothing.
+    if (!Device.localTerminal) return;
+    _add(_controller(label: _localLabel));
+  }
 
   /// Brings a page to the front, opening it if it is not open.
   void openPage(PageKind page) {
@@ -289,6 +296,13 @@ class TabsNotifier extends Notifier<TabsState> {
     if (at >= 0) return select(at);
     final tabs = [...state.tabs, PageTab(page)];
     state = TabsState(tabs, tabs.length - 1);
+  }
+
+  /// The start page in front, the tabs kept: the phone's «Inicio», which
+  /// has no tab strip to go back to it from.
+  void showStart() {
+    if (state.active == -1) return;
+    state = TabsState(state.tabs, -1);
   }
 
   void select(int index) {

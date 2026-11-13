@@ -14,12 +14,20 @@ crate-type = ["cdylib", "staticlib", "rlib"]
 [dependencies]
 tempfile = "3"
 openward-app = { path = "../openward-app" }
-openward-fido = { path = "../openward-fido" }
+# HID security keys only on desktop: phones reach them over NFC or USB,
+# which nothing here speaks yet (docs/plan/movil.md).
+openward-fido = { path = "../openward-fido", default-features = false }
 openward-import = { path = "../openward-import" }
 anyhow = "1"
 # Pinned exactly: the Dart package must be the same version.
 flutter_rust_bridge = "=2.13.0"
 zeroize = "1"
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+openward-fido = { path = "../openward-fido", features = ["hid"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "=0.21.1"
 
 # Not the workspace lints: the generated bindings need `unsafe`. The
 # hand-written API denies it (src/lib.rs).

@@ -7,6 +7,8 @@ use std::time::{Duration, Instant};
 
 use openward_vault::{Error, Result, Vault};
 
+#[cfg(target_os = "android")]
+pub mod android;
 pub mod device;
 pub mod native;
 mod recovery_document;

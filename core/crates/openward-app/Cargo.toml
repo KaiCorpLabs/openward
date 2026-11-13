@@ -10,7 +10,9 @@ publish.workspace = true
 
 [dependencies]
 openward-ghostty = { path = "../openward-ghostty" }
-openward-fido = { path = "../openward-fido" }
+# HID security keys only on desktop: phones reach them over NFC or USB,
+# which nothing here speaks yet (docs/plan/movil.md).
+openward-fido = { path = "../openward-fido", default-features = false }
 openward-import = { path = "../openward-import" }
 openward-pty = { path = "../openward-pty" }
 openward-serial = { path = "../openward-serial" }
@@ -42,7 +44,14 @@ sha2 = { version = "0.11", features = ["zeroize"] }
 zxcvbn = "=3.1.1"
 qrcodegen = "=1.8.0"
 
-[target.'cfg(target_os = "macos")'.dependencies]
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+openward-fido = { path = "../openward-fido", features = ["hid"] }
+
+# The Keystore, through the app's VaultKeystore.kt (security/android.rs).
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "=0.21.1"
+
+[target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
 security-framework = { version = "=3.7.0", features = ["OSX_10_15", "sync-keychain"] }
 
 [target.'cfg(windows)'.dependencies]

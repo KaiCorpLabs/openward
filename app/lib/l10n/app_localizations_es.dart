@@ -6686,4 +6686,69 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get chooseSshKeyFile => 'Elegir archivo de clave…';
+
+  @override
+  String get keyBarCtrl => 'Control (se mantiene para la siguiente tecla)';
+
+  @override
+  String get keyBarAlt => 'Alt (se mantiene para la siguiente tecla)';
+
+  @override
+  String get keyBarLeft => 'Flecha izquierda';
+
+  @override
+  String get keyBarUp => 'Flecha arriba';
+
+  @override
+  String get keyBarDown => 'Flecha abajo';
+
+  @override
+  String get keyBarRight => 'Flecha derecha';
+
+  @override
+  String get keyBarHome => 'Inicio';
+
+  @override
+  String get keyBarEnd => 'Fin';
+
+  @override
+  String get keyBarPageUp => 'RePág';
+
+  @override
+  String get keyBarPageDown => 'AvPág';
+
+  @override
+  String get keyBarHideKeyboard => 'Ocultar el teclado';
+
+  @override
+  String get keyBarShowKeyboard => 'Mostrar el teclado';
+
+  @override
+  String get mobileHostsMenu => 'Hosts y biblioteca';
+
+  @override
+  String mobileTabs(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pestañas abiertas',
+      one: '1 pestaña abierta',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mobileSftpHere => 'Abrir SFTP de este host';
+
+  @override
+  String get mobileBiggerText => 'Letra más grande';
+
+  @override
+  String get mobileSmallerText => 'Letra más pequeña';
+
+  @override
+  String get vaultFaceId => 'Face ID o Touch ID';
+
+  @override
+  String get vaultBiometricAndroid => 'Huella o rostro';
 }
