@@ -44,11 +44,15 @@ arrancan bloqueados. D5–D7 completan recuperación, secretos y copias. La beta
 
 | Trabajo | Seguimiento | Evidencia necesaria |
 |---|---|---|
-| v0.5: sync con almacenamiento propio | [#38](https://github.com/KaiCorpLabs/openward/issues/38) | Convergencia, backends, equipos y recuperación/reintento. |
+| v0.5: motor de sync | [#38](https://github.com/KaiCorpLabs/openward/issues/38) | Convergencia, equipos y recuperación/reintento contra un backend de pruebas; sin backends de almacenamiento propio. |
 | v0.6: servidor y cuentas | [#39](https://github.com/KaiCorpLabs/openward/issues/39) | ADR/API/modelo revisados y despliegue inicial dentro del tailnet. |
 | v0.7: operación pública | [#40](https://github.com/KaiCorpLabs/openward/issues/40) | Copias/restauración, monitorización, borrado y puerta pública aprobada. |
 | Firma, actualización y descargas | [#41](https://github.com/KaiCorpLabs/openward/issues/41) | Instalación/actualización reales y artefactos trazables. |
 | Pruebas manuales, decisiones y lanzamiento | [#42](https://github.com/KaiCorpLabs/openward/issues/42) | Hardware, uso prolongado, decisiones pendientes y revisión legal. |
+
+El 2026-11-13 se decidió que toda la sync es de pago y alojada, con el servidor
+privado y Android e iOS antes de cobrar ([decisiones](community.md#decisiones-del-2026-11-13)).
+#38, #39 y #40 conservan su número con ese alcance.
 
 Publicar una release, comprar dominio/certificados o activar servicios públicos
 mantiene sus decisiones específicas. Los nuevos issues son trabajo de producto;

@@ -38,4 +38,4 @@ git commit -s
 
 ## CLA (desde el lanzamiento)
 
-Cuando se abran las contribuciones, todas (cliente, servidor, especificación y documentación) requerirán un acuerdo de licencia de contribuidor (CLA). **No cedes el copyright:** concedes una licencia amplia que permite ofrecer OpenWard también con otras licencias, por ejemplo en la App Store, o el servidor con licencia comercial. El motivo está en el [ADR-007](docs/adr/ADR-007-licencias-y-contribuciones.md).
+Cuando se abran las contribuciones, todas (cliente, especificación y documentación) requerirán un acuerdo de licencia de contribuidor (CLA). **No cedes el copyright:** concedes una licencia amplia que permite ofrecer OpenWard también con otras licencias, por ejemplo en la App Store. El motivo está en el [ADR-007](docs/adr/ADR-007-licencias-y-contribuciones.md).
