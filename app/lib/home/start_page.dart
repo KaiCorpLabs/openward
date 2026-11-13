@@ -1,5 +1,3 @@
-import '../core/platform.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +7,7 @@ import '../core/address.dart';
 import '../core/connection.dart' show Phase;
 import '../core/errors.dart';
 import '../core/match.dart';
+import '../core/platform.dart';
 import '../core/providers.dart';
 import '../hosts/editors.dart';
 import '../hosts/host_actions.dart' show hostAddress;

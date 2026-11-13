@@ -4774,5 +4774,7 @@
   "mobileBiggerText": "Letra más grande",
   "mobileSmallerText": "Letra más pequeña",
   "vaultFaceId": "Face ID o Touch ID",
-  "vaultBiometricAndroid": "Huella o rostro"
+  "vaultBiometricAndroid": "Huella o rostro",
+  "mobileSaveTo": "Guardar en…",
+  "mobileImportFiles": "Importar archivos del teléfono…"
 }

@@ -1,11 +1,10 @@
-import '../core/platform.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/address.dart';
+import '../core/platform.dart';
 import '../core/providers.dart';
 import '../home/recent.dart';
 import '../l10n/l10n.dart';

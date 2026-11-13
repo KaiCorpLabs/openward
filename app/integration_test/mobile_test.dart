@@ -6,13 +6,13 @@
 // The SSH case needs the S2 test servers (spikes/s2-ssh/servers/up.sh) and
 // their key where the app can read it: the iOS simulator reads the Mac's
 // files, so `--dart-define=S2_FIXTURES=$HOME/Library/Caches/openward/s2-fixtures`
-// is enough; the Android emulator reaches the Mac at 10.0.2.2
-// (`--dart-define=S2_HOST=10.0.2.2`) but not its files, so that case skips
-// there unless the key is pushed (docs/plan/movil.md).
+// is enough; the Android emulator reaches the Mac at 10.0.2.2 but not its
+// files: `--dart-define=S2_HOST=10.0.2.2 --dart-define=S2_KEY_B64=$(base64 < "$S2/id_ed25519")`.
 
 @Timeout(Duration(minutes: 3))
 library;
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/gestures.dart'
@@ -65,11 +65,21 @@ Finder _hostRow(String label) => find.byWidgetPredicate(
 const _fixturesDefine = String.fromEnvironment('S2_FIXTURES');
 const _host = String.fromEnvironment('S2_HOST', defaultValue: '127.0.0.1');
 
+/// The test key itself, for a device that cannot read the Mac's files (the
+/// Android emulator): `--dart-define=S2_KEY_B64=$(base64 < id_ed25519)`.
+const _keyB64 = String.fromEnvironment('S2_KEY_B64');
+
 /// The S2 fixtures if the servers answer and the key is readable here.
 Future<String?> _servers() async {
-  final fixtures = _fixturesDefine.isNotEmpty
+  var fixtures = _fixturesDefine.isNotEmpty
       ? _fixturesDefine
       : '${Platform.environment['HOME']}/Library/Caches/openward/s2-fixtures';
+  if (_keyB64.isNotEmpty) {
+    final dir = await Directory.systemTemp.createTemp('openward-s2-');
+    File('${dir.path}/id_ed25519')
+        .writeAsBytesSync(base64.decode(_keyB64.replaceAll(RegExp(r'\s'), '')));
+    fixtures = dir.path;
+  }
   final up = await Socket.connect(
     _host,
     22100,

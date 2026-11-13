@@ -1,12 +1,11 @@
 // The connection settings, each set here or inherited.
 
-import '../../core/platform.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/address.dart';
+import '../../core/platform.dart';
 import '../../core/providers.dart';
 import '../../core/settings.dart';
 import '../../identities/identities.dart';

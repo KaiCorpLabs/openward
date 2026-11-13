@@ -6725,4 +6725,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get vaultBiometricAndroid => 'Fingerprint or face';
+
+  @override
+  String get mobileSaveTo => 'Save to…';
+
+  @override
+  String get mobileImportFiles => 'Import files from the phone…';
 }

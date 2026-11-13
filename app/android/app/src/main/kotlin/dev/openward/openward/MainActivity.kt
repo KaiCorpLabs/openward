@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
+import android.system.Os
 import androidx.activity.result.contract.ActivityResultContracts
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -49,6 +50,10 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // An app has no HOME or writable TMPDIR of its own: the core's
+        // ~/.ssh, known_hosts and temporary files go in the app's folders.
+        Os.setenv("HOME", filesDir.absolutePath, true)
+        Os.setenv("TMPDIR", cacheDir.absolutePath, true)
         // The core, before Flutter opens it: JNI_OnLoad hands the Java VM
         // to it, for VaultKeystore.
         System.loadLibrary("openward_ffi")

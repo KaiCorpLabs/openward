@@ -6751,4 +6751,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get vaultBiometricAndroid => 'Huella o rostro';
+
+  @override
+  String get mobileSaveTo => 'Guardar en…';
+
+  @override
+  String get mobileImportFiles => 'Importar archivos del teléfono…';
 }

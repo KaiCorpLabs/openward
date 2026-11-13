@@ -3,14 +3,13 @@
 // does, the saved hosts and workspaces, the snippets and the commands run
 // before, found by typing a few letters. `>` first: only the actions.
 
-import '../core/platform.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/address.dart';
 import '../core/match.dart';
+import '../core/platform.dart';
 import '../core/providers.dart';
 import '../history/history.dart';
 import '../history/replay.dart';

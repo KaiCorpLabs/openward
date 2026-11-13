@@ -3,8 +3,6 @@
 // play it back, and saving it with a note, exporting it or connecting
 // again. One recording at a time: opening another replaces it.
 
-import '../core/save_file.dart';
-
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -17,6 +15,7 @@ import 'package:intl/intl.dart' show DateFormat;
 import '../core/address.dart';
 import '../core/errors.dart';
 import '../core/providers.dart';
+import '../core/save_file.dart';
 import '../core/settings.dart';
 import '../home/start_page.dart' show durationText;
 import '../l10n/l10n.dart';

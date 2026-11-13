@@ -2169,5 +2169,7 @@
   "mobileBiggerText": "Bigger text",
   "mobileSmallerText": "Smaller text",
   "vaultFaceId": "Face ID or Touch ID",
-  "vaultBiometricAndroid": "Fingerprint or face"
+  "vaultBiometricAndroid": "Fingerprint or face",
+  "mobileSaveTo": "Save to…",
+  "mobileImportFiles": "Import files from the phone…"
 }

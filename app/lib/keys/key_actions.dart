@@ -2,9 +2,6 @@
 // on a server: renaming it, giving it another passphrase, exporting it,
 // finding it in the file manager and deleting it.
 
-import '../core/platform.dart';
-import '../core/save_file.dart';
-
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -12,7 +9,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/errors.dart';
+import '../core/platform.dart';
 import '../core/providers.dart';
+import '../core/save_file.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/keychain.dart';
 import '../ui/confirm.dart';

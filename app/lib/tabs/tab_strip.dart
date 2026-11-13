@@ -1,5 +1,3 @@
-import '../core/platform.dart';
-
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart'
@@ -7,6 +5,7 @@ import 'package:flutter/gestures.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/platform.dart';
 import '../core/providers.dart';
 import '../hosts/sidebar.dart' show tabStatus;
 import '../l10n/l10n.dart';

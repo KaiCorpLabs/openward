@@ -10507,6 +10507,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Huella o rostro'**
   String get vaultBiometricAndroid;
+
+  /// No description provided for @mobileSaveTo.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar en…'**
+  String get mobileSaveTo;
+
+  /// No description provided for @mobileImportFiles.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar archivos del teléfono…'**
+  String get mobileImportFiles;
 }
 
 class _AppLocalizationsDelegate

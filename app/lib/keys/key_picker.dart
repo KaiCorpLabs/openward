@@ -5,8 +5,10 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/platform.dart';
 import '../identities/identities.dart' show tildePath;
 import '../l10n/l10n.dart';
+import 'key_dialogs.dart' show showImportKeyDialog;
 import 'keys.dart';
 
 Future<String?> showSshKeyPicker(BuildContext context) =>
@@ -65,6 +67,15 @@ class _Picker extends ConsumerWidget {
         OutlinedButton(
           key: const ValueKey('sshKey.chooseFile'),
           onPressed: () async {
+            // A phone hands over a copy, not the file: it goes into the
+            // vault, and the host refers to that.
+            if (!Device.userFiles) {
+              final key = await showImportKeyDialog(context);
+              if (key != null && context.mounted) {
+                Navigator.pop(context, key.path);
+              }
+              return;
+            }
             final home =
                 Platform.environment['HOME'] ??
                 Platform.environment['USERPROFILE'];

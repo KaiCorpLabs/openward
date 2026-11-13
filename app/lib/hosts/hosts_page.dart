@@ -2,14 +2,13 @@
 // filters by environment, favorite, tag and system, and what each one can
 // do. The sidebar keeps only what is used every day.
 
-import '../core/platform.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/match.dart';
+import '../core/platform.dart';
 import '../core/providers.dart';
 import '../home/recent.dart';
 import '../l10n/l10n.dart';

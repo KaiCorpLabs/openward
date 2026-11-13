@@ -1,7 +1,6 @@
-import '../core/platform.dart';
-
 import 'package:flutter/material.dart';
 
+import '../core/platform.dart';
 import 'focus_ring.dart';
 import 'tokens.dart';
 

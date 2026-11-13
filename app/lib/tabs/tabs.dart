@@ -1,11 +1,10 @@
-import '../core/platform.dart';
-
 import 'package:flutter/widgets.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/address.dart';
 import '../core/errors.dart' show appNavigator;
+import '../core/platform.dart';
 import '../core/providers.dart';
 import '../core/settings.dart';
 import '../l10n/l10n.dart';
