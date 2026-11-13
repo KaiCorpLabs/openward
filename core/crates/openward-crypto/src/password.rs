@@ -5,7 +5,6 @@ use chacha20poly1305::{
     KeyInit, XChaCha20Poly1305, XNonce,
     aead::{Aead, Payload},
 };
-use std::time::{Duration, Instant};
 use zeroize::Zeroizing;
 
 pub const MIN_MEMORY_KIB: u32 = 64 * 1024;
@@ -66,31 +65,8 @@ impl Default for KdfParams {
     }
 }
 
-/// Run on a Rust worker at setup. The measured result is returned, including
-/// when a slow/fast machine cannot meet the target within the resource policy.
-pub fn calibrate() -> Result<(KdfParams, Duration), Error> {
-    let mut passes = 1;
-    let mut memory = MIN_MEMORY_KIB;
-    loop {
-        let params = KdfParams::new(memory, passes)?;
-        let start = Instant::now();
-        drop(params.derive(b"openward calibration probe", &[0; 16])?);
-        let elapsed = start.elapsed();
-        if elapsed >= Duration::from_millis(500) {
-            return Ok((params, elapsed));
-        }
-        if passes == 16 {
-            if memory == MIN_MEMORY_KIB {
-                memory *= 2;
-                continue;
-            }
-            return Ok((params, elapsed));
-        }
-        let next = ((passes as u128 * 750) / elapsed.as_millis().max(1))
-            .clamp(passes as u128 + 1, 16) as u32;
-        passes = next;
-    }
-}
+mod calibration;
+pub use calibration::calibrate;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PasswordBox {
@@ -202,12 +178,10 @@ mod measurements {
             params.passes()
         );
         assert!(params.memory_kib() >= super::MIN_MEMORY_KIB);
-        if !(std::time::Duration::from_millis(500)..=std::time::Duration::from_secs(1))
-            .contains(&elapsed)
-        {
-            eprintln!(
-                "Target not met on this runner within the bounded calibration policy; retain this result in beta evidence."
-            );
-        }
+        assert!(
+            (std::time::Duration::from_millis(500)..=std::time::Duration::from_secs(1))
+                .contains(&elapsed),
+            "calibration missed the 500–1000 ms target on this runner: {elapsed:?}"
+        );
     }
 }

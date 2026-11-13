@@ -74,7 +74,9 @@ temporal se comprueba dentro del cuerpo de la prueba.
 `cargo test --release --locked -p openward-vault ten_thousand -- --ignored --nocapture`
 mide la carga del índice de 10.000 ítems después del KDF (objetivo <300ms).
 `cargo test --release --locked -p openward-crypto calibrated_password_measurement -- --ignored --nocapture`
-informa la calibración Argon2id (objetivo 0,5–1s, mínimo64MiB). Registrar resultado
+comprueba la calibración Argon2id y falla fuera de 0,5–1 s (mínimo 64 MiB).
+La [corrección del salto de memoria y sus límites](../evidence/kdf-calibration-v0.4.md)
+se prueba también sin temporizadores mediante medidas inyectadas. Registrar resultado
 real y hardware; son medidas del runner, no una garantía para todo equipo.
 La [medición local y su alcance](../evidence/v0.4-beta1.md) conserva los números de la candidata.
 Las migraciones de fixtures publicados y la recuperación de archivos comunes

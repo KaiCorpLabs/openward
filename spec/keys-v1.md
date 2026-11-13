@@ -52,9 +52,18 @@ esperado y la firma antes de desencapsular.
 Argon2id v19, salida 32 bytes, salt aleatorio de 16 bytes, una lane.
 Memoria entre 64 y 256 MiB, pases entre 1 y 16, memoria×pases como máximo
 2 GiB de trabajo. Se validan parámetros antes de reservar. La calibración
-busca 0,5–1 s (objetivo 750 ms): ajusta pases en 64 MiB y puede subir a
-128 MiB si la máquina es demasiado rápida. Devuelve también el tiempo real;
-en equipos extremos el suelo/tope puede impedir cumplir el objetivo.
+busca 0,5–1 s (objetivo 750 ms), comprobando ambos extremos. Acota las
+pasadas con medidas reales y las reduce si hay un exceso de tiempo. Al subir
+de 64 a 128 o 256 MiB las reescala respetando el presupuesto de trabajo; cada
+configuración propuesta se mide antes de aceptarla. Máximo 12 medidas, sin
+repetir configuraciones. Si el suelo/tope o tiempos inestables impiden cumplir,
+devuelve el resultado medido más cercano al objetivo y propaga los errores.
+La prueba release de CI exige 500–1000 ms en los tres runners. [Regresión,
+algoritmo y pruebas](../docs/evidence/kdf-calibration-v0.4.md).
+
+Las altas y cambios de contraseña usan esta calibración. La apertura de un
+vault existente sigue usando sus parámetros guardados; no se alteran el formato
+ni las credenciales anteriores. El tiempo puede variar con la carga posterior.
 
 Contraseñas de 1–4096 bytes, sin normalización implícita. La UI de D4 aplica
 la política de fuerza. OWKB usa XChaCha20-Poly1305 con nonce aleatorio y el
