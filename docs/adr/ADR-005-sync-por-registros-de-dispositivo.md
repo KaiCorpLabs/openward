@@ -1,6 +1,6 @@
 # ADR-005 — Sync por registros de dispositivo con backends intercambiables
 
-- **Estado:** **aceptado** (2026-11-10), con la primera parte de [S4](../spikes/S4-sync.md) (2026-11-09), que cambió el merge a relojes de campo y fijó el sobre. La segunda, con backends de verdad (v0.5, S1), puede reabrirlo ([Validación](#validación-y-revisión)).
+- **Estado:** **aceptado** (2026-11-10), con la primera parte de [S4](../spikes/S4-sync.md) (2026-11-09), que cambió el merge a relojes de campo y fijó el sobre. La segunda (v0.5, S1) puede reabrirlo ([Validación](#validación-y-revisión)). [Revisado el 2026-11-13](#revisión-del-2026-11-13): el motor se queda, pero su único backend es el servidor; no hay backends de almacenamiento propio.
 - **Fecha:** 2026-10-08.
 - **Alcance:** protocolo de sincronización, resolución de conflictos y backends.
 
@@ -37,3 +37,22 @@ Hay más complejidad en el cliente (merge, compactación, cursores). Se compensa
 S4, en dos partes:
 - **Primera (2026-11-09), en memoria:** 3 dispositivos × 10.000 escrituras y 2.000 ejecuciones aleatorias de `proptest` con poda y relojes desfasados, en los tres sistemas. Con relojes de campo, convergencia del 100 % y ninguna escritura perdida; con tres bandas, no. Ver [S4-sync.md](../spikes/S4-sync.md).
 - **Segunda (v0.5, S1), con backends:** 3 dispositivos × {carpeta, S3} con 10.000 ediciones concurrentes deben converger. Aceptar con convergencia del 100 % y compactación verificada. Reabrir si los backends con consistencia eventual (WebDAV o iCloud) producen pérdidas no detectables.
+
+## Revisión del 2026-11-13
+
+El contexto de arriba daba como diferencia comercial la sync gratis con el almacenamiento del usuario. Desde el 2026-11-13, toda la sincronización es de pago y alojada ([ADR-006](ADR-006-servidor-open-core.md#revisión-del-2026-11-13)).
+
+**Decisión:**
+- **El motor no cambia:** registros por dispositivo que solo crecen, merge por relojes de campo, el sobre `v: 1`, la compactación y el formato en `spec/`.
+- **El único backend es el relay del servicio alojado.** Quedan descartados los backends de almacenamiento propio (carpeta, S3, WebDAV y Git) y el relay autoalojado.
+- **El backend sigue siendo un trait** (`put`, `get`, `list` y `watch`). Además del relay, tiene uno de pruebas, en memoria y en un directorio, para las pruebas del núcleo y la CLI que simula N dispositivos. La app no lo ofrece.
+- **La segunda parte de S4** pasa a ser: 3 dispositivos × 10.000 ediciones concurrentes con el motor de verdad contra el backend de pruebas (v0.5, S1) y contra el relay (v0.6, C6). Se acepta con convergencia del 100 % y compactación verificada. Ya no depende de los backends con consistencia eventual.
+
+**Por qué no se reabre el diseño:**
+- La alternativa del servidor con secuencia global se descartó porque no funcionaba con almacenamiento «tonto». Esa razón ya no cuenta, pero las demás sí: el sobre y el merge están medidos en S4 y la v0.4 ya escribe el sobre; el cliente funciona sin conexión y fusiona al volver; y el servidor queda simple, barato y sin ver el contenido.
+- Que el motor pida tan poco al almacenamiento deja abierta la puerta a otros backends más adelante sin tocar el formato.
+
+**Consecuencias:**
+- Menos que construir y probar: sin los casos difíciles de iCloud, Dropbox o WebDAV (copias con retraso, archivos «en conflicto»).
+- La latencia ya no depende del servicio del usuario: la da el relay, con `watch`.
+- La etapa 3 del [camino a la Community](../plan/community.md#etapa-3--v05-el-motor-de-sync) pierde sus hitos de backends (S2 y S3).

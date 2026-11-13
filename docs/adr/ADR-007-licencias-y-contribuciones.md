@@ -1,6 +1,6 @@
 # ADR-007 — Licencias por componente y régimen de contribuciones
 
-- **Estado:** aceptado (2026-10-08), [revisado el 2026-11-10](#revisión-del-2026-11-10): todos los derechos reservados hasta el lanzamiento de la Community; desde entonces, el cliente con GPL-3.0 y la CLA en todo el repositorio. La licencia de `server/ee/` queda pendiente hasta la fase 4 ([ADR-006](ADR-006-servidor-open-core.md)).
+- **Estado:** aceptado (2026-10-08), [revisado el 2026-11-10](#revisión-del-2026-11-10): todos los derechos reservados hasta el lanzamiento de la Community; desde entonces, el cliente con GPL-3.0 y la CLA en todo el repositorio. [Revisado el 2026-11-13](#revisión-del-2026-11-13): el servidor es privado y no sale con AGPL-3.0, y la sync deja la lista «Siempre gratis» ([ADR-006](ADR-006-servidor-open-core.md#revisión-del-2026-11-13)).
 - **Fecha:** 2026-10-08.
 - **Alcance:** licencia de cada directorio, CLA/DCO y promesa pública.
 
@@ -80,4 +80,29 @@ La tabla de arriba era el plan del 2026-10-08. Esta revisión la cambia.
 - Antes de abrir las contribuciones: el bot de la CLA para todo el repositorio, y la revisión legal de la CLA (ya prevista) y de LICENSE.
 - SignPath firma gratis solo builds con licencia OSI y sin componentes propietarios: sirve desde el lanzamiento, con la GPL. Las betas de antes siguen sin firmar o con una firma de pago.
 - `cargo-deny` y `cargo-about` no comprueban los crates propios, que no se publican (`[licenses.private]` en `core/deny.toml` y `private` en `core/about.toml`).
+
+## Revisión del 2026-11-13
+
+La revisión del 2026-11-10 mantenía el servidor con AGPL-3.0 y autoalojable. La [revisión del 2026-11-13 de ADR-006](ADR-006-servidor-open-core.md#revisión-del-2026-11-13) lo cambia: toda la sincronización es de pago y alojada, y el servidor es privado.
+
+**Decisión:**
+- **Al lanzar:**
+
+  | Componente | Licencia | Contribuciones |
+  |---|---|---|
+  | `core/`, `app/`, `spikes/` (el cliente) | **GPL-3.0-only**, como en la revisión del 2026-11-10 | CLA |
+  | `spec/`, `docs/` | CC-BY-4.0 | CLA |
+  | El servidor | **Privado**, en vez de AGPL-3.0-only: no se publica ni se distribuye, y no está en este repositorio | Solo el equipo |
+
+- **La promesa «Siempre gratis»** queda así: la app completa en todas las plataformas, funcionando en local y sin cuenta, con el vault cifrado, su recuperación y sus copias de seguridad; y la exportación completa de los datos. Salen de la lista la sync con almacenamiento propio, el relay autoalojado, y los vaults de equipo básicos y el OIDC que llegaban con él.
+- **No cambia** lo demás de la revisión del 2026-11-10: todos los derechos reservados hasta el lanzamiento, la CLA en todo el repositorio, GPL y AGPL prohibidas en las dependencias del cliente, y el registro de la marca.
+
+**Por qué:**
+- La sync es lo que se cobra, así que no puede estar también en la lista de lo gratuito, ni con un servidor que cualquiera pueda alojar ([ADR-006](ADR-006-servidor-open-core.md#revisión-del-2026-11-13)).
+- **Es la segunda vez que se va contra «reabrir solo para abrir más»**, y la revisión del 2026-11-10 decía «solo esta vez». Sigue siendo antes del lanzamiento: el servidor no existe, y la promesa «Siempre gratis» no ha entrado en vigor. Desde el lanzamiento, la regla vale.
+
+**Consecuencias:**
+- La CLA ya no hace falta para vender el servidor con licencia comercial. Sigue en todo el repositorio para poder ofrecer el cliente también con otra licencia, como pide la App Store.
+- SignPath sigue valiendo para el cliente: lleva una licencia OSI y no incluye componentes propietarios.
+- Cambian con esta revisión [LICENSING](../../LICENSING.md), y la lista «Siempre gratis» y la tabla de estructura del README.
 

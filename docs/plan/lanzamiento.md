@@ -1,26 +1,27 @@
 # Lanzamiento: lo que queda para salir con la Community
 
-- **Estado:** propuesta (2026-11-10). Ordena por prioridad lo que falta hasta lanzar la Community: lo que ya planifican [community.md](community.md) y [v0.4.md](v0.4.md), y lo que deja sin plan su apartado «[Después de este plan](community.md#después-de-este-plan)».
+- **Estado:** propuesta (2026-11-10), revisada el 2026-11-13: toda la sync es de pago y alojada, el servidor es privado, y Android e iOS van antes de cobrar ([decisiones](community.md#decisiones-del-2026-11-13)). Ordena por prioridad lo que falta hasta lanzar la Community: lo que ya planifican [community.md](community.md) y [v0.4.md](v0.4.md), y lo que deja sin plan su apartado «[Después de este plan](community.md#después-de-este-plan)».
 - **Fecha:** 2026-11-10.
 - **Base:** el [camino a la Community](community.md) (etapas 2 a 5), la hoja de ruta ([ARCHITECTURE §15](../ARCHITECTURE.md#15-hoja-de-ruta-con-puertas)) y el [modelo de amenazas](../THREAT_MODEL.md).
-- **Estimación original (2026-11-10):** unas 18 semanas: 6,5 de la v0.4, 5 de la v0.5, 5 de la v0.6 y 1,5 de la v0.7. Es una referencia histórica, no trabajo restante ni una fecha comprometida; D3–D8 han avanzado como se detalla abajo. Distribución, web y legal siguen sin estimación, y las dos semanas de uso del punto 9 van aparte.
+- **Estimación original (2026-11-10):** unas 18 semanas: 6,5 de la v0.4, 5 de la v0.5, 5 de la v0.6 y 1,5 de la v0.7. Es una referencia histórica, no trabajo restante ni una fecha comprometida; D3–D8 han avanzado como se detalla abajo. El 2026-11-13 la v0.5 bajó de 5 a 3,5 al quedarse sin los backends de almacenamiento propio. Distribución, web y legal siguen sin estimación, y las dos semanas de uso del punto 9 van aparte.
 
 ## Objetivo
 
 Lanzar la **Community**, la edición gratuita, en macOS, Windows y Linux:
-- con el vault cifrado, la sync con tu almacenamiento y el servidor abierto con las cuentas de KaiCorp Labs, como pide la puerta de salida del [camino a la Community](community.md);
+- con el cliente completo funcionando en local y sin cuenta, y el vault cifrado;
+- con el servidor abierto a las cuentas de KaiCorp Labs, como pide la puerta de salida del [camino a la Community](community.md). La sync no es parte de la Community: es el servicio de pago, y hasta que se pueda cobrar funciona en periodo de prueba;
 - que se descargue de una web, firmada y con actualizaciones automáticas;
 - con lo legal en orden: la licencia, la marca, los términos, la privacidad y la Ley de Ciberresiliencia.
 
-La sync alojada de pago viene después ([prioridad 3](#prioridad-3-para-cobrar)).
+Cobrar por la sync viene después, con Android e iOS ([prioridad 3](#prioridad-3-para-cobrar)).
 
 ## Dónde estamos (2026-11-13)
 
 - **Etapa 1 implementada** (P0–P7); hardware y uso real siguen abiertos en [#42](https://github.com/KaiCorpLabs/openward/issues/42).
 - **v0.4:** D0–D3 y D5–D7 completados; sesión y backends D4, onboarding y Ajustes D8 integrados. Candidata `0.4.0-beta.1+31` en `main`, sin etiqueta ni release de 0.4. La KDF cumple 500–1000 ms en la CI release de los tres sistemas ([#58](https://github.com/KaiCorpLabs/openward/pull/58), [evidencia](../evidence/kdf-calibration-v0.4.md)).
 - **Pendiente para cerrar v0.4:** maquetas originales, autenticación física y firma SSH con claves no exportables en Secure Enclave ([#33](https://github.com/KaiCorpLabs/openward/issues/33)); migraciones personales, una semana de uso cifrado y recuperación independiente ([#37](https://github.com/KaiCorpLabs/openward/issues/37)). No se ha modificado el vault personal durante esta preparación.
-- **v0.5–v0.7:** sync de producción, servidor/cuentas y operación pública pendientes en [#38](https://github.com/KaiCorpLabs/openward/issues/38), [#39](https://github.com/KaiCorpLabs/openward/issues/39) y [#40](https://github.com/KaiCorpLabs/openward/issues/40).
-- **Desde el 2026-11-10, el repositorio tiene todos los derechos reservados** ([ADR-007](../adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-10)). El plan de lanzamiento prevé cliente GPL-3.0 y servidor AGPL-3.0; su revisión sigue en #42.
+- **v0.5–v0.7:** motor de sync, servidor/cuentas y operación pública pendientes en [#38](https://github.com/KaiCorpLabs/openward/issues/38), [#39](https://github.com/KaiCorpLabs/openward/issues/39) y [#40](https://github.com/KaiCorpLabs/openward/issues/40).
+- **Desde el 2026-11-10, el repositorio tiene todos los derechos reservados** ([ADR-007](../adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-10)). El plan de lanzamiento prevé el cliente con GPL-3.0; el servidor es privado desde la [revisión del 2026-11-13](../adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-13). La revisión legal sigue en #42.
 - **Distribución:** ninguna release pública; 28 borradores a fecha de esta revisión. Última etiqueta/borrador `v0.3.4-beta.4` en `5736b7c`, con macOS universal, Windows x64 y Linux x86_64/aarch64, checksums y procedencia. El [cask](https://github.com/KaiCorpLabs/homebrew-tap/blob/main/Casks/openward.rb) sigue en `0.3.4-beta.3`; el código candidato 0.4 se obtiene de los artefactos de CI. Firma, actualizaciones y paquetes siguen en [#41](https://github.com/KaiCorpLabs/openward/issues/41).
 - **CI habitual:** `.dmg` macOS universal con firma ad hoc, `.zip` Windows x64 sin firmar y `.tar.gz` Linux x86_64; Linux aarch64 tiene su flujo de contenedor aparte. Ninguno se actualiza solo. Las pruebas automatizadas no cierran las puertas humanas.
 
@@ -31,7 +32,7 @@ La sync alojada de pago viene después ([prioridad 3](#prioridad-3-para-cobrar))
 | 1 | Prueba de Touch ID y el Secure Enclave con la app firmada ad hoc | 1 día | [v0.4, riesgos](v0.4.md#riesgos) |
 | 2 | Confirmar las 10 decisiones por defecto del camino a la Community | — | [community.md](community.md#decisiones-por-defecto-a-confirmar) |
 | 3 | Cerrar v0.4: puertas restantes de #33 y #37 | pendiente de evidencia | [v0.4.md](v0.4.md#hitos) |
-| 4 | v0.5: sync con tu almacenamiento (S1–S6) | 5 | [etapa 3](community.md#etapa-3--v05-sync-con-tu-almacenamiento) |
+| 4 | v0.5: el motor de sync (S1 y S4–S6) | 3,5 | [etapa 3](community.md#etapa-3--v05-el-motor-de-sync) |
 | 5 | v0.6: servidor y cuentas de KaiCorp Labs (C1–C6) | 5 | [etapa 4](community.md#etapa-4--v06-servidor-y-cuentas-de-kaicorp-labs) |
 | 6 | v0.7: el servidor en producción (M1–M3) | 1,5 | [etapa 5](community.md#etapa-5--v07-abierto-el-servidor-en-producción) |
 | 7 | Distribución: firma, notarización, actualizaciones y paquetes | sin estimar | este documento |
@@ -49,9 +50,11 @@ Sigue siendo una puerta de #33 porque puede adelantar la necesidad de Developer 
 
 Las de la v0.4 y las tres de su modelo de amenazas están aceptadas desde el 2026-11-10. Las diez del plan general siguen «a confirmar». Entre ellas:
 - Mosh con el `mosh-client` instalado en el equipo;
-- la sync gratuita antes que el servidor;
+- el motor de sync antes que el servidor;
 - las cuentas de KaiCorp Labs;
 - la base de datos del servidor, aparte de la de la identidad.
+
+Lo que cambia el modelo ya está decidido, el 2026-11-13: toda la sync de pago y alojada, el servidor privado, la cuenta gratuita con un periodo de prueba, y Android e iOS antes de cobrar ([community.md](community.md#decisiones-del-2026-11-13)).
 
 ### 3 · v0.4, el vault cifrado
 
@@ -62,14 +65,14 @@ Las de la v0.4 y las tres de su modelo de amenazas están aceptadas desde el 202
 - **D7:** implementada la copia de seguridad `.owvault`/JSON y su restauración en un vault vacío con identidad propia (0,5 semanas). [Contrato, pruebas y guía de recuperación](../../spec/vault-backup-v1.md).
 - **D8:** onboarding, Ajustes › Seguridad, notas y candidata `0.4.0-beta.1+31` integrados en [#57](https://github.com/KaiCorpLabs/openward/pull/57); KDF corregida y validada en #58. [#37](https://github.com/KaiCorpLabs/openward/issues/37) conserva las puertas personales de migración, uso y recuperación. No hay publicación de 0.4.
 
-### 4 · v0.5, sync con tu almacenamiento
+### 4 · v0.5, el motor de sync
 
-El motor `openward-sync`, con la segunda parte de S4 como puerta de ADR-005 (3 dispositivos × 10.000 ediciones convergen al 100 %). Después, los backends de carpeta, S3 y WebDAV, añadir y revocar equipos, y la pantalla de sync.
+El motor `openward-sync`, con la segunda parte de S4 como puerta de ADR-005 (3 dispositivos × 10.000 ediciones convergen al 100 %), contra un backend de pruebas. Después, añadir y revocar equipos, y la pantalla de sync. Desde el 2026-11-13 no trae backends de carpeta, S3 ni WebDAV: el único backend es el servidor de la v0.6 ([ADR-005](../adr/ADR-005-sync-por-registros-de-dispositivo.md#revisión-del-2026-11-13)).
 
 ### 5 · v0.6, servidor y cuentas de KaiCorp Labs
 
 - **C1:** ADR-010, el modelo de amenazas del servidor y la API v1. Decide también si el servidor guarda una copia del paquete de la cuenta que se abra solo con el kit, para recuperar sin contraseña y sin ningún equipo ([THREAT_MODEL §11](../THREAT_MODEL.md#11-decisiones-que-salen-de-d0)).
-- **C2–C5:** el servidor en Go, la entrada con OIDC, el relay y la cuenta en la app.
+- **C2–C5:** el servidor en Go, la entrada con OIDC, el relay y la cuenta en la app. El servidor es privado y no se autoaloja ([ADR-006](../adr/ADR-006-servidor-open-core.md#revisión-del-2026-11-13)).
 - **C6:** el despliegue en el minipc, solo dentro del tailnet.
 
 ### 6 · v0.7, el servidor en producción
@@ -77,6 +80,7 @@ El motor `openward-sync`, con la segunda parte de S4 como puerta de ADR-005 (3 d
 - La dirección pública por el túnel de Cloudflare.
 - Las copias, la vigilancia y el borrado de los datos de una persona, como en los demás servicios de la casa.
 - Los términos y la privacidad, porque entran datos de personas de fuera.
+- Quien entra sincroniza en su periodo de prueba: el plan de pago llega con la [prioridad 3](#prioridad-3-para-cobrar).
 
 ### 7 · Distribución
 
@@ -117,8 +121,8 @@ El análisis dice qué aplica a la Community y qué al plan de pago. Va con los 
 ### 11 · Licencia, marca, «Siempre gratis» y `SECURITY.md`
 
 - **La marca:** registrar «OpenWard» (OEPM o EUIPO). Cuanto antes, porque la fecha de la solicitud es la que cuenta.
-- **La licencia del lanzamiento:** hasta entonces, todos los derechos reservados. Al publicar, el cliente pasa a GPL-3.0 y el servidor sale con AGPL-3.0, con el bot de la CLA para todo el repositorio y la revisión legal de LICENSE y de la CLA.
-- **La lista «Siempre gratis»** del README es un borrador, y lo que diga queda como promesa pública desde el lanzamiento.
+- **La licencia del lanzamiento:** hasta entonces, todos los derechos reservados. Al publicar, el cliente pasa a GPL-3.0, con el bot de la CLA para todo el repositorio y la revisión legal de LICENSE y de la CLA. El servidor no se publica: es privado ([ADR-007](../adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-13)).
+- **La lista «Siempre gratis»** del README es un borrador, y lo que diga queda como promesa pública desde el lanzamiento. Desde el 2026-11-13 es el cliente completo en local, con el vault cifrado, y la exportación; la sync no está.
 - **`SECURITY.md` ya existe**, con el reporte privado de GitHub. Se repasa que los plazos sigan siendo realistas con usuarios de fuera.
 
 ### 12 · Publicar la primera release
@@ -142,13 +146,15 @@ Publicarla es una decisión aparte, como hasta ahora. Antes, se decide qué hace
 
 ## Prioridad 3: para cobrar
 
-- **El plan de pago de la sync alojada** y el cobro, en el repositorio privado `openward-cloud`.
+Toda la sync es de pago (2026-11-13). Hasta aquí ha funcionado en periodo de prueba.
+
+- **Android e iOS.** El producto de pago es el mismo cliente, sincronizado, en el móvil y en el escritorio: las apps salen después del lanzamiento de escritorio y antes de cobrar. Antes, el spike S1.2: el motor de terminal en dispositivos reales, la condición pendiente de [ADR-002](../adr/ADR-002-motor-de-terminal.md).
+- **El plan de pago de la sync**, con el final del periodo de prueba, y el cobro, en el repositorio privado `openward-cloud`.
 - **Una auditoría externa del cifrado y la sync** antes de cobrar por ella. Es la puerta de la fase 2 en [ARCHITECTURE §15](../ARCHITECTURE.md#15-hoja-de-ruta-con-puertas).
 
 ## Después del lanzamiento
 
-- **Android e iOS.** Antes, el spike S1.2: el motor de terminal en dispositivos reales, la condición pendiente de [ADR-002](../adr/ADR-002-motor-de-terminal.md).
-- **Git como backend**, el agente SSH, la CLI `ow` y cuentas propias para el servidor autoalojado.
+- **El agente SSH y la CLI `ow`.**
 - **Mosh en Windows**, con el cliente clean-room de [ADR-009](../adr/ADR-009-mosh-clean-room.md).
 - **La fase 3:** equipos, plan Team, IA con tu propia clave ([ADR-008](../adr/ADR-008-ia-mcp-y-byok.md)) y MCP.
 
@@ -157,6 +163,7 @@ Publicarla es una decisión aparte, como hasta ahora. Antes, se decide qué hace
 - **Gastos:** la cuenta de Apple Developer, el certificado de firma de Windows, el dominio y el registro de la marca.
 - **Decisiones:**
   - las diez del camino a la Community (punto 2);
+  - lo que quedó abierto el 2026-11-13: la duración del periodo de prueba de la sync, el precio del plan y dónde se aloja el servicio en producción;
   - publicar cada release.
 - **Trámites:** registrar la marca y comprar el dominio (puntos 8 y 11).
 - **Pruebas:** las de hardware y las dos semanas de uso (punto 9).

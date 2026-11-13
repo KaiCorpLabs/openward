@@ -1,8 +1,8 @@
 # Arquitectura y stack de OpenWard
 
-**Estado:** documento vivo: lo hecho y lo que falta van marcados donde importa (la columna «Estado» de los crates, las listas de seguridad y distribución) · **Revisado:** 2026-11-10 (§4.2, §5 y §6.1, con S4, S6 y D0) · [ADRs](adr/)
+**Estado:** documento vivo: lo hecho y lo que falta van marcados donde importa (la columna «Estado» de los crates, las listas de seguridad y distribución) · **Revisado:** 2026-11-13 (§1.1, §6.2, §7, §12, §13 y §15: toda la sync, de pago y alojada, y el servidor, privado); antes, 2026-11-10 (§4.2, §5 y §6.1, con S4, S6 y D0) · [ADRs](adr/)
 
-OpenWard es un cliente SSH open-core para Windows, macOS, Linux, iOS y Android. Es local-first y su vault de hosts y credenciales tiene formato abierto. La sincronización está cifrada de extremo a extremo (E2EE) y funciona con el almacenamiento del usuario, con un relay autoalojado o con el servicio alojado de pago. El dinero sale de servicios con coste real en el servidor: sincronización alojada, equipos y funciones enterprise. El cliente es 100 % open source y nunca tiene funciones capadas.
+OpenWard es un cliente SSH open-core para Windows, macOS, Linux, iOS y Android. Es local-first y su vault de hosts y credenciales tiene formato abierto. La edición gratuita, la Community, es el cliente completo funcionando en local y sin cuenta. La sincronización está cifrada de extremo a extremo (E2EE) y es el servicio de pago: va con una cuenta, en el servicio alojado de OpenWard. No hay sincronización con el almacenamiento del usuario ni servidor autoalojable ([ADR-006](adr/ADR-006-servidor-open-core.md#revisión-del-2026-11-13)). El dinero sale de servicios con coste real en el servidor: sincronización, equipos y funciones enterprise. El cliente es 100 % open source, y lo único que no hace gratis es sincronizar.
 
 ---
 
@@ -14,9 +14,9 @@ OpenWard es un cliente SSH open-core para Windows, macOS, Linux, iOS y Android. 
 | Terminal | Estado VT nativo y render propio en Flutter (atlas de glifos). **`libghostty-vt`**, fijado a un commit: el único que pasa la puerta de memoria y el que trae los codificadores de entrada ([informe S1](spikes/S1-terminal-resultados.md)). `xterm.dart` está descartado: sin versión desde febrero de 2024. | [ADR-002](adr/ADR-002-motor-de-terminal.md) |
 | SSH | `russh` + `russh-sftp`, con un trait `Signer` para claves en software, agente, Secure Enclave, Keystore, TPM y FIDO2 | [ADR-003](adr/ADR-003-ssh-russh-y-firmantes.md) |
 | Vault | **Aceptado.** Cifrado por ítem (XChaCha20-Poly1305) sobre SQLite. Jerarquía de claves con HPKE (X-Wing, `hpke-rs` y libcrux) y kit de recuperación obligatorio. | [ADR-004](adr/ADR-004-vault-y-jerarquia-de-claves.md) |
-| Sync | **Aceptado** (la segunda parte de S4, con backends, puede reabrirlo). Registros inmutables por dispositivo, firmados y cifrados, con merge por relojes de campo. Sirven para cualquier backend "tonto" (carpeta, S3, WebDAV, Git) y para el relay. | [ADR-005](adr/ADR-005-sync-por-registros-de-dispositivo.md) |
-| Servidor | **Aceptado.** Monolito modular en Go: SQLite para autoalojar y Postgres para el servicio alojado. Open core por fases: todo AGPL en las fases 2 y 3 (ingresos del servicio alojado); `ee/` aparece en la fase 4 solo con funciones nuevas (SAML, SCIM, SIEM, grabaciones). | [ADR-006](adr/ADR-006-servidor-open-core.md) |
-| Licencias | **Aceptado, revisado el 2026-11-10.** Hasta el lanzamiento de la Community, todo con todos los derechos reservados. Al lanzar: cliente y núcleo con GPL-3.0, servidor con AGPL-3.0, y **CLA en todo el repositorio**. La licencia de `ee/` se decide en la fase 4 con datos. Cobros e infraestructura en un repositorio privado. | [ADR-007](adr/ADR-007-licencias-y-contribuciones.md) |
+| Sync | **Aceptado, revisado el 2026-11-13** (la segunda parte de S4 puede reabrirlo). Registros inmutables por dispositivo, firmados y cifrados, con merge por relojes de campo. Su único backend es el relay del servicio alojado; no hay backends de almacenamiento propio. | [ADR-005](adr/ADR-005-sync-por-registros-de-dispositivo.md) |
+| Servidor | **Aceptado, revisado el 2026-11-13.** Monolito modular en Go con Postgres. Es privado: no se publica ni se autoaloja. Toda la sync es de pago y alojada, con una cuenta gratuita que trae un periodo de prueba. Lo de la fase 4 (`ee/`: SAML, SCIM, SIEM, grabaciones) se decide entonces. | [ADR-006](adr/ADR-006-servidor-open-core.md) |
+| Licencias | **Aceptado, revisado el 2026-11-10 y el 2026-11-13.** Hasta el lanzamiento de la Community, todo con todos los derechos reservados. Al lanzar: cliente y núcleo con GPL-3.0 y **CLA en todo el repositorio**. El servidor, los cobros y la infraestructura son privados. | [ADR-007](adr/ADR-007-licencias-y-contribuciones.md) |
 | IA | Servidor MCP local ("el agente usa SSH, pero nunca ve la clave") y modelos BYOK o locales. No pagamos inferencia. | [ADR-008](adr/ADR-008-ia-mcp-y-byok.md) |
 | Mosh | Implementación clean-room en Rust: no se enlaza mosh porque es GPLv3. Hasta entonces se usan SSH + tmux con reconexión automática. | [ADR-009](adr/ADR-009-mosh-clean-room.md) |
 
@@ -29,7 +29,7 @@ OpenWard es un cliente SSH open-core para Windows, macOS, Linux, iOS y Android. 
 - **Funciones base de un cliente SSH moderno:** hosts, grupos con herencia, tags, keychain, identidades, known hosts, terminal con pestañas, división y broadcast, SFTP de doble panel, port forwarding (local, remoto y dinámico), jump hosts, proxy (HTTP/SOCKS5 y ProxyCommand), snippets, terminal local, serial, temas y paleta de comandos.
 - **Importadores:** `~/.ssh/config`, Termius, PuTTY, MobaXterm, SecureCRT y CSV. **Exportación completa** a un formato abierto documentado.
 - **Vault cifrado** con desbloqueo por contraseña, biometría o PIN y **recuperación sin pérdida de datos**.
-- **Sync E2EE:** con almacenamiento propio (gratis), con relay autoalojado (gratis) o con el servicio alojado en tiempo real (de pago).
+- **Sync E2EE:** con una cuenta, en el servicio alojado y en tiempo real. Es de pago, con un periodo de prueba; no hay sync con almacenamiento propio ni relay autoalojado.
 - **Equipos:** vaults compartidos, roles, invitaciones, OIDC y auditoría básica.
 - **Enterprise:** SAML, SCIM, políticas gestionadas, grabación de sesiones en modo cumplimiento, envío a SIEM e integraciones con Vault, OpenBao, step-ca, Teleport y Cloudflare.
 - **Integraciones de red:** Tailscale (descubrimiento de hosts del tailnet y Tailscale SSH) e inventario cloud.
@@ -53,7 +53,7 @@ OpenWard es un cliente SSH open-core para Windows, macOS, Linux, iOS y Android. 
 ### 1.3 Supuestos y restricciones
 
 - **Equipo de 1 a 3 personas**, con experiencia demostrada en Rust, Flutter (con `flutter_rust_bridge`) y Go (Arveil). El stack prioriza lo que ya se domina y lo que tiene una sola implementación por capa.
-- **Orden de lanzamiento:** escritorio y Android primero; iOS en la fase 2.
+- **Orden de lanzamiento:** primero el escritorio, con la Community; Android e iOS, después de ese lanzamiento y antes de cobrar por la sync (decidido el 2026-11-13).
 - **Presupuesto fijo** para firma y distribución: Apple US$99/año, firma para Windows (SignPath gratis para OSS o Azure Trusted Signing) y dominios.
 - **Calidad de ejecución como prioridad:** móvil desde el principio, builds firmadas, auditoría externa, integraciones e importadores.
 
@@ -77,18 +77,17 @@ flowchart TB
   CORE -.->|LocalAPI| TS[Tailscale]
   CORE -.->|BYOK / local| LLM[OpenAI · Anthropic · Ollama]
 
-  CORE <-->|registros cifrados| BYO[(Almacenamiento propio<br/>carpeta · S3/R2 · WebDAV · Git)]
-  CORE <-->|HTTPS + WebSocket| SRV
+  CORE <-->|HTTPS + WebSocket<br/>registros cifrados| SRV
 
   subgraph SRV[Servidor OpenWard — no fiable para el contenido]
-    API[API Go: identidad, vaults, objetos, tiempo real] --> SDB[(SQLite o Postgres)]
+    API[API Go: identidad, vaults, objetos, tiempo real] --> SDB[(Postgres)]
     API --> OBJ[(Disco o S3: segmentos y grabaciones cifradas)]
     EE[ee/: SAML · SCIM · políticas · auditoría · grabaciones · SIEM]
     PUSH[Pasarela push APNs/FCM]
   end
 ```
 
-**La frontera de confianza es el dispositivo.** El servidor (alojado o autoalojado) guarda blobs cifrados, metadatos mínimos y listas de control de acceso, nada más. La UI Flutter muestra datos y recoge entradas. El núcleo Rust es la única autoridad para cifrar, verificar firmas, decidir la confianza en un host y usar claves.
+**La frontera de confianza es el dispositivo.** El servidor guarda blobs cifrados, metadatos mínimos y listas de control de acceso, nada más. La UI Flutter muestra datos y recoge entradas. El núcleo Rust es la única autoridad para cifrar, verificar firmas, decidir la confianza en un host y usar claves.
 
 ---
 
@@ -119,7 +118,7 @@ flowchart TB
 | `openward-proto` | Tipos de datos del vault, esquemas CBOR versionados, sobres y formato de registros (también es la especificación de `spec/`) | `serde`, `ciborium` | Hecho |
 | `openward-crypto` | AEAD, HPKE, firmas, KDF, jerarquía de claves, kit de recuperación | RustCrypto (`chacha20poly1305`, `ed25519-dalek`, `argon2`, `hpke`, `ml-kem`), `zeroize` | Fase 2 |
 | `openward-vault` | Almacén local SQLite, CRUD de ítems, índice en memoria, herencia de configuración, bloqueo | `rusqlite` | Hecho (sin cifrar hasta la fase 2) |
-| `openward-sync` | Motor de sync (registros por dispositivo, merge y compactación) y backends | `object_store` (S3/R2/local), WebDAV, `gix` (Git), cliente del relay | Fase 2 |
+| `openward-sync` | Motor de sync (registros por dispositivo, merge y compactación), el cliente del relay y un backend de pruebas | Cliente HTTPS y WebSocket del relay | Fase 2 |
 | `openward-ssh` | Sesiones, autenticación, trait `Signer`, cadenas de saltos, proxy, ProxyCommand, servidor SOCKS5 propio para forwarding dinámico, known hosts, keepalive, reconexión | `russh`, `ssh-key` | Hecho |
 | `openward-sftp` | Navegador remoto, transferencias con cola, reanudación y permisos | `russh-sftp` | Hecho |
 | `openward-term` | Trait `TermEngine` y formato de frames (*damage* por filas) entre el motor y la UI | — | Hecho |
@@ -288,23 +287,22 @@ vaults/<vault_id>/
   acks/<device_id>     cursores leídos (para poder podar)
 ```
 
-- **Funciona sobre cualquier almacenamiento que permita escribir un objeto nuevo y listar un prefijo** (carpeta de iCloud, Dropbox o Syncthing, S3/R2/MinIO, WebDAV, Git). Nadie sobrescribe archivos de otro, así que no hacen falta bloqueos ni operaciones *compare-and-swap*.
+- **Pide muy poco al almacenamiento:** escribir un objeto nuevo y listar un prefijo. Nadie sobrescribe archivos de otro, así que no hacen falta bloqueos ni operaciones *compare-and-swap*, y el servidor queda simple. El modelo valdría también para una carpeta, S3 o WebDAV, pero esos backends no se ofrecen ([§6.2](#62-backends)).
 - **Merge por relojes de campo** ([ADR-005](adr/ADR-005-sync-por-registros-de-dispositivo.md), medido en [S4](spikes/S4-sync.md)): cada revisión lleva, para cada campo, el reloj lógico híbrido de la escritura que lo puso (dentro del texto cifrado). Si hay dos cabezas, el núcleo se queda, campo a campo, con el reloj más reciente. No necesita el historial, así que podar es seguro; el merge a tres bandas desde el ancestro común perdía escrituras y quedó descartado. Las revisiones siguen formando un DAG por ítem (`parents`), para el historial y para los avisos: si dos equipos escribieron el mismo campo, la versión perdedora queda en el historial con un aviso en la UI. Borrar es escribir el campo `deleted`, que gana o pierde como cualquier otro.
 - **Compactación:** instantáneas periódicas; los segmentos se podan cuando todos los dispositivos activos han confirmado lectura o pasa la ventana de retención.
 - **Pruebas de convergencia** con `proptest`: ediciones concurrentes aleatorias deben converger al mismo estado en todos los dispositivos, sin perder ninguna escritura que nadie más vio.
 
 ### 6.2 Backends
 
+Desde el 2026-11-13 hay un solo backend, y es de pago ([ADR-005](adr/ADR-005-sync-por-registros-de-dispositivo.md#revisión-del-2026-11-13), [ADR-006](adr/ADR-006-servidor-open-core.md#revisión-del-2026-11-13)):
+
 | Backend | Plan | Notas |
 |---|---|---|
-| Carpeta local o de red (iCloud Drive, Dropbox, Syncthing) | Gratis | El más simple; sin tiempo real |
-| S3 / R2 / MinIO / B2 | Gratis | Credenciales en el almacén del dispositivo |
-| WebDAV (Nextcloud) | Gratis | — |
-| Git (repositorio privado propio) | Gratis | Cada dispositivo escribe sus rutas, así que no hay conflictos de merge |
-| Relay OpenWard autoalojado | Gratis (AGPL) | Tiempo real por WebSocket y equipos |
-| OpenWard Cloud | **De pago** | Lo mismo que el relay, sin instalar nada, con historial, recuperación y push |
+| OpenWard Cloud (el relay del servicio alojado) | **De pago**, con una cuenta gratuita y un periodo de prueba | Tiempo real por WebSocket, equipos, historial, recuperación y push |
+| Carpeta local o de red, S3 / R2 / MinIO / B2, WebDAV y Git | Descartados | El modelo los admite, pero no se ofrecen |
+| Relay OpenWard autoalojado | Descartado | El servidor es privado |
 
-El backend es un trait (`put_object`, `list(prefix, after)`, `get_object`, `watch?`). El relay añade `watch` (notificación) y el control de acceso.
+El backend es un trait (`put_object`, `list(prefix, after)`, `get_object`, `watch?`). El relay añade `watch` (notificación) y el control de acceso. Las pruebas del núcleo usan un backend en memoria o en un directorio, que la app no ofrece.
 
 ---
 
@@ -312,14 +310,16 @@ El backend es un trait (`put_object`, `list(prefix, after)`, `get_object`, `watc
 
 ### 7.1 Monolito modular
 
+Todo el servidor es privado ([ADR-006](adr/ADR-006-servidor-open-core.md#revisión-del-2026-11-13)). La columna «Edición» separa la base del servicio de lo que llega con la fase 4.
+
 | Módulo | Responsabilidad | Edición |
 |---|---|---|
-| `identity` | Cuentas (clave pública), certificados de dispositivo, tokens por desafío firmado (la contraseña nunca sale del dispositivo) y OIDC | OSS |
-| `vaults` | Manifiestos, espejo de la ACL para aplicar permisos, invitaciones | OSS |
-| `objects` | Segmentos, instantáneas, cuotas, retención; disco o S3 | OSS |
-| `realtime` | WebSocket con aviso de cambios por vault | OSS |
-| `push` | Cliente de la pasarela APNs/FCM con carga opaca; los relays autoalojados usan la pasarela pública de OpenWard | OSS (pasarela alojada) |
-| `admin` | Gestión básica de la instancia | OSS |
+| `identity` | Cuentas (clave pública), certificados de dispositivo, tokens por desafío firmado (la contraseña nunca sale del dispositivo) y OIDC | Base |
+| `vaults` | Manifiestos, espejo de la ACL para aplicar permisos, invitaciones | Base |
+| `objects` | Segmentos, instantáneas, cuotas, retención; disco o S3 | Base |
+| `realtime` | WebSocket con aviso de cambios por vault | Base |
+| `push` | Cliente de la pasarela APNs/FCM con carga opaca | Base |
+| `admin` | Gestión básica de la instancia | Base |
 | `ee/sso` | SAML 2.0 y vinculación de identidad a la organización | EE |
 | `ee/scim` | Aprovisionamiento y desaprovisionamiento (provoca rotación de claves en los clientes) | EE |
 | `ee/policy` | Políticas firmadas que el cliente aplica: IA sí/no, proveedores permitidos, exportación, grabación obligatoria, tiempos de bloqueo | EE |
@@ -327,13 +327,13 @@ El backend es un trait (`put_object`, `list(prefix, after)`, `get_object`, `watc
 | `ee/recordings` | Grabaciones de sesión cifradas con la clave de grabación de la org, retención y visor | EE |
 | `ee/console` | Consola web de la organización (miembros, dispositivos, políticas, auditoría): Go + templ + htmx dentro del binario | EE |
 
-La facturación (Stripe), el aprovisionamiento de tenants y la infraestructura del servicio alojado van en un **repositorio privado aparte** (`openward-cloud`) que importa el servidor como librería. No forma parte del producto distribuible.
+La facturación (Stripe), el aprovisionamiento de tenants y la infraestructura del servicio alojado van en un **repositorio privado aparte** (`openward-cloud`) que importa el servidor como librería. Ni eso ni el servidor se distribuyen.
 
 ### 7.2 Almacenamiento y API
 
-- **Autoalojado:** un binario, SQLite (`modernc.org/sqlite`, sin CGO) y el directorio de datos. Es el patrón de Arveil (ADR-004 de Arveil).
+- **Sin autoalojamiento** (decidido el 2026-11-13, [ADR-006](adr/ADR-006-servidor-open-core.md#revisión-del-2026-11-13)): el servidor solo corre como servicio alojado.
 - **Servicio alojado:** Postgres y almacenamiento de objetos (R2/S3). El aviso de cambios entre nodos usa `LISTEN/NOTIFY` y pasaría a NATS si hiciera falta.
-- **Capa de persistencia:** interfaz `Store` con dos implementaciones (SQLite y Postgres). Consultas con `sqlc` y migraciones por dialecto, ambas probadas en CI.
+- **Capa de persistencia:** interfaz `Store` sobre Postgres, con `sqlc` y migraciones probadas en CI. La implementación en SQLite, pensada para autoalojar con un único binario, deja de ser un requisito; C1 del [camino a la Community](plan/community.md#etapa-4--v06-servidor-y-cuentas-de-kaicorp-labs) decide si se conserva para las pruebas.
 - **API:** HTTPS con JSON para el plano de control, cuerpos binarios para los segmentos y WebSocket para los avisos. La API está versionada (`/v1`) y documentada en `spec/`. El servidor **no enlaza el núcleo Rust**.
 
 ### 7.3 Capacidad estimada (servicio alojado)
@@ -388,7 +388,7 @@ Hay dos interfaces en `openward-integrations`:
 | Capacidad | Dónde | Plan |
 |---|---|---|
 | Historial de sesiones local (cuándo, host, duración) y reproducción asciicast v2 | Cliente, cifrado con una clave del vault desde la v0.4 ([D0-2](THREAT_MODEL.md#11-decisiones-que-salen-de-d0)) | Gratis |
-| Historial de comandos (shell history) por host | Cliente, sincronizable en el vault | Gratis |
+| Historial de comandos (shell history) por host | Cliente, sincronizable en el vault | Gratis en local; sincronizarlo, con el plan de pago |
 | Auditoría de equipo (quién accedió a qué vault, altas y bajas, exportaciones) | Servidor y eventos firmados de los clientes | Team (básica) / Enterprise (SIEM) |
 | **Grabación en modo cumplimiento** | El cliente graba por política, cifra para la org, sube por partes encadenadas con hash y el servidor retiene | Enterprise |
 | Grabación **imposible de eludir** | Requiere un proxy o bastión: integrar Teleport, Tailscale o Boundary, o una pasarela propia en el futuro | Enterprise / revisión futura |
@@ -428,16 +428,15 @@ Hasta el lanzamiento de la Community, todo el repositorio tiene todos los derech
 openward/
 ├── core/         Rust (workspace)          GPL-3.0      CLA
 ├── app/          Flutter                   GPL-3.0      CLA
-├── server/       Go                        AGPL-3.0     CLA
-│   └── ee/       Go (build tag `ee`, fase 4)   Por decidir: comercial, FSL o AGPL (ADR-006)
 ├── spec/         Formato del vault, sync y API   CC-BY-4.0   CLA
 ├── spikes/       Prototipos de la fase 0 (no es producto)   GPL-3.0   CLA
 └── docs/         Arquitectura, ADRs, amenazas, operación   CC-BY-4.0   CLA
 ```
 
+- **El servidor no está en este repositorio:** es privado y no se publica ([ADR-006](adr/ADR-006-servidor-open-core.md#revisión-del-2026-11-13), [ADR-007](adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-13)).
 - **Desde el lanzamiento, el cliente es completamente open source (GPL-3.0):** el SSO del cliente es un flujo OIDC o SAML estándar del navegador y las políticas son configuración firmada. Eso permite firmar las builds de Windows gratis con SignPath (que exige una licencia OSI y que no haya componentes propietarios).
-- **CLA en todo el repositorio**, para poder ofrecer el cliente también con otra licencia (la App Store no admite la GPL de terceros) y vender licencias comerciales del núcleo AGPL junto a `ee/` sin violar la AGPL de contribuciones externas.
-- **Lista pública de "siempre gratis"**, en borrador desde la v0.1 y en vigor desde el lanzamiento (cliente completo, sync con almacenamiento propio, relay autoalojado, vaults de equipo básicos y OIDC). Nunca se recortará después: recortar lo que ya era gratis es lo que rompe la confianza de una comunidad open source.
+- **CLA en todo el repositorio**, para poder ofrecer el cliente también con otra licencia (la App Store no admite la GPL de terceros).
+- **Lista pública de "siempre gratis"**, en borrador desde la v0.1, cambiada el 2026-11-13 y en vigor desde el lanzamiento: el cliente completo en local y sin cuenta, con el vault cifrado, su recuperación y sus copias de seguridad, y la exportación completa. La sync no está en la lista. Desde el lanzamiento no se recortará: recortar lo que ya era gratis es lo que rompe la confianza de una comunidad open source.
 
 ---
 
@@ -450,7 +449,7 @@ openward/
 | Linux | Flatpak (Flathub), AppImage, .deb y .rpm | Del propio gestor de paquetes / AppImageUpdate | Un tar.gz (`make package-linux`); lo demás, pendiente |
 | iOS | App Store, TestFlight | App Store | Pendiente |
 | Android | Google Play, F-Droid y APK en GitHub | Tienda / F-Droid | Pendiente |
-| Servidor | Imagen OCI, binario único, paquetes de systemd; Helm en el futuro | Migraciones automáticas con copia de seguridad previa | Pendiente |
+| Servidor | No se distribuye: solo corre como servicio alojado (2026-11-13) | Migraciones automáticas con copia de seguridad previa | Pendiente |
 
 Se reutilizan los documentos de Arveil `CLIENT_RELEASES.md`, `CLIENT_UPDATES.md` y ADR-010.
 
@@ -464,8 +463,8 @@ Se reutilizan los documentos de Arveil `CLIENT_RELEASES.md`, `CLIENT_UPDATES.md`
 | Interoperabilidad | Matriz de servidores SSH, autenticaciones, saltos y túneles | Docker en CI |
 | Terminal | `vttest`, `esctest`, golden tests de render | — |
 | App | Widget tests, integration tests en dispositivos reales (Android/iOS) y escritorio | `flutter test`, `integration_test` |
-| Servidor | API, ACL, migraciones en ambos dialectos, carga de WebSocket | `go test`, k6 |
-| Sync de punta a punta | 3 dispositivos simulados × 4 backends con ediciones concurrentes | `openward-cli` sin UI |
+| Servidor | API, ACL, migraciones, carga de WebSocket | `go test`, k6 |
+| Sync de punta a punta | 3 dispositivos simulados contra el backend de pruebas y contra el relay, con ediciones concurrentes | `openward-cli` sin UI |
 
 ---
 
@@ -474,8 +473,11 @@ Se reutilizan los documentos de Arveil `CLIENT_RELEASES.md`, `CLIENT_UPDATES.md`
 La tabla conserva la visión arquitectónica original. Para el orden y las versiones
 vigentes prevalecen el [plan Community](plan/community.md) y el
 [estado verificable](plan/estado.md), reconciliados el 2026-11-13: v0.4 vault,
-v0.5 sync con almacenamiento propio, v0.6 servidor/cuentas y v0.7 operación
-pública. Equipos/IA, móvil y Enterprise vienen después, sin versión comprometida.
+v0.5 motor de sync, v0.6 servidor/cuentas y v0.7 operación pública. Ese mismo
+día se decidió que toda la sync es de pago y alojada, sin backends de
+almacenamiento propio ni servidor autoalojable ([ADR-006](adr/ADR-006-servidor-open-core.md#revisión-del-2026-11-13)).
+Móvil viene después del lanzamiento de escritorio y antes de cobrar por la sync;
+Equipos/IA y Enterprise, después, sin versión comprometida.
 Serie, FIDO2 y Mosh mediante `mosh-client` ya tienen soporte básico de escritorio
 en la etapa 1; el cliente Mosh clean-room y el soporte móvil siguen pendientes.
 
@@ -483,9 +485,9 @@ en la etapa 1; el cliente Mosh clean-room y el soporte móvil siguen pendientes.
 |---|---|---|
 | **0 · Spikes** (4–6 sem.) | S1 terminal (`alacritty_terminal` vs `libghostty-vt`, ambos con render propio en Flutter); S2 interop de `russh` + build en iOS/Android (`aws-lc-rs` vs `ring`); S3 `flutter_rust_bridge` con streams + firmante Secure Enclave y Keystore; S4 formato de sync sobre carpeta y S3 con `proptest`; S5 teclado e IME en Android y escritorio; S6 selección de HPKE/X-Wing (`hpke-rs` + libcrux vs `hpke`) | ADR-002, ADR-003 y ADR-004 aceptados con números medidos |
 | **1 · MVP local** (v0.1–0.3) | Escritorio. Hosts, grupos y tags con herencia; keychain (generar e importar); identidades; known hosts; terminal con pestañas, división y broadcast; SFTP; port forwarding L/R/D; saltos; proxy y ProxyCommand; snippets; terminal local; importadores (ssh_config, PuTTY, MobaXterm, Termius); temas; paleta; historial local. **Sin cuenta.** | Usable a diario por el equipo; importadores probados con exportaciones reales |
-| **2 · Vault y sync** (v0.4–0.6) | Cifrado, desbloqueo biométrico, kit de recuperación; sync con almacenamiento propio (carpeta, S3, WebDAV, Git); relay autoalojado; **lanzamiento de OpenWard Cloud Sync**; claves Secure Enclave y Keystore; agente SSH y CLI; **apps de Android e iOS**, al final de la fase (decidido el 2026-10-14: Android sale de la fase 1); firma y notarización antes de publicar | Auditoría externa del núcleo y el sync superada; convergencia probada |
+| **2 · Vault y sync** (v0.4–0.6) | Cifrado, desbloqueo biométrico, kit de recuperación; el motor de sync y el servidor con cuentas, que es su único backend; claves Secure Enclave y Keystore; agente SSH y CLI; firma y notarización antes de publicar; **lanzamiento de la Community de escritorio** (el cliente completo, en local); **apps de Android e iOS**, después de ese lanzamiento y antes de cobrar (decidido el 2026-11-13); **lanzamiento de OpenWard Cloud Sync**, de pago | Auditoría externa del núcleo y el sync superada; convergencia probada |
 | **3 · Equipos e IA** (v0.7–0.9) | Vaults de equipo con manifiesto, roles, invitaciones y OIDC; auditoría básica; **plan Team alojado**; Tailscale; MCP; IA BYOK o local; modo agente móvil (dictado, adjuntos, teclas, `tmux -CC`, reenganche) | 3 equipos piloto pagando |
-| **4 · Enterprise** (1.x) | SAML, SCIM, políticas, grabación en modo cumplimiento, SIEM, consola EE, Vault, OpenBao, step-ca, Teleport, Cloudflare, SSM, inventario cloud, FIDO2, TPM, **Mosh**, serial, licencias EE autoalojadas | Primer contrato enterprise y segunda auditoría |
+| **4 · Enterprise** (1.x) | SAML, SCIM, políticas, grabación en modo cumplimiento, SIEM, consola EE, Vault, OpenBao, step-ca, Teleport, Cloudflare, SSM, inventario cloud, FIDO2, TPM, **Mosh**, serial; autoalojar para empresas, por decidir entonces ([ADR-006](adr/ADR-006-servidor-open-core.md#revisión-del-2026-11-13)) | Primer contrato enterprise y segunda auditoría |
 
 ---
 

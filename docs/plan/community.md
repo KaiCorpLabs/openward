@@ -1,30 +1,30 @@
 # Camino a la Community: lo básico completo y la sincronización
 
-- **Estado (2026-11-13):** etapa 1 implementada; pruebas de hardware y uso real pendientes. La etapa 2 tiene D0–D3 y D5–D7 completados, la sesión de D4 y el onboarding/Ajustes de D8 integrados, con candidata `0.4.0-beta.1+31` y KDF validada en los tres sistemas. [#33](https://github.com/KaiCorpLabs/openward/issues/33) conserva maquetas, autenticación física y firma SSH en Secure Enclave; [#37](https://github.com/KaiCorpLabs/openward/issues/37), migraciones personales, uso cifrado y recuperación independiente. Las etapas 3–5 siguen pendientes: el spike S4 no es el motor de sync de producción. Las decisiones de v0.4 están aceptadas; las diez del plan Community siguen por confirmar. Cada hito con interfaz nueva conserva la revisión de sus maquetas. [Estado y evidencia](estado.md).
+- **Estado (2026-11-13):** etapa 1 implementada; pruebas de hardware y uso real pendientes. La etapa 2 tiene D0–D3 y D5–D7 completados, la sesión de D4 y el onboarding/Ajustes de D8 integrados, con candidata `0.4.0-beta.1+31` y KDF validada en los tres sistemas. [#33](https://github.com/KaiCorpLabs/openward/issues/33) conserva maquetas, autenticación física y firma SSH en Secure Enclave; [#37](https://github.com/KaiCorpLabs/openward/issues/37), migraciones personales, uso cifrado y recuperación independiente. Las etapas 3–5 siguen pendientes: el spike S4 no es el motor de sync de producción. Las decisiones de v0.4 están aceptadas; las diez del plan Community siguen por confirmar. El 2026-11-13 se decidió que toda la sync es de pago y alojada, sin backends de almacenamiento propio ni servidor autoalojable: las etapas 3 a 5 están revisadas con eso ([decisiones del 2026-11-13](#decisiones-del-2026-11-13)). Cada hito con interfaz nueva conserva la revisión de sus maquetas. [Estado y evidencia](estado.md).
 - **Fecha:** 2026-11-06.
 - **Base:** fases 1 y 2 de la hoja de ruta ([ARCHITECTURE §15](../ARCHITECTURE.md#15-hoja-de-ruta-con-puertas)) y los ADR [004](../adr/ADR-004-vault-y-jerarquia-de-claves.md) (vault), [005](../adr/ADR-005-sync-por-registros-de-dispositivo.md) (sync), [006](../adr/ADR-006-servidor-open-core.md) (servidor) y [009](../adr/ADR-009-mosh-clean-room.md) (Mosh). Incluye el plan de la [v0.4](v0.4.md) como etapa 2, con tres ajustes.
-- **Duración estimada:** unas 29 semanas de plan en cinco etapas. Son estimaciones al estilo de los planes anteriores: la 0.2 y la 0.3 fueron bastante más rápidas que lo que decían sus planes.
+- **Duración estimada:** unas 28 semanas de plan en cinco etapas (la etapa 3 perdió semana y media el 2026-11-13). Son estimaciones al estilo de los planes anteriores: la 0.2 y la 0.3 fueron bastante más rápidas que lo que decían sus planes.
 
 ## Objetivo
 
-Llegar a una versión de escritorio que se pueda lanzar como **Community**, la edición gratuita:
+Llegar a una versión de escritorio que se pueda lanzar como **Community**, la edición gratuita, y dejar hecha la base del servicio de pago, que es la sincronización:
 - **todo lo que hoy se espera gratis de un cliente SSH moderno**, en macOS, Windows y Linux;
 - **el vault cifrado** con contraseña maestra, kit de recuperación y desbloqueo con biometría;
-- **sincronización E2EE entre equipos**, gratis con el almacenamiento de cada cual (una carpeta, S3, WebDAV) y con una cuenta en nuestro servidor;
+- **sincronización E2EE entre equipos**, con una cuenta en nuestro servidor. Es el servicio de pago y no forma parte de la Community: la cuenta es gratuita y trae un periodo de prueba de la sync, y la app funciona entera sin cuenta. No hay sync con el almacenamiento de cada cual ni servidor autoalojable (decidido el 2026-11-13);
 - **el servidor funcionando con las cuentas de KaiCorp Labs** (`id.kaicorplabs.com`, Supabase Auth autoalojado), que ya existen y ya usan las demás apps de la casa: OpenWard no construye registro ni inicio de sesión propios.
 
 **Orden acordado (2026-11-06):**
 1. primero esto: lo básico, el vault y la sync;
 2. después, el lanzamiento: la web, la firma y la notarización, y lo demás de «Después de este plan»;
-3. y Android e iOS, cuando esto esté listo.
+3. y Android e iOS, cuando esto esté listo. Desde el 2026-11-13, además, antes de cobrar por la sync: el producto de pago es el mismo cliente sincronizado en el móvil y en el escritorio.
 
 Ese mismo día se descartó montar Postgres y Supabase Auth aparte para OpenWard: la identidad de KaiCorp Labs ya es Supabase Auth y corre en el minipc de la casa.
 
 **Puerta de salida del plan:**
 - el equipo usa OpenWard dos semanas como único cliente SSH en macOS, Windows y Linux, sin echar en falta nada de la etapa 1;
-- dos equipos de cada persona se sincronizan por una carpeta y por la cuenta. Con ediciones a la vez y sin conexión, convergen sin perder nada, y los conflictos se ven;
+- dos equipos de cada persona se sincronizan por la cuenta. Con ediciones a la vez y sin conexión, convergen sin perder nada, y los conflictos se ven;
 - se entra con una cuenta de KaiCorp Labs, se añade un segundo equipo y se recupera el vault en un tercero con el kit. El servidor no ve nunca la contraseña maestra ni nada en claro, y se comprueba en sus tablas y registros;
-- una persona de fuera del equipo crea su cuenta, recibe la membresía de OpenWard y sincroniza contra el servidor público, que tiene copias, vigilancia y borrado de una persona como los demás servicios de la casa;
+- una persona de fuera del equipo crea su cuenta, recibe la membresía de OpenWard y sincroniza contra el servidor público en su periodo de prueba. El servidor tiene copias, vigilancia y borrado de una persona como los demás servicios de la casa;
 - `THREAT_MODEL.md` cubre el servidor y las cuentas.
 
 ## Etapas
@@ -33,7 +33,7 @@ Ese mismo día se descartó montar Postgres y Supabase Auth aparte para OpenWard
 |---|---|---|---|
 | 1 | 0.3.4 y siguientes | [Lo básico completo](#etapa-1--lo-básico-completo) (P0–P7) | ~9 |
 | 2 | 0.4 | [El vault cifrado](#etapa-2--v04-el-vault-cifrado) ([v0.4.md](v0.4.md), D0–D8) | ~9 |
-| 3 | 0.5 | [Sync con tu almacenamiento](#etapa-3--v05-sync-con-tu-almacenamiento) (S1–S6) | ~5 |
+| 3 | 0.5 | [El motor de sync](#etapa-3--v05-el-motor-de-sync) (S1 y S4–S6) | ~3,5 |
 | 4 | 0.6 | [Servidor y cuentas de KaiCorp Labs](#etapa-4--v06-servidor-y-cuentas-de-kaicorp-labs) (C1–C6) | ~5 |
 | 5 | 0.7 | [Abierto: el servidor en producción](#etapa-5--v07-abierto-el-servidor-en-producción) (M1–M3) | ~1,5 |
 
@@ -321,24 +321,24 @@ Las decisiones de la v0.4 (contraseña maestra obligatoria y «Más tarde» dura
 
 D8 prepara `0.4.0-beta.1+31`, onboarding y Ajustes › Seguridad. La [guía](prueba-v0.4.md) mantiene pendientes la semana de uso, migraciones personales y autenticación física; #37/#33 siguen sus puertas. Preparar la candidata no publica una release.
 
-## Etapa 3 · v0.5, sync con tu almacenamiento
+## Etapa 3 · v0.5, el motor de sync
 
-El motor de [ADR-005](../adr/ADR-005-sync-por-registros-de-dispositivo.md) con los backends gratuitos. Va antes del servidor por tres razones:
-- es la promesa de la lista «Siempre gratis»;
-- una carpeta es la forma más simple de probar el motor;
-- el servidor será un backend más del mismo motor.
+El motor de [ADR-005](../adr/ADR-005-sync-por-registros-de-dispositivo.md), sin backends de almacenamiento propio. Hasta el 2026-11-13 esta etapa era «sync con tu almacenamiento» y traía los backends gratuitos (carpeta, S3 y WebDAV). Se quitaron al decidir que toda la sync es de pago y alojada ([revisión de ADR-005](../adr/ADR-005-sync-por-registros-de-dispositivo.md#revisión-del-2026-11-13)): el único backend es el servidor de la etapa 4.
+
+Sigue yendo antes del servidor por dos razones:
+- el motor se puede probar entero sin servidor, con un backend de pruebas;
+- el servidor será el backend de ese mismo motor, sin un segundo protocolo.
 
 | # | Hito | Semanas |
 |---|---|---|
-| S1 | `openward-sync`: registros por dispositivo, segmentos firmados, merge por campo, lápidas y cursores. Puerta de ADR-005: 3 dispositivos × 10.000 ediciones con `proptest` convergen al 100 % | 2 |
-| S2 | Backend de carpeta (iCloud Drive, Dropbox, Syncthing, una carpeta de red), con lo que esos servicios hacen mal: copias con retraso y archivos «en conflicto» | 0,5 |
-| S3 | Backends S3 (AWS, R2, MinIO, B2) y WebDAV (Nextcloud); sus credenciales, en el vault | 1 |
+| S1 | `openward-sync`: registros por dispositivo, segmentos firmados, merge por campo, lápidas y cursores, con un backend de pruebas (en memoria y en un directorio) que la app no ofrece. Puerta de ADR-005: 3 dispositivos × 10.000 ediciones con `proptest` convergen al 100 % | 2 |
 | S4 | Equipos: añadir uno con un código o un QR desde otro que ya está dentro (o con el kit), ver la lista y revocar uno | 0,5 |
-| S5 | Ajustes › Sincronización: estado («última sync hace 3 min, vía iCloud»), conflictos con la versión que perdió e historial de un ítem | 0,5 |
+| S5 | Ajustes › Sincronización: estado («última sync hace 3 min»), conflictos con la versión que perdió e historial de un ítem | 0,5 |
 | S6 | Compactación y poda, `openward-cli` para simular N dispositivos, formato en `spec/`, notas y beta | 0,5 |
 
+- **S2 y S3 ya no existen:** eran el backend de carpeta y los de S3 y WebDAV. Los demás hitos conservan su número, porque otros documentos los citan.
+- **La sync no se enciende en la app hasta la etapa 4,** porque no hay backend que elegir. S4 y S5 se construyen y se prueban contra el backend de pruebas, y C5 las conecta a la cuenta.
 - **Qué se sincroniza por defecto:** todo el vault (hosts, grupos, identidades, claves y contraseñas guardadas, snippets, túneles y workspaces). El historial y los registros se quedan en cada equipo; sincronizarlos será opcional y más adelante.
-- **Git como backend** queda para después. Está en ADR-005, pero aquí no aporta nada que S3 o una carpeta no den ya.
 
 ## Etapa 4 · v0.6, servidor y cuentas de KaiCorp Labs
 
@@ -355,13 +355,12 @@ Las demás apps de la casa entran con OIDC genérico por discovery. OpenWard es 
 
 ### El servidor
 
-- `server/` en Go con AGPL-3.0 y **CLA desde el primer commit** ([ADR-006](../adr/ADR-006-servidor-open-core.md), [ADR-007](../adr/ADR-007-licencias-y-contribuciones.md)).
+- El servidor, en Go y **privado**: no se publica ni se autoaloja, y su código va en un repositorio privado, no en este ([ADR-006](../adr/ADR-006-servidor-open-core.md#revisión-del-2026-11-13), [ADR-007](../adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-13)).
 - Módulos mínimos: `identity`, `objects`, `realtime` y `admin`.
-- Postgres con `sqlc` y migraciones. El `Store` también existe en SQLite, para autoalojar con un único binario.
-- **El relay es un backend más** del motor de la etapa 3 (`put`, `get`, `list` y `watch` por WebSocket): el cliente no tiene un segundo protocolo de sync.
-- **Un cliente OIDC genérico**, configurado por discovery y sin nada exclusivo de Supabase:
-  - en la casa, contra la identidad de KaiCorp Labs;
-  - autoalojado, contra el proveedor OIDC de cada cual, como promete la lista «Siempre gratis».
+- Postgres con `sqlc` y migraciones. El `Store` en SQLite, que estaba para autoalojar con un único binario, deja de ser un requisito: C1 decide si se conserva para las pruebas.
+- **El relay es el backend** del motor de la etapa 3 (`put`, `get`, `list` y `watch` por WebSocket), y el único: el cliente no tiene un segundo protocolo de sync.
+- **Un cliente OIDC genérico**, configurado por discovery y sin nada exclusivo de Supabase, contra la identidad de KaiCorp Labs. Así, mover la identidad a otro sitio es trabajo de operación, no de código.
+- **La cuenta es gratuita y trae un periodo de prueba de la sync;** después, sincronizar pide el plan de pago (decidido el 2026-11-13). La duración de la prueba está por decidir, y el cobro va aparte ([«Después de este plan»](#después-de-este-plan)).
 - **La base de datos es suya**, un Postgres aparte del de la identidad: lo que guarda la sync no se mezcla con las cuentas y se copia y se restaura por separado.
 
 ### Cómo entra la app de escritorio
@@ -374,7 +373,7 @@ Las demás apps de la casa entran con OIDC genérico por discovery. OpenWard es 
 Hay tres ventajas:
 - en la identidad solo se registra la dirección de vuelta del servidor;
 - la app no habla nunca con el emisor, así que no le afecta la comprobación de navegador de Cloudflare en `id.kaicorplabs.com`;
-- un servidor autoalojado funciona igual con otro proveedor.
+- cambiar de proveedor de identidad no pide tocar la app.
 
 ### Qué guarda el servidor, y qué no
 
@@ -394,15 +393,16 @@ Hay tres ventajas:
 
 - En el minipc de la casa, donde ya están la identidad y los demás servicios. Se despliega como ellos: imagen en GHCR que pasa Trivy, variables y secretos con las herramientas de la casa, y su red OIDC con la pasarela de la identidad.
 - **Hasta la etapa 5, solo en el tailnet** (`tailscale serve`) y solo para el equipo: la membresía de OpenWard solo la tienen sus personas.
+- **En revisión (2026-11-13):** dónde se alojará el servicio en producción no está decidido. Hasta entonces, este apartado y la etapa 5 valen como están.
 
 | # | Hito | Semanas |
 |---|---|---|
-| C1 | ADR-010 (cuentas y servidor), modelo de amenazas del servidor, API v1 en `spec/`, y el cliente OAuth y la membresía de OpenWard dados de alta en la identidad | 0,5 |
-| C2 | `server/`: esqueleto, `Store` en Postgres y SQLite, migraciones, objetos, CI (`go test` en los dos dialectos) e imagen | 1 |
+| C1 | ADR-010 (cuentas y servidor), modelo de amenazas del servidor, API v1 en `spec/`, y el cliente OAuth y la membresía de OpenWard dados de alta en la identidad. Decide también si el `Store` en SQLite se conserva para las pruebas | 0,5 |
+| C2 | El servidor, en su repositorio privado: esqueleto, `Store` en Postgres, migraciones, objetos, CI (`go test`) e imagen | 1 |
 | C3 | Entrar: OIDC por discovery, el traspaso a la app por `127.0.0.1`, la cuenta por `sub`, certificados de dispositivo, el paquete de la clave, salir y borrar los datos de la cuenta | 1 |
 | C4 | Relay: el backend del cliente, `watch` por WebSocket, cuotas y límite de peticiones | 1 |
-| C5 | App: Ajustes › Cuenta (entrar con la cuenta de KaiCorp Labs, dispositivos y salir; el registro y el segundo factor se hacen en la app de cuenta), alta de un equipo nuevo por la cuenta y estado de la sync en tiempo real | 1 |
-| C6 | Despliegue en el minipc (solo en el tailnet), prueba de punta a punta con 3 dispositivos × carpeta, S3 y relay, notas, guía y beta | 0,5 |
+| C5 | App: Ajustes › Cuenta (entrar con la cuenta de KaiCorp Labs, dispositivos y salir; el registro y el segundo factor se hacen en la app de cuenta), alta de un equipo nuevo por la cuenta y estado de la sync en tiempo real. Aquí se enciende la sync en la app, con S4 y S5 de la etapa 3 | 1 |
+| C6 | Despliegue en el minipc (solo en el tailnet), prueba de punta a punta con 3 dispositivos contra el relay (la segunda parte de la puerta de ADR-005), notas, guía y beta | 0,5 |
 
 ## Etapa 5 · v0.7, abierto: el servidor en producción
 
@@ -413,6 +413,8 @@ El servidor sale del tailnet para que entre gente de fuera del equipo, al están
 | M1 | Dirección pública por el túnel de Cloudflare, con el WebSocket a través de él (pings por debajo del límite de inactividad). Es la dirección estable que guardan los clientes: un dominio propio de OpenWard (decidido el 2026-11-10) | 0,5 |
 | M2 | Al estándar de la casa: copias nocturnas comprobadas, vigilancia, el borrado de una persona también en OpenWard e imágenes firmadas | 0,5 |
 | M3 | Términos y privacidad (hay datos de personas de fuera), la membresía de OpenWard para quien la pida, notas y beta | 0,5 |
+
+Quien entra en esta etapa sincroniza en su periodo de prueba: el plan de pago todavía no existe ([decisiones del 2026-11-13](#decisiones-del-2026-11-13)).
 
 **Supabase en la nube no hace falta para esto.** Solo tendría sentido si un día el minipc se queda corto. Como el servidor no usa nada exclusivo de Supabase, mover la identidad o la base a otro sitio sería trabajo de operación, no de código.
 
@@ -426,25 +428,39 @@ Lo que queda para lanzar y que este plan no hace. El [plan de lanzamiento](lanza
   - Flatpak, AppImage y .deb; winget y Scoop.
 - **Repositorio:**
   - el repo público, con la CI completa;
-  - la licencia del lanzamiento (GPL-3.0 en el cliente y AGPL-3.0 en el servidor), la CLA en todo el repositorio y el registro de la marca ([ADR-007](../adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-10));
+  - la licencia del lanzamiento (GPL-3.0 en el cliente; el servidor es privado), la CLA en todo el repositorio y el registro de la marca ([ADR-007](../adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-13));
   - el canal de `SECURITY.md`;
-  - la lista «Siempre gratis», cerrada.
+  - la lista «Siempre gratis», cerrada: el cliente completo en local y la exportación, sin la sync.
 - **Legal:** el análisis de la Ley de Ciberresiliencia (CRA).
-- **Cobro:**
-  - el plan de pago de la sync alojada, en el repositorio privado `openward-cloud`;
+- **Móvil:** Android e iOS, después del lanzamiento de escritorio y antes de cobrar por la sync (2026-11-13). Antes, el spike S1.2 (el motor en dispositivos reales): es la condición pendiente de [ADR-002](../adr/ADR-002-motor-de-terminal.md).
+- **Cobro.** Toda la sync es de pago, y hasta aquí ha funcionado en periodo de prueba:
+  - el plan de pago de la sync y el final del periodo de prueba, en el repositorio privado `openward-cloud`;
+  - las apps de Android e iOS, publicadas;
   - auditoría externa del cifrado y la sync antes de cobrar por ella.
 - **Producto:**
   - informes de fallos con consentimiento y un canal de opiniones;
-  - Git como backend, el agente SSH y la CLI `ow`;
-  - cuentas internas del servidor autoalojado, para quien no tenga un proveedor OIDC.
-- **Móvil:** Android e iOS. Antes, el spike S1.2 (el motor en dispositivos reales): es la condición pendiente de [ADR-002](../adr/ADR-002-motor-de-terminal.md).
+  - el agente SSH y la CLI `ow`.
+
+## Decisiones del 2026-11-13
+
+Decididas, no por confirmar:
+1. **Toda la sync es de pago y alojada.** La Community, la edición gratuita, es el cliente completo funcionando en local. No hay sync con almacenamiento propio (carpeta, S3, WebDAV, Git).
+2. **No hay servidor autoalojable, y el servidor es privado:** no se publica al lanzar ([ADR-006](../adr/ADR-006-servidor-open-core.md#revisión-del-2026-11-13)).
+3. **La v0.5 se queda como el motor de sync,** sin backends: la convergencia de ADR-005, añadir y revocar equipos, la pantalla de sync y el formato. El servidor de la v0.6 es el único backend ([ADR-005](../adr/ADR-005-sync-por-registros-de-dispositivo.md#revisión-del-2026-11-13)).
+4. **Android e iOS van antes de cobrar.** La Community de escritorio se lanza primero, y las apps móviles son condición del plan de pago.
+5. **La cuenta es gratuita y trae un periodo de prueba de la sync.** La app sigue funcionando entera sin cuenta.
+
+Quedan abiertas:
+- la duración del periodo de prueba, y el precio del plan;
+- dónde se aloja el servicio en producción. Los planes de las etapas 4 y 5 siguen como estaban hasta que se decida;
+- cómo funciona la sync entre la etapa 5 y el plan de pago. Por defecto, y a confirmar: en periodo de prueba para todas las cuentas, sin prometer sync gratuita.
 
 ## Decisiones por defecto (a confirmar)
 
 1. La etapa 1 va antes que la v0.4, por los datos nuevos de los hosts; D0–D2 van en paralelo.
 2. Mosh en escritorio con el `mosh-client` instalado en el equipo (revisión de ADR-009); el cliente clean-room sigue para el móvil y Windows.
 3. Autocompletado local, sin IA; la IA llega en la fase 3.
-4. La sync gratuita (carpeta, S3, WebDAV) va antes que el servidor; Git, después.
+4. El motor de sync va antes que el servidor, que es su único backend. Hasta el 2026-11-13 decía «la sync gratuita (carpeta, S3, WebDAV) va antes que el servidor; Git, después».
 5. Las cuentas de OpenWard son las de KaiCorp Labs: una sola cuenta para todas las apps de la casa, con su registro, segundo factor y membresías.
 6. La cuenta identifica, no descifra: la contraseña maestra no sale del equipo, ni siquiera derivada.
 7. El servidor es un cliente OIDC genérico y la app no habla nunca con el emisor: entra a través del servidor.
@@ -460,8 +476,8 @@ Lo que queda para lanzar y que este plan no hace. El [plan de lanzamiento](lanza
 | Touch ID y el Secure Enclave exigen una app firmada con Developer ID | Comprobarlo la primera semana de D4 (ya está en los riesgos de la v0.4); si hace falta, la cuenta de desarrollador de Apple antes de lo previsto |
 | Mosh: falta `mosh-client` o el UDP está bloqueado | Se detecta y se vuelve a SSH con tmux, con un aviso claro |
 | Las codificaciones heredadas confunden al motor | Traducir en el núcleo antes del motor; pruebas con vttest en Latin-1 y CP437 |
-| El merge pierde datos con almacenamiento «tonto» | La puerta de ADR-005 (`proptest`) antes de la interfaz; iCloud y Dropbox probados con sus conflictos reales |
-| Un fallo de la identidad deja a OpenWard sin cuentas, y a las demás apps también | La sync por carpeta o S3 no depende de ella, y lo ya sincronizado sigue en cada equipo; la identidad ya tiene copias y vigilancia |
+| El merge pierde datos | La puerta de ADR-005 (`proptest`) antes de la interfaz, y la prueba de punta a punta contra el relay en C6 |
+| Un fallo de la identidad deja a OpenWard sin cuentas, y a las demás apps también | La app funciona entera en local sin cuenta, y lo ya sincronizado sigue en cada equipo; la identidad ya tiene copias y vigilancia |
 | Cloudflare corta los WebSocket inactivos | Pings por debajo del límite y reconexión del `watch` sin perder el cursor |
 | El minipc se queda corto (Intel N150, 32 GB, con los demás servicios) | Medir en C6 con el equipo; los segmentos pueden pasar a almacenamiento S3 sin tocar el cliente |
 | Confundir el acceso a la cuenta con la contraseña del vault | Dos nombres distintos en la interfaz («tu cuenta de KaiCorp Labs» y «la contraseña del vault»); el correo de recuperación de la cuenta no promete nunca recuperar el vault |

@@ -149,7 +149,7 @@ Cada una es una prueba que se escribe en su hito.
 
 ## 8. Lo que llega después
 
-- **La sync (v0.5), con tu almacenamiento:**
+- **La sync (el motor de la v0.5), con el servidor de la v0.6 como único almacenamiento:**
   - el almacenamiento no lee ni falsifica nada, porque los segmentos van cifrados y firmados;
   - pero ve cuántos equipos hay, cuándo escribe cada uno y cuánto;
   - y puede borrar, quedarse atrás o devolver versiones viejas. Los cursores y las firmas lo detectan, y la app lo dice.
