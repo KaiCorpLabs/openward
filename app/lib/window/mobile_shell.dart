@@ -46,7 +46,7 @@ class MobileTopBar extends ConsumerWidget {
             Expanded(
               child: InkWell(
                 key: const ValueKey('mobile.title'),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(ow.shape.radius),
                 onTap: () => showTabSwitcher(context),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -107,18 +107,18 @@ class _TabCount extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             border: Border.all(color: c.text, width: 1.6),
-            borderRadius: BorderRadius.circular(5),
+            borderRadius: BorderRadius.circular(context.ow.shape.radius),
           ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 22),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: OwSpace.s2),
               child: Center(
                 widthFactor: 1,
                 child: Text(
                   count > 99 ? ':D' : '$count',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: OwText.small,
                     height: 1,
                     fontWeight: FontWeight.w700,
                     color: c.text,

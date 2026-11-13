@@ -160,7 +160,12 @@ Cada una es una prueba que se escribe en su hito.
   - el paquete de la clave de cuenta que se sube es el punto delicado. Va envuelto con la contraseña y con el secreto del kit, así que el servidor no puede probar contraseñas con él ([D0-1](#11-decisiones-que-salen-de-d0));
   - C1 amplía este documento con el servidor.
 - **Vaults de equipo:** la clave pública de un miembro nuevo se puede sustituir. Se defiende con la huella o con una atestación del servidor ([ADR-004](adr/ADR-004-vault-y-jerarquia-de-claves.md)).
-- **Móvil, y la IA con MCP** ([ADR-008](adr/ADR-008-ia-mcp-y-byok.md)): un agente con acceso a las sesiones es otro atacante posible, y tendrá su apartado cuando exista.
+- **Móvil** (primera implementación en #68, [plan](plan/movil.md)): lo que cambia respecto a este documento, a revisar antes de publicar:
+  - la carpeta de datos y la del vault no comprueban quién es dueño de cada carpeta padre (AM-3), porque el contenedor de la app es del sistema; siguen siendo 0700;
+  - la clave de «Más tarde» y la del desbloqueo biométrico están en el Keychain (iOS, `ThisDeviceOnly`) o en el Keystore (Android, AES-GCM, StrongBox si lo hay; la biométrica, por uso e invalidada al cambiar las huellas). Llegan a Rust por JNI sin pasar por Dart;
+  - «Guardar como» escribe una copia temporal en la caché de la app antes de entregarla al sistema, también de una clave privada o un JSON en claro;
+  - Android no copia los datos a Google ni a otro teléfono; iOS sí los incluye en la copia de iCloud, sin la clave del Keychain.
+- **La IA con MCP** ([ADR-008](adr/ADR-008-ia-mcp-y-byok.md)): un agente con acceso a las sesiones es otro atacante posible, y tendrá su apartado cuando exista.
 
 ## 9. Hallazgos de D0
 

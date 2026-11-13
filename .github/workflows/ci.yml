@@ -138,16 +138,29 @@ jobs:
         run: spikes/s2-ssh/servers/down.sh
 
   mobile-check:
-    name: Core compiles for mobile targets
-    # cargo check does not link, so Linux is enough. Left out: crates that
-    # build C for the target (openward-ssh: aws-lc; openward-vault: SQLite)
-    # or need a prebuilt library (openward-ghostty), the desktop-only
-    # openward-pty, openward-serial and openward-fido (HID), and
-    # openward-app and openward-ffi, which use them all.
-    # Their mobile builds come with phase 2.
+    name: Core and Android app for mobile targets
+    # iOS: what builds without Xcode (cargo check does not link). Left out
+    # there: crates that build C for the target (openward-ssh: aws-lc;
+    # openward-vault: SQLite), the prebuilt libghostty-vt and what uses
+    # them; tool/ci.sh checks the whole core for iOS on a Mac.
+    # Android: the whole core with the runner's NDK, and the app's debug
+    # APK (docs/plan/movil.md).
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Cache location
+        run: echo "OPENWARD_CACHE=$RUNNER_TEMP/openward" >> "$GITHUB_ENV"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/openward/ghostty/build
+          key: libghostty-vt-android-${{ hashFiles('core/crates/openward-ghostty/GHOSTTY_COMMIT', 'core/crates/openward-ghostty/build-libghostty.sh', '.github/scripts/install-zig.sh') }}
+      - name: Install Zig
+        run: .github/scripts/install-zig.sh
+      - name: Build libghostty-vt for Android
+        run: |
+          core/crates/openward-ghostty/build-libghostty.sh aarch64-linux-android
+          core/crates/openward-ghostty/build-libghostty.sh x86_64-linux-android
       - name: Install toolchain and targets
         working-directory: core
         run: |
@@ -156,15 +169,37 @@ jobs:
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: core
-      - name: Check
+      - name: Check iOS
         working-directory: core
         run: |
-          for target in aarch64-apple-ios aarch64-apple-ios-sim aarch64-linux-android x86_64-linux-android; do
+          for target in aarch64-apple-ios aarch64-apple-ios-sim; do
             cargo check --workspace --target "$target" \
               --exclude openward-ghostty --exclude openward-ssh --exclude openward-pty \
               --exclude openward-serial --exclude openward-fido \
               --exclude openward-vault --exclude openward-app --exclude openward-ffi
           done
+      - name: Check Android
+        working-directory: core
+        run: |
+          bin="$(ls -d "$ANDROID_NDK_LATEST_HOME"/toolchains/llvm/prebuilt/*/bin | head -1)"
+          for target in aarch64-linux-android x86_64-linux-android; do
+            var="${target//-/_}"
+            env "CC_$var=$bin/${target}28-clang" "AR_$var=$bin/llvm-ar" \
+              cargo check --workspace --target "$target"
+          done
+      - name: Flutter version
+        id: flutter
+        run: echo "version=$(jq -r .flutter .fvmrc)" >> "$GITHUB_OUTPUT"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ steps.flutter.outputs.version }}
+          channel: stable
+          cache: true
+      - name: Android debug APK
+        working-directory: app
+        run: |
+          flutter pub get --enforce-lockfile
+          flutter build apk --debug --target-platform android-arm64
 
   termbench:
     name: Spike S1 benchmark smoke test

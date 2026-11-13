@@ -1,7 +1,9 @@
 // Packages the approved Umbral artwork; never redraws the old shield.
 // From app/: fvm flutter test --no-pub tool/make_icons.dart
+// Desktop (macOS, Windows, Linux) and phones (iOS AppIcon, Android launcher).
 // Sources and integration notes: ../../assets/brand/umbral/README.md.
 
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -142,6 +144,93 @@ Future<void> _icns(String appearance, Map<int, Uint8List> pngs) async {
   }
 }
 
+/// iOS: the opaque master, full bleed (iOS rounds it), as each slot of
+/// AppIcon.appiconset asks; the smallest from the flat mark, as on the
+/// desktop.
+Future<Uint8List> _iosPng(_Artwork art, int size) async {
+  final recorder = ui.PictureRecorder();
+  final c = Canvas(recorder)..scale(size / 1024);
+  final paint = Paint()..filterQuality = FilterQuality.high;
+  const square = Rect.fromLTWH(0, 0, 1024, 1024);
+  if (size <= 40) {
+    c.drawColor(art.background, BlendMode.srcOver);
+    c.drawImageRect(art.mark, square, square, paint);
+  } else {
+    c.drawImageRect(art.master, square, square, paint);
+  }
+  return _render(recorder, size);
+}
+
+/// Android's adaptive icon: the flat mark alone, on a 108 dp canvas whose
+/// middle 66 dp the launcher always shows; the background is a color.
+Future<Uint8List> _androidForeground(ui.Image mark, int size) async {
+  final recorder = ui.PictureRecorder();
+  final c = Canvas(recorder)..scale(size / 108);
+  // The mark's 1024 canvas keeps its own clear space: on 72 dp, its
+  // silhouette stays inside the 66 dp safe circle.
+  c.drawImageRect(
+    mark,
+    const Rect.fromLTWH(0, 0, 1024, 1024),
+    const Rect.fromLTWH(18, 18, 72, 72),
+    Paint()..filterQuality = FilterQuality.high,
+  );
+  return _render(recorder, size);
+}
+
+Future<Uint8List> _render(ui.PictureRecorder recorder, int size) async {
+  final picture = recorder.endRecording();
+  final image = await picture.toImage(size, size);
+  picture.dispose();
+  final data = await image.toByteData(format: ui.ImageByteFormat.png);
+  image.dispose();
+  return data!.buffer.asUint8List();
+}
+
+/// Android densities: the legacy 48 dp icon and the 108 dp adaptive layer.
+const _androidDensities = {
+  'mdpi': 1.0,
+  'hdpi': 1.5,
+  'xhdpi': 2.0,
+  'xxhdpi': 3.0,
+  'xxxhdpi': 4.0,
+};
+
+Future<void> _phones() async {
+  final art = await _artwork('dark');
+  final mono = await _load('$_brand/png/positive/umbral-positive-1024.png');
+  try {
+    const ios = 'ios/Runner/Assets.xcassets/AppIcon.appiconset';
+    final slots =
+        (jsonDecode(await File('$ios/Contents.json').readAsString())
+                as Map<String, dynamic>)['images']
+            as List<dynamic>;
+    for (final slot in slots.cast<Map<String, dynamic>>()) {
+      final points = double.parse((slot['size'] as String).split('x').first);
+      final scale = double.parse((slot['scale'] as String).replaceAll('x', ''));
+      final size = (points * scale).round();
+      await _write('$ios/${slot['filename']}', await _iosPng(art, size));
+    }
+    const res = 'android/app/src/main/res';
+    for (final MapEntry(key: density, value: k) in _androidDensities.entries) {
+      await _write(
+        '$res/mipmap-$density/ic_launcher.png',
+        await _png(art, (48 * k).round()),
+      );
+      await _write(
+        '$res/mipmap-$density/ic_launcher_foreground.png',
+        await _androidForeground(art.mark, (108 * k).round()),
+      );
+      await _write(
+        '$res/mipmap-$density/ic_launcher_monochrome.png',
+        await _androidForeground(mono, (108 * k).round()),
+      );
+    }
+  } finally {
+    art.dispose();
+    mono.dispose();
+  }
+}
+
 void main() {
   test('package Umbral app icons', () async {
     for (final appearance in ['dark', 'light']) {
@@ -171,4 +260,6 @@ void main() {
       }
     }
   });
+
+  test('package Umbral phone icons', _phones);
 }

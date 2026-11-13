@@ -15,7 +15,7 @@ use ssh_key::private::{KeypairData, SkEcdsaSha2NistP256 as SkEcdsaPair, SkEd2551
 use ssh_key::public::{SkEcdsaSha2NistP256, SkEd25519};
 use ssh_key::{Algorithm, PrivateKey, Signature};
 
-#[cfg(feature = "hid")]
+#[cfg(all(feature = "hid", not(any(target_os = "android", target_os = "ios"))))]
 pub mod hid;
 #[cfg(any(test, feature = "soft"))]
 pub mod soft;

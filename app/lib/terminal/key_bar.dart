@@ -98,7 +98,7 @@ class KeyBar extends StatelessWidget {
             listenable: stickyMods,
             builder: (context, _) => ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: OwSpace.s2),
               children: [
                 _Key(
                   label: 'Esc',
@@ -240,16 +240,19 @@ class _KeyState extends State<_Key> {
     final c = ow.colors;
     final on = widget.held;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),
+      padding: const EdgeInsets.symmetric(
+        horizontal: OwSpace.s1,
+        vertical: OwSpace.s2,
+      ),
       child: Semantics(
         button: true,
         selected: on,
         label: widget.semantics,
         child: Material(
           color: on ? c.primary : c.control,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(ow.shape.radius),
           child: InkWell(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(ow.shape.radius),
             onTap: widget.onTap,
             child: GestureDetector(
               onLongPressStart: widget.repeat ? (_) => _repeat() : null,
@@ -257,7 +260,7 @@ class _KeyState extends State<_Key> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(minWidth: 40),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: OwSpace.s5),
                   child: Center(
                     child: ExcludeSemantics(
                       child: widget.icon != null
@@ -270,7 +273,7 @@ class _KeyState extends State<_Key> {
                               widget.label!,
                               style: TextStyle(
                                 fontFamily: ow.fonts.mono,
-                                fontSize: 14,
+                                fontSize: OwText.title,
                                 fontWeight: widget.locked
                                     ? FontWeight.w700
                                     : FontWeight.w500,

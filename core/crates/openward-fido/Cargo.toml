@@ -21,10 +21,14 @@ soft = ["dep:rand"]
 ssh-key = { version = "=0.7.0-rc.11", features = ["ed25519", "p256", "alloc", "std", "rand_core"] }
 signature = "3"
 thiserror = "2"
-# CTAP2 over HID (ADR-003), with the crypto russh uses already.
-ctap-hid-fido2 = { version = "=3.6.1", default-features = false, features = ["aws-lc-rs"], optional = true }
 anyhow = { version = "1", optional = true }
 rand = { version = "0.10", features = ["thread_rng"], optional = true }
+
+# CTAP2 over HID (ADR-003), with the crypto russh uses already. Desktop
+# only: phones reach keys over NFC or USB (docs/plan/movil.md), so `hid`
+# builds nothing there.
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+ctap-hid-fido2 = { version = "=3.6.1", default-features = false, features = ["aws-lc-rs"], optional = true }
 
 [dev-dependencies]
 rand = { version = "0.10", features = ["thread_rng"] }

@@ -201,9 +201,10 @@ impl Writer {
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 type Port = Box<dyn SerialPort>;
 
-/// No port on a phone: nothing of this kind is ever made.
+/// No port on a phone: nothing of this kind is ever made. Boxed, so the
+/// reader and the writer are dropped as on the desktop.
 #[cfg(any(target_os = "android", target_os = "ios"))]
-enum Port {}
+type Port = Box<std::convert::Infallible>;
 
 #[cfg(any(target_os = "android", target_os = "ios"))]
 pub fn ports() -> Vec<PortInfo> {
@@ -218,17 +219,17 @@ pub fn open(path: &str, _: &SerialLine) -> Result<(Reader, Writer), OpenError> {
 #[cfg(any(target_os = "android", target_os = "ios"))]
 impl Reader {
     pub fn read(&mut self, _: &mut [u8]) -> io::Result<Option<usize>> {
-        match self.0 {}
+        match *self.0 {}
     }
 }
 
 #[cfg(any(target_os = "android", target_os = "ios"))]
 impl Writer {
     pub fn write(&mut self, _: &[u8]) -> io::Result<()> {
-        match self.0 {}
+        match *self.0 {}
     }
     pub fn send_break(&mut self) -> io::Result<()> {
-        match self.0 {}
+        match *self.0 {}
     }
 }
 

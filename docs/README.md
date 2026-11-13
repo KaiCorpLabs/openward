@@ -25,6 +25,7 @@
 | [plan/seguridad-0.3.3.md](plan/seguridad-0.3.3.md) | 63 fichas históricas y seguimientos S0/S1/S2 con pruebas, PR, CI y límites; los casos pendientes conservan su evidencia solicitada |
 | [plan/community.md](plan/community.md) | Camino a la Community: etapa 1 implementada con pruebas manuales pendientes; vault cifrado, motor de sync, servidor y producción por completar. Desde el 2026-11-13, la Community es el cliente completo en local y la sync es el servicio de pago |
 | [plan/v0.4.md](plan/v0.4.md) | v0.4: el vault cifrado (contraseña maestra, kit de recuperación, desbloqueo con biometría, secretos y copia de seguridad), etapa 2 del camino a la Community (en marcha) |
+| [plan/movil.md](plan/movil.md) | Android e iOS (#68): la misma app y el mismo núcleo, qué hay, paridad con el escritorio, cómo se prueba, limitaciones y lo que hay que revisar antes de publicar |
 | [plan/lanzamiento.md](plan/lanzamiento.md) | Lanzamiento: lo que queda para salir con la Community, por prioridad (los planes de la v0.4 a la v0.7, distribución, web, legal y la prueba final), y lo que hace falta para cobrar por la sync, con Android e iOS (propuesta, revisada el 2026-11-13) |
 
 Pendiente: `PROTOCOL.md` (en [`spec/`](../spec/)).

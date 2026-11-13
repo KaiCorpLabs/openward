@@ -174,8 +174,8 @@ El terminal es la pieza que más se nota. Los clientes de escritorio basados en 
   |---|---|---|---|
   | Software (descifrado del vault) | todas | Ed25519/ECDSA/RSA | 1 |
   | Agente externo | escritorio | lo que ofrezca el agente | 1 |
-  | Secure Enclave | macOS implementado; iOS pendiente | `ecdsa-sha2-nistp256` | D4: [contrato y límites](../spec/secure-enclave-ssh-v1.md); validación física en #33 |
-  | Android Keystore / StrongBox | Android | `ecdsa-sha2-nistp256` | 2 |
+  | Secure Enclave | macOS implementado; iOS con el mismo código, sin validar en un iPhone ([plan móvil](plan/movil.md)) | `ecdsa-sha2-nistp256` | D4: [contrato y límites](../spec/secure-enclave-ssh-v1.md); validación física en #33 |
+  | Android Keystore / StrongBox | Android (el desbloqueo del vault ya lo usa por JNI; el firmante SSH, pendiente) | `ecdsa-sha2-nistp256` | 2 |
   | TPM (CNG / tpm2) | Windows / Linux | `ecdsa-sha2-nistp256` | 4 |
   | FIDO2 (`sk-*`) | escritorio, luego móvil | `sk-ssh-ed25519`, `sk-ecdsa` | 4 |
   | Certificado de corta duración | todas | envuelve cualquiera de los anteriores | 3–4 |
@@ -195,6 +195,9 @@ Es poco común en clientes SSH multiplataforma; algunos gestores de contraseñas
 - Generación opcional de un bloque `Include` para `~/.ssh/config` con `ProxyCommand ow proxy %h %p`, para usar la configuración del vault desde OpenSSH.
 
 ### 3.7 Móvil
+
+Primera implementación en #68: la misma app y el mismo núcleo, con la interfaz de teléfono, la barra de teclas, el Keychain y el Keystore. Paridad con el escritorio, límites y lo que queda por revisar en el [plan móvil](plan/movil.md).
+
 
 - **Segundo plano:** iOS suspende los sockets, así que la continuidad se consigue con **reconexión y reenganche automático a tmux** (fase 3) y después con **Mosh** (fase 4). En Android se usa un servicio en primer plano mientras haya sesiones activas.
 - **Modo agente** (para Claude Code o Codex por SSH, fase 3):
@@ -447,8 +450,8 @@ openward/
 | macOS | DMG notarizado, cask de Homebrew | Sparkle (feed firmado) | DMG sin firmar y cask de Homebrew (tap propio); notarización y Sparkle, pendientes |
 | Windows | MSIX/MSI firmados, winget, Scoop | WinSparkle o MSIX App Installer | Un zip sin firmar, cuando se empaqueta; lo demás, pendiente |
 | Linux | Flatpak (Flathub), AppImage, .deb y .rpm | Del propio gestor de paquetes / AppImageUpdate | Un tar.gz (`make package-linux`); lo demás, pendiente |
-| iOS | App Store, TestFlight | App Store | Pendiente |
-| Android | Google Play, F-Droid y APK en GitHub | Tienda / F-Droid | Pendiente |
+| iOS | App Store, TestFlight | App Store | Builds de depuración para el simulador; firma y tiendas, pendientes ([plan móvil](plan/movil.md)) |
+| Android | Google Play, F-Droid y APK en GitHub | Tienda / F-Droid | APK de depuración (CI); firma y tiendas, pendientes ([plan móvil](plan/movil.md)) |
 | Servidor | No se distribuye: solo corre como servicio alojado (2026-11-13) | Migraciones automáticas con copia de seguridad previa | Pendiente |
 
 Se reutilizan los documentos de Arveil `CLIENT_RELEASES.md`, `CLIENT_UPDATES.md` y ADR-010.
