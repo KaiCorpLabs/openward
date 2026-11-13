@@ -471,6 +471,14 @@ Se reutilizan los documentos de Arveil `CLIENT_RELEASES.md`, `CLIENT_UPDATES.md`
 
 ## 15. Hoja de ruta con puertas
 
+La tabla conserva la visión arquitectónica original. Para el orden y las versiones
+vigentes prevalecen el [plan Community](plan/community.md) y el
+[estado verificable](plan/estado.md), reconciliados el 2026-11-13: v0.4 vault,
+v0.5 sync con almacenamiento propio, v0.6 servidor/cuentas y v0.7 operación
+pública. Equipos/IA, móvil y Enterprise vienen después, sin versión comprometida.
+Serie, FIDO2 y Mosh mediante `mosh-client` ya tienen soporte básico de escritorio
+en la etapa 1; el cliente Mosh clean-room y el soporte móvil siguen pendientes.
+
 | Fase | Contenido | Puerta de salida |
 |---|---|---|
 | **0 · Spikes** (4–6 sem.) | S1 terminal (`alacritty_terminal` vs `libghostty-vt`, ambos con render propio en Flutter); S2 interop de `russh` + build en iOS/Android (`aws-lc-rs` vs `ring`); S3 `flutter_rust_bridge` con streams + firmante Secure Enclave y Keystore; S4 formato de sync sobre carpeta y S3 con `proptest`; S5 teclado e IME en Android y escritorio; S6 selección de HPKE/X-Wing (`hpke-rs` + libcrux vs `hpke`) | ADR-002, ADR-003 y ADR-004 aceptados con números medidos |

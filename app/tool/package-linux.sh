@@ -64,7 +64,7 @@ git ls-files -z --cached --others --exclude-standard | tar --null -T - -czf "$tm
   "$image" bash -euc '
     mkdir /src && tar -xzf /io/src.tgz -C /src && cd /src
     core/crates/openward-ghostty/build-libghostty.sh
-    cd app && flutter pub get && flutter build linux --release
+    cd app && flutter pub get --enforce-lockfile && flutter build linux --release
     bundle="$(ls -d build/linux/*/release/bundle)"
     tar -czf /io/out.tgz -C "$(dirname "$bundle")" --transform "s,^bundle,OpenWard," bundle'
 mkdir -p app/build

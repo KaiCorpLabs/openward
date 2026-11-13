@@ -139,7 +139,7 @@ step "Rust: tests"
 
 step "App: analysis and unit tests"
 cd app
-fvm flutter pub get >/dev/null
+fvm flutter pub get --enforce-lockfile >/dev/null
 fvm flutter analyze
 fvm dart format --output=none --set-exit-if-changed lib test integration_test tool
 fvm flutter test test/
