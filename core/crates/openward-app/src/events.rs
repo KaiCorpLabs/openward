@@ -106,6 +106,8 @@ pub enum Stage {
     Authenticating,
     /// Waiting for the security key of `label`'s key file to be touched.
     TouchKey,
+    /// Waiting for the OS to authorize a Secure Enclave SSH signature.
+    TouchId,
     OpeningShell,
     OpeningSftp,
 }

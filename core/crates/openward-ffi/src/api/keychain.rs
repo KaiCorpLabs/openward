@@ -135,6 +135,7 @@ impl OpenWard {
             let users = keychain::users(self.app.local(), &self.app.vault());
             let mut keys = keychain::list(self.app.local(), &users);
             let mut stored = openward_app::vault_keys::list(&self.app.vault());
+            stored.extend(openward_app::enclave::list(&self.app.vault()));
             for key in &mut stored {
                 let path = keychain::absolute(self.app.local(), &key.path);
                 key.used_by = users
@@ -147,6 +148,17 @@ impl OpenWard {
             keys.into_iter().map(SshKey::from).collect()
         })
         .unwrap_or_default()
+    }
+
+    /// A device-bound P-256 key. Generation proves an authenticated signature
+    /// before saving public metadata; no vault lease is held over Touch ID.
+    pub fn generate_enclave_key(&self, name: String, comment: String) -> SshKeyResult {
+        result(openward_app::enclave::generate(
+            self.app.security(),
+            &*self.app.enclave(),
+            &name,
+            &comment,
+        ))
     }
 
     /// Makes `~/.ssh/<name>` and its `.pub`. RSA takes a few seconds.
@@ -330,6 +342,15 @@ impl OpenWard {
     /// Deletes a key of `~/.ssh` and its `.pub` and certificate; None if
     /// it went.
     pub fn delete_key(&self, path: String) -> Result<Option<SshKeyFailure>, VaultError> {
+        if openward_app::enclave::reference(std::path::Path::new(&path)).is_some() {
+            return Ok(openward_app::enclave::delete(
+                self.app.security(),
+                &*self.app.enclave(),
+                std::path::Path::new(&path),
+            )
+            .err()
+            .map(failure));
+        }
         let gate = self.app.security().gate();
         super::security::access(&gate, false, || {
             if let Some(id) = openward_app::vault_keys::reference(std::path::Path::new(&path)) {
@@ -349,6 +370,18 @@ impl OpenWard {
     pub fn rename_key(&self, path: String, name: String) -> Result<SshKeyResult, VaultError> {
         let gate = self.app.security().gate();
         super::security::access(&gate, false, || {
+            if let Some(id) = openward_app::enclave::reference(std::path::Path::new(&path)) {
+                let mut v = self.app.vault();
+                return match v.rename_secret(&id, &name) {
+                    Ok(()) => result(
+                        openward_app::enclave::list(&v)
+                            .into_iter()
+                            .find(|k| k.path == path)
+                            .ok_or(keychain::KeyError::NotAKey),
+                    ),
+                    Err(_) => result(Err(keychain::KeyError::NotAKey)),
+                };
+            }
             if let Some(id) = openward_app::vault_keys::reference(std::path::Path::new(&path)) {
                 let mut v = self.app.vault();
                 let renamed = v.rename_secret(&id, &name);
@@ -382,6 +415,9 @@ impl OpenWard {
     ) -> Result<Option<SshKeyFailure>, VaultError> {
         let gate = self.app.security().gate();
         super::security::access(&gate, false, || {
+            if openward_app::enclave::reference(std::path::Path::new(&path)).is_some() {
+                return Some(failure(keychain::KeyError::NotOpenSsh));
+            }
             let old = old.map(Zeroizing::new);
             let new = new.map(Zeroizing::new);
             if openward_app::vault_keys::reference(std::path::Path::new(&path)).is_some() {
@@ -409,6 +445,9 @@ impl OpenWard {
     /// Where a key's file is, `~` expanded: to export it or show it.
     #[frb(sync)]
     pub fn key_file_path(&self, path: String) -> String {
+        if path.starts_with("enclave:") {
+            return String::new();
+        }
         let gate = self.app.security().gate();
         super::security::access(&gate, true, || {
             keychain::absolute(self.app.local(), &path)
@@ -422,7 +461,9 @@ impl OpenWard {
     pub fn public_key_line(&self, path: String) -> Option<String> {
         let gate = self.app.security().gate();
         super::security::access(&gate, false, || {
-            if openward_app::vault_keys::reference(std::path::Path::new(&path)).is_some() {
+            if openward_app::enclave::reference(std::path::Path::new(&path)).is_some() {
+                openward_app::enclave::public(&self.app.vault(), std::path::Path::new(&path)).ok()
+            } else if openward_app::vault_keys::reference(std::path::Path::new(&path)).is_some() {
                 openward_app::vault_keys::public(&self.app.vault(), std::path::Path::new(&path))
                     .ok()
             } else {
@@ -459,5 +500,113 @@ impl OpenWard {
             )
         })
         .unwrap_or_default()
+    }
+}
+
+#[cfg(test)]
+mod enclave_tests {
+    use super::*;
+    use std::{path::Path, sync::Arc};
+    struct NoDevice;
+    impl openward_app::enclave::Backend for NoDevice {
+        fn create(
+            &self,
+            _: &str,
+        ) -> Result<openward_ssh::russh::keys::PublicKey, openward_app::enclave::Error> {
+            Err(openward_app::enclave::Error::Unavailable)
+        }
+        fn sign(
+            &self,
+            _: &str,
+            _: &openward_ssh::russh::keys::PublicKey,
+            _: &[u8],
+        ) -> Result<Vec<u8>, openward_app::enclave::Error> {
+            Err(openward_app::enclave::Error::Unavailable)
+        }
+        fn remove(
+            &self,
+            _: &str,
+            _: &openward_ssh::russh::keys::PublicKey,
+        ) -> Result<(), openward_app::enclave::Error> {
+            Ok(())
+        }
+    }
+    #[test]
+    fn ffi_lists_renames_and_copies_public_metadata_but_never_exports_private_material() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("vault.db");
+        let mut vault = openward_app::vault::Vault::create_encrypted(
+            &path,
+            b"public test password",
+            openward_crypto::password::KdfParams::new(65536, 1).unwrap(),
+        )
+        .unwrap();
+        let public = std::fs::read_to_string(
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../openward-ssh/tests/fixtures/ecdsa-p256-short.pub"),
+        )
+        .unwrap();
+        let native_id = openward_app::vault::proto::ItemId::new().to_string();
+        let descriptor =
+            serde_json::json!({"version": 1, "id": native_id, "public_key": public.trim()})
+                .to_string();
+        let id = vault
+            .save_secret(
+                openward_app::vault::SecretKind::SecureEnclaveKey,
+                "device-bound",
+                &native_id,
+                &descriptor,
+            )
+            .unwrap();
+        drop(vault);
+        let local = openward_app::Local {
+            home: dir.path().into(),
+            user: "test".into(),
+            ssh_dir: dir.path().join("ssh"),
+            system_ssh_dir: dir.path().join("etc-ssh"),
+            agent: None,
+        };
+        let app = Arc::new(openward_app::App::open_as(dir.path(), local).unwrap());
+        app.set_enclave(Arc::new(NoDevice));
+        app.security().unlock(b"public test password").unwrap();
+        let ui = OpenWard { app };
+        let reference = format!("enclave:{id}");
+        assert_eq!(ui.keys().len(), 1);
+        assert!(
+            ui.public_key_line(reference.clone())
+                .unwrap()
+                .starts_with("ecdsa-sha2-nistp256 ")
+        );
+        assert!(ui.key_file_path(reference.clone()).is_empty());
+        assert!(ui.saved_credentials().is_empty());
+        assert!(ui.forget_credential(id).is_err());
+        assert!(
+            ui.export_vault_key(
+                reference.clone(),
+                dir.path().join("private-export").display().to_string()
+            )
+            .is_err()
+        );
+        assert!(!dir.path().join("private-export").exists());
+        assert_eq!(
+            ui.change_key_passphrase(reference.clone(), None, Some("x".into()))
+                .unwrap()
+                .unwrap()
+                .kind,
+            SshKeyFailureKind::NotOpenSsh
+        );
+        let renamed = ui
+            .rename_key(reference.clone(), "renamed".into())
+            .unwrap()
+            .key
+            .unwrap();
+        assert_eq!(renamed.path, reference);
+        assert_eq!(renamed.name, "renamed");
+        assert_eq!(
+            ui.key_info(reference.clone(), vec![]).unwrap().state,
+            super::super::identities::KeyStateKind::Found
+        );
+        assert!(ui.delete_key(reference).unwrap().is_none());
+        assert!(ui.keys().is_empty());
     }
 }

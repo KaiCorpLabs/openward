@@ -150,10 +150,12 @@ readability in the shipped bundle or physical Touch ID/Hello. Those remain
 manual gates before a Developer ID decision. No certificate was purchased.
 
 Issue #33 stays open for its original mockup review (no source available in this
-workspace), physical native authentication and the roadmap's separate SSH
-Secure Enclave signing feature. This probe is not that SSH feature. D6–D8,
-Windows ACL/DACL work and external cryptographic review retain their existing
-gates; D4 does not make history/recent/log files encrypted.
+workspace) and physical native authentication in the real bundle. The subsequent
+[Secure Enclave SSH signer](secure-enclave-ssh-v1.md) implements device-bound
+P-256 signing; this earlier probe is not physical validation of that feature.
+D6 subsequently encrypts history/recent/log files; D8 completes onboarding and
+settings. Windows ACL/DACL work and external cryptographic review retain their
+existing gates.
 
 ## D5 continuation
 

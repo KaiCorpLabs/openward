@@ -175,7 +175,7 @@ El terminal es la pieza que más se nota. Los clientes de escritorio basados en 
   |---|---|---|---|
   | Software (descifrado del vault) | todas | Ed25519/ECDSA/RSA | 1 |
   | Agente externo | escritorio | lo que ofrezca el agente | 1 |
-  | Secure Enclave | macOS / iOS | `ecdsa-sha2-nistp256` | 2 |
+  | Secure Enclave | macOS implementado; iOS pendiente | `ecdsa-sha2-nistp256` | D4: [contrato y límites](../spec/secure-enclave-ssh-v1.md); validación física en #33 |
   | Android Keystore / StrongBox | Android | `ecdsa-sha2-nistp256` | 2 |
   | TPM (CNG / tpm2) | Windows / Linux | `ecdsa-sha2-nistp256` | 4 |
   | FIDO2 (`sk-*`) | escritorio, luego móvil | `sk-ssh-ed25519`, `sk-ecdsa` | 4 |

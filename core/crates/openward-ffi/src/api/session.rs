@@ -118,6 +118,7 @@ pub enum StageKind {
     Authenticating,
     /// Touch the security key of the key file in `label`.
     TouchKey,
+    TouchId,
     OpeningShell,
     OpeningSftp,
 }
@@ -641,6 +642,7 @@ pub(crate) fn event_view(e: Event) -> SessionEvent {
                     Stage::OpeningShell => StageKind::OpeningShell,
                     Stage::OpeningSftp => StageKind::OpeningSftp,
                     Stage::TouchKey => StageKind::TouchKey,
+                    Stage::TouchId => StageKind::TouchId,
                 },
             });
         }

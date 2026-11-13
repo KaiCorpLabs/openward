@@ -198,7 +198,11 @@ class _KeysPageState extends ConsumerState<KeysPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              k.path.startsWith('vault:') ? l.vaultStoredKey : k.path,
+              k.path.startsWith('enclave:')
+                  ? l.enclaveStored
+                  : k.path.startsWith('vault:')
+                  ? l.vaultStoredKey
+                  : k.path,
               overflow: TextOverflow.ellipsis,
               style: monoStyle(context, size: 12, color: c.text),
             ),
@@ -234,7 +238,15 @@ class _KeysPageState extends ConsumerState<KeysPage> {
             ),
           ],
         ),
-        if (k.securityKey)
+        if (k.path.startsWith('enclave:'))
+          Row(
+            children: [
+              Icon(Icons.fingerprint, size: 14, color: c.accentText),
+              const SizedBox(width: 6),
+              Flexible(child: Text(l.enclaveStored)),
+            ],
+          )
+        else if (k.securityKey)
           // Its secret is on the key: no passphrase to warn about.
           Row(
             children: [
@@ -309,14 +321,18 @@ class _KeysPageState extends ConsumerState<KeysPage> {
               itemBuilder: (context) => [
                 for (final (text, action) in [
                   (l.renameEllipsis, () => renameKey(context, k)),
-                  (
-                    l.keyPassphraseEllipsis,
-                    () => changeKeyPassphrase(context, k),
-                  ),
-                  (l.exportEllipsis, () => exportKey(context, ref, k)),
-                  if (!k.path.startsWith('vault:'))
+                  if (!k.path.startsWith('enclave:'))
+                    (
+                      l.keyPassphraseEllipsis,
+                      () => changeKeyPassphrase(context, k),
+                    ),
+                  if (!k.path.startsWith('enclave:'))
+                    (l.exportEllipsis, () => exportKey(context, ref, k)),
+                  if (!k.path.startsWith('vault:') &&
+                      !k.path.startsWith('enclave:'))
                     (revealLabel(l), () => revealKey(ref, k)),
                   if (!k.path.startsWith('vault:') &&
+                      !k.path.startsWith('enclave:') &&
                       ref.read(securityProvider).phase == VaultPhase.unlocked)
                     (l.vaultStoreKey, () => storeKeyInVault(context, ref, k)),
                   (l.deleteEllipsis, () => deleteKey(context, ref, k)),

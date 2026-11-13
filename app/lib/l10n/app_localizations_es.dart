@@ -6655,4 +6655,29 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get vaultMissingKitStatus => 'Cifrado · kit de recuperación pendiente';
+
+  @override
+  String get enclaveCreate => 'Crear en Secure Enclave (Touch ID)';
+
+  @override
+  String get enclaveNote =>
+      'Clave ECDSA P-256 no exportable, protegida por Touch ID. Solo funciona en este Mac. Las copias del vault guardan su referencia, pero no permiten recuperar la clave privada. Conserva otra forma de entrar en tus servidores.';
+
+  @override
+  String get enclaveStored => 'Secure Enclave · vinculada al Mac';
+
+  @override
+  String get enclaveName => 'Nombre de la clave';
+
+  @override
+  String get enclaveDelete =>
+      'La clave privada se eliminará de este Mac y no se puede recuperar desde una copia del vault. Revoca también la clave pública en los servidores donde la instalaste.';
+
+  @override
+  String get enclaveBusy => 'Autoriza la firma con Touch ID…';
+
+  @override
+  String stageTouchId(Object key) {
+    return 'Autoriza con Touch ID la firma SSH de $key…';
+  }
 }

@@ -1028,6 +1028,7 @@ enum StageKind {
 
   /// Touch the security key of the key file in `label`.
   touchKey,
+  touchId,
   openingShell,
   openingSftp,
 }

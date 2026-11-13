@@ -74,7 +74,7 @@ Future<void> deleteKey(BuildContext context, WidgetRef ref, SshKey k) async {
     context,
     title: l.deleteKeyTitle(k.name),
     body: [
-      l.deleteKeyBody(k.path),
+      k.path.startsWith('enclave:') ? l.enclaveDelete : l.deleteKeyBody(k.path),
       if (k.usedBy.isNotEmpty) l.deleteKeyUsed(k.usedBy.join(', ')),
     ].join('\n\n'),
     action: l.delete,
@@ -159,7 +159,11 @@ class _RenameKeyState extends ConsumerState<_RenameKey> {
               autofocus: true,
               onSubmitted: (_) => _save(),
               decoration: InputDecoration(
-                prefixText: '~/.ssh/',
+                prefixText:
+                    widget.k.path.startsWith('enclave:') ||
+                        widget.k.path.startsWith('vault:')
+                    ? null
+                    : '~/.ssh/',
                 errorText: _error,
               ),
             ),

@@ -46,6 +46,7 @@ pub(crate) struct Ctx {
     pub local: Local,
     /// What talks to security keys: the one plugged in.
     pub security_keys: Arc<dyn openward_fido::Authenticator>,
+    pub enclave: Arc<dyn crate::enclave::Backend>,
     pub prompts: Arc<Prompts>,
     pub sink: Arc<dyn EventSink>,
     /// Connections that are up, to share.
@@ -597,9 +598,17 @@ async fn public_keys(
     let files: Vec<(&Path, Option<PublicKey>)> = hop
         .identity_files
         .iter()
-        .filter(|p| p.is_file() || crate::vault_keys::reference(p).is_some())
+        .filter(|p| {
+            p.is_file()
+                || crate::vault_keys::reference(p).is_some()
+                || crate::enclave::reference(p).is_some()
+        })
         .map(|p| {
-            let public = if crate::vault_keys::reference(p).is_some() {
+            let public = if crate::enclave::reference(p).is_some() {
+                crate::enclave::public(&lock(&ctx.vault), p)
+                    .ok()
+                    .and_then(|s| PublicKey::from_openssh(&s).ok())
+            } else if crate::vault_keys::reference(p).is_some() {
                 crate::vault_keys::public(&lock(&ctx.vault), p)
                     .ok()
                     .and_then(|s| PublicKey::from_openssh(&s).ok())
@@ -614,7 +623,18 @@ async fn public_keys(
     if let Some(socket) = &hop.agent
         && let Ok(mut agent) = Agent::connect(socket).await
     {
-        let keys = agent.keys().await.unwrap_or_default();
+        let keys = agent
+            .keys()
+            .await
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|key| {
+                !files.iter().any(|(path, p)| {
+                    crate::enclave::reference(path).is_some()
+                        && p.as_ref().is_some_and(|p| p.key_data() == key.key_data())
+                })
+            })
+            .collect::<Vec<_>>();
         let listed = |k: &PublicKey| {
             files
                 .iter()
@@ -650,6 +670,39 @@ async fn public_keys(
     for (path, public) in files {
         if s.is_closed() {
             break;
+        }
+        // A listed Secure Enclave identity always uses its native signer,
+        // even if an agent advertises the same public key. No file/password
+        // fallback may turn a missing/cancelled hardware key into success.
+        if crate::enclave::reference(path).is_some() {
+            let gate = ctx.security.gate();
+            let epoch = gate.ticket().map_err(|_| Failure::Cancelled)?;
+            let d = crate::enclave::descriptor(&lock(&ctx.vault), path)
+                .map_err(|e| Failure::Other(e.to_string()))?;
+            let public = d.public().map_err(|e| Failure::Other(e.to_string()))?;
+            ctx.sink.send(Event::Stage {
+                hop: at.0,
+                hops: at.1,
+                label: path.display().to_string(),
+                stage: Stage::TouchId,
+            });
+            let sign =
+                crate::enclave::signer(Arc::clone(&ctx.enclave), d, Arc::clone(&gate), epoch);
+            let outcome =
+                s.auth_signed(user, public, sign).await.map_err(|e| match e
+                    .downcast_ref::<crate::enclave::Error>()
+                {
+                    Some(crate::enclave::Error::Cancelled | crate::enclave::Error::Locked) => {
+                        Failure::Cancelled
+                    }
+                    _ => Failure::Other(e.to_string()),
+                })?;
+            gate.check(epoch).map_err(|_| Failure::Cancelled)?;
+            if !rejected(&outcome) {
+                return Ok(outcome);
+            }
+            last = outcome;
+            continue;
         }
         if public
             .as_ref()

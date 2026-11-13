@@ -48,6 +48,30 @@ al issue. Usar datos ficticios para capturas y errores reproducibles.
   fallback por contraseña. En Linux comprobar Secret Service y su advertencia.
   Anotar firma y capacidades del paquete: los mocks no cierran esta prueba.
 
+## Claves SSH en Secure Enclave (macOS, #33)
+
+Usar un perfil y un servidor desechables, con otra forma de acceso disponible.
+
+1. Con el vault cifrado desbloqueado, Claves → Nueva clave → «Crear en Secure
+   Enclave (Touch ID)». Debe fijar P-256 y explicar que la clave privada no viaja
+   en las copias ni se recupera con el kit. No pide frase de paso.
+2. Autorizar la creación con Touch ID. Copiar/instalar la clave pública, elegirla
+   para el host y conectar por SSH. Cerrar/reabrir la app y repetir la conexión.
+3. Cancelar Touch ID al crear y al conectar: no debe aparecer una nueva clave ni
+   completarse la conexión. Bloquear el vault durante el diálogo; una respuesta
+   tardía no debe aceptar la firma, aunque se desbloquee otra vez.
+4. El menú permite clave pública, renombrar y borrar, pero no exportar la privada,
+   cambiar frase de paso ni mostrar un archivo privado en Finder.
+5. Restaurar una copia del vault en otro equipo: conserva la referencia pública,
+   pero no puede firmar allí. Mantener la alternativa de acceso al servidor.
+6. Borrar la clave de prueba en el Mac original y volver a intentar usar una copia
+   anterior: la referencia no debe resucitar la clave. Revocar la pública en el
+   servidor. Registrar también cambio del conjunto biométrico con datos de prueba.
+
+[Contrato, pruebas automatizadas y diagnóstico manual](../../spec/secure-enclave-ssh-v1.md).
+Registrar resultado y firma del bundle real en #33. No dar por aprobada la prueba
+por haber compilado en CI o usado un backend simulado.
+
 ## Recuperación y copias
 
 1. Exportar `.owvault`. Crear otro perfil cifrado vacío con contraseña y kit
@@ -60,6 +84,7 @@ al issue. Usar datos ficticios para capturas y errores reproducibles.
 4. Alterar una copia ficticia, truncarla, usar credencial errónea o un destino
    con datos: rechazar sin cambios. Cancelar la vista previa no importa nada.
 5. Las claves por ruta y los datos locales D6 no viajan en estas copias. Las
+   claves Secure Enclave solo conservan su referencia pública; no su privada. Las
    copias anteriores conservan su protección anterior. Eliminar con cuidado
    las exportaciones de prueba; no asumir borrado forense.
 
@@ -90,6 +115,7 @@ en los tres sistemas complementan, sin sustituir, las pruebas personales.
 | Una semana de uso cifrado | Fechas, escenarios diarios e incidencias | Pendiente de participantes |
 | Recuperación independiente personal | Otro perfil/equipo, contraseña olvidada en una copia | Pendiente; fixtures automatizados disponibles |
 | Touch ID / Windows Hello físicos | Equipo, firma, éxito y cancelación | Pendiente en #33 |
+| Firma SSH Secure Enclave física | Bundle firmado, alta, conexión, cancelación y clave no exportable | Pendiente en #33 |
 | Revisión visual de maquetas | Referencia y conformidad | Pendiente en #33 |
 
 Anotar cada resultado en #37 o #33 con commit y evidencia. Mantener #37 abierto
