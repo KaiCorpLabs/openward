@@ -2921,8 +2921,15 @@ fn enclave_identity_authenticates_and_cancellation_or_missing_key_never_falls_ba
         match events.recv_timeout(Duration::from_secs(30)).unwrap() {
             Event::Stage {
                 stage: Stage::TouchId,
+                label,
                 ..
-            } => touched = true,
+            } => {
+                assert_eq!(
+                    label, "S2 Enclave",
+                    "the UI must show the key name, not its opaque reference"
+                );
+                touched = true;
+            }
             Event::Connected(_) => break,
             Event::Closed { failure, .. } => panic!("enclave login failed: {failure:?}"),
             _ => {}

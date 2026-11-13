@@ -674,16 +674,21 @@ async fn public_keys(
         // A listed Secure Enclave identity always uses its native signer,
         // even if an agent advertises the same public key. No file/password
         // fallback may turn a missing/cancelled hardware key into success.
-        if crate::enclave::reference(path).is_some() {
+        if let Some(id) = crate::enclave::reference(path) {
             let gate = ctx.security.gate();
             let epoch = gate.ticket().map_err(|_| Failure::Cancelled)?;
             let d = crate::enclave::descriptor(&lock(&ctx.vault), path)
                 .map_err(|e| Failure::Other(e.to_string()))?;
             let public = d.public().map_err(|e| Failure::Other(e.to_string()))?;
+            let label = lock(&ctx.vault)
+                .secret(&id)
+                .map_err(|e| Failure::Other(e.to_string()))?
+                .info
+                .label;
             ctx.sink.send(Event::Stage {
                 hop: at.0,
                 hops: at.1,
-                label: path.display().to_string(),
+                label,
                 stage: Stage::TouchId,
             });
             let sign =
