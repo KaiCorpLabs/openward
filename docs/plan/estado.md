@@ -1,8 +1,28 @@
 # Estado y backlog verificable
 
-Actualizado el **13 de noviembre de 2026**. Este índice relaciona el código,
+Actualizado el **14 de noviembre de 2026**. Este índice relaciona el código,
 las PR y las puertas del roadmap; las estimaciones antiguas no son fechas
 comprometidas.
+
+## Foto vigente y niveles de evidencia
+
+Revisión contra **`main 553ab147e0d2c1fb7bc65f0e0ddb9890b40e3b39`**. [PR #69](https://github.com/KaiCorpLabs/openward/pull/69) móvil y [#70](https://github.com/KaiCorpLabs/openward/pull/70) fixes, fusionadas. Hay **14 issues abiertos**: #33, #37–42 y #62–68. Ninguna release pública; los **28 registros de release consultados son borradores**. Estos recuentos son una foto de la revisión, no un compromiso inmutable.
+
+| Nivel | Qué está acreditado / qué no |
+|---|---|
+| **Integrado en main** | Cliente local/vault v0.4 y base Android/iOS, más fixes de #70. [CI de 553ab147](https://github.com/KaiCorpLabs/openward/actions/runs/43541166915): 19 trabajos correctos y release omitida. Integración de app y matriz SSH omitidas en macOS/Windows; Linux sí las ejecuta. No contiene el Go ni el motor de sync de las copias locales. |
+| **Probado localmente, sin publicar** | Motor, Go, lógica de suscripciones y UX de cuenta/sync, recorrido entre dos vaults y ensayos móviles. Conexión Go real de lectura a Supabase con TLS verificado. Hay CI completa de una revisión local anterior; falta sobre el último árbol y su conciliación con main actual. No prueba runtime OVH ni checkout real. |
+| **Aplicado en Supabase** | `openward-production` existe y está activo; 11 tablas privadas con RLS habilitada/forzada y sin SELECT para `anon`/`authenticated`, login backend limitado sin superusuario/BYPASSRLS y helper privado de sesión. Verificación de catálogo de solo lectura el 2026-11-14. No se ha abierto una API ni demostrado aislamiento frente a backend comprometido. |
+| **Pendiente / último bloqueo** | Auth sintético y custodia segura; registro/login, logout/revocación alojados con JWT vigente. El último intento encontró el Mac bloqueado y Dashboard sin sesión utilizable; esta revisión no repite el ensayo. API cerrada `design_pending`. Posesión/enrolamiento, recuperación remota y exclusión criptográfica siguen sin resolver/validar. |
+| **Puertas de salida** | Onboarding alojado, checkout/ciclo real de pago, operación/restauración, firma/distribución, uso personal y dispositivos físicos, revisión legal y auditoría externa pendientes. Los flujos locales del vault ya integrados no acreditan estas puertas. |
+
+Dirección confirmada: **monorepo Flutter escritorio/móvil + Rust + Go mínimo; Supabase gestionado para Auth/datos; un proyecto de producción por ahora; Edge Functions secundaria**. OVH previsto sin desplegar. Precio **4,99 €/mes o 49 €/año; 14 días sin tarjeta**. [ADR-010](../adr/ADR-010-monorepo-go-supabase.md) y [#67](https://github.com/KaiCorpLabs/openward/issues/67) sustituyen el backend separado, identidad autoalojada y precios pendientes. Objetivo: beta con pago activo desde salida, condicionada a evidencia y go/no-go.
+
+La evidencia local se ha consultado para esta conciliación sin publicar código, logs privados o credenciales. La configuración alojada no vive aún como implementación integrada en main. No se extrapola una suite anterior al último commit ni un mock al proveedor real.
+
+## Evidencia histórica del cliente
+
+Las revisiones y paquetes de esta tabla conservan su fecha/alcance; la foto vigente está arriba.
 
 | Área | Estado y evidencia |
 |---|---|
@@ -13,7 +33,7 @@ comprometidas.
 | Distribución | La etiqueta `v0.3.4-beta.4` incluye S2 y la corrección final de Mosh; D3 queda fuera de esa beta. No hay release pública; el [cask](https://github.com/KaiCorpLabs/homebrew-tap/blob/main/Casks/openward.rb) sigue en `0.3.4-beta.3`, por detrás de la etiqueta/borrador y del código candidato 0.4. |
 | Seguridad | S0/S1 integrados. Cuatro correcciones de S2, con sus puertas de CI y fusión, en [#28](https://github.com/KaiCorpLabs/openward/pull/28), [#29](https://github.com/KaiCorpLabs/openward/pull/29), [#30](https://github.com/KaiCorpLabs/openward/pull/30) y [#31](https://github.com/KaiCorpLabs/openward/pull/31). [Seguimiento y límites](seguridad-0.3.3.md#seguimiento-de-s2). |
 | v0.4 | D0–D2 completados y ADR-004/005 aceptados. D3 implementa sobres, jerarquía/Argon2id y migración del backend Rust, con pruebas de recuperación y formato documentado. [#43](https://github.com/KaiCorpLabs/openward/pull/43), [#45](https://github.com/KaiCorpLabs/openward/pull/45) y #32 conservan la evidencia. D4 añade alta optativa, desbloqueo y bloqueo ([#53](https://github.com/KaiCorpLabs/openward/pull/53)). D5 completa el kit con QR/PDF, la regeneración, el cambio de contraseña y el paquete de cuenta protegido por contraseña+kit ([#54](https://github.com/KaiCorpLabs/openward/pull/54)); D6 añade secretos optativos y datos locales cifrados ([contrato y pruebas](../../spec/protected-local-v1.md)); D7 implementa las copias portables y la restauración segura ([formato y guía](../../spec/vault-backup-v1.md)); D8 prepara onboarding obligatorio/«Más tarde», Ajustes y `0.4.0-beta.1+31` ([guía](prueba-v0.4.md)); #37 conserva las puertas humanas y #33 las físicas/visuales. |
-| Móvil | Primera implementación de Android e iOS para [#68](https://github.com/KaiCorpLabs/openward/issues/68): la misma app, el núcleo para los cuatro destinos móviles, Keychain/Keystore, interfaz de teléfono y pruebas en simulador y emulador ([plan, paridad y límites](movil.md)). Puertas S1.2/S2/S3/S5 en dispositivos reales, firma y tiendas pendientes. |
+| Móvil | Base Android/iOS integrada por [#69](https://github.com/KaiCorpLabs/openward/pull/69) para [#68](https://github.com/KaiCorpLabs/openward/issues/68): la misma app, el núcleo para los cuatro destinos móviles, Keychain/Keystore, interfaz de teléfono y pruebas en simulador y emulador ([plan, paridad y límites](movil.md)). Puertas S1.2/S2/S3/S5 en dispositivos reales, firma y tiendas pendientes. |
 | Uso real | Etapa 1 implementada; pruebas con hardware y dos semanas de uso pendientes. CI no las sustituye. |
 
 ## Hito v0.4
@@ -39,21 +59,26 @@ arrancan bloqueados. D5–D7 completan recuperación, secretos y copias. La beta
 0.3.4 etiquetada y su borrador anterior se conservan por separado; la candidata
 0.4 no se publica ni actualiza el cask en esta preparación.
 
-## Puertas Community
+## Puertas Community y beta de pago
 
 [Milestone Community](https://github.com/KaiCorpLabs/openward/milestone/2).
 
 | Trabajo | Seguimiento | Evidencia necesaria |
 |---|---|---|
 | v0.5: motor de sync | [#38](https://github.com/KaiCorpLabs/openward/issues/38) | Convergencia, equipos y recuperación/reintento contra un backend de pruebas; sin backends de almacenamiento propio. |
-| v0.6: servidor y cuentas | [#39](https://github.com/KaiCorpLabs/openward/issues/39) | ADR/API/modelo revisados y despliegue inicial dentro del tailnet. |
+| v0.6: servidor y cuentas | [#39](https://github.com/KaiCorpLabs/openward/issues/39) | Contrato #62 y Go mínimo/Supabase gestionado integrados y probados; el tailnet es historia, OVH previsto sin desplegar. |
 | v0.7: operación pública | [#40](https://github.com/KaiCorpLabs/openward/issues/40) | Copias/restauración, monitorización, borrado y puerta pública aprobada. |
 | Firma, actualización y descargas | [#41](https://github.com/KaiCorpLabs/openward/issues/41) | Instalación/actualización reales y artefactos trazables. |
 | Pruebas manuales, decisiones y lanzamiento | [#42](https://github.com/KaiCorpLabs/openward/issues/42) | Hardware, uso prolongado, decisiones pendientes y revisión legal. |
+| Contrato/decisiones y fixtures | [#62](https://github.com/KaiCorpLabs/openward/issues/62) | Callbacks, posesión, recuperación y contrato versionado; registrar decisiones no cierra el contrato. |
+| Trial y suscripciones | [#63](https://github.com/KaiCorpLabs/openward/issues/63) | Checkout/webhooks/ciclo de pago reales; precio y duración confirmados, activación pendiente. |
+| Cuenta, dispositivos y sync en Flutter | [#64](https://github.com/KaiCorpLabs/openward/issues/64) | Onboarding alojado y recorrido real; el trabajo local aún requiere integración. |
+| Seguridad integrada | [#65](https://github.com/KaiCorpLabs/openward/issues/65) | Logout/revocación alojados, aislamiento, recuperación/posesión, exclusión criptográfica y auditoría externa con retest. |
+| Presentación, soporte y legal | [#66](https://github.com/KaiCorpLabs/openward/issues/66) | Mensajes, licencia/CLA, términos, privacidad y soporte fieles a candidata. |
+| Plan maestro de beta de pago | [#67](https://github.com/KaiCorpLabs/openward/issues/67) | Dependencias reunidas y go/no-go explícito; no es una fecha. |
+| Android/iOS | [#68](https://github.com/KaiCorpLabs/openward/issues/68) | #69 integrada; dispositivos físicos/S1.2/S2/S3/S5, cuenta/sync/pago, firma y tiendas pendientes. |
 
-El 2026-11-13 se decidió que toda la sync es de pago y alojada, con el servidor
-privado y Android e iOS antes de cobrar ([decisiones](community.md#decisiones-del-2026-11-13)).
-#38, #39 y #40 conservan su número con ese alcance.
+#33 y #37 siguen abiertos con las puertas de la sección v0.4. La lista anterior, junto con #38–42, cubre los 14 issues abiertos verificados; ninguna casilla se cierra al conciliar documentos.
 
 Publicar una release, comprar dominio/certificados o activar servicios públicos
 mantiene sus decisiones específicas. Los nuevos issues son trabajo de producto;
