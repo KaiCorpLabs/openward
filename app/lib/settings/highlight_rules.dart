@@ -2,6 +2,7 @@
 // in color, the app's and the user's, each with its switch.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/settings.dart';
@@ -231,7 +232,7 @@ class _RuleDialogState extends State<_RuleDialog> {
     final ow = context.ow;
     final pattern = _pattern.text.trim();
     final bad = pattern.isNotEmpty && !HighlightRule.valid(pattern);
-    return AlertDialog(
+    final dialog = AlertDialog(
       title: Text(
         widget.rule == null
             ? l.highlightNewTitle
@@ -344,6 +345,15 @@ class _RuleDialogState extends State<_RuleDialog> {
           child: Text(l.save),
         ),
       ],
+    );
+    // As in the shortcuts sheet: EditableText keeps Escape by default, but
+    // here it must cancel the modal even while its name/pattern has focus.
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): () =>
+            Navigator.maybePop(context),
+      },
+      child: dialog,
     );
   }
 }

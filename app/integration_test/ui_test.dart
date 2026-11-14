@@ -1397,10 +1397,34 @@ Host web-1 web-2
       'over it, and a serial port by hand', (tester) async {
     // A switch's Telnet, here: it greets and asks for nothing.
     final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
-    addTearDown(server.close);
-    server.listen((s) {
+    final clients = <Socket>[];
+    final completions = <Future<void>>[];
+    final failures = <(Object, StackTrace)>[];
+    var closing = false;
+    void recordError(Object error, StackTrace stack) {
+      // Closing the tab deliberately closes its peer. Observe the write-side
+      // future too: a reset there must not leak into a later test's zone.
+      if (!closing || error is! SocketException) failures.add((error, stack));
+    }
+
+    final listener = server.listen((s) {
+      clients.add(s);
+      completions.add(s.done.then<void>((_) {}, onError: recordError));
       s.add(utf8.encode('\r\nUser Access Verification\r\n\r\nsw-1> '));
-      s.listen((_) {}, onError: (_) {}, cancelOnError: true);
+      s.listen((_) {}, onError: recordError, cancelOnError: true);
+    }, onError: recordError);
+    addTearDown(() async {
+      closing = true;
+      await server.close();
+      await listener.cancel();
+      for (final client in clients) {
+        client.destroy();
+      }
+      await Future.wait(completions).timeout(const Duration(seconds: 5));
+      if (failures.isNotEmpty) {
+        final (error, stack) = failures.first;
+        Error.throwWithStackTrace(error, stack);
+      }
     });
     final container = await launch(tester);
     Finder field(String key) => find.byKey(ValueKey(key));
@@ -1458,6 +1482,7 @@ Host web-1 web-2
     expect(field('status.unencrypted'), findsOneWidget);
     expect(field('status.sftp'), findsNothing);
     await _shot(tester, '29-telnet-session');
+    closing = true;
     container.read(tabsProvider.notifier).close(0);
     await _settle(tester);
 
