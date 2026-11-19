@@ -15,7 +15,7 @@ anyhow = "1"
 
 [target.'cfg(unix)'.dependencies]
 # Signals to process groups, and a reader that notices the shell is gone.
-nix = { version = "0.31", features = ["signal", "poll"] }
+nix = { version = "0.32", features = ["signal", "poll"] }
 
 [lints.rust]
 # One `unsafe` block: borrowing the PTY's descriptor, to duplicate it.
