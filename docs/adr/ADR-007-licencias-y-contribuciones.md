@@ -1,5 +1,7 @@
 # ADR-007 — Licencias por componente y régimen de contribuciones
 
+> **Historial de decisiones.** Las revisiones de este documento se conservan con su fecha. Para monorepo, Go mínimo, Supabase gestionado, precio/trial y límites de publicación prevalece [ADR-010](ADR-010-monorepo-go-supabase.md), reconciliado el 2026-11-14. Quedan sustituidos el requisito de backend en otro repositorio y las propuestas incompatibles de identidad/infraestructura. La conciliación de licencia/publicación del servidor sigue pendiente; no se activa una licencia nueva.
+
 - **Estado:** aceptado (2026-10-08), [revisado el 2026-11-10](#revisión-del-2026-11-10): todos los derechos reservados hasta el lanzamiento de la Community; desde entonces, el cliente con GPL-3.0 y la CLA en todo el repositorio. [Revisado el 2026-11-13](#revisión-del-2026-11-13): el servidor es privado y no sale con AGPL-3.0, y la sync deja la lista «Siempre gratis» ([ADR-006](ADR-006-servidor-open-core.md#revisión-del-2026-11-13)).
 - **Fecha:** 2026-10-08.
 - **Alcance:** licencia de cada directorio, CLA/DCO y promesa pública.

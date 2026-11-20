@@ -1,5 +1,7 @@
 # ADR-006 — Servidor Go open-core por fases
 
+> **Historial de decisiones.** Las revisiones de este documento se conservan con su fecha. Para monorepo, Go mínimo, Supabase gestionado, precio/trial y límites de publicación prevalece [ADR-010](ADR-010-monorepo-go-supabase.md), reconciliado el 2026-11-14. Quedan sustituidos el requisito de backend en otro repositorio y las propuestas incompatibles de identidad/infraestructura. La conciliación de licencia/publicación del servidor sigue pendiente; no se activa una licencia nueva.
+
 - **Estado:** aceptado (2026-10-08), [revisado el 2026-11-13](#revisión-del-2026-11-13): el servidor pasa a ser privado, sin autoalojamiento, y toda la sincronización es de pago y alojada. Esa revisión deja sin efecto lo que el texto de abajo dice del servidor AGPL y autoalojable, confirmado por última vez el 2026-11-10. El servicio alojado va en un dominio propio de OpenWard. Hasta el lanzamiento, el repositorio tiene todos los derechos reservados ([ADR-007](ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-10)).
 - **Fecha:** 2026-10-08.
 - **Alcance:** servidor (relay, equipos y enterprise), persistencia y frontera entre la edición libre y la de pago.

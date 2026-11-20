@@ -10,7 +10,7 @@
   | `core/`, `app/`, `spikes/` (el cliente) | GPL-3.0-only | CLA (acuerdo de licencia de contribuidor) |
   | `spec/`, `docs/` | CC-BY-4.0 | CLA |
 
-- **El servidor de sincronización** no forma parte de este repositorio ni se publica: es privado. Lo deciden las revisiones del 2026-11-13 de [ADR-006](docs/adr/ADR-006-servidor-open-core.md#revisión-del-2026-11-13) y [ADR-007](docs/adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-13); hasta entonces, el plan era publicarlo con AGPL-3.0.
+- **El servidor de sincronización** se prevé en el mismo monorepo que Flutter/Rust, según [ADR-010](docs/adr/ADR-010-monorepo-go-supabase.md). Su código local aún no está integrado en main. Esta decisión sustituye el repositorio separado de las revisiones anteriores de ADR-006/007; no modifica [LICENSE](LICENSE) ni determina automáticamente licencia, visibilidad o publicación del servidor. Conciliar esos puntos con revisión legal antes de publicar código.
 - **Contribuciones:** hasta el lanzamiento no se aceptan contribuciones de código de fuera; sí issues y avisos de seguridad ([CONTRIBUTING](CONTRIBUTING.md)).
 - **Dependencias del cliente:** solo licencias permisivas (Apache-2.0, MIT, BSD, ISC, Zlib, Unicode, Unlicense) y MPL-2.0 con inventario. Las licencias GPL y AGPL no se admiten en el cliente, aunque salga con GPL: los derechos de todo su código tienen que ser nuestros para poder ofrecerlo también con otra licencia, como hace falta en la App Store. `cargo-deny` lo comprueba en la CI (`core/deny.toml`).
 - **Fuentes incluidas:** SIL Open Font License 1.1, en `app/assets/fonts` con su licencia al lado. Se listan en [NOTICE](NOTICE).

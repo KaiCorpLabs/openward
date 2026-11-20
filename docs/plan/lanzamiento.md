@@ -1,174 +1,128 @@
-# Lanzamiento: lo que queda para salir con la Community
+# Lanzamiento: Community local y beta de pago
 
-- **Estado:** propuesta (2026-11-10), revisada el 2026-11-13: toda la sync es de pago y alojada, el servidor es privado, y Android e iOS van antes de cobrar ([decisiones](community.md#decisiones-del-2026-11-13)). Ordena por prioridad lo que falta hasta lanzar la Community: lo que ya planifican [community.md](community.md) y [v0.4.md](v0.4.md), y lo que deja sin plan su apartado «[Después de este plan](community.md#después-de-este-plan)».
-- **Fecha:** 2026-11-10.
-- **Base:** el [camino a la Community](community.md) (etapas 2 a 5), la hoja de ruta ([ARCHITECTURE §15](../ARCHITECTURE.md#15-hoja-de-ruta-con-puertas)) y el [modelo de amenazas](../THREAT_MODEL.md).
-- **Estimación original (2026-11-10):** unas 18 semanas: 6,5 de la v0.4, 5 de la v0.5, 5 de la v0.6 y 1,5 de la v0.7. Es una referencia histórica, no trabajo restante ni una fecha comprometida; D3–D8 han avanzado como se detalla abajo. El 2026-11-13 la v0.5 bajó de 5 a 3,5 al quedarse sin los backends de almacenamiento propio. Distribución, web y legal siguen sin estimación, y las dos semanas de uso del punto 9 van aparte.
+- **Revisión:** 2026-11-14, contra `main 553ab147e0d2c1fb7bc65f0e0ddb9890b40e3b39`.
+- **Referencias vigentes:** [estado y evidencia](estado.md), [plan Community](community.md), [ADR-010](../adr/ADR-010-monorepo-go-supabase.md), [móvil](movil.md) y [plan maestro #67](https://github.com/KaiCorpLabs/openward/issues/67).
+- **Historia:** propuesta del 2026-11-10. Las estimaciones antiguas (~18 semanas, después 3,5 para el motor sin backends propios) no son una fecha ni el trabajo restante. Se conservan las dos semanas de uso y las puertas físicas, de recuperación y auditoría.
 
 ## Objetivo
 
-Lanzar la **Community**, la edición gratuita, en macOS, Windows y Linux:
-- con el cliente completo funcionando en local y sin cuenta, y el vault cifrado;
-- con el servidor abierto a las cuentas de KaiCorp Labs, como pide la puerta de salida del [camino a la Community](community.md). La sync no es parte de la Community: es el servicio de pago, y hasta que se pueda cobrar funciona en periodo de prueba;
-- que se descargue de una web, firmada y con actualizaciones automáticas;
-- con lo legal en orden: la licencia, la marca, los términos, la privacidad y la Ley de Ciberresiliencia.
+La Community es el cliente completo gratuito en local, con vault cifrado y sin cuenta obligatoria. La sync E2EE alojada cuesta **4,99 €/mes o 49 €/año**, con **14 días sin tarjeta**. El objetivo vigente de #67 es salir como **beta con pago activo**, con cuenta/sync fiables y móvil validado. La publicación y activación de cobros requieren un go/no-go explícito después de reunir la evidencia.
 
-Cobrar por la sync viene después, con Android e iOS ([prioridad 3](#prioridad-3-para-cobrar)).
+La secuencia anterior de Community de escritorio, móvil y después cobro queda como historia. El código Android/iOS ya está fusionado; eso no acredita su disponibilidad en tiendas ni permite cobrar antes de las puertas. No se presenta un trial como servicio ya abierto.
 
-## Dónde estamos (2026-11-13)
+La arquitectura acordada es monorepo Flutter/Rust/Go mínimo, Supabase gestionado para Auth/datos y un único proyecto de producción por ahora. Edge Functions es alternativa secundaria. OVH está previsto, aún sin desplegar. No se requiere backend en otro repositorio, identidad KaiCorp autoalojada ni producción en el minipc/tailnet.
 
-- **Etapa 1 implementada** (P0–P7); hardware y uso real siguen abiertos en [#42](https://github.com/KaiCorpLabs/openward/issues/42).
-- **v0.4:** D0–D3 y D5–D7 completados; sesión y backends D4, onboarding y Ajustes D8 integrados. Candidata `0.4.0-beta.1+31` en `main`, sin etiqueta ni release de 0.4. La KDF cumple 500–1000 ms en la CI release de los tres sistemas ([#58](https://github.com/KaiCorpLabs/openward/pull/58), [evidencia](../evidence/kdf-calibration-v0.4.md)).
-- **Pendiente para cerrar v0.4:** maquetas originales y autenticación física, incluida la firma SSH con claves no exportables en Secure Enclave ([#33](https://github.com/KaiCorpLabs/openward/issues/33)); migraciones personales, una semana de uso cifrado y recuperación independiente ([#37](https://github.com/KaiCorpLabs/openward/issues/37)). No se ha modificado el vault personal durante esta preparación.
-- **v0.5–v0.7:** motor de sync, servidor/cuentas y operación pública pendientes en [#38](https://github.com/KaiCorpLabs/openward/issues/38), [#39](https://github.com/KaiCorpLabs/openward/issues/39) y [#40](https://github.com/KaiCorpLabs/openward/issues/40).
-- **Desde el 2026-11-10, el repositorio tiene todos los derechos reservados** ([ADR-007](../adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-10)). El plan de lanzamiento prevé el cliente con GPL-3.0; el servidor es privado desde la [revisión del 2026-11-13](../adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-13). La revisión legal sigue en #42.
-- **Distribución:** ninguna release pública; 28 borradores a fecha de esta revisión. Última etiqueta/borrador `v0.3.4-beta.4` en `5736b7c`, con macOS universal, Windows x64 y Linux x86_64/aarch64, checksums y procedencia. El [cask](https://github.com/KaiCorpLabs/homebrew-tap/blob/main/Casks/openward.rb) sigue en `0.3.4-beta.3`; el código candidato 0.4 se obtiene de los artefactos de CI. Firma, actualizaciones y paquetes siguen en [#41](https://github.com/KaiCorpLabs/openward/issues/41).
-- **CI habitual:** `.dmg` macOS universal con firma ad hoc, `.zip` Windows x64 sin firmar y `.tar.gz` Linux x86_64; Linux aarch64 tiene su flujo de contenedor aparte. Ninguno se actualiza solo. Las pruebas automatizadas no cierran las puertas humanas.
+## Dónde estamos (2026-11-14)
+
+| Nivel | Estado verificado |
+|---|---|
+| **Integrado en main** | Etapa 1 y vault v0.4: D0–D3 y D5–D7 implementados, sesión/backends D4 y onboarding/Ajustes **locales** D8; candidata `0.4.0-beta.1+31`. Android/iOS por [#69](https://github.com/KaiCorpLabs/openward/pull/69); Escape y fixtures SSH/Telnet por [#70](https://github.com/KaiCorpLabs/openward/pull/70). |
+| **CI de main** | [553ab147](https://github.com/KaiCorpLabs/openward/actions/runs/43541166915): 19 trabajos correctos, borrador de release omitido. Integración de app y matriz SSH se ejecutan en Linux; sus pasos se omiten en macOS/Windows. No acredita hardware, operación ni trabajo local sin publicar. |
+| **Probado localmente** | Motor de sync, Go, lógica de suscripciones y UX de cuenta/sync en copias aisladas; recorrido entre dos vaults y ensayos de simulador/emulador. Conexión Go real de lectura a Supabase con TLS verificado. No está integrado en main; falta CI completa del último árbol y conciliación con main actual. |
+| **Aplicado en Supabase** | Proyecto de producción, 11 tablas privadas con RLS habilitada/forzada y sin lectura para clientes `anon`/`authenticated`, login backend limitado y helper privado de sesión. No equivale a servicio desplegado ni aislamiento ante backend comprometido. |
+| **Bloqueado en el último ensayo** | Auth real, logout/revocación alojados con JWT vigente: falta identidad sintética con custodia segura y acceso al Dashboard; el Mac estaba bloqueado. API cerrada `design_pending`; no se han repetido esas pruebas durante esta revisión. |
+| **Pendiente de producto/seguridad** | Onboarding alojado, posesión/enrolamiento, recuperación remota, exclusión criptográfica, checkout real, operación, firma/distribución, dispositivos físicos y auditoría. #33/#37 conservan sus puertas personales y físicas. |
+| **Distribución** | Ninguna release pública. Los 28 registros consultados son borradores; el último sigue en `v0.3.4-beta.4`, anterior al vault v0.4 y al móvil de main. Una etiqueta, paquete de CI o borrador no es una candidata pública validada. |
 
 ## Prioridad 1: sin esto no se lanza
 
-| # | Qué | Semanas | Plan |
-|---|---|---|---|
-| 1 | Prueba de Touch ID y el Secure Enclave con la app firmada ad hoc | 1 día | [v0.4, riesgos](v0.4.md#riesgos) |
-| 2 | Confirmar las 10 decisiones por defecto del camino a la Community | — | [community.md](community.md#decisiones-por-defecto-a-confirmar) |
-| 3 | Cerrar v0.4: puertas restantes de #33 y #37 | pendiente de evidencia | [v0.4.md](v0.4.md#hitos) |
-| 4 | v0.5: el motor de sync (S1 y S4–S6) | 3,5 | [etapa 3](community.md#etapa-3--v05-el-motor-de-sync) |
-| 5 | v0.6: servidor y cuentas de KaiCorp Labs (C1–C6) | 5 | [etapa 4](community.md#etapa-4--v06-servidor-y-cuentas-de-kaicorp-labs) |
-| 6 | v0.7: el servidor en producción (M1–M3) | 1,5 | [etapa 5](community.md#etapa-5--v07-abierto-el-servidor-en-producción) |
-| 7 | Distribución: firma, notarización, actualizaciones y paquetes | sin estimar | este documento |
-| 8 | La web y la documentación pública | sin estimar | este documento |
-| 9 | La prueba final: dos semanas de uso y la guía con hardware | 2 | [community.md](community.md) |
-| 10 | Legal: la Ley de Ciberresiliencia | sin estimar | este documento |
-| 11 | La licencia del lanzamiento, la marca, la lista «Siempre gratis» y `SECURITY.md` | — | [ADR-007](../adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-10) |
-| 12 | Publicar la primera release | — | — |
+Los números conservan los enlaces históricos del plan. La preparación puede ir en paralelo contra el contrato #62; integrar y abrir servicios depende de sus puertas.
+
+| # | Trabajo | Seguimiento y cierre |
+|---|---|---|
+| 1 | Touch ID, llavero protegido y firma SSH Secure Enclave en bundle real; hardware de escritorio/móvil | [#33](https://github.com/KaiCorpLabs/openward/issues/33), #68 |
+| 2 | Contrato común, callbacks, posesión, recuperación y decisiones restantes | [#62](https://github.com/KaiCorpLabs/openward/issues/62); [ADR-010](../adr/ADR-010-monorepo-go-supabase.md) ya registra las confirmadas |
+| 3 | Cerrar las puertas restantes del vault v0.4 | [#37](https://github.com/KaiCorpLabs/openward/issues/37), #33; [guía](prueba-v0.4.md) |
+| 4 | Motor de sync durable y convergencia | [#38](https://github.com/KaiCorpLabs/openward/issues/38) |
+| 5 | Go mínimo, Supabase Auth/datos y UX integrada | [#39](https://github.com/KaiCorpLabs/openward/issues/39), [#64](https://github.com/KaiCorpLabs/openward/issues/64), #62/#65 |
+| 6 | Runtime, restauración, monitorización, borrado y operación | [#40](https://github.com/KaiCorpLabs/openward/issues/40) |
+| 7 | Firma, actualizaciones, paquetes y descargas | [#41](https://github.com/KaiCorpLabs/openward/issues/41), #68 |
+| 8 | Web, documentación y soporte fieles a la candidata | [#66](https://github.com/KaiCorpLabs/openward/issues/66) |
+| 9 | E2E y dos semanas de uso; hardware y escritorio↔móvil | [#42](https://github.com/KaiCorpLabs/openward/issues/42), #33/#37/#68 |
+| 10 | Análisis legal pertinente, incluida CRA | #66/#42; revisión pendiente |
+| 11 | Licencia/CLA, marca, «Siempre gratis» y canal de seguridad | #66/#42; ninguna licencia cambia en esta revisión |
+| 12 | Go/no-go de publicación y pago sobre candidata exacta | #67/#42, con #63/#65 cerrados |
 
 ### 1 · Touch ID y el Secure Enclave
 
-Sigue siendo una puerta de #33 porque puede adelantar la necesidad de Developer ID. La sonda ad hoc creó una clave efímera no exportable, pero Touch ID devolvió `SystemCancel` (-4): no valida autenticación física. La firma SSH P-256 está ahora implementada ([contrato y pruebas](../../spec/secure-enclave-ssh-v1.md)); falta comprobarla en el bundle real. Registrar el resultado con el bundle real antes de decidir certificados o compras.
+La sonda ad hoc histórica creó una clave efímera no exportable, pero Touch ID devolvió `SystemCancel`: no valida autenticación física. La firma SSH P-256 está implementada ([contrato y límites](../../spec/secure-enclave-ssh-v1.md)); falta probar alta, conexión, cancelación, bloqueo, reapertura y borrado en el bundle real. Los mocks y simuladores no acreditan Face ID/Touch ID, Windows Hello ni BiometricPrompt físicos. Registrar resultados antes de decidir certificados/compras.
 
-### 2 · Las decisiones del camino a la Community
+### 2 · Decisiones y contrato
 
-Las de la v0.4 y las tres de su modelo de amenazas están aceptadas desde el 2026-11-10. Las diez del plan general siguen «a confirmar». Entre ellas:
-- Mosh con el `mosh-client` instalado en el equipo;
-- el motor de sync antes que el servidor;
-- las cuentas de KaiCorp Labs;
-- la base de datos del servidor, aparte de la de la identidad.
+Monorepo, Go mínimo, Supabase gestionado, precio y duración del trial están confirmados. #62 sigue abierto porque registrar estas decisiones no completa la API, fixtures, callbacks, posesión o recuperación. Faltan también inicio del contador, fiscalidad, vendedor, mercados, retención/gracia y rutas de pago.
 
-Lo que cambia el modelo ya está decidido, el 2026-11-13: toda la sync de pago y alojada, el servidor privado, la cuenta gratuita con un periodo de prueba, y Android e iOS antes de cobrar ([community.md](community.md#decisiones-del-2026-11-13)).
+Cuenta, dispositivo, descifrado y entitlement son autoridades distintas. El paquete remoto actual exige contraseña maestra+kit; el kit no es copia de datos ni recupera hardware. No se promete recuperación remota solo con kit ni admisión de otro equipo por login de cuenta.
 
 ### 3 · v0.4, el vault cifrado
 
-- **D3:** `openward-crypto`, jerarquía y migración implementados y [#32](https://github.com/KaiCorpLabs/openward/issues/32) cerrado. [Formato y pruebas](../../spec/vault-sqlite-v2.md). Las maquetas originales siguen pendientes en #33.
-- **D4:** sesión con contraseña, bloqueo y backends de Touch ID/Windows Hello/llavero Linux implementados en [#53](https://github.com/KaiCorpLabs/openward/pull/53). La firma SSH P-256 no exportable está implementada con Touch ID y referencias públicas en el vault ([contrato y límites](../../spec/secure-enclave-ssh-v1.md)); #33 conserva las maquetas y pruebas físicas.
-- **D5:** el kit de recuperación, el cambio de contraseña y el paquete de la clave de cuenta (0,5 semanas). Implementado en [#54](https://github.com/KaiCorpLabs/openward/pull/54); [formato, pruebas de recuperación y límites](../../spec/recovery-v1.md).
-- **D6:** los secretos en el vault, y el historial, los recientes y los registros cifrados (2 semanas). Implementado con guardado explícito, migración y barrera de formato3 ([contrato, pruebas y límites](../../spec/protected-local-v1.md)). Completa las mitigaciones de [AM-4, AM-7 y AM-9](../THREAT_MODEL.md#9-hallazgos-de-d0).
-- **D7:** implementada la copia de seguridad `.owvault`/JSON y su restauración en un vault vacío con identidad propia (0,5 semanas). [Contrato, pruebas y guía de recuperación](../../spec/vault-backup-v1.md).
-- **D8:** onboarding, Ajustes › Seguridad, notas y candidata `0.4.0-beta.1+31` integrados en [#57](https://github.com/KaiCorpLabs/openward/pull/57); KDF corregida y validada en #58. [#37](https://github.com/KaiCorpLabs/openward/issues/37) conserva las puertas personales de migración, uso y recuperación. No hay publicación de 0.4.
+D3–D8 tienen implementación integrada ([plan](v0.4.md), [notas](../notas/v0.4.md)). [#58](https://github.com/KaiCorpLabs/openward/pull/58) conserva la [calibración KDF en los tres sistemas](../evidence/kdf-calibration-v0.4.md). #33 conserva maquetas originales y autenticación/firma físicas. #37 conserva migración personal, una semana real de uso cifrado y recuperación independiente; no se acreditan con fixtures. El onboarding **local** integrado no prueba el de cuenta/sync alojadas.
 
 ### 4 · v0.5, el motor de sync
 
-El motor `openward-sync`, con la segunda parte de S4 como puerta de ADR-005 (3 dispositivos × 10.000 ediciones convergen al 100 %), contra un backend de pruebas. Después, añadir y revocar equipos, y la pantalla de sync. Desde el 2026-11-13 no trae backends de carpeta, S3 ni WebDAV: el único backend es el servidor de la v0.6 ([ADR-005](../adr/ADR-005-sync-por-registros-de-dispositivo.md#revisión-del-2026-11-13)).
+Integrar el trabajo local de #38 con el main actual. Exigir colas/cursores/confirmaciones durables, reintentos idempotentes, duplicados/desorden, crash, conflictos recuperables y compactación. Puerta: tres dispositivos × 10.000 ediciones convergen al 100 % contra backend de pruebas **y relay real**. No hay backends de carpeta/S3/WebDAV ofrecidos al usuario.
 
-### 5 · v0.6, servidor y cuentas de KaiCorp Labs
+### 5 · v0.6, servidor y cuentas
 
-- **C1:** ADR-010, el modelo de amenazas del servidor y la API v1. Decide también si el servidor guarda una copia del paquete de la cuenta que se abra solo con el kit, para recuperar sin contraseña y sin ningún equipo ([THREAT_MODEL §11](../THREAT_MODEL.md#11-decisiones-que-salen-de-d0)).
-- **C2–C5:** el servidor en Go, la entrada con OIDC, el relay y la cuenta en la app. El servidor es privado y no se autoaloja ([ADR-006](../adr/ADR-006-servidor-open-core.md#revisión-del-2026-11-13)).
-- **C6:** el despliegue en el minipc, solo dentro del tailnet.
+Supabase gestionado aporta Auth/datos; Go mínimo en el monorepo conserva la lógica de confianza. Resolver #62 e integrar #39/#64 con #38/#63. Probar autorización A/B, enrolamiento/posesión, recuperación, callbacks por plataforma, sesión viva, logout y revocación alojados. El helper privado no sustituye esas pruebas. Mantener la API cerrada `design_pending` hasta resolverlas; denegar un token no excluye criptográficamente a quien conserva claves (#65).
 
-### 6 · v0.7, el servidor en producción
+### 6 · v0.7, operación
 
-- La dirección pública por el túnel de Cloudflare.
-- Las copias, la vigilancia y el borrado de los datos de una persona, como en los demás servicios de la casa.
-- Los términos y la privacidad, porque entran datos de personas de fuera.
-- Quien entra sincroniza en su periodo de prueba: el plan de pago llega con la [prioridad 3](#prioridad-3-para-cobrar).
+OVH previsto, sin runtime desplegado. #40 exige permisos y secretos mínimos, TLS/WebSocket, backups cifrados fuera del host, restauración limpia con RPO/RTO medidos, alertas/runbooks, migraciones/rollback y borrado/retención. Un solo proyecto Supabase por ahora: definir aislamiento de ensayos y restauración sin inventar staging ya disponible. Los tests locales de operación no acreditan estos procedimientos en producción.
 
 ### 7 · Distribución
 
-- **macOS:** firma con Developer ID y notarización. Sin ellas, Gatekeeper avisa o bloquea al abrir la app descargada.
-- **Windows:** firma del ejecutable. Sin ella, SmartScreen avisa al abrirlo.
-- **Actualizaciones automáticas:** Sparkle en macOS y WinSparkle en Windows. En Linux, las del sistema de paquetes.
-- **Paquetes que faltan:**
-  - en Linux, Flatpak, AppImage y `.deb`;
-  - en Windows, un instalador, winget y Scoop.
-  
-  El cask de Homebrew ya existe.
+#41 exige firma/notarización macOS, firma Windows, paquetes Linux/Windows y actualizaciones autenticadas con pruebas de manipulación, interrupción, rollback y migración. Android/iOS requieren firma de release y disponibilidad validada de #68. Verificar los mismos archivos que recibirá el usuario con commit, checksums y procedencia. El APK de depuración y los artefactos ad hoc actuales no cierran esta puerta.
 
 ### 8 · Web y documentación pública
 
-- El dominio es propio de OpenWard (decidido el 2026-11-10), y es el mismo que usa M1 para el servidor. Hay que comprarlo antes de M1.
-- La web, con las descargas de los tres sistemas.
-- La documentación de uso, con la guía de prueba como punto de partida.
+#66 debe mostrar función/plataforma/estado, precio, prueba, límites, recuperación, cancelación y soporte verificables. Descargas ligadas a #41, sin anunciar móvil disponible por haber compilado. Dominio/marca, compras, certificados y publicación conservan su decisión específica.
 
 ### 9 · La prueba final
 
-- **Dos semanas** usando OpenWard como único cliente SSH en macOS, Windows y Linux.
-- **Los puntos 24 a 30 de la [guía de prueba](prueba-v0.3.md)**, con hardware de verdad:
-  - un cable serie;
-  - Mosh cambiando de red;
-  - una llave FIDO2 en los tres sistemas;
-  - un equipo de red con Latin-1 o CP437;
-  - el autocompletado con bash, zsh y fish;
-  - «Abrir con…» con editores de verdad.
+- Dos semanas usando OpenWard como cliente SSH principal en macOS/Windows/Linux y una semana cifrada/migración/recuperación independiente de #37.
+- Hardware de los puntos 24–30 de la [guía](prueba-v0.3.md): serie, cambio de red Mosh, FIDO2, codificaciones, shells y editores externos; puertas #33 y móviles S1.2/S2/S3/S5 de #68.
+- Usuario externo: cuenta → vault/importación → trial/compra → segundo dispositivo autorizado → sync; offline/concurrencia/conflictos, logout/revocación con JWT vigente y recuperación en tercero limpio.
+- Escritorio↔escritorio y escritorio↔Android/iOS; caída y restauración del servicio, actualización sin pérdida y ciclo completo de cobro. Registrar candidata exacta y evidencia en #42.
 
-### 10 · La Ley de Ciberresiliencia
+### 10 · Revisión legal
 
-El análisis de la Ley de Ciberresiliencia (CRA, Reglamento (UE) 2024/2847). Como OpenWard tendrá plan de pago, lo más probable es que entre en ella.
-- La obligación de notificar las vulnerabilidades explotadas aplica desde el 11 de septiembre de 2026.
-- El resto aplica desde el 11 de diciembre de 2027.
-
-El análisis dice qué aplica a la Community y qué al plan de pago. Va con los términos y la privacidad de M3.
+#66/#42 requieren análisis de aplicabilidad y obligaciones de la CRA, privacidad, términos, retención/borrado, cancelación y devoluciones con apoyo jurídico adecuado. No se considera terminado por disponer de borradores ni se deduce una validación legal de este roadmap.
 
 ### 11 · Licencia, marca, «Siempre gratis» y `SECURITY.md`
 
-- **La marca:** registrar «OpenWard» (OEPM o EUIPO). Cuanto antes, porque la fecha de la solicitud es la que cuenta.
-- **La licencia del lanzamiento:** hasta entonces, todos los derechos reservados. Al publicar, el cliente pasa a GPL-3.0, con el bot de la CLA para todo el repositorio y la revisión legal de LICENSE y de la CLA. El servidor no se publica: es privado ([ADR-007](../adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-13)).
-- **La lista «Siempre gratis»** del README es un borrador, y lo que diga queda como promesa pública desde el lanzamiento. Desde el 2026-11-13 es el cliente completo en local, con el vault cifrado, y la exportación; la sync no está.
-- **`SECURITY.md` ya existe**, con el reporte privado de GitHub. Se repasa que los plazos sigan siendo realistas con usuarios de fuera.
+[LICENSE](../../LICENSE) mantiene todos los derechos reservados. El plan previo de cliente GPL-3.0 y CLA debe revisarse junto a licencia/publicación del Go en el monorepo ([ADR-010](../adr/ADR-010-monorepo-go-supabase.md)); no se crea una excepción ni se publica código local aquí. Revisar marca y promesa de cliente local completo/exportación gratuitos. [SECURITY.md](../../SECURITY.md) ya existe; comprobar canal y plazos antes de usuarios externos.
 
-### 12 · Publicar la primera release
+### 12 · Publicación
 
-Publicarla es una decisión aparte, como hasta ahora. Antes, se decide qué hacer con los borradores viejos.
+#42 reúne evidencia, candidata/commit, riesgos residuales y responsables. Pérdida/corrupción, aislamiento, recuperación, revocación/exclusión, cobro incorrecto o backup no restaurable son **no-go**. Resolver el destino de borradores antiguos. Release, apertura pública y cobro requieren decisión explícita final; no se activan al cerrar una PR de documentación.
 
 ## Orden
 
-- Del 1 al 6 se va en orden, porque cada etapa usa lo que deja la anterior.
-- **El 7, el 8, el 10 y el 11 no tocan el núcleo** y pueden ir en paralelo con la v0.5 y la v0.6:
-  - la firma de macOS, en cuanto el punto 1 diga si hace falta antes;
-  - las actualizaciones automáticas, antes de la primera beta con gente de fuera, para que las correcciones les lleguen solas;
-  - comprar el dominio, antes de M1;
-  - registrar la marca, lo antes posible;
-  - lo legal, antes de M3.
-- El 9 y el 12 cierran.
+1. Cerrar decisiones/contrato #62 y conciliar fuentes locales con main actual, conservando su evidencia por revisión.
+2. Motor #38, backend #39, UX #64 y billing #63 preparan contra fixtures e integran sobre el contrato. #40/#41/#66 pueden preparar operación, distribución y textos en paralelo.
+3. #65 acompaña desde el modelo; su cierre exige sistema real, revisión externa, auditoría y retest antes de cobrar.
+4. #42 valida todo, incluida la entrega móvil del propietario #68 y #33/#37. Después, go/no-go de #67.
 
 ## Prioridad 2: conviene tenerlo el día del lanzamiento
 
-- **Informes de fallos con consentimiento y un canal de opiniones.** Cuando la use gente de fuera, sin ellos no se sabrá qué falla.
+Informes de fallos solo con consentimiento y secretos redactados, canal de feedback y soporte con responsables/plazos realistas (#66/#40).
 
 ## Prioridad 3: para cobrar
 
-Toda la sync es de pago (2026-11-13). Hasta aquí ha funcionado en periodo de prueba.
+Este título conserva su ancla histórica; son puertas de la misma beta de pago, no una fase que permita abrir cobros después sin validación:
 
-- **Android e iOS.** El producto de pago es el mismo cliente, sincronizado, en el móvil y en el escritorio: las apps salen después del lanzamiento de escritorio y antes de cobrar. Antes, el spike S1.2: el motor de terminal en dispositivos reales, la condición pendiente de [ADR-002](../adr/ADR-002-motor-de-terminal.md).
-- **El plan de pago de la sync**, con el final del periodo de prueba, y el cobro, en el repositorio privado `openward-cloud`.
-- **Una auditoría externa del cifrado y la sync** antes de cobrar por ella. Es la puerta de la fase 2 en [ARCHITECTURE §15](../ARCHITECTURE.md#15-hoja-de-ruta-con-puertas).
+- **#63:** proveedor y checkout reales, webhooks autenticados/idempotentes, renovación, impago, cancelación, reembolso, restauración de derechos y rutas de tienda; 4,99 €/mes o 49 €/año y 14 días sin tarjeta. Vencimiento/cancelación conservan acceso y exportación locales.
+- **#68:** Android/iOS integrados, pero dispositivos físicos, cuenta/sync, firma y tiendas siguen pendientes.
+- **#65:** revisión y auditoría externa del cifrado/sync con correcciones verificadas sobre la candidata, incluyendo recuperación y revocación/exclusión.
 
 ## Después del lanzamiento
 
-- **El agente SSH y la CLI `ow`.**
-- **Mosh en Windows**, con el cliente clean-room de [ADR-009](../adr/ADR-009-mosh-clean-room.md).
-- **La fase 3:** equipos, plan Team, IA con tu propia clave ([ADR-008](../adr/ADR-008-ia-mcp-y-byok.md)) y MCP.
+Agente SSH/CLI `ow`, Mosh clean-room para Windows/móvil y fases de equipos, IA BYOK/MCP y Enterprise. No se cuentan como entregadas ni se fijan fechas.
 
 ## Lo que hay que decidir o hacer a mano
 
-- **Gastos:** la cuenta de Apple Developer, el certificado de firma de Windows, el dominio y el registro de la marca.
-- **Decisiones:**
-  - las diez del camino a la Community (punto 2);
-  - lo que quedó abierto el 2026-11-13: la duración del periodo de prueba de la sync, el precio del plan y dónde se aloja el servicio en producción;
-  - publicar cada release.
-- **Trámites:** registrar la marca y comprar el dominio (puntos 8 y 11).
-- **Pruebas:** las de hardware y las dos semanas de uso (punto 9).
-- **Legal:** revisar LICENSE, la CLA, los términos, la privacidad y el análisis de la CRA.
+Gastos/cuentas de desarrollador, certificados, dominio/marca, pruebas físicas y uso real; contrato y decisiones comerciales aún abiertas, revisión legal/licencias y go/no-go. El precio, duración del trial, monorepo y Supabase gestionado ya no están pendientes de decidir.
 
 ## Fuera de la ruta
 
-- [RustCrypto/SSH#620](https://github.com/RustCrypto/SSH/issues/620) está resuelto desde el 2026-11-10 por la [PR #623](https://github.com/RustCrypto/SSH/pull/623). Falta una versión publicada con el arreglo y compatible con `russh`: comprobado el 2026-11-11, `ssh-key` llega hasta `0.7.0-rc.12` (anterior al arreglo) y `russh` 0.64.1 y 0.65.1 fijan la `rc.11`. Hasta entonces se conserva `openward-ssh::keyfile`, con el mínimo de 24 bytes de magnitud aplicado también a claves con ceros iniciales y cifradas. Al actualizar, cambiar también las dependencias directas de `openward-app` y `openward-fido`, retirar el relleno local y mantener las pruebas de claves cortas y del mínimo ([ADR-003](../adr/ADR-003-ssh-russh-y-firmantes.md)).
+La corrección local de claves SSH cortas conserva su contexto en [ADR-003](../adr/ADR-003-ssh-russh-y-firmantes.md). La comprobación de versiones upstream del 2026-11-11 es historia: antes de retirar el workaround hay que verificar una versión compatible publicada y conservar las regresiones del mínimo de magnitud. Esta revisión documental no actualiza dependencias.

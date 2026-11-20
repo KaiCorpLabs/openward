@@ -1,8 +1,16 @@
 # Android e iOS
 
-- **Estado:** primera implementación completa en la rama de la PR de [#68](https://github.com/KaiCorpLabs/openward/issues/68) (2026-11-13). Compila y pasa sus pruebas en el simulador de iOS y en el emulador de Android. Falta todo lo que exige un teléfono real, una cuenta de desarrollador o una decisión (ver «Revisar después»).
-- **Base:** [ADR-001](../adr/ADR-001-rust-core-flutter-go.md) (la misma app Flutter y el mismo núcleo Rust en las cinco plataformas), [ARCHITECTURE §3.7](../ARCHITECTURE.md#37-móvil) y las decisiones del 2026-11-13 ([community.md](community.md#decisiones-del-2026-11-13)): las apps salen después de la Community de escritorio y antes de cobrar por la sync.
-- **Seguimiento:** [#68](https://github.com/KaiCorpLabs/openward/issues/68). Los contratos de cuenta, sync y cobro siguen en #62, #38, #64 y #63.
+- **Estado (2026-11-14):** base móvil integrada en `main` por [PR #69](https://github.com/KaiCorpLabs/openward/pull/69), merge `8a05cecd`; revisión actual `553ab147` con los fixes de [#70](https://github.com/KaiCorpLabs/openward/pull/70). No cierra [#68](https://github.com/KaiCorpLabs/openward/issues/68): dispositivos reales, firma, tiendas y cuenta/sync/pago siguen pendientes.
+- **Base:** [ADR-001](../adr/ADR-001-rust-core-flutter-go.md), [ADR-010 vigente](../adr/ADR-010-monorepo-go-supabase.md), [ARCHITECTURE §3.7](../ARCHITECTURE.md#37-móvil) y [decisiones](community.md#decisiones-del-2026-11-13). La misma app Flutter y núcleo Rust en las cinco plataformas; Go mínimo en el monorepo y Supabase gestionado para Auth/datos.
+- **Seguimiento:** #68, contrato [#62](https://github.com/KaiCorpLabs/openward/issues/62), motor #38, backend #39, UX #64, pago #63, seguridad #65, distribución #41 y aceptación #42. El [plan maestro #67](https://github.com/KaiCorpLabs/openward/issues/67) exige móvil validado para la beta con pago desde salida; la antigua secuencia escritorio → móvil → cobro queda como historia.
+
+## Alcance de la evidencia
+
+**Integrado:** lo descrito abajo es código del cliente en main. Los resultados de simulador/emulador son los registrados en #69 el 2026-11-13, no una validación física ni pruebas repetidas en esta revisión documental. La [CI de main](https://github.com/KaiCorpLabs/openward/actions/runs/43541166915) pasa, con integración de app y matriz SSH omitidas en macOS/Windows.
+
+**Solo local:** hay trabajo posterior de cuenta/sync/pago y ensayos móviles en copias aisladas que aún no está en main. La conexión Go de lectura con TLS y el esquema/helper privados aplicados en Supabase no acreditan login/logout/revocación alojados ni onboarding de cuenta. El último ensayo Auth se detuvo por identidad sintética pendiente y falta de acceso utilizable al Dashboard con el Mac bloqueado. API cerrada `design_pending`; [estado por nivel](estado.md).
+
+**Salida pendiente:** S1.2/S2/S3/S5, biometría/firma físicas, posesión/enrolamiento y recuperación, revocación/exclusión criptográfica, checkout real, operación, auditoría, firma y tiendas. Precio confirmado: **4,99 €/mes o 49 €/año, 14 días sin tarjeta**; no hay cobros activos ni release pública. «Más tarde» y el kit que se prueban abajo son flujos del vault local, no el onboarding alojado ni prueba de recuperación remota.
 
 ## Qué hay
 
@@ -77,7 +85,7 @@
 | Importar de programas instalados, Termius incluido, y `~/.ssh/config` | No | No | No hay otros programas en el teléfono |
 | Abrir un archivo remoto con una app del equipo | No | No | |
 | Atajos de teclado | Con teclado físico | Con teclado físico (iPad) | Las teclas de atajo no se dibujan en un teléfono |
-| Cuenta, sync y cobro | — | — | Aún no existen en ninguna plataforma (#62, #38, #63) |
+| Cuenta, sync y cobro | Pendiente en main | Pendiente en main | Trabajo local sin publicar; contrato #62, motor #38, backend #39, UX #64 y pago #63. Auth alojado aún sin validar |
 
 ## Cómo se prueba
 
@@ -102,7 +110,7 @@ fvm flutter test integration_test/mobile_test.dart -d emulator-5554 \
 
 En macOS prueba la estructura de teléfono con `Device.debugMobile`; está en `tool/ci.sh` junto a las builds de Android e iOS.
 
-Resultado del 2026-11-13: 3 de 3 en el iPhone 17 Pro (iOS 26.5, simulador), 3 de 3 en un emulador Android 15 arm64 y 2 de 2 en macOS (el caso del llavero se salta allí). A mano, en el emulador: onboarding con «Más tarde», reinicio y desbloqueo con el Keystore, conexión rápida con confirmación de la clave del host, contraseña, comandos y permiso de notificaciones.
+Resultado registrado en #69 el 2026-11-13 (simulador/emulador; no dispositivo físico): 3 de 3 en el iPhone 17 Pro (iOS 26.5, simulador), 3 de 3 en un emulador Android 15 arm64 y 2 de 2 en macOS (el caso del llavero se salta allí). A mano, en el emulador: onboarding con «Más tarde», reinicio y desbloqueo con el Keystore, conexión rápida con confirmación de la clave del host, contraseña, comandos y permiso de notificaciones.
 
 La CI:
 - en Actions, el núcleo completo para Android con el NDK del runner y el APK de depuración. iOS, sin Xcode, solo con lo que no compila C;
@@ -150,7 +158,7 @@ La CI:
 - [ ] La CI de iOS en Actions con un runner de macOS, y las pruebas en un dispositivo real.
 
 **Cuenta, sync y cobro:**
-- [ ] Callbacks del inicio de sesión (App Links y Universal Links, PKCE) según el contrato de #62.
-- [ ] Sync de #38 con el mismo vault.
+- [ ] Supabase Auth gestionado con callbacks móviles (App Links y Universal Links y protecciones del flujo elegido, PKCE cuando corresponda) según #62; no copiar el loopback de escritorio. Verificar login/logout/revocación alojados con JWT aún vigente.
+- [ ] Sync de #38 con el mismo vault, UX de #64 y posesión/enrolamiento/recuperación de #62. Revocación de acceso y exclusión criptográfica son puertas distintas de #65.
 - [ ] StoreKit y Play Billing o la ruta que decida #63.
 - [ ] La matriz escritorio↔móvil de #42.

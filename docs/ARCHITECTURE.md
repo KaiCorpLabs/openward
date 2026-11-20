@@ -1,8 +1,8 @@
 # Arquitectura y stack de OpenWard
 
-**Estado:** documento vivo: lo hecho y lo que falta van marcados donde importa (la columna «Estado» de los crates, las listas de seguridad y distribución) · **Revisado:** 2026-11-13 (§1.1, §6.2, §7, §12, §13 y §15: toda la sync, de pago y alojada, y el servidor, privado); antes, 2026-11-10 (§4.2, §5 y §6.1, con S4, S6 y D0) · [ADRs](adr/)
+**Estado:** documento vivo: lo hecho y lo que falta van marcados donde importa (la columna «Estado» de los crates, las listas de seguridad y distribución) · **Revisado:** 2026-11-14 ([ADR-010](adr/ADR-010-monorepo-go-supabase.md): monorepo, Go mínimo, Supabase gestionado y beta de pago); antes, 2026-11-13 (§1.1, §6.2, §7, §12, §13 y §15: toda la sync, de pago y alojada, y el servidor, privado); antes, 2026-11-10 (§4.2, §5 y §6.1, con S4, S6 y D0) · [ADRs](adr/)
 
-OpenWard es un cliente SSH open-core para Windows, macOS, Linux, iOS y Android. Es local-first y su vault de hosts y credenciales tiene formato abierto. La edición gratuita, la Community, es el cliente completo funcionando en local y sin cuenta. La sincronización está cifrada de extremo a extremo (E2EE) y es el servicio de pago: va con una cuenta, en el servicio alojado de OpenWard. No hay sincronización con el almacenamiento del usuario ni servidor autoalojable ([ADR-006](adr/ADR-006-servidor-open-core.md#revisión-del-2026-11-13)). El dinero sale de servicios con coste real en el servidor: sincronización, equipos y funciones enterprise. El cliente es 100 % open source, y lo único que no hace gratis es sincronizar.
+OpenWard es un cliente SSH open-core para Windows, macOS, Linux, iOS y Android. Es local-first y su vault de hosts y credenciales tiene formato abierto. La edición gratuita, la Community, es el cliente completo funcionando en local y sin cuenta. La sincronización está cifrada de extremo a extremo (E2EE) y es el servicio de pago: va con una cuenta, en el servicio alojado de OpenWard. No hay sincronización con el almacenamiento del usuario ni servidor autoalojable ([ADR-006](adr/ADR-006-servidor-open-core.md#revisión-del-2026-11-13)). El dinero sale de servicios con coste real en el servidor: sincronización, equipos y funciones enterprise. La licencia actual mantiene todos los derechos reservados; el plan de apertura del cliente requiere su revisión de lanzamiento. El [estado verificable](plan/estado.md) distingue implementación integrada y objetivos pendientes.
 
 ---
 
@@ -15,8 +15,8 @@ OpenWard es un cliente SSH open-core para Windows, macOS, Linux, iOS y Android. 
 | SSH | `russh` + `russh-sftp`, con un trait `Signer` para claves en software, agente, Secure Enclave, Keystore, TPM y FIDO2 | [ADR-003](adr/ADR-003-ssh-russh-y-firmantes.md) |
 | Vault | **Aceptado.** Cifrado por ítem (XChaCha20-Poly1305) sobre SQLite. Jerarquía de claves con HPKE (X-Wing, `hpke-rs` y libcrux) y kit de recuperación obligatorio. | [ADR-004](adr/ADR-004-vault-y-jerarquia-de-claves.md) |
 | Sync | **Aceptado, revisado el 2026-11-13** (la segunda parte de S4 puede reabrirlo). Registros inmutables por dispositivo, firmados y cifrados, con merge por relojes de campo. Su único backend es el relay del servicio alojado; no hay backends de almacenamiento propio. | [ADR-005](adr/ADR-005-sync-por-registros-de-dispositivo.md) |
-| Servidor | **Aceptado, revisado el 2026-11-13.** Monolito modular en Go con Postgres. Es privado: no se publica ni se autoaloja. Toda la sync es de pago y alojada, con una cuenta gratuita que trae un periodo de prueba. Lo de la fase 4 (`ee/`: SAML, SCIM, SIEM, grabaciones) se decide entonces. | [ADR-006](adr/ADR-006-servidor-open-core.md) |
-| Licencias | **Aceptado, revisado el 2026-11-10 y el 2026-11-13.** Hasta el lanzamiento de la Community, todo con todos los derechos reservados. Al lanzar: cliente y núcleo con GPL-3.0 y **CLA en todo el repositorio**. El servidor, los cobros y la infraestructura son privados. | [ADR-007](adr/ADR-007-licencias-y-contribuciones.md) |
+| Servidor | **Decisión vigente:** Go mínimo en el monorepo con Flutter/Rust, Supabase gestionado para Auth/datos y un proyecto de producción por ahora. Edge Functions secundaria. Sync alojada: 4,99 €/mes o 49 €/año, 14 días sin tarjeta. Runtime OVH previsto, sin desplegar. | [ADR-010](adr/ADR-010-monorepo-go-supabase.md) |
+| Licencias | **Aceptado, revisado el 2026-11-10 y el 2026-11-13.** Hasta el lanzamiento de la Community, todo con todos los derechos reservados. Al lanzar: cliente y núcleo con GPL-3.0 y **CLA en todo el repositorio**. La licencia/publicación del Go en monorepo requiere conciliación antes de publicar código ([ADR-010](adr/ADR-010-monorepo-go-supabase.md)); no cambia LICENSE. | [ADR-007](adr/ADR-007-licencias-y-contribuciones.md) |
 | IA | Servidor MCP local ("el agente usa SSH, pero nunca ve la clave") y modelos BYOK o locales. No pagamos inferencia. | [ADR-008](adr/ADR-008-ia-mcp-y-byok.md) |
 | Mosh | Implementación clean-room en Rust: no se enlaza mosh porque es GPLv3. Hasta entonces se usan SSH + tmux con reconexión automática. | [ADR-009](adr/ADR-009-mosh-clean-room.md) |
 
@@ -53,7 +53,7 @@ OpenWard es un cliente SSH open-core para Windows, macOS, Linux, iOS y Android. 
 ### 1.3 Supuestos y restricciones
 
 - **Equipo de 1 a 3 personas**, con experiencia demostrada en Rust, Flutter (con `flutter_rust_bridge`) y Go (Arveil). El stack prioriza lo que ya se domina y lo que tiene una sola implementación por capa.
-- **Orden de lanzamiento:** primero el escritorio, con la Community; Android e iOS, después de ese lanzamiento y antes de cobrar por la sync (decidido el 2026-11-13).
+- **Salida vigente:** beta con pago activo cuando se cierre #67/#42, incluida validación móvil. La secuencia anterior escritorio → móvil → cobro es historia; la base Android/iOS ya está integrada por #69, sin firma/tiendas ni validación física completas.
 - **Presupuesto fijo** para firma y distribución: Apple US$99/año, firma para Windows (SignPath gratis para OSS o Azure Trusted Signing) y dominios.
 - **Calidad de ejecución como prioridad:** móvil desde el principio, builds firmadas, auditoría externa, integraciones e importadores.
 
@@ -80,7 +80,8 @@ flowchart TB
   CORE <-->|HTTPS + WebSocket<br/>registros cifrados| SRV
 
   subgraph SRV[Servidor OpenWard — no fiable para el contenido]
-    API[API Go: identidad, vaults, objetos, tiempo real] --> SDB[(Postgres)]
+    API[Go mínimo: autorización, relay, entitlement] --> SDB[(Supabase gestionado: datos)]
+    API --> AUTH[Supabase Auth gestionado]
     API --> OBJ[(Disco o S3: segmentos y grabaciones cifradas)]
     EE[ee/: SAML · SCIM · políticas · auditoría · grabaciones · SIEM]
     PUSH[Pasarela push APNs/FCM]
@@ -303,7 +304,7 @@ Desde el 2026-11-13 hay un solo backend, y es de pago ([ADR-005](adr/ADR-005-syn
 |---|---|---|
 | OpenWard Cloud (el relay del servicio alojado) | **De pago**, con una cuenta gratuita y un periodo de prueba | Tiempo real por WebSocket, equipos, historial, recuperación y push |
 | Carpeta local o de red, S3 / R2 / MinIO / B2, WebDAV y Git | Descartados | El modelo los admite, pero no se ofrecen |
-| Relay OpenWard autoalojado | Descartado | El servidor es privado |
+| Relay OpenWard autoalojado | Descartado | No se ofrece servidor autoalojable |
 
 El backend es un trait (`put_object`, `list(prefix, after)`, `get_object`, `watch?`). El relay añade `watch` (notificación) y el control de acceso. Las pruebas del núcleo usan un backend en memoria o en un directorio, que la app no ofrece.
 
@@ -313,11 +314,13 @@ El backend es un trait (`put_object`, `list(prefix, after)`, `get_object`, `watc
 
 ### 7.1 Monolito modular
 
-Todo el servidor es privado ([ADR-006](adr/ADR-006-servidor-open-core.md#revisión-del-2026-11-13)). La columna «Edición» separa la base del servicio de lo que llega con la fase 4.
+**Vigente:** Go mínimo en el monorepo y Supabase gestionado para Auth/datos ([ADR-010](adr/ADR-010-monorepo-go-supabase.md)). Cuenta, dispositivo, descifrado y pago son autoridades distintas. El contrato y los callbacks siguen abiertos en #62; no se requiere una identidad KaiCorp autoalojada ni un proxy OIDC propio. API cerrada `design_pending`; [estado y límites](plan/estado.md).
+
+La tabla conserva el inventario modular de horizonte del diseño anterior, no módulos desplegados ni alcance obligatorio del Go de la beta. Equipos/Enterprise quedan para fases posteriores.
 
 | Módulo | Responsabilidad | Edición |
 |---|---|---|
-| `identity` | Cuentas (clave pública), certificados de dispositivo, tokens por desafío firmado (la contraseña nunca sale del dispositivo) y OIDC | Base |
+| `identity` | Integración con Supabase Auth, autorización/posesión y sesiones de dispositivo; contrato pendiente en #62/#39 | Base |
 | `vaults` | Manifiestos, espejo de la ACL para aplicar permisos, invitaciones | Base |
 | `objects` | Segmentos, instantáneas, cuotas, retención; disco o S3 | Base |
 | `realtime` | WebSocket con aviso de cambios por vault | Base |
@@ -330,14 +333,14 @@ Todo el servidor es privado ([ADR-006](adr/ADR-006-servidor-open-core.md#revisi�
 | `ee/recordings` | Grabaciones de sesión cifradas con la clave de grabación de la org, retención y visor | EE |
 | `ee/console` | Consola web de la organización (miembros, dispositivos, políticas, auditoría): Go + templ + htmx dentro del binario | EE |
 
-La facturación (Stripe), el aprovisionamiento de tenants y la infraestructura del servicio alojado van en un **repositorio privado aparte** (`openward-cloud`) que importa el servidor como librería. Ni eso ni el servidor se distribuyen.
+Facturación, autorización de entitlement y webhooks que requieran servidor se preparan en el mismo monorepo (#63), sin proveedor/rutas de tienda dados por cerrados. Edge Functions es alternativa secundaria. El trabajo Go/sync/cobro local aún no está en main ni desplegado; su publicación/licencia requiere conciliación.
 
 ### 7.2 Almacenamiento y API
 
 - **Sin autoalojamiento** (decidido el 2026-11-13, [ADR-006](adr/ADR-006-servidor-open-core.md#revisión-del-2026-11-13)): el servidor solo corre como servicio alojado.
-- **Servicio alojado:** Postgres y almacenamiento de objetos (R2/S3). El aviso de cambios entre nodos usa `LISTEN/NOTIFY` y pasaría a NATS si hiciera falta.
+- **Servicio alojado:** Supabase gestionado para Auth/datos; runtime Go previsto en OVH, sin desplegar. Un proyecto de producción por ahora; aislamiento de ensayos, backups/restauración y topología pendientes en #40. No se presupone otra base de identidad ni proyecto alojado de staging.
 - **Capa de persistencia:** interfaz `Store` sobre Postgres, con `sqlc` y migraciones probadas en CI. La implementación en SQLite, pensada para autoalojar con un único binario, deja de ser un requisito; C1 del [camino a la Community](plan/community.md#etapa-4--v06-servidor-y-cuentas-de-kaicorp-labs) decide si se conserva para las pruebas.
-- **API:** HTTPS con JSON para el plano de control, cuerpos binarios para los segmentos y WebSocket para los avisos. La API está versionada (`/v1`) y documentada en `spec/`. El servidor **no enlaza el núcleo Rust**.
+- **API objetivo:** HTTPS y notificaciones del relay, con contrato/fixtures versionados aún pendientes en #62. No se declara implementado un contrato de producción por existir un spike o un adaptador local. La API permanece cerrada `design_pending`. El servidor **no enlaza el núcleo Rust**.
 
 ### 7.3 Capacidad estimada (servicio alojado)
 
@@ -436,7 +439,7 @@ openward/
 └── docs/         Arquitectura, ADRs, amenazas, operación   CC-BY-4.0   CLA
 ```
 
-- **El servidor no está en este repositorio:** es privado y no se publica ([ADR-006](adr/ADR-006-servidor-open-core.md#revisión-del-2026-11-13), [ADR-007](adr/ADR-007-licencias-y-contribuciones.md#revisión-del-2026-11-13)).
+- **Servidor previsto en el mismo monorepo:** su código local aún no está integrado en main. La licencia/publicación se debe conciliar antes de publicar código ([ADR-010](adr/ADR-010-monorepo-go-supabase.md)); esta decisión no cambia LICENSE. El árbol de arriba enumera las rutas presentes en main.
 - **Desde el lanzamiento, el cliente es completamente open source (GPL-3.0):** el SSO del cliente es un flujo OIDC o SAML estándar del navegador y las políticas son configuración firmada. Eso permite firmar las builds de Windows gratis con SignPath (que exige una licencia OSI y que no haya componentes propietarios).
 - **CLA en todo el repositorio**, para poder ofrecer el cliente también con otra licencia (la App Store no admite la GPL de terceros).
 - **Lista pública de "siempre gratis"**, en borrador desde la v0.1, cambiada el 2026-11-13 y en vigor desde el lanzamiento: el cliente completo en local y sin cuenta, con el vault cifrado, su recuperación y sus copias de seguridad, y la exportación completa. La sync no está en la lista. Desde el lanzamiento no se recortará: recortar lo que ya era gratis es lo que rompe la confianza de una comunidad open source.
@@ -475,14 +478,14 @@ Se reutilizan los documentos de Arveil `CLIENT_RELEASES.md`, `CLIENT_UPDATES.md`
 
 La tabla conserva la visión arquitectónica original. Para el orden y las versiones
 vigentes prevalecen el [plan Community](plan/community.md) y el
-[estado verificable](plan/estado.md), reconciliados el 2026-11-13: v0.4 vault,
-v0.5 motor de sync, v0.6 servidor/cuentas y v0.7 operación pública. Ese mismo
-día se decidió que toda la sync es de pago y alojada, sin backends de
+[estado verificable](plan/estado.md), reconciliados el 2026-11-14: v0.4 vault,
+v0.5 motor de sync, v0.6 servidor/cuentas y v0.7 operación pública. Desde el
+2026-11-13 toda la sync se plantea de pago y alojada, sin backends de
 almacenamiento propio ni servidor autoalojable ([ADR-006](adr/ADR-006-servidor-open-core.md#revisión-del-2026-11-13)).
-Móvil viene después del lanzamiento de escritorio y antes de cobrar por la sync;
-Equipos/IA y Enterprise, después, sin versión comprometida.
+La beta con pago desde salida de #67 exige móvil validado; su base ya está integrada por #69. La secuencia anterior de publicaciones de la tabla es historia.
+Equipos/IA y Enterprise quedan después, sin versión comprometida.
 Serie, FIDO2 y Mosh mediante `mosh-client` ya tienen soporte básico de escritorio
-en la etapa 1; el cliente Mosh clean-room y el soporte móvil siguen pendientes.
+en la etapa 1; el cliente Mosh clean-room para Windows y móvil sigue pendiente.
 
 | Fase | Contenido | Puerta de salida |
 |---|---|---|
