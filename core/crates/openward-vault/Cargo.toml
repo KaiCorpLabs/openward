@@ -16,7 +16,7 @@ tempfile = "3"
 cap-std = "=4.0.3"
 cap-fs-ext = "=4.0.3"
 # Bundled: the same SQLite on every platform, mobile included.
-rusqlite = { version = "0.41", features = ["bundled"] }
+rusqlite = { version = "0.43", features = ["bundled"] }
 thiserror = "2"
 
 serde = { version = "1", features = ["derive"] }
