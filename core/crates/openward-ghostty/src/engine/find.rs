@@ -10,7 +10,7 @@ use std::ffi::c_void;
 use std::ptr;
 use std::time::{Duration, Instant};
 
-use super::{GhosttyEngine, ok, sized};
+use super::{GhosttyEngine, ok};
 use crate::sys;
 
 /// A match's part on one visible row; columns inclusive.
@@ -56,16 +56,21 @@ pub struct Link {
 ///
 /// # Safety
 /// `T` is the type `data` documents.
-unsafe fn get<T>(search: sys::GhosttySearch, data: i32, out: &mut T) -> sys::GhosttyResult {
+unsafe fn get<T>(
+    search: sys::GhosttySearch,
+    data: sys::GhosttySearchData,
+    out: &mut T,
+) -> sys::GhosttyResult {
     // SAFETY: as the caller promises; `out` is valid for the call.
     unsafe { sys::ghostty_search_get(search, data, (out as *mut T).cast::<c_void>()) }
 }
 
 fn empty_selection() -> sys::GhosttySelection {
-    let mut s: sys::GhosttySelection = sized(|s: &mut sys::GhosttySelection, n| s.size = n);
-    s.start = sized(|r: &mut sys::GhosttyGridRef, n| r.size = n);
-    s.end = sized(|r: &mut sys::GhosttyGridRef, n| r.size = n);
-    s
+    sys::GhosttySelection {
+        start: sys::GhosttyGridRef::default(),
+        end: sys::GhosttyGridRef::default(),
+        rectangle: false,
+    }
 }
 
 impl GhosttyEngine {
@@ -120,14 +125,14 @@ impl GhosttyEngine {
             return;
         }
         self.advance();
-        let option = if older {
-            sys::GHOSTTY_SEARCH_OPT_SELECT_NEXT
-        } else {
-            sys::GHOSTTY_SEARCH_OPT_SELECT_PREV
-        };
-        // SAFETY: valid search; the select options take NULL. No matches
-        // is not an error worth reporting.
-        unsafe { sys::ghostty_search_set(self.search, option, ptr::null()) };
+        // SAFETY: valid search. No matches is not an error worth reporting.
+        unsafe {
+            if older {
+                sys::ghostty_search_select_next(self.search);
+            } else {
+                sys::ghostty_search_select_prev(self.search);
+            }
+        }
         self.force_full = true;
     }
 
@@ -194,7 +199,7 @@ impl GhosttyEngine {
                 cap: storage.len(),
                 len: 0,
             };
-            // SAFETY: the buffer points at `cap` sized selections.
+            // SAFETY: the buffer points at `cap` selection slots.
             let r = unsafe { get(search, sys::GHOSTTY_SEARCH_DATA_VIEWPORT_MATCHES, &mut buf) };
             if r == sys::GHOSTTY_OUT_OF_SPACE && buf.len > storage.len() {
                 storage.resize(buf.len, empty_selection());

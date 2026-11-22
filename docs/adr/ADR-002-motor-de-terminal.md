@@ -83,3 +83,9 @@ El spike S1 comparó los dos candidatos con el mismo adaptador, el mismo formato
 4. **Accesibilidad:** VoiceOver y TalkBack pueden leer la pantalla fila a fila con el render propio.
 
 Si se reabre, la alternativa es `alacritty_terminal` con un scrollback compacto propio (la S1.7, descartada por ahora). Se revisa también si Ghostty deja de mantener la librería o si una actualización rompe más de lo que el adaptador puede absorber.
+
+## Actualización del 2026-11-21
+
+- Se actualiza `libghostty-vt` al commit `9ad3c422` de Ghostty (ABI 1.0) y el toolchain a **Zig 0.17.1** (LLVM/Clang 22).
+- Motivación: el runner `windows-latest` (`Visual Studio 2026` / MSVC `14.52.37025`) exige Clang 22 o superior para compilar `simdutf` contra las cabeceras de la STL (`STL1000`), lo que impedía compilar con Zig 0.16.0.
+- Se mantienen las cuatro condiciones de aceptación anteriores (validación física en móvil, Windows, Linux y accesibilidad).

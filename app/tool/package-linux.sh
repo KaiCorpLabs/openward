@@ -36,7 +36,7 @@ platform=()
 
 rust="$(sed -n 's/^channel = "\(.*\)"/\1/p' core/rust-toolchain.toml)"
 flutter="$(jq -r .flutter .fvmrc)"
-zig=0.16.0
+zig=0.17.1
 image="openward-linux-build:flutter-$flutter-rust-$rust-zig-$zig-$arch"
 context="$tmp/context"
 mkdir -p "$context"

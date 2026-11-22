@@ -4,7 +4,7 @@
 
 ## Compilar
 
-Requisitos: Zig 0.16.0 exacto (`brew install zig@0.16`) y git. Para Android, además, el NDK (`ANDROID_NDK_HOME`).
+Requisitos: Zig 0.17.1 exacto (`brew install zig`) y git. Para Android, además, el NDK (`ANDROID_NDK_HOME`).
 
 ```bash
 ./build-libghostty.sh                          # host (p. ej. aarch64-macos)

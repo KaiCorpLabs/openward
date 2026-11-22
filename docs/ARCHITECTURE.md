@@ -534,7 +534,7 @@ Comprobado el 2026-10-08 en crates.io, pub.dev, go.dev, el canal estable de Rust
 | `russh-sftp` | 3.0.1 (2026-09-28) | Apache-2.0 | Activo |
 | `ssh-key` | 0.7.0-rc.11 (fijada por `russh`); estable 0.6.7 | Apache/MIT | Verifica `sk-*` pero no firma. #620 resuelto por #623, aún sin versión publicada con el arreglo a 2026-11-11; lectura local de escalares cortos con mínimo de 24 bytes de magnitud (ADR-003) |
 | `alacritty_terminal` | 0.26.0 (2026-04-06) | Apache-2.0 | **Descartado** como motor (S1); solo referencia de pruebas |
-| `libghostty-vt` | Commit `05dcf887` de Ghostty (main, 2026-10-12) | MIT | **Elegido** (ADR-002). API C "work-in-progress"; Zig 0.16.0 |
+| `libghostty-vt` | Commit `9ad3c422` de Ghostty (`main`, 2026-11-20; API 1.0) | MIT | **Elegido** (ADR-002). Zig 0.17.1 |
 | `xterm` (Dart) | 4.0.0 (2024-02-27) | MIT | **Descartado:** sin versiones desde 2024 |
 | `hpke-rs` | 0.8.0 (2026-10-07) | MPL-2.0 | Dentro de libcrux (verificado formalmente); X-Wing draft-06 |
 | `hpke` (rozbb) | 0.14.1 (2026-09-06) | MIT/Apache | X-Wing draft-10; sin auditar |

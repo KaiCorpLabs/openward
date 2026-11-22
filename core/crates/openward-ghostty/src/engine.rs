@@ -625,7 +625,7 @@ impl GhosttyEngine {
             return;
         }
         let behavior = sys::GhosttyTerminalScrollViewport {
-            tag: sys::GHOSTTY_SCROLL_VIEWPORT_BOTTOM,
+            tag: sys::GHOSTTY_TERMINAL_SCROLL_VIEWPORT_BOTTOM,
             value: sys::GhosttyTerminalScrollViewportValue { delta: 0 },
         };
         // SAFETY: valid terminal; the BOTTOM tag reads no union member.
@@ -672,19 +672,19 @@ impl GhosttyEngine {
     /// reset it), and whether it blinks.
     pub fn set_cursor_defaults(&mut self, shape: CursorShape, blink: bool) {
         let style = match shape {
-            CursorShape::Beam => sys::GHOSTTY_TERMINAL_CURSOR_STYLE_BAR,
-            CursorShape::Underline => sys::GHOSTTY_TERMINAL_CURSOR_STYLE_UNDERLINE,
-            CursorShape::HollowBlock => sys::GHOSTTY_TERMINAL_CURSOR_STYLE_BLOCK_HOLLOW,
-            _ => sys::GHOSTTY_TERMINAL_CURSOR_STYLE_BLOCK,
+            CursorShape::Beam => sys::GHOSTTY_CURSOR_STYLE_BAR,
+            CursorShape::Underline => sys::GHOSTTY_CURSOR_STYLE_UNDERLINE,
+            CursorShape::HollowBlock => sys::GHOSTTY_CURSOR_STYLE_BLOCK_HOLLOW,
+            _ => sys::GHOSTTY_CURSOR_STYLE_BLOCK,
         };
-        // SAFETY: valid terminal; the values are GhosttyTerminalCursorStyle*
+        // SAFETY: valid terminal; the values are GhosttyCursorStyle*
         // and bool*, copied.
         unsafe {
             ok(
                 sys::ghostty_terminal_set(
                     self.term,
                     sys::GHOSTTY_TERMINAL_OPT_DEFAULT_CURSOR_STYLE,
-                    (&style as *const sys::GhosttyTerminalCursorStyle).cast::<c_void>(),
+                    (&style as *const sys::GhosttyCursorStyle).cast::<c_void>(),
                 ),
                 "set default cursor style",
             );
@@ -767,11 +767,9 @@ impl GhosttyEngine {
             row: c.viewport_y.min(self.size.rows.saturating_sub(1)),
             col: c.viewport_x.min(self.size.cols.saturating_sub(1)),
             shape: match c.visual_style {
-                sys::GHOSTTY_RENDER_STATE_CURSOR_VISUAL_STYLE_BAR => CursorShape::Beam,
-                sys::GHOSTTY_RENDER_STATE_CURSOR_VISUAL_STYLE_UNDERLINE => CursorShape::Underline,
-                sys::GHOSTTY_RENDER_STATE_CURSOR_VISUAL_STYLE_BLOCK_HOLLOW => {
-                    CursorShape::HollowBlock
-                }
+                sys::GHOSTTY_CURSOR_STYLE_BAR => CursorShape::Beam,
+                sys::GHOSTTY_CURSOR_STYLE_UNDERLINE => CursorShape::Underline,
+                sys::GHOSTTY_CURSOR_STYLE_BLOCK_HOLLOW => CursorShape::HollowBlock,
                 _ => CursorShape::Block,
             },
             visible: c.visible && c.viewport_has_value,
@@ -842,18 +840,24 @@ impl GhosttyEngine {
         {
             return;
         }
-        self.graphemes.clear();
         self.graphemes.resize(len as usize, 0);
-        // SAFETY: the buffer holds `len` codepoints, as the API requires.
-        unsafe {
-            sys::ghostty_render_state_row_cells_get(
-                self.cells,
-                sys::GHOSTTY_RENDER_STATE_ROW_CELLS_DATA_GRAPHEMES_BUF,
-                self.graphemes.as_mut_ptr().cast::<c_void>(),
-            );
+        let mut buf = sys::GhosttyCodepointBuffer {
+            ptr: self.graphemes.as_mut_ptr(),
+            cap: self.graphemes.len(),
+            len: 0,
+        };
+        if !self.cell_get(
+            sys::GHOSTTY_RENDER_STATE_ROW_CELLS_DATA_GRAPHEMES_BUF,
+            &mut buf,
+        ) {
+            return;
         }
-        self.text
-            .extend(self.graphemes.iter().filter_map(|&cp| char::from_u32(cp)));
+        let written = buf.len.min(self.graphemes.len());
+        self.text.extend(
+            self.graphemes[..written]
+                .iter()
+                .filter_map(|&cp| char::from_u32(cp)),
+        );
     }
 
     /// The background of a cell that has only a color (no text, no style).
@@ -927,23 +931,32 @@ impl GhosttyEngine {
         {
             return Style::default();
         }
-        let mut s = sized(|s: &mut sys::GhosttyStyle, n| s.size = n);
+        // Bits from ghostty/vt/style.h (bindgen skips the C-cast flag macros).
+        const FLAG_BOLD: sys::GhosttyStyleFlags = 1 << 0;
+        const FLAG_ITALIC: sys::GhosttyStyleFlags = 1 << 1;
+        const FLAG_FAINT: sys::GhosttyStyleFlags = 1 << 2;
+        const FLAG_INVERSE: sys::GhosttyStyleFlags = 1 << 4;
+        const FLAG_INVISIBLE: sys::GhosttyStyleFlags = 1 << 5;
+        const FLAG_STRIKETHROUGH: sys::GhosttyStyleFlags = 1 << 6;
+
+        let mut s = sys::GhosttyStyle::default();
         if !self.cell_get(sys::GHOSTTY_RENDER_STATE_ROW_CELLS_DATA_STYLE, &mut s) {
             return Style::default();
         }
         let mut a = 0;
-        let mut flag = |on: bool, bit: u16| {
-            if on {
+        let mut flag = |mask: sys::GhosttyStyleFlags, bit: u16| {
+            if s.flags & mask != 0 {
                 a |= bit;
             }
         };
-        flag(s.bold, attrs::BOLD);
-        flag(s.faint, attrs::DIM);
-        flag(s.italic, attrs::ITALIC);
-        flag(s.inverse, attrs::INVERSE);
-        flag(s.invisible, attrs::HIDDEN);
-        flag(s.strikethrough, attrs::STRIKEOUT);
-        a |= match s.underline {
+        flag(FLAG_BOLD, attrs::BOLD);
+        flag(FLAG_FAINT, attrs::DIM);
+        flag(FLAG_ITALIC, attrs::ITALIC);
+        flag(FLAG_INVERSE, attrs::INVERSE);
+        flag(FLAG_INVISIBLE, attrs::HIDDEN);
+        flag(FLAG_STRIKETHROUGH, attrs::STRIKEOUT);
+        let underline = u32::from((s.flags >> sys::GHOSTTY_STYLE_UNDERLINE_SHIFT) & 0x7);
+        a |= match underline {
             sys::GHOSTTY_SGR_UNDERLINE_SINGLE => attrs::UNDERLINE,
             sys::GHOSTTY_SGR_UNDERLINE_DOUBLE => attrs::DOUBLE_UNDERLINE,
             sys::GHOSTTY_SGR_UNDERLINE_CURLY => attrs::UNDERCURL,
@@ -1030,12 +1043,27 @@ impl GhosttyEngine {
                         continue;
                     }
                     buf.resize(len as usize, 0);
-                    sys::ghostty_render_state_row_cells_get(
+                    let mut cp_buf = sys::GhosttyCodepointBuffer {
+                        ptr: buf.as_mut_ptr(),
+                        cap: buf.len(),
+                        len: 0,
+                    };
+                    if sys::ghostty_render_state_row_cells_get(
                         cells,
                         sys::GHOSTTY_RENDER_STATE_ROW_CELLS_DATA_GRAPHEMES_BUF,
-                        buf.as_mut_ptr().cast::<c_void>(),
-                    );
-                    line.push(buf.iter().filter_map(|&cp| char::from_u32(cp)).collect());
+                        (&mut cp_buf as *mut sys::GhosttyCodepointBuffer).cast::<c_void>(),
+                    ) == sys::GHOSTTY_SUCCESS
+                    {
+                        let written = cp_buf.len.min(buf.len());
+                        line.push(
+                            buf[..written]
+                                .iter()
+                                .filter_map(|&cp| char::from_u32(cp))
+                                .collect(),
+                        );
+                    } else {
+                        line.push(" ".to_owned());
+                    }
                 }
                 out.push(line);
             }
@@ -1113,7 +1141,7 @@ impl GhosttyEngine {
 }
 
 fn color(c: sys::GhosttyStyleColor) -> Color {
-    match c.tag {
+    match u32::from(c.tag) {
         // SAFETY: the tag says which union member is set.
         sys::GHOSTTY_STYLE_COLOR_PALETTE => {
             let i = unsafe { c.value.palette };
@@ -1264,7 +1292,7 @@ impl TermEngine for GhosttyEngine {
 
     fn scroll_display(&mut self, delta_lines: i32) {
         let behavior = sys::GhosttyTerminalScrollViewport {
-            tag: sys::GHOSTTY_SCROLL_VIEWPORT_DELTA,
+            tag: sys::GHOSTTY_TERMINAL_SCROLL_VIEWPORT_DELTA,
             // Our API scrolls into history with positive deltas; libghostty
             // moves the viewport up with negative ones.
             value: sys::GhosttyTerminalScrollViewportValue {
