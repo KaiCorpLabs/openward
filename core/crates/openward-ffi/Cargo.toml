@@ -27,7 +27,7 @@ zeroize = "1"
 openward-fido = { path = "../openward-fido", features = ["hid"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
-jni = "=0.21.1"
+jni = "=0.22.4"
 
 # Not the workspace lints: the generated bindings need `unsafe`. The
 # hand-written API denies it (src/lib.rs).
