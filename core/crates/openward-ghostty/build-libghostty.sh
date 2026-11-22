@@ -6,7 +6,7 @@
 #   ./build-libghostty.sh aarch64-linux-android
 #   ./build-libghostty.sh --bindings      # host build + regenerate src/sys.rs
 #
-# Needs Zig 0.16.0 exactly (brew install zig@0.16) and git.
+# Needs Zig 0.17.1 exactly (brew install zig) and git.
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -28,8 +28,8 @@ for arg in "$@"; do
 done
 
 zig_version="$(zig version)"
-if [[ "$zig_version" != 0.16.0 ]]; then
-  echo "error: Zig 0.16.0 required, found $zig_version (brew install zig@0.16)" >&2
+if [[ "$zig_version" != 0.17.1 ]]; then
+  echo "error: Zig 0.17.1 required, found $zig_version (brew install zig)" >&2
   exit 1
 fi
 

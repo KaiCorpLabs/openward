@@ -112,7 +112,7 @@ fn prelink_apple(src: &std::path::Path, out: &std::path::Path) {
         (other, _) => panic!("prelink: unsupported Apple OS {other}"),
     };
     let exports = out.join("ghostty-vt.exports");
-    std::fs::write(&exports, "_ghostty_*\n").expect("write export list");
+    std::fs::write(&exports, public_ghostty_symbols(src)).expect("write export list");
     let object = out.join("ghostty-vt.o");
     let archive = out.join("libghostty-vt.a");
     let _ = std::fs::remove_file(&archive);
@@ -139,6 +139,42 @@ fn prelink_apple(src: &std::path::Path, out: &std::path::Path) {
         archive.as_os_str(),
         object.as_os_str(),
     ]);
+}
+
+/// Lists the public (`external`, non-hidden) `_ghostty_*` symbols defined in
+/// `archive`. Ghostty 1.0 marks internal SIMD helpers (`_ghostty_simd_*`,
+/// `_ghostty_hwy_*`) as hidden (`private external`), which newer Apple `ld`
+/// rejects if matched by a wildcard in `-exported_symbols_list`.
+fn public_ghostty_symbols(archive: &std::path::Path) -> String {
+    let output = std::process::Command::new("xcrun")
+        .args(["nm", "-m", "-gU"])
+        .arg(archive)
+        .output()
+        .unwrap_or_else(|e| panic!("xcrun nm: {e}"));
+    assert!(
+        output.status.success(),
+        "xcrun nm -m -gU {} failed: {}",
+        archive.display(),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).expect("xcrun nm output is UTF-8");
+    let mut symbols: Vec<&str> = stdout
+        .lines()
+        .filter(|line| !line.contains(" private external "))
+        .filter_map(|line| line.rsplit_once(" external ").map(|(_, rest)| rest))
+        .filter_map(|rest| rest.split_whitespace().next())
+        .filter(|sym| sym.starts_with("_ghostty_"))
+        .collect();
+    symbols.sort_unstable();
+    symbols.dedup();
+    assert!(
+        !symbols.is_empty(),
+        "no public _ghostty_* symbols found in {}",
+        archive.display()
+    );
+    let mut list = symbols.join("\n");
+    list.push('\n');
+    list
 }
 
 fn run_xcrun(args: &[&std::ffi::OsStr]) {

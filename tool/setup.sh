@@ -26,7 +26,7 @@ brew=""
 need git "${brew}git"
 need rustup "https://rustup.rs"
 need fvm "${brew}fvm"
-need zig "${brew}zig@0.16"
+need zig "${brew}zig"
 need jq "${brew}jq"
 # The S2 SSH servers of the tests: podman, or docker.
 command -v docker >/dev/null || need podman "${brew}podman"
@@ -39,8 +39,8 @@ if ((${#missing[@]})); then
   exit 1
 fi
 
-if [[ "$(zig version)" != 0.16.0 ]]; then
-  echo "error: Zig 0.16.0 required, found $(zig version) (${brew}zig@0.16)" >&2
+if [[ "$(zig version)" != 0.17.1 ]]; then
+  echo "error: Zig 0.17.1 required, found $(zig version) (${brew}zig)" >&2
   exit 1
 fi
 

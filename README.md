@@ -61,7 +61,7 @@ Desde un clon recién hecho, `make setup` instala lo que el proyecto fija y dice
 
 - **Rust:** la versión de [`core/rust-toolchain.toml`](core/rust-toolchain.toml), con `rustup`.
 - **Flutter:** la versión de [`.fvmrc`](.fvmrc), con [FVM](https://fvm.app) (`brew install fvm`); se usa como `fvm flutter …`.
-- **Zig 0.16.0**, para el motor del terminal (`libghostty-vt`), que `make setup` compila la primera vez: `brew install zig@0.16`.
+- **Zig 0.17.1**, para el motor del terminal (`libghostty-vt`), que `make setup` compila la primera vez: `brew install zig`.
 - **jq**, **podman** (o docker, para los servidores SSH de prueba) y, en macOS, **Xcode**.
 - `cargo-deny`, `cargo-about` y `flutter_rust_bridge_codegen`, que instala `make setup` en sus versiones.
 

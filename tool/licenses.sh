@@ -44,12 +44,21 @@ trap 'rm -rf "$tmp"' EXIT
 # A Zig package's file, by the hash its build.zig.zon gives.
 zig_file() {
   local zon="$1" name="$2" file="$3" hash
-  hash="$(grep -A3 "\\.$name = " "$zon" | sed -n 's/.*\.hash = "\(.*\)".*/\1/p' | head -1)"
-  [[ -n "$hash" && -f "$zig_cache/$hash.tar.gz" ]] || {
+  hash="$(awk -v name="$name" '
+    $0 ~ ("\\." name " = \\.\\{") { in_blk = 1; next }
+    in_blk && /\.hash = "/ {
+      sub(/.*\.hash = "/, ""); sub(/".*/, ""); print; exit
+    }
+    in_blk && /^[[:space:]]*\},/ { in_blk = 0 }
+  ' "$zon")"
+  if [[ -n "$hash" && -f "$zig_cache/$hash/$file" ]]; then
+    cat "$zig_cache/$hash/$file"
+  elif [[ -n "$hash" && -f "$zig_cache/$hash.tar.gz" ]]; then
+    tar -xzOf "$zig_cache/$hash.tar.gz" "$hash/$file"
+  else
     echo "$name is not in Zig's cache ($zig_cache): build libghostty-vt first" >&2
     exit 1
-  }
-  tar -xzOf "$zig_cache/$hash.tar.gz" "$hash/$file"
+  fi
 }
 
 # Rust: one entry per license text, with the crates that have it; the

@@ -64,7 +64,7 @@ secret-service = { version = "=6.0.0-rc.1", default-features = false, features =
 rustix = { version = "1.1.6", features = ["process", "fs"] }
 
 [dev-dependencies]
-rusqlite = "0.41"
+rusqlite = "0.43"
 rand = { version = "0.10", features = ["thread_rng"] }
 # Hashed known_hosts names in tests.
 data-encoding = "2"

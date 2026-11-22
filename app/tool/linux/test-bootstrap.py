@@ -55,7 +55,7 @@ class BootstrapTests(unittest.TestCase):
                         '*) cp "$TEST_ROOT/archive" "$2";; esac',
                 'tar': 'echo extracted >> "$BOOTSTRAP_TRACE"\n'
                        'dir="${2%.tar.xz}"\nmkdir -p "$dir"\n'
-                       'printf \'#!/bin/sh\\necho 0.16.0\\n\' > "$dir/zig"\nchmod +x "$dir/zig"',
+                       'printf \'#!/bin/sh\\necho 0.17.1\\n\' > "$dir/zig"\nchmod +x "$dir/zig"',
                 'git': 'if [[ "$1" == clone ]]; then\n'
                        '  mkdir -p "${!#}/bin"\n'
                        '  printf \'#!/bin/sh\\necho sdk-executed >> "$BOOTSTRAP_TRACE"\\n\' > "${!#}/bin/flutter"\n'
@@ -74,7 +74,7 @@ class BootstrapTests(unittest.TestCase):
                        TEST_FLUTTER_HEAD='0' * 40 if bad == 'flutter' else
                        re.search(r'FLUTTER_COMMIT=(\w+)', pins)[1],
                        RUST='wrong' if bad == 'version' else '1.99.0',
-                       FLUTTER='3.47.6', ZIG='0.16.0')
+                       FLUTTER='3.47.6', ZIG='0.17.1')
             command = ['bash', '-c', 'bash "$1" "$2"',
                        'test', str(context / 'install-tools.sh'), str(root / 'prefix')]
             result = subprocess.run(command, env=env, capture_output=True, text=True)

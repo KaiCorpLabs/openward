@@ -6,7 +6,7 @@
 //! reports. Every call syncs the encoder with the terminal first, so a mode
 //! change in the output stream applies to the very next key.
 
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 use std::ptr;
 
 use super::{GhosttyEngine, ok, sized};
@@ -333,15 +333,15 @@ impl GhosttyEngine {
         // SAFETY: live handles; `text` outlives the encode call and is
         // detached from the event before returning (the event borrows it).
         unsafe {
-            sys::ghostty_key_encoder_setopt_from_terminal(enc, self.term);
-            // setopt_from_terminal resets option-as-alt; apply ours after.
+            sys::ghostty_key_encoder_set_from_terminal(enc, self.term);
+            // set_from_terminal resets option-as-alt; apply ours after.
             let option_as_alt = match self.input.option_as_alt {
                 OptionAsAlt::Off => sys::GHOSTTY_OPTION_AS_ALT_FALSE,
                 OptionAsAlt::Both => sys::GHOSTTY_OPTION_AS_ALT_TRUE,
                 OptionAsAlt::Left => sys::GHOSTTY_OPTION_AS_ALT_LEFT,
                 OptionAsAlt::Right => sys::GHOSTTY_OPTION_AS_ALT_RIGHT,
             };
-            sys::ghostty_key_encoder_setopt(
+            sys::ghostty_key_encoder_set(
                 enc,
                 sys::GHOSTTY_KEY_ENCODER_OPT_MACOS_OPTION_AS_ALT,
                 (&option_as_alt as *const sys::GhosttyOptionAsAlt).cast::<c_void>(),
@@ -352,15 +352,28 @@ impl GhosttyEngine {
             sys::ghostty_key_event_set_consumed_mods(ev, consumed);
             sys::ghostty_key_event_set_composing(ev, false);
             sys::ghostty_key_event_set_unshifted_codepoint(ev, unshifted);
-            if text.is_empty() {
-                sys::ghostty_key_event_set_utf8(ev, ptr::null(), 0);
+            let utf8 = if text.is_empty() {
+                sys::GhosttyString {
+                    ptr: ptr::null(),
+                    len: 0,
+                }
             } else {
-                sys::ghostty_key_event_set_utf8(ev, text.as_ptr().cast::<c_char>(), text.len());
-            }
+                sys::GhosttyString {
+                    ptr: text.as_ptr(),
+                    len: text.len(),
+                }
+            };
+            sys::ghostty_key_event_set_utf8(ev, utf8);
             let out = encode_into(|buf, cap, len| {
                 sys::ghostty_key_encoder_encode(enc, ev, buf, cap, len)
             });
-            sys::ghostty_key_event_set_utf8(ev, ptr::null(), 0);
+            sys::ghostty_key_event_set_utf8(
+                ev,
+                sys::GhosttyString {
+                    ptr: ptr::null(),
+                    len: 0,
+                },
+            );
             out
         }
     }
@@ -484,21 +497,25 @@ impl GhosttyEngine {
         let ev = self.input.mouse_event;
         // SAFETY: live handles; option values match their documented types.
         unsafe {
-            sys::ghostty_mouse_encoder_setopt_from_terminal(enc, self.term);
-            sys::ghostty_mouse_encoder_setopt(
+            sys::ghostty_mouse_encoder_set_from_terminal(enc, self.term);
+            sys::ghostty_mouse_encoder_set(
                 enc,
                 sys::GHOSTTY_MOUSE_ENCODER_OPT_SIZE,
                 (&size as *const sys::GhosttyMouseEncoderSize).cast::<c_void>(),
             );
-            sys::ghostty_mouse_encoder_setopt(
+            sys::ghostty_mouse_encoder_set(
                 enc,
                 sys::GHOSTTY_MOUSE_ENCODER_OPT_ANY_BUTTON_PRESSED,
                 (&any_pressed as *const bool).cast::<c_void>(),
             );
             sys::ghostty_mouse_event_set_action(ev, action);
             match button {
-                Some(b) => sys::ghostty_mouse_event_set_button(ev, b),
-                None => sys::ghostty_mouse_event_clear_button(ev),
+                Some(b) => {
+                    sys::ghostty_mouse_event_set_button(ev, b);
+                }
+                None => {
+                    sys::ghostty_mouse_event_clear_button(ev);
+                }
             }
             sys::ghostty_mouse_event_set_mods(ev, mods);
             sys::ghostty_mouse_event_set_position(ev, position);
@@ -607,19 +624,16 @@ fn encoder_text(text: &str) -> &str {
 /// # Safety
 /// `encode` must write at most `cap` bytes to `buf` and set `len`.
 unsafe fn encode_into(
-    mut encode: impl FnMut(*mut c_char, usize, &mut usize) -> sys::GhosttyResult,
+    mut encode: impl FnMut(*mut u8, usize, &mut usize) -> sys::GhosttyResult,
 ) -> Vec<u8> {
     let mut buf = [0u8; 128];
     let mut len = 0usize;
-    match encode(buf.as_mut_ptr().cast(), buf.len(), &mut len) {
+    match encode(buf.as_mut_ptr(), buf.len(), &mut len) {
         sys::GHOSTTY_SUCCESS => buf[..len].to_vec(),
         sys::GHOSTTY_OUT_OF_SPACE => {
             let mut big = vec![0u8; len];
             let mut written = 0usize;
-            ok(
-                encode(big.as_mut_ptr().cast(), big.len(), &mut written),
-                "encode",
-            );
+            ok(encode(big.as_mut_ptr(), big.len(), &mut written), "encode");
             big.truncate(written);
             big
         }

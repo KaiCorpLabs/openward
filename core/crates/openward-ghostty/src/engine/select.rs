@@ -78,7 +78,11 @@ impl Gesture {
 ///
 /// # Safety
 /// `T` is the type `option` documents.
-unsafe fn set<T>(event: sys::GhosttySelectionGestureEvent, option: i32, value: &T) {
+unsafe fn set<T>(
+    event: sys::GhosttySelectionGestureEvent,
+    option: sys::GhosttySelectionGestureEventOption,
+    value: &T,
+) {
     // SAFETY: as the caller promises; the event copies what it keeps.
     ok(
         unsafe {
@@ -112,8 +116,8 @@ impl GhosttyEngine {
             x: col,
             y: u32::from(row),
         };
-        let mut r: sys::GhosttyGridRef = sized(|r: &mut sys::GhosttyGridRef, s| r.size = s);
-        // SAFETY: valid terminal; out-pointer to a sized local.
+        let mut r = sys::GhosttyGridRef::default();
+        // SAFETY: valid terminal; out-pointer to a local GhosttyGridRef.
         let found = unsafe { sys::ghostty_terminal_grid_ref(self.term, point, &mut r) };
         (found == sys::GHOSTTY_SUCCESS).then_some(r)
     }
@@ -141,9 +145,12 @@ impl GhosttyEngine {
     /// Runs a gesture event and installs what it selects. Returns whether
     /// there is a selection now.
     fn apply(&mut self, event: sys::GhosttySelectionGestureEvent) -> bool {
-        let mut selection: sys::GhosttySelection =
-            sized(|s: &mut sys::GhosttySelection, n| s.size = n);
-        // SAFETY: valid handles; out-pointer to a sized local.
+        let mut selection = sys::GhosttySelection {
+            start: sys::GhosttyGridRef::default(),
+            end: sys::GhosttyGridRef::default(),
+            rectangle: false,
+        };
+        // SAFETY: valid handles; out-pointer to a local GhosttySelection.
         let result = unsafe {
             sys::ghostty_selection_gesture_event(
                 self.select.handle,
@@ -260,9 +267,12 @@ impl GhosttyEngine {
 
     /// Everything: screen and scrollback.
     pub fn select_all(&mut self) {
-        let mut selection: sys::GhosttySelection =
-            sized(|s: &mut sys::GhosttySelection, n| s.size = n);
-        // SAFETY: valid terminal; out-pointer to a sized local.
+        let mut selection = sys::GhosttySelection {
+            start: sys::GhosttyGridRef::default(),
+            end: sys::GhosttyGridRef::default(),
+            rectangle: false,
+        };
+        // SAFETY: valid terminal; out-pointer to a local GhosttySelection.
         let found = unsafe { sys::ghostty_terminal_select_all(self.term, &mut selection) };
         if found == sys::GHOSTTY_SUCCESS {
             self.install(Some(&selection));
@@ -276,8 +286,11 @@ impl GhosttyEngine {
     }
 
     pub fn has_selection(&self) -> bool {
-        let mut selection: sys::GhosttySelection =
-            sized(|s: &mut sys::GhosttySelection, n| s.size = n);
+        let mut selection = sys::GhosttySelection {
+            start: sys::GhosttyGridRef::default(),
+            end: sys::GhosttyGridRef::default(),
+            rectangle: false,
+        };
         // SAFETY: valid terminal; the output type is GhosttySelection.
         let found = unsafe { self.get_raw(sys::GHOSTTY_TERMINAL_DATA_SELECTION, &mut selection) };
         found == sys::GHOSTTY_SUCCESS
@@ -286,28 +299,78 @@ impl GhosttyEngine {
     /// The selected text as a clipboard wants it: soft-wrapped lines joined
     /// and trailing blanks trimmed. `None` without a selection.
     pub fn selection_text(&self) -> Option<String> {
-        if !self.has_selection() {
+        let mut selection = sys::GhosttySelection {
+            start: sys::GhosttyGridRef::default(),
+            end: sys::GhosttyGridRef::default(),
+            rectangle: false,
+        };
+        // SAFETY: valid terminal; the output type is GhosttySelection.
+        let found = unsafe { self.get_raw(sys::GHOSTTY_TERMINAL_DATA_SELECTION, &mut selection) };
+        if found != sys::GHOSTTY_SUCCESS {
             return None;
         }
-        let options = sys::GhosttyTerminalSelectionFormatOptions {
-            size: size_of::<sys::GhosttyTerminalSelectionFormatOptions>(),
-            emit: sys::GHOSTTY_FORMATTER_FORMAT_PLAIN,
-            unwrap: true,
-            trim: true,
-            // The active selection.
-            selection: ptr::null(),
-        };
+        let mut formatter: sys::GhosttyFormatter = ptr::null_mut();
+        // SAFETY: valid terminal; out-pointer to receive the formatter handle.
+        if unsafe { sys::ghostty_formatter_terminal_new(ptr::null(), &mut formatter, self.term) }
+            != sys::GHOSTTY_SUCCESS
+        {
+            return None;
+        }
+        struct FormatterGuard(sys::GhosttyFormatter);
+        impl Drop for FormatterGuard {
+            fn drop(&mut self) {
+                // SAFETY: `self.0` was allocated by `ghostty_formatter_terminal_new`.
+                unsafe { sys::ghostty_formatter_free(self.0) };
+            }
+        }
+        let _guard = FormatterGuard(formatter);
+
+        let emit = sys::GHOSTTY_FORMATTER_FORMAT_PLAIN;
+        let unwrap = true;
+        let trim = true;
+        // SAFETY: `formatter` is valid and each value pointer matches the option's documented type.
+        unsafe {
+            ok(
+                sys::ghostty_formatter_set(
+                    formatter,
+                    sys::GHOSTTY_FORMATTER_OPT_EMIT,
+                    (&emit as *const sys::GhosttyFormatterFormat).cast::<c_void>(),
+                ),
+                "formatter emit",
+            );
+            ok(
+                sys::ghostty_formatter_set(
+                    formatter,
+                    sys::GHOSTTY_FORMATTER_OPT_UNWRAP,
+                    (&unwrap as *const bool).cast::<c_void>(),
+                ),
+                "formatter unwrap",
+            );
+            ok(
+                sys::ghostty_formatter_set(
+                    formatter,
+                    sys::GHOSTTY_FORMATTER_OPT_TRIM,
+                    (&trim as *const bool).cast::<c_void>(),
+                ),
+                "formatter trim",
+            );
+            ok(
+                sys::ghostty_formatter_set(
+                    formatter,
+                    sys::GHOSTTY_FORMATTER_OPT_SELECTION,
+                    (&selection as *const sys::GhosttySelection).cast::<c_void>(),
+                ),
+                "formatter selection",
+            );
+        }
+
         let mut len = 0usize;
-        // SAFETY: valid terminal; a NULL buffer asks for the length.
-        let first = unsafe {
-            sys::ghostty_terminal_selection_format_buf(
-                self.term,
-                options,
-                ptr::null_mut(),
-                0,
-                &mut len,
-            )
-        };
+        // SAFETY: valid formatter; a NULL buffer asks for the required length.
+        let first =
+            unsafe { sys::ghostty_formatter_format_buf(formatter, ptr::null_mut(), 0, &mut len) };
+        if first == sys::GHOSTTY_SUCCESS && len == 0 {
+            return Some(String::new());
+        }
         if first != sys::GHOSTTY_OUT_OF_SPACE && first != sys::GHOSTTY_SUCCESS {
             return None;
         }
@@ -315,13 +378,7 @@ impl GhosttyEngine {
         let mut written = 0usize;
         // SAFETY: the buffer holds `len` bytes.
         let second = unsafe {
-            sys::ghostty_terminal_selection_format_buf(
-                self.term,
-                options,
-                buf.as_mut_ptr(),
-                buf.len(),
-                &mut written,
-            )
+            sys::ghostty_formatter_format_buf(formatter, buf.as_mut_ptr(), buf.len(), &mut written)
         };
         if second != sys::GHOSTTY_SUCCESS {
             return None;
