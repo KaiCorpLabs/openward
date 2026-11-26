@@ -3657,9 +3657,9 @@ dependencies = [
 
 [[package]]
 name = "secret-service"
-version = "6.0.0-rc.1"
+version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa2cc7674358e10dfb5d88e3ee76b1b6e46774a0440bfcc49f188d9efdd79a69"
+checksum = "02ce5a46d499a2841b922de2d0f11f190efe0013dbd3b9d0fd0fc2bf5a0c24d8"
 dependencies = [
  "aes",
  "cbc",
