@@ -74,16 +74,79 @@ class AppearanceSection extends ConsumerWidget {
             SectionLabel(l.accessibility),
             const SizedBox(height: 4),
             const _Accessibility(),
-            if (!wide) ...[const SizedBox(height: 24), preview],
           ],
         );
-        if (!wide) return form;
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        if (!box.hasBoundedHeight) {
+          if (!wide) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [preview, const SizedBox(height: 24), form],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: form),
+              const SizedBox(width: 28),
+              SizedBox(width: 320, child: preview),
+            ],
+          );
+        }
+        if (wide) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(
+                    0,
+                    OwSpace.s10,
+                    0,
+                    OwSpace.s12,
+                  ),
+                  child: form,
+                ),
+              ),
+              const SizedBox(width: 28),
+              SizedBox(
+                width: 320,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(
+                    0,
+                    OwSpace.s10,
+                    0,
+                    OwSpace.s12,
+                  ),
+                  child: preview,
+                ),
+              ),
+            ],
+          );
+        }
+        final maxPreview = (box.maxHeight * 0.42).clamp(140.0, 340.0);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(child: form),
-            const SizedBox(width: 28),
-            SizedBox(width: 320, child: preview),
+            Padding(
+              padding: const EdgeInsets.only(top: OwSpace.s10),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: maxPreview),
+                child: SingleChildScrollView(child: preview),
+              ),
+            ),
+            const SizedBox(height: OwSpace.s6),
+            Divider(height: 1, color: context.ow.colors.border),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(
+                  0,
+                  OwSpace.s8,
+                  0,
+                  OwSpace.s12,
+                ),
+                child: form,
+              ),
+            ),
           ],
         );
       },
@@ -115,21 +178,30 @@ class _ThemeChoice extends ConsumerWidget {
           .id;
     }
 
-    DropdownButton<String> slot(Brightness b) => DropdownButton<String>(
-      key: ValueKey('theme.${b.name}'),
-      style: style,
-      value: family(b),
-      items: [
-        for (final f in OwThemes.families)
-          if (f.variant(b) != null)
-            DropdownMenuItem(value: f.id, child: Text(f.name)),
-      ],
-      onChanged: (id) => notifier.update(
-        (s) => b == Brightness.light
-            ? s.copyWith(lightTheme: id)
-            : s.copyWith(darkTheme: id),
-      ),
-    );
+    DropdownButton<String> slot(Brightness b, {bool expanded = false}) =>
+        DropdownButton<String>(
+          key: ValueKey('theme.${b.name}'),
+          isExpanded: expanded,
+          style: style,
+          value: family(b),
+          items: [
+            for (final f in OwThemes.families)
+              if (f.variant(b) != null)
+                DropdownMenuItem(
+                  value: f.id,
+                  child: Text(
+                    f.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+          ],
+          onChanged: (id) => notifier.update(
+            (s) => b == Brightness.light
+                ? s.copyWith(lightTheme: id)
+                : s.copyWith(darkTheme: id),
+          ),
+        );
 
     // A card sets the theme for the brightness it has; if it only comes in
     // the other one and the mode is fixed, the mode follows.
@@ -151,12 +223,11 @@ class _ThemeChoice extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Wrap(
-          spacing: 14,
-          runSpacing: 10,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            SegmentedButton<ThemeChoice>(
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SegmentedButton<ThemeChoice>(
               showSelectedIcon: false,
               segments: [
                 ButtonSegment(
@@ -176,23 +247,52 @@ class _ThemeChoice extends ConsumerWidget {
               onSelectionChanged: (v) =>
                   notifier.update((s) => s.copyWith(theme: v.single)),
             ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
+          ),
+        ),
+        const SizedBox(height: 12),
+        LayoutBuilder(
+          builder: (context, box) {
+            if (box.maxWidth < 460) {
+              Widget pair(String label, Brightness b) => Row(
+                children: [
+                  Text(label, style: TextStyle(color: c.textMuted)),
+                  const SizedBox(width: 8),
+                  Expanded(child: slot(b, expanded: true)),
+                ],
+              );
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  pair(l.inLight, Brightness.light),
+                  const SizedBox(height: 6),
+                  pair(l.inDark, Brightness.dark),
+                ],
+              );
+            }
+            return Wrap(
+              spacing: 20,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Text(l.inLight, style: TextStyle(color: c.textMuted)),
-                const SizedBox(width: 8),
-                slot(Brightness.light),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(l.inLight, style: TextStyle(color: c.textMuted)),
+                    const SizedBox(width: 8),
+                    slot(Brightness.light),
+                  ],
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(l.inDark, style: TextStyle(color: c.textMuted)),
+                    const SizedBox(width: 8),
+                    slot(Brightness.dark),
+                  ],
+                ),
               ],
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(l.inDark, style: TextStyle(color: c.textMuted)),
-                const SizedBox(width: 8),
-                slot(Brightness.dark),
-              ],
-            ),
-          ],
+            );
+          },
         ),
         const SizedBox(height: 14),
         Wrap(
@@ -662,142 +762,175 @@ class _Accessibility extends ConsumerWidget {
     final l = context.l10n;
     final c = context.ow.colors;
     final style = fieldTextStyle(context);
-    Widget row(String label, Widget control, {String? help}) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: OwSpace.s4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label),
-                if (help != null)
-                  Text(
-                    help,
-                    style: TextStyle(
-                      fontSize: OwText.small,
-                      color: c.textMuted,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-          control,
-        ],
-      ),
-    );
     final percent = (s.textScale * 100).round();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        row(
-          l.textSize,
-          SizedBox(
-            width: 260,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Slider(
-                    key: const ValueKey('a11y.textScale'),
-                    min: 0.85,
-                    max: 1.5,
-                    divisions: 13,
-                    value: s.textScale.clamp(0.85, 1.5),
-                    label: l.percent(percent),
-                    onChanged: (v) => notifier.update(
-                      (s) => s.copyWith(textScale: (v * 20).round() / 20),
+    return LayoutBuilder(
+      builder: (context, box) {
+        final narrow = box.maxWidth < 520;
+        Widget item(
+          String label,
+          Widget control, {
+          String? help,
+          bool stackWhenNarrow = false,
+        }) {
+          final info = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label),
+              if (help != null)
+                Text(
+                  help,
+                  style: TextStyle(fontSize: OwText.small, color: c.textMuted),
+                ),
+            ],
+          );
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: OwSpace.s4),
+            child: narrow && stackWhenNarrow
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      info,
+                      const SizedBox(height: OwSpace.s3),
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: control,
+                      ),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      Expanded(child: info),
+                      const SizedBox(width: 16),
+                      control,
+                    ],
+                  ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            item(
+              l.textSize,
+              SizedBox(
+                width: narrow ? box.maxWidth : 260,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Slider(
+                        key: const ValueKey('a11y.textScale'),
+                        min: 0.85,
+                        max: 1.5,
+                        divisions: 13,
+                        value: s.textScale.clamp(0.85, 1.5),
+                        label: l.percent(percent),
+                        onChanged: (v) => notifier.update(
+                          (s) => s.copyWith(textScale: (v * 20).round() / 20),
+                        ),
+                      ),
                     ),
-                  ),
+                    SizedBox(
+                      width: 48,
+                      child: Text(
+                        l.percent(percent),
+                        textAlign: TextAlign.right,
+                        style: monoStyle(context),
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(
-                  width: 48,
-                  child: Text(
-                    l.percent(percent),
-                    textAlign: TextAlign.right,
-                    style: monoStyle(context),
-                  ),
-                ),
-              ],
+              ),
+              help: l.textSizeHelp,
+              stackWhenNarrow: true,
             ),
-          ),
-          help: l.textSizeHelp,
-        ),
-        row(
-          l.lineHeight,
-          DropdownButton<double>(
-            style: style,
-            value: s.lineHeight,
-            items: [
-              for (final h in {...Settings.lineHeights, s.lineHeight})
-                DropdownMenuItem(
-                  value: h,
-                  child: Text(
-                    NumberFormat.decimalPatternDigits(
-                      locale: l.localeName,
-                      decimalDigits: 2,
-                    ).format(h),
+            item(
+              l.lineHeight,
+              DropdownButton<double>(
+                style: style,
+                value: s.lineHeight,
+                items: [
+                  for (final h in {...Settings.lineHeights, s.lineHeight})
+                    DropdownMenuItem(
+                      value: h,
+                      child: Text(
+                        NumberFormat.decimalPatternDigits(
+                          locale: l.localeName,
+                          decimalDigits: 2,
+                        ).format(h),
+                      ),
+                    ),
+                ],
+                onChanged: (v) =>
+                    notifier.update((s) => s.copyWith(lineHeight: v)),
+              ),
+            ),
+            item(
+              l.minimumContrast,
+              Switch(
+                value: s.minimumContrast,
+                onChanged: (v) =>
+                    notifier.update((s) => s.copyWith(minimumContrast: v)),
+              ),
+              help: l.minimumContrastHelp,
+            ),
+            item(
+              l.reduceMotion,
+              DropdownButton<MotionChoice>(
+                style: style,
+                value: s.motion,
+                items: [
+                  DropdownMenuItem(
+                    value: MotionChoice.system,
+                    child: Text(l.asSystem),
                   ),
+                  DropdownMenuItem(
+                    value: MotionChoice.reduce,
+                    child: Text(l.yes),
+                  ),
+                  DropdownMenuItem(value: MotionChoice.full, child: Text(l.no)),
+                ],
+                onChanged: (v) => notifier.update((s) => s.copyWith(motion: v)),
+              ),
+            ),
+            item(
+              l.cursor,
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SegmentedButton<CursorChoice>(
+                  showSelectedIcon: false,
+                  segments: [
+                    ButtonSegment(
+                      value: CursorChoice.block,
+                      label: Text(l.cursorBlock),
+                    ),
+                    ButtonSegment(
+                      value: CursorChoice.bar,
+                      label: Text(l.cursorBar),
+                    ),
+                    ButtonSegment(
+                      value: CursorChoice.underline,
+                      label: Text(l.cursorUnderline),
+                    ),
+                  ],
+                  selected: {s.cursor},
+                  onSelectionChanged: (v) =>
+                      notifier.update((s) => s.copyWith(cursor: v.single)),
                 ),
-            ],
-            onChanged: (v) => notifier.update((s) => s.copyWith(lineHeight: v)),
-          ),
-        ),
-        row(
-          l.minimumContrast,
-          Switch(
-            value: s.minimumContrast,
-            onChanged: (v) =>
-                notifier.update((s) => s.copyWith(minimumContrast: v)),
-          ),
-          help: l.minimumContrastHelp,
-        ),
-        row(
-          l.reduceMotion,
-          DropdownButton<MotionChoice>(
-            style: style,
-            value: s.motion,
-            items: [
-              DropdownMenuItem(
-                value: MotionChoice.system,
-                child: Text(l.asSystem),
               ),
-              DropdownMenuItem(value: MotionChoice.reduce, child: Text(l.yes)),
-              DropdownMenuItem(value: MotionChoice.full, child: Text(l.no)),
-            ],
-            onChanged: (v) => notifier.update((s) => s.copyWith(motion: v)),
-          ),
-        ),
-        row(
-          l.cursor,
-          SegmentedButton<CursorChoice>(
-            showSelectedIcon: false,
-            segments: [
-              ButtonSegment(
-                value: CursorChoice.block,
-                label: Text(l.cursorBlock),
+              help: l.cursorHelp,
+              stackWhenNarrow: true,
+            ),
+            item(
+              l.cursorBlink,
+              Switch(
+                value: s.cursorBlink,
+                onChanged: (v) =>
+                    notifier.update((s) => s.copyWith(cursorBlink: v)),
               ),
-              ButtonSegment(value: CursorChoice.bar, label: Text(l.cursorBar)),
-              ButtonSegment(
-                value: CursorChoice.underline,
-                label: Text(l.cursorUnderline),
-              ),
-            ],
-            selected: {s.cursor},
-            onSelectionChanged: (v) =>
-                notifier.update((s) => s.copyWith(cursor: v.single)),
-          ),
-          help: l.cursorHelp,
-        ),
-        row(
-          l.cursorBlink,
-          Switch(
-            value: s.cursorBlink,
-            onChanged: (v) =>
-                notifier.update((s) => s.copyWith(cursorBlink: v)),
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 }

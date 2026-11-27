@@ -177,12 +177,7 @@ class _FavoriteButton extends StatelessWidget {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                SystemBadge(
-                  code: h.system?.code,
-                  env: h.environment,
-                  size: 24,
-                  tagged: true,
-                ),
+                SystemBadge(code: h.system?.code, env: h.environment, size: 24),
                 if (status != null)
                   Positioned(
                     right: -3,

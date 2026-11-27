@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/address.dart';
 import '../core/errors.dart';
 import '../core/match.dart';
+import '../core/platform.dart';
 import '../core/providers.dart';
 import '../hosts/host_actions.dart' show overSsh;
 import '../l10n/l10n.dart';
@@ -243,7 +244,7 @@ class _NewKeyState extends ConsumerState<_NewKey> {
                 onChanged: _busy ? null : (v) => setState(() => _inVault = v),
               ),
 
-            if (Theme.of(context).platform == TargetPlatform.macOS &&
+            if (Device.supportsSecureEnclaveFor(Theme.of(context).platform) &&
                 ref.watch(securityProvider).phase == VaultPhase.unlocked)
               SwitchListTile(
                 key: const ValueKey('newKey.enclave'),
@@ -265,26 +266,27 @@ class _NewKeyState extends ConsumerState<_NewKey> {
                         if (!_nameTouched) _name.text = _freeName();
                       }),
               ),
-            SwitchListTile(
-              key: const ValueKey('newKey.onKey'),
-              contentPadding: EdgeInsets.zero,
-              title: Text(l.onSecurityKey),
-              value: _onKey,
-              onChanged: _busy
-                  ? null
-                  : (on) => setState(() {
-                      _onKey = on;
-                      if (on) {
-                        _inVault = false;
-                        _enclave = false;
-                      }
-                      // No RSA on security keys.
-                      if (on && _type == SshKeyType.rsa) {
-                        _type = SshKeyType.ed25519;
-                      }
-                      if (!_nameTouched) _name.text = _freeName();
-                    }),
-            ),
+            if (Device.securityKeys)
+              SwitchListTile(
+                key: const ValueKey('newKey.onKey'),
+                contentPadding: EdgeInsets.zero,
+                title: Text(l.onSecurityKey),
+                value: _onKey,
+                onChanged: _busy
+                    ? null
+                    : (on) => setState(() {
+                        _onKey = on;
+                        if (on) {
+                          _inVault = false;
+                          _enclave = false;
+                        }
+                        // No RSA on security keys.
+                        if (on && _type == SshKeyType.rsa) {
+                          _type = SshKeyType.ed25519;
+                        }
+                        if (!_nameTouched) _name.text = _freeName();
+                      }),
+              ),
             const SizedBox(height: 8),
             _labelled(
               context,

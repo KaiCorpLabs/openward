@@ -217,59 +217,111 @@ class _SidebarState extends ConsumerState<Sidebar> {
             decoration: BoxDecoration(
               border: Border(top: BorderSide(color: ow.colors.border)),
             ),
-            child: Row(
-              children: [
-                // When empty, the empty state has its own button.
-                Expanded(
-                  child: empty
-                      ? const SizedBox.shrink()
-                      : OutlinedButton.icon(
-                          onPressed: () => actions.editHost(),
-                          icon: const Icon(Icons.add, size: 16),
-                          label: Text(l.newHost),
-                        ),
-                ),
-                const SizedBox(width: 6),
-                Builder(
-                  builder: (context) => IconButton(
-                    tooltip: l.moreActions,
-                    icon: const Icon(Icons.more_horiz, size: 18),
-                    onPressed: () {
-                      final box = context.findRenderObject()! as RenderBox;
-                      final at = box.localToGlobal(
-                        Offset(0, box.size.height + 4),
-                      );
-                      actions.menu(at, [
-                        actions.item(l.newGroup, () => actions.editGroup()),
-                        actions.item(l.importEllipsis, actions.import),
-                      ]);
-                    },
+            child: LayoutBuilder(
+              builder: (context, box) {
+                final icons = [
+                  Builder(
+                    builder: (context) => IconButton(
+                      tooltip: l.moreActions,
+                      icon: const Icon(Icons.more_horiz, size: 18),
+                      onPressed: () {
+                        final box = context.findRenderObject()! as RenderBox;
+                        final at = box.localToGlobal(
+                          Offset(0, box.size.height + 4),
+                        );
+                        actions.menu(at, [
+                          actions.item(l.newGroup, () => actions.editGroup()),
+                          actions.item(l.importEllipsis, actions.import),
+                        ]);
+                      },
+                    ),
                   ),
-                ),
-                IconButton(
-                  tooltip: l.settings,
-                  icon: const Icon(Icons.settings_outlined, size: 18),
-                  onPressed: () => ref
-                      .read(tabsProvider.notifier)
-                      .openPage(PageKind.settings),
-                ),
-                if (widget.inDrawer)
-                  const SizedBox.shrink()
-                else if (widget.overWindow)
                   IconButton(
-                    key: const ValueKey('sidebar.pin'),
-                    tooltip: withKeys(l.pinSidebar, sidebarKeys(l)),
-                    icon: const Icon(Icons.push_pin_outlined, size: 18),
-                    onPressed: ref.read(sidebarProvider.notifier).toggle,
-                  )
-                else
-                  IconButton(
-                    key: const ValueKey('sidebar.fold'),
-                    tooltip: withKeys(l.foldSidebar, sidebarKeys(l)),
-                    icon: const Icon(Icons.view_sidebar_outlined, size: 18),
-                    onPressed: ref.read(sidebarProvider.notifier).toggle,
+                    tooltip: l.settings,
+                    icon: const Icon(Icons.settings_outlined, size: 18),
+                    onPressed: () => ref
+                        .read(tabsProvider.notifier)
+                        .openPage(PageKind.settings),
                   ),
-              ],
+                  if (!widget.inDrawer)
+                    widget.overWindow
+                        ? IconButton(
+                            key: const ValueKey('sidebar.pin'),
+                            tooltip: withKeys(l.pinSidebar, sidebarKeys(l)),
+                            icon: const Icon(Icons.push_pin_outlined, size: 18),
+                            onPressed: ref
+                                .read(sidebarProvider.notifier)
+                                .toggle,
+                          )
+                        : IconButton(
+                            key: const ValueKey('sidebar.fold'),
+                            tooltip: withKeys(l.foldSidebar, sidebarKeys(l)),
+                            icon: const Icon(
+                              Icons.view_sidebar_outlined,
+                              size: 18,
+                            ),
+                            onPressed: ref
+                                .read(sidebarProvider.notifier)
+                                .toggle,
+                          ),
+                ];
+                // When empty, the empty state has its own button; keep the
+                // utility buttons balanced without an empty Expanded gap.
+                if (empty) {
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: icons,
+                  );
+                }
+                final labelWidth = textWidth(
+                  context,
+                  l.newHost,
+                  TextStyle(
+                    fontFamily: ow.fonts.ui,
+                    fontSize: OwText.body,
+                    fontWeight: FontWeight.w500,
+                  ),
+                );
+                // Padding (16) + icon (16) + gap (8) + border (2) + margin (4).
+                final buttonMinWidth = labelWidth + 46;
+                final iconsWidth = icons.length * 36.0;
+                final inlineFits =
+                    buttonMinWidth + 6 + iconsWidth <= box.maxWidth;
+                final newHostButton = OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: OwSpace.s4),
+                  ),
+                  onPressed: () => actions.editHost(),
+                  icon: const Icon(Icons.add, size: 16),
+                  label: Text(
+                    l.newHost,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+                if (inlineFits) {
+                  return Row(
+                    children: [
+                      Expanded(child: newHostButton),
+                      const SizedBox(width: 6),
+                      ...icons,
+                    ],
+                  );
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    newHostButton,
+                    const SizedBox(height: OwSpace.s3),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: icons,
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -1224,34 +1276,36 @@ class _Empty extends StatelessWidget {
     final ow = context.ow;
     final l = context.l10n;
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.all(OwSpace.s12),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.dns_outlined, size: 30, color: ow.colors.textSubtle),
-          const SizedBox(height: 10),
-          Text(l.noHostsTitle, style: theme.textTheme.titleSmall),
-          const SizedBox(height: 6),
-          Text(
-            l.noHostsBody,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: ow.colors.textMuted, height: 1.45),
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: 200,
-            child: FilledButton(onPressed: onNew, child: Text(l.newHost)),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: 200,
-            child: OutlinedButton(
-              onPressed: onImport,
-              child: Text(l.importEllipsis),
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(OwSpace.s12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.dns_outlined, size: 30, color: ow.colors.textSubtle),
+            const SizedBox(height: 10),
+            Text(l.noHostsTitle, style: theme.textTheme.titleSmall),
+            const SizedBox(height: 6),
+            Text(
+              l.noHostsBody,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: ow.colors.textMuted, height: 1.45),
             ),
-          ),
-        ],
+            const SizedBox(height: 14),
+            SizedBox(
+              width: 200,
+              child: FilledButton(onPressed: onNew, child: Text(l.newHost)),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: 200,
+              child: OutlinedButton(
+                onPressed: onImport,
+                child: Text(l.importEllipsis),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1376,27 +1430,68 @@ class _Library extends ConsumerWidget {
             builder: (context, _) => Consumer(
               builder: (context, ref, _) {
                 final entries = libraryEntries(context, ref);
-                Widget button(LibraryEntry e) => _LibraryButton(
-                  entry: e,
-                  selected: here(e.page),
-                  onPressed: () =>
-                      ref.read(tabsProvider.notifier).openPage(e.page),
-                );
-                return Column(
-                  children: [
-                    for (var i = 0; i < entries.length; i += 2)
-                      Row(
+                Widget button(LibraryEntry e, {required bool allowWrap}) =>
+                    _LibraryButton(
+                      entry: e,
+                      selected: here(e.page),
+                      allowWrap: allowWrap,
+                      onPressed: () =>
+                          ref.read(tabsProvider.notifier).openPage(e.page),
+                    );
+                return LayoutBuilder(
+                  builder: (context, box) {
+                    final colWidth = (box.maxWidth - 2) / 2;
+                    final twoColumns = entries.every((e) {
+                      final selected = here(e.page);
+                      final labelStyle = TextStyle(
+                        fontSize: OwText.body,
+                        fontWeight: selected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      );
+                      final countWidth = e.count > 0
+                          ? 4 +
+                                textWidth(
+                                  context,
+                                  '${e.count}',
+                                  monoStyle(context, size: 12),
+                                )
+                          : 0.0;
+                      final needed =
+                          OwSpace.s4 * 2 +
+                          16 +
+                          8 +
+                          textWidth(context, e.label, labelStyle) +
+                          countWidth +
+                          2;
+                      return needed <= colWidth;
+                    });
+                    if (!twoColumns) {
+                      return Column(
                         children: [
-                          Expanded(child: button(entries[i])),
-                          const SizedBox(width: 2),
-                          Expanded(
-                            child: i + 1 < entries.length
-                                ? button(entries[i + 1])
-                                : const SizedBox.shrink(),
-                          ),
+                          for (final e in entries) button(e, allowWrap: true),
                         ],
-                      ),
-                  ],
+                      );
+                    }
+                    return Column(
+                      children: [
+                        for (var i = 0; i < entries.length; i += 2)
+                          Row(
+                            children: [
+                              Expanded(
+                                child: button(entries[i], allowWrap: false),
+                              ),
+                              const SizedBox(width: 2),
+                              Expanded(
+                                child: i + 1 < entries.length
+                                    ? button(entries[i + 1], allowWrap: false)
+                                    : const SizedBox.shrink(),
+                              ),
+                            ],
+                          ),
+                      ],
+                    );
+                  },
                 );
               },
             ),
@@ -1411,11 +1506,13 @@ class _LibraryButton extends StatelessWidget {
   const _LibraryButton({
     required this.entry,
     required this.selected,
+    required this.allowWrap,
     required this.onPressed,
   });
 
   final LibraryEntry entry;
   final bool selected;
+  final bool allowWrap;
   final VoidCallback onPressed;
 
   @override
@@ -1443,10 +1540,15 @@ class _LibraryButton extends StatelessWidget {
               key: ValueKey('library.${e.page.name}'),
               borderRadius: radius,
               onTap: onPressed,
-              child: SizedBox(
-                height: heightForText(context, 30),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: heightForText(context, 30),
+                ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: OwSpace.s4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: OwSpace.s4,
+                    vertical: OwSpace.s2,
+                  ),
                   child: Row(
                     children: [
                       Stack(
@@ -1473,7 +1575,7 @@ class _LibraryButton extends StatelessWidget {
                       Expanded(
                         child: Text(
                           e.label,
-                          maxLines: 1,
+                          maxLines: allowWrap ? 2 : 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: OwText.body,
@@ -1484,8 +1586,10 @@ class _LibraryButton extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (e.count > 0)
+                      if (e.count > 0) ...[
+                        const SizedBox(width: 4),
                         Text('${e.count}', style: monoStyle(context, size: 12)),
+                      ],
                     ],
                   ),
                 ),
