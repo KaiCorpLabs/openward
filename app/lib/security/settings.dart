@@ -8,11 +8,25 @@ import '../core/providers.dart';
 import '../history/history.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/security.dart';
+import '../ui/tokens.dart';
 import 'state.dart';
 import 'credentials.dart';
 import 'backups.dart';
 import 'recovery.dart';
 import 'unlock.dart';
+
+String _formatAutoLock(AppLocalizations l, int seconds) {
+  if (seconds == 0) return l.vaultNever;
+  if (seconds < 60) return l.durationSec(seconds);
+  if (seconds >= 3600) {
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    return minutes == 0 ? '$hours h' : l.durationHours(hours, minutes);
+  }
+  final minutes = seconds ~/ 60;
+  final rem = seconds % 60;
+  return rem == 0 ? l.durationMinutes(minutes) : l.durationMinSec(minutes, rem);
+}
 
 class VaultSettings extends ConsumerStatefulWidget {
   const VaultSettings({super.key});
@@ -46,20 +60,30 @@ class _VaultSettingsState extends ConsumerState<VaultSettings> {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
+    final c = owOf(context).colors;
     final view = ref.watch(securityProvider);
     final app = ref.read(openWardProvider);
     final nativeKind = app.nativeProtection();
     final deviceOnly = app.vaultNeedsPassword();
+    final autoLockOptions = {
+      0,
+      60,
+      300,
+      900,
+      1800,
+      3600,
+      view.autoLockSeconds.toInt(),
+    }.toList()..sort();
     return Material(
       type: MaterialType.transparency,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l.vaultSecurity, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 16),
           Text(l.vaultScope),
-          const SizedBox(height: 16),
           if (view.phase == VaultPhase.legacy || deviceOnly) ...[
+            const SizedBox(height: 12),
+            Text(l.vaultCloseSessions),
+            const SizedBox(height: 12),
             Text(
               deviceOnly
                   ? (Device.mobile
@@ -76,37 +100,45 @@ class _VaultSettingsState extends ConsumerState<VaultSettings> {
               ),
               child: Text(deviceOnly ? l.vaultFinishSetup : l.vaultEnable),
             ),
+            if (view.phase != VaultPhase.legacy) const SizedBox(height: 24),
           ],
           if (view.phase != VaultPhase.legacy) ...[
             if (!deviceOnly) ...[
+              const SizedBox(height: 16),
               Text(
                 view.recoveryAvailable
                     ? l.vaultProtectedStatus
                     : l.vaultMissingKitStatus,
               ),
-              const SizedBox(height: 16),
-              OutlinedButton(
-                onPressed: () => showDialog<void>(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (_) => const VaultPasswordChange(),
-                ),
-                child: Text(l.vaultChangePassword),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton(
+                    onPressed: () => showDialog<void>(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) => const VaultPasswordChange(),
+                    ),
+                    child: Text(l.vaultChangePassword),
+                  ),
+                  OutlinedButton(
+                    onPressed: () => showDialog<void>(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) => const VaultSetup(regenerate: true),
+                    ),
+                    child: Text(l.vaultRegenerateKit),
+                  ),
+                ],
               ),
-              OutlinedButton(
-                onPressed: () => showDialog<void>(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (_) => const VaultSetup(regenerate: true),
-                ),
-                child: Text(l.vaultRegenerateKit),
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
             ],
             const StoredCredentials(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             Text(l.vaultSessions),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             FilledButton(
               onPressed: () {
                 ref.read(historyProvider.notifier).flush();
@@ -119,17 +151,10 @@ class _VaultSettingsState extends ConsumerState<VaultSettings> {
               initialValue: view.autoLockSeconds.toInt(),
               decoration: InputDecoration(labelText: l.vaultAutoLock),
               items: [
-                for (final n in {
-                  0,
-                  60,
-                  300,
-                  900,
-                  1800,
-                  view.autoLockSeconds.toInt(),
-                })
+                for (final n in autoLockOptions)
                   DropdownMenuItem(
                     value: n,
-                    child: Text(n == 0 ? l.vaultNever : '$n s'),
+                    child: Text(_formatAutoLock(l, n)),
                   ),
               ],
               onChanged: (n) async {
@@ -141,16 +166,18 @@ class _VaultSettingsState extends ConsumerState<VaultSettings> {
                 }
               },
             ),
-            const SizedBox(height: 24),
             if (!deviceOnly) ...[
+              const SizedBox(height: 24),
               Text(
                 nativeLabel(l, nativeKind),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
+              const SizedBox(height: 6),
               Text(l.vaultNativeExplain),
               if (nativeKind == NativeProtection.sessionKeyring) ...[
                 const SizedBox(height: 8),
                 Text(l.vaultLinuxWarning),
+                const SizedBox(height: 4),
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
                   value: linuxAck,
@@ -178,13 +205,14 @@ class _VaultSettingsState extends ConsumerState<VaultSettings> {
                 ),
             ],
           ],
-          const SizedBox(height: 24),
-          if (!deviceOnly) const VaultBackups(),
-          if (error != null)
-            Text(
-              error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
+          if (!deviceOnly) ...[
+            const SizedBox(height: 24),
+            const VaultBackups(),
+          ],
+          if (error != null) ...[
+            const SizedBox(height: 12),
+            Text(error!, style: TextStyle(color: c.danger)),
+          ],
         ],
       ),
     );
@@ -301,6 +329,7 @@ class _VaultSetupState extends ConsumerState<VaultSetup> {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
+    final c = owOf(context).colors;
     final app = ref.read(openWardProvider);
     return AlertDialog(
       title: Text(widget.regenerate ? l.vaultRegenerateKit : l.vaultEnable),
@@ -320,6 +349,7 @@ class _VaultSetupState extends ConsumerState<VaultSetup> {
                   maxLength: 4,
                   decoration: InputDecoration(labelText: l.vaultGroup3),
                 ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: group12,
                   obscureText: true,
@@ -330,13 +360,18 @@ class _VaultSetupState extends ConsumerState<VaultSetup> {
                 ),
               ] else if (kit case final text?) ...[
                 Text(l.vaultKitWarning),
+                const SizedBox(height: 8),
                 Text(l.vaultKitCopies),
                 const SizedBox(height: 16),
                 Text(
                   text,
                   style: const TextStyle(fontFamily: 'monospace', height: 1.8),
                 ),
-                if (qr case final modules?) RecoveryQr(modules: modules),
+                if (qr case final modules?) ...[
+                  const SizedBox(height: 16),
+                  RecoveryQr(modules: modules),
+                ],
+                const SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: busy
                       ? null
@@ -358,7 +393,9 @@ class _VaultSetupState extends ConsumerState<VaultSetup> {
                   icon: const Icon(Icons.picture_as_pdf_outlined),
                   label: Text(l.vaultSavePdf),
                 ),
+                const SizedBox(height: 8),
                 CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
                   value: saved,
                   onChanged: busy
                       ? null
@@ -370,41 +407,49 @@ class _VaultSetupState extends ConsumerState<VaultSetup> {
                   Text(l.vaultRotateWarning)
                 else
                   Text(l.vaultCompatibility),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Text(l.vaultScope),
+                if (!widget.regenerate) ...[
+                  const SizedBox(height: 8),
+                  Text(l.vaultCloseSessions),
+                ],
                 const SizedBox(height: 16),
-                if (!widget.regenerate) Text(l.vaultPasswordHint),
-                TextField(
+                if (!widget.regenerate) ...[
+                  Text(
+                    l.vaultPasswordHint,
+                    style: TextStyle(
+                      fontSize: OwText.small,
+                      color: c.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                VaultSecretField(
                   controller: password,
-                  obscureText: true,
-                  autocorrect: false,
-                  enableSuggestions: false,
+                  enabled: !busy,
                   maxLength: 128,
-                  decoration: InputDecoration(labelText: l.vaultPassword),
+                  label: l.vaultPassword,
                   onChanged: strength,
                 ),
-                if (!widget.regenerate)
+                if (!widget.regenerate) ...[
+                  const SizedBox(height: 8),
                   LinearProgressIndicator(
                     value: score / 4,
                     semanticsLabel: l.vaultStrength,
                   ),
-                if (!widget.regenerate)
-                  TextField(
+                  const SizedBox(height: 12),
+                  VaultSecretField(
                     controller: confirmation,
-                    obscureText: true,
-                    autocorrect: false,
-                    enableSuggestions: false,
+                    enabled: !busy,
                     maxLength: 128,
-                    decoration: InputDecoration(
-                      labelText: l.vaultConfirmPassword,
-                    ),
+                    label: l.vaultConfirmPassword,
                   ),
+                ],
               ],
-              if (error != null)
-                Text(
-                  error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
+              if (error != null) ...[
+                const SizedBox(height: 12),
+                Text(error!, style: TextStyle(color: c.danger)),
+              ],
             ],
           ),
         ),

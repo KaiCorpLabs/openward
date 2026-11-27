@@ -10,7 +10,9 @@ import '../l10n/l10n.dart';
 import '../keys/keys.dart';
 import '../src/rust/api/backups.dart';
 import '../src/rust/api/security.dart';
+import '../ui/tokens.dart';
 import 'state.dart';
+import 'unlock.dart';
 
 class VaultBackups extends ConsumerWidget {
   const VaultBackups({super.key});
@@ -49,15 +51,24 @@ class VaultBackups extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = context.l10n;
+    final c = owOf(context).colors;
     final unlocked = ref.watch(securityProvider).phase == VaultPhase.unlocked;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(l.backupTitle, style: Theme.of(context).textTheme.titleMedium),
-        Text(l.backupScope),
-        if (!unlocked) Text(l.backupUnlockFirst),
+        const SizedBox(height: 6),
+        Text(l.backupScope, style: TextStyle(color: c.textMuted)),
+        if (!unlocked) ...[
+          const SizedBox(height: 8),
+          Text(
+            l.backupUnlockFirst,
+            style: TextStyle(fontSize: OwText.small, color: c.textMuted),
+          ),
+        ],
+        const SizedBox(height: 12),
         Wrap(
-          spacing: 12,
+          spacing: 8,
           runSpacing: 8,
           children: [
             FilledButton(
@@ -162,6 +173,7 @@ class _VaultBackupDialogState extends ConsumerState<VaultBackupDialog> {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
+    final c = owOf(context).colors;
     final ready = restoring
         ? preview != null && preview!.destinationEmpty && ack
         : !plaintext || ack && credential.text.isNotEmpty;
@@ -184,9 +196,13 @@ class _VaultBackupDialogState extends ConsumerState<VaultBackupDialog> {
             children: [
               Text(l.backupScope),
               const SizedBox(height: 12),
-              if (plaintext) Text(l.backupPlaintextWarning),
+              if (plaintext) ...[
+                Text(l.backupPlaintextWarning),
+                const SizedBox(height: 12),
+              ],
               if (restoring) ...[
                 Text(l.backupRestoreExplain),
+                const SizedBox(height: 8),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(l.backupUseKit),
@@ -199,21 +215,21 @@ class _VaultBackupDialogState extends ConsumerState<VaultBackupDialog> {
                           ack = false;
                         }),
                 ),
-                Text(l.backupCredentialExplain),
+                const SizedBox(height: 8),
+                Text(
+                  l.backupCredentialExplain,
+                  style: TextStyle(fontSize: OwText.small, color: c.textMuted),
+                ),
+                const SizedBox(height: 12),
               ],
               if (plaintext || restoring)
-                TextField(
-                  key: const ValueKey('backup.credential'),
+                VaultSecretField(
+                  fieldKey: const ValueKey('backup.credential'),
                   controller: credential,
-                  obscureText: true,
-                  autocorrect: false,
-                  enableSuggestions: false,
                   enabled: !busy,
-                  decoration: InputDecoration(
-                    labelText: restoring
-                        ? l.backupSourceCredential
-                        : l.vaultCurrentPassword,
-                  ),
+                  label: restoring
+                      ? l.backupSourceCredential
+                      : l.vaultCurrentPassword,
                   onChanged: (_) => setState(() {
                     if (restoring) {
                       preview = null;
@@ -221,25 +237,28 @@ class _VaultBackupDialogState extends ConsumerState<VaultBackupDialog> {
                     }
                   }),
                 ),
-              if (restoring)
+              if (restoring) ...[
+                const SizedBox(height: 8),
                 TextButton(
                   key: const ValueKey('backup.preview'),
                   onPressed: busy ? null : () => act(inspect: true),
                   child: Text(l.backupPreview),
                 ),
-              if (preview case final p?) ...[
-                Text(l.backupSummary(p.items, p.secrets, p.unreadable)),
-                if (!p.destinationEmpty)
-                  Text(
-                    l.backupNeedsEmpty,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
-                if (p.format == BackupFormat.json)
-                  Text(l.backupPlaintextWarning),
               ],
-              if (plaintext || restoring && preview != null)
+              if (preview case final p?) ...[
+                const SizedBox(height: 12),
+                Text(l.backupSummary(p.items, p.secrets, p.unreadable)),
+                if (!p.destinationEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(l.backupNeedsEmpty, style: TextStyle(color: c.danger)),
+                ],
+                if (p.format == BackupFormat.json) ...[
+                  const SizedBox(height: 8),
+                  Text(l.backupPlaintextWarning),
+                ],
+              ],
+              if (plaintext || restoring && preview != null) ...[
+                const SizedBox(height: 8),
                 CheckboxListTile(
                   key: const ValueKey('backup.confirm'),
                   contentPadding: EdgeInsets.zero,
@@ -251,12 +270,15 @@ class _VaultBackupDialogState extends ConsumerState<VaultBackupDialog> {
                       ? null
                       : (v) => setState(() => ack = v ?? false),
                 ),
-              if (error != null)
-                Text(
-                  error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              if (busy) const LinearProgressIndicator(),
+              ],
+              if (error != null) ...[
+                const SizedBox(height: 12),
+                Text(error!, style: TextStyle(color: c.danger)),
+              ],
+              if (busy) ...[
+                const SizedBox(height: 12),
+                const LinearProgressIndicator(),
+              ],
             ],
           ),
         ),

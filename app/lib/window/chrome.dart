@@ -10,6 +10,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/providers.dart';
+import '../security/state.dart';
+
 const _channel = MethodChannel('openward/window');
 
 /// The top bar's height, the same as in MainFlutterWindow.swift.
@@ -69,17 +72,24 @@ class WindowDragArea extends StatelessWidget {
   }
 }
 
+/// Whether the window chrome below the top edge (sidebar, rail, tab strip)
+/// must reserve space for the macOS window buttons. Returns false when the
+/// platform does not draw a custom title bar, in full-screen, or when a top
+/// banner such as `VaultReminder` already owns `y = 0`.
+bool showWindowButtonsInChrome(WidgetRef ref) {
+  if (!customTitleBar) return false;
+  if (ref.watch(fullScreenProvider)) return false;
+  ref.watch(securityProvider);
+  return !ref.read(openWardProvider).vaultNeedsPassword();
+}
+
 /// The room the window buttons need at the top of the sidebar.
 class WindowButtonsSpace extends ConsumerWidget {
   const WindowButtonsSpace({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!customTitleBar) return const SizedBox(height: 10);
-    final full = ref.watch(fullScreenProvider);
-    return SizedBox(
-      height: full ? 10 : topBarHeight,
-      child: const WindowDragArea(),
-    );
+    if (!showWindowButtonsInChrome(ref)) return const SizedBox(height: 10);
+    return const SizedBox(height: topBarHeight, child: WindowDragArea());
   }
 }

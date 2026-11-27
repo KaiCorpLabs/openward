@@ -9761,7 +9761,7 @@ abstract class AppLocalizations {
   /// No description provided for @vaultLock.
   ///
   /// In es, this message translates to:
-  /// **'Bloquear ahora · ⌘L / Ctrl+Alt+L'**
+  /// **'Bloquear ahora'**
   String get vaultLock;
 
   /// No description provided for @vaultBusy.
@@ -9959,8 +9959,14 @@ abstract class AppLocalizations {
   /// No description provided for @vaultScope.
   ///
   /// In es, this message translates to:
-  /// **'El vault cifrado protege los ítems, los secretos guardados y el historial, los recientes y los registros de OpenWard. Los archivos SSH externos sólo se copian al vault cuando lo solicitas. Antes de activar el cifrado, cierra las sesiones abiertas.'**
+  /// **'El vault cifrado protege los ítems, los secretos guardados y el historial, los recientes y los registros de OpenWard. Los archivos SSH externos solo se copian al vault cuando lo solicitas.'**
   String get vaultScope;
+
+  /// No description provided for @vaultCloseSessions.
+  ///
+  /// In es, this message translates to:
+  /// **'Antes de activar el cifrado, cierra las sesiones abiertas.'**
+  String get vaultCloseSessions;
 
   /// No description provided for @vaultCompatibility.
   ///
@@ -10109,7 +10115,7 @@ abstract class AppLocalizations {
   /// No description provided for @vaultCredentialExplain.
   ///
   /// In es, this message translates to:
-  /// **'Sólo se guardan cuando lo solicitas y la autenticación las verifica. Las contraseñas se vinculan al servidor, puerto, usuario y clave de host. PIN, 2FA y contraseñas de proxy no se guardan.'**
+  /// **'Solo se guardan cuando lo solicitas y la autenticación las verifica. Las contraseñas se vinculan al servidor, puerto, usuario y clave de host. PIN, 2FA y contraseñas de proxy no se guardan.'**
   String get vaultCredentialExplain;
 
   /// No description provided for @vaultCredentialPassword.
@@ -10123,6 +10129,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Frase de paso de una clave'**
   String get vaultCredentialPassphrase;
+
+  /// No description provided for @vaultCredentialsEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Todavía no hay credenciales guardadas.'**
+  String get vaultCredentialsEmpty;
+
+  /// No description provided for @vaultShowPassword.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar contraseña'**
+  String get vaultShowPassword;
+
+  /// No description provided for @vaultHidePassword.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocultar contraseña'**
+  String get vaultHidePassword;
 
   /// No description provided for @logsEncrypted.
   ///

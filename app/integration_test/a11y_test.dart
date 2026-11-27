@@ -604,6 +604,9 @@ Future<void> _walk(WidgetTester tester, _Look look) async {
       await tapOn(find.byKey(const ValueKey('settings.section.logs')));
       await tester.pump(const Duration(milliseconds: 400));
       await audit('settings: logs');
+      await tapOn(find.byKey(const ValueKey('settings.section.security')));
+      await tester.pump(const Duration(milliseconds: 400));
+      await audit('settings: security');
 
       tabs.openPage(PageKind.tunnels);
       await audit('tunnels');

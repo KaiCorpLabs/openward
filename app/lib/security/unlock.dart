@@ -6,10 +6,89 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/platform.dart';
 import '../core/providers.dart';
 import '../l10n/l10n.dart';
+import '../ui/themes.dart';
 import '../ui/tokens.dart';
+import '../ui/umbral.dart';
+import '../window/chrome.dart';
 import '../src/rust/api/security.dart';
 import '../src/rust/api/vault.dart';
 import 'state.dart';
+
+/// Returns the active [OwTheme], falling back to the matching default theme
+/// when a widget is mounted without [OwTheme] (for example in unit tests).
+OwTheme owOf(BuildContext context) =>
+    Theme.of(context).extension<OwTheme>() ??
+    (Theme.of(context).brightness == Brightness.dark
+        ? OwThemes.grafito
+        : OwThemes.papel);
+
+/// A secret text field (password or recovery kit) with an accessible
+/// visibility toggle.
+class VaultSecretField extends StatefulWidget {
+  const VaultSecretField({
+    super.key,
+    this.fieldKey,
+    required this.controller,
+    required this.label,
+    this.enabled = true,
+    this.autofocus = false,
+    this.maxLength,
+    this.counterText,
+    this.onChanged,
+    this.onSubmitted,
+  });
+
+  final Key? fieldKey;
+  final TextEditingController controller;
+  final String label;
+  final bool enabled;
+  final bool autofocus;
+  final int? maxLength;
+  final String? counterText;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
+
+  @override
+  State<VaultSecretField> createState() => _VaultSecretFieldState();
+}
+
+class _VaultSecretFieldState extends State<VaultSecretField> {
+  bool obscure = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return TextField(
+      key: widget.fieldKey,
+      controller: widget.controller,
+      autofocus: widget.autofocus,
+      enabled: widget.enabled,
+      obscureText: obscure,
+      enableSuggestions: false,
+      autocorrect: false,
+      maxLength: widget.maxLength,
+      onChanged: widget.onChanged,
+      onSubmitted: widget.onSubmitted,
+      decoration: InputDecoration(
+        labelText: widget.label,
+        counterText: widget.counterText,
+        suffixIcon: IconButton(
+          style: IconButton.styleFrom(
+            minimumSize: const Size(40, 40),
+            padding: EdgeInsets.zero,
+          ),
+          icon: Icon(
+            obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+          ),
+          tooltip: obscure ? l.vaultShowPassword : l.vaultHidePassword,
+          onPressed: widget.enabled
+              ? () => setState(() => obscure = !obscure)
+              : null,
+        ),
+      ),
+    );
+  }
+}
 
 class VaultUnlock extends ConsumerStatefulWidget {
   const VaultUnlock({super.key});
@@ -20,6 +99,7 @@ class VaultUnlock extends ConsumerStatefulWidget {
 class _VaultUnlockState extends ConsumerState<VaultUnlock> {
   final password = TextEditingController();
   bool kit = false;
+  bool obscure = true;
   bool pending = false;
   String? error;
   @override
@@ -69,7 +149,10 @@ class _VaultUnlockState extends ConsumerState<VaultUnlock> {
     } finally {
       if (mounted) {
         password.clear();
-        setState(() => pending = false);
+        setState(() {
+          pending = false;
+          obscure = true;
+        });
       }
     }
   }
@@ -77,119 +160,181 @@ class _VaultUnlockState extends ConsumerState<VaultUnlock> {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
+    final c = owOf(context).colors;
     final view = ref.watch(securityProvider);
     final busy = pending || view.phase == VaultPhase.changing;
     final paused = view.phase == VaultPhase.legacyPaused;
     final deviceOnly = ref.read(openWardProvider).vaultNeedsPassword();
+    final topBar = customTitleBar && !ref.watch(fullScreenProvider);
     return Material(
-      color: Theme.of(context).colorScheme.surface,
-      child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(OwSpace.s8),
-          child: SizedBox(
-            width: 420,
+      color: c.surface,
+      child: Stack(
+        children: [
+          const Positioned.fill(child: WindowDragArea()),
+          SafeArea(
             child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Icon(Icons.lock_outline, size: 40),
-                const SizedBox(height: 20),
-                Text(
-                  'OpenWard',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  paused ? l.vaultPaused : l.vaultLocked,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                if (paused)
-                  FilledButton(
-                    onPressed: () =>
-                        ref.read(openWardProvider).resumeLegacyVault(),
-                    child: Text(l.vaultResume),
-                  )
-                else if (deviceOnly) ...[
-                  Text(
-                    Device.mobile
-                        ? l.vaultDeviceWarningMobile
-                        : l.vaultDeviceWarning,
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: busy ? null : unlock,
-                    child: Text(
-                      busy
-                          ? l.vaultBusy
-                          : Device.mobile
-                          ? l.vaultDeviceUnlockMobile
-                          : l.vaultDeviceUnlock,
-                    ),
-                  ),
-                ] else ...[
-                  TextField(
-                    key: const ValueKey('vault.password'),
-                    controller: password,
-                    autofocus: true,
-                    obscureText: true,
-                    enableSuggestions: false,
-                    autocorrect: false,
-                    maxLength: kit ? 256 : 4096,
-                    enabled: !busy,
-                    decoration: InputDecoration(
-                      labelText: kit ? l.vaultKit : l.vaultPassword,
-                      counterText: '',
-                    ),
-                    onSubmitted: (_) => unlock(),
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    key: const ValueKey('vault.unlock'),
-                    onPressed: busy ? null : unlock,
-                    child: Text(busy ? l.vaultBusy : l.vaultUnlock),
-                  ),
-                  if (view.nativeEnabled)
-                    OutlinedButton(
-                      onPressed: busy ? null : () => unlock(native: true),
-                      child: Text(
-                        nativeLabel(
-                          l,
-                          ref.read(openWardProvider).nativeProtection(),
+                if (topBar)
+                  const SizedBox(height: topBarHeight, child: WindowDragArea()),
+                Expanded(
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(OwSpace.s8),
+                      child: SizedBox(
+                        width: 420,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Center(
+                              child: UmbralMark(size: 56, color: c.accent),
+                            ),
+                            const SizedBox(height: 20),
+                            Semantics(
+                              header: true,
+                              child: Text(
+                                'OpenWard',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineSmall,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              paused ? l.vaultPaused : l.vaultLocked,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: c.textMuted),
+                            ),
+                            const SizedBox(height: 24),
+                            if (paused)
+                              FilledButton(
+                                onPressed: () => ref
+                                    .read(openWardProvider)
+                                    .resumeLegacyVault(),
+                                child: Text(l.vaultResume),
+                              )
+                            else if (deviceOnly) ...[
+                              Text(
+                                Device.mobile
+                                    ? l.vaultDeviceWarningMobile
+                                    : l.vaultDeviceWarning,
+                                style: TextStyle(color: c.textMuted),
+                              ),
+                              const SizedBox(height: 16),
+                              FilledButton(
+                                onPressed: busy ? null : unlock,
+                                child: Text(
+                                  busy
+                                      ? l.vaultBusy
+                                      : Device.mobile
+                                      ? l.vaultDeviceUnlockMobile
+                                      : l.vaultDeviceUnlock,
+                                ),
+                              ),
+                            ] else ...[
+                              TextField(
+                                key: const ValueKey('vault.password'),
+                                controller: password,
+                                autofocus: true,
+                                obscureText: obscure,
+                                enableSuggestions: false,
+                                autocorrect: false,
+                                maxLength: kit ? 256 : 4096,
+                                enabled: !busy,
+                                decoration: InputDecoration(
+                                  labelText: kit ? l.vaultKit : l.vaultPassword,
+                                  counterText: '',
+                                  suffixIcon: IconButton(
+                                    key: const ValueKey(
+                                      'vault.password.visibility',
+                                    ),
+                                    style: IconButton.styleFrom(
+                                      minimumSize: const Size(40, 40),
+                                      padding: EdgeInsets.zero,
+                                    ),
+                                    icon: Icon(
+                                      obscure
+                                          ? Icons.visibility_outlined
+                                          : Icons.visibility_off_outlined,
+                                    ),
+                                    tooltip: obscure
+                                        ? l.vaultShowPassword
+                                        : l.vaultHidePassword,
+                                    onPressed: busy
+                                        ? null
+                                        : () => setState(
+                                            () => obscure = !obscure,
+                                          ),
+                                  ),
+                                ),
+                                onSubmitted: (_) => unlock(),
+                              ),
+                              const SizedBox(height: 16),
+                              FilledButton(
+                                key: const ValueKey('vault.unlock'),
+                                onPressed: busy ? null : unlock,
+                                child: Text(busy ? l.vaultBusy : l.vaultUnlock),
+                              ),
+                              if (view.nativeEnabled) ...[
+                                const SizedBox(height: 8),
+                                OutlinedButton(
+                                  onPressed: busy
+                                      ? null
+                                      : () => unlock(native: true),
+                                  child: Text(
+                                    nativeLabel(
+                                      l,
+                                      ref
+                                          .read(openWardProvider)
+                                          .nativeProtection(),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              if (view.recoveryAvailable) ...[
+                                const SizedBox(height: 8),
+                                TextButton(
+                                  onPressed: busy
+                                      ? null
+                                      : () {
+                                          password.clear();
+                                          setState(() {
+                                            kit = !kit;
+                                            obscure = true;
+                                            error = null;
+                                          });
+                                        },
+                                  child: Text(
+                                    kit ? l.vaultPassword : l.vaultRecovery,
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 16),
+                              Text(
+                                l.vaultSessions,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: c.textMuted),
+                              ),
+                            ],
+                            if (error != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: OwSpace.s4),
+                                child: Text(
+                                  error!,
+                                  style: TextStyle(color: c.danger),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ),
-                  if (view.recoveryAvailable)
-                    TextButton(
-                      onPressed: busy
-                          ? null
-                          : () {
-                              password.clear();
-                              setState(() {
-                                kit = !kit;
-                                error = null;
-                              });
-                            },
-                      child: Text(kit ? l.vaultPassword : l.vaultRecovery),
-                    ),
-                  const SizedBox(height: 16),
-                  Text(l.vaultSessions, textAlign: TextAlign.center),
-                ],
-                if (error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: OwSpace.s4),
-                    child: Text(
-                      error!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
                   ),
+                ),
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }

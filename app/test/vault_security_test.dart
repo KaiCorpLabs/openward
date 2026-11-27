@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -13,6 +15,9 @@ import 'package:openward/security/onboarding.dart';
 import 'package:openward/security/credentials.dart';
 import 'package:openward/src/rust/api/credentials.dart';
 import 'package:openward/src/rust/api/security.dart';
+import 'package:openward/ui/themes.dart';
+import 'package:openward/ui/umbral.dart';
+import 'package:openward/window/chrome.dart';
 
 import 'fakes.dart';
 
@@ -433,4 +438,152 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await core.securityEvents.close();
   });
+  testWidgets(
+    'VaultReminder uses OwTheme warning colors, clears macOS buttons, and toggles chrome space',
+    (tester) async {
+      final core = Core()..needsPassword = true;
+      core.security = SecurityView(
+        phase: VaultPhase.unlocked,
+        autoLockSeconds: BigInt.from(900),
+        nativeEnabled: false,
+        recoveryAvailable: false,
+      );
+      late bool chromeButtons;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [openWardProvider.overrideWithValue(core)],
+          child: MaterialApp(
+            theme: materialTheme(OwThemes.papel),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: Scaffold(
+              body: Column(
+                children: [
+                  const VaultReminder(),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      chromeButtons = showWindowButtonsInChrome(ref);
+                      return const WindowButtonsSpace();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final reminderMaterial = tester.widget<Material>(
+        find
+            .descendant(
+              of: find.byType(VaultReminder),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      expect(reminderMaterial.color, OwThemes.papel.colors.warnSoft);
+      expect(chromeButtons, isFalse);
+      if (Platform.isMacOS) {
+        final textBox = tester.getRect(
+          find.textContaining('Password and recovery kit pending'),
+        );
+        expect(textBox.left, greaterThanOrEqualTo(windowButtonsWidth));
+      }
+      core.needsPassword = false;
+      core.phase(VaultPhase.unlocked);
+      await tester.pumpAndSettle();
+      expect(chromeButtons, Platform.isMacOS);
+      await tester.pumpWidget(const SizedBox());
+      await core.securityEvents.close();
+    },
+  );
+  testWidgets(
+    'VaultUnlock and VaultOnboarding render UmbralMark and password visibility toggle works',
+    (tester) async {
+      final core = Core()..onboardingRequired = true;
+      core.phase(VaultPhase.legacy);
+      await tester.pumpWidget(harness(core));
+      await tester.pumpAndSettle();
+      expect(find.byType(UmbralMark), findsOneWidget);
+
+      core.onboardingRequired = false;
+      core.phase(VaultPhase.locked);
+      await tester.pumpAndSettle();
+      expect(find.byType(UmbralMark), findsOneWidget);
+
+      final fieldFinder = find.byKey(const ValueKey('vault.password'));
+      final toggleFinder = find.byKey(
+        const ValueKey('vault.password.visibility'),
+      );
+      expect(tester.widget<TextField>(fieldFinder).obscureText, isTrue);
+      final toggleSize = tester.getSize(toggleFinder);
+      expect(toggleSize.width, greaterThanOrEqualTo(28));
+      expect(toggleSize.height, greaterThanOrEqualTo(28));
+      expect(find.byTooltip('Show password'), findsOneWidget);
+
+      await tester.tap(toggleFinder);
+      await tester.pump();
+      expect(tester.widget<TextField>(fieldFinder).obscureText, isFalse);
+      expect(find.byTooltip('Hide password'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox());
+      await core.securityEvents.close();
+    },
+  );
+  testWidgets(
+    'VaultSettings hides redundant heading and pre-encryption notice, formats durations, and shows empty credentials',
+    (tester) async {
+      final core = Core();
+      core.phase(VaultPhase.unlocked);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            openWardProvider.overrideWithValue(core),
+            savedCredentialsProvider.overrideWith((ref) async => const []),
+          ],
+          child: MaterialApp(
+            theme: materialTheme(OwThemes.grafito),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: const Scaffold(
+              body: SingleChildScrollView(child: VaultSettings()),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Security'), findsNothing);
+      expect(
+        find.text('Close open sessions before activating encryption.'),
+        findsNothing,
+      );
+      expect(find.text('No saved credentials yet.'), findsOneWidget);
+      expect(find.text('Lock now'), findsOneWidget);
+      expect(find.textContaining('Ctrl+Alt+L'), findsNothing);
+      expect(find.text('15 min'), findsOneWidget);
+      expect(find.text('900 s'), findsNothing);
+
+      core.phase(VaultPhase.legacy);
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Close open sessions before activating encryption.'),
+        findsOneWidget,
+      );
+
+      await tester.pumpWidget(const SizedBox());
+      await core.securityEvents.close();
+    },
+  );
 }

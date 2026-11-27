@@ -9,6 +9,8 @@ import '../core/providers.dart';
 import '../core/save_file.dart';
 import '../l10n/l10n.dart';
 import '../src/rust/api/app.dart';
+import '../ui/tokens.dart';
+import 'unlock.dart';
 
 Future<void> saveRecoveryPdf(OpenWard app) async {
   final location = await chooseSave(
@@ -149,19 +151,17 @@ class _VaultPasswordChangeState extends ConsumerState<VaultPasswordChange> {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
+    final c = owOf(context).colors;
     Widget field(
       TextEditingController controller,
       String label, {
       int? maxLength,
-    }) => TextField(
+    }) => VaultSecretField(
       controller: controller,
       enabled: !busy,
-      obscureText: true,
-      autocorrect: false,
-      enableSuggestions: false,
+      label: label,
       maxLength: maxLength,
       onChanged: controller == password ? strength : null,
-      decoration: InputDecoration(labelText: label),
     );
     return AlertDialog(
       title: Text(l.vaultChangePassword),
@@ -173,6 +173,7 @@ class _VaultPasswordChangeState extends ConsumerState<VaultPasswordChange> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(l.vaultChangeExplain),
+              const SizedBox(height: 8),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(l.vaultUseKit),
@@ -184,23 +185,30 @@ class _VaultPasswordChangeState extends ConsumerState<VaultPasswordChange> {
                         authorization.clear();
                       }),
               ),
+              const SizedBox(height: 8),
               field(
                 authorization,
                 useKit ? l.vaultKit : l.vaultCurrentPassword,
                 maxLength: useKit ? 256 : 128,
               ),
-              Text(l.vaultPasswordHint),
+              const SizedBox(height: 12),
+              Text(
+                l.vaultPasswordHint,
+                style: TextStyle(fontSize: OwText.small, color: c.textMuted),
+              ),
+              const SizedBox(height: 8),
               field(password, l.vaultNewPassword, maxLength: 128),
+              const SizedBox(height: 8),
               LinearProgressIndicator(
                 value: score / 4,
                 semanticsLabel: l.vaultStrength,
               ),
+              const SizedBox(height: 12),
               field(confirmation, l.vaultConfirmPassword, maxLength: 128),
-              if (error != null)
-                Text(
-                  error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
+              if (error != null) ...[
+                const SizedBox(height: 12),
+                Text(error!, style: TextStyle(color: c.danger)),
+              ],
             ],
           ),
         ),
