@@ -4754,6 +4754,48 @@ abstract class AppLocalizations {
   /// **'Maximizar el panel'**
   String get maximizePane;
 
+  /// No description provided for @menuFile.
+  ///
+  /// In es, this message translates to:
+  /// **'Archivo'**
+  String get menuFile;
+
+  /// No description provided for @menuHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Ayuda'**
+  String get menuHelp;
+
+  /// No description provided for @menuLockVault.
+  ///
+  /// In es, this message translates to:
+  /// **'Bloquear vault'**
+  String get menuLockVault;
+
+  /// No description provided for @menuNewTab.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva pestaña'**
+  String get menuNewTab;
+
+  /// No description provided for @menuPreferences.
+  ///
+  /// In es, this message translates to:
+  /// **'Ajustes…'**
+  String get menuPreferences;
+
+  /// No description provided for @menuView.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver'**
+  String get menuView;
+
+  /// No description provided for @menuWindow.
+  ///
+  /// In es, this message translates to:
+  /// **'Ventana'**
+  String get menuWindow;
+
   /// No description provided for @milliseconds.
   ///
   /// In es, this message translates to:
@@ -6055,6 +6097,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Hosts'**
   String get paletteHosts;
+
+  /// No description provided for @paletteLockVault.
+  ///
+  /// In es, this message translates to:
+  /// **'Bloquear vault'**
+  String get paletteLockVault;
 
   /// No description provided for @paletteNothing.
   ///

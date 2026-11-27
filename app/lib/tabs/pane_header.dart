@@ -297,6 +297,8 @@ class _PanePickerState extends ConsumerState<PanePicker> {
           t,
     ];
     final fromHost = hostOf(from?.hostId);
+    final fromIsLocal =
+        from != null && from.hostId == null && from.target == null;
     final choices = <_Choice>[
       for (final t in open)
         _Choice(
@@ -306,7 +308,7 @@ class _PanePickerState extends ConsumerState<PanePicker> {
           env: hostOf(t.panes.active.controller?.hostId)?.environment,
           open: () => tabs.bringTab(t, widget.tab, widget.pane),
         ),
-      if (from != null && q.isEmpty)
+      if (from != null && !fromIsLocal && q.isEmpty)
         _Choice(
           section: l.paletteHosts,
           title: from.label,

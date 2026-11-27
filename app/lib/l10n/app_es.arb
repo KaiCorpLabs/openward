@@ -2421,6 +2421,13 @@
     }
   },
   "maximizePane": "Maximizar el panel",
+  "menuFile": "Archivo",
+  "menuHelp": "Ayuda",
+  "menuLockVault": "Bloquear vault",
+  "menuNewTab": "Nueva pestaña",
+  "menuPreferences": "Ajustes…",
+  "menuView": "Ver",
+  "menuWindow": "Ventana",
   "milliseconds": "{ms} ms",
   "@milliseconds": {
     "placeholders": {
@@ -2894,6 +2901,7 @@
   "paletteHint": "Busca un host, una pestaña, una acción o un comando que ya usaste…",
   "paletteHistory": "Historial",
   "paletteHosts": "Hosts",
+  "paletteLockVault": "Bloquear vault",
   "paletteNothing": "Nada coincide.",
   "paletteOnlyActions": "solo acciones",
   "paletteRecent": "Recientes",

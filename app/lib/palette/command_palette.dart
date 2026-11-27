@@ -21,8 +21,10 @@ import '../import/import_dialog.dart';
 import '../keys/key_dialogs.dart';
 import '../l10n/l10n.dart';
 import '../logs/log_viewer.dart' show openLogById;
+import '../security/state.dart';
 import '../snippets/palette.dart';
 import '../snippets/snippets.dart';
+import '../src/rust/api/security.dart' show VaultPhase;
 import '../src/rust/api/vault.dart' show HostView, ProtocolKind;
 import '../tabs/tab_strip.dart' show pageIcon, tabTitle;
 import '../tabs/tabs.dart';
@@ -95,7 +97,7 @@ Future<void> showCommandPalette(BuildContext context, WidgetRef ref) async {
   ref.read(workspacesProvider.notifier).refresh();
   final picked = await showDialog<(_Entry, bool)>(
     context: context,
-    barrierColor: Colors.transparent,
+    barrierColor: context.ow.colors.scrim,
     builder: (_) => _Palette(window: context, home: ref),
   );
   if (picked == null) {
@@ -158,6 +160,9 @@ class _PaletteState extends ConsumerState<_Palette> {
     final terminal = session != null && !session.isDisposed;
     final key = macShortcuts ? '⌘' : l.ctrlShiftPrefix;
     final container = ProviderScope.containerOf(window);
+    final phase = ref.read(securityProvider).phase;
+    final canLockVault =
+        phase == VaultPhase.unlocked || phase == VaultPhase.changing;
     _Entry action(
       String id,
       String title,
@@ -449,6 +454,18 @@ class _PaletteState extends ConsumerState<_Palette> {
         () => tabs.openPage(PageKind.settings),
         keys: macShortcuts ? '⌘,' : 'Ctrl+,',
       ),
+      if (canLockVault)
+        _Entry(
+          kind: _Kind.action,
+          id: 'lockVault',
+          title: l.paletteLockVault,
+          icon: Icons.lock_outline,
+          keys: macShortcuts ? '⌘L' : 'Ctrl+Alt+L',
+          run: (_) async {
+            home.read(historyProvider.notifier).flush();
+            await home.read(openWardProvider).lockVault();
+          },
+        ),
       action(
         'shortcuts',
         l.shortcutsTitle,

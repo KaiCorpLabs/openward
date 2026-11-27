@@ -45,6 +45,7 @@ import 'workspaces/workspaces_page.dart';
 import 'ui/tokens.dart';
 import 'l10n/l10n.dart';
 import 'window/chrome.dart';
+import 'window/menu_bar.dart';
 import 'window/mobile_shell.dart';
 import 'window/shortcuts.dart';
 import 'window/sidebar_state.dart';
@@ -431,16 +432,23 @@ class _HomeState extends ConsumerState<Home> {
     final empty = ref.watch(
       libraryProvider.select((l) => l.hosts.isEmpty && l.groups.isEmpty),
     );
-    if (!welcomed && (empty || _guide)) {
-      _guide = true;
-      // On a phone, clear of the status bar and the home indicator.
-      return Device.mobile
-          ? ColoredBox(
-              color: context.ow.colors.window,
-              child: const SafeArea(child: FirstRun()),
-            )
-          : const FirstRun();
-    }
+    final firstRun = !welcomed && (empty || _guide);
+    if (firstRun) _guide = true;
+    return OwMenuBar(
+      enabled: !firstRun,
+      child: firstRun
+          // On a phone, clear of the status bar and the home indicator.
+          ? (Device.mobile
+                ? ColoredBox(
+                    color: context.ow.colors.window,
+                    child: const SafeArea(child: FirstRun()),
+                  )
+                : const FirstRun())
+          : _home(context),
+    );
+  }
+
+  Widget _home(BuildContext context) {
     // Once per release, for who used an earlier one.
     if (!_newsShown && shouldShowNews(ref.read(settingsProvider))) {
       _newsShown = true;

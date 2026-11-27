@@ -3118,6 +3118,27 @@ class AppLocalizationsEs extends AppLocalizations {
   String get maximizePane => 'Maximizar el panel';
 
   @override
+  String get menuFile => 'Archivo';
+
+  @override
+  String get menuHelp => 'Ayuda';
+
+  @override
+  String get menuLockVault => 'Bloquear vault';
+
+  @override
+  String get menuNewTab => 'Nueva pestaña';
+
+  @override
+  String get menuPreferences => 'Ajustes…';
+
+  @override
+  String get menuView => 'Ver';
+
+  @override
+  String get menuWindow => 'Ventana';
+
+  @override
   String milliseconds(int ms) {
     return '$ms ms';
   }
@@ -3894,6 +3915,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get paletteHosts => 'Hosts';
+
+  @override
+  String get paletteLockVault => 'Bloquear vault';
 
   @override
   String get paletteNothing => 'Nada coincide.';
