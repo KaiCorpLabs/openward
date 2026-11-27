@@ -251,7 +251,7 @@ class _TunnelsPageState extends ConsumerState<TunnelsPage> {
     );
   }
 
-  static const _widths = [1.35, 0.7, 1.9, 0.85, 0.75, 1.7];
+  static const _widths = [1.1, 0.65, 2.45, 0.85, 1.2, 1.5];
 
   Widget _row(BuildContext context, TunnelView t) {
     final ow = context.ow;

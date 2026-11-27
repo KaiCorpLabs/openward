@@ -2,7 +2,7 @@
 
 La app de Flutter de OpenWard, la misma para escritorio (macOS, Linux y Windows) y para teléfonos (Android e iOS: [plan, paridad y límites](../docs/plan/movil.md)). Habla con el núcleo de Rust (`core/crates/openward-ffi`) mediante flutter_rust_bridge, y lo compila y empaqueta cargokit (`rust_builder/`).
 
-> **Estado:** beta de escritorio 0.3 ([plan](../docs/plan/v0.3.md), [notas](../docs/notas/v0.3.md), [guía de prueba](../docs/plan/prueba-v0.3.md)).
+> **Estado:** beta de escritorio 0.4.0-beta.1 ([plan](../docs/plan/v0.4.md), [notas](../docs/notas/v0.4.md), [guía de prueba](../docs/plan/prueba-v0.4.md)).
 
 ## Requisitos
 

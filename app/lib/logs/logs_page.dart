@@ -701,8 +701,15 @@ class _Preview extends ConsumerStatefulWidget {
 }
 
 class _PreviewState extends ConsumerState<_Preview> {
+  final _hScroll = ScrollController();
   Future<LogPreview?>? _preview;
   Future<List<LogLine>>? _around;
+
+  @override
+  void dispose() {
+    _hScroll.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -821,27 +828,31 @@ class _PreviewState extends ConsumerState<_Preview> {
             )
           else
             Expanded(child: _content(context, hit)),
-          const SizedBox(height: OwSpace.s6),
-          Row(
-            children: [
-              if (e.recorded)
-                Expanded(
-                  child: FilledButton.icon(
-                    key: const ValueKey('logs.open'),
-                    onPressed: () => widget.onOpen(hit?.at),
-                    icon: const Icon(Icons.subject, size: 16),
-                    label: Text(hit == null ? l.logsOpen : l.logsOpenHere),
+          if (e.recorded || e.place != LogPlace.local) ...[
+            const SizedBox(height: OwSpace.s6),
+            Row(
+              children: [
+                if (e.recorded)
+                  Expanded(
+                    child: FilledButton.icon(
+                      key: const ValueKey('logs.open'),
+                      onPressed: () => widget.onOpen(hit?.at),
+                      icon: const Icon(Icons.subject, size: 16),
+                      label: Text(hit == null ? l.logsOpen : l.logsOpenHere),
+                    ),
                   ),
-                ),
-              if (e.recorded) const SizedBox(width: OwSpace.s4),
-              OutlinedButton.icon(
-                key: const ValueKey('logs.connect'),
-                onPressed: () => connectAgain(ref, e),
-                icon: const Icon(Icons.refresh, size: 16),
-                label: Text(l.logsConnectAgain),
-              ),
-            ],
-          ),
+                if (e.recorded && e.place != LogPlace.local)
+                  const SizedBox(width: OwSpace.s4),
+                if (e.place != LogPlace.local)
+                  OutlinedButton.icon(
+                    key: const ValueKey('logs.connect'),
+                    onPressed: () => connectAgain(ref, e),
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: Text(l.logsConnectAgain),
+                  ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -858,13 +869,20 @@ class _PreviewState extends ConsumerState<_Preview> {
         border: Border.all(color: c.border),
         borderRadius: BorderRadius.circular(context.ow.shape.radius),
       ),
-      child: Text(
-        lines.map((x) => x.text).join('\n'),
-        key: const ValueKey('logs.preview.lines'),
-        maxLines: 12,
-        overflow: TextOverflow.clip,
-        softWrap: false,
-        style: monoStyle(context, size: OwText.small, color: c.text),
+      child: Scrollbar(
+        controller: _hScroll,
+        notificationPredicate: (n) => n.depth == 0,
+        child: SingleChildScrollView(
+          controller: _hScroll,
+          scrollDirection: Axis.horizontal,
+          child: Text(
+            lines.map((x) => x.text).join('\n'),
+            key: const ValueKey('logs.preview.lines'),
+            maxLines: 12,
+            softWrap: false,
+            style: monoStyle(context, size: OwText.small, color: c.text),
+          ),
+        ),
       ),
     );
     if (hit != null) {

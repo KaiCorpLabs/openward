@@ -6,7 +6,7 @@
 > **Todos los derechos reservados.** El código se puede leer aquí, pero no copiar, modificar, redistribuir ni usar en otros productos: ver [LICENSE](LICENSE). El cliente será open source cuando se lance la Community ([LICENSING.md](LICENSING.md)).
 
 > [!WARNING]
-> Estado revisado el **2026-11-14**: `main 553ab147` integra el vault cifrado v0.4 y la base Android/iOS. No hay release pública; cuenta/sync/pago alojados siguen pendientes de integración y validación. Hardware, firma y auditoría conservan sus puertas en el [estado verificable](docs/plan/estado.md).
+> Estado revisado el **2026-11-27** (sobre `main 1e435e2`, PRs [#71](https://github.com/KaiCorpLabs/openward/pull/71) y [#77](https://github.com/KaiCorpLabs/openward/pull/77)): integra el cliente y vault cifrado `0.4.0-beta.1` (+31), la base Android/iOS y la migración de `libghostty-vt` a ABI 1.0 y Zig 0.17.1. No hay release pública; cuenta/sync/pago alojados siguen pendientes de integración y validación. Hardware, firma y auditoría conservan sus puertas en el [estado verificable](docs/plan/estado.md).
 
 ## Principios
 
