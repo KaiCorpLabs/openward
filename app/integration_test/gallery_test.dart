@@ -25,6 +25,7 @@ import 'package:openward/core/rust_init.dart';
 import 'package:openward/core/errors.dart';
 import 'package:openward/settings/settings_page.dart';
 import 'package:openward/security/credentials.dart';
+import 'package:openward/security/state.dart';
 import 'package:openward/core/settings.dart';
 import 'package:openward/hosts/sidebar.dart';
 import 'package:openward/import/program_preview.dart';
@@ -332,9 +333,6 @@ void main() {
       ),
     );
     await shot('d8-1-onboarding');
-    await tester.tap(find.byKey(const ValueKey('vault.onboarding.later')));
-    await tester.pumpAndSettle();
-    await shot('d8-1b-reminder');
     const password = 'Gallery-D8-Marzipan-Conductor-Fjord-87!';
     final kit = await beta.prepareVault(password: password);
     final groups = kit.split('-');
@@ -361,6 +359,24 @@ void main() {
     );
     await tester.pumpAndSettle();
     await shot('d8-3-security');
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(
+      RepaintBoundary(
+        key: _frame,
+        child: ProviderScope(
+          key: const ValueKey('d8-reminder-scope'),
+          overrides: [
+            openWardProvider.overrideWithValue(beta),
+            settingsFileProvider.overrideWithValue(betaSettings),
+            sshConfigFileProvider.overrideWithValue('${dir.path}/no-config'),
+            vaultNeedsPasswordProvider.overrideWithValue(true),
+          ],
+          child: const OpenWardApp(key: ValueKey('d8-reminder')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await shot('d8-1b-reminder');
     binding.reportData = {'screenshots': reported};
     await tester.pumpWidget(const SizedBox());
     beta.dispose();

@@ -10,7 +10,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/providers.dart';
 import '../security/state.dart';
 
 const _channel = MethodChannel('openward/window');
@@ -79,8 +78,7 @@ class WindowDragArea extends StatelessWidget {
 bool showWindowButtonsInChrome(WidgetRef ref) {
   if (!customTitleBar) return false;
   if (ref.watch(fullScreenProvider)) return false;
-  ref.watch(securityProvider);
-  return !ref.read(openWardProvider).vaultNeedsPassword();
+  return !ref.watch(vaultNeedsPasswordProvider);
 }
 
 /// The room the window buttons need at the top of the sidebar.
