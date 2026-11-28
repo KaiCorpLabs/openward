@@ -170,7 +170,7 @@ class _HomeState extends ConsumerState<Home> {
   Widget? _leading(SidebarMode mode) {
     if (mode == SidebarMode.open) return null;
     final l = context.l10n;
-    final buttons = customTitleBar && !ref.watch(fullScreenProvider);
+    final buttons = showWindowButtonsInChrome(ref);
     final room = mode == SidebarMode.hidden
         ? windowButtonsWidth
         : windowButtonsWidth - railWidth;
