@@ -21,6 +21,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:openward/app.dart';
 import 'package:openward/core/providers.dart';
+import 'package:openward/core/rust_init.dart';
 import 'package:openward/core/errors.dart';
 import 'package:openward/settings/settings_page.dart';
 import 'package:openward/security/credentials.dart';
@@ -32,7 +33,6 @@ import 'package:openward/src/rust/api/app.dart';
 import 'package:openward/src/rust/api/logs.dart';
 import 'package:openward/src/rust/api/tunnels.dart';
 import 'package:openward/src/rust/api/vault.dart';
-import 'package:openward/src/rust/frb_generated.dart';
 import 'package:openward/tabs/tabs.dart';
 import 'package:openward/terminal/controller.dart';
 import 'package:openward/welcome/whats_new.dart';
@@ -84,7 +84,7 @@ const _themes = [
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  setUpAll(() => RustLib.init());
+  setUpAll(initRustLib);
 
   testWidgets('the main screens with every theme, light and dark', (
     tester,

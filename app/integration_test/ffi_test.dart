@@ -12,6 +12,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:openward/core/rust_init.dart';
 import 'package:openward/core/version.dart';
 import 'package:openward/src/rust/api/app.dart';
 import 'package:openward/src/rust/api/backups.dart';
@@ -27,7 +28,6 @@ import 'package:openward/src/rust/api/sftp.dart';
 import 'package:openward/src/rust/api/tunnels.dart';
 import 'package:openward/src/rust/api/vault.dart';
 import 'package:openward/src/rust/api/workspaces.dart';
-import 'package:openward/src/rust/frb_generated.dart';
 
 /// A [VaultError] of `kind`: the app tells errors by kind, never by text.
 Matcher isVault(VaultErrorKind kind) =>
@@ -35,7 +35,7 @@ Matcher isVault(VaultErrorKind kind) =>
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  setUpAll(() => RustLib.init());
+  setUpAll(initRustLib);
 
   late Directory dir;
   late OpenWard app;

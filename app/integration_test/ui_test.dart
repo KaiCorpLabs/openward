@@ -29,6 +29,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:openward/app.dart';
 import 'package:openward/core/providers.dart';
+import 'package:openward/core/rust_init.dart';
 import 'package:openward/core/errors.dart' show appNavigator;
 import 'package:openward/core/settings.dart';
 import 'package:openward/history/history.dart';
@@ -40,7 +41,6 @@ import 'package:openward/src/rust/api/session.dart';
 import 'package:openward/src/rust/api/sftp.dart'
     show ConflictChoice, TransferDirection;
 import 'package:openward/src/rust/api/vault.dart';
-import 'package:openward/src/rust/frb_generated.dart';
 import 'package:openward/hosts/hosts_page.dart';
 import 'package:openward/hosts/sidebar.dart';
 import 'package:openward/logs/log_viewer.dart';
@@ -277,7 +277,7 @@ Future<void> _connect(WidgetTester tester, String label) async {
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  setUpAll(() => RustLib.init());
+  setUpAll(initRustLib);
 
   late Directory dir;
   late OpenWard app;
