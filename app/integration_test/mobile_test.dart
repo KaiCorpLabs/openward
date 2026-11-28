@@ -24,11 +24,11 @@ import 'package:integration_test/integration_test.dart';
 import 'package:openward/app.dart';
 import 'package:openward/core/platform.dart';
 import 'package:openward/core/providers.dart';
+import 'package:openward/core/rust_init.dart';
 import 'package:openward/core/settings.dart';
 import 'package:openward/src/rust/api/app.dart';
 import 'package:openward/src/rust/api/security.dart';
 import 'package:openward/src/rust/api/vault.dart';
-import 'package:openward/src/rust/frb_generated.dart';
 import 'package:openward/tabs/tab_strip.dart';
 import 'package:openward/tabs/tabs.dart';
 import 'package:openward/terminal/key_bar.dart';
@@ -91,7 +91,7 @@ Future<String?> _servers() async {
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  setUpAll(() => RustLib.init());
+  setUpAll(initRustLib);
 
   late Directory dir;
   late OpenWard app;

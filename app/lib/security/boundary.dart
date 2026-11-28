@@ -30,7 +30,7 @@ class _VaultHomeState extends ConsumerState<VaultHome> {
     final view = ref.watch(securityProvider);
     final app = ref.read(openWardProvider);
     opened |= vaultVisible(view) && !app.vaultOnboardingRequired();
-    final reminder = app.vaultNeedsPassword();
+    final reminder = ref.watch(vaultNeedsPasswordProvider);
     return opened
         ? Column(
             children: [

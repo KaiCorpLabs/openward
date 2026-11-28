@@ -3111,6 +3111,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get maximizePane => 'Maximize the pane';
 
   @override
+  String get menuFile => 'File';
+
+  @override
+  String get menuHelp => 'Help';
+
+  @override
+  String get menuLockVault => 'Lock vault';
+
+  @override
+  String get menuNewTab => 'New tab';
+
+  @override
+  String get menuPreferences => 'Settings…';
+
+  @override
+  String get menuView => 'View';
+
+  @override
+  String get menuWindow => 'Window';
+
+  @override
   String milliseconds(int ms) {
     return '$ms ms';
   }
@@ -3880,6 +3901,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get paletteHosts => 'Hosts';
+
+  @override
+  String get paletteLockVault => 'Lock vault';
 
   @override
   String get paletteNothing => 'Nothing matches.';
@@ -6294,7 +6318,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vaultUnlock => 'Unlock';
 
   @override
-  String get vaultLock => 'Lock now · ⌘L / Ctrl+Alt+L';
+  String get vaultLock => 'Lock now';
 
   @override
   String get vaultBusy => 'Authenticating…';
@@ -6404,7 +6428,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get vaultScope =>
-      'An encrypted vault protects its items, saved secrets and OpenWard history, recents and logs. External SSH files are copied into the vault only on request. Close open sessions before activating encryption.';
+      'An encrypted vault protects its items, saved secrets and OpenWard history, recents and logs. External SSH files are copied into the vault only on request.';
+
+  @override
+  String get vaultCloseSessions =>
+      'Close open sessions before activating encryption.';
 
   @override
   String get vaultCompatibility =>
@@ -6499,6 +6527,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get vaultCredentialPassphrase => 'Key passphrase';
+
+  @override
+  String get vaultCredentialsEmpty => 'No saved credentials yet.';
+
+  @override
+  String get vaultShowPassword => 'Show password';
+
+  @override
+  String get vaultHidePassword => 'Hide password';
 
   @override
   String get logsEncrypted =>

@@ -10,10 +10,10 @@ import 'app.dart';
 import 'core/errors.dart';
 import 'core/fonts.dart';
 import 'core/providers.dart';
+import 'core/rust_init.dart';
 import 'core/settings.dart';
 import 'sftp/remote_edit.dart';
 import 'src/rust/api/app.dart';
-import 'src/rust/frb_generated.dart';
 import 'startup_error.dart';
 import 'ui/focus_ring.dart';
 
@@ -28,7 +28,7 @@ Future<void> main() async {
       (await getApplicationSupportDirectory()).path;
   final OpenWard app;
   try {
-    await RustLib.init();
+    await initRustLib();
     app = await OpenWard.open(dataDir: dir);
   } catch (e) {
     // Rather than an empty window: what happened, and where the data is.

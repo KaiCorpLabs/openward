@@ -33,6 +33,19 @@ import 'report.dart';
 import '../window/shortcuts.dart';
 import '../window/sidebar_state.dart';
 
+/// Human-readable operating system name for display (e.g. `macOS`, `Linux`).
+String formatOperatingSystem([String? os]) =>
+    switch (os ?? Platform.operatingSystem) {
+      'macos' => 'macOS',
+      'ios' => 'iOS',
+      'linux' => 'Linux',
+      'windows' => 'Windows',
+      'android' => 'Android',
+      'fuchsia' => 'Fuchsia',
+      final other =>
+        other.isEmpty ? other : other[0].toUpperCase() + other.substring(1),
+    };
+
 enum SettingsSection { general, appearance, terminal, logs, security }
 
 class SettingsSectionNotifier extends Notifier<SettingsSection> {
@@ -82,51 +95,63 @@ class SettingsPage extends ConsumerWidget {
             decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: c.border)),
             ),
-            child: Row(
-              children: [
-                for (final s in SettingsSection.values)
-                  _NavItem(
-                    key: ValueKey('settings.section.${s.name}'),
-                    text: switch (s) {
-                      SettingsSection.general => l.settingsGeneral,
-                      SettingsSection.appearance => l.settingsAppearance,
-                      SettingsSection.terminal => l.settingsTerminal,
-                      SettingsSection.logs => l.settingsLogs,
-                      SettingsSection.security => l.vaultSecurity,
-                    },
-                    selected: s == section,
-                    onTap: () =>
-                        ref.read(settingsSectionProvider.notifier).show(s),
-                  ),
-              ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final s in SettingsSection.values)
+                    _NavItem(
+                      key: ValueKey('settings.section.${s.name}'),
+                      text: switch (s) {
+                        SettingsSection.general => l.settingsGeneral,
+                        SettingsSection.appearance => l.settingsAppearance,
+                        SettingsSection.terminal => l.settingsTerminal,
+                        SettingsSection.logs => l.settingsLogs,
+                        SettingsSection.security => l.vaultSecurity,
+                      },
+                      selected: s == section,
+                      onTap: () =>
+                          ref.read(settingsSectionProvider.notifier).show(s),
+                    ),
+                ],
+              ),
             ),
           ),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(
-                OwSpace.s12,
-                OwSpace.s10,
-                OwSpace.s12,
-                OwSpace.s12,
-              ),
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: section == SettingsSection.appearance
-                        ? 1100
-                        : 680,
+            child: section == SettingsSection.appearance
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: OwSpace.s12,
+                    ),
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1100),
+                        child: const AppearanceSection(),
+                      ),
+                    ),
+                  )
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(
+                      OwSpace.s12,
+                      OwSpace.s10,
+                      OwSpace.s12,
+                      OwSpace.s12,
+                    ),
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 680),
+                        child: switch (section) {
+                          SettingsSection.general => const _General(),
+                          SettingsSection.appearance => const SizedBox.shrink(),
+                          SettingsSection.terminal => const _Terminal(),
+                          SettingsSection.logs => const _Logs(),
+                          SettingsSection.security => const VaultSettings(),
+                        },
+                      ),
+                    ),
                   ),
-                  child: switch (section) {
-                    SettingsSection.general => const _General(),
-                    SettingsSection.appearance => const AppearanceSection(),
-                    SettingsSection.terminal => const _Terminal(),
-                    SettingsSection.logs => const _Logs(),
-                    SettingsSection.security => const VaultSettings(),
-                  },
-                ),
-              ),
-            ),
           ),
         ],
       ),
@@ -196,31 +221,39 @@ class _Row extends StatelessWidget {
     return MergeSemantics(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: OwSpace.s5),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label),
-                  if (help != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: OwSpace.s1),
-                      child: Text(
-                        help!,
-                        style: TextStyle(
-                          fontSize: OwText.small,
-                          color: c.textMuted,
-                          height: 1.4,
+        child: LayoutBuilder(
+          builder: (context, box) => Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label),
+                    if (help != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: OwSpace.s1),
+                        child: Text(
+                          help!,
+                          style: TextStyle(
+                            fontSize: OwText.small,
+                            color: c.textMuted,
+                            height: 1.4,
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 24),
-            control,
-          ],
+              const SizedBox(width: 24),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: box.maxWidth * 0.62),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: control,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -268,8 +301,8 @@ class _General extends ConsumerWidget {
             help: l.optionAsAltHelp,
             control: DropdownButton<OptionAltChoice>(
               key: const ValueKey('settings.optionAsAlt'),
+              style: fieldTextStyle(context),
               value: s.optionAsAlt,
-              underline: const SizedBox.shrink(),
               items: [
                 for (final (v, text) in [
                   (OptionAltChoice.off, l.optionAltOff),
@@ -424,7 +457,7 @@ class _General extends ConsumerWidget {
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                     Text(
-                      '${Platform.operatingSystem} · ${l.reportCore} ${coreVersion()}',
+                      '${formatOperatingSystem()} · ${l.reportCore} ${coreVersion()}',
                       style: TextStyle(
                         fontSize: OwText.small,
                         color: c.textSubtle,
@@ -557,6 +590,7 @@ class _Terminal extends ConsumerWidget {
                 : null,
           ),
         ),
+        const SizedBox(height: 24),
         SectionLabel(l.settingsMouse),
         _Row(
           label: l.copyOnSelect,
@@ -580,6 +614,7 @@ class _Terminal extends ConsumerWidget {
                   notifier.update((s) => s.copyWith(rightClickPaste: v)),
             ),
           ),
+        const SizedBox(height: 24),
         SectionLabel(l.settingsHighlight),
         _Row(
           label: l.highlightOn,
@@ -591,6 +626,7 @@ class _Terminal extends ConsumerWidget {
           ),
         ),
         const HighlightRules(),
+        const SizedBox(height: 24),
         SectionLabel(l.settingsShortcuts),
         _Row(
           label: l.shortcutProfile,

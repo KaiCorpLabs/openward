@@ -9,20 +9,20 @@ yanked = "deny"
 ignore = [
     # Accepted in ADR-004 / S6 §7: proc-macro-error2 runs only as part of
     # hax's compile-time macros in libcrux, not in the vault at runtime.
-    # No vulnerability/fixed upgrade is reported. Revisit this maintenance
-    # exception with every hpke-rs/libcrux update; inventory: spec/keys-v1.md.
+    # Reviewed 2026-11-28: no vulnerability/fixed upgrade is reported. Revisit
+    # with every hpke-rs/libcrux update; inventory: spec/keys-v1.md.
     { id = "RUSTSEC-2026-0173", reason = "unmaintained compile-time hax macro dependency of pinned libcrux; accepted ADR-004 / S6; review on each update" },
-    # Marvin (timing in `rsa`), with no fixed release. It reaches us through
-    # russh, which only uses the private key to sign with the user's own RSA
-    # key when authenticating; host key checks are public-key operations and
-    # are not affected. Recovering the key needs a great many timed signatures,
-    # far more than one per login. Revisit when `rsa` ships a constant-time
-    # release (ADR-003).
+    # Marvin (timing in `rsa`), with no verified constant-time upstream fix
+    # (reviewed 2026-11-28: `rsa` 0.10.0 is published, advisory still applies).
+    # It reaches us through russh, which only uses the private key to sign with
+    # the user's own RSA key when authenticating; host key checks are public-key
+    # operations and are not affected. Recovering the key needs a great many
+    # timed signatures, far more than one per login (ADR-003).
     { id = "RUSTSEC-2023-0071", reason = "rsa timing leak; no fix upstream; only client-side signing with the user's RSA key, see ADR-003" },
-    # Transitive dependency of russh-sftp (3.0.1), russh-util (0.52.0 / russh 0.64.1),
-    # and zxcvbn (3.1.1); marked unmaintained with no security vulnerability or safe
-    # upstream replacement yet. Revisit when russh/russh-sftp and zxcvbn migrate off chrono.
-    { id = "RUSTSEC-2026-0543", reason = "unmaintained transitive chrono via russh/russh-sftp and zxcvbn; no vulnerability or safe upgrade upstream; revisit on dependency updates" },
+    # Transitive dependency of russh-sftp 3.0.1 in the current tree (reviewed
+    # 2026-11-28: russh-sftp 4.0.0 also depends on chrono); marked unmaintained
+    # with no security vulnerability or chrono-free upstream replacement yet.
+    { id = "RUSTSEC-2026-0543", reason = "unmaintained transitive chrono via russh-sftp; no vulnerability or safe upgrade upstream; revisit on dependency updates" },
 ]
 
 [licenses]

@@ -158,9 +158,11 @@ class _StartPageState extends ConsumerState<StartPage> {
     final recent = ref.watch(recentProvider).connections;
     final library = ref.watch(libraryProvider);
     final firstDay = recent.isEmpty;
-    // Favorites once there are hosts to choose; the first day, after the
-    // ways to start.
-    final favorites = library.hosts.isNotEmpty;
+    // Favorites once there are hosts to choose; on the first day, only when
+    // some are already starred (the sidebar already explains how to star).
+    final favorites = firstDay
+        ? library.favorites.isNotEmpty
+        : library.hosts.isNotEmpty;
     // As the Hosts page: the whole window, and the shortcuts at its foot.
     return ColoredBox(
       color: c.surface,
@@ -361,6 +363,11 @@ class _StartPageState extends ConsumerState<StartPage> {
     final ow = context.ow;
     final c = ow.colors;
     final l = context.l10n;
+    OutlineInputBorder border(Color color, [double width = 1]) =>
+        OutlineInputBorder(
+          borderRadius: BorderRadius.circular(ow.shape.control),
+          borderSide: BorderSide(color: color, width: width),
+        );
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -389,13 +396,20 @@ class _StartPageState extends ConsumerState<StartPage> {
                       decoration: InputDecoration(
                         hintText: l.quickConnectHint,
                         errorText: _error,
+                        border: border(c.control),
+                        enabledBorder: border(c.control),
+                        focusedBorder: border(c.accent, 1.5),
+                        errorBorder: border(c.danger),
+                        focusedErrorBorder: border(c.danger, 1.5),
                         prefixIcon: const Icon(Icons.terminal, size: 16),
-                        prefixIconConstraints: const BoxConstraints(
-                          minWidth: 36,
+                        prefixIconConstraints: BoxConstraints(
+                          minWidth: ow.shape.pills ? 42 : 36,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: OwSpace.s6,
-                          vertical: OwSpace.s6,
+                        contentPadding: EdgeInsets.fromLTRB(
+                          OwSpace.s6,
+                          OwSpace.s6,
+                          ow.shape.pills ? OwSpace.s8 : OwSpace.s6,
+                          OwSpace.s6,
                         ),
                       ),
                       onChanged: (_) {
@@ -956,17 +970,7 @@ class _FavoriteCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: monoStyle(context, size: 12),
                   ),
-                  const SizedBox(height: 8),
-                  if (env != null)
-                    EnvChip(env)
-                  else
-                    Text(
-                      l.envNoneNote,
-                      style: TextStyle(
-                        fontSize: OwText.small,
-                        color: c.textSubtle,
-                      ),
-                    ),
+                  if (env != null) ...[const SizedBox(height: 8), EnvChip(env)],
                 ],
               ),
             ),

@@ -602,14 +602,16 @@ class _Tab extends ConsumerWidget {
           // The active pane's session; the first while it asks what to open.
           final shown = panes.active.controller ?? all.firstOrNull;
           final c = context.ow.colors;
-          final onAccent = active && context.ow.shape.tabs == TabStyle.block
+          final style = context.ow.shape.tabs;
+          final onAccent =
+              active && (style == TabStyle.block || style == TabStyle.pill)
               ? c.onPrimary
               : null;
           return _frame(
             context,
             hint: shown == null ? null : _hint(context, shown),
             leading: panes.broadcast
-                ? Icon(Icons.podcasts, size: 14, color: c.warn)
+                ? Icon(Icons.podcasts, size: 14, color: onAccent ?? c.warn)
                 : shown == null
                 ? const SizedBox(width: 7)
                 // Split: the panes' glyph, in the colour of how it is doing.
@@ -629,7 +631,7 @@ class _Tab extends ConsumerWidget {
                 : StatusDot(
                     tabStatus(shown),
                     size: 7,
-                    // On an accent block the accent would not show.
+                    // On an accent block or inverted pill, accent would not show.
                     onAccent: onAccent,
                   ),
             title: tabTitle(context, tab),
@@ -649,7 +651,10 @@ class _Tab extends ConsumerWidget {
             leading: Icon(
               Icons.folder_outlined,
               size: 14,
-              color: active && context.ow.shape.tabs == TabStyle.block
+              color:
+                  active &&
+                      (context.ow.shape.tabs == TabStyle.block ||
+                          context.ow.shape.tabs == TabStyle.pill)
                   ? c.onPrimary
                   : switch (controller.phase) {
                       Phase.connected => c.accent,

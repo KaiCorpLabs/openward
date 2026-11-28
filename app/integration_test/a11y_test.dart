@@ -25,6 +25,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:openward/app.dart';
 import 'package:openward/core/providers.dart';
+import 'package:openward/core/rust_init.dart';
 import 'package:openward/core/settings.dart';
 import 'package:openward/home/recent.dart';
 import 'package:openward/hosts/sidebar.dart';
@@ -40,7 +41,6 @@ import 'package:openward/src/rust/api/snippets.dart';
 import 'package:openward/src/rust/api/tunnels.dart';
 import 'package:openward/src/rust/api/vault.dart';
 import 'package:openward/src/rust/api/workspaces.dart';
-import 'package:openward/src/rust/frb_generated.dart';
 import 'package:openward/tabs/tabs.dart';
 import 'package:openward/terminal/controller.dart';
 import 'package:openward/terminal/keys.dart';
@@ -336,7 +336,7 @@ class _TextSize extends AccessibilityGuideline {
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  setUpAll(() => RustLib.init());
+  setUpAll(initRustLib);
 
   for (final look in _looks) {
     testWidgets(
@@ -604,6 +604,9 @@ Future<void> _walk(WidgetTester tester, _Look look) async {
       await tapOn(find.byKey(const ValueKey('settings.section.logs')));
       await tester.pump(const Duration(milliseconds: 400));
       await audit('settings: logs');
+      await tapOn(find.byKey(const ValueKey('settings.section.security')));
+      await tester.pump(const Duration(milliseconds: 400));
+      await audit('settings: security');
 
       tabs.openPage(PageKind.tunnels);
       await audit('tunnels');

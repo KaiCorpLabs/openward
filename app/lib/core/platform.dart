@@ -44,9 +44,32 @@ abstract final class Device {
   /// Other programs' settings on this device (PuTTY, MobaXterm, Termius…).
   static bool get installedPrograms => !mobile;
 
+  /// Tests can override Secure Enclave availability directly.
+  @visibleForTesting
+  static bool? debugSecureEnclave;
+
   /// Secure Enclave keys: macOS, and iOS with the same API.
-  static bool get secureEnclave =>
-      !Platform.isAndroid && (Platform.isMacOS || Platform.isIOS);
+  static bool get supportsSecureEnclave =>
+      debugSecureEnclave ??
+      (!Platform.isAndroid && (Platform.isMacOS || Platform.isIOS));
+
+  /// Alias kept for callers using the shorter name.
+  static bool get secureEnclave => supportsSecureEnclave;
+
+  /// Whether Secure Enclave is available for [platform], letting widget
+  /// tests override `ThemeData.platform` on any host.
+  static bool supportsSecureEnclaveFor(TargetPlatform platform) {
+    if (debugSecureEnclave case final forced?) return forced;
+    if (platform == TargetPlatform.macOS || platform == TargetPlatform.iOS) {
+      return true;
+    }
+    if (platform == TargetPlatform.linux ||
+        platform == TargetPlatform.windows) {
+      return false;
+    }
+    if (debugMobile == true) return false;
+    return supportsSecureEnclave;
+  }
 }
 
 /// The phone's layout: one thing on the screen at a time, the hosts in a

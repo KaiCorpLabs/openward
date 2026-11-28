@@ -26,6 +26,7 @@ import '../tabs/find_bar.dart';
 import '../tabs/tabs.dart';
 import '../terminal/controller.dart';
 import '../terminal/keys.dart';
+import '../terminal/renderer.dart';
 import '../terminal/terminal_pane.dart';
 import '../ui/confirm.dart';
 import '../ui/environment.dart';
@@ -381,10 +382,8 @@ class _LogView extends ConsumerWidget {
                       child: Stack(
                         children: [
                           Positioned.fill(
-                            child: TerminalPane(
-                              key: const ValueKey('log.terminal'),
+                            child: _PlaybackTerminal(
                               controller: viewer.terminal,
-                              readOnly: true,
                             ),
                           ),
                           if (viewer.terminal.findOpen)
@@ -492,21 +491,23 @@ class _Bar extends ConsumerWidget {
         _SaveButton(viewer: viewer, narrow: narrow),
         const SizedBox(width: OwSpace.s4),
         _ExportMenu(viewer: viewer, narrow: narrow),
-        const SizedBox(width: OwSpace.s4),
-        if (narrow)
-          IconButton(
-            key: const ValueKey('log.connect'),
-            tooltip: l.logsConnectAgain,
-            onPressed: () => connectAgain(ref, e),
-            icon: const Icon(Icons.refresh, size: 18),
-          )
-        else
-          OutlinedButton.icon(
-            key: const ValueKey('log.connect'),
-            onPressed: () => connectAgain(ref, e),
-            icon: const Icon(Icons.refresh, size: 16),
-            label: Text(l.logsConnectAgain),
-          ),
+        if (e.place != LogPlace.local) ...[
+          const SizedBox(width: OwSpace.s4),
+          if (narrow)
+            IconButton(
+              key: const ValueKey('log.connect'),
+              tooltip: l.logsConnectAgain,
+              onPressed: () => connectAgain(ref, e),
+              icon: const Icon(Icons.refresh, size: 18),
+            )
+          else
+            OutlinedButton.icon(
+              key: const ValueKey('log.connect'),
+              onPressed: () => connectAgain(ref, e),
+              icon: const Icon(Icons.refresh, size: 16),
+              label: Text(l.logsConnectAgain),
+            ),
+        ],
         const SizedBox(width: OwSpace.s2),
         _MoreMenu(viewer: viewer),
       ],
@@ -1110,4 +1111,126 @@ class _TrackPainter extends CustomPainter {
       old.commands.length != commands.length ||
       old.track != track ||
       old.played != played;
+}
+
+/// Keeps a read-only playback terminal at its recorded column width, scrolling
+/// horizontally when the Commands sidebar leaves less room.
+class _PlaybackTerminal extends ConsumerStatefulWidget {
+  const _PlaybackTerminal({required this.controller});
+
+  final TerminalController controller;
+
+  @override
+  ConsumerState<_PlaybackTerminal> createState() => _PlaybackTerminalState();
+}
+
+class _PlaybackTerminalState extends ConsumerState<_PlaybackTerminal> {
+  final _hScroll = ScrollController();
+  TerminalRenderer? _renderer;
+  int _cols = 0;
+  double _cellWidth = 0;
+  bool _syncScheduled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_scheduleSync);
+    _scheduleSync();
+  }
+
+  @override
+  void didUpdateWidget(_PlaybackTerminal oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_scheduleSync);
+      _detach();
+      _cols = 0;
+      _cellWidth = 0;
+      widget.controller.addListener(_scheduleSync);
+      _scheduleSync();
+    }
+  }
+
+  void _detach() {
+    final r = _renderer;
+    if (r != null &&
+        !widget.controller.isDisposed &&
+        identical(r, widget.controller.currentRenderer)) {
+      r.removeListener(_onRenderer);
+    }
+    _renderer = null;
+  }
+
+  void _scheduleSync() {
+    if (_syncScheduled || !mounted) return;
+    _syncScheduled = true;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _syncScheduled = false;
+      if (mounted) _syncRenderer();
+    });
+  }
+
+  void _syncRenderer() {
+    if (widget.controller.isDisposed) return;
+    final r = widget.controller.currentRenderer;
+    if (!identical(r, _renderer)) {
+      _detach();
+      _renderer = r;
+      r?.addListener(_onRenderer);
+    }
+    if (r != null && (r.cols != _cols || r.metrics.width != _cellWidth)) {
+      setState(() {
+        _cols = r.cols;
+        _cellWidth = r.metrics.width;
+      });
+    }
+  }
+
+  void _onRenderer() {
+    final r = _renderer;
+    if (!mounted || r == null) return;
+    if (r.cols != _cols || r.metrics.width != _cellWidth) {
+      _scheduleSync();
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_scheduleSync);
+    _detach();
+    _hScroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pad = ref.watch(settingsProvider.select((s) => s.terminalPadding));
+    final contentWidth = _cols > 0 && _cellWidth > 0
+        ? pad * 2 + _cols * _cellWidth
+        : 0.0;
+    return LayoutBuilder(
+      builder: (context, box) {
+        final width = math.max(box.maxWidth, contentWidth);
+        final needsScroll = width > box.maxWidth + 0.5;
+        return Scrollbar(
+          controller: _hScroll,
+          thumbVisibility: needsScroll,
+          notificationPredicate: (n) => n.metrics.axis == Axis.horizontal,
+          child: SingleChildScrollView(
+            controller: _hScroll,
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: width,
+              height: box.maxHeight,
+              child: TerminalPane(
+                key: const ValueKey('log.terminal'),
+                controller: widget.controller,
+                readOnly: true,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

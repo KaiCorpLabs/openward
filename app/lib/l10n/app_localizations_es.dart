@@ -3118,6 +3118,27 @@ class AppLocalizationsEs extends AppLocalizations {
   String get maximizePane => 'Maximizar el panel';
 
   @override
+  String get menuFile => 'Archivo';
+
+  @override
+  String get menuHelp => 'Ayuda';
+
+  @override
+  String get menuLockVault => 'Bloquear vault';
+
+  @override
+  String get menuNewTab => 'Nueva pestaña';
+
+  @override
+  String get menuPreferences => 'Ajustes…';
+
+  @override
+  String get menuView => 'Ver';
+
+  @override
+  String get menuWindow => 'Ventana';
+
+  @override
   String milliseconds(int ms) {
     return '$ms ms';
   }
@@ -3894,6 +3915,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get paletteHosts => 'Hosts';
+
+  @override
+  String get paletteLockVault => 'Bloquear vault';
 
   @override
   String get paletteNothing => 'Nada coincide.';
@@ -6319,7 +6343,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get vaultUnlock => 'Desbloquear';
 
   @override
-  String get vaultLock => 'Bloquear ahora · ⌘L / Ctrl+Alt+L';
+  String get vaultLock => 'Bloquear ahora';
 
   @override
   String get vaultBusy => 'Autenticando…';
@@ -6429,7 +6453,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get vaultScope =>
-      'El vault cifrado protege los ítems, los secretos guardados y el historial, los recientes y los registros de OpenWard. Los archivos SSH externos sólo se copian al vault cuando lo solicitas. Antes de activar el cifrado, cierra las sesiones abiertas.';
+      'El vault cifrado protege los ítems, los secretos guardados y el historial, los recientes y los registros de OpenWard. Los archivos SSH externos solo se copian al vault cuando lo solicitas.';
+
+  @override
+  String get vaultCloseSessions =>
+      'Antes de activar el cifrado, cierra las sesiones abiertas.';
 
   @override
   String get vaultCompatibility =>
@@ -6519,13 +6547,22 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get vaultCredentialExplain =>
-      'Sólo se guardan cuando lo solicitas y la autenticación las verifica. Las contraseñas se vinculan al servidor, puerto, usuario y clave de host. PIN, 2FA y contraseñas de proxy no se guardan.';
+      'Solo se guardan cuando lo solicitas y la autenticación las verifica. Las contraseñas se vinculan al servidor, puerto, usuario y clave de host. PIN, 2FA y contraseñas de proxy no se guardan.';
 
   @override
   String get vaultCredentialPassword => 'Contraseña SSH';
 
   @override
   String get vaultCredentialPassphrase => 'Frase de paso de una clave';
+
+  @override
+  String get vaultCredentialsEmpty => 'Todavía no hay credenciales guardadas.';
+
+  @override
+  String get vaultShowPassword => 'Mostrar contraseña';
+
+  @override
+  String get vaultHidePassword => 'Ocultar contraseña';
 
   @override
   String get logsEncrypted =>

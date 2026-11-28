@@ -11,7 +11,7 @@
 # which --check looks for. The S2 test servers are started and stopped
 # here, and the SSH tests fail instead of skipping without them.
 #
-# Needs Zig 0.16, FVM, cargo-deny, and podman (or docker); the window tests
+# Needs Zig 0.17.1, FVM, cargo-deny, and podman (or docker); the window tests
 # need macOS. They stall while someone uses the Mac ("Failed to foreground
 # app"), so each runs under a time limit.
 set -euo pipefail

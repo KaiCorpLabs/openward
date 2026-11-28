@@ -19,3 +19,10 @@ class SecurityNotifier extends Notifier<SecurityView> {
 final securityProvider = NotifierProvider<SecurityNotifier, SecurityView>(
   SecurityNotifier.new,
 );
+
+/// Whether the vault currently needs a master password (device-only "Later"
+/// state).
+final vaultNeedsPasswordProvider = Provider<bool>((ref) {
+  ref.watch(securityProvider);
+  return ref.read(openWardProvider).vaultNeedsPassword();
+});

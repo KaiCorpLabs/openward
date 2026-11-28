@@ -21,9 +21,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:openward/app.dart';
 import 'package:openward/core/providers.dart';
+import 'package:openward/core/rust_init.dart';
 import 'package:openward/core/errors.dart';
 import 'package:openward/settings/settings_page.dart';
 import 'package:openward/security/credentials.dart';
+import 'package:openward/security/state.dart';
 import 'package:openward/core/settings.dart';
 import 'package:openward/hosts/sidebar.dart';
 import 'package:openward/import/program_preview.dart';
@@ -32,7 +34,6 @@ import 'package:openward/src/rust/api/app.dart';
 import 'package:openward/src/rust/api/logs.dart';
 import 'package:openward/src/rust/api/tunnels.dart';
 import 'package:openward/src/rust/api/vault.dart';
-import 'package:openward/src/rust/frb_generated.dart';
 import 'package:openward/tabs/tabs.dart';
 import 'package:openward/terminal/controller.dart';
 import 'package:openward/welcome/whats_new.dart';
@@ -84,7 +85,7 @@ const _themes = [
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  setUpAll(() => RustLib.init());
+  setUpAll(initRustLib);
 
   testWidgets('the main screens with every theme, light and dark', (
     tester,
@@ -358,6 +359,24 @@ void main() {
     );
     await tester.pumpAndSettle();
     await shot('d8-3-security');
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(
+      RepaintBoundary(
+        key: _frame,
+        child: ProviderScope(
+          key: const ValueKey('d8-reminder-scope'),
+          overrides: [
+            openWardProvider.overrideWithValue(beta),
+            settingsFileProvider.overrideWithValue(betaSettings),
+            sshConfigFileProvider.overrideWithValue('${dir.path}/no-config'),
+            vaultNeedsPasswordProvider.overrideWithValue(true),
+          ],
+          child: const OpenWardApp(key: ValueKey('d8-reminder')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await shot('d8-1b-reminder');
     binding.reportData = {'screenshots': reported};
     await tester.pumpWidget(const SizedBox());
     beta.dispose();

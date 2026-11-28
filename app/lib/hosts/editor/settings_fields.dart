@@ -528,26 +528,6 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
       children: [
         // How inheriting reads, before the first inherited value.
         const InheritLegend(),
-        if (widget.system case final system?) ...[
-          EditorSection(l.sectionSystem),
-          system,
-          const SizedBox(height: 10),
-          // It runs a command over SSH.
-          if (_protocol == ProtocolKind.ssh) ...[
-            _osReleaseRow(l),
-            Padding(
-              padding: const EdgeInsets.only(
-                left: editorLabelWidth,
-                right: editorResetWidth,
-                bottom: OwSpace.s3,
-              ),
-              child: Text(
-                l.readOsReleaseNote,
-                style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
-              ),
-            ),
-          ],
-        ],
         EditorSection(l.sectionEnvironment),
         if (widget.system == null)
           Padding(
@@ -1276,6 +1256,26 @@ class _SettingsFieldsState extends ConsumerState<SettingsFields> {
               ),
             ),
             if (widget.system == null) _osReleaseRow(l),
+          ],
+        ],
+        if (widget.system case final system?) ...[
+          EditorSection(l.sectionSystem),
+          system,
+          const SizedBox(height: 10),
+          // It runs a command over SSH.
+          if (_protocol == ProtocolKind.ssh) ...[
+            _osReleaseRow(l),
+            Padding(
+              padding: const EdgeInsets.only(
+                left: editorLabelWidth,
+                right: editorResetWidth,
+                bottom: OwSpace.s3,
+              ),
+              child: Text(
+                l.readOsReleaseNote,
+                style: TextStyle(fontSize: OwText.small, color: c.textSubtle),
+              ),
+            ),
           ],
         ],
       ],

@@ -462,6 +462,19 @@ jobs:
         env:
           S2_RUNTIME: docker
         run: spikes/s2-ssh/servers/down.sh
+      # Desktop smoke integration tests on macOS and Windows alongside gallery review.
+      - name: Desktop integration smoke tests
+        if: runner.os != 'Linux'
+        working-directory: app
+        run: |
+          if [[ "$RUNNER_OS" == macOS ]]; then
+            flutter test integration_test/ffi_test.dart -d macos
+            flutter test integration_test/ui_test.dart -d macos --plain-name "focus: the sidebar folds"
+            flutter test integration_test/ui_test.dart -d macos --plain-name "window shortcuts with nothing focused"
+            flutter test integration_test/a11y_test.dart -d macos --dart-define=OPENWARD_SHOTS="$OPENWARD_SHOTS"
+          elif [[ "$RUNNER_OS" == Windows ]]; then
+            flutter test integration_test/ffi_test.dart -d windows
+          fi
       # The beta gallery is required on every desktop. The wrapper also catches
       # inner test failures incorrectly reported as success by flutter drive.
       - name: Review gallery
