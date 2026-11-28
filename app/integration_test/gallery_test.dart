@@ -332,6 +332,9 @@ void main() {
       ),
     );
     await shot('d8-1-onboarding');
+    await tester.tap(find.byKey(const ValueKey('vault.onboarding.later')));
+    await tester.pumpAndSettle();
+    await shot('d8-1b-reminder');
     const password = 'Gallery-D8-Marzipan-Conductor-Fjord-87!';
     final kit = await beta.prepareVault(password: password);
     final groups = kit.split('-');
