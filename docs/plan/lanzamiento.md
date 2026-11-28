@@ -1,6 +1,6 @@
 # Lanzamiento: Community local y beta de pago
 
-- **Revisión:** 2026-11-14, contra `main 553ab147e0d2c1fb7bc65f0e0ddb9890b40e3b39`.
+- **Revisión:** 2026-11-28, contra `main 1e435e2` (candidata `0.4.0-beta.1+31`; incluye la reconciliación de #71, las dependencias y `libghostty-vt` ABI 1.0 / Zig 0.17.1 de #77, la migración SwiftPM de `openward_ffi` y smoke tests de CI en macOS/Windows).
 - **Referencias vigentes:** [estado y evidencia](estado.md), [plan Community](community.md), [ADR-010](../adr/ADR-010-monorepo-go-supabase.md), [móvil](movil.md) y [plan maestro #67](https://github.com/KaiCorpLabs/openward/issues/67).
 - **Historia:** propuesta del 2026-11-10. Las estimaciones antiguas (~18 semanas, después 3,5 para el motor sin backends propios) no son una fecha ni el trabajo restante. Se conservan las dos semanas de uso y las puertas físicas, de recuperación y auditoría.
 
@@ -12,12 +12,12 @@ La secuencia anterior de Community de escritorio, móvil y después cobro queda 
 
 La arquitectura acordada es monorepo Flutter/Rust/Go mínimo, Supabase gestionado para Auth/datos y un único proyecto de producción por ahora. Edge Functions es alternativa secundaria. OVH está previsto, aún sin desplegar. No se requiere backend en otro repositorio, identidad KaiCorp autoalojada ni producción en el minipc/tailnet.
 
-## Dónde estamos (2026-11-14)
+## Dónde estamos (2026-11-28)
 
 | Nivel | Estado verificado |
 |---|---|
-| **Integrado en main** | Etapa 1 y vault v0.4: D0–D3 y D5–D7 implementados, sesión/backends D4 y onboarding/Ajustes **locales** D8; candidata `0.4.0-beta.1+31`. Android/iOS por [#69](https://github.com/KaiCorpLabs/openward/pull/69); Escape y fixtures SSH/Telnet por [#70](https://github.com/KaiCorpLabs/openward/pull/70). |
-| **CI de main** | [553ab147](https://github.com/KaiCorpLabs/openward/actions/runs/43541166915): 19 trabajos correctos, borrador de release omitido. Integración de app y matriz SSH se ejecutan en Linux; sus pasos se omiten en macOS/Windows. No acredita hardware, operación ni trabajo local sin publicar. |
+| **Integrado en main** | Etapa 1 y vault v0.4: D0–D3 y D5–D7 implementados, sesión/backends D4 y onboarding/Ajustes **locales** D8; candidata `0.4.0-beta.1+31`. Android/iOS por [#69](https://github.com/KaiCorpLabs/openward/pull/69); Escape y fixtures SSH/Telnet por [#70](https://github.com/KaiCorpLabs/openward/pull/70); reconciliación documental (#71); actualizaciones y `libghostty-vt` ABI 1.0 / Zig 0.17.1 (#77); y migración SwiftPM de `openward_ffi` en macOS/iOS. |
+| **CI de main** | Última referencia previa sobre [553ab147](https://github.com/KaiCorpLabs/openward/actions/runs/43541166915): 19 trabajos correctos, borrador de release omitido. Matriz SSH completa solo en Linux; macOS y Windows ejecutan smoke tests de integración (`ffi_test`, `ui_test`/`a11y_test` en macOS) y galería visual, lo que no sustituye pruebas físicas ni de operación. |
 | **Probado localmente** | Motor de sync, Go, lógica de suscripciones y UX de cuenta/sync en copias aisladas; recorrido entre dos vaults y ensayos de simulador/emulador. Conexión Go real de lectura a Supabase con TLS verificado. No está integrado en main; falta CI completa del último árbol y conciliación con main actual. |
 | **Aplicado en Supabase** | Proyecto de producción, 11 tablas privadas con RLS habilitada/forzada y sin lectura para clientes `anon`/`authenticated`, login backend limitado y helper privado de sesión. No equivale a servicio desplegado ni aislamiento ante backend comprometido. |
 | **Bloqueado en el último ensayo** | Auth real, logout/revocación alojados con JWT vigente: falta identidad sintética con custodia segura y acceso al Dashboard; el Mac estaba bloqueado. API cerrada `design_pending`; no se han repetido esas pruebas durante esta revisión. |
